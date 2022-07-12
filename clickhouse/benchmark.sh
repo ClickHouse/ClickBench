@@ -4,6 +4,14 @@
 
 curl https://clickhouse.com/ | sh
 sudo DEBIAN_FRONTEND=noninteractive ./clickhouse install
+
+# Optional: if you want to use higher compression:
+echo "
+compression:
+    case:
+        method: zstd
+" | sudo tee /etc/clickhouse-server/config.d/compression.yaml
+
 sudo clickhouse start
 
 # Load the data
