@@ -1,5 +1,7 @@
 # ClickBench: a Benchmark For Analytical Databases
 
+https://benchmark.clickhouse.com/
+
 ## Overview
 
 This benchmark represents typical workload in the following areas: click stream and traffic analysis, web analytics, machine-generated data, structured logs, and events data. It covers the typical queries in ad-hoc analytics and real-time dashboards.
