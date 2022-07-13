@@ -2,6 +2,8 @@
 
 https://benchmark.clickhouse.com/
 
+Discussion: https://news.ycombinator.com/item?id=32084571
+
 ## Overview
 
 This benchmark represents typical workload in the following areas: click stream and traffic analysis, web analytics, machine-generated data, structured logs, and events data. It covers the typical queries in ad-hoc analytics and real-time dashboards.
