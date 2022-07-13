@@ -81,13 +81,13 @@ gzip -d hits.tsv.gz
 
 time curl -XPUT 'http://root:@127.0.0.1:8081/v1/streaming_load' -H 'insert_sql: insert into hits format TSV' -H 'skip_header: 0' -H 'field_delimiter: \t' -H 'record_delimiter: \n' -F 'upload=@"./hits.tsv"'
 
-# {"id":"3cd85230-02ea-427b-9af3-43bfe4ea54b5","state":"SUCCESS","stats":{"rows":99997497,"bytes":81443407622},"error":null}
-# real    7m15.312s
+# {"id":"b9e20026-7eb2-4f09-a6b3-3ab79c4cb1fd","state":"SUCCESS","stats":{"rows":99997497,"bytes":81443407174},"error":null}
+# real    8m17.103s
 
 wc -l hits.tsv                                  1
 # 99997497 hits.tsv
 
-du -bcs _data
-# 15380105715
+du -bcs benddata
+# 15376458490
 
 ./run.sh 2>&1 | tee log.txt
