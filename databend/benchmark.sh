@@ -1,8 +1,8 @@
 #!/bin/bash
 
 mkdir databend && cd databend
-curl -LJO 'https://github.com/datafuselabs/databend/releases/download/v0.7.113-nightly/databend-v0.7.113-nightly-x86_64-unknown-linux-musl.tar.gz'
-tar xzvf 'databend-v0.7.113-nightly-x86_64-unknown-linux-musl.tar.gz'
+curl -LJO 'https://github.com/datafuselabs/databend/releases/download/v0.7.127-nightly/databend-v0.7.127-nightly-x86_64-unknown-linux-musl.tar.gz'
+tar xzvf 'databend-v0.7.127-nightly-x86_64-unknown-linux-musl.tar.gz'
 
 echo 'dir = "metadata/_logs"
 admin_api_address = "127.0.0.1:8101"
@@ -68,38 +68,26 @@ curl https://clickhouse.com/ | sh
 sudo ./clickhouse install
 
 # Load the data
+# Docs: https://databend.rs/doc/learn/analyze-hits-dataset-with-databend
 
 curl 'http://default@localhost:8124/' --data-binary @create.sql
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
-gzip -d hits.csv.gz
+wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+gzip -d hits.tsv.gz
 
-# Note: if I run
+# Note:
 # clickhouse-client --time --query "INSERT INTO hits FORMAT TSV" < hits.tsv
-# it panics:
-# ERROR common_tracing::panic_hook: panicked at 'called `Result::unwrap()` on an `Err` value: SendError
+# can work but it's a bit slower than streaming load
 
-# Note: if I run
-# curl -XPUT 'http://root:@127.0.0.1:8000/v1/streaming_load' -H 'insert_sql: insert into hits format CSV' -H 'skip_header: 0' -H 'field_delimiter: ,' -H 'record_delimiter: \n' -F 'upload=@"./hits.csv"'
-# curl: (55) Send failure: Broken pipe
+time curl -XPUT 'http://root:@127.0.0.1:8000/v1/streaming_load' -H 'insert_sql: insert into hits format TSV' -H 'skip_header: 0' -H 'field_delimiter: \t' -H 'record_delimiter: \n' -F 'upload=@"./hits.tsv"'
 
-# This is not entirely correct, but starts to work:
-# curl -XPUT 'http://root:@127.0.0.1:8000/v1/streaming_load' -H 'insert_sql: insert into hits format TSV' -H 'skip_header: 0' -H 'field_delimiter: \t' -H 'record_delimiter: \n' -F 'upload=@"./hits.tsv"'
-# and fails after 7 minutes 38 seconds without loading any data:
-# Code: 4000, displayText = invalid data (Expected to have terminated string literal.) (while in processor thread 5).
-# the diagnostics is terrible.
-
-head -n 90000000 hits.tsv > hits90m.tsv
-time curl -XPUT 'http://root:@127.0.0.1:8000/v1/streaming_load' -H 'insert_sql: insert into hits format TSV' -H 'skip_header: 0' -H 'field_delimiter: \t' -H 'record_delimiter: \n' -F 'upload=@"./hits90m.tsv"'
-
-# {"id":"08f59e6c-2924-483e-bb96-cbcb458588f5","state":"SUCCESS","stats":{"rows":90000000,"bytes":73152552024},"error":null}
+# {"id":"3cd85230-02ea-427b-9af3-43bfe4ea54b5","state":"SUCCESS","stats":{"rows":99997497,"bytes":81443407622},"error":null}
 # real    7m15.312s
 
-du -bcs _data
-# 38714978944
+wc -l hits.tsv                                  1
+# 99997497 hits.tsv
 
-# It does not support ClickHouse protocol well (it hangs on some queries if they are too long).
+du -bcs _data
+# 15380105715
 
 ./run.sh 2>&1 | tee log.txt
-
-# Note: divide every number by 0.9 as only 90% of the data was loaded successfully.

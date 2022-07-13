@@ -3,12 +3,12 @@
     "date": "2022-07-01",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
-    "comment": "Only 90% of data successfully loaded.",
+    "comment": "",
 
     "tags": ["Rust", "column-oriented", "ClickHouse derivative"],
 
     "load_time": 484,
-    "data_size": 43016643271,
+    "data_size": 15380105715,
 
     "result": [
 [0.010087, 0.002961, 0.003271],
