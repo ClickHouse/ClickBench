@@ -4,7 +4,7 @@ Go to AWS Redshift service.
 Create a cluster. Note: this is a classic Redshift, not "serverless".
 
 Choose the node type and cluster size.
-I've selected 4 nodes of ra3.xplus 4vCPU to get 16vCPU in total.
+I've selected 4 nodes of ra3.xlplus 4vCPU to get 16vCPU in total.
 
 Set up some password for the admin user.
 The cluster will take a few minutes to start.
