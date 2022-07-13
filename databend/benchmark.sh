@@ -70,7 +70,7 @@ sudo ./clickhouse install
 # Load the data
 # Docs: https://databend.rs/doc/learn/analyze-hits-dataset-with-databend
 
-curl 'http://default@localhost:8124/' --data-binary @create.sql
+curl 'http://default@localhost:8125/' --data-binary @create.sql
 
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
@@ -79,7 +79,7 @@ gzip -d hits.tsv.gz
 # clickhouse-client --time --query "INSERT INTO hits FORMAT TSV" < hits.tsv
 # can work but it's a bit slower than streaming load
 
-time curl -XPUT 'http://root:@127.0.0.1:8000/v1/streaming_load' -H 'insert_sql: insert into hits format TSV' -H 'skip_header: 0' -H 'field_delimiter: \t' -H 'record_delimiter: \n' -F 'upload=@"./hits.tsv"'
+time curl -XPUT 'http://root:@127.0.0.1:8081/v1/streaming_load' -H 'insert_sql: insert into hits format TSV' -H 'skip_header: 0' -H 'field_delimiter: \t' -H 'record_delimiter: \n' -F 'upload=@"./hits.tsv"'
 
 # {"id":"3cd85230-02ea-427b-9af3-43bfe4ea54b5","state":"SUCCESS","stats":{"rows":99997497,"bytes":81443407622},"error":null}
 # real    7m15.312s
