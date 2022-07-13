@@ -685,7 +685,7 @@ function renderSummary(filtered_data) {
 
         if (!elem.fake) {
             let link = document.createElement('a');
-            link.appendChild(document.createTextNode(`${elem.system} (${elem.machine})`));
+            link.appendChild(document.createTextNode(`${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
             link.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + elem.source;
             td_name.appendChild(link);
         } else {
@@ -826,7 +826,7 @@ function render() {
     sorted_indices.map(idx => {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
-        th.appendChild(document.createTextNode(`${elem.system}\n(${elem.machine})`));
+        th.appendChild(document.createTextNode(`${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
         th.className = 'th-entry';
         th.dataset.system = elem.system;
         details_head.appendChild(th);
