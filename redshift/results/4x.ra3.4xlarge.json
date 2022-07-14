@@ -3,7 +3,7 @@
     "date": "2022-07-14",
     "machine": "ra3.4xlarge",
     "cluster_size": 4,
-    "comment": "One query did not run due to overflow check and another due to missing regexp function.",
+    "comment": "One query did not run due to overflow check.",
 
     "tags": ["managed", "column-oriented"],
 
