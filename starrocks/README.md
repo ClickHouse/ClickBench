@@ -1,3 +1,1 @@
-It requires providing an email for downloading.
-But then the button on the website does not work and it does not download.
-I cannot find the packages anywhere.
+[StarRocks](https://github.com/StarRocks/starrocks) is the next-generation data platform designed to make data-intensive real-time analytics fast and easy.
