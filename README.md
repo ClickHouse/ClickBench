@@ -238,7 +238,6 @@ We also introduced the [Hardware Benchmark](https://clickhouse.com/benchmark/har
 - [x] Amazon RDS Aurora for MySQL
 - [x] Amazon RDS Aurora for Postgres
 - [ ] InfluxDB
-- [ ] VictoriaMetrics
 - [ ] TDEngine
 - [ ] MongoDB
 - [ ] Cassandra
