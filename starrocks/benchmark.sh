@@ -20,20 +20,23 @@ fe/bin/start_fe.sh --daemon
 # Start Backend
 echo "storage_root_path = ${STARROCKS_HOME}/storage" >> be/conf/be.conf
 echo "disable_storage_page_cache = false" >> be/conf/be.conf
+echo "storage_page_cache_limit = 6G" >> be/conf/be.conf
 be/bin/start_be.sh --daemon
 
 # Setup cluster
 mysql -h 127.0.0.1 -P9030 -uroot -e "ALTER SYSTEM ADD BACKEND '${IPADDR}:9050' "
 mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits "
+mysql -h 127.0.0.1 -P9030 -uroot -e "SET GLOBAL enable_pipeline_engine=true"
+mysql -h 127.0.0.1 -P9030 -uroot -e "SET GLOBAL enable_column_expr_predicate=true"
 
 # Load data
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 # Split file into chunks
-split -a 2 -d -l 10000000 hits.tsv hits_split
+split -a 1 -d -l 10000000 hits.tsv hits_split
 
 START=$(date +%s)
-for i in `seq -w 0 10`; do
+for i in `seq -w 0 9`; do
     echo "start loading hits_split${i} ..."
     curl --location-trusted \
         -u root: \
@@ -49,7 +52,7 @@ echo "Load data costs $LOADTIME seconds"
 # Analyze table
 mysql -h 127.0.0.1 -P9030 -uroot hits -e "ANALYZE TABLE hits"
 
-# Dataset contains 
+# Dataset contains 53990245607 bytes and 99997497 rows
 du -bcs storage/
 wc -l hits.tsv
 
