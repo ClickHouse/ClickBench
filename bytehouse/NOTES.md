@@ -24,7 +24,7 @@ alias bytehouse-cli="$(pwd)/bytehouse-cli"
 
 ```
 export user='aleksei.milovidov'
-export password='bGm45*sn%4j'
+export password='bGm45*sn%4j' # No worries, I've changed it.
 export account='AWSPPCOZ'
 export warehouse='test'
 ```
