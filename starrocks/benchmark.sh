@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Install
-wget https://download.starrocks.com/en-US/download/request-download/36/StarRocks-2.3.0-rc01.tar.gz
-tar zxvf StarRocks-2.3.0-rc01.tar.gz
-cd StarRocks-2.3.0-rc01/
+wget https://download.starrocks.com/en-US/download/request-download/36/StarRocks-2.3.0-rc02.tar.gz
+tar zxvf StarRocks-2.3.0-rc02.tar.gz
+cd StarRocks-2.3.0-rc02/
 
 # Install dependencies
 yum install -y java-1.8.0-openjdk-devel.x86_64
@@ -20,13 +20,12 @@ fe/bin/start_fe.sh --daemon
 # Start Backend
 echo "storage_root_path = ${STARROCKS_HOME}/storage" >> be/conf/be.conf
 echo "disable_storage_page_cache = false" >> be/conf/be.conf
-echo "storage_page_cache_limit = 6G" >> be/conf/be.conf
+echo "storage_page_cache_limit = 4G" >> be/conf/be.conf
 be/bin/start_be.sh --daemon
 
 # Setup cluster
 mysql -h 127.0.0.1 -P9030 -uroot -e "ALTER SYSTEM ADD BACKEND '${IPADDR}:9050' "
 mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits "
-mysql -h 127.0.0.1 -P9030 -uroot -e "SET GLOBAL enable_pipeline_engine=true"
 mysql -h 127.0.0.1 -P9030 -uroot -e "SET GLOBAL enable_column_expr_predicate=true"
 
 # Load data
@@ -52,7 +51,7 @@ echo "Load data costs $LOADTIME seconds"
 # Analyze table
 mysql -h 127.0.0.1 -P9030 -uroot hits -e "ANALYZE TABLE hits"
 
-# Dataset contains 53990245607 bytes and 99997497 rows
+# Dataset contains 23676271984 bytes and 99997497 rows
 du -bcs storage/
 wc -l hits.tsv
 
