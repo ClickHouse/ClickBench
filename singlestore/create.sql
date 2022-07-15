@@ -1,3 +1,6 @@
+set global collation_database='utf8_bin';
+set collation_database='utf8_bin';
+
 CREATE TABLE hits
 (
     WatchID BIGINT NOT NULL,
