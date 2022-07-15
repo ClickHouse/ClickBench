@@ -270,6 +270,7 @@ End of Stream
 ```
 
 The statistics of the number of rows, and bytes processed is wrong.
+Also it shows 200 million records in the UI while I only have 100 million.
 
 ```
 cat log.txt | grep --text -F 'Elapsed' | 
