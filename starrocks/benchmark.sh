@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Install
-wget https://download.starrocks.com/en-US/download/request-download/36/StarRocks-2.3.0-rc02.tar.gz
-tar zxvf StarRocks-2.3.0-rc02.tar.gz
-cd StarRocks-2.3.0-rc02/
+wget https://download.starrocks.com/en-US/download/request-download/40/StarRocks-2.3.0-rc03.tar.gz
+tar zxvf StarRocks-2.3.0-rc03.tar.gz
+cd StarRocks-2.3.0-rc03/
 
 # Install dependencies
 yum install -y java-1.8.0-openjdk-devel.x86_64
@@ -21,6 +21,7 @@ fe/bin/start_fe.sh --daemon
 echo "storage_root_path = ${STARROCKS_HOME}/storage" >> be/conf/be.conf
 echo "disable_storage_page_cache = false" >> be/conf/be.conf
 echo "storage_page_cache_limit = 4G" >> be/conf/be.conf
+echo "mem_limit=90%" >> be/conf/be.conf
 be/bin/start_be.sh --daemon
 
 # Setup cluster
