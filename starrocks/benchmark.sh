@@ -24,16 +24,21 @@ fe/bin/start_fe.sh --daemon
 
 # Start Backend
 echo "storage_root_path = ${STARROCKS_HOME}/storage" >> be/conf/be.conf
-echo "disable_storage_page_cache = false" >> be/conf/be.conf
-echo "storage_page_cache_limit = 4G" >> be/conf/be.conf
-echo "mem_limit=90%" >> be/conf/be.conf
+
+# This if you want to obtain the "tuned" result:
+#echo "disable_storage_page_cache = false" >> be/conf/be.conf
+#echo "storage_page_cache_limit = 4G" >> be/conf/be.conf
+#echo "mem_limit=90%" >> be/conf/be.conf
+
 be/bin/start_be.sh --daemon
 
 # Setup cluster
 mysql -h 127.0.0.1 -P9030 -uroot -e "ALTER SYSTEM ADD BACKEND '${IPADDR}:9050' "
 mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits"
-mysql -h 127.0.0.1 -P9030 -uroot -e "SET GLOBAL enable_column_expr_predicate=true"
 mysql -h 127.0.0.1 -P9030 -uroot hits < create.sql
+
+# This if you want to obtain the "tuned" result:
+#mysql -h 127.0.0.1 -P9030 -uroot -e "SET GLOBAL enable_column_expr_predicate=true"
 
 # Load data
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
@@ -55,8 +60,8 @@ END=$(date +%s)
 LOADTIME=$(echo "$END - $START" | bc)
 echo "Load data costs $LOADTIME seconds"
 
-# Analyze table
-time mysql -h 127.0.0.1 -P9030 -uroot hits -e "ANALYZE TABLE hits"
+# This if you want to obtain the "tuned" result. Analyze table:
+#time mysql -h 127.0.0.1 -P9030 -uroot hits -e "ANALYZE TABLE hits"
 
 # Dataset contains 23676271984 bytes and 99997497 rows
 du -bcs storage/
