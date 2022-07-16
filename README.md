@@ -260,6 +260,7 @@ We also introduced the [Hardware Benchmark](https://clickhouse.com/benchmark/har
 - [ ] Apache Kudu
 - [ ] Apache Kylin
 - [ ] S3 select command in AWS
+- [ ] Kinetica
 
 By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
 
