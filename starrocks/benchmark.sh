@@ -1,12 +1,17 @@
 #!/bin/bash
 
+# This benchmark should run on Amazon Linux
+
 # Install
 wget https://download.starrocks.com/en-US/download/request-download/40/StarRocks-2.3.0-rc03.tar.gz
 tar zxvf StarRocks-2.3.0-rc03.tar.gz
 cd StarRocks-2.3.0-rc03/
 
 # Install dependencies
-yum install -y java-1.8.0-openjdk-devel.x86_64
+sudo yum install -y java-1.8.0-openjdk-devel.x86_64 mysql
+
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk/
+export PATH=$JAVA_HOME/bin:$PATH
 
 # Create directory for FE and BE
 IPADDR=`hostname -i`
@@ -26,8 +31,9 @@ be/bin/start_be.sh --daemon
 
 # Setup cluster
 mysql -h 127.0.0.1 -P9030 -uroot -e "ALTER SYSTEM ADD BACKEND '${IPADDR}:9050' "
-mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits "
+mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits"
 mysql -h 127.0.0.1 -P9030 -uroot -e "SET GLOBAL enable_column_expr_predicate=true"
+mysql -h 127.0.0.1 -P9030 -uroot hits < create.sql
 
 # Load data
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
@@ -50,11 +56,13 @@ LOADTIME=$(echo "$END - $START" | bc)
 echo "Load data costs $LOADTIME seconds"
 
 # Analyze table
-mysql -h 127.0.0.1 -P9030 -uroot hits -e "ANALYZE TABLE hits"
+time mysql -h 127.0.0.1 -P9030 -uroot hits -e "ANALYZE TABLE hits"
 
 # Dataset contains 23676271984 bytes and 99997497 rows
 du -bcs storage/
-wc -l hits.tsv
+mysql -h 127.0.0.1 -P9030 -uroot hits -e "SELECT count(*) FROM hits"
 
 # Run queries
 ./run.sh 2>&1 | tee run.log
+
+sed -r -e 's/query[0-9]+,/[/; s/$/],/' run.log

@@ -1,4 +1,5 @@
 {
+    "hide": true,
     "system": "MariaDB",
     "date": "2022-07-12",
     "machine": "c6a.4xlarge, 500gb gp2",
