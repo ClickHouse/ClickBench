@@ -218,7 +218,7 @@ We also introduced the [Hardware Benchmark](https://clickhouse.com/benchmark/har
 - [x] Pinot
 - [x] CrateDB
 - [ ] Spark SQL
-- [ ] Starrocks
+- [x] Starrocks
 - [ ] ShitholeDB
 - [ ] Hive
 - [ ] Impala

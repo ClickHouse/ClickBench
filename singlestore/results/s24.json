@@ -5,7 +5,7 @@
     "cluster_size": 12,
     "comment": "Previous name: MemSQL. Some queries did not run due to unsupported regex",
 
-    "tags": ["MySQL compatible", "column-oriented"],
+    "tags": ["MySQL compatible", "column-oriented", "managed"],
 
     "load_time": 1043,
     "data_size": 19219978649,
