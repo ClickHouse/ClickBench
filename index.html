@@ -527,7 +527,7 @@ unique_systems.map(elem => {
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
     systems.appendChild(selector);
-    if (!(elem in selectors.system)) { selectors.system[elem] = true; }
+    if (!(elem in selectors.system)) { selectors.system[elem] = data.some(entry => entry.system == elem && !entry.hide); }
     selector.addEventListener('click', e => toggle(e, elem, selectors.system));
 
     /// Highlighting summary rows and table columns on hovering over the system selector.
