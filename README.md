@@ -245,7 +245,7 @@ We also introduced the [Hardware Benchmark](https://clickhouse.com/benchmark/har
 - [ ] ScyllaDB
 - [ ] Elasticsearch
 - [ ] Apache Ignite
-- [ ] Infobright
+- [x] Infobright
 - [ ] Actian Vector
 - [ ] Manticore Search
 - [x] Vertica (without publishing)
@@ -259,6 +259,7 @@ We also introduced the [Hardware Benchmark](https://clickhouse.com/benchmark/har
 - [ ] Apache Drill
 - [ ] Apache Kudu
 - [ ] Apache Kylin
+- [ ] S3 select command in AWS
 
 By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
 
