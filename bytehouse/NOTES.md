@@ -1,5 +1,5 @@
 Bytehouse is a derivative of ClickHouse.
-It is based on very old ClickHouse version and many features are unsupported.
+It is based on very old ClickHouse version (20.4.54418) and many features are unsupported.
 
 https://bytehouse.cloud/signup
 

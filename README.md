@@ -212,6 +212,7 @@ We also introduced the [Hardware Benchmark](https://clickhouse.com/benchmark/har
 - [x] MonetDB
 - [x] mapD/Omnisci/HeavyAI
 - [x] Databend
+- [x] ByteHouse
 - [ ] Doris/PALO
 - [x] Druid
 - [x] Pinot

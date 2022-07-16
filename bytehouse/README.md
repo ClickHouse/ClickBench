@@ -1,5 +1,5 @@
 Bytehouse is a derivative of ClickHouse.
-It is based on very old ClickHouse version and many features are unsupported.
+It is based on very old ClickHouse version (20.4.54418) and many features are unsupported.
 
 https://bytehouse.cloud/signup
 
@@ -58,3 +58,6 @@ cat log.txt | grep --text -F 'Elapsed' |
     awk '{ if ($3 == 0) { print "null" } else if ($2 == "ms") { print $1 / 1000 } else { print $1 } }' |
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 ```
+
+Note: cluster size L is the maximum that can be created.
+An attempt to create XL gives "Failed AWAITING RESOURCES". 
