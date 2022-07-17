@@ -25,12 +25,6 @@ time mongosh --eval 'db.hits.createIndex({"CounterID": 1, "EventDate": 1, "UserI
 sudo du -bcs /var/lib/mongodb/
 # 54587120319
 
-# Install MongoDB JDBC driver
-sudo apt install -y openjdk-17-jdk sqlline
-wget 'https://repo1.maven.org/maven2/org/mongodb/mongodb-jdbc/2.0.0/mongodb-jdbc-2.0.0.jar'
-
-sqlline -d org.mongodb:mongodb-jdbc -u 'jdbc:mongodb://localhost/'
-
 # MongoDB does not support SQL in self-hosted option. Only with MongoDB Atlas service.
 
 # db.hits.stats().count
