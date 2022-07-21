@@ -39,9 +39,6 @@ cat 'queries.sql' | while read -r QUERY; do
 	  # output to result file
           echo "${QUERY_NUM},${i},${ES_TIME}" >> result.csv
 
-          #echo -n $runtime
-	  #echo -n ", " 
-
     done;
 
     echo "],"
