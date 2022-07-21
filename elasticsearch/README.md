@@ -11,7 +11,7 @@ Data loading process:
 - Split JSON file into smaller files and load them sequentially into Elasticsearch via Bulk API
 
 Running the benchmark: 
-- Benchmark run is semi-automated: Manually run through steps one by one in benchmark.sh in bash, but run.sh is provided to run the queries and produce results automatically
+- Benchmark run is semi-automated: Manually run through steps one by one in `benchmark.sh` in bash, but `run.sh` is provided to run the queries and produce results automatically
 - Because OFFSET is not supported by Elasticsearch https://github.com/elastic/elasticsearch/issues/31549, the last 5 queries were modified to replace LIMIT x OFFSET y with LIMIT x+y 
 - I ran into problems using the SQL API directly (some queries would inexplicably stall), but if I used the SQL Translate API and then passed the resulting JSON to Search API, queries completed. 
 - Only one query did not run due to lack of support for REGEXP_REPLACE.
