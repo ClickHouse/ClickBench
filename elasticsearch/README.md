@@ -1,10 +1,8 @@
 Disclaimer: I am not an expert in optimizing Elasticsearch for analytical workloads, so this benchmark uses a "naive" deployment of Elasticsearch with no attempt at any performance optimizations. I also used the Elasticsearch SQL API to generate the queries, which may not always utilize all the power of Elasticsearch aggregations framework. It is likely possible to achieve better results by tuning Elasticsearch as well as rewriting these queries using Elasticsearch native query DSL.
 
 Methodology:
-
-Local install of Elasticsearch 8.3 on AWS EC2 instance c6a.4xlarge
-
-Per instructions, started with 500GB EBS gp2 per instructions, but ran out of space loading data in Elasticsearch abou a third in, and expanded to 1.5TB
+- Local install of Elasticsearch 8.3 on AWS EC2 instance c6a.4xlarge
+- Per instructions, started with 500GB EBS gp2 per instructions, but ran out of space loading data in Elasticsearch abou a third in, and expanded to 1.5TB
 
 Data loading process: 
 - Create index mappings manually, mirroring data types after the ClickHouse benchmark, and using index sorting on the same fields ClickHouse chose for primary keys
