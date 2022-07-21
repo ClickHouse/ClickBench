@@ -261,6 +261,8 @@ We also introduced the [Hardware Benchmark](https://clickhouse.com/benchmark/har
 - [ ] Apache Kylin
 - [ ] S3 select command in AWS
 - [ ] Kinetica
+- [ ] YDB
+- [ ] OceanBase
 
 By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
 
