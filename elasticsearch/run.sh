@@ -1,3 +1,4 @@
+#!/bin/bash
 
 TRIES=3
 
@@ -44,5 +45,3 @@ cat 'queries.sql' | while read -r QUERY; do
     echo "],"
 
 done;
-
-
