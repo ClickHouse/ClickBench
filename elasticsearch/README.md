@@ -3,7 +3,7 @@ Disclaimer: I am not an expert in optimizing Elasticsearch for analytical worklo
 Methodology
 
 Infrastructure:
-- Local install of Elasticsearch 8.3 on AWS EC2 instance c6a.4xlarge
+- Local single-node install of Elasticsearch 8.3 on AWS EC2 instance c6a.4xlarge
 - Per instructions, started with 500GB EBS gp2 per instructions, but ran out of space loading data in Elasticsearch abou a third in, and expanded to 1.5TB
 
 Data loading process: 
