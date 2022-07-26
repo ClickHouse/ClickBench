@@ -20,3 +20,5 @@ Budget some time to run the benchmark:
 - Install and data prep process can take up to an hour.
 - Data loading process takes a bit under 3 hours. 
 - Running the benchmark takes about 2 hours, because of one long-running query which takes 25 minutes x 3 times. 
+
+UPDATE: Added a "tuned" result for Elasticsearch, after going through repeated benchmark to find the optimal Elasticsearch shard number and size for this resource type and workload. This type of tuning is recommended by Elastic ([example](https://www.elastic.co/blog/how-many-shards-should-i-have-in-my-elasticsearch-cluster)), but generally is considered an advanced task for experienced operators. More optimal number of shards (4 in my testing) resulted in 2x improvement in indexing speed and average query performance, at the trade-off of ~13% increase in storage size. 
