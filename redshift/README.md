@@ -17,7 +17,7 @@ To create a table, you can go to the Query Editor v2.
 Open the "dev" database.
 Run the CREATE TABLE statement you find in `create.sql`.
 
-Note: Redshift prefers VARCHAR(MAX) instead of TEXT.
+Note: Redshift prefers VARCHAR(MAX) instead of TEXT and uses Numeric(38, 0) rather than BIGINT for UserID.
 
 Then press on the "Load data".
 This will generate a statement:
@@ -36,7 +36,7 @@ We will run the queries from another server with `psql` client.
 ```
 sudo apt-get install -y postgresql-client
 
-echo "*:*:*:*:your_password" > .pgpass
+echo "*:*:*:*:your_password" > ~/.pgpass
 chmod 400 .pgpass
 
 psql -h redshift-cluster-1.chedgchbam32.eu-central-1.redshift.amazonaws.com -U awsuser -d dev -p 5439
