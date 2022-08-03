@@ -18,7 +18,7 @@ cat queries.sql | while read query; do
 	echo 
 
 
-	./datafusion-cli -f create.sql /tmp/query.sql
+	datafusion-cli -f create.sql /tmp/query.sql
 
     QUERY_NUM=$((QUERY_NUM + 1))
 done
