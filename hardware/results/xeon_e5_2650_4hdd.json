@@ -3,7 +3,7 @@
     "machine":       "Xeon E5-2650",
     "comment":  "Xeon E5-2650 v2 @ 2.60GHz, 2 sockets, 16 threads, 4xHDD RAID-10",
     "time":         "2020-09-25 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "intel"],
     "result":
     [
 [0.040, 0.002, 0.002],
@@ -51,4 +51,3 @@
 [0.054, 0.006, 0.006]
     ]
 }
-

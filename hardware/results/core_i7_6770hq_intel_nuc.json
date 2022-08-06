@@ -3,7 +3,7 @@
     "machine":       "Intel NUC",
     "comment":  "Intel NUC, 4 cores (Intel i7-6770HQ), 32 GiB RAM, 1 TB NVMe SSD",
     "time":         "2020-04-15 00:00:00",
-    "tags": ["desktop"],
+    "tags": ["desktop", "intel"],
     "result":
     [
         [0.003, 0.002, 0.001],
@@ -51,4 +51,3 @@
         [0.022, 0.008, 0.006]
     ]
 }
-

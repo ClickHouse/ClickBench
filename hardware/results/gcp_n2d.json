@@ -2,7 +2,7 @@
     "machine":       "GCP n2d-standard-8",
     "comment":  "GCP n2d-standard-8, AMD EPYC 7B12, 8vCPU, 64 GiB RAM",
     "time":         "2021-11-23 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "gcp", "amd"],
     "result":
     [
 [0.002, 0.002, 0.002],

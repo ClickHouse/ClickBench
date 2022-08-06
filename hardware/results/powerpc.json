@@ -3,7 +3,7 @@
     "machine":       "POWER9 x_large VM",
     "comment":  "POWER9 x_large VM (8 vCPU, pSeries, 16GiB RAM)",
     "time":         "2022-05-10 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "powerpc"],
     "result":
     [
 [0.263, 0.004, 0.004],
@@ -51,4 +51,3 @@
 [0.047, 0.015, 0.012]
     ]
 }
-

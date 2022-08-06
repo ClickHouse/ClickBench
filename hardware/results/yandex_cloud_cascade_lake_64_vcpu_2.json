@@ -2,7 +2,7 @@
     "machine":       "Yandex Cloud s2.6xlarge 4TB SSD",
     "comment":  "Yandex Cloud Cascade Lake, 64 vCPU (32 threads), 128 GB RAM, 4 TB SSD",
     "time":         "2020-01-13 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "yandex", "intel"],
     "result":
     [
         [0.054, 0.002, 0.002],

@@ -2,7 +2,7 @@
     "machine":       "Hetzner CCX22",
     "comment":  "Hetzner CCX22 (AMD EPYC 7003, 4 cores, 16 GiB RAM, NVMe)",
     "time":         "2021-11-17 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "hetzner", "amd"],
     "result":
     [
 [0.001, 0.001, 0.001],

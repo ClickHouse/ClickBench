@@ -3,7 +3,7 @@
     "machine":       "scaleway GP1-S 8x x86",
     "comment":  "scaleway GP1-M 16x x86 64bit 64GB ram 600gb NVMe",
     "time":         "2022-02-16 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "scaleway"],
     "result":
     [
         [0.005,	0.005,	0.036],
@@ -51,4 +51,3 @@
         [0.029,	0.012,	0.012]
     ]
 }
-

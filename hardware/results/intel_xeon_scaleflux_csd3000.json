@@ -3,7 +3,7 @@
     "machine":       "Intel(R) Xeon Silver 4314 with ScaleFlux CSD3000",
     "comment":  "Intel(R) Xeon(R) Silver 4314 CPU @ 2.40GHz, 376 GB RAM, ScaleFlux CSD300 3.5 TB",
     "time":         "2022-07-08 03:58:35",
-    "tags": ["server"],
+    "tags": ["server", "intel"],
     "result":
     [
         [0.002, 0.021, 0.002],
@@ -51,4 +51,3 @@
         [0.005, 0.003, 0.003]
     ]
 }
-

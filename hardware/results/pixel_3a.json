@@ -1,11 +1,9 @@
 
 {
     "machine": "Google Pixel 3a",
-    "comment": "Google Pixel 3a, 8 cores, 4 GB RAM",
-    "cpu_vendor": "Qualcomm",
-    "cpu_model": "Snapdragon 670",
+    "comment": "Google Pixel 3a, 8 cores, 4 GB RAM, Qualcomm Snapdragon 670",
     "time": "2020-07-15 00:00:00",
-    "tags": ["phone"],
+    "tags": ["phone", "arm"],
     "result":
     [
         [0.034, 0.029, 0.035],
@@ -53,5 +51,3 @@
         [0.052, 0.033, 0.036]
     ]
 }
-
-

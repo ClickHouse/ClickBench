@@ -2,9 +2,8 @@
 {
     "machine":       "Yandex Cloud 8vCPU",
     "comment":  "Yandex Cloud Broadwell, 8 vCPU (4 threads), 64 GB RAM, 500 GB SSD",
-    "cpu_vendor":   "Intel",
     "time":         "2021-02-05 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "yandex", "intel"],
     "result":
     [
         [0.004, 0.003, 0.003],
@@ -52,4 +51,3 @@
         [0.014, 0.011, 0.008]
     ]
 }
-

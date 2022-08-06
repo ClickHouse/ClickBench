@@ -3,7 +3,7 @@
     "machine":       "Dell PowerEdge R740xd",
     "comment":  "Dell PowerEdge R740xd, 256GB, 2 * Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz, 48 vCPU",
     "time":         "2022-06-18 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "intel"],
     "result":
     [
         [0.004, 0.003, 0.070],
@@ -51,4 +51,3 @@
         [0.048, 0.023, 0.011]
     ]
 }
-

@@ -3,7 +3,7 @@
     "machine":       "AWS i3.2xlarge",
     "comment":  "AWS i3.2xlarge Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz",
     "time":         "2022-01-02 03:16:35",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "intel"],
     "result":
     [
         [0.002, 0.002, 0.002],
@@ -51,4 +51,3 @@
         [0.007, 0.004, 0.005]
     ]
 }
-

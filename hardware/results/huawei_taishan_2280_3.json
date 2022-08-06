@@ -3,7 +3,7 @@
     "machine":       "Huawei TaiShan (2)",
     "comment":  "Huawei TaiShan 2280 (AArch64) 2280 (2x64 cores, SSD)",
     "time":         "2020-11-03 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "arm"],
     "result":
     [
         [0.001, 0.003, 0.002],
@@ -51,4 +51,3 @@
         [0.005, 0.006, 0.006]
     ]
 }
-

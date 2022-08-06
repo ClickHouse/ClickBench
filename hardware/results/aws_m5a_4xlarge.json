@@ -3,7 +3,7 @@
     "machine":       "AWS m5a.4xlarge",
     "comment":  "AWS m5a.4xlarge 16 vCPU, 512 GiB RAM, EBS GP3",
     "time":         "2020-08-13 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "amd"],
     "result":
     [
         [0.002, 0.002, 0.002],
@@ -51,5 +51,3 @@
         [0.007, 0.005, 0.007]
     ]
 }
-
-

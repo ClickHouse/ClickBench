@@ -3,7 +3,7 @@
     "machine":       "Scaleway GP1-XS",
     "comment":  "Scaleway GP1-XS (AMD EPYC 7401P, 4 cores, 16 GiB RAM, NVMe)",
     "time":         "2021-11-17 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "amd"],
     "result":
     [
 [0.002, 0.002, 0.002],
@@ -51,4 +51,3 @@
 [0.006, 0.017, 0.014]
     ]
 }
-

@@ -2,7 +2,7 @@
     "machine":       "AMD EPYC 7402P HDD",
     "comment":       "AMD EPYC 7402P 2.8 GHz, 128 GB DDR4, HDD RAID1 2×8000 GB HDD (TOSHIBA MG06ACA800E)",
     "time":         "2020-01-26 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "amd"],
     "result":
     [
         [0.149, 0.002, 0.002],

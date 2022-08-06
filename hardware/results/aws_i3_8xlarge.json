@@ -3,7 +3,7 @@
     "machine":       "AWS i3.8xlarge",
     "comment":      "AWS i3.8xlarge 32vCPU 244GiB 4x1900 NVMe SSD",
     "time":         "2020-01-15 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "intel"],
     "result":
     [
         [0.009, 0.002, 0.002],
@@ -51,4 +51,3 @@
         [0.012, 0.007, 0.007]
     ]
 }
-

@@ -2,10 +2,8 @@
 {
     "machine":       "Xeon Gold 6230",
     "comment":      "Xeon Gold 6230, 2 sockets, 40 threads",
-    "cpu_vendor":   "Intel",
-    "cpu_model":    "Xeon Gold 6230",
     "time":         "2020-01-01 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "intel"],
     "result":
     [
         [0.009, 0.002, 0.001],
@@ -53,4 +51,3 @@
         [0.009, 0.005, 0.005]
     ]
 }
-

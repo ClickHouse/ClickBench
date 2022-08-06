@@ -2,7 +2,7 @@
     "machine":       "AMD EPYC 7502P nVME",
     "comment":       "AMD EPYC 7502P / 128G DDR4 / 2NVME SAMSUNG MZQLB960HAJR",
     "time":         "2020-03-05 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "amd"],
     "result":
     [
         [0.012, 0.019, 0.009],

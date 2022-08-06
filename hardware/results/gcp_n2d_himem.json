@@ -2,7 +2,7 @@
     "machine":       "GCP n2d-16-highmem",
     "comment":  "GCP compute n2d-16-highmem, AMD EPYC 7B12, 16vCPU, 128 GiB RAM",
     "time":         "2021-11-18 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "gcp", "amd"],
     "result":
     [
 [0.002, 0.001, 0.001],

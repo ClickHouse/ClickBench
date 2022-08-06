@@ -3,7 +3,7 @@
     "machine":       "Xeon E5645",
     "comment":      "Xeon E5645 @ 2.40GHz, 2 sockets, 12 threads, 96 GiB, 14 x 2TB HDD RAID-10",
     "time":         "2020-01-18 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "intel"],
     "result":
     [
         [0.061, 0.003, 0.003],
@@ -51,4 +51,3 @@
         [0.062, 0.010, 0.010]
     ]
 }
-

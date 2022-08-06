@@ -3,7 +3,7 @@
     "machine":       "MacBook Pro M1",
     "comment":  "MacBook Pro M1 Max 16\" 2022, 64 GiB RAM, 1 TB SSD",
     "time":         "2022-02-27 00:00:00",
-    "tags": ["laptop"],
+    "tags": ["laptop", "arm", "apple"],
     "result":
     [
         [0.012, 0.001, 0.001],
@@ -51,4 +51,3 @@
         [0.017, 0.003, 0.003]
     ]
 }
-

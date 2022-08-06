@@ -3,7 +3,7 @@
     "machine":       "AWS c5.metal 100GB",
     "comment":  "AWS c5.metal 96vCPU 192GiB 100GB SSD",
     "time":         "2020-01-17 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "intel"],
     "result":
     [
         [0.013, 0.003, 0.002],
@@ -51,4 +51,3 @@
         [0.021, 0.022, 0.008]
     ]
 }
-

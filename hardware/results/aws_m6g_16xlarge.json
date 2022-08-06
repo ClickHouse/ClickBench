@@ -3,7 +3,7 @@
     "machine":       "AWS m6g.16xlarge (Graviton 2)",
     "comment":  "AWS m6g.16xlarge (Graviton 2) 64 vCPU, 256 GiB RAM, EBS",
     "time":         "2020-02-13 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "arm"],
     "result":
     [
         [0.012, 0.003, 0.003],
@@ -51,4 +51,3 @@
         [0.010, 0.007, 0.007]
     ]
 }
-

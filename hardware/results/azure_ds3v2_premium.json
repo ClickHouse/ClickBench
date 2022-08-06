@@ -2,7 +2,7 @@
     "machine":       "Azure DS3v2 Premium SSD",
     "comment":       "Azure DS3v2 4vcpu 14GB RAM 1TB Premium SSD",
     "time":         "2020-01-15 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "azure"],
     "result":
     [
         [0.047, 0.004, 0.003],

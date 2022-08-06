@@ -3,7 +3,7 @@
     "machine":       "scaleway GP1-S 8x x86",
     "comment":  "scaleway GP1-S 8x x86 64bit 32GB ram 300gb NVMe",
     "time":         "2022-02-16 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "scaleway"],
     "result":
     [
         [0.026, 0.004, 0.004],
@@ -51,4 +51,3 @@
         [0.008, 0.011, 0.015]
     ]
 }
-

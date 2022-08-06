@@ -3,7 +3,7 @@
     "machine":       "Asus A15",
     "comment":  "Asus A15 (16 × AMD Ryzen 7 4800H, 16 GiB RAM)",
     "time":         "2021-03-23 00:00:00",
-    "tags": ["laptop"],
+    "tags": ["laptop", "amd"],
     "result":
     [
 [0.004, 0.003, 0.003],
@@ -51,4 +51,3 @@
 [0.023, 0.013, 0.018]
     ]
 }
-

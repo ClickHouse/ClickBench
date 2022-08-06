@@ -3,7 +3,7 @@
     "machine":       "Rock Pi 4, 4GiB, NVMe",
     "comment":  "Rock Pi 4, 4GiB C, NVMe",
     "time":         "2021-12-23 00:00:00",
-    "tags": ["desktop"],
+    "tags": ["desktop", "arm"],
     "result":
     [
 [0.007, 0.014, 0.005],
@@ -51,4 +51,3 @@
 [0.188, 0.024, 0.016]
     ]
 }
-

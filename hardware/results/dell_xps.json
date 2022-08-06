@@ -1,11 +1,9 @@
 
 {
     "machine": "Dell XPS 15",
-    "comment": "Dell XPS 15, 6 cores, 32 GB RAM",
-    "cpu_vendor": "Intel",
-    "cpu_model": "i7-8750H CPU @ 2.20GHz",
+    "comment": "Dell XPS 15, 6 cores, 32 GB RAM, i7-8750H CPU @ 2.20GHz",
     "time": "2020-07-15 00:00:00",
-    "tags": ["laptop"],
+    "tags": ["laptop", "intel"],
     "result":
     [
         [0.004, 0.004, 0.002],
@@ -53,4 +51,3 @@
         [0.010, 0.007, 0.011]
     ]
 }
-

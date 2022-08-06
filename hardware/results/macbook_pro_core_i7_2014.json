@@ -3,7 +3,7 @@
     "machine":       "MacBook Pro 2014",
     "comment":       "MacBook Pro 2014, 2.5 GHz Quad-Core Intel Core i7, 16 GiB RAM",
     "time":         "2020-04-04 00:00:00",
-    "tags": ["laptop"],
+    "tags": ["laptop", "intel", "apple"],
     "result":
     [
         [0.030, 0.003, 0.003],
@@ -51,4 +51,3 @@
         [0.045, 0.007, 0.007]
     ]
 }
-

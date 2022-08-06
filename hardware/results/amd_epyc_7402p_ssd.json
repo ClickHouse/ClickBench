@@ -2,7 +2,7 @@
     "machine":       "AMD EPYC 7402P SSD",
     "comment":      "AMD EPYC 7402P 2.8 GHz, 128 GB DDR4, SSD RAID1 2×1920 GB SSD (INTEL SSDSC2KB019T7)",
     "time":         "2020-01-26 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "amd"],
     "result":
     [
         [0.014, 0.002, 0.002],

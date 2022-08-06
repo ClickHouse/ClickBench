@@ -3,7 +3,7 @@
     "machine":       "Intel(R) 11th Gen Core i9-11900KF",
     "comment":  "Intel(R) 11th Gen Core i9-11900KF, 64 GB RAM, 1 TB SSD",
     "time":         "2022-03-27 04:04:00",
-    "tags": ["server"],
+    "tags": ["server", "intel"],
     "result":
     [
         [0.001, 0.001, 0.001],
@@ -51,4 +51,3 @@
         [0.003, 0.002, 0.003]
     ]
 }
-

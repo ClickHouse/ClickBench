@@ -3,7 +3,7 @@
     "machine":       "AWS c7g.16xlarge (Graviton 3)",
     "comment":  "AWS c7g.16xlarge (Graviton 3) 64 vCPU, 128 GiB RAM, EBS",
     "time":         "2022-05-24 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "arm"],
     "result":
     [
 [0.002, 0.002, 0.002],
@@ -51,4 +51,3 @@
 [0.016, 0.016, 0.004]
     ]
 }
-

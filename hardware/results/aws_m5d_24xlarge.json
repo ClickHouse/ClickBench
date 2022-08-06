@@ -3,7 +3,7 @@
     "machine":       "AWS m5d.24xlarge",
     "comment":      "AWS m5d.24xlarge 96vCPU 384GiB 4x900 NVMe SSD",
     "time":         "2020-01-15 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "intel"],
     "result":
     [
         [0.012, 0.002, 0.002],
@@ -51,4 +51,3 @@
         [0.016, 0.006, 0.006]
     ]
 }
-

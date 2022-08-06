@@ -1,9 +1,9 @@
 
 {
-    "machine":       "2x EPYC 7702 on ZFS mirror NVME",
+    "machine":       "EPYC 7702 on ZFS mirror NVME",
     "comment":  "2x EPYC 7702 on ZFS mirror NVME, AMD EPYC 7702 64-Core Processor",
     "time":         "2022-01-14 21:07:13",
-    "tags": ["server"],
+    "tags": ["server", "amd"],
     "result":
     [
         [0.001, 0.002, 0.001],
@@ -51,4 +51,3 @@
         [0.004, 0.010, 0.009]
     ]
 }
-

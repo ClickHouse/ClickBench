@@ -3,7 +3,7 @@
     "machine":       "ASUS Z390-Plus Server",
     "comment":  "ASUS Z390-Plus Server with Intel I5-9600K and DDR4 16GB",
     "time":         "2021-11-05 03:00:00",
-    "tags": ["server"],
+    "tags": ["server", "intel"],
     "result":
     [
        [0.001, 0.001, 0.001],
@@ -51,4 +51,3 @@
        [0.020, 0.003, 0.002]
     ]
 }
-

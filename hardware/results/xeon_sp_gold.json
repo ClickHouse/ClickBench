@@ -2,10 +2,8 @@
 {
     "machine":       "Dell PowerEdge R640",
     "comment":      "Dell PowerEdge R640 DX292 2x Xeon SP Gold 16-Core 2.10GHz, 196 GB RAM, 2x SSD 960 GB RAID-1",
-    "cpu_vendor":   "Intel",
-    "cpu_model":   "Xeon SP Gold",
     "time":         "2020-01-13 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "intel"],
     "result":
     [
         [0.005, 0.003, 0.003],
@@ -53,4 +51,3 @@
         [0.013, 0.010, 0.010]
     ]
 }
-

@@ -3,7 +3,7 @@
     "machine":       "ThinkPad P15",
     "comment":  "Lenovo ThinkPad P15, i7-11800H @ 2.30GHz, 16 cores, 32 GiB RAM, NVMe",
     "time":         "2021-11-19 00:00:00",
-    "tags": ["laptop"],
+    "tags": ["laptop", "intel"],
     "result":
     [
 [0.001, 0.001, 0.001],
@@ -51,4 +51,3 @@
 [0.010, 0.002, 0.004]
     ]
 }
-

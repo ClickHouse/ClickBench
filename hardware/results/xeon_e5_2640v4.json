@@ -3,7 +3,7 @@
     "machine":       "Dell PowerEdge R730xd",
     "comment":       "Dell PowerEdge R730xd, 2 socket 10 cores E5-2640 v4, HW RAID5 3TBx12 SATA",
     "time":         "2020-01-14 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "intel"],
     "result":
     [
         [0.225, 0.001, 0.002],
@@ -51,4 +51,3 @@
         [0.058, 0.006, 0.006]
     ]
 }
-

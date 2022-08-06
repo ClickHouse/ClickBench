@@ -3,7 +3,7 @@
     "machine":       "GCP c2-standard-30",
     "comment":  "GCP c2-standard-30, 128 GiB RAM",
     "time":         "2021-11-25 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "gcp"],
     "result":
     [
 [0.001, 0.001, 0.002],
@@ -51,4 +51,3 @@
 [0.016, 0.004, 0.003]
     ]
 }
-

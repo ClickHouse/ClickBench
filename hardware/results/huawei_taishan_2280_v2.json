@@ -3,7 +3,7 @@
     "machine":       "Huawei TaiShan",
     "comment":      "Huawei TaiShan 2280 v2 (AArch64) 64 core (2-die), one physical HDD",
     "time":         "2020-01-15 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "arm"],
     "result":
     [
         [0.356, 0.002, 0.002],
@@ -51,4 +51,3 @@
         [0.340, 0.007, 0.007]
     ]
 }
-

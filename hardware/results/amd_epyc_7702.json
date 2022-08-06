@@ -3,7 +3,7 @@
     "machine":       "AMD EPYC 7702",
     "comment":  "AMD EPYC 7702, 256 cores, 512 GiB, NVMe SSD",
     "time":         "2020-04-09 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "amd"],
     "result":
     [
         [0.006, 0.002, 0.002],
@@ -51,4 +51,3 @@
         [0.024, 0.007, 0.007]
     ]
 }
-

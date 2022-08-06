@@ -1,10 +1,8 @@
 {
     "machine":       "DigitalOcean Storage-opt 8",
     "comment":  "DigitalOcean 8 CPUs, 64 GB RAM, 1.17 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
-    "cpu_vendor":   "Intel",
-    "cpu_model":    "Xeon Gold 6140",
     "time":         "2020-12-13 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "do", "intel"],
     "result":
     [
 [0.003, 0.002, 0.002],

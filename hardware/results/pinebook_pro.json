@@ -3,7 +3,7 @@
     "machine":       "Pinebook Pro",
     "comment":       "Pinebook Pro (AArch64, 4 GiB RAM)",
     "time":         "2020-03-08 00:00:00",
-    "tags": ["laptop"],
+    "tags": ["laptop", "arm"],
     "result":
     [
         [0.021, 0.009, 0.007],
@@ -51,4 +51,3 @@
         [null, null, null]
     ]
 }
-

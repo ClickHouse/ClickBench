@@ -3,7 +3,7 @@
     "machine":       "AWS im4gn.4xlarge",
     "comment":  "AWS im4gn.4xlarge Neoverse-N1 1x7,500 NVMe SSD",
     "time":         "2022-01-02 06:59:48",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "arm"],
     "result":
     [
         [0.002, 0.002, 0.002],
@@ -51,4 +51,3 @@
         [0.006, 0.010, 0.017]
     ]
 }
-

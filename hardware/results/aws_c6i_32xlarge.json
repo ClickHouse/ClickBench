@@ -3,7 +3,7 @@
     "machine":       "AWS c6i.32xlarge",
     "comment":  "AWS c6i.32xlarge 128vCPU 256GiB 200GB gp2 EBS, Xeon(R) Platinum 8375C CPU @ 2.90GHz, Amazon Linux",
     "time":         "2021-11-27 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "intel"],
     "result":
     [
 [0.002, 0.001, 0.001],
@@ -51,4 +51,3 @@
 [0.005, 0.008, 0.002]
     ]
 }
-

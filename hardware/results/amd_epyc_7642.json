@@ -3,7 +3,7 @@
     "machine":       "AMD EPYC 7642",
     "comment":  "2x AMD EPYC 7642 / 512 GB RAM / 12x 1TB SSD (RAID 6)",
     "time":         "2020-09-21 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "amd"],
     "result":
     [
         [0.003, 0.003, 0.002],
@@ -51,6 +51,3 @@
         [0.007, 0.007, 0.007]
     ]
 }
-
-
-

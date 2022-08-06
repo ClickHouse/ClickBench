@@ -3,7 +3,7 @@
     "machine":       "MacBook Pro 2020",
     "comment":  "MacBook Pro 2020, 2.3 GHz Quad-Core Intel Core i7 (10th gen), 32 GiB RAM, 2TB SSD",
     "time":         "2020-06-25 00:00:00",
-    "tags": ["laptop"],
+    "tags": ["laptop", "intel", "apple"],
     "result":
     [
 [0.003, 0.002, 0.002],
@@ -51,4 +51,3 @@
 [0.005, 0.006, 0.007]
     ]
 }
-

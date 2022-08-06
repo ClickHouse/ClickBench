@@ -3,7 +3,7 @@
     "machine":       "AWS Lightsail 4vCPU",
     "comment":  "AWS Lightsail E5-2686 v4 @ 2.30GHz, 16 GiB RAM",
     "time":         "2020-07-02 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "intel"],
     "result":
     [
         [0.002, 0.001, 0.001],
@@ -51,4 +51,3 @@
         [0.007, 0.007, 0.006]
     ]
 }
-

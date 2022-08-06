@@ -3,7 +3,7 @@
     "machine":       "AWS m5ad.24xlarge",
     "comment":       "AWS m5ad.24xlarge 96vCPU 384GiB 4x900 NVMe SSD, AMD EPYC 7000 series 2.5 GHz",
     "time":         "2020-01-17 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "amd"],
     "result":
     [
         [0.013, 0.002, 0.002],
@@ -51,4 +51,3 @@
         [0.013, 0.008, 0.007]
     ]
 }
-

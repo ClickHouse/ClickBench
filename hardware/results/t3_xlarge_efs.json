@@ -2,7 +2,7 @@
     "machine":       "t3.xlarge, EFS",
     "comment":  "t3.xlarge, EFS 1 TiB gp, prov. at 1000 MiB/s",
     "time":         "2021-11-08 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "intel"],
     "result":
     [
 [0.001,0.001,0.001],

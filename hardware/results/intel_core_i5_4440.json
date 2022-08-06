@@ -3,7 +3,7 @@
     "machine":       "Intel(R) Core(TM) i5-4440 CPU @ 3.10GHz",
     "comment":  "Intel(R) Core(TM) i5-4440 CPU @ 3.10GHz",
     "time":         "2022-01-06 08:48:45",
-    "tags": ["server"],
+    "tags": ["server", "intel"],
     "result":
     [
         [0.002, 0.001, 0.001],
@@ -51,4 +51,3 @@
         [0.059, 0.006, 0.007]
     ]
 }
-

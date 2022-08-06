@@ -3,7 +3,7 @@
     "machine":       "Lenovo Thinkpad X1 Carbon",
     "comment":      "Lenovo Thinkpad X1 Carbon 6th Gen i7-8550U CPU @ 1.80GHz 4 threads, 16 GiB",
     "time":         "2020-01-18 00:00:00",
-    "tags": ["laptop"],
+    "tags": ["laptop", "intel"],
     "result":
     [
         [0.006, 0.002, 0.002],
@@ -51,4 +51,3 @@
         [0.010, 0.007, 0.006]
     ]
 }
-

@@ -3,7 +3,7 @@
     "machine":       "Linode 16GB",
     "comment":  "Linode Cloud 16GB RAM, 6 AMD EPYC 7601 CPU Cores 2200 MHz, 320GB Storage, CentOS Linux release 7.9.2009 kernel 3.10.0-1160, KVM",
     "time":         "2021-11-05 18:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "linode", "amd"],
     "result":
     [
 [0.003, 0.002, 0.002],
@@ -51,4 +51,3 @@
 [0.050, 0.040, 0.010]
     ]
 }
-

@@ -1,8 +1,8 @@
 {
-    "machine":       "2x AMD EPYC 7642, 7.2 TB NVM",
+    "machine":       "AMD EPYC 7642, 7.2 TB NVM",
     "comment":  "2x AMD EPYC 7642 - 512 GB RAM - 7.2 TB NVM",
     "time":         "2021-01-13 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "ibm", "amd"],
     "result":
     [
 [0.003, 0.002, 0.002],

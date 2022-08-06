@@ -3,7 +3,7 @@
     "machine":       "Azure E32s v3",
     "comment":       "Azure E32s v3 32 256 GiB 512 GiB",
     "time":         "2020-03-23 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "azure"],
     "result":
     [
         [0.003, 0.002, 0.003],
@@ -51,4 +51,3 @@
         [0.032, 0.009, 0.007]
     ]
 }
-

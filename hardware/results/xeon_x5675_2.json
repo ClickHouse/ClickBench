@@ -2,7 +2,7 @@
     "machine":       "ProLiant DL380 G7 (2 CPU)",
     "comment":       "ProLiant DL380 G7, 12Gb RAM, 2x Xeon X5675 3.07GHz, 8x300GB SAS soft RAID5",
     "time":         "2020-02-18 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "intel"],
     "result":
     [
         [0.041, 0.005, 0.005],

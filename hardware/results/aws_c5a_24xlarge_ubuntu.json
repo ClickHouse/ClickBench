@@ -2,7 +2,7 @@
     "machine":       "AWS c5a.24xlarge",
     "comment":  "AWS c5a.24xlarge 96vCPU 192GiB 200GB gp2 EBS, AMD EPYC 7R32, Ubuntu 20.04",
     "time":         "2021-11-27 00:00:00",
-    "tags": ["cloud"],
+    "tags": ["cloud", "aws", "amd"],
     "result":
     [
 [0.001, 0.001, 0.002],

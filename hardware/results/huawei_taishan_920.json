@@ -3,7 +3,7 @@
     "machine":       "Huawei TaiShan",
     "comment":      "Huawei TaiShan Kunpeng 920, 96 vCPU, 256GB RAM",
     "time":         "2022-06-18 00:00:00",
-    "tags": ["server"],
+    "tags": ["server", "arm"],
     "result":
     [
         [0.018, 0.001, 0.002],
@@ -51,4 +51,3 @@
         [0.064, 0.005, 0.005]
     ]
 }
-
