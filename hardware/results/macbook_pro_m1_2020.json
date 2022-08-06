@@ -1,7 +1,7 @@
 [
     {
-        "system":       "MacBook Pro M1",
-        "system_full":  "MacBook Pro M1 13\" 2020, 8‑core CPU, 16 GiB RAM, 512 GB SSD",
+        "machine":       "MacBook Pro M1",
+        "comment":  "MacBook Pro M1 13\" 2020, 8‑core CPU, 16 GiB RAM, 512 GB SSD",
         "time":         "2021-10-22 18:17:00",
         "tags": ["laptop"],
         "result":

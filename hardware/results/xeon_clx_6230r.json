@@ -1,7 +1,7 @@
 [
     {
-        "system":       "2x Intel CLX 6230R",
-        "system_full":  "2x Intel CLX 6230R, 384 GB RAM, P4600 1.6 TB ext4",
+        "machine":       "2x Intel CLX 6230R",
+        "comment":  "2x Intel CLX 6230R, 384 GB RAM, P4600 1.6 TB ext4",
         "cpu_vendor":   "Intel",
         "cpu_model":    "2x Intel CLX 6230R",
         "time":         "2020-11-13 00:00:00",

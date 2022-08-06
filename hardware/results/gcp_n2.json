@@ -1,7 +1,7 @@
 [
     {
-        "system":       "GCP n2-highmem-32",
-        "system_full":  "GCP n2-highmem-32, 256 GiB RAM",
+        "machine":       "GCP n2-highmem-32",
+        "comment":  "GCP n2-highmem-32, 256 GiB RAM",
         "time":         "2021-11-25 00:00:00",
         "tags": ["cloud"],
         "result":

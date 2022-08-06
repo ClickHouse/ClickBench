@@ -1,7 +1,7 @@
 [
     {
-        "system":       "ThinkPad P15",
-        "system_full":  "Lenovo ThinkPad P15, i7-11800H @ 2.30GHz, 16 cores, 32 GiB RAM, NVMe",
+        "machine":       "ThinkPad P15",
+        "comment":  "Lenovo ThinkPad P15, i7-11800H @ 2.30GHz, 16 cores, 32 GiB RAM, NVMe",
         "time":         "2021-11-19 00:00:00",
         "tags": ["laptop"],
         "result":

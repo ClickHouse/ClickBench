@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Equinix metal n3.xlarge.x84",
-        "system_full":      "Equinix metal n3.xlarge.x84 503 Gib local NVMe ",
+        "machine":       "Equinix metal n3.xlarge.x84",
+        "comment":      "Equinix metal n3.xlarge.x84 503 Gib local NVMe ",
         "time":         "2022-07-12 10:25:52",
         "tags": ["server"],
         "result":

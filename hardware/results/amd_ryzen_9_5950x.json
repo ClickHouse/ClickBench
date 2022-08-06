@@ -1,7 +1,7 @@
 [
     {
-        "system":       "AMD Ryzen 9 (2022)",
-        "system_full":  " AMD Ryzen 9 5950X 16-Core Processor, 125Gi RAM",
+        "machine":       "AMD Ryzen 9 (2022)",
+        "comment":  " AMD Ryzen 9 5950X 16-Core Processor, 125Gi RAM",
         "time":         "2022-05-03 00:00:00",
         "tags": ["desktop"],
         "result":

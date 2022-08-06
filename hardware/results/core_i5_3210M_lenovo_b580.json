@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Lenovo B580",
-        "system_full":      "Lenovo B580 Laptop (i5-3210M)",
+        "machine":       "Lenovo B580",
+        "comment":      "Lenovo B580 Laptop (i5-3210M)",
         "time":         "2020-01-11 00:00:00",
         "tags": ["laptop"],
         "result":

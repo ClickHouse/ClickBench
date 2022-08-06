@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Yandex Cloud 32vCPU",
-        "system_full":  "Yandex Cloud Cascade Lake, 32 vCPU, 128 GB RAM, 300 GB SSD",
+        "machine":       "Yandex Cloud 32vCPU",
+        "comment":  "Yandex Cloud Cascade Lake, 32 vCPU, 128 GB RAM, 300 GB SSD",
         "cpu_vendor":   "Intel",
         "time":         "2020-09-23 00:00:00",
         "tags": ["cloud"],

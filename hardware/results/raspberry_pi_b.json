@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Raspberry Pi 4",
-        "system_full":  "Raspberry Pi 4 Model B 8GB",
+        "machine":       "Raspberry Pi 4",
+        "comment":  "Raspberry Pi 4 Model B 8GB",
         "time":         "2020-11-14 00:00:00",
         "tags": ["desktop"],
         "result":

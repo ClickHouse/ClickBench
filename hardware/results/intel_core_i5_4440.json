@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Intel(R) Core(TM) i5-4440 CPU @ 3.10GHz",
-        "system_full":  "Intel(R) Core(TM) i5-4440 CPU @ 3.10GHz",
+        "machine":       "Intel(R) Core(TM) i5-4440 CPU @ 3.10GHz",
+        "comment":  "Intel(R) Core(TM) i5-4440 CPU @ 3.10GHz",
         "time":         "2022-01-06 08:48:45",
         "tags": ["server"],
         "result":

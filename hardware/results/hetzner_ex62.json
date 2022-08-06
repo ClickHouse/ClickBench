@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Hetzner EX62",
-        "system_full":  "Hetzner EX62 (Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz, 128 RAM DDR4 2666, NVMe)",
+        "machine":       "Hetzner EX62",
+        "comment":  "Hetzner EX62 (Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz, 128 RAM DDR4 2666, NVMe)",
         "time":         "2022-04-28 00:00:00",
         "tags": ["server"],
         "result":

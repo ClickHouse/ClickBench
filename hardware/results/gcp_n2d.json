@@ -1,7 +1,7 @@
 [
     {
-        "system":       "GCP n2d-16-highmem",
-        "system_full":  "GCP compute n2d-16-highmem, AMD EPYC 7B12, 16vCPU, 128 GiB RAM",
+        "machine":       "GCP n2d-16-highmem",
+        "comment":  "GCP compute n2d-16-highmem, AMD EPYC 7B12, 16vCPU, 128 GiB RAM",
         "time":         "2021-11-18 00:00:00",
         "tags": ["cloud"],
         "result":
@@ -52,8 +52,8 @@
         ]
     },
     {
-        "system":       "GCP n2d-standard-8",
-        "system_full":  "GCP n2d-standard-8, AMD EPYC 7B12, 8vCPU, 64 GiB RAM",
+        "machine":       "GCP n2d-standard-8",
+        "comment":  "GCP n2d-standard-8, AMD EPYC 7B12, 8vCPU, 64 GiB RAM",
         "time":         "2021-11-23 00:00:00",
         "tags": ["cloud"],
         "result":

@@ -1,7 +1,7 @@
 [
     {
-        "system":       "AWS c7g.16xlarge (Graviton 3)",
-        "system_full":  "AWS c7g.16xlarge (Graviton 3) 64 vCPU, 128 GiB RAM, EBS",
+        "machine":       "AWS c7g.16xlarge (Graviton 3)",
+        "comment":  "AWS c7g.16xlarge (Graviton 3) 64 vCPU, 128 GiB RAM, EBS",
         "time":         "2022-05-24 00:00:00",
         "tags": ["cloud"],
         "result":

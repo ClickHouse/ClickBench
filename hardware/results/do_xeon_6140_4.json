@@ -1,7 +1,7 @@
 [
     {
-        "system":       "DigitalOcean CPU-opt 4",
-        "system_full":  "DigitalOcean CPU-Optimized 4CPU/8GB RAM Intel(R) Xeon(R) Gold 6140",
+        "machine":       "DigitalOcean CPU-opt 4",
+        "comment":  "DigitalOcean CPU-Optimized 4CPU/8GB RAM Intel(R) Xeon(R) Gold 6140",
         "cpu_vendor":   "Intel",
         "cpu_model":    "Xeon Gold 6140",
         "time":         "2020-11-14 00:00:00",

@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Xeon E5-2650",
-        "system_full":  "Xeon E5-2650 v2 @ 2.60GHz, 2 sockets, 16 threads, 4xHDD RAID-10",
+        "machine":       "Xeon E5-2650",
+        "comment":  "Xeon E5-2650 v2 @ 2.60GHz, 2 sockets, 16 threads, 4xHDD RAID-10",
         "time":         "2020-09-25 00:00:00",
         "tags": ["server"],
         "result":

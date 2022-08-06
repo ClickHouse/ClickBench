@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Hetzner CCX22",
-        "system_full":  "Hetzner CCX22 (AMD EPYC 7003, 4 cores, 16 GiB RAM, NVMe)",
+        "machine":       "Hetzner CCX22",
+        "comment":  "Hetzner CCX22 (AMD EPYC 7003, 4 cores, 16 GiB RAM, NVMe)",
         "time":         "2021-11-17 00:00:00",
         "tags": ["server"],
         "result":
@@ -52,8 +52,8 @@
         ]
     },
     {
-        "system":       "Hetzner CCX32",
-        "system_full":  "Hetzner CCX32 (AMD EPYC 7003, 8 cores, 32 GiB RAM, NVMe)",
+        "machine":       "Hetzner CCX32",
+        "comment":  "Hetzner CCX32 (AMD EPYC 7003, 8 cores, 32 GiB RAM, NVMe)",
         "time":         "2021-11-17 00:00:00",
         "tags": ["server"],
         "result":

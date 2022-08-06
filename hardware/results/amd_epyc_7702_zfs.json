@@ -1,7 +1,7 @@
 [
     {
-        "system":       "2x EPYC 7702 on ZFS mirror NVME",
-        "system_full":  "2x EPYC 7702 on ZFS mirror NVME, AMD EPYC 7702 64-Core Processor",
+        "machine":       "2x EPYC 7702 on ZFS mirror NVME",
+        "comment":  "2x EPYC 7702 on ZFS mirror NVME, AMD EPYC 7702 64-Core Processor",
         "time":         "2022-01-14 21:07:13",
         "tags": ["server"],
         "result":

@@ -1,7 +1,7 @@
 [
     {
-        "system":       "AMD EPYC 7662",
-        "system_full":  "AMD EPYC 7662 64-Core Processor",
+        "machine":       "AMD EPYC 7662",
+        "comment":  "AMD EPYC 7662 64-Core Processor",
         "time":         "2022-01-26 11:28:55",
         "tags": ["server"],
         "result":

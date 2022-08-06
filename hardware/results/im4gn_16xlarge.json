@@ -1,7 +1,7 @@
 [
     {
-        "system":       "AWS im4gn.16xlarge",
-        "system_full":  "AWS im4gn.16xlarge Neoverse-N1 4x7,500 NVMe SSD",
+        "machine":       "AWS im4gn.16xlarge",
+        "comment":  "AWS im4gn.16xlarge Neoverse-N1 4x7,500 NVMe SSD",
         "time":         "2022-01-04 01:04:37",
         "tags": ["cloud"],
         "result":

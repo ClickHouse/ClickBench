@@ -1,7 +1,7 @@
 [
     {
-        "system":       "ASUS Z390-Plus Server",
-        "system_full":  "ASUS Z390-Plus Server with Intel I5-9600K and DDR4 16GB",
+        "machine":       "ASUS Z390-Plus Server",
+        "comment":  "ASUS Z390-Plus Server with Intel I5-9600K and DDR4 16GB",
         "time":         "2021-11-05 03:00:00",
         "tags": ["server"],
         "result":

@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Yandex Cloud s2.6xlarge",
-        "system_full":      "Yandex Cloud Cascade Lake, 64 vCPU (32 threads), 128 GB RAM, 400 GB SSD",
+        "machine":       "Yandex Cloud s2.6xlarge",
+        "comment":      "Yandex Cloud Cascade Lake, 64 vCPU (32 threads), 128 GB RAM, 400 GB SSD",
         "cpu_vendor":   "Intel",
         "time":         "2020-01-11 00:00:00",
         "tags": ["cloud"],
@@ -54,8 +54,8 @@
     },
 
     {
-        "system":       "Yandex Cloud s2.6xlarge 4TB SSD",
-        "system_full":  "Yandex Cloud Cascade Lake, 64 vCPU (32 threads), 128 GB RAM, 4 TB SSD",
+        "machine":       "Yandex Cloud s2.6xlarge 4TB SSD",
+        "comment":  "Yandex Cloud Cascade Lake, 64 vCPU (32 threads), 128 GB RAM, 4 TB SSD",
         "time":         "2020-01-13 00:00:00",
         "tags": ["cloud"],
         "result":

@@ -1,7 +1,7 @@
 [
     {
-        "system":       "AWS i3.2xlarge",
-        "system_full":  "AWS i3.2xlarge Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz",
+        "machine":       "AWS i3.2xlarge",
+        "comment":  "AWS i3.2xlarge Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz",
         "time":         "2022-01-02 03:16:35",
         "tags": ["cloud"],
         "result":

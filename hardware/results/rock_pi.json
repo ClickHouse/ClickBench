@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Rock Pi 4, 4GiB, NVMe",
-        "system_full":  "Rock Pi 4, 4GiB C, NVMe",
+        "machine":       "Rock Pi 4, 4GiB, NVMe",
+        "comment":  "Rock Pi 4, 4GiB C, NVMe",
         "time":         "2021-12-23 00:00:00",
         "tags": ["desktop"],
         "result":

@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Huawei TaiShan (2)",
-        "system_full":  "Huawei TaiShan 2280 (AArch64) 2280 (2x64 cores, SSD)",
+        "machine":       "Huawei TaiShan (2)",
+        "comment":  "Huawei TaiShan 2280 (AArch64) 2280 (2x64 cores, SSD)",
         "time":         "2020-11-03 00:00:00",
         "tags": ["server"],
         "result":

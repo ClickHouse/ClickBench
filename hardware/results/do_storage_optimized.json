@@ -1,7 +1,7 @@
 [
     {
-        "system":       "DigitalOcean Storage-opt 8",
-        "system_full":  "DigitalOcean 8 CPUs, 64 GB RAM, 1.17 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+        "machine":       "DigitalOcean Storage-opt 8",
+        "comment":  "DigitalOcean 8 CPUs, 64 GB RAM, 1.17 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
         "cpu_vendor":   "Intel",
         "cpu_model":    "Xeon Gold 6140",
         "time":         "2020-12-13 00:00:00",
@@ -54,8 +54,8 @@
         ]
     },
     {
-        "system":       "DigitalOcean Storage-opt 16",
-        "system_full":  "DigitalOcean 16 CPUs, 128 GB RAM, 2.34 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+        "machine":       "DigitalOcean Storage-opt 16",
+        "comment":  "DigitalOcean 16 CPUs, 128 GB RAM, 2.34 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
         "cpu_vendor":   "Intel",
         "cpu_model":    "Xeon Gold 6140",
         "time":         "2020-12-13 00:00:00",
@@ -108,8 +108,8 @@
         ]
     },
     {
-        "system":       "DigitalOcean Storage-opt 24",
-        "system_full":  "DigitalOcean, 24 CPUs, 192 GB RAM, 3.52 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+        "machine":       "DigitalOcean Storage-opt 24",
+        "comment":  "DigitalOcean, 24 CPUs, 192 GB RAM, 3.52 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
         "cpu_vendor":   "Intel",
         "cpu_model":    "Xeon Gold 6140",
         "time":         "2020-12-13 00:00:00",
@@ -162,8 +162,8 @@
         ]
     },
     {
-        "system":       "DigitalOcean Storage-opt 32",
-        "system_full":  "DigitalOcean, 32 CPUs, 256 GB RAM, 4.56 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+        "machine":       "DigitalOcean Storage-opt 32",
+        "comment":  "DigitalOcean, 32 CPUs, 256 GB RAM, 4.56 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
         "cpu_vendor":   "Intel",
         "cpu_model":    "Xeon Gold 6140",
         "time":         "2020-12-13 00:00:00",
@@ -216,8 +216,8 @@
         ]
     },
     {
-        "system":       "DigitalOcean Memory-opt 32",
-        "system_full":  "DigitalOcean, 32 CPUs, 256 GB RAM, 4.8 TB SSD, Memory Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+        "machine":       "DigitalOcean Memory-opt 32",
+        "comment":  "DigitalOcean, 32 CPUs, 256 GB RAM, 4.8 TB SSD, Memory Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
         "cpu_vendor":   "Intel",
         "cpu_model":    "Xeon Gold 6140",
         "time":         "2020-12-13 00:00:00",
@@ -270,8 +270,8 @@
         ]
     },
     {
-        "system":       "DigitalOcean CPU-opt, 32",
-        "system_full":  "DigitalOcean, 32 CPUs, 64 GB RAM, 3.52 TB SSD, CPU Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+        "machine":       "DigitalOcean CPU-opt, 32",
+        "comment":  "DigitalOcean, 32 CPUs, 64 GB RAM, 3.52 TB SSD, CPU Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
         "cpu_vendor":   "Intel",
         "cpu_model":    "Xeon Gold 6140",
         "time":         "2020-12-13 00:00:00",
@@ -324,8 +324,8 @@
         ]
     },
     {
-        "system":       "DigitalOcean General 40",
-        "system_full":  "DigitalOcean, 40 CPUs, 64 GB RAM, 1 TB SSD, General Purpose, San Francisco, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+        "machine":       "DigitalOcean General 40",
+        "comment":  "DigitalOcean, 40 CPUs, 64 GB RAM, 1 TB SSD, General Purpose, San Francisco, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
         "cpu_vendor":   "Intel",
         "cpu_model":    "Xeon Gold 6140",
         "time":         "2020-12-13 00:00:00",

@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Xeon Gold 6230",
-        "system_full":      "Xeon Gold 6230, 2 sockets, 40 threads",
+        "machine":       "Xeon Gold 6230",
+        "comment":      "Xeon Gold 6230, 2 sockets, 40 threads",
         "cpu_vendor":   "Intel",
         "cpu_model":    "Xeon Gold 6230",
         "time":         "2020-01-01 00:00:00",

@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Yandex Cloud s1.small",
-        "system_full":  "Yandex Cloud Broadwell, 4 vCPU (2 threads), 16 GB RAM, 30 GB SSD",
+        "machine":       "Yandex Cloud s1.small",
+        "comment":  "Yandex Cloud Broadwell, 4 vCPU (2 threads), 16 GB RAM, 30 GB SSD",
         "cpu_vendor":   "Intel",
         "time":         "2020-01-14 00:00:00",
         "tags": ["cloud"],

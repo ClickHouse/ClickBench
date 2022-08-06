@@ -1,7 +1,7 @@
 [
     {
-        "system":       "AWS m5a.8xlarge",
-        "system_full":  "AWS m5a.8xlarge 32 vCPU, 128 GiB RAM, EBS",
+        "machine":       "AWS m5a.8xlarge",
+        "comment":  "AWS m5a.8xlarge 32 vCPU, 128 GiB RAM, EBS",
         "time":         "2020-08-13 00:00:00",
         "tags": ["cloud"],
         "result":

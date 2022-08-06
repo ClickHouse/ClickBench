@@ -1,7 +1,7 @@
 [
     {
-        "system":       "AMD EPYC 7742",
-        "system_full":  "AMD EPYC 7742, 256 cores, 1 TiB Samsung 16x64GB DDR4-3200 ECC, 2 * Samsung PM1725b 12.8TB (RAID 0)",
+        "machine":       "AMD EPYC 7742",
+        "comment":  "AMD EPYC 7742, 256 cores, 1 TiB Samsung 16x64GB DDR4-3200 ECC, 2 * Samsung PM1725b 12.8TB (RAID 0)",
         "time":         "2021-02-23 00:00:00",
         "tags": ["server"],
         "result":

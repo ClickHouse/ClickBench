@@ -1,7 +1,7 @@
 [
     {
-        "system":       "AWS i3en.24xlarge",
-        "system_full":      "AWS i3en.24xlarge 96vCPU 768GiB 8x7500 NVMe SSD",
+        "machine":       "AWS i3en.24xlarge",
+        "comment":      "AWS i3en.24xlarge 96vCPU 768GiB 8x7500 NVMe SSD",
         "time":         "2020-01-15 00:00:00",
         "tags": ["cloud"],
         "result":

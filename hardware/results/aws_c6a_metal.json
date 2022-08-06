@@ -1,7 +1,7 @@
 [
     {
-        "system":       "AWS c6a.metal",
-        "system_full":  "AWS c6a.metal 192 vCPU (96 cores) 384GiB RAM, 200 GB EBS",
+        "machine":       "AWS c6a.metal",
+        "comment":  "AWS c6a.metal 192 vCPU (96 cores) 384GiB RAM, 200 GB EBS",
         "time":         "2022-06-25 00:00:00",
         "tags": ["cloud"],
         "result":

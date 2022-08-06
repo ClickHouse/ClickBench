@@ -1,7 +1,7 @@
 [
     {
-        "system":       "AMD Ryzen 9 (2020)",
-        "system_full":       "AMD Ryzen 9 3950X 16-Core Processor, 64 GiB RAM, Intel Optane 900P 280 GB",
+        "machine":       "AMD Ryzen 9 (2020)",
+        "comment":       "AMD Ryzen 9 3950X 16-Core Processor, 64 GiB RAM, Intel Optane 900P 280 GB",
         "time":         "2020-03-14 00:00:00",
         "tags": ["desktop"],
         "result":
@@ -52,8 +52,8 @@
         ]
     },
     {
-        "system":       "AMD Ryzen 9 (2021)",
-        "system_full":       "AMD Ryzen 9 3950X 16-Core Processor, 64 GiB RAM, Samsung evo 970 plus 1TB",
+        "machine":       "AMD Ryzen 9 (2021)",
+        "comment":       "AMD Ryzen 9 3950X 16-Core Processor, 64 GiB RAM, Samsung evo 970 plus 1TB",
         "time":         "2021-03-08 00:00:00",
         "tags": ["desktop"],
         "result":

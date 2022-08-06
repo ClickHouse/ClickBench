@@ -1,7 +1,7 @@
 [
     {
-        "system": "Dell XPS 15",
-        "system_full": "Dell XPS 15, 6 cores, 32 GB RAM",
+        "machine": "Dell XPS 15",
+        "comment": "Dell XPS 15, 6 cores, 32 GB RAM",
         "cpu_vendor": "Intel",
         "cpu_model": "i7-8750H CPU @ 2.20GHz",
         "time": "2020-07-15 00:00:00",

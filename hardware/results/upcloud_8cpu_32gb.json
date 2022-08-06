@@ -1,7 +1,7 @@
 [
     {
-        "system":       "UpCloud 8CPU 32GiB",
-        "system_full":  "UpCloud 8CPU 32GiB, AMD EPYC 7542",
+        "machine":       "UpCloud 8CPU 32GiB",
+        "comment":  "UpCloud 8CPU 32GiB, AMD EPYC 7542",
         "time":         "2021-11-23 00:00:00",
         "tags": ["cloud"],
         "result":

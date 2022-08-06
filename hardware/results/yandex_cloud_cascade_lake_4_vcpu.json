@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Yandex Cloud s2.small",
-        "system_full":  "Yandex Cloud Cascade Lake, 4 vCPU (2 threads), 16 GB RAM, 30 GB SSD",
+        "machine":       "Yandex Cloud s2.small",
+        "comment":  "Yandex Cloud Cascade Lake, 4 vCPU (2 threads), 16 GB RAM, 30 GB SSD",
         "cpu_vendor":   "Intel",
         "time":         "2020-01-13 00:00:00",
         "tags": ["cloud"],

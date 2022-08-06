@@ -1,7 +1,7 @@
 [
     {
-        "system":       "AMD EPYC 7642",
-        "system_full":  "2x AMD EPYC 7642 / 512 GB RAM / 12x 1TB SSD (RAID 6)",
+        "machine":       "AMD EPYC 7642",
+        "comment":  "2x AMD EPYC 7642 / 512 GB RAM / 12x 1TB SSD (RAID 6)",
         "time":         "2020-09-21 00:00:00",
         "tags": ["server"],
         "result":

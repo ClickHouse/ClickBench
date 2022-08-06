@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Huawei TaiShan",
-        "system_full":      "Huawei TaiShan Kunpeng 920, 96 vCPU, 256GB RAM",
+        "machine":       "Huawei TaiShan",
+        "comment":      "Huawei TaiShan Kunpeng 920, 96 vCPU, 256GB RAM",
         "time":         "2022-06-18 00:00:00",
         "tags": ["server"],
         "result":

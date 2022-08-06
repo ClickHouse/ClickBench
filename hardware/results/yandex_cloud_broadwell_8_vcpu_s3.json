@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Yandex Cloud 8vCPU Object Storage",
-        "system_full":  "Yandex Cloud Broadwell, 8 vCPU (4 threads), 64 GB RAM, Object Storage",
+        "machine":       "Yandex Cloud 8vCPU Object Storage",
+        "comment":  "Yandex Cloud Broadwell, 8 vCPU (4 threads), 64 GB RAM, Object Storage",
         "cpu_vendor":   "Intel",
         "time":         "2021-02-05 00:00:00",
         "tags": ["cloud"],

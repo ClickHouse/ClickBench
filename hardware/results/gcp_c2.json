@@ -1,7 +1,7 @@
 [
     {
-        "system":       "GCP c2-standard-30",
-        "system_full":  "GCP c2-standard-30, 128 GiB RAM",
+        "machine":       "GCP c2-standard-30",
+        "comment":  "GCP c2-standard-30, 128 GiB RAM",
         "time":         "2021-11-25 00:00:00",
         "tags": ["cloud"],
         "result":

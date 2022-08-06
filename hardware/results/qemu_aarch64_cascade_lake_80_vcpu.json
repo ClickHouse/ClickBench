@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Intel 80vCPU, QEMU, AArch64",
-        "system_full":  "Intel Cascade Lake 80vCPU running AArch64 ClickHouse under qemu-aarch64 version 4.2.1 (userspace emulation)",
+        "machine":       "Intel 80vCPU, QEMU, AArch64",
+        "comment":  "Intel Cascade Lake 80vCPU running AArch64 ClickHouse under qemu-aarch64 version 4.2.1 (userspace emulation)",
         "cpu_vendor":   "Intel",
         "time":         "2021-04-05 00:00:00",
         "tags": ["cloud"],

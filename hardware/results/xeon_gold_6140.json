@@ -1,7 +1,7 @@
 [
     {
-        "system":       "Xeon Gold 6140",
-        "system_full":  "Xeon Gold 6140, 1 socket, 32 threads, 64 GB RAM, vda",
+        "machine":       "Xeon Gold 6140",
+        "comment":  "Xeon Gold 6140, 1 socket, 32 threads, 64 GB RAM, vda",
         "cpu_vendor":   "Intel",
         "cpu_model":    "Xeon Gold 6140",
         "time":         "2021-08-24 00:00:00",

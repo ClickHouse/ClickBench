@@ -1,7 +1,7 @@
 [
     {
-        "system":       "MacBook Pro 2018",
-        "system_full":       "MacBook Pro 2018, 2.7 GHz Quad-Core Intel Core i7, 16 GiB RAM, 1TB SSD",
+        "machine":       "MacBook Pro 2018",
+        "comment":       "MacBook Pro 2018, 2.7 GHz Quad-Core Intel Core i7, 16 GiB RAM, 1TB SSD",
         "time":         "2020-04-04 00:00:00",
         "tags": ["laptop"],
         "result":

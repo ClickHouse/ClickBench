@@ -1,7 +1,7 @@
 [
     {
-        "system": "Google Pixel 3a",
-        "system_full": "Google Pixel 3a, 8 cores, 4 GB RAM",
+        "machine": "Google Pixel 3a",
+        "comment": "Google Pixel 3a, 8 cores, 4 GB RAM",
         "cpu_vendor": "Qualcomm",
         "cpu_model": "Snapdragon 670",
         "time": "2020-07-15 00:00:00",
