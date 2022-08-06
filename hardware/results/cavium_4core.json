@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "Cavium ARM64 CPU (4 Core, 1.5 GHz, NVMe SSD)",
-        "comment":  "Cavium ARM64 CPU (4 Corem 1.5 GHz, NVMe SSD), 16 GiB",
-        "time":         "2021-12-27 00:00:00",
-        "tags": ["server"],
-        "result":
-        [
+
+{
+    "machine":       "Cavium ARM64 CPU (4 Core, 1.5 GHz, NVMe SSD)",
+    "comment":  "Cavium ARM64 CPU (4 Corem 1.5 GHz, NVMe SSD), 16 GiB",
+    "time":         "2021-12-27 00:00:00",
+    "tags": ["server"],
+    "result":
+    [
 [0.004, 0.004, 0.004],
 [0.196, 0.178, 0.180],
 [0.495, 0.437, 0.426],
@@ -49,6 +49,6 @@
 [0.141, 0.119, 0.117],
 [0.116, 0.095, 0.092],
 [0.021, 0.017, 0.014]
-        ]
-    }
-]
+    ]
+}
+

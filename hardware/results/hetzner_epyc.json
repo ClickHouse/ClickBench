@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "Hetzner CCX22",
-        "comment":  "Hetzner CCX22 (AMD EPYC 7003, 4 cores, 16 GiB RAM, NVMe)",
-        "time":         "2021-11-17 00:00:00",
-        "tags": ["server"],
-        "result":
-        [
+
+{
+    "machine":       "Hetzner CCX22",
+    "comment":  "Hetzner CCX22 (AMD EPYC 7003, 4 cores, 16 GiB RAM, NVMe)",
+    "time":         "2021-11-17 00:00:00",
+    "tags": ["server"],
+    "result":
+    [
 [0.001, 0.001, 0.001],
 [0.036, 0.023, 0.039],
 [0.130, 0.102, 0.092],
@@ -49,15 +49,15 @@
 [0.046, 0.021, 0.029],
 [0.032, 0.016, 0.017],
 [0.005, 0.004, 0.007]
-        ]
-    },
-    {
-        "machine":       "Hetzner CCX32",
-        "comment":  "Hetzner CCX32 (AMD EPYC 7003, 8 cores, 32 GiB RAM, NVMe)",
-        "time":         "2021-11-17 00:00:00",
-        "tags": ["server"],
-        "result":
-        [
+    ]
+},
+{
+    "machine":       "Hetzner CCX32",
+    "comment":  "Hetzner CCX32 (AMD EPYC 7003, 8 cores, 32 GiB RAM, NVMe)",
+    "time":         "2021-11-17 00:00:00",
+    "tags": ["server"],
+    "result":
+    [
 [0.001, 0.001, 0.001],
 [0.021, 0.018, 0.017],
 [0.078, 0.057, 0.063],
@@ -101,6 +101,6 @@
 [0.077, 0.022, 0.024],
 [0.030, 0.022, 0.018],
 [0.011, 0.004, 0.008]
-        ]
-    }
-]
+    ]
+}
+

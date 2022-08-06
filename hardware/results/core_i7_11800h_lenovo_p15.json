@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "ThinkPad P15",
-        "comment":  "Lenovo ThinkPad P15, i7-11800H @ 2.30GHz, 16 cores, 32 GiB RAM, NVMe",
-        "time":         "2021-11-19 00:00:00",
-        "tags": ["laptop"],
-        "result":
-        [
+
+{
+    "machine":       "ThinkPad P15",
+    "comment":  "Lenovo ThinkPad P15, i7-11800H @ 2.30GHz, 16 cores, 32 GiB RAM, NVMe",
+    "time":         "2021-11-19 00:00:00",
+    "tags": ["laptop"],
+    "result":
+    [
 [0.001, 0.001, 0.001],
 [0.013, 0.008, 0.007],
 [0.036, 0.025, 0.024],
@@ -49,6 +49,6 @@
 [0.032, 0.022, 0.023],
 [0.018, 0.011, 0.015],
 [0.010, 0.002, 0.004]
-        ]
-    }
-]
+    ]
+}
+

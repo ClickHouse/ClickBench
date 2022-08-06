@@ -1,13 +1,13 @@
-[
-    {
-        "machine":       "DigitalOcean Storage-opt 8",
-        "comment":  "DigitalOcean 8 CPUs, 64 GB RAM, 1.17 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
-        "cpu_vendor":   "Intel",
-        "cpu_model":    "Xeon Gold 6140",
-        "time":         "2020-12-13 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+
+{
+    "machine":       "DigitalOcean Storage-opt 8",
+    "comment":  "DigitalOcean 8 CPUs, 64 GB RAM, 1.17 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+    "cpu_vendor":   "Intel",
+    "cpu_model":    "Xeon Gold 6140",
+    "time":         "2020-12-13 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.003, 0.002, 0.002],
 [0.020, 0.014, 0.014],
 [0.060, 0.048, 0.049],
@@ -51,17 +51,17 @@
 [0.034, 0.015, 0.013],
 [0.016, 0.010, 0.011],
 [0.006, 0.006, 0.006]
-        ]
-    },
-    {
-        "machine":       "DigitalOcean Storage-opt 16",
-        "comment":  "DigitalOcean 16 CPUs, 128 GB RAM, 2.34 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
-        "cpu_vendor":   "Intel",
-        "cpu_model":    "Xeon Gold 6140",
-        "time":         "2020-12-13 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+    ]
+},
+{
+    "machine":       "DigitalOcean Storage-opt 16",
+    "comment":  "DigitalOcean 16 CPUs, 128 GB RAM, 2.34 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+    "cpu_vendor":   "Intel",
+    "cpu_model":    "Xeon Gold 6140",
+    "time":         "2020-12-13 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.002, 0.002, 0.002],
 [0.017, 0.010, 0.010],
 [0.039, 0.029, 0.027],
@@ -105,17 +105,17 @@
 [0.030, 0.015, 0.017],
 [0.014, 0.010, 0.015],
 [0.012, 0.006, 0.005]
-        ]
-    },
-    {
-        "machine":       "DigitalOcean Storage-opt 24",
-        "comment":  "DigitalOcean, 24 CPUs, 192 GB RAM, 3.52 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
-        "cpu_vendor":   "Intel",
-        "cpu_model":    "Xeon Gold 6140",
-        "time":         "2020-12-13 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+    ]
+},
+{
+    "machine":       "DigitalOcean Storage-opt 24",
+    "comment":  "DigitalOcean, 24 CPUs, 192 GB RAM, 3.52 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+    "cpu_vendor":   "Intel",
+    "cpu_model":    "Xeon Gold 6140",
+    "time":         "2020-12-13 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.002, 0.002, 0.001],
 [0.017, 0.009, 0.009],
 [0.033, 0.022, 0.022],
@@ -159,17 +159,17 @@
 [0.034, 0.012, 0.014],
 [0.014, 0.012, 0.011],
 [0.005, 0.005, 0.005]
-        ]
-    },
-    {
-        "machine":       "DigitalOcean Storage-opt 32",
-        "comment":  "DigitalOcean, 32 CPUs, 256 GB RAM, 4.56 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
-        "cpu_vendor":   "Intel",
-        "cpu_model":    "Xeon Gold 6140",
-        "time":         "2020-12-13 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+    ]
+},
+{
+    "machine":       "DigitalOcean Storage-opt 32",
+    "comment":  "DigitalOcean, 32 CPUs, 256 GB RAM, 4.56 TB NVM SSD, Storage Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+    "cpu_vendor":   "Intel",
+    "cpu_model":    "Xeon Gold 6140",
+    "time":         "2020-12-13 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.002, 0.002, 0.001],
 [0.016, 0.011, 0.010],
 [0.029, 0.020, 0.019],
@@ -213,17 +213,17 @@
 [0.031, 0.017, 0.014],
 [0.013, 0.011, 0.017],
 [0.008, 0.009, 0.006]
-        ]
-    },
-    {
-        "machine":       "DigitalOcean Memory-opt 32",
-        "comment":  "DigitalOcean, 32 CPUs, 256 GB RAM, 4.8 TB SSD, Memory Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
-        "cpu_vendor":   "Intel",
-        "cpu_model":    "Xeon Gold 6140",
-        "time":         "2020-12-13 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+    ]
+},
+{
+    "machine":       "DigitalOcean Memory-opt 32",
+    "comment":  "DigitalOcean, 32 CPUs, 256 GB RAM, 4.8 TB SSD, Memory Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+    "cpu_vendor":   "Intel",
+    "cpu_model":    "Xeon Gold 6140",
+    "time":         "2020-12-13 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.003, 0.002, 0.002],
 [0.016, 0.009, 0.009],
 [0.030, 0.019, 0.019],
@@ -267,17 +267,17 @@
 [0.031, 0.014, 0.017],
 [0.019, 0.010, 0.010],
 [0.005, 0.005, 0.005]
-        ]
-    },
-    {
-        "machine":       "DigitalOcean CPU-opt, 32",
-        "comment":  "DigitalOcean, 32 CPUs, 64 GB RAM, 3.52 TB SSD, CPU Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
-        "cpu_vendor":   "Intel",
-        "cpu_model":    "Xeon Gold 6140",
-        "time":         "2020-12-13 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+    ]
+},
+{
+    "machine":       "DigitalOcean CPU-opt, 32",
+    "comment":  "DigitalOcean, 32 CPUs, 64 GB RAM, 3.52 TB SSD, CPU Intensive, Frankfurt, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+    "cpu_vendor":   "Intel",
+    "cpu_model":    "Xeon Gold 6140",
+    "time":         "2020-12-13 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.002, 0.002, 0.001],
 [0.016, 0.009, 0.009],
 [0.026, 0.018, 0.018],
@@ -321,17 +321,17 @@
 [0.032, 0.012, 0.012],
 [0.019, 0.014, 0.009],
 [0.005, 0.005, 0.005]
-        ]
-    },
-    {
-        "machine":       "DigitalOcean General 40",
-        "comment":  "DigitalOcean, 40 CPUs, 64 GB RAM, 1 TB SSD, General Purpose, San Francisco, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
-        "cpu_vendor":   "Intel",
-        "cpu_model":    "Xeon Gold 6140",
-        "time":         "2020-12-13 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+    ]
+},
+{
+    "machine":       "DigitalOcean General 40",
+    "comment":  "DigitalOcean, 40 CPUs, 64 GB RAM, 1 TB SSD, General Purpose, San Francisco, Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz",
+    "cpu_vendor":   "Intel",
+    "cpu_model":    "Xeon Gold 6140",
+    "time":         "2020-12-13 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.003, 0.001, 0.001],
 [0.019, 0.009, 0.009],
 [0.045, 0.017, 0.017],
@@ -375,6 +375,6 @@
 [0.039, 0.018, 0.013],
 [0.015, 0.010, 0.010],
 [0.005, 0.005, 0.005]
-        ]
-    }
-]
+    ]
+}
+

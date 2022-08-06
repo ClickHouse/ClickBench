@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "MacBook Pro M1",
-        "comment":  "MacBook Pro M1 13\" 2020, 8‑core CPU, 16 GiB RAM, 512 GB SSD",
-        "time":         "2021-10-22 18:17:00",
-        "tags": ["laptop"],
-        "result":
-        [
+
+{
+    "machine":       "MacBook Pro M1",
+    "comment":  "MacBook Pro M1 13\" 2020, 8‑core CPU, 16 GiB RAM, 512 GB SSD",
+    "time":         "2021-10-22 18:17:00",
+    "tags": ["laptop"],
+    "result":
+    [
 [0.001, 0.001, 0.001],
 [0.020, 0.013, 0.012],
 [0.046, 0.032, 0.032],
@@ -49,6 +49,6 @@
 [0.016, 0.012, 0.012],
 [0.011, 0.010, 0.010],
 [0.003, 0.002, 0.002]
-        ]
-    }
-]
+    ]
+}
+

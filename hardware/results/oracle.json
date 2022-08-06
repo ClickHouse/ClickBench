@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "Oracle Cloud ARM 4vCPU",
-        "comment":  "Oracle Cloud (free tier), Ampere Altra, 4 vCPU, 24 GiB RAM",
-        "time":         "2021-07-28 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+
+{
+    "machine":       "Oracle Cloud ARM 4vCPU",
+    "comment":  "Oracle Cloud (free tier), Ampere Altra, 4 vCPU, 24 GiB RAM",
+    "time":         "2021-07-28 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.031, 0.008, 0.002],
 [0.087, 0.044, 0.039],
 [0.193, 0.068, 0.068],
@@ -49,6 +49,6 @@
 [0.066, 0.017, 0.017],
 [0.049, 0.014, 0.014],
 [0.033, 0.006, 0.004]
-        ]
-    }
-]
+    ]
+}
+

@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "AMD EPYC 7742",
-        "comment":  "AMD EPYC 7742, 256 cores, 1 TiB Samsung 16x64GB DDR4-3200 ECC, 2 * Samsung PM1725b 12.8TB (RAID 0)",
-        "time":         "2021-02-23 00:00:00",
-        "tags": ["server"],
-        "result":
-        [
+
+{
+    "machine":       "AMD EPYC 7742",
+    "comment":  "AMD EPYC 7742, 256 cores, 1 TiB Samsung 16x64GB DDR4-3200 ECC, 2 * Samsung PM1725b 12.8TB (RAID 0)",
+    "time":         "2021-02-23 00:00:00",
+    "tags": ["server"],
+    "result":
+    [
 [0.001, 0.001, 0.001],
 [0.075, 0.080, 0.015],
 [0.030, 0.029, 0.025],
@@ -49,6 +49,6 @@
 [0.026, 0.021, 0.020],
 [0.018, 0.015, 0.016],
 [0.005, 0.005, 0.004]
-        ]
-    }
-]
+    ]
+}
+

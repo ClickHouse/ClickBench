@@ -1,12 +1,12 @@
-[
-    {
-        "machine":       "Intel 80vCPU, QEMU, AArch64",
-        "comment":  "Intel Cascade Lake 80vCPU running AArch64 ClickHouse under qemu-aarch64 version 4.2.1 (userspace emulation)",
-        "cpu_vendor":   "Intel",
-        "time":         "2021-04-05 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+
+{
+    "machine":       "Intel 80vCPU, QEMU, AArch64",
+    "comment":  "Intel Cascade Lake 80vCPU running AArch64 ClickHouse under qemu-aarch64 version 4.2.1 (userspace emulation)",
+    "cpu_vendor":   "Intel",
+    "time":         "2021-04-05 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.045, 0.006, 0.006],
 [0.366, 0.201, 0.576],
 [0.314, 0.144, 0.152],
@@ -50,6 +50,6 @@
 [0.201, 0.133, 0.130],
 [0.173, 0.123, 0.150],
 [0.070, 0.028, 0.028]
-        ]
-    }
-]
+    ]
+}
+

@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "UpCloud 8CPU 32GiB",
-        "comment":  "UpCloud 8CPU 32GiB, AMD EPYC 7542",
-        "time":         "2021-11-23 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+
+{
+    "machine":       "UpCloud 8CPU 32GiB",
+    "comment":  "UpCloud 8CPU 32GiB, AMD EPYC 7542",
+    "time":         "2021-11-23 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.002, 0.001, 0.001],
 [0.024, 0.020, 0.019],
 [0.123, 0.040, 0.048],
@@ -49,6 +49,6 @@
 [0.034, 0.024, 0.026],
 [0.024, 0.020, 0.021],
 [0.006, 0.005, 0.006]
-        ]
-    }
-]
+    ]
+}
+

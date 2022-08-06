@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "GCP n2d-16-highmem",
-        "comment":  "GCP compute n2d-16-highmem, AMD EPYC 7B12, 16vCPU, 128 GiB RAM",
-        "time":         "2021-11-18 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+
+{
+    "machine":       "GCP n2d-16-highmem",
+    "comment":  "GCP compute n2d-16-highmem, AMD EPYC 7B12, 16vCPU, 128 GiB RAM",
+    "time":         "2021-11-18 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.002, 0.001, 0.001],
 [0.017, 0.013, 0.012],
 [0.046, 0.032, 0.031],
@@ -49,15 +49,15 @@
 [0.032, 0.027, 0.020],
 [0.021, 0.015, 0.015],
 [0.006, 0.008, 0.006]
-        ]
-    },
-    {
-        "machine":       "GCP n2d-standard-8",
-        "comment":  "GCP n2d-standard-8, AMD EPYC 7B12, 8vCPU, 64 GiB RAM",
-        "time":         "2021-11-23 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+    ]
+},
+{
+    "machine":       "GCP n2d-standard-8",
+    "comment":  "GCP n2d-standard-8, AMD EPYC 7B12, 8vCPU, 64 GiB RAM",
+    "time":         "2021-11-23 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.002, 0.002, 0.002],
 [0.054, 0.019, 0.023],
 [0.109, 0.053, 0.061],
@@ -101,6 +101,6 @@
 [0.048, 0.022, 0.022],
 [0.038, 0.067, 0.016],
 [0.011, 0.004, 0.004]
-        ]
-    }
-]
+    ]
+}
+

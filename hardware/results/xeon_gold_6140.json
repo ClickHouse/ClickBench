@@ -1,13 +1,13 @@
-[
-    {
-        "machine":       "Xeon Gold 6140",
-        "comment":  "Xeon Gold 6140, 1 socket, 32 threads, 64 GB RAM, vda",
-        "cpu_vendor":   "Intel",
-        "cpu_model":    "Xeon Gold 6140",
-        "time":         "2021-08-24 00:00:00",
-        "tags": ["server"],
-        "result":
-        [
+
+{
+    "machine":       "Xeon Gold 6140",
+    "comment":  "Xeon Gold 6140, 1 socket, 32 threads, 64 GB RAM, vda",
+    "cpu_vendor":   "Intel",
+    "cpu_model":    "Xeon Gold 6140",
+    "time":         "2021-08-24 00:00:00",
+    "tags": ["server"],
+    "result":
+    [
 [0.002, 0.002, 0.001],
 [0.017, 0.008, 0.008],
 [0.029, 0.019, 0.018],
@@ -51,6 +51,6 @@
 [0.027, 0.022, 0.020],
 [0.023, 0.020, 0.014],
 [0.014, 0.008, 0.003]
-        ]
-    }
-]
+    ]
+}
+

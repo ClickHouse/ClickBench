@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "AWS c5a.24xlarge",
-        "comment":  "AWS c5a.24xlarge 96vCPU 192GiB 200GB gp2 EBS, AMD EPYC 7R32, Amazon Linux",
-        "time":         "2021-11-27 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+
+{
+    "machine":       "AWS c5a.24xlarge",
+    "comment":  "AWS c5a.24xlarge 96vCPU 192GiB 200GB gp2 EBS, AMD EPYC 7R32, Amazon Linux",
+    "time":         "2021-11-27 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.001, 0.001, 0.002],
 [0.040, 0.009, 0.008],
 [0.034, 0.013, 0.012],
@@ -49,15 +49,15 @@
 [0.046, 0.025, 0.025],
 [0.032, 0.014, 0.014],
 [0.007, 0.010, 0.003]
-        ]
-    },
-    {
-        "machine":       "AWS c5a.24xlarge",
-        "comment":  "AWS c5a.24xlarge 96vCPU 192GiB 200GB gp2 EBS, AMD EPYC 7R32, Ubuntu 20.04",
-        "time":         "2021-11-27 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+    ]
+},
+{
+    "machine":       "AWS c5a.24xlarge",
+    "comment":  "AWS c5a.24xlarge 96vCPU 192GiB 200GB gp2 EBS, AMD EPYC 7R32, Ubuntu 20.04",
+    "time":         "2021-11-27 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.001, 0.001, 0.002],
 [0.030, 0.010, 0.009],
 [0.031, 0.013, 0.013],
@@ -101,6 +101,6 @@
 [0.050, 0.025, 0.032],
 [0.024, 0.023, 0.014],
 [0.016, 0.004, 0.021]
-        ]
-    }
-]
+    ]
+}
+

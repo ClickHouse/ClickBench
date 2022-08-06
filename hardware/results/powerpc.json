@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "POWER9 x_large VM",
-        "comment":  "POWER9 x_large VM (8 vCPU, pSeries, 16GiB RAM)",
-        "time":         "2022-05-10 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+
+{
+    "machine":       "POWER9 x_large VM",
+    "comment":  "POWER9 x_large VM (8 vCPU, pSeries, 16GiB RAM)",
+    "time":         "2022-05-10 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.263, 0.004, 0.004],
 [0.352, 0.044, 0.040],
 [1.556, 0.087, 0.083],
@@ -49,6 +49,6 @@
 [0.254, 0.057, 0.057],
 [0.132, 0.045, 0.046],
 [0.047, 0.015, 0.012]
-        ]
-    }
-]
+    ]
+}
+

@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "MacBook Air M1",
-        "comment":  "MacBook Air M1 13\" 2020, 8‑core CPU, 16 GiB RAM, 512 GB SSD",
-        "time":         "2021-04-11 00:00:00",
-        "tags": ["laptop"],
-        "result":
-        [
+
+{
+    "machine":       "MacBook Air M1",
+    "comment":  "MacBook Air M1 13\" 2020, 8‑core CPU, 16 GiB RAM, 512 GB SSD",
+    "time":         "2021-04-11 00:00:00",
+    "tags": ["laptop"],
+    "result":
+    [
 [0.003, 0.001, 0.001],
 [0.019, 0.014, 0.014],
 [0.042, 0.034, 0.033],
@@ -49,6 +49,6 @@
 [0.020, 0.014, 0.013],
 [0.013, 0.011, 0.012],
 [0.009, 0.009, 0.009]
-        ]
-    }
-]
+    ]
+}
+

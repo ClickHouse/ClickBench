@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "DO Xeon E5-2650Lv3",
-        "comment":  "Digital Ocean, Xeon E5-2650L v3 @ 1.80GHz, 16 cores, 64 GB, SSD Disk 1.28 TB",
-        "time":         "2020-01-21 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+
+{
+    "machine":       "DO Xeon E5-2650Lv3",
+    "comment":  "Digital Ocean, Xeon E5-2650L v3 @ 1.80GHz, 16 cores, 64 GB, SSD Disk 1.28 TB",
+    "time":         "2020-01-21 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.004, 0.004, 0.004],
 [0.056, 0.037, 0.036],
 [0.111, 0.079, 0.078],
@@ -49,6 +49,6 @@
 [0.098, 0.077, 0.058],
 [0.078, 0.042, 0.041],
 [0.025, 0.015, 0.020]
-        ]
-    }
-]
+    ]
+}
+

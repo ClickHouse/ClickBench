@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "AWS c6.metal (Graviton 2)",
-        "comment":  "AWS c6.metal (Graviton 2) 64 CPU 128GiB 2x1.7TB local SSD md-RAID-0",
-        "time":         "2020-09-23 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+
+{
+    "machine":       "AWS c6.metal (Graviton 2)",
+    "comment":  "AWS c6.metal (Graviton 2) 64 CPU 128GiB 2x1.7TB local SSD md-RAID-0",
+    "time":         "2020-09-23 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.004, 0.003, 0.001],
 [0.085, 0.030, 0.032],
 [0.029, 0.028, 0.026],
@@ -49,6 +49,6 @@
 [0.034, 0.025, 0.022],
 [0.022, 0.019, 0.018],
 [0.007, 0.007, 0.007]
-        ]
-    }
-]
+    ]
+}
+

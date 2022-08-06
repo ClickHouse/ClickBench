@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "Raspberry Pi 4",
-        "comment":  "Raspberry Pi 4 Model B 8GB",
-        "time":         "2020-11-14 00:00:00",
-        "tags": ["desktop"],
-        "result":
-        [
+
+{
+    "machine":       "Raspberry Pi 4",
+    "comment":  "Raspberry Pi 4 Model B 8GB",
+    "time":         "2020-11-14 00:00:00",
+    "tags": ["desktop"],
+    "result":
+    [
 [0.015, 0.005, 0.005],
 [0.214, 0.176, 0.171],
 [1.205, 0.535, 0.534],
@@ -49,6 +49,6 @@
 [0.345, 0.085, 0.082],
 [0.219, 0.070, 0.072],
 [0.044, 0.021, 0.023]
-        ]
-    }
-]
+    ]
+}
+

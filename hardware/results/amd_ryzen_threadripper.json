@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "AMD Ryzen Threadripper PRO 3995WX 64-Cores",
-        "comment":  "AMD Ryzen Threadripper PRO 3995WX 64-Cores, 256 GB RAM (8-channel)",
-        "time":         "2022-07-11 00:00:00",
-        "tags": ["desktop"],
-        "result":
-        [
+
+{
+    "machine":       "AMD Ryzen Threadripper PRO 3995WX 64-Cores",
+    "comment":  "AMD Ryzen Threadripper PRO 3995WX 64-Cores, 256 GB RAM (8-channel)",
+    "time":         "2022-07-11 00:00:00",
+    "tags": ["desktop"],
+    "result":
+    [
 [0.003, 0.015, 0.002],
 [0.259, 0.140, 0.041],
 [0.072, 0.047, 0.050],
@@ -49,6 +49,6 @@
 [0.032, 0.023, 0.014],
 [0.016, 0.010, 0.019],
 [0.011, 0.005, 0.008]
-        ]
-    }
-]
+    ]
+}
+

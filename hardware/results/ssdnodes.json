@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "SSDNodes G6",
-        "comment":  "G6 Performance+ 48GB RAM, 720GB NVMe, 12x Intel Silver vCPU, KVM",
-        "time":         "2021-12-27 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+
+{
+    "machine":       "SSDNodes G6",
+    "comment":  "G6 Performance+ 48GB RAM, 720GB NVMe, 12x Intel Silver vCPU, KVM",
+    "time":         "2021-12-27 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.002, 0.002, 0.002],
 [0.021, 0.017, 0.017],
 [0.053, 0.034, 0.039],
@@ -49,6 +49,6 @@
 [0.041, 0.031, 0.028],
 [0.029, 0.021, 0.025],
 [0.007, 0.006, 0.005]
-        ]
-    }
-]
+    ]
+}
+

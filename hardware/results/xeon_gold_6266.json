@@ -1,13 +1,13 @@
-[
-    {
-        "machine":       "Huawei Cloud c6.xlarge.4, 4vCPUs, 16 GiB",
-        "comment":  "Huawei Cloud c6.xlarge.4, Xeon Gold 6266C, 3GHz, 4vCPU, 16GiB RAM, vda1 40GB",
-        "cpu_vendor":   "Intel",
-        "cpu_model":    "Xeon Gold 6266C",
-        "time":         "2021-12-23 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+
+{
+    "machine":       "Huawei Cloud c6.xlarge.4, 4vCPUs, 16 GiB",
+    "comment":  "Huawei Cloud c6.xlarge.4, Xeon Gold 6266C, 3GHz, 4vCPU, 16GiB RAM, vda1 40GB",
+    "cpu_vendor":   "Intel",
+    "cpu_model":    "Xeon Gold 6266C",
+    "time":         "2021-12-23 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.001, 0.001, 0.001],
 [0.034, 0.023, 0.023],
 [0.168, 0.105, 0.104],
@@ -51,6 +51,6 @@
 [0.042, 0.022, 0.021],
 [0.029, 0.017, 0.015],
 [0.007, 0.005, 0.003]
-        ]
-    }
-]
+    ]
+}
+

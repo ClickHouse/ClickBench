@@ -1,11 +1,11 @@
-[
-    {
-        "machine":       "AWS c7g.16xlarge (Graviton 3)",
-        "comment":  "AWS c7g.16xlarge (Graviton 3) 64 vCPU, 128 GiB RAM, EBS",
-        "time":         "2022-05-24 00:00:00",
-        "tags": ["cloud"],
-        "result":
-        [
+
+{
+    "machine":       "AWS c7g.16xlarge (Graviton 3)",
+    "comment":  "AWS c7g.16xlarge (Graviton 3) 64 vCPU, 128 GiB RAM, EBS",
+    "time":         "2022-05-24 00:00:00",
+    "tags": ["cloud"],
+    "result":
+    [
 [0.002, 0.002, 0.002],
 [0.031, 0.022, 0.023],
 [0.066, 0.025, 0.025],
@@ -49,6 +49,6 @@
 [0.061, 0.030, 0.032],
 [0.035, 0.030, 0.028],
 [0.016, 0.016, 0.004]
-        ]
-    }
-]
+    ]
+}
+
