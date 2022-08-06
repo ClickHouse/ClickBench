@@ -12,7 +12,7 @@ if [[ ! -x clickhouse ]]; then
 fi
 
 if [[ ! -f $QUERIES_FILE ]]; then
-    wget "https://raw.githubusercontent.com/ClickHouse/ClickHouse/master/benchmark/hardware/$QUERIES_FILE"
+    wget "https://raw.githubusercontent.com/ClickHouse/ClickBench/main/hardware/$QUERIES_FILE"
 fi
 
 uptime
