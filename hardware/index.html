@@ -704,7 +704,7 @@ function renderSummary(filtered_data) {
         if (!elem.fake) {
             let link = document.createElement('a');
             link.appendChild(document.createTextNode(`${elem.machine}`));
-            link.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + elem.source;
+            link.href = "https://github.com/ClickHouse/ClickBench/blob/main/hardware/" + elem.source;
             td_name.appendChild(link);
         } else {
             td_name.appendChild(document.createTextNode(elem.machine));
