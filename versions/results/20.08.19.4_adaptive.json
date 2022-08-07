@@ -1,9 +1,5 @@
 {
-    "system":       "2021-07-11 20.8",
-"system_full":  "ClickHouse 20.8.19.4 2021-07-11(adaptive)",
     "version":      "20.8.19.4",
-"kind":         "adaptive", 
-"kind":         "",
     "result":
     [
 [0.021, 0.004, 0.004],

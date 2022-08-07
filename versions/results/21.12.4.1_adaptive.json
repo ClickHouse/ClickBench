@@ -1,8 +1,5 @@
 {
-    "system":       "2022-01-23 21.12",
-"system_full":  "ClickHouse 21.12.4.1 2022-01-23(adaptive)",
     "version":      "21.12.4.1",
-"kind":         "adaptive", 
     "result":
     [
 [0.036, 0.003, 0.003],

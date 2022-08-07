@@ -1,8 +1,5 @@
 {
-    "system":       "2022-04-06 22.3",
-"system_full":  "ClickHouse 22.3.3.44 2022-04-06(adaptive)",
     "version":      "22.3.3.44",
-    "kind":         "adaptive", 
     "result":
     [
 [0.031, 0.004, 0.004],

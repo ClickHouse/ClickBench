@@ -1,8 +1,5 @@
 {
-    "system":       "2020-08-20 20.5",
-"system_full":  "ClickHouse 20.5.5.74 2020-08-20(adaptive)",
     "version":      "20.5.5.74",
-"kind":         "adaptive", 
     "result":
     [
 [0.017, 0.003, 0.003],

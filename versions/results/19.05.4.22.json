@@ -1,7 +1,4 @@
 {
-    "system":       "2019-05-13 19.5",
-    "system_full":  "ClickHouse 19.5.4.22 2019-05-13",
-    "kind":         "",
     "version":      "19.5.4.22",
     "result":
     [

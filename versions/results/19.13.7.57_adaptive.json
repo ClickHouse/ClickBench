@@ -1,8 +1,5 @@
 {
-    "system":       "2019-11-06 19.13",
-"system_full":  "ClickHouse 19.13.7.57 2019-11-06(adaptive)",
     "version":      "19.13.7.57",
-"kind":         "adaptive", 
     "result":
     [
 [0.032, 0.003, 0.003],
