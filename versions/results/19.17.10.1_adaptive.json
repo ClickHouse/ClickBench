@@ -3,7 +3,6 @@
 "system_full":  "ClickHouse 19.17.10.1 2020-07-22(adaptive)",
     "version":      "19.17.10.1",
 "kind":         "adaptive", 
-    "comments":     "",
     "result":
     [
 [0.032, 0.003, 0.003],

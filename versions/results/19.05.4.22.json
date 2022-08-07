@@ -3,7 +3,6 @@
     "system_full":  "ClickHouse 19.5.4.22 2019-05-13",
     "kind":         "",
     "version":      "19.5.4.22",
-    "comments":     "",
     "result":
     [
 [0.067, 0.010, 0.009],

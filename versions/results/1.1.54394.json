@@ -3,7 +3,6 @@
     "system_full":  "ClickHouse 1.1.54394 2018-07-12",
     "version":      "1.1.54394",
     "kind":         "",
-    "comments":     "",
     "result":
     [
 [0.141, 0.016, 0.014],

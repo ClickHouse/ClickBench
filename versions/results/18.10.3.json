@@ -3,7 +3,6 @@
     "system_full":  "ClickHouse 18.10.3 2018-08-13",
     "version":      "18.10.3",
     "kind":         "",
-    "comments":     "",
     "result":
     [
 [0.138, 0.015, 0.013],
