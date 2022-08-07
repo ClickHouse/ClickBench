@@ -697,9 +697,9 @@ function colorize(elem, ratio) {
     let [r, g, b] = [0, 0, 0];
 
     /// ratio less than 1 - green
-    /// ratio from 1 to 2 - green to yellow
-    /// ratio from 2 to 10 - yellow to red
-    /// ratio from 10 to 1000 to infinity - red to brown to black
+    /// ratio from 1 to 1.1 - green to yellow
+    /// ratio from 1.1 to 3 - yellow to red
+    /// ratio from 3 to 10 to infinity - red to brown to black
 
     /// Note: we are using RGB space without proper gamma correction. Read more: https://www.handprint.com/HP/WCL/color1.html
 
@@ -710,14 +710,14 @@ function colorize(elem, ratio) {
             b = 232;
         } else if (ratio <= 1) {
             g = 255;
-        } else if (ratio <= 2) {
+        } else if (ratio <= 1.1) {
             g = 255;
-            r = (ratio - 1) * 255;
-        } else if (ratio <= 10) {
-            g = (10 - ratio) / 8 * 255;
+            r = (ratio - 1) / 0.1 * 255;
+        } else if (ratio <= 3) {
+            g = (3 - ratio) / 1.9 * 255;
             r = 255;
         } else {
-            r = (1 - ((ratio - 10) / ((ratio - 10) + 1000))) * 255;
+            r = (1 - ((ratio - 3) / ((ratio - 3) + 10))) * 255;
         }
     }
 
