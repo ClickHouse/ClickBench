@@ -2,9 +2,9 @@
 [
     {
         "system":       "2020-11-02 20.3",
-	"system_full":  "ClickHouse 20.3.21.2 2020-11-02(adaptive)",
+    "system_full":  "ClickHouse 20.3.21.2 2020-11-02(adaptive)",
         "version":      "20.3.21.2",
-	"kind":         "adaptive", 
+    "kind":         "adaptive", 
         "comments":     "",
         "result":
         [
@@ -80,6 +80,6 @@
 [0.050, 0.014, 0.019],
 [0.029, 0.018, 0.029],
 [0.012, 0.003, 0.003]
-		]
+    	]
     }
 ]

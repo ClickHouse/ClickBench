@@ -2,9 +2,9 @@
 [
     {
         "system":       "2019-07-12 19.10",
-	"system_full":  "ClickHouse 19.10.1.5 2019-07-12(adaptive)",
+    "system_full":  "ClickHouse 19.10.1.5 2019-07-12(adaptive)",
         "version":      "19.10.1.5",
-	"type":         "adaptive", 
+    "type":         "adaptive", 
         "comments":     "",
         "result":
         [
@@ -80,6 +80,6 @@
 [0.035, 0.011, 0.011],
 [0.027, 0.009, 0.008],
 [0.013, 0.002, 0.002]
-		]
+    	]
     }
 ]

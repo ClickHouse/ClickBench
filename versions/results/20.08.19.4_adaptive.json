@@ -2,10 +2,10 @@
 [
     {
         "system":       "2021-07-11 20.8",
-	"system_full":  "ClickHouse 20.8.19.4 2021-07-11(adaptive)",
+    "system_full":  "ClickHouse 20.8.19.4 2021-07-11(adaptive)",
         "version":      "20.8.19.4",
-	"kind":         "adaptive", 
-	"kind":         "",
+    "kind":         "adaptive", 
+    "kind":         "",
         "comments":     "",
         "result":
         [
@@ -81,6 +81,6 @@
 [0.062, 0.015, 0.014],
 [0.042, 0.014, 0.011],
 [0.015, 0.003, 0.003]
-		]
+    	]
     }
 ]

@@ -2,9 +2,9 @@
 [
     {
         "system":       "2022-02-25 22.1",
-	"system_full":  "ClickHouse 22.1.4.30 2022-02-25(adaptive)",
+    "system_full":  "ClickHouse 22.1.4.30 2022-02-25(adaptive)",
         "version":      "22.1.4.30",
-	"kind":         "adaptive", 
+    "kind":         "adaptive", 
         "comments":     "",
         "result":
         [
@@ -80,6 +80,6 @@
 [0.056, 0.015, 0.016],
 [0.040, 0.016, 0.017],
 [0.019, 0.003, 0.003]
-		]
+    	]
     }
 ]

@@ -2,9 +2,9 @@
 [
     {
         "system":       "2021-04-13 21.1",
-	"system_full":  "ClickHouse 21.1.9.41 2021-04-13(adaptive)",
+    "system_full":  "ClickHouse 21.1.9.41 2021-04-13(adaptive)",
         "version":      "21.1.9.41",
-	"kind":         "adaptive", 
+    "kind":         "adaptive", 
         "comments":     "",
         "result":
         [
@@ -80,6 +80,6 @@
 [0.050, 0.014, 0.013],
 [0.040, 0.012, 0.022],
 [0.013, 0.009, 0.003]
-		]
+    	]
     }
 ]
