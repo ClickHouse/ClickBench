@@ -1,7 +1,7 @@
 {
     "system":       "2021-03-02 20.12",
 "system_full":  "ClickHouse 20.12.8.5 2021-03-02(adaptive)",
-    "version":      "2021-03-02",
+    "version":      "20.12.8.5",
     "time":         "2021-03-02",
 "kind":         "adaptive", 
     "result":
