@@ -17,7 +17,7 @@ bash benchmark.sh
 
 1. importing parquet by `datafusion-cli` doesn't support schema, need to add some casting in quries.sql (e.g. converting EventTime from Int to Timestamp via `to_timestamp_seconds`)
 2. importing parquet by `datafusion-cli` make column name column name case-sensitive, i change all column name in quries.sql to double quoted literal (e.g. `EventTime` -> `"EventTime"`)
-3. `comparing binary with utf-8` and `group by binary` don't work in mac, if you run these quries in mac, you'll get some errors for quries contain binary format
+3. `comparing binary with utf-8` and `group by binary` don't work in mac, if you run these quries in mac, you'll get some errors for quries contain binary format apache/arrow-datafusion#3050
 
 
 ### to generate full human readable results (for debugging)
