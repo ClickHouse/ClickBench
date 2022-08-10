@@ -12,7 +12,13 @@ sudo apt install gcc -y
 
 
 # Install Datafusion
-cargo install --version 10.0.0 datafusion-cli
+#cargo install --version 10.0.0 datafusion-cli
+
+# Install Datafusion Master Branch
+git clone https://github.com/apache/arrow-datafusion.git
+cd arrow-datafusion/datafusion-cli && cargo build --release
+export PATH="`pwd`/target/release:$PATH"
+cd ../..
 
 
 # Download benchmark target data
