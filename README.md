@@ -190,7 +190,7 @@ The benchmark is created and used by the ClickHouse team. It can be surprising, 
 
 Now the new benchmark is easy to use and the results for any system can be reproduced in around 20 minutes.
 
-We also introduced the [Hardware Benchmark](https://clickhouse.com/benchmark/hardware/) for testing servers and VMs.
+We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/hardware/) for testing servers and VMs.
 
 ## Systems Included
 
