@@ -5,7 +5,7 @@ PASSWORD="$2"
 
 TRIES=3
 QUERY_NUM=1
-cat queries.sql | while read query; do
+cat queries_throughput.sql | while read query; do
     echo -n "["
     for i in $(seq 1 $TRIES); do
         RES=$(clickhouse-client --host "$HOST" --password "$PASSWORD" --secure --time --format=Null --query="$query" 2>&1 ||:)

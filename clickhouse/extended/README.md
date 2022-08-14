@@ -20,3 +20,9 @@ clickhouse-obfuscator --structure "${STRUCTURE}" --input-format Native --output-
         SELECT * REPLACE(nowInBlock() AS EventTime, toDate(nowInBlock()) AS EventDate) FROM table" |
     clickhouse-client --host xyz.eu-central-1.aws.clickhouse.cloud --secure --password xyz --query "INSERT INTO hits FORMAT Native"
 ```
+
+Prepare the list of CounterIDs:
+
+```
+SELECT CounterID, count() AS c FROM hits GROUP BY CounterID HAVING c >= 1000000 ORDER BY c DESC INTO OUTFILE 'counters.tsv'
+```
