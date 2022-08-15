@@ -397,6 +397,15 @@ https://github.com/db-benchmarks/db-benchmarks
 A benchmark suite inspired by ClickHouse benchmarks.
 Used mostly to compare search engines: Elasticsearch and Manticore.
 
+### SciTS
+
+https://arxiv.org/abs/2204.09795
+A new benchmark for time-series workloads.
+Tests both insertion and query speeds, as well as resource consumption.
+
+Includes TimescaleDB, InfluxDB, PostgreSQL and ClickHouse.
+This benchmark is fully independent and [open-source](https://github.com/jalalmostafa/SciTS).
+
 ### STAC
 
 https://www.stacresearch.com/
