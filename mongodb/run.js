@@ -1,6 +1,6 @@
 load("./queries.js");
 
-const iterations = 1;
+const iterations = 3;
 let col = db.hits;
 
 for (let i = 0; i < queries.length; i++) {
