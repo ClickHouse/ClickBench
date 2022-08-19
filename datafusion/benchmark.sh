@@ -17,7 +17,7 @@ sudo apt install gcc -y
 # Install Datafusion Master Branch
 git clone https://github.com/apache/arrow-datafusion.git
 cd arrow-datafusion/datafusion-cli
-CARGO_PROFILE_RELEASE_LTO=true RUSTFLAGS="-C codegen-units=1 -C target-cpu=haswell" cargo build --release
+CARGO_PROFILE_RELEASE_LTO=true RUSTFLAGS="-C codegen-units=1" cargo build --release
 export PATH="`pwd`/target/release:$PATH"
 cd ../..
 
