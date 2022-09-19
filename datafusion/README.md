@@ -5,6 +5,10 @@ DataFusion is an extensible query execution framework, written in Rust, that use
 We use parquet file here and create an external table for it; and then do the queries.
 
 
+### To solve
+
+q32 (line 33 in queries.sql) out of memory in my 32GB memory vm, it output null now since it's killed
+
 
 ### to generate benchmark results:
 
