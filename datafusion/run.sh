@@ -10,9 +10,13 @@ cat queries.sql | while read query; do
 
     echo -n "["
     for i in $(seq 1 $TRIES); do
-		RES=$(datafusion-cli -f create.sql /tmp/query.sql 2>&1 | tail -n 1)
-		[[ "$(echo $RES | awk '{print $5$6}')" == "Querytook" ]] && \
-			echo -n "$(echo $RES | awk '{print $7}')" || \
+		# 1. there will be two query result, one for creating table another for executing the select statement
+		# 2. each query contains a "Query took xxx seconds", we just grep these 2 lines
+		# 3. use sed to take the second line
+		# 4. use awk to take the number we want
+		RES=`datafusion-cli -f create.sql /tmp/query.sql 2>&1 | grep "Query took" | sed -n 2p | awk '{print $7}'`
+		[[ $RES != "" ]] && \
+			echo -n "$RES" || \
 			echo -n "null"
         [[ "$i" != $TRIES ]] && echo -n ", "
 
