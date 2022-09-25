@@ -61,8 +61,8 @@ LOADTIME=$(echo "$END - $START" | bc)
 echo "Load data costs $LOADTIME seconds"
 
 # This if you want to obtain the "tuned" result. Analyze table:
-time mysql -h 127.0.0.1 -P9030 -uroot hits -e "ANALYZE TABLE hits with sync mode"
-mysql -h 127.0.0.1 -P9030 -uroot hits -e "SET GLOBAL enable_tablet_internal_parallel=false"
+# time mysql -h 127.0.0.1 -P9030 -uroot hits -e "ANALYZE TABLE hits with sync mode"
+# mysql -h 127.0.0.1 -P9030 -uroot hits -e "SET GLOBAL enable_tablet_internal_parallel=false"
 
 # Dataset contains about 40GB of data when the import is just completed.
 # This is because the trashed data generated during the compaction process.
