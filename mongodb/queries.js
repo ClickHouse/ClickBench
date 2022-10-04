@@ -69,19 +69,35 @@ queries.push([
 
 // Q9
 // SELECT RegionID, SUM(AdvEngineID), COUNT(*) AS c, AVG(ResolutionWidth), COUNT(DISTINCT UserID) FROM hits GROUP BY RegionID ORDER BY c DESC LIMIT 10;
+// NOTE: $addToSet is extremely expensive in this case so better use rewrite query with $lookup
+//       to collection itself. Not this query depends on collection name `collectionName` - the var from main
+//       run script in field `from` inside lookup.
 queries.push([
   {
     $group: {
       _id: "$RegionID",
-      count_distinct_UserID: { $addToSet: "$UserID" },
       sum_AdvEngineID: { $sum: "$AdvEngineID" },
       c: { $sum: 1 },
       avg_ResolutionWidth: { $avg: "$ResolutionWidth" },
     },
   },
-  { $set: { count_distinct_UserID: { $size: "$count_distinct_UserID" } } },
   { $sort: { c: -1 } },
   { $limit: 10 },
+  {
+    $lookup: {
+      from: collectionName,
+      let: { regionIdVar: "$_id" },
+      pipeline: [
+        { $match: { $expr: { $eq: ["$RegionID", "$$regionIdVar"] } } },
+        { $group: { _id: "$UserID" } },
+        { $count: "c" }
+      ],
+      as: "count_distinct_UserID"
+    }
+  },
+  {
+    $set: { count_distinct_UserID: { $arrayElemAt: ["$count_distinct_UserID.c", 0] } }
+  }
 ]);
 
 // Q10
