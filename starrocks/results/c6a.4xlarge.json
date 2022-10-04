@@ -1,4 +1,5 @@
 {
+    "hide": true,
     "system": "StarRocks (tuned)",
     "date": "2022-09-25",
     "machine": "c6a.4xlarge, 500gb gp2",
