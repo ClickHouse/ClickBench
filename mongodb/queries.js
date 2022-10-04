@@ -19,7 +19,6 @@ queries.push([
 // Q2
 // SELECT SUM(AdvEngineID), COUNT(*), AVG(ResolutionWidth) FROM hits;
 queries.push([
-  { $project: { _id: 0, AdvEngineID: 1, ResolutionWidth: 1 } },
   {
     $group: {
       _id: null,
@@ -52,14 +51,26 @@ queries.push([{ $group: { _id: "$SearchPhrase" } }, { $count: "c" }]);
 
 // Q6
 // SELECT MIN(EventDate), MAX(EventDate) FROM hits;
+// NOTE: depends on collectionName var
 queries.push([
+  { $sort: { EventDate: 1 } },
+  { $limit: 1 },
   {
-    $group: {
-      _id: null,
-      min: { $min: "$EventDate" },
-      max: { $max: "$EventDate" },
-    },
+    $unionWith: {
+      coll: collectionName,
+      pipeline: [
+        { $sort: { EventDate: -1 } },
+        { $limit: 1 },
+      ]
+    }
   },
+  { $group: { _id: null, tmpArray: { $push: "$EventDate" } } },
+  {
+    $project: {
+      min: { $arrayElemAt: ["$tmpArray", 0] },
+      max: { $arrayElemAt: ["$tmpArray", 1] }
+    }
+  }
 ]);
 
 // Q7
