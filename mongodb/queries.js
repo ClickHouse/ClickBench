@@ -3,15 +3,23 @@ queries = [];
 
 // Q0
 // SELECT COUNT(*) FROM hits;
-queries.push([{ $count: "c" }]);
+// NOTE: $project need to enable covered index usage with enabled DB options
+queries.push([
+  { $project: { _id: 1 } },
+  { $count: "c" }
+]);
 
 // Q1
 // SELECT COUNT(*) FROM hits WHERE AdvEngineID <> 0;
-queries.push([{ $match: { AdvEngineID: { $ne: 0 } } }, { $count: "c" }]);
+queries.push([
+  { $match: { AdvEngineID: { $ne: 0 } } },
+  { $count: "c" }
+]);
 
 // Q2
 // SELECT SUM(AdvEngineID), COUNT(*), AVG(ResolutionWidth) FROM hits;
 queries.push([
+  { $project: { _id: 0, AdvEngineID: 1, ResolutionWidth: 1 } },
   {
     $group: {
       _id: null,
@@ -26,8 +34,12 @@ queries.push([
 // SELECT AVG(UserID) FROM hits;
 // REMARKS: Precision is lost without the $toDecimal
 queries.push([
-  { $addFields: { converted: { $toDecimal: "$UserID" } } },
-  { $group: { _id: null, a: { $avg: "$converted" } } },
+  {
+    $group: {
+      _id: null,
+      a: { $avg: { $toDecimal: "$UserID" } }
+    }
+  },
 ]);
 
 // Q4
