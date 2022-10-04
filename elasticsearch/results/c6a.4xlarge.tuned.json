@@ -1,4 +1,5 @@
 {
+    "hide": true,
     "system": "Elasticsearch (tuned)",
     "date": "2022-07-25",
     "machine": "c6a.4xlarge, 1500gb gp2",
