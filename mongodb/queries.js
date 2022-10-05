@@ -184,14 +184,20 @@ queries.push([
 
 // Q14
 // SELECT SearchEngineID, SearchPhrase, COUNT(*) AS c FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, SearchPhrase ORDER BY c DESC LIMIT 10;
+// NOTE: concat as _id take less cpu compare to object with two fields. Here we can use it because of int field SearchEngineID
 queries.push([
   { $match: { SearchPhrase: { $ne: "" } } },
   {
     $group: {
       _id: {
-        SearchEngineID: "$SearchEngineID",
-        SearchPhrase: "$SearchPhrase",
+        $concat: [
+          "$SearchPhrase",
+          "|",
+          { $toString: "$SearchEngineID" },
+        ]
       },
+      SearchPhrase: { $first: "$SearchPhrase" },
+      SearchEngineID: { $first: "$SearchEngineID" },
       c: { $sum: 1 },
     },
   },
