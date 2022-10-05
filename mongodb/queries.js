@@ -329,8 +329,8 @@ queries.push([
 // SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY EventTime LIMIT 10;
 queries.push([
   { $match: { SearchPhrase: { $ne: "" } } },
+  { $project: { _id: 0, SearchPhrase: 1 } },
   { $sort: { EventTime: 1 } },
-  { $project: { SearchPhrase: 1 } },
   { $limit: 10 },
 ]);
 
@@ -347,8 +347,8 @@ queries.push([
 // SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY EventTime, SearchPhrase LIMIT 10;
 queries.push([
   { $match: { SearchPhrase: { $ne: "" } } },
+  { $project: { _id: 0, EventTime: 1, SearchPhrase: 1 } },
   { $sort: { EventTime: 1, SearchPhrase: 1 } },
-  { $project: { SearchPhrase: 1 } },
   { $limit: 10 },
 ]);
 
