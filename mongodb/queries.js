@@ -100,8 +100,8 @@ queries.push([
     $group: {
       _id: "$RegionID",
       sum_AdvEngineID: { $sum: "$AdvEngineID" },
-      c: { $sum: 1 },
       avg_ResolutionWidth: { $avg: "$ResolutionWidth" },
+      c: { $sum: 1 },
     },
   },
   { $sort: { c: -1 } },
@@ -299,7 +299,7 @@ queries.push([
   {
     $match: {
       Title: /Google/,
-      URL: { $not: /\\.google\\./ },
+      URL: { $not: /\.google\./ },
       SearchPhrase: { $ne: "" },
     },
   },
