@@ -218,7 +218,15 @@ queries.push([
 queries.push([
   {
     $group: {
-      _id: { UserID: "$UserID", SearchPhrase: "$SearchPhrase" },
+      _id: {
+        $concat: [
+          "$SearchPhrase",
+          "|",
+          { $toString: "$UserID" },
+        ]
+      },
+      SearchPhrase: { $first: "$SearchPhrase" },
+      UserID: { $first: "$UserID" },
       c: { $sum: 1 },
     },
   },
@@ -231,7 +239,15 @@ queries.push([
 queries.push([
   {
     $group: {
-      _id: { UserID: "$UserID", SearchPhrase: "$SearchPhrase" },
+      _id: {
+        $concat: [
+          "$SearchPhrase",
+          "|",
+          { $toString: "$UserID" },
+        ]
+      },
+      SearchPhrase: { $first: "$SearchPhrase" },
+      UserID: { $first: "$UserID" },
       c: { $sum: 1 },
     },
   },
@@ -241,10 +257,9 @@ queries.push([
 // Q18
 // SELECT UserID, extract(minute FROM EventTime) AS m, SearchPhrase, COUNT(*) FROM hits GROUP BY UserID, m, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
 queries.push([
-  { $set: { m: { $minute: "$EventTime" } } },
   {
     $group: {
-      _id: { UserID: "$UserID", SearchPhrase: "$SearchPhrase", m: "$m" },
+      _id: { UserID: "$UserID", SearchPhrase: "$SearchPhrase", m: { $minute: "$EventTime" } },
       c: { $sum: 1 },
     },
   },
