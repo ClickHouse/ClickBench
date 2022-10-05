@@ -365,7 +365,7 @@ queries.push([
     },
   },
   { $match: { c: { $gt: 100000 } } },
-  { $sort: { l: -1, SearchPhrase: 1 } },
+  { $sort: { l: -1 } },
   { $limit: 25 },
 ]);
 
