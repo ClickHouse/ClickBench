@@ -9,7 +9,7 @@ ROOT=$(pwd)
 if [[ -n "$1" ]]; then
     url="$1"
 else
-    url='https://selectdb.s3.amazonaws.com/selectdb-1.2.0-linux_x64.tar.gz'
+    url='https://selectdb.s3.amazonaws.com/selectdb-2.0.0-linux_x64.tar.gz'
 fi
 # Download
 file_name="$(basename ${url})"
