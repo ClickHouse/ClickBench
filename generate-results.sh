@@ -9,6 +9,8 @@
     FIRST=1
     ls -1 */results/*.json | while read file
     do
+        [[ $file =~ ^(hardware|versions)/ ]] && continue;
+
         [ "${FIRST}" = "0" ] && echo -n ','
         jq --compact-output ". += {\"source\": \"${file}\"}" "${file}"
         FIRST=0

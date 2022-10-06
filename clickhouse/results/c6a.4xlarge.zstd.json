@@ -1,4 +1,5 @@
 {
+    "hide": true,
     "system": "ClickHouse (zstd)",
     "date": "2022-07-01",
     "machine": "c6a.4xlarge, 500gb gp2",

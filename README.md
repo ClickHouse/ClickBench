@@ -6,7 +6,7 @@ Discussion: https://news.ycombinator.com/item?id=32084571
 
 ## Overview
 
-This benchmark represents typical workload in the following areas: click stream and traffic analysis, web analytics, machine-generated data, structured logs, and events data. It covers the typical queries in ad-hoc analytics and real-time dashboards.
+This benchmark represents typical workload in the following areas: clickstream and traffic analysis, web analytics, machine-generated data, structured logs, and events data. It covers the typical queries in ad-hoc analytics and real-time dashboards.
 
 The dataset from this benchmark was obtained from the actual traffic recording of one of the world's largest web analytics platforms. It is anonymized while keeping all the essential distributions of the data. The set of queries was improvised to reflect the realistic workloads, while the queries are not directly from production.
 
@@ -32,7 +32,7 @@ The dataset is derived from accurate production data. The realistic data distrib
 
 ## Limitations
 
-The limitations of this benchmark allow keeping it easy to reproduce and to include more systems in the comparison. The benchmark represents only a subset of all possible workloads and scenarios. While it aims to be as fair as possible, the focus on a specific subset of workloads may give an advantage to the systems specialized in those workloads.
+The limitations of this benchmark allow keeping it easy to reproduce and to include more systems in the comparison. The benchmark represents only a subset of all possible workloads and scenarios. While it aims to be as fair as possible, focusing on a specific subset of workloads may give an advantage to the systems that specialise in those workloads.
 
 The following limitations should be acknowledged:
 
@@ -44,7 +44,7 @@ The following limitations should be acknowledged:
 
 4. The benchmark runs queries one after another and does not test a workload with concurrent requests; neither does it test for system capacity. Every query is run only a few times, and this allows some variability in the results.
 
-6. Many setups and systems are different enough to make direct comparison tricky. It is not possible to test the efficiency of storage used for in-memory databases, or the time of data loading for stateless query engines. The goal of the benchmark is to give the numbers for comparison and let you derive the conclusions on your own.
+5. Many setups and systems are different enough to make direct comparison tricky. It is not possible to test the efficiency of storage used for in-memory databases, or the time of data loading for stateless query engines. The goal of the benchmark is to give the numbers for comparison and let you derive the conclusions on your own.
 
 TLDR: *All Benchmarks Are ~~Bastards~~ Liars*.
 
@@ -190,7 +190,7 @@ The benchmark is created and used by the ClickHouse team. It can be surprising, 
 
 Now the new benchmark is easy to use and the results for any system can be reproduced in around 20 minutes.
 
-We also introduced the [Hardware Benchmark](https://clickhouse.com/benchmark/hardware/) for testing servers and VMs.
+We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/hardware/) for testing servers and VMs.
 
 ## Systems Included
 
@@ -261,6 +261,8 @@ We also introduced the [Hardware Benchmark](https://clickhouse.com/benchmark/har
 - [ ] Apache Kylin
 - [ ] S3 select command in AWS
 - [ ] Kinetica
+- [ ] YDB
+- [ ] OceanBase
 
 By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
 
@@ -394,6 +396,15 @@ https://github.com/db-benchmarks/db-benchmarks
 
 A benchmark suite inspired by ClickHouse benchmarks.
 Used mostly to compare search engines: Elasticsearch and Manticore.
+
+### SciTS
+
+https://arxiv.org/abs/2204.09795 or https://dl.acm.org/doi/10.1145/3538712.3538723
+A new benchmark for time-series workloads.  
+Tests both insertion and query speeds, as well as resource consumption.
+
+Includes TimescaleDB, InfluxDB, PostgreSQL and ClickHouse.  
+This benchmark is fully independent and [open-source](https://github.com/jalalmostafa/SciTS).
 
 ### STAC
 
