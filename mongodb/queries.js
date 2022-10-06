@@ -374,6 +374,7 @@ queries.push([
 // REMARK: This seems right but unsure of correct output for this one (mysql results seem strange)
 queries.push([
   { $match: { Referer: { $ne: "" } } },
+  { $project: { _id: 0, Referer: 1 } },
   {
     $set: {
       k: {
@@ -384,10 +385,9 @@ queries.push([
       },
     },
   },
-  { $set: { k: { $ifNull: [{ $first: "$k.captures" }, "$Referer"] } } },
   {
     $group: {
-      _id: "$k",
+      _id: { $ifNull: [{ $first: "$k.captures" }, "$Referer"] },
       l: { $avg: { $strLenBytes: "$Referer" } },
       c: { $sum: 1 },
     },
