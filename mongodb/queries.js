@@ -503,17 +503,20 @@ queries.push([
 queries.push([
   {
     $group: {
-      _id: {
-        c_0: "$ClientIP",
-        c_1: { $add: ["$ClientIP", -1] },
-        c_2: { $add: ["$ClientIP", -2] },
-        c_3: { $add: ["$ClientIP", -3] },
-      },
+      _id: "$ClientIP",
       c: { $sum: 1 },
     },
   },
   { $sort: { c: -1 } },
   { $limit: 10 },
+  {
+    $set: {
+      ClientIP_0: "$_id",
+      ClientIP_1: { $add: ["$_id", -1] },
+      ClientIP_2: { $add: ["$_id", -2] },
+      ClientIP_3: { $add: ["$_id", -3] },
+    }
+  }
 ]);
 
 // Q36
