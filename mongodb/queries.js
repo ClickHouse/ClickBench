@@ -416,7 +416,15 @@ queries.push([
   { $match: { SearchPhrase: { $ne: "" } } },
   {
     $group: {
-      _id: { SearchEngineID: "$SearchEngineID", ClientIP: "$ClientIP" },
+      _id: {
+        $concat: [
+          { $toString: "$SearchEngineID" },
+          "|",
+          { $toString: "$ClientIP" },
+        ]
+      },
+      SearchEngineID: { $first: "$SearchEngineID" },
+      ClientIP: { $first: "$ClientIP" },
       avg_ResolutionWidth: { $avg: "$ResolutionWidth" },
       sum_IsRefresh: { $sum: "$IsRefresh" },
       c: { $sum: 1 },
@@ -432,7 +440,15 @@ queries.push([
   { $match: { SearchPhrase: { $ne: "" } } },
   {
     $group: {
-      _id: { WatchID: "$WatchID", ClientIP: "$ClientIP" },
+      _id: {
+        $concat: [
+          { $toString: "$WatchID" },
+          "|",
+          { $toString: "$ClientIP" },
+        ]
+      },
+      WatchID: { $first: "$WatchID" },
+      ClientIP: { $first: "$ClientIP" },
       avg_ResolutionWidth: { $avg: "$ResolutionWidth" },
       sum_IsRefresh: { $sum: "$IsRefresh" },
       c: { $sum: 1 },
@@ -447,7 +463,15 @@ queries.push([
 queries.push([
   {
     $group: {
-      _id: { WatchID: "$WatchID", ClientIP: "$ClientIP" },
+      _id: {
+        $concat: [
+          { $toString: "$WatchID" },
+          "|",
+          { $toString: "$ClientIP" },
+        ]
+      },
+      WatchID: { $first: "$WatchID" },
+      ClientIP: { $first: "$ClientIP" },
       avg_ResolutionWidth: { $avg: "$ResolutionWidth" },
       sum_IsRefresh: { $sum: "$IsRefresh" },
       c: { $sum: 1 },
