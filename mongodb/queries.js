@@ -402,10 +402,13 @@ queries.push([
 let sums = { _id: null };
 for (i = 0; i < 90; ++i) {
   sums["srw_plus_" + i] = {
-    $sum: { $toLong: { $add: ["$ResolutionWidth", i] } },
+    $sum: { $add: ["$ResolutionWidth", i] },
   };
 }
-queries.push([{ $group: sums }]);
+queries.push([
+  { $project: { _id: 0, ResolutionWidth: { "$toLong": "$ResolutionWidth" } } },
+  { $group: sums }
+]);
 
 // Q30
 // SELECT SearchEngineID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, ClientIP ORDER BY c DESC LIMIT 10;
