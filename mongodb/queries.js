@@ -492,9 +492,10 @@ queries.push([
 // Q34
 // SELECT 1, URL, COUNT(*) AS c FROM hits GROUP BY 1, URL ORDER BY c DESC LIMIT 10;
 queries.push([
-  { $group: { _id: { one: { $literal: 1 }, URL: "$URL" }, c: { $sum: 1 } } },
+  { $group: { _id: "$URL", c: { $sum: 1 } } },
   { $sort: { c: -1 } },
   { $limit: 10 },
+  { $set: { one: 1 } }
 ]);
 
 // Q35
