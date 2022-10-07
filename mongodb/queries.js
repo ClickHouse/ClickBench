@@ -695,13 +695,8 @@ queries.push([
     },
   },
   {
-    $set: {
-      m: { $dateTrunc: { date: "$EventTime", unit: "minute" } },
-    },
-  },
-  {
     $group: {
-      _id: "$m",
+      _id: { $dateTrunc: { date: "$EventTime", unit: "minute" } },
       pageViews: { $sum: 1 },
     },
   },
