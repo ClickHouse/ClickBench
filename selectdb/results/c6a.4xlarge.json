@@ -4,7 +4,7 @@
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
     "comment": "",
-    "tags": ["C++", "column-oriented", "MySQL compatible"],
+    "tags": ["C++", "column-oriented", "MySQL compatible", "ClickHouse derivative"],
     "load_time": 482,
     "data_size": 17122854938,
     "result": [
@@ -53,4 +53,3 @@
 [0.03,0.03,0.03]
     ]
 }
-
