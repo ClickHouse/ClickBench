@@ -446,7 +446,9 @@ const additional_data_size_points = [
         <th>Metric: </th>
         <td id="selectors_run">
             <a class="selector" id="selector-metric-cold">Cold Run</a>
+            <a class="selector" id="selector-metric-cold-sum">Cold Run(sum)</a>
             <a class="selector" id="selector-metric-hot">Hot Run</a>
+            <a class="selector" id="selector-metric-hot-sum">Hot Run(sum)</a>
             <a class="selector" id="selector-metric-load">Load Time</a>
             <a class="selector" id="selector-metric-size">Storage Size</a>
         </td>
@@ -460,7 +462,7 @@ const additional_data_size_points = [
                 System &amp; Machine
             </th>
             <th colspan="2">
-                Relative <span id="time-or-size">time</span> (lower is better)
+                <span id="time-or-size">Relative time</span> (lower is better)
             </th>
         </tr>
     </thead>
@@ -600,7 +602,9 @@ document.getElementById('select-all-cluster-sizes').addEventListener('click', e 
 }));
 
 document.getElementById('selector-metric-cold').addEventListener('click', e => { selectors.metric = 'cold'; render(); updateHistory(); });
+document.getElementById('selector-metric-cold-sum').addEventListener('click', e => { selectors.metric = 'cold-sum'; render(); updateHistory(); });
 document.getElementById('selector-metric-hot').addEventListener('click', e => { selectors.metric = 'hot'; render(); updateHistory(); });
+document.getElementById('selector-metric-hot-sum').addEventListener('click', e => { selectors.metric = 'hot-sum'; render(); updateHistory(); });
 document.getElementById('selector-metric-load').addEventListener('click', e => { selectors.metric = 'load'; render(); updateHistory(); });
 document.getElementById('selector-metric-size').addEventListener('click', e => { selectors.metric = 'size'; render(); updateHistory(); });
 
@@ -626,7 +630,7 @@ function clearElement(elem)
 }
 
 function selectRun(timings) {
-    return selectors.metric == 'cold' ? timings[0] : (timings[1] !== null && timings[2] !== null ? Math.min(timings[1], timings[2]) : null)
+    return (selectors.metric == 'cold' || selectors.metric == 'cold-sum') ? timings[0] : (timings[1] !== null && timings[2] !== null ? Math.min(timings[1], timings[2]) : null)
 }
 
 function addNote(text) {
@@ -664,13 +668,25 @@ function renderSummary(filtered_data) {
     const min_load_time = Math.min(...filtered_data.map(elem => elem.load_time).filter(x => x));
     const min_data_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x));
 
+    const total_times = filtered_data.map(elem => {
+        const fallback_timing = missing_result_penalty * Math.max(missing_result_time, ...elem.result.map(timings => selectRun(timings)));
+        let curr_total_time = 0;
+        for (let i = 0; i < num_queries; ++i) {
+            curr_total_time += selectRun(elem.result[i]) ?? fallback_timing;
+        }
+        return curr_total_time;
+    });
+
     let summaries;
     if (selectors.metric == 'load') {
         summaries = filtered_data.map(elem => elem.load_time / min_load_time);
-        document.getElementById('time-or-size').innerText = 'time';
+        document.getElementById('time-or-size').innerText = 'Relative time';
     } else if (selectors.metric == 'size') {
         summaries = filtered_data.map(elem => elem.data_size / min_data_size);
-        document.getElementById('time-or-size').innerText = 'size';
+        document.getElementById('time-or-size').innerText = 'Relative size';
+    } else if (selectors.metric == 'cold-sum' || selectors.metric == 'hot-sum') {
+        summaries = total_times
+        document.getElementById('time-or-size').innerText = 'Total time';
     } else {
         summaries = filtered_data.map(elem => {
             const fallback_timing = missing_result_penalty * Math.max(missing_result_time, ...elem.result.map(timings => selectRun(timings)));
@@ -692,7 +708,7 @@ function renderSummary(filtered_data) {
 
             return Math.exp(accumulator / used_queries);
         });
-        document.getElementById('time-or-size').innerText = 'time';
+        document.getElementById('time-or-size').innerText = 'Relative time';
     }
 
     const sorted_indices = [...summaries.keys()].sort((a, b) => summaries[a] - summaries[b]);
@@ -731,6 +747,8 @@ function renderSummary(filtered_data) {
 
         const text = selectors.metric == 'load' ? (elem.load_time ? `${Math.round(elem.load_time)}s (×${ratio.toFixed(2)})` : 'stateless')
             :  selectors.metric == 'size' ? `${(elem.data_size / 1024 / 1024 / 1024).toFixed(2)} GiB (×${ratio.toFixed(2)})`
+            :  selectors.metric == 'cold-sum' ? `${ratio.toFixed(2)}s`
+            :  selectors.metric == 'hot-sum' ? `${ratio.toFixed(2)}s`
             : `×${ratio.toFixed(2)}`;
 
         td_number.appendChild(document.createTextNode(text));
@@ -751,7 +769,7 @@ function renderSummary(filtered_data) {
         table.appendChild(tr);
     });
 
-    return [sorted_indices, baseline_data];
+    return [sorted_indices, baseline_data, total_times];
 }
 
 function colorize(elem, ratio) {
@@ -828,7 +846,7 @@ function render() {
         filtered_data = [...filtered_data, ...additional_data_size_points];
     }
 
-    let [sorted_indices, baseline_data] = renderSummary(filtered_data);
+    let [sorted_indices, baseline_data, total_times] = renderSummary(filtered_data);
     sorted_indices = sorted_indices.filter(idx => !filtered_data[idx].fake);
 
     /// Generate details
@@ -902,6 +920,31 @@ function render() {
 
             let td = document.createElement('td');
             td.appendChild(document.createTextNode(curr_size !== null ? `${(curr_size / 1024 / 1024 / 1024).toFixed(2)} GiB (×${ratio.toFixed(2)})` : '☠'));
+
+            colorize(td, ratio);
+            tr.appendChild(td);
+        });
+
+        details_body.appendChild(tr);
+    }
+
+    /// Total query runtimes
+    {
+        let tr = document.createElement('tr');
+        tr.className = 'shadow';
+
+        let td_title = document.createElement('td');
+        td_title.colSpan = 2;
+        td_title.appendChild(document.createTextNode('Total query time: '));
+        tr.appendChild(td_title);
+
+        const baseline_total_time = total_times[sorted_indices[0]]; 
+        sorted_indices.map(idx => {
+            let curr_total_time = total_times[idx];
+            const ratio = curr_total_time / baseline_total_time
+
+            let td = document.createElement('td');
+            td.appendChild(document.createTextNode(`${curr_total_time.toFixed(2)}s (x${ratio.toFixed(2)})`));
 
             colorize(td, ratio);
             tr.appendChild(td);
