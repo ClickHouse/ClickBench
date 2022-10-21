@@ -13,6 +13,9 @@ sudo systemctl status mongod
 #################################
 # set params `internalQueryPlannerGenerateCoveredWholeIndexScans` to true because we know that collscan is
 # always bad. Decision about enabling should be made if collection data couldn't fit to RAM.
+# NOTE: This option is reset to default on restart until it saved in mongo config file.
+#       Don't forget to set again if mongo restart needed or crashes happened while queries run and
+#       you want to continue theirs execution.
 time mongosh --quiet --eval 'db.adminCommand({setParameter: 1,"internalQueryPlannerGenerateCoveredWholeIndexScans": true});'
 
 
