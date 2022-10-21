@@ -1,7 +1,7 @@
 const iterations = 3;
 
 // `col` need in queries to make lookups so define before load
-let collectionName = "hits_tmp"
+let collectionName = "hits"
 let col = db.getCollection(collectionName);
 
 load("./queries.js");
