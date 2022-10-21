@@ -465,9 +465,9 @@ queries.push([
     $group: {
       _id: {
         $concat: [
-          { $toString: "$WatchID" },
-          "|",
           { $toString: "$ClientIP" },
+          "|",
+          { $toString: "$WatchID" },
         ]
       },
       WatchID: { $first: "$WatchID" },
