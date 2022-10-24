@@ -57,8 +57,8 @@ time mongosh --quiet --eval 'db.hits.createIndex({"ClientIP": 1, "WatchID": 1, "
 # Load data and import
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
-#
-time mongoimport --collection hits --type tsv hits.tsv --fieldFile=create.txt --columnsHaveTypes
+# Use mongo import to load data into mongo. By default numInsertionWorkers is 1 so change to half of VM where it would be run
+time mongoimport --collection hits --type tsv hits.tsv --fieldFile=create.txt --columnsHaveTypes --numInsertionWorkers=8
 # 2022-07-16T00:06:36.161+0000    99997497 document(s) imported successfully. 0 document(s) failed to import.
 # real    101m35.264s
 
