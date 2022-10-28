@@ -1,3 +1,18 @@
+## Disclaimer
+
+When you use mongo then you need to prepare structure, indexes, queries even for normal
+work. Especially when you work with legacy structure or big data. 
+So in addition to converting SQL to mongo query language they are adapted to use indexes.
+
+It may seem unfair to other benches that don't have same preparation but working with mongo 
+require that all because you can't just make arbitrary queries on big collections in mongo.
+
+If you search mongo analogues for your SQL queries then you can inspire by
+`queries.js` but remember that these queries specially adapted to current benchmark
+and may be work slower in your cases/environment. Especially if you have less than 100k docs.
+
+---
+
 The queries produce correct results and locally run to completion.
 
 It's likely there are opportunities for optimization in the setup and the

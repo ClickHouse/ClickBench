@@ -3,11 +3,18 @@ queries = [];
 
 // Q0
 // SELECT COUNT(*) FROM hits;
-queries.push([{ $count: "c" }]);
+// NOTE: $project need to enable covered index usage with enabled DB options
+queries.push([
+  { $project: { _id: 1 } },
+  { $count: "c" }
+]);
 
 // Q1
 // SELECT COUNT(*) FROM hits WHERE AdvEngineID <> 0;
-queries.push([{ $match: { AdvEngineID: { $ne: 0 } } }, { $count: "c" }]);
+queries.push([
+  { $match: { AdvEngineID: { $ne: 0 } } },
+  { $count: "c" }
+]);
 
 // Q2
 // SELECT SUM(AdvEngineID), COUNT(*), AVG(ResolutionWidth) FROM hits;
@@ -26,8 +33,12 @@ queries.push([
 // SELECT AVG(UserID) FROM hits;
 // REMARKS: Precision is lost without the $toDecimal
 queries.push([
-  { $addFields: { converted: { $toDecimal: "$UserID" } } },
-  { $group: { _id: null, a: { $avg: "$converted" } } },
+  {
+    $group: {
+      _id: null,
+      a: { $avg: { $toDecimal: "$UserID" } }
+    }
+  },
 ]);
 
 // Q4
@@ -40,14 +51,26 @@ queries.push([{ $group: { _id: "$SearchPhrase" } }, { $count: "c" }]);
 
 // Q6
 // SELECT MIN(EventDate), MAX(EventDate) FROM hits;
+// NOTE: depends on collectionName var
 queries.push([
+  { $sort: { EventDate: 1 } },
+  { $limit: 1 },
   {
-    $group: {
-      _id: null,
-      min: { $min: "$EventDate" },
-      max: { $max: "$EventDate" },
-    },
+    $unionWith: {
+      coll: collectionName,
+      pipeline: [
+        { $sort: { EventDate: -1 } },
+        { $limit: 1 },
+      ]
+    }
   },
+  { $group: { _id: null, tmpArray: { $push: "$EventDate" } } },
+  {
+    $project: {
+      min: { $arrayElemAt: ["$tmpArray", 0] },
+      max: { $arrayElemAt: ["$tmpArray", 1] }
+    }
+  }
 ]);
 
 // Q7
@@ -69,19 +92,35 @@ queries.push([
 
 // Q9
 // SELECT RegionID, SUM(AdvEngineID), COUNT(*) AS c, AVG(ResolutionWidth), COUNT(DISTINCT UserID) FROM hits GROUP BY RegionID ORDER BY c DESC LIMIT 10;
+// NOTE: $addToSet is extremely expensive in this case so better use rewrite query with $lookup
+//       to collection itself. Not this query depends on collection name `collectionName` - the var from main
+//       run script in field `from` inside lookup.
 queries.push([
   {
     $group: {
       _id: "$RegionID",
-      count_distinct_UserID: { $addToSet: "$UserID" },
       sum_AdvEngineID: { $sum: "$AdvEngineID" },
-      c: { $sum: 1 },
       avg_ResolutionWidth: { $avg: "$ResolutionWidth" },
+      c: { $sum: 1 },
     },
   },
-  { $set: { count_distinct_UserID: { $size: "$count_distinct_UserID" } } },
   { $sort: { c: -1 } },
   { $limit: 10 },
+  {
+    $lookup: {
+      from: collectionName,
+      let: { regionIdVar: "$_id" },
+      pipeline: [
+        { $match: { $expr: { $eq: ["$RegionID", "$$regionIdVar"] } } },
+        { $group: { _id: "$UserID" } },
+        { $count: "c" }
+      ],
+      as: "count_distinct_UserID"
+    }
+  },
+  {
+    $set: { count_distinct_UserID: { $arrayElemAt: ["$count_distinct_UserID.c", 0] } }
+  }
 ]);
 
 // Q10
@@ -145,14 +184,20 @@ queries.push([
 
 // Q14
 // SELECT SearchEngineID, SearchPhrase, COUNT(*) AS c FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, SearchPhrase ORDER BY c DESC LIMIT 10;
+// NOTE: concat as _id take less cpu compare to object with two fields. Here we can use it because of int field SearchEngineID
 queries.push([
   { $match: { SearchPhrase: { $ne: "" } } },
   {
     $group: {
       _id: {
-        SearchEngineID: "$SearchEngineID",
-        SearchPhrase: "$SearchPhrase",
+        $concat: [
+          "$SearchPhrase",
+          "|",
+          { $toString: "$SearchEngineID" },
+        ]
       },
+      SearchPhrase: { $first: "$SearchPhrase" },
+      SearchEngineID: { $first: "$SearchEngineID" },
       c: { $sum: 1 },
     },
   },
@@ -173,7 +218,15 @@ queries.push([
 queries.push([
   {
     $group: {
-      _id: { UserID: "$UserID", SearchPhrase: "$SearchPhrase" },
+      _id: {
+        $concat: [
+          "$SearchPhrase",
+          "|",
+          { $toString: "$UserID" },
+        ]
+      },
+      SearchPhrase: { $first: "$SearchPhrase" },
+      UserID: { $first: "$UserID" },
       c: { $sum: 1 },
     },
   },
@@ -186,7 +239,15 @@ queries.push([
 queries.push([
   {
     $group: {
-      _id: { UserID: "$UserID", SearchPhrase: "$SearchPhrase" },
+      _id: {
+        $concat: [
+          "$SearchPhrase",
+          "|",
+          { $toString: "$UserID" },
+        ]
+      },
+      SearchPhrase: { $first: "$SearchPhrase" },
+      UserID: { $first: "$UserID" },
       c: { $sum: 1 },
     },
   },
@@ -196,10 +257,9 @@ queries.push([
 // Q18
 // SELECT UserID, extract(minute FROM EventTime) AS m, SearchPhrase, COUNT(*) FROM hits GROUP BY UserID, m, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
 queries.push([
-  { $set: { m: { $minute: "$EventTime" } } },
   {
     $group: {
-      _id: { UserID: "$UserID", SearchPhrase: "$SearchPhrase", m: "$m" },
+      _id: { UserID: "$UserID", SearchPhrase: "$SearchPhrase", m: { $minute: "$EventTime" } },
       c: { $sum: 1 },
     },
   },
@@ -239,7 +299,7 @@ queries.push([
   {
     $match: {
       Title: /Google/,
-      URL: { $not: /\\.google\\./ },
+      URL: { $not: /\.google\./ },
       SearchPhrase: { $ne: "" },
     },
   },
@@ -269,8 +329,8 @@ queries.push([
 // SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY EventTime LIMIT 10;
 queries.push([
   { $match: { SearchPhrase: { $ne: "" } } },
+  { $project: { _id: 0, SearchPhrase: 1 } },
   { $sort: { EventTime: 1 } },
-  { $project: { SearchPhrase: 1 } },
   { $limit: 10 },
 ]);
 
@@ -287,8 +347,8 @@ queries.push([
 // SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY EventTime, SearchPhrase LIMIT 10;
 queries.push([
   { $match: { SearchPhrase: { $ne: "" } } },
+  { $project: { _id: 0, EventTime: 1, SearchPhrase: 1 } },
   { $sort: { EventTime: 1, SearchPhrase: 1 } },
-  { $project: { SearchPhrase: 1 } },
   { $limit: 10 },
 ]);
 
@@ -305,7 +365,7 @@ queries.push([
     },
   },
   { $match: { c: { $gt: 100000 } } },
-  { $sort: { l: -1, SearchPhrase: 1 } },
+  { $sort: { l: -1 } },
   { $limit: 25 },
 ]);
 
@@ -314,6 +374,7 @@ queries.push([
 // REMARK: This seems right but unsure of correct output for this one (mysql results seem strange)
 queries.push([
   { $match: { Referer: { $ne: "" } } },
+  { $project: { _id: 0, Referer: 1 } },
   {
     $set: {
       k: {
@@ -324,16 +385,15 @@ queries.push([
       },
     },
   },
-  { $set: { k: { $ifNull: [{ $first: "$k.captures" }, "$Referer"] } } },
   {
     $group: {
-      _id: "$k",
+      _id: { $ifNull: [{ $first: "$k.captures" }, "$Referer"] },
       l: { $avg: { $strLenBytes: "$Referer" } },
       c: { $sum: 1 },
     },
   },
   { $match: { c: { $gt: 100000 } } },
-  { $sort: { l: -1, SearchPhrase: 1 } },
+  { $sort: { l: -1 } },
   { $limit: 25 },
 ]);
 
@@ -342,10 +402,13 @@ queries.push([
 let sums = { _id: null };
 for (i = 0; i < 90; ++i) {
   sums["srw_plus_" + i] = {
-    $sum: { $toLong: { $add: ["$ResolutionWidth", i] } },
+    $sum: { $add: ["$ResolutionWidth", i] },
   };
 }
-queries.push([{ $group: sums }]);
+queries.push([
+  { $project: { _id: 0, ResolutionWidth: { "$toLong": "$ResolutionWidth" } } },
+  { $group: sums }
+]);
 
 // Q30
 // SELECT SearchEngineID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, ClientIP ORDER BY c DESC LIMIT 10;
@@ -353,7 +416,15 @@ queries.push([
   { $match: { SearchPhrase: { $ne: "" } } },
   {
     $group: {
-      _id: { SearchEngineID: "$SearchEngineID", ClientIP: "$ClientIP" },
+      _id: {
+        $concat: [
+          { $toString: "$SearchEngineID" },
+          "|",
+          { $toString: "$ClientIP" },
+        ]
+      },
+      SearchEngineID: { $first: "$SearchEngineID" },
+      ClientIP: { $first: "$ClientIP" },
       avg_ResolutionWidth: { $avg: "$ResolutionWidth" },
       sum_IsRefresh: { $sum: "$IsRefresh" },
       c: { $sum: 1 },
@@ -369,7 +440,15 @@ queries.push([
   { $match: { SearchPhrase: { $ne: "" } } },
   {
     $group: {
-      _id: { WatchID: "$WatchID", ClientIP: "$ClientIP" },
+      _id: {
+        $concat: [
+          { $toString: "$WatchID" },
+          "|",
+          { $toString: "$ClientIP" },
+        ]
+      },
+      WatchID: { $first: "$WatchID" },
+      ClientIP: { $first: "$ClientIP" },
       avg_ResolutionWidth: { $avg: "$ResolutionWidth" },
       sum_IsRefresh: { $sum: "$IsRefresh" },
       c: { $sum: 1 },
@@ -384,7 +463,15 @@ queries.push([
 queries.push([
   {
     $group: {
-      _id: { WatchID: "$WatchID", ClientIP: "$ClientIP" },
+      _id: {
+        $concat: [
+          { $toString: "$ClientIP" },
+          "|",
+          { $toString: "$WatchID" },
+        ]
+      },
+      WatchID: { $first: "$WatchID" },
+      ClientIP: { $first: "$ClientIP" },
       avg_ResolutionWidth: { $avg: "$ResolutionWidth" },
       sum_IsRefresh: { $sum: "$IsRefresh" },
       c: { $sum: 1 },
@@ -405,9 +492,10 @@ queries.push([
 // Q34
 // SELECT 1, URL, COUNT(*) AS c FROM hits GROUP BY 1, URL ORDER BY c DESC LIMIT 10;
 queries.push([
-  { $group: { _id: { one: { $literal: 1 }, URL: "$URL" }, c: { $sum: 1 } } },
+  { $group: { _id: "$URL", c: { $sum: 1 } } },
   { $sort: { c: -1 } },
   { $limit: 10 },
+  { $set: { one: 1 } }
 ]);
 
 // Q35
@@ -415,17 +503,20 @@ queries.push([
 queries.push([
   {
     $group: {
-      _id: {
-        c_0: "$ClientIP",
-        c_1: { $add: ["$ClientIP", -1] },
-        c_2: { $add: ["$ClientIP", -2] },
-        c_3: { $add: ["$ClientIP", -3] },
-      },
+      _id: "$ClientIP",
       c: { $sum: 1 },
     },
   },
   { $sort: { c: -1 } },
   { $limit: 10 },
+  {
+    $set: {
+      ClientIP_0: "$_id",
+      ClientIP_1: { $add: ["$_id", -1] },
+      ClientIP_2: { $add: ["$_id", -2] },
+      ClientIP_3: { $add: ["$_id", -3] },
+    }
+  }
 ]);
 
 // Q36
@@ -604,13 +695,8 @@ queries.push([
     },
   },
   {
-    $set: {
-      m: { $dateTrunc: { date: "$EventTime", unit: "minute" } },
-    },
-  },
-  {
     $group: {
-      _id: "$m",
+      _id: { $dateTrunc: { date: "$EventTime", unit: "minute" } },
       pageViews: { $sum: 1 },
     },
   },

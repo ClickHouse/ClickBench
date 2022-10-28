@@ -1,7 +1,10 @@
-load("./queries.js");
-
 const iterations = 3;
-let col = db.hits;
+
+// `col` need in queries to make lookups so define before load
+let collectionName = "hits"
+let col = db.getCollection(collectionName);
+
+load("./queries.js");
 
 for (let i = 0; i < queries.length; i++) {
   for (let j = 0; j < iterations; ++j) {
