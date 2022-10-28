@@ -1,4 +1,5 @@
 ## Disclaimer
+
 When you use mongo then you need to prepare structure, indexes, queries even for normal
 work. Especially when you work with legacy structure or big data. 
 So in addition to converting SQL to mongo query language they are adapted to use indexes.
