@@ -1,0 +1,1 @@
+CREATE VIEW hits AS SELECT * FROM read_parquet('hits_*.parquet', binary_as_string=True);
