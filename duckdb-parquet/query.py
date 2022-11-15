@@ -16,4 +16,3 @@ for try_num in range(3):
     results = con.execute(query).fetchall()
     end = timeit.default_timer()
     print(end - start)
-    print(results)
