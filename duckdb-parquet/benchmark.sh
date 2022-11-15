@@ -2,14 +2,12 @@
 
 # Install
 
-# FIXME: uncomment
-# sudo apt-get update
-# sudo apt-get install -y python3-pip
-# pip install duckdb psutil
+sudo apt-get update
+sudo apt-get install -y python3-pip
+pip install duckdb psutil
 
 # Load the data
-# FIXME: uncomment
-# seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 
 ./load.py
 
