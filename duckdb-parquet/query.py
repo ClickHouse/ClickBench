@@ -9,6 +9,7 @@ query = sys.stdin.read()
 print(query)
 
 con = duckdb.connect(database="my-db.duckdb", read_only=False)
+# enable parquet metadata cache
 con.execute("PRAGMA enable_object_cache")
 
 for try_num in range(3):
