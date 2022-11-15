@@ -12,7 +12,7 @@ wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 gzip -d hits.csv.gz
 
 ./load.py
-# 4216.5390389899985 seconds
+# 414 seconds
 
 # Run the queries
 
