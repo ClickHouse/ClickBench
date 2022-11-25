@@ -199,7 +199,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] clickhouse-local without data loading
 - [x] MySQL InnoDB
 - [x] MySQL MyISAM
-- [ ] MariaDB
+- [x] MariaDB
 - [x] MariaDB ColumnStore
 - [x] MemSQL/SingleStore
 - [x] PostgreSQL
@@ -209,12 +209,13 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Vertica (without publishing)
 - [x] QuestDB
 - [x] DuckDB
+- [x] DuckDB over Parquet files
 - [x] MonetDB
 - [x] mapD/Omnisci/HeavyAI
 - [x] Databend
 - [x] DataFusion
 - [x] ByteHouse
-- [ ] Doris/PALO
+- [x] Doris/PALO
 - [x] SelectDB
 - [x] Druid
 - [x] Pinot
@@ -242,10 +243,10 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Amazon RDS Aurora for Postgres
 - [ ] InfluxDB
 - [ ] TDEngine
-- [ ] MongoDB
+- [x] MongoDB
 - [ ] Cassandra
 - [ ] ScyllaDB
-- [ ] Elasticsearch
+- [x] Elasticsearch
 - [ ] Apache Ignite
 - [x] Infobright
 - [ ] Actian Vector
