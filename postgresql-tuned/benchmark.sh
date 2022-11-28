@@ -4,6 +4,13 @@ sudo apt-get update
 sudo apt-get install -y postgresql-common
 sudo apt-get install -y postgresql-14
 
+sudo sed -i -e 's/shared_buffers = 128MB/shared_buffers = 8GB/' /etc/postgresql/14/main/postgresql.conf
+sudo sed -i -e 's/#max_parallel_workers = 8/max_parallel_workers=16/' /etc/postgresql/14/main/postgresql.conf
+sudo sed -i -e 's/#max_parallel_workers_per_gather = 2/max_parallel_workers_per_gather = 8/' /etc/postgresql/14/main/postgresql.conf
+sudo sed -i -e 's/max_wal_size = 1GB/max_wal_size=32GB/' /etc/postgresql/14/main/postgresql.conf
+sudo systemctl restart  postgresql@14-main
+
+
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 chmod 777 ~ hits.tsv
