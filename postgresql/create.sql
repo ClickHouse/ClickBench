@@ -105,5 +105,4 @@ CREATE TABLE hits
     RefererHash BIGINT NOT NULL,
     URLHash BIGINT NOT NULL,
     CLID INTEGER NOT NULL,
-    PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID)
 );
