@@ -167,7 +167,10 @@ UUID=$(./clickhouse local --query "SELECT generateUUIDv4()")
 " | tee results.tsv | ./clickhouse client --host play.clickhouse.com --secure --user benchmark --query "
   INSERT INTO benchmark_results
   (run_id, query_num, try_num, time)
-  FORMAT TSV" || echo "Cannot upload results. Please send the output to feedback@clickhouse.com"
+  FORMAT TSV" || echo "Cannot upload results."
+
+echo
+echo "Please send the output above to feedback@clickhouse.com"
 
 <<////
 
@@ -210,5 +213,19 @@ TO benchmark;
 
 GRANT INSERT ON benchmark_runs TO benchmark;
 GRANT INSERT ON benchmark_results TO benchmark;
+
+
+How to extract data from automatically saved results:
+
+clickhouse-client --user play --host play.clickhouse.com --secure --query "
+  SELECT toString(groupArray(time)) || ','
+  FROM
+  (
+    SELECT * FROM benchmark_results
+    WHERE run_id = 'ec3d0822-50e0-4e30-bb42-87330accb03c'
+    ORDER BY query_num, try_num
+  )
+  GROUP BY query_num
+  ORDER BY query_num"
 
 ////
