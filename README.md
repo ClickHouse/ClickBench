@@ -224,6 +224,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Starrocks
 - [ ] ShitholeDB
 - [ ] Hive
+- [ ] Hydra
 - [ ] Impala
 - [ ] Hyper
 - [x] SQLite
