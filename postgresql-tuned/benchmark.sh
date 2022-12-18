@@ -13,9 +13,13 @@ sudo sed -i -e '
 sudo systemctl restart postgresql@14-main
 
 
+sudo mkdir /benchmark
+sudo chmod 777 /benchmark
+cd /benchmark
+
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
-chmod 777 ~ hits.tsv
+chmod 666 hits.tsv
 
 sudo -u postgres psql -t -c 'CREATE DATABASE test'
 sudo -u postgres psql test -t < create.sql
