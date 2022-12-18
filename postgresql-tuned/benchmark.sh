@@ -26,9 +26,9 @@ sudo -u postgres psql test -t < create.sql
 time split hits.tsv --verbose  -n r/$(( $(nproc)/2 ))  --filter='sudo -u postgres psql test -t -c "\\copy hits FROM STDIN"'
 
 sudo -u postgres psql test -t -c 'CREATE EXTENSION pg_trgm;'
-sudo -u postgres psql test -t < index.sql
+time sudo -u postgres psql test -t < index.sql
 
-sudo -u postgres psql test -t -c 'VACUUM ANALYZE hits'
+time sudo -u postgres psql test -t -c 'VACUUM ANALYZE hits'
 
 # COPY 99997497
 # Time: 2341543.463 ms (39:01.543)
