@@ -1,7 +1,7 @@
 
 {
     "machine":       "UpCloud 4CPU AMD EPYC",
-    "comment":  "UpCloud 8CPU, AMD EPYC 7542 32-Core Processor",
+    "comment":  "UpCloud 4CPU, AMD EPYC 7542 32-Core Processor, 8 GiB RAM",
     "time":         "2022-02-06 00:00:00",
     "tags": ["cloud", "amd"],
     "result":
