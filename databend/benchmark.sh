@@ -36,7 +36,7 @@ time curl -XPUT 'http://root:@127.0.0.1:8000/v1/streaming_load' -H 'insert_sql: 
 ## check data is correct
 curl 'http://default@localhost:8124/' --data-binary "select count() from hits"
 
-# [ec2-user@ip-172-31-16-92 databend]$ du -bcs _data
+du -bcs _data
 # 20922561953     _data
 # 20922561953     total
 
