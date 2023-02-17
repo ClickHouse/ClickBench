@@ -1,5 +1,4 @@
 {
-    "hide": true,
     "system": "ClickHouse (tuned)",
     "date": "2022-07-01",
     "machine": "c6a.metal, 500gb gp2",
