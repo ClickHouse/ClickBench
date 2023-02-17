@@ -106,4 +106,4 @@ CREATE TRANSIENT TABLE hits
     URLHash BIGINT NOT NULL,
     CLID INTEGER NOT NULL
 )
-CLUSTER BY (CounterID, EventDate, UserID, EventTime, WatchID);
+CLUSTER BY (CounterID, EventDate, UserID, EventTime, WatchID) COMPRESSION = "lz4" STORAGE_FORMAT = "native";
