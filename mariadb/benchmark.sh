@@ -14,9 +14,8 @@ gzip -d hits.tsv.gz
 
 sudo mariadb -e "CREATE DATABASE test"
 sudo mariadb test < create.sql
-time sudo mariadb test -e "LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits"
 
-# 2:23:45 elapsed
+time split -l 10000 --filter="mariadb test -e \"SET sql_log_bin = 0; LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE hits;\""
 
 ./run.sh 2>&1 | tee log.txt
 
