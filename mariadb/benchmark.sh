@@ -5,6 +5,11 @@
 sudo apt-get update
 sudo apt-get install -y mariadb-server
 sudo bash -c "echo -e '[mysql]\nlocal-infile=1\n\n[mysqld]\nlocal-infile=1\n' > /etc/mysql/conf.d/local_infile.cnf"
+
+# size innodb buffer based on available RAM
+# use 75% of total
+sudo bash -c "awk '/MemTotal/ { printf \"innodb_buffer_pool_size=%.0fG \n\", \$2*0.75/1024/1024 }' /proc/meminfo > /etc/mysql/buffer.conf"
+
 sudo service mariadb restart
 
 # Load the data
