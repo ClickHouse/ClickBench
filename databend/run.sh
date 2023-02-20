@@ -1,6 +1,6 @@
 #!/bin/bash
 
-THREADS=`cat /proc/cpuinfo  | grep 'physical id' | wc -l`
+THREADS=`cat /proc/cpuinfo | grep 'cpu cores' | uniq | grep -Eo '[0-9]+'`
 TRIES=3
 QUERY_NUM=1
 cat queries.sql | while read query; do
