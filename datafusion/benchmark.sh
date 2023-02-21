@@ -7,14 +7,11 @@ source ~/.cargo/env
 
 
 # Install Dependencies
-sudo apt update -y
-sudo apt install gcc -y
+sudo yum update -y
+sudo yum install gcc -y
 
 
-# Install Datafusion
-#cargo install --version 10.0.0 datafusion-cli
-
-# Install Datafusion Master Branch
+# Install DataFusion main branch
 git clone https://github.com/apache/arrow-datafusion.git
 cd arrow-datafusion/datafusion-cli
 CARGO_PROFILE_RELEASE_LTO=true RUSTFLAGS="-C codegen-units=1" cargo build --release
