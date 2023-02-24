@@ -7,6 +7,7 @@
     "tags": [
         "Rust",
         "column-oriented",
+        "MySQL compatible",
         "ClickHouse derivative"
     ],
     "load_time": 358,

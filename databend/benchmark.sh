@@ -36,10 +36,10 @@ time curl -XPUT 'http://root:@127.0.0.1:8000/v1/streaming_load' -H 'insert_sql: 
 # sys     0m32.262s
 
 ## in c6a.metal it's ~70s
-# {"id":"2792b64f-15a2-42d8-9e32-29434ad8e068","state":"SUCCESS","stats":{"rows":99997497,"bytes":74807831229},"error":null,"files":["hits.tsv"]}
-# real    1m11.019s
-# user    0m0.957s
-# sys     0m19.687s
+# {"id":"2564bd91-1b36-4cf2-a95e-de46c5aff0c6","state":"SUCCESS","stats":{"rows":99997497,"bytes":74807831229},"error":null,"files":["hits.tsv"]}
+# real    1m10.347s
+# user    0m0.953s
+# sys     0m20.401s
 
 
 ## check data is correct
