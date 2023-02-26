@@ -1,4 +1,4 @@
-# Datafusion
+# DataFusion
 
 DataFusion is an extensible query execution framework, written in Rust, that uses Apache Arrow as its in-memory format. For more information, please check <https://arrow.apache.org/datafusion/user-guide/introduction.html>
 
