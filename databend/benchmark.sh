@@ -1,8 +1,7 @@
 #!/bin/bash
 
-mkdir databend && cd databend
-curl -LJO 'https://github.com/datafuselabs/databend/releases/download/v0.9.50-nightly/databend-v0.9.50-nightly-x86_64-unknown-linux-musl.tar.gz'
-tar xzvf 'databend-v0.9.50-nightly-x86_64-unknown-linux-musl.tar.gz'
+curl -LJO 'https://github.com/datafuselabs/databend/releases/download/v0.9.53-nightly/databend-v0.9.53-nightly-x86_64-unknown-linux-musl.tar.gz'
+tar xzvf 'databend-v0.9.53-nightly-x86_64-unknown-linux-musl.tar.gz'
  
 cat > config.toml << CONF
 [storage]
@@ -40,6 +39,12 @@ time curl -XPUT 'http://root:@127.0.0.1:8000/v1/streaming_load' -H 'insert_sql: 
 # real    1m10.347s
 # user    0m0.953s
 # sys     0m20.401s
+
+## in c5.4x large, it's 368s
+# {"id":"17477ed9-9f1a-46d9-b6cf-12a5971f4450","state":"SUCCESS","stats":{"rows":99997497,"bytes":74807831229},"error":null,"files":["hits.tsv"]}
+# real    6m8.975s
+# user    0m4.327s
+# sys     0m36.185s
 
 
 ## check data is correct
