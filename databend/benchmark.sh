@@ -55,7 +55,7 @@ du -bcs _data
 # 20922561953     total
 
 # If you wants to get the data size(without metadata and indexes)
-# curl 'http://default@localhost:8124/' --data-binary "select humanize_size(bytes_compressed)  from fuse_snapshot('default', 'hits') select humanize_size(bytes_compressed)  from fuse_snapshot('default', 'hits') order by timestamp desc limit 1"
+# curl 'http://default@localhost:8124/' --data-binary "select humanize_size(bytes_compressed)  from fuse_snapshot('default', 'hits') order by timestamp desc limit 1"
 # 18.48 GiB
 
 ./run.sh 2>&1 | tee log.txt
