@@ -1,8 +1,15 @@
 #!/bin/bash
 
+tuned=$1
+if (( ! tuned )); then
+    queries="queries.sql"
+else
+    queries="queries-tuned.sql"
+fi;
+
 TRIES=3
 QUERY_NUM=1
-cat queries.sql | while read query; do
+cat $queries | while read query; do
     [ -z "$HOST" ] && sync
     [ -z "$HOST" ] && echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
