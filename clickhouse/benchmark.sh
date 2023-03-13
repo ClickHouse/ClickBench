@@ -16,12 +16,12 @@ done
 
 # Install
 
-#curl https://clickhouse.com/ | sh
-#sudo DEBIAN_FRONTEND=noninteractive ./clickhouse install
+curl https://clickhouse.com/ | sh
+sudo DEBIAN_FRONTEND=noninteractive ./clickhouse install
 
 # Clean up non-default config files:
-sudo rm /etc/clickhouse-server/config.d/compression.yaml
-sudo rm /etc/clickhouse-server/users.d/custom-settings.yaml
+sudo rm -f /etc/clickhouse-server/config.d/compression.yaml
+sudo rm -f /etc/clickhouse-server/users.d/custom-settings.yaml
 
 # Optional: if you want to use higher compression:
 if (( use_zstd )); then
@@ -32,7 +32,7 @@ compression:
     " | sudo tee /etc/clickhouse-server/config.d/compression.yaml
 fi;
 
-sudo clickhouse start
+sudo clickhouse restart
 
 # Load the data
 
@@ -54,11 +54,10 @@ profiles:
     rm create-tuned.sql
 fi;
 
-#wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-#gzip -d hits.tsv.gz
+# wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+# gzip -d hits.tsv.gz
 
 clickhouse-client --time --query "INSERT INTO hits FORMAT TSV" < hits.tsv
-clickhouse-client --time --query "OPTIMIZE TABLE hits FINAL"
 
 # Run the queries
 
