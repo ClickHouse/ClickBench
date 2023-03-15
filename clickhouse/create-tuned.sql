@@ -108,5 +108,5 @@ CREATE TABLE hits
     PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID)
 )
 ENGINE = MergeTree
-PARTITION BY UserID % MAX_THREADS
+PARTITION BY UserID % 16
 SETTINGS index_granularity = 1024;
