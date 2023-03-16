@@ -5,6 +5,11 @@
 sudo apt-get update
 sudo apt-get install -y mariadb-server
 sudo bash -c "echo -e '[mysql]\nlocal-infile=1\n\n[mysqld]\nlocal-infile=1\n' > /etc/mysql/conf.d/local_infile.cnf"
+
+# size innodb buffer based on available RAM
+# use 75% of total
+sudo bash -c "awk '/MemTotal/ { printf \"innodb_buffer_pool_size=%.0fG \n\", \$2*0.75/1024/1024 }' /proc/meminfo > /etc/mysql/buffer.conf"
+
 sudo service mariadb restart
 
 # Load the data
@@ -14,9 +19,8 @@ gzip -d hits.tsv.gz
 
 sudo mariadb -e "CREATE DATABASE test"
 sudo mariadb test < create.sql
-time sudo mariadb test -e "LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits"
 
-# 2:23:45 elapsed
+time split -l 10000 --filter="sudo mariadb test -e \"SET sql_log_bin = 0; LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE hits;\"" hits.tsv
 
 ./run.sh 2>&1 | tee log.txt
 
