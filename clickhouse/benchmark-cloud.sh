@@ -6,8 +6,8 @@
 
 # Load the data
 
-export HOST=...
-export PASSWORD=...
+export HOST="twolunc123.eu-west-1.aws.clickhouse-staging.com"
+export PASSWORD="KNjGEvqsFiPd"
 
 clickhouse-client --host "$HOST" --password "$PASSWORD" --secure < create.sql
 
