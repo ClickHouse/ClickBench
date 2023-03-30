@@ -20,7 +20,9 @@ time sudo mysql test -e "LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits"
 
 ./run.sh 2>&1 | tee log.txt
 
-sudo du -bcs /var/lib/mysql
+sudo mysql -e "SELECT table_name AS 'Table', \
+               round((data_length + index_length), 2) 'Size in Bytes' \
+               FROM information_schema.TABLES WHERE table_schema = 'test' AND table_name = 'hits';"
 
 cat log.txt |
   grep -P 'rows? in set|Empty set|^ERROR' |
