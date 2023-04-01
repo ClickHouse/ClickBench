@@ -24,7 +24,10 @@ time split -l 10000 --filter="sudo mariadb test -e \"SET sql_log_bin = 0; LOAD D
 
 ./run.sh 2>&1 | tee log.txt
 
-sudo du -bcs /var/lib/mysql
+# Calculate the table size
+sudo mariadb -e "SELECT table_name AS 'Table', \
+               round((data_length + index_length), 2) 'Size in Bytes' \
+               FROM information_schema.TABLES WHERE table_schema = 'test' AND table_name = 'hits';"
 
 cat log.txt |
   grep -P 'rows? in set|Empty set|^ERROR' |

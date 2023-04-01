@@ -25,7 +25,10 @@ time sudo docker run -it --rm --volume $(pwd):/workdir --network host mysql:5 my
 
 # 38m37.466s
 
-sudo docker exec mysql_ib du -bcs /mnt/mysql_data/ /usr/local/infobright-4.0.7-x86_64/cache
+# Calculate the table size
+sudo docker run -it --rm --network host mysql:5 mysql --host 127.0.0.1 --port 5029 --user=root --password=mypass -e "SELECT table_name AS 'Table', \
+    round((data_length + index_length), 2) 'Size in Bytes' \
+    FROM information_schema.TABLES WHERE table_schema = 'test' AND table_name = 'hits';"
 
 # 13 760 341 294
 
