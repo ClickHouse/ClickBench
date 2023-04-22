@@ -1,5 +1,5 @@
 {
-    "system": "DataFusion (single)",
+    "system": "DataFusion (single parquet)",
     "date": "2023-04-11",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
