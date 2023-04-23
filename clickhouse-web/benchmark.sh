@@ -6,7 +6,7 @@
 # Install
 
 curl https://clickhouse.com/ | sh
-sudo ./clickhouse --noninteractive install
+sudo ./clickhouse install --noninteractive
 sudo clickhouse start
 
 # A directory for cache
