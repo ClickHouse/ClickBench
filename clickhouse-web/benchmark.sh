@@ -9,6 +9,10 @@ curl https://clickhouse.com/ | sh
 sudo ./clickhouse --noninteractive install
 sudo clickhouse start
 
+# A directory for cache
+sudo mkdir /dev/shm/clickhouse
+sudo chown clickhouse:clickhouse /dev/shm/clickhouse
+
 # Load the data
 
 clickhouse-client --time < create.sql
