@@ -6,7 +6,8 @@
 # Install
 
 curl https://clickhouse.com/ | sh
-sudo DEBIAN_FRONTEND=noninteractive ./clickhouse install
+sudo ./clickhouse --noninteractive install
+sudo clickhouse start
 
 # Load the data
 

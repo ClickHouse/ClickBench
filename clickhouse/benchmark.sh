@@ -3,7 +3,7 @@
 # Install
 
 curl https://clickhouse.com/ | sh
-sudo DEBIAN_FRONTEND=noninteractive ./clickhouse install
+sudo ./clickhouse install --noninteractive
 
 # Optional: if you want to use higher compression:
 if (( 0 )); then
