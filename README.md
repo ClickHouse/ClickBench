@@ -195,8 +195,9 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 ## Systems Included
 
 - [x] ClickHouse
-- [ ] ClickHouse operating like "Athena"
-- [x] clickhouse-local without data loading
+- [x] ClickHouse on local Parquet files
+- [x] ClickHouse operating like "Athena" on remote Parquet files
+- [x] ClickHouse on a VFS over HTTPs on CDN
 - [x] MySQL InnoDB
 - [x] MySQL MyISAM
 - [x] MariaDB
@@ -209,7 +210,8 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Vertica (without publishing)
 - [x] QuestDB
 - [x] DuckDB
-- [x] DuckDB over Parquet files
+- [x] DuckDB over local Parquet files
+- [ ] DuckDB operating like "Athena" on remote Parquet files
 - [x] MonetDB
 - [x] mapD/Omnisci/HeavyAI
 - [x] Databend
@@ -224,13 +226,15 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Starrocks
 - [ ] ShitholeDB
 - [ ] Hive
-- [ ] Hydra
+- [x] Hydra
 - [ ] Impala
 - [ ] Hyper
 - [x] SQLite
 - [x] Redshift
 - [x] Redshift Serverless
-- [ ] Presto/Trino
+- [ ] Redshift Spectrum
+- [ ] Presto
+- [ ] Trino
 - [x] Amazon Athena
 - [x] Bigquery (without publishing)
 - [x] Snowflake
@@ -267,6 +271,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Kinetica
 - [ ] YDB
 - [ ] OceanBase
+- [ ] Boilingdata
 
 By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
 
