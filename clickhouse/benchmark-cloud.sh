@@ -12,7 +12,7 @@ export PASSWORD=...
 clickhouse-client --host "$HOST" --password "$PASSWORD" --secure < create.sql
 
 clickhouse-client --host "$HOST" --password "$PASSWORD" --secure --query "
-  INSERT INTO hits SELECT * FROM url('https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz')
+  INSERT INTO hits SELECT * FROM url('https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/hits.tsv.gz')
 " --time
 
 # 343.455
