@@ -1,7 +1,7 @@
 {
-    "system": "ClickHouse Cloud",
+    "system": "ClickHouse Cloud (AWS)",
     "date": "2023-05-01",
-    "machine": "360GB AWS",
+    "machine": "360GB",
     "cluster_size": "serverless",
     "comment": "",
 
