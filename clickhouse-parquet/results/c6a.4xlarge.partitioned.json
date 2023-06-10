@@ -1,5 +1,5 @@
 {
-    "system": "clickhouse-local (partitioned)",
+    "system": "ClickHouse (Parquet, partitioned)",
     "date": "2023-06-09",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
