@@ -2,7 +2,7 @@
 
 # See the docs in clickhouse/cloud-init.sh
 
-BASE_URL='https://raw.githubusercontent.com/ClickHouse/ClickBench/main/clickhouse-local/'
+BASE_URL='https://raw.githubusercontent.com/ClickHouse/ClickBench/main/clickhouse-parquet/'
 
 apt-get update
 apt-get install -y wget curl

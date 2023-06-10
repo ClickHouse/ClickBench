@@ -1,5 +1,5 @@
 {
-    "system": "DuckDB (Parquet)",
+    "system": "DuckDB (Parquet, partitioned)",
     "date": "2022-11-15",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
