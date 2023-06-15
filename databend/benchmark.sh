@@ -11,10 +11,15 @@ type = "fs"
 data_path = "./_data"
 
 [meta]
-embedded_dir = "./.databend/meta_embedded"
+endpoints = ["127.0.0.1:9191"]
+username = "root"
+password = "root"
+client_timeout_in_second = 60
+auto_sync_interval = 60
 CONF
 
-# databend starts with embedded meta service
+# databend starts with meta service
+./bin/databend-meta --single > meta.log 2>&1 &
 ./bin/databend-query -c config.toml > query.log 2>&1 &
 
 # Load the data
