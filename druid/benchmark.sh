@@ -26,7 +26,7 @@ echo "druid.query.groupBy.maxMergingDictionarySize=5000000000" >> apache-druid-$
 
 # Load the data
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 
 ./apache-druid-${VERSION}/bin/post-index-task --file ingest.json --url http://localhost:8081

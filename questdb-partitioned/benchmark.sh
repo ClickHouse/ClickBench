@@ -17,7 +17,7 @@ questdb-6.5.2-rt-linux-amd64/bin/questdb.sh start
 
 # Import the data
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 gzip -d hits.csv.gz
 
 curl -G --data-urlencode "query=$(cat create.sql)" 'http://localhost:9000/exec'
