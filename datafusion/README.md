@@ -4,15 +4,9 @@ DataFusion is an extensible query execution framework, written in Rust, that use
 
 We use parquet file here and create an external table for it; and then do the queries.
 
+## Generate benchmark results
 
-### To solve
-
-q32 (line 33 in queries.sql) out of memory in my 32GB memory vm, it output null now since it's killed
-
-
-### to generate benchmark results
-
-The benchmark should be completed in under an hour. On-demand pricing is $0.6 per hour while spot pricing is only $0.2 per hour.
+The benchmark should be completed in under an hour. On-demand pricing is $0.6 per hour while spot pricing is only $0.2 to $0.3 per hour (us-east-2).
 
 1. manually start a AWS EC2 instance
     - `c6a.4xlarge`
@@ -20,8 +14,8 @@ The benchmark should be completed in under an hour. On-demand pricing is $0.6 pe
     - Root 500GB gp2 SSD
     - no EBS optimized
     - no instance store
-1. wait for status check passed, then ssh to EC2
-1. `sudo yum update -y` and `sudo yum install gcc -y`
+1. wait for status check passed, then ssh to EC2 `ssh ec2-user@{ip}`
+1. `sudo yum update -y` and `sudo yum install gcc git -y`
 1. `git clone https://github.com/ClickHouse/ClickBench`
 1. `cd ClickBench/datafusion`
 1. `vi benchmark.sh` and modify following line to target Datafusion version
@@ -37,7 +31,7 @@ The benchmark should be completed in under an hour. On-demand pricing is $0.6 pe
 3. `comparing binary with utf-8` and `group by binary` don't work in mac, if you run these quries in mac, you'll get some errors for quries contain binary format apache/arrow-datafusion#3050
 
 
-### to generate full human readable results (for debugging)
+## Generate full human readable results (for debugging)
 
 1. install datafusion-cli
 2. download the parquet ```wget --no-verbose --continue https://datasets.clickhouse.com/hits_compatible/hits.parquet```
