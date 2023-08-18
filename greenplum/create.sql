@@ -108,7 +108,7 @@ CREATE TABLE hits
     CLID INTEGER NOT NULL
 )
 with (appendoptimized=true,orientation=column,compresstype=zstd)
-DISTRIBUTED RANDOMLY;
+DISTRIBUTED BY (UserID);
 CREATE INDEX hits_idx on hits using btree (CounterID, EventDate, UserID, EventTime, WatchID); 
 drop external table if exists hits_ext;
 CREATE EXTERNAL TABLE hits_ext (like hits)
