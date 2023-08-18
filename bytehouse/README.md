@@ -28,7 +28,7 @@ export warehouse='test'
 ```
 
 ```
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 gzip -d hits.csv.gz
 ```
 

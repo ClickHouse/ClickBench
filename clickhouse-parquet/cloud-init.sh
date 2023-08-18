@@ -12,12 +12,12 @@ chmod +x *.sh
 
 curl https://clickhouse.com/ | sh
 
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --no-verbose --continue https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 
 echo "Partitioned:" > log
 ./run.sh >> log
 
-wget --continue 'https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/hits.parquet'
+wget --no-verbose --continue 'https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/hits.parquet'
 
 sed -i 's/hits_\*\.parquet/hits.parquet/' create.sql
 

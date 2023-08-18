@@ -21,7 +21,7 @@ cd ../..
 
 
 # Download benchmark target data
-wget --continue https://datasets.clickhouse.com/hits_compatible/hits.parquet
+wget --no-verbose --continue https://datasets.clickhouse.com/hits_compatible/hits.parquet
 
 
 # Run

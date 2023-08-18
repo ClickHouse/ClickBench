@@ -7,7 +7,7 @@ sudo apt-get install -y postgresql-client
 
 psql -U crate -h localhost --no-password -t -c 'SELECT 1'
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 
 psql -U crate -h localhost --no-password -t < create.sql

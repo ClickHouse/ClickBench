@@ -7,7 +7,7 @@ sudo ./install.sh
 
 # download hits.tsv if we dont already have it
 if [ ! -e hits.tsv ]; then
-    wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+    wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
     gzip -d hits.tsv.gz
 fi
 
