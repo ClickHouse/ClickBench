@@ -47,7 +47,7 @@ psql -h default.111111111111.eu-central-1.redshift-serverless.amazonaws.com -U d
 
 Then run the benchmark:
 ```
-export HOST=...
+export FQDN=...
 ./run.sh 2>&1 | tee log.txt
 
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms|ERROR' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |

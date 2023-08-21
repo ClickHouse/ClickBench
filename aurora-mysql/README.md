@@ -28,10 +28,10 @@ Find "Security", click on the group in "VPC security groups".
 Edit "Inbound rules". Add "Custom TCP", port 3306, from 0.0.0.0/0.
 
 ```
-export HOST="database-1.cluster-cnkeohbxcwr1.eu-central-1.rds.amazonaws.com"
+export FQDN="database-1.cluster-cnkeohbxcwr1.eu-central-1.rds.amazonaws.com"
 export PASSWORD="..."
 
-mysql -h "${HOST}" -u admin --password="${PASSWORD}" -e "CREATE DATABASE test"
+mysql -h "${FQDN}" -u admin --password="${PASSWORD}" -e "CREATE DATABASE test"
 ```
 
 Load the data
@@ -40,9 +40,9 @@ Load the data
 wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 
-mysql -h "${HOST}" -u admin --password="${PASSWORD}" test < create.sql
+mysql -h "${FQDN}" -u admin --password="${PASSWORD}" test < create.sql
 
-time mysql --local-infile=1 -h "${HOST}" -u admin --password="${PASSWORD}" test -e "LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits"
+time mysql --local-infile=1 -h "${FQDN}" -u admin --password="${PASSWORD}" test -e "LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits"
 ```
 
 > 128m7.318s
