@@ -37,7 +37,7 @@ mysql -h "${HOST}" -u admin --password="${PASSWORD}" -e "CREATE DATABASE test"
 Load the data
 
 ```
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 
 mysql -h "${HOST}" -u admin --password="${PASSWORD}" test < create.sql

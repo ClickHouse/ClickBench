@@ -253,6 +253,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] ScyllaDB
 - [x] Elasticsearch
 - [ ] Apache Ignite
+- [ ] Motherduck
 - [x] Infobright
 - [ ] Actian Vector
 - [ ] Manticore Search
@@ -272,6 +273,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] YDB
 - [ ] OceanBase
 - [ ] Boilingdata
+- [x] Byteconity
 
 By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
 

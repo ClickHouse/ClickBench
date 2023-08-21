@@ -15,7 +15,7 @@ apt-get install -y wget curl
 
 wget $BASE_URL/{benchmark.sh,run.sh,create.sql,queries.sql}
 chmod +x *.sh
-./benchmark.sh | tee log
+./benchmark.sh 2>&1 | tee log
 
 echo $BASE_URL >> log
 curl 'http://169.254.169.254/latest/meta-data/instance-type' >> log

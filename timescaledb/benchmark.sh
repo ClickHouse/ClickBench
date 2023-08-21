@@ -18,7 +18,7 @@ sudo -u postgres psql uncompressed -c "CREATE EXTENSION IF NOT EXISTS timescaled
 
 # Import the data
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 sudo chmod og+rX ~
 chmod 777 hits.tsv

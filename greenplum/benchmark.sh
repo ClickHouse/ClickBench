@@ -12,8 +12,9 @@ sudo apt update
 sudo apt install greenplum-db-6
 sudo rm -rf /gpmaster /gpdata*
 ssh-keygen -t rsa -b 4096
+touch /home/gpadmin/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
 cat /home/gpadmin/.ssh/id_rsa.pub >> /home/gpadmin/.ssh/authorized_keys
-mod 600 ~/.ssh/authorized_keys
 sudo echo "# kernel.shmall = _PHYS_PAGES / 2 # See Shared Memory Pages
 kernel.shmall = 197951838
 # kernel.shmmax = kernel.shmall * PAGE_SIZE 
@@ -53,7 +54,7 @@ echo "* soft nofile 524288
 echo "RemoveIPC=no" |sudo tee -a  /etc/systemd/logind.conf
 echo "Now you need to reboot the machine. Press Enter if you already rebooted, or reboot now and run the script once again"
 read
-source /opt/greenplum-db-*.0/greenplum_path.sh
+source /opt/greenplum-db-*/greenplum_path.sh
 cp $GPHOME/docs/cli_help/gpconfigs/gpinitsystem_singlenode .
 echo localhost > ./hostlist_singlenode
 sed -i "s/MASTER_HOSTNAME=[a-z_]*/MASTER_HOSTNAME=$(hostname)/" gpinitsystem_singlenode
@@ -62,12 +63,13 @@ sudo mkdir /gpmaster /gpdata1 /gpdata2 /gpdata3 /gpdata4 /gpdata5 /gpdata6 /gpda
 sudo chmod 777 /gpmaster /gpdata1 /gpdata2 /gpdata3 /gpdata4 /gpdata5 /gpdata6 /gpdata7 /gpdata8 /gpdata9 /gpdata10 /gpdata11 /gpdata12 /gpdata13 /gpdata14
 gpinitsystem -ac gpinitsystem_singlenode
 export MASTER_DATA_DIRECTORY=/gpmaster/gpsne-1/
-#wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-#gzip -d hits.tsv.gz
+wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+gzip -d hits.tsv.gz
 chmod 777 ~ hits.tsv
 psql -d postgres -f create.sql
 nohup gpfdist &
 time psql -d postgres -t -c '\timing' -c "insert into hits select * from hits_ext;"
+psql -d postgres -t -c "ANALYZE hits;"
 du -sh /gpdata*
 ./run.sh 2>&1 | tee log.txt
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
