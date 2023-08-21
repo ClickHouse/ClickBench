@@ -9,6 +9,7 @@
     FIRST=1
     ls -1 results/*.json | while read file
     do
+	>&2 echo processing ${file}
         [ "${FIRST}" = "0" ] && echo -n ','
         jq --compact-output ". += {\"source\": \"${file}\"}" "${file}"
         FIRST=0
