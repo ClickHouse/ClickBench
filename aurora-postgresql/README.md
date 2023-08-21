@@ -28,7 +28,7 @@ Find "Security", click on the group in "VPC security groups".
 Edit "Inbound rules". Add "Custom TCP", port 5432, from 0.0.0.0/0.
 
 ```
-export HOST="database-2-instance-1.cnkeohbxcwr1.eu-central-1.rds.amazonaws.com"
+export FQDN="database-2-instance-1.cnkeohbxcwr1.eu-central-1.rds.amazonaws.com"
 echo "*:*:*:*:..." > .pgpass
 chmod 400 .pgpass
 ```
@@ -39,9 +39,9 @@ Load the data
 wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 
-psql -U postgres -h "${HOST}" -t -c 'CREATE DATABASE test'
-psql -U postgres -h "${HOST}" test -t < create.sql
-psql -U postgres -h "${HOST}" test -t -c '\timing' -c "\\copy hits FROM 'hits.tsv'"
+psql -U postgres -h "${FQDN}" -t -c 'CREATE DATABASE test'
+psql -U postgres -h "${FQDN}" test -t < create.sql
+psql -U postgres -h "${FQDN}" test -t -c '\timing' -c "\\copy hits FROM 'hits.tsv'"
 ```
 
 > COPY 99997497
