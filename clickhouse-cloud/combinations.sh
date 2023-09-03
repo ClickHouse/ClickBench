@@ -4,24 +4,32 @@
 # export KEY_ID=...
 # export KEY_SECRET=...
 
-for PROVIDER in aws gcp
+PROVIDER=aws
+REGION='eu-central-1'
+
+TIER=development
+MEMORY=0
+export PROVIDER TIER REGION MEMORY
+./cloud-api.sh &
+
+TIER=production
+for MEMORY in 24 48 96 192 360 720
 do
-    if [ "$PROVIDER" == 'aws' ]
-    then
-        REGION='eu-central-1'
-    else
-        REGION='europe-west-4'
-    fi
-
-    TIER=development
-    MEMORY=0
     export PROVIDER TIER REGION MEMORY
-    ./cloud-api.sh
+    ./cloud-api.sh &
+done
 
-    TIER=production
-    for MEMORY in 24 48 96 192 360 720
-    do
-        export PROVIDER TIER REGION MEMORY
-        ./cloud-api.sh
-    done
+PROVIDER=gcp
+REGION='europe-west4'
+
+TIER=development
+MEMORY=0
+export PROVIDER TIER REGION MEMORY
+./cloud-api.sh &
+
+TIER=production
+for MEMORY in 24 48 96 192 360 708
+do
+    export PROVIDER TIER REGION MEMORY
+    ./cloud-api.sh &
 done
