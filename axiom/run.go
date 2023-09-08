@@ -20,26 +20,25 @@ import (
 	"github.com/axiomhq/axiom-go/axiom/query"
 )
 
-func main() {
-	var (
-		apiURL = flag.String(
-			"api-url",
-			firstNonZero(os.Getenv("AXIOM_URL"), "https://api.axiom.co/"),
-			"Axiom API base URL [defaults to $AXIOM_URL when set]",
-		)
-		traceURL = flag.String("trace-url", "", "Axiom trace URL where traceId query argument will be added")
-		org      = flag.String("org", os.Getenv("AXIOM_ORG_ID"), "Axiom organization [defaults to $AXIOM_ORG_ID]")
-		token    = flag.String("token", os.Getenv("AXIOM_TOKEN"), "Axiom auth token [defaults to $AXIOM_TOKEN]")
-		iters    = flag.Int("iters", 3, "Number of iterations to run each query")
-		failfast = flag.Bool("failfast", false, "Exit on first error")
-		version  = flag.String("version", firstNonZero(gitSha(), "dev"), "Version of the benchmarking client code")
+func runCmd() command {
+	fs := flag.NewFlagSet("run", flag.ExitOnError)
+
+	apiURL := fs.String(
+		"api-url",
+		firstNonZero(os.Getenv("AXIOM_URL"), "https://api.axiom.co/"),
+		"Axiom API base URL [defaults to $AXIOM_URL when set]",
 	)
+	traceURL := fs.String("trace-url", "", "Axiom trace URL where traceId query argument will be added")
+	org := fs.String("org", os.Getenv("AXIOM_ORG_ID"), "Axiom organization [defaults to $AXIOM_ORG_ID]")
+	token := fs.String("token", os.Getenv("AXIOM_TOKEN"), "Axiom auth token [defaults to $AXIOM_TOKEN]")
+	iters := fs.Int("iters", 3, "Number of iterations to run each query")
+	failfast := fs.Bool("failfast", false, "Exit on first error")
+	version := fs.String("version", firstNonZero(gitSha(), "dev"), "Version of the benchmarking client code")
 
-	flag.Parse()
-
-	if err := run(*version, *apiURL, *traceURL, *org, *token, *iters, *failfast); err != nil {
-		log.Fatal(err)
-	}
+	return command{fs, func(args []string) error {
+		fs.Parse(args)
+		return run(*version, *apiURL, *traceURL, *org, *token, *iters, *failfast)
+	}}
 }
 
 func run(version, apiURL, traceURL, org, token string, iters int, failfast bool) error {
@@ -64,7 +63,7 @@ func run(version, apiURL, traceURL, org, token string, iters int, failfast bool)
 		sc  = bufio.NewScanner(os.Stdin)
 		ctx = context.Background()
 		enc = json.NewEncoder(os.Stdout)
-		id  = 1
+		id  = 0
 	)
 
 	for sc.Scan() {
