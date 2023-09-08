@@ -218,7 +218,7 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 		ServerVersions: map[string]string{},
 		Version:        c.version,
 		TraceID:        traceID,
-		TraceURL:       c.buildTraceURL(traceID),
+		TraceURL:       c.buildTraceURL(began, traceID),
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -234,7 +234,7 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 	return result, nil
 }
 
-func (c *axiomClient) buildTraceURL(traceID string) string {
+func (c *axiomClient) buildTraceURL(timestamp time.Time, traceID string) string {
 	if c.traceURL == nil {
 		return ""
 	}
@@ -242,6 +242,7 @@ func (c *axiomClient) buildTraceURL(traceID string) string {
 	uri := *c.traceURL
 	qs := uri.Query()
 	qs.Set("traceId", traceID)
+	qs.Set("traceStart", timestamp.Format(time.RFC3339Nano))
 	uri.RawQuery = qs.Encode()
 
 	return uri.String()
