@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -159,8 +161,10 @@ type QueryResult struct {
 	TraceID string `json:"trace_id"`
 	// TraceURL is the URL to the trace in Axiom
 	TraceURL string `json:"trace_url"`
-	// Result is the query result
-	Result *query.Result `json:"result"`
+	// Status of the query result
+	Status query.Status `json:"status"`
+	// Columns is the list of columns returned by the query
+	Columns [][]any `json:"columns"`
 	// Error is the error if the query failed
 	Error string `json:"error"`
 }
@@ -225,9 +229,72 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 		return result, nil
 	}
 
-	result.Result = &query.Result{}
-	if err := json.Unmarshal(respBody, result.Result); err != nil {
+	var r query.Result
+	if err := json.Unmarshal(respBody, &r); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
+	}
+
+	result.Status = r.Status
+
+	colMap := make(map[string][]any)
+	var colNames []string
+
+	add := func(name string, values ...any) {
+		if _, ok := colMap[name]; !ok {
+			colNames = append(colNames, name)
+		}
+
+		for _, v := range values {
+			// Ensure JSON encoding matches that of Clickhouse --format=JSONCompactColumns
+			// so that we can diff the results of the two.
+			switch n := v.(type) {
+			case float64:
+				if n != math.Trunc(n) {
+					// n is a float number with decimal places
+					colMap[name] = append(colMap[name], n)
+				} else if n >= float64(math.MinInt16) && n <= float64(math.MaxInt16) {
+					// Fits in int16, encode as int
+					colMap[name] = append(colMap[name], int16(n))
+				} else {
+					// Fits in int32, encode as string
+					colMap[name] = append(colMap[name], strconv.FormatInt(int64(n), 10))
+				}
+			default:
+				// Handle other types
+				colMap[name] = append(colMap[name], v)
+			}
+		}
+	}
+
+	for _, match := range r.Matches {
+		for colName, values := range match.Data {
+			switch vs := values.(type) {
+			case []any:
+				add(colName, vs...)
+			default:
+				add(colName, vs)
+			}
+		}
+	}
+
+	for _, total := range r.Buckets.Totals {
+		if len(total.Group) == 0 {
+			for _, agg := range total.Aggregations {
+				add(agg.Alias, agg.Value)
+			}
+			continue
+		}
+
+		for name, group := range total.Group {
+			add(name, group)
+			for _, agg := range total.Aggregations {
+				add(agg.Alias, agg.Value)
+			}
+		}
+	}
+
+	for _, name := range colNames {
+		result.Columns = append(result.Columns, colMap[name])
 	}
 
 	return result, nil
