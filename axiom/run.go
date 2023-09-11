@@ -235,7 +235,12 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 	}
 
 	result.Status = r.Status
+	result.Columns = columns(&r)
 
+	return result, nil
+}
+
+func columns(r *query.Result) [][]any {
 	colMap := make(map[string][]any)
 	var colNames []string
 
@@ -268,12 +273,7 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 
 	for _, match := range r.Matches {
 		for colName, values := range match.Data {
-			switch vs := values.(type) {
-			case []any:
-				add(colName, vs...)
-			default:
-				add(colName, vs)
-			}
+			add(colName, values)
 		}
 	}
 
@@ -293,11 +293,12 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 		}
 	}
 
-	for _, name := range colNames {
-		result.Columns = append(result.Columns, colMap[name])
+	cols := make([][]any, len(colNames))
+	for i, name := range colNames {
+		cols[i] = colMap[name]
 	}
 
-	return result, nil
+	return cols
 }
 
 func (c *axiomClient) buildTraceURL(timestamp time.Time, traceID string) string {
