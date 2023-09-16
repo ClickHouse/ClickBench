@@ -242,6 +242,7 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 
 func columns(r *query.Result) [][]any {
 	colMap := make(map[string][]any)
+	colTypes := map[string]func(any) any{}
 	var colNames []string
 
 	add := func(name string, values ...any) {
@@ -249,25 +250,31 @@ func columns(r *query.Result) [][]any {
 			colNames = append(colNames, name)
 		}
 
+		colType := colTypes[name]
 		for _, v := range values {
-			// Ensure JSON encoding matches that of Clickhouse --format=JSONCompactColumns
-			// so that we can diff the results of the two.
-			switch n := v.(type) {
-			case float64:
-				if n != math.Trunc(n) {
-					// n is a float number with decimal places
-					colMap[name] = append(colMap[name], n)
-				} else if n >= float64(math.MinInt16) && n <= float64(math.MaxInt16) {
-					// Fits in int16, encode as int
-					colMap[name] = append(colMap[name], int16(n))
-				} else {
-					// Fits in int32, encode as string
-					colMap[name] = append(colMap[name], strconv.FormatInt(int64(n), 10))
+			if colType == nil {
+				// Ensure JSON encoding matches that of Clickhouse --format=JSONCompactColumns
+				// so that we can diff the results of the two.
+				switch n := v.(type) {
+				case float64:
+					if n != math.Trunc(n) {
+						// n is a float number with decimal places
+						colType = func(v any) any { return v }
+					} else if n >= float64(math.MinInt16) && n <= float64(math.MaxInt16) {
+						// Fits in int16, encode as int
+						colType = func(v any) any { return int16(v.(float64)) }
+					} else {
+						// Fits in int32, encode as string
+						colType = func(v any) any { return strconv.FormatInt(int64(v.(float64)), 10) }
+					}
+				default:
+					colType = func(v any) any { return v }
 				}
-			default:
-				// Handle other types
-				colMap[name] = append(colMap[name], v)
+
+				colTypes[name] = colType
 			}
+
+			colMap[name] = append(colMap[name], colType(v))
 		}
 	}
 
