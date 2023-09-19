@@ -1,16 +1,9 @@
 import org.apache.spark.sql.{SparkSession, SQLContext}
 import java.sql.Statement
-import java.io.{FileOutputStream, File}
-import scala.io.Source
-import scala.io.Codec
 import org.apache.spark.sql.types._
 
 val spark = SparkSession.builder.enableHiveSupport().getOrCreate()
 spark.sql("DROP TABLE IF EXISTS hits")
-val logFile = "log.txt"
-val fileOutputStream = new FileOutputStream(logFile)
-val fileStream = new java.io.PrintStream(fileOutputStream, true, Codec.UTF8.toString)
-System.setOut(fileStream)
 
 val schema = StructType(
   List(
@@ -122,7 +115,7 @@ val schema = StructType(
 )
 
 val startTable = System.nanoTime()
-val df = spark.read.schema(schema).option("header", "false").csv("/hits_neww.csv")
+val df = spark.read.schema(schema).option("header", "false").option("sep", "\t").csv("/hits.tsv")
 df.createOrReplaceTempView("hits")
 val endTable = System.nanoTime()
 val timeElapsedTable = (endTable - startTable) / 1000000
@@ -139,8 +132,5 @@ var itr: Int = 0
         itr += 1
     })
 
-
-fileStream.close()
-fileOutputStream.close()
 spark.stop()
 System.exit(0)
