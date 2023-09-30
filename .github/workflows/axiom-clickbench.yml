@@ -1,4 +1,4 @@
-name: Clickbench Axiom
+name: Clickbench Axiom DB
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  clickbench:
     runs-on: ubuntu-latest
     env:
       AXIOM_URL: ${{ secrets.AXIOM_URL }}
