@@ -21,9 +21,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        sparse-checkout: axiom
         with:
           fetch-depth: 0
+          sparse-checkout: axiom
 
       - name: Set up Go
         working-directory: axiom
