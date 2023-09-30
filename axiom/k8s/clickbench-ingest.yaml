@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clickbench-ingest-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: clickbench-ingest
+spec:
+  containers:
+    - name: clickbench-ingest
+      image: ubuntu:latest
+      command:
+        - "/bin/bash"
+      args:
+        - "-c"
+        - "trap : TERM INT; sleep infinity & wait"
+      volumeMounts:
+        - mountPath: /data
+          name: data
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: clickbench-ingest-pvc
