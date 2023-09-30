@@ -41,16 +41,18 @@ jobs:
       - name: Vet
         working-directory: axiom
         run: |
-          cd axiomgo vet ./...
+          go vet ./...
 
       - name: Run axiom-clickbench
         working-directory: axiom
         run: |
+          set -euo pipefail
           go build
           ./axiom-clickbench run -trace-url=$AXIOM_TRACE_URL < queries.apl > events.json
 
       - name: Ingest events into results dataset
         working-directory: axiom
         run: |
+          set -euo pipefail
           go install github.com/axiomhq/cli/cmd/axiom@latest
           axiom ingest $AXIOM_RESULTS_DATASET --content-type json < events.json
