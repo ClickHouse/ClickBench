@@ -26,10 +26,9 @@ jobs:
           sparse-checkout: axiom
 
       - name: Set up Go
-        working-directory: axiom
         uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version-file: 'axiom/go.mod'
 
       - name: Format Check
         working-directory: axiom
