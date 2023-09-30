@@ -21,10 +21,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        sparse-checkout: axiom
         with:
           fetch-depth: 0
 
       - name: Set up Go
+        working-directory: axiom
         uses: actions/setup-go@v4
         with:
           go-version: '1.21'
@@ -46,7 +48,7 @@ jobs:
         working-directory: axiom
         run: |
           go build
-          ./axiom-clickbench run -trace-url=$AXIOM_TRACE_URL < queries.apl | tee events.json
+          ./axiom-clickbench run -trace-url=$AXIOM_TRACE_URL < queries.apl > events.json
 
       - name: Ingest events into results dataset
         working-directory: axiom
