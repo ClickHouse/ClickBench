@@ -47,6 +47,6 @@ jobs:
           ./axiom-clickbench run -trace-url=$AXIOM_TRACE_URL < queries.apl | tee events.json
 
       - name: Ingest events into results dataset
-        uses: axiomhq/cli
         run: |
+          go install github.com/axiomhq/cli/cmd/axiom@latest
           axiom ingest $AXIOM_RESULTS_DATASET --content-type json < events.json
