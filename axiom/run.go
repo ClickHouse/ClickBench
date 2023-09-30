@@ -229,7 +229,7 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 		return result, nil
 	}
 
-	var r query.Result
+	var r aplQueryResponse
 	if err := json.Unmarshal(respBody, &r); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	}
@@ -240,7 +240,16 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 	return result, nil
 }
 
-func columns(r *query.Result) [][]any {
+type aplLegacyQueryRequest struct {
+	GroupBy []string `json:"groupBy"`
+}
+
+type aplQueryResponse struct {
+	query.Result
+	Request aplLegacyQueryRequest `json:"request"`
+}
+
+func columns(r *aplQueryResponse) [][]any {
 	colMap := make(map[string][]any)
 	colTypes := map[string]func(any) any{}
 	var colNames []string
@@ -259,12 +268,8 @@ func columns(r *query.Result) [][]any {
 				case float64:
 					if n != math.Trunc(n) {
 						// n is a float number with decimal places
-						colType = func(v any) any { return v }
-					} else if n >= float64(math.MinInt16) && n <= float64(math.MaxInt16) {
-						// Fits in int16, encode as int
-						colType = func(v any) any { return int16(v.(float64)) }
+						colType = func(v any) any { return strconv.FormatFloat(v.(float64), 'f', 13, 64) }
 					} else {
-						// Fits in int32, encode as string
 						colType = func(v any) any { return strconv.FormatInt(int64(v.(float64)), 10) }
 					}
 				default:
@@ -285,18 +290,20 @@ func columns(r *query.Result) [][]any {
 	}
 
 	for _, total := range r.Buckets.Totals {
-		if len(total.Group) == 0 {
-			for _, agg := range total.Aggregations {
-				add(agg.Alias, agg.Value)
+		if len(total.Group) > 0 {
+			// Order matters, but total.Group is a map, so get the keys
+			// from r.GroupBy and use them to index into total.Group.
+			if len(r.Request.GroupBy) != len(total.Group) {
+				panic(fmt.Sprintf("GroupBy: %v, total.Group: %v", r.Request.GroupBy, total.Group))
 			}
-			continue
+
+			for _, name := range r.Request.GroupBy {
+				add(name, total.Group[name])
+			}
 		}
 
-		for name, group := range total.Group {
-			add(name, group)
-			for _, agg := range total.Aggregations {
-				add(agg.Alias, agg.Value)
-			}
+		for _, agg := range total.Aggregations {
+			add(agg.Alias, agg.Value)
 		}
 	}
 
