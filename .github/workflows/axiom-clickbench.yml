@@ -62,4 +62,4 @@ jobs:
           axiom ingest $AXIOM_RESULTS_DATASET \
             --content-type ndjson \
             --content-encoding gzip \
-            < events.json.gz
+            --file events.json.gz
