@@ -298,7 +298,7 @@ func (c *axiomClient) ServerVersions(ctx context.Context, began time.Time, trace
     ['%s']
     | where trace_id in (%s) and _time >= datetime('%s')
     | distinct trace_id, ['service.name'], ['service.version']
-  `, traceDataset, strings.Join(traceIDs, ","), from)
+  `, traceDataset, buf.String(), from)
 
 	var cols [][]any
 	r, _, err := c.query(ctx, aplQuery)

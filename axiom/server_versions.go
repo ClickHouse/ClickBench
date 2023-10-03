@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -79,7 +80,7 @@ func serverVersions(apiURL, traceURL, org, token string, failfast bool) error {
 		}
 	}
 
-	versions, err := cli.ServerVersions(ctx, earliest.Add(-30*time.Second), traceIDs)
+	serverVersions, err := cli.ServerVersions(ctx, earliest.Add(-30*time.Second), traceIDs)
 	if err != nil {
 		return fmt.Errorf("error getting server versions: %w", err)
 	}
@@ -92,9 +93,24 @@ func serverVersions(apiURL, traceURL, org, token string, failfast bool) error {
 	for _, r := range results {
 		buf.Reset()
 
-		r.ServerVersions = versions[r.TraceID]
+		var (
+			versionNames = make(map[string][]string)
+			versions     []string
+		)
+
+		r.ServerVersions = serverVersions[r.TraceID]
 		for name, version := range r.ServerVersions {
-			buf.WriteString(name + "=" + version + ",")
+			if _, ok := versionNames[version]; !ok {
+				versions = append(versions, version)
+			}
+			versionNames[version] = append(versionNames[version], name)
+		}
+
+		sort.Strings(versions)
+
+		for _, version := range versions {
+			names := versionNames[version]
+			fmt.Fprintf(&buf, "%s=%v,", version, names)
 		}
 
 		if buf.Len() > 0 {

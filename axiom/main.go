@@ -15,8 +15,9 @@ type command struct {
 
 func main() {
 	commands := map[string]command{
-		"run":    runCmd(),
-		"report": reportCmd(),
+		"run":             runCmd(),
+		"report":          reportCmd(),
+		"server-versions": serverVersionsCmd(),
 	}
 
 	fs := flag.NewFlagSet("axiom-clickbench", flag.ExitOnError)
