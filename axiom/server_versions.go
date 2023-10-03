@@ -110,6 +110,7 @@ func serverVersions(apiURL, traceURL, org, token string, failfast bool) error {
 
 		for _, version := range versions {
 			names := versionNames[version]
+			sort.Strings(names)
 			fmt.Fprintf(&buf, "%s=%v,", version, names)
 		}
 
