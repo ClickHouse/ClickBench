@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+// serverVersionsCmd enriches incoming events with the server versions found
+// in their traces (from trace_id), which we query. This is done separate from
+// run so that we can wait for a while until traces have been flushed and propagated, as
+// well as to avoid slowing down the run command.
 func serverVersionsCmd() command {
 	fs := flag.NewFlagSet("server-versions", flag.ExitOnError)
 
