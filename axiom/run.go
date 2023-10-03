@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -169,22 +170,22 @@ type QueryResult struct {
 	Error string `json:"error"`
 }
 
-func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*QueryResult, error) {
-	uri := *c.apiURL
-	uri.Path = path.Join(uri.Path, "v1/datasets/_apl")
-	uri.RawQuery = "nocache=true&format=legacy"
+type httpError struct {
+	code int
+	msg  string
+}
 
-	type aplQueryRequest struct {
-		APL string `json:"apl"`
-	}
+func (e httpError) Error() string {
+	return fmt.Sprintf("HTTP %d: %s", e.code, e.msg)
+}
 
-	var body bytes.Buffer
-	if err := json.NewEncoder(&body).Encode(aplQueryRequest{APL: aplQuery}); err != nil {
+func (c *axiomClient) do(ctx context.Context, rawURL string, body, v any) (*http.Response, error) {
+	var bodyBytes bytes.Buffer
+	if err := json.NewEncoder(&bodyBytes).Encode(body); err != nil {
 		return nil, fmt.Errorf("error encoding request body: %w", err)
 	}
 
-	rawURL := uri.String()
-	req, err := http.NewRequestWithContext(ctx, "POST", rawURL, &body)
+	req, err := http.NewRequestWithContext(ctx, "POST", rawURL, &bodyBytes)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
@@ -195,7 +196,6 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 	req.Header.Set("User-Agent", "axiom-clickbench/"+c.version)
 	req.Header.Set("X-Axiom-Org-Id", c.org)
 
-	began := time.Now().UTC()
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error executing request: %w", err)
@@ -204,38 +204,70 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %w", err)
-	}
-
-	latency := time.Since(began)
-	traceID := resp.Header.Get("x-axiom-trace-id")
-
-	result := &QueryResult{
-		Query:          aplQuery,
-		ID:             id,
-		URL:            rawURL,
-		Time:           began,
-		LatencyNanos:   latency,
-		LatencySeconds: latency.Seconds(),
-		// TODO(tsenart): Figure out how to fill this in.
-		ServerVersions: map[string]string{},
-		Version:        c.version,
-		TraceID:        traceID,
-		TraceURL:       c.buildTraceURL(began, traceID),
+		return resp, fmt.Errorf("error reading response body: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		result.Error = fmt.Sprintf("HTTP %d: %s", resp.StatusCode, respBody)
-		return result, nil
+		return resp, &httpError{code: resp.StatusCode, msg: string(respBody)}
+	}
+
+	if err := json.Unmarshal(respBody, v); err != nil {
+		return resp, fmt.Errorf("error decoding response: %w", err)
+	}
+
+	return resp, nil
+}
+
+func (c *axiomClient) query(ctx context.Context, id int, aplQuery string) (*aplQueryResponse, *http.Response, error) {
+	uri := *c.apiURL
+	uri.Path = path.Join(uri.Path, "v1/datasets/_apl")
+	uri.RawQuery = "nocache=true&format=legacy"
+
+	body := struct {
+		APL string `json:"apl"`
+	}{
+		APL: aplQuery,
 	}
 
 	var r aplQueryResponse
-	if err := json.Unmarshal(respBody, &r); err != nil {
-		return nil, fmt.Errorf("error decoding response: %w", err)
+	resp, err := c.do(ctx, uri.String(), body, &r)
+	if err != nil {
+		return nil, resp, err
 	}
 
-	result.Status = r.Status
-	result.Columns = columns(&r)
+	return &r, resp, nil
+}
+
+func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*QueryResult, error) {
+	began := time.Now().UTC()
+
+	result := &QueryResult{
+		Query:   aplQuery,
+		ID:      id,
+		Time:    began,
+		Version: c.version,
+	}
+
+	var httpErr *httpError
+	r, httpResp, err := c.query(ctx, id, aplQuery)
+	if err != nil && !errors.As(err, &httpErr) {
+		return nil, err
+	}
+
+	result.LatencyNanos = time.Since(began)
+	result.LatencySeconds = result.LatencyNanos.Seconds()
+	result.URL = httpResp.Request.URL.String()
+	result.TraceID = httpResp.Header.Get("X-Axiom-Trace-Id")
+	result.TraceURL = c.buildTraceURL(began, result.TraceID)
+
+	if r != nil {
+		result.Status = r.Status
+		result.Columns = columns(r)
+	}
+
+	if httpErr != nil {
+		result.Error = httpErr.Error()
+	}
 
 	return result, nil
 }
