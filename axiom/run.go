@@ -16,7 +16,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -264,10 +263,6 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 		result.URL = httpResp.Request.URL.String()
 		result.TraceID = httpResp.Header.Get("X-Axiom-Trace-Id")
 		result.TraceURL = c.buildTraceURL(began, result.TraceID)
-		result.ServerVersions, result.ServerVersion, err = c.serverVersions(ctx, began, result.TraceID)
-		if err != nil {
-			log.Printf("error getting server versions: %v", err)
-		}
 	}
 
 	if r != nil {
@@ -282,61 +277,53 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 	return result, nil
 }
 
-func (c *axiomClient) serverVersions(ctx context.Context, began time.Time, traceID string) (map[string]string, string, error) {
+func (c *axiomClient) ServerVersions(ctx context.Context, began time.Time, traceIDs []string) (map[string]map[string]string, error) {
 	traceDataset := c.traceURL.Query().Get("traceDataset")
 	if traceDataset == "" {
-		return nil, "", nil
+		return nil, nil
 	}
 
 	from := began.Add(-30 * time.Second).Format(time.RFC3339Nano)
 
-	aplQuery := fmt.Sprintf(`
-    ['%s']
-    | where trace_id == "%s" and _time >= datetime('%s')
-    | distinct ['service.name'], ['service.version']
-  `, traceDataset, traceID, from)
-
-	// We retry a few times to give traces time to be flushed and ingested.
-	var cols [][]any
-	start := time.Now()
-	for i := 0; i < 5; i++ {
-		r, _, err := c.query(ctx, aplQuery)
-		if err != nil {
-			return nil, "", err
-		}
-
-		cols = columns(r)
-		if len(cols) != 3 {
-			time.Sleep(time.Second)
-			continue
-		}
-	}
-
-	if len(cols) != 3 {
-		return nil, "", fmt.Errorf("server versions for %q not found within %s", traceID, time.Since(start))
-	}
-
-	serverNames := make([]string, len(cols[0]))
-	for i, name := range cols[0] {
-		serverNames[i] = name.(string)
-	}
-
-	serverVersions := make(map[string]string, len(serverNames))
-	for i, name := range serverNames {
-		serverVersions[name] = cols[1][i].(string)
-	}
-
-	sort.Strings(serverNames)
 	var buf bytes.Buffer
-	for _, name := range serverNames {
-		buf.WriteString(name + "=" + serverVersions[name] + ",")
+	for _, traceID := range traceIDs {
+		buf.WriteString(`"` + traceID + `",`)
 	}
 
 	if buf.Len() > 0 {
 		buf.Truncate(buf.Len() - 1)
 	}
 
-	return serverVersions, buf.String(), nil
+	aplQuery := fmt.Sprintf(`
+    ['%s']
+    | where trace_id in (%s) and _time >= datetime('%s')
+    | distinct trace_id, ['service.name'], ['service.version']
+  `, traceDataset, strings.Join(traceIDs, ","), from)
+
+	var cols [][]any
+	r, _, err := c.query(ctx, aplQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	cols = columns(r)
+	if len(cols) != 4 {
+		return nil, fmt.Errorf("server versions not found")
+	}
+
+	// traceID -> serverName -> serverVersion
+	serverVersions := make(map[string]map[string]string, len(cols[0]))
+	for i, name := range cols[1] {
+		traceID := cols[0][i].(string)
+		versions := serverVersions[traceID]
+		if versions == nil {
+			versions = make(map[string]string)
+			serverVersions[traceID] = versions
+		}
+		versions[name.(string)] = cols[2][i].(string)
+	}
+
+	return serverVersions, nil
 }
 
 type aplLegacyQueryRequest struct {
