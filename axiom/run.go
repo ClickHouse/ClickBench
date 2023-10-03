@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -16,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -156,6 +159,8 @@ type QueryResult struct {
 	LatencySeconds float64 `json:"latency_seconds"`
 	// ServerVersions is a dictionary of service name to git sha that was under test
 	ServerVersions map[string]string `json:"server_versions"`
+	// ServerVersionsHash is a hash of all the ServerVersions map
+	ServerVersionsHash string `json:"server_versions_hash"`
 	// Version is the git sha of the benchmarking client code
 	Version string `json:"version"`
 	// TraceID is the trace ID of the query request
@@ -218,7 +223,7 @@ func (c *axiomClient) do(ctx context.Context, rawURL string, body, v any) (*http
 	return resp, nil
 }
 
-func (c *axiomClient) query(ctx context.Context, id int, aplQuery string) (*aplQueryResponse, *http.Response, error) {
+func (c *axiomClient) query(ctx context.Context, aplQuery string) (*aplQueryResponse, *http.Response, error) {
 	uri := *c.apiURL
 	uri.Path = path.Join(uri.Path, "v1/datasets/_apl")
 	uri.RawQuery = "nocache=true&format=legacy"
@@ -249,16 +254,23 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 	}
 
 	var httpErr *httpError
-	r, httpResp, err := c.query(ctx, id, aplQuery)
+	r, httpResp, err := c.query(ctx, aplQuery)
 	if err != nil && !errors.As(err, &httpErr) {
 		return nil, err
 	}
 
 	result.LatencyNanos = time.Since(began)
 	result.LatencySeconds = result.LatencyNanos.Seconds()
-	result.URL = httpResp.Request.URL.String()
-	result.TraceID = httpResp.Header.Get("X-Axiom-Trace-Id")
-	result.TraceURL = c.buildTraceURL(began, result.TraceID)
+
+	if httpResp != nil {
+		result.URL = httpResp.Request.URL.String()
+		result.TraceID = httpResp.Header.Get("X-Axiom-Trace-Id")
+		result.TraceURL = c.buildTraceURL(began, result.TraceID)
+		result.ServerVersions, result.ServerVersionsHash, err = c.serverVersions(ctx, began, result.TraceID)
+		if err != nil {
+			log.Printf("error getting server versions: %v", err)
+		}
+	}
 
 	if r != nil {
 		result.Status = r.Status
@@ -270,6 +282,61 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 	}
 
 	return result, nil
+}
+
+func (c *axiomClient) serverVersions(ctx context.Context, began time.Time, traceID string) (map[string]string, string, error) {
+	traceDataset := c.traceURL.Query().Get("traceDataset")
+	if traceDataset == "" {
+		return nil, "", nil
+	}
+
+	from := began.Add(-30 * time.Second).Format(time.RFC3339Nano)
+
+	aplQuery := fmt.Sprintf(`
+    ['%s']
+    | where trace_id == "%s" and _time >= datetime('%s')
+    | distinct ['service.name'], ['service.version']
+  `, traceDataset, traceID, from)
+
+	// We retry a few times to give traces time to be flushed and ingested.
+	var cols [][]any
+	start := time.Now()
+	for i := 0; i < 5; i++ {
+		r, _, err := c.query(ctx, aplQuery)
+		if err != nil {
+			return nil, "", err
+		}
+
+		cols = columns(r)
+		if len(cols) != 3 {
+			time.Sleep(time.Second)
+			continue
+		}
+	}
+
+	if len(cols) != 3 {
+		return nil, "", fmt.Errorf("server versions for %q not found within %s", traceID, time.Since(start))
+	}
+
+	serverNames := make([]string, len(cols[0]))
+	for i, name := range cols[0] {
+		serverNames[i] = name.(string)
+	}
+
+	serverVersions := make(map[string]string, len(serverNames))
+	for i, name := range serverNames {
+		serverVersions[name] = cols[1][i].(string)
+	}
+
+	sort.Strings(serverNames)
+	h := sha256.New()
+	for _, name := range serverNames {
+		h.Write([]byte(name + "=" + serverVersions[name] + ";"))
+	}
+
+	serverVersionsHash := base64.URLEncoding.EncodeToString(h.Sum(nil))
+
+	return serverVersions, serverVersionsHash, nil
 }
 
 type aplLegacyQueryRequest struct {
