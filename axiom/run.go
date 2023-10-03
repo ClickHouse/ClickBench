@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -159,8 +157,8 @@ type QueryResult struct {
 	LatencySeconds float64 `json:"latency_seconds"`
 	// ServerVersions is a dictionary of service name to git sha that was under test
 	ServerVersions map[string]string `json:"server_versions"`
-	// ServerVersionsHash is a hash of all the ServerVersions map
-	ServerVersionsHash string `json:"server_versions_hash"`
+	// ServerVersion is a concatenation all the ServerVersions map entries in a stable order
+	ServerVersion string `json:"server_version"`
 	// Version is the git sha of the benchmarking client code
 	Version string `json:"version"`
 	// TraceID is the trace ID of the query request
@@ -266,7 +264,7 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 		result.URL = httpResp.Request.URL.String()
 		result.TraceID = httpResp.Header.Get("X-Axiom-Trace-Id")
 		result.TraceURL = c.buildTraceURL(began, result.TraceID)
-		result.ServerVersions, result.ServerVersionsHash, err = c.serverVersions(ctx, began, result.TraceID)
+		result.ServerVersions, result.ServerVersion, err = c.serverVersions(ctx, began, result.TraceID)
 		if err != nil {
 			log.Printf("error getting server versions: %v", err)
 		}
@@ -329,14 +327,16 @@ func (c *axiomClient) serverVersions(ctx context.Context, began time.Time, trace
 	}
 
 	sort.Strings(serverNames)
-	h := sha256.New()
+	var buf bytes.Buffer
 	for _, name := range serverNames {
-		h.Write([]byte(name + "=" + serverVersions[name] + ";"))
+		buf.WriteString(name + "=" + serverVersions[name] + ",")
 	}
 
-	serverVersionsHash := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	if buf.Len() > 0 {
+		buf.Truncate(buf.Len() - 1)
+	}
 
-	return serverVersions, serverVersionsHash, nil
+	return serverVersions, buf.String(), nil
 }
 
 type aplLegacyQueryRequest struct {
