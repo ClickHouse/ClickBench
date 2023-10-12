@@ -31,7 +31,7 @@ fi
 axiom ingest "$AXIOM_DATASET" \
   --auth-org-id "$AXIOM_ORG_ID" \
   --auth-token "$AXIOM_TOKEN" \
-  --content-type json \
+  --content-type ndjson \
   --content-encoding gzip \
   --timestamp-field EventTime \
-  < hits.json.gz
+  -f hits.json.gz
