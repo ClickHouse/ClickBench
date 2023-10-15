@@ -36,15 +36,16 @@ func runCmd() command {
 	token := fs.String("token", os.Getenv("AXIOM_TOKEN"), "Axiom auth token [defaults to $AXIOM_TOKEN]")
 	iters := fs.Int("iters", 3, "Number of iterations to run each query")
 	failfast := fs.Bool("failfast", false, "Exit on first error")
+	noCache := fs.Bool("no-cache", true, "Do not use axiom results caching")
 	version := fs.String("version", firstNonZero(gitSha(), "dev"), "Version of the benchmarking client code")
 
 	return command{fs, func(args []string) error {
 		fs.Parse(args)
-		return run(*version, *apiURL, *traceURL, *org, *token, *iters, *failfast)
+		return run(*version, *apiURL, *traceURL, *org, *token, *iters, *failfast, *noCache)
 	}}
 }
 
-func run(version, apiURL, traceURL, org, token string, iters int, failfast bool) error {
+func run(version, apiURL, traceURL, org, token string, iters int, failfast, noCache bool) error {
 	if apiURL == "" {
 		return fmt.Errorf("api-url cannot be empty")
 	}
@@ -70,7 +71,7 @@ func run(version, apiURL, traceURL, org, token string, iters int, failfast bool)
 	)
 
 	for sc.Scan() {
-		if err := benchmark(ctx, cli, id, sc.Text(), iters, enc); err != nil {
+		if err := benchmark(ctx, cli, id, sc.Text(), iters, noCache, enc); err != nil {
 			if failfast {
 				return err
 			}
@@ -90,9 +91,9 @@ func gitSha() string {
 	return strings.TrimSpace(string(sha))
 }
 
-func benchmark(ctx context.Context, cli *axiomClient, id int, query string, iters int, enc *json.Encoder) error {
+func benchmark(ctx context.Context, cli *axiomClient, id int, query string, iters int, noCache bool, enc *json.Encoder) error {
 	for i := 1; i <= iters; i++ {
-		result, err := cli.Query(ctx, id, query)
+		result, err := cli.Query(ctx, id, query, noCache)
 		if err != nil {
 			return fmt.Errorf("failed query #%d, iter %d: %w", id, i, err)
 		}
@@ -220,10 +221,10 @@ func (c *axiomClient) do(ctx context.Context, rawURL string, body, v any) (*http
 	return resp, nil
 }
 
-func (c *axiomClient) query(ctx context.Context, aplQuery string) (*aplQueryResponse, *http.Response, error) {
+func (c *axiomClient) query(ctx context.Context, aplQuery string, noCache bool) (*aplQueryResponse, *http.Response, error) {
 	uri := *c.apiURL
 	uri.Path = path.Join(uri.Path, "v1/datasets/_apl")
-	uri.RawQuery = "nocache=true&format=legacy"
+	uri.RawQuery = fmt.Sprintf("nocache=%t&format=legacy", noCache)
 
 	body := struct {
 		APL string `json:"apl"`
@@ -240,7 +241,7 @@ func (c *axiomClient) query(ctx context.Context, aplQuery string) (*aplQueryResp
 	return &r, resp, nil
 }
 
-func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*QueryResult, error) {
+func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string, noCache bool) (*QueryResult, error) {
 	began := time.Now().UTC()
 
 	result := &QueryResult{
@@ -251,7 +252,7 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string) (*Quer
 	}
 
 	var httpErr *httpError
-	r, httpResp, err := c.query(ctx, aplQuery)
+	r, httpResp, err := c.query(ctx, aplQuery, noCache)
 	if err != nil && !errors.As(err, &httpErr) {
 		return nil, err
 	}
@@ -301,7 +302,7 @@ func (c *axiomClient) ServerVersions(ctx context.Context, began time.Time, trace
   `, traceDataset, buf.String(), from)
 
 	var cols [][]any
-	r, _, err := c.query(ctx, aplQuery)
+	r, _, err := c.query(ctx, aplQuery, true)
 	if err != nil {
 		return nil, err
 	}

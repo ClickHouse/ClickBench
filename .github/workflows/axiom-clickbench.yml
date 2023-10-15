@@ -52,7 +52,8 @@ jobs:
         run: |
           set -euo pipefail
           go build
-          ./axiom-clickbench run -trace-url=$AXIOM_TRACE_URL < queries.apl > events.json
+          ./axiom-clickbench run -trace-url=$AXIOM_TRACE_URL -no-cache=true  < queries.apl >  events.json
+          ./axiom-clickbench run -trace-url=$AXIOM_TRACE_URL -no-cache=false < queries.apl >> events.json
           # In another life, we'd wire server versions through services and their middleware and back out in
           # a response header of the original query. Alas, we do the hacky thing today.
           echo "Sleeping 90s to let traces propagate, yolo"
