@@ -200,7 +200,7 @@ func (c *axiomClient) do(ctx context.Context, rawURL string, id int, body, v any
 	req.Header.Set("X-Axiom-Org-Id", c.org)
 
 	if id >= 0 {
-		req.Header.Set("X-Axiom-Trace-Label", fmt.Sprintf("clickbench-%d", id))
+		req.Header.Set("X-Axiom-Profile-Label", fmt.Sprintf("clickbench-%d", id))
 	}
 
 	resp, err := http.DefaultClient.Do(req)
