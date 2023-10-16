@@ -182,7 +182,7 @@ func (e httpError) Error() string {
 	return fmt.Sprintf("HTTP %d: %s", e.code, e.msg)
 }
 
-func (c *axiomClient) do(ctx context.Context, rawURL string, body, v any) (*http.Response, error) {
+func (c *axiomClient) do(ctx context.Context, rawURL string, id int, body, v any) (*http.Response, error) {
 	var bodyBytes bytes.Buffer
 	if err := json.NewEncoder(&bodyBytes).Encode(body); err != nil {
 		return nil, fmt.Errorf("error encoding request body: %w", err)
@@ -198,6 +198,10 @@ func (c *axiomClient) do(ctx context.Context, rawURL string, body, v any) (*http
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "axiom-clickbench/"+c.version)
 	req.Header.Set("X-Axiom-Org-Id", c.org)
+
+	if id >= 0 {
+		req.Header.Set("X-Axiom-Trace-Label", fmt.Sprintf("clickbench-%d", id))
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -221,7 +225,7 @@ func (c *axiomClient) do(ctx context.Context, rawURL string, body, v any) (*http
 	return resp, nil
 }
 
-func (c *axiomClient) query(ctx context.Context, aplQuery string, noCache bool) (*aplQueryResponse, *http.Response, error) {
+func (c *axiomClient) query(ctx context.Context, id int, aplQuery string, noCache bool) (*aplQueryResponse, *http.Response, error) {
 	uri := *c.apiURL
 	uri.Path = path.Join(uri.Path, "v1/datasets/_apl")
 	uri.RawQuery = fmt.Sprintf("nocache=%t&format=legacy", noCache)
@@ -233,7 +237,7 @@ func (c *axiomClient) query(ctx context.Context, aplQuery string, noCache bool) 
 	}
 
 	var r aplQueryResponse
-	resp, err := c.do(ctx, uri.String(), body, &r)
+	resp, err := c.do(ctx, uri.String(), id, body, &r)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -252,7 +256,7 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string, noCach
 	}
 
 	var httpErr *httpError
-	r, httpResp, err := c.query(ctx, aplQuery, noCache)
+	r, httpResp, err := c.query(ctx, id, aplQuery, noCache)
 	if err != nil && !errors.As(err, &httpErr) {
 		return nil, err
 	}
@@ -302,7 +306,7 @@ func (c *axiomClient) ServerVersions(ctx context.Context, began time.Time, trace
   `, traceDataset, buf.String(), from)
 
 	var cols [][]any
-	r, _, err := c.query(ctx, aplQuery, true)
+	r, _, err := c.query(ctx, -1, aplQuery, true)
 	if err != nil {
 		return nil, err
 	}
