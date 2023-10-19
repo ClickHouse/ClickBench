@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # This is the script for cloud-init, to run on a VM in unattended fashion. Example:
-#
-# aws ec2 run-instances --count 1 --image-id ami-0d1ddd83282187d18 --instance-type c6a.4xlarge \
-# --block-device-mappings 'DeviceName=/dev/sda1,Ebs={DeleteOnTermination=true,VolumeSize=500,VolumeType=gp2}' \
-# --key-name milovidov --security-group-ids sg-013790293e9640422 --instance-initiated-shutdown-behavior terminate \
-# --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=clickbench}]'
-# --user-data file://cloud-init.sh
+<<///
+aws ec2 run-instances --count 1 --image-id ami-0d1ddd83282187d18 --instance-type c6a.4xlarge \
+ --block-device-mappings 'DeviceName=/dev/sda1,Ebs={DeleteOnTermination=true,VolumeSize=500,VolumeType=gp2}' \
+ --key-name milovidov --security-group-ids sg-013790293e9640422 --instance-initiated-shutdown-behavior terminate \
+ --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=clickbench}]' \
+ --user-data file://cloud-init.sh
+///
 
 BASE_URL='https://raw.githubusercontent.com/ClickHouse/ClickBench/main/clickhouse/'
 

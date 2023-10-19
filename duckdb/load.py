@@ -10,8 +10,6 @@ con = duckdb.connect(database="my-db.duckdb", read_only=False)
 # enable the progress bar
 con.execute('PRAGMA enable_progress_bar')
 con.execute('PRAGMA enable_print_progress_bar;')
-# enable parallel CSV loading
-con.execute("SET experimental_parallel_csv=true")
 # disable preservation of insertion order
 con.execute("SET preserve_insertion_order=false")
 
