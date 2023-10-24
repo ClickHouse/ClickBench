@@ -171,6 +171,8 @@ type QueryResult struct {
 	Columns [][]any `json:"columns"`
 	// Error is the error if the query failed
 	Error string `json:"error"`
+	// Cost is the cost of the query in GBms
+	Cost int `json:"cost"`
 }
 
 type httpError struct {
@@ -268,6 +270,7 @@ func (c *axiomClient) Query(ctx context.Context, id int, aplQuery string, noCach
 		result.URL = httpResp.Request.URL.String()
 		result.TraceID = httpResp.Header.Get("X-Axiom-Trace-Id")
 		result.TraceURL = c.buildTraceURL(began, result.TraceID)
+		result.Cost, _ = strconv.Atoi(httpResp.Header.Get("X-Axiom-Query-Cost-GBms"))
 	}
 
 	if r != nil {
