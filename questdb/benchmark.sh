@@ -2,17 +2,17 @@
 
 # Install
 
-wget https://github.com/questdb/questdb/releases/download/7.3/questdb-7.3-rt-linux-amd64.tar.gz
+wget https://github.com/questdb/questdb/releases/download/7.3.3/questdb-7.3.3-rt-linux-amd64.tar.gz
 tar xf questdb*.tar.gz
-questdb-7.3-rt-linux-amd64/bin/questdb.sh start
+questdb-7.3.3-rt-linux-amd64/bin/questdb.sh start
 
 while ! nc -z localhost 9000; do
   sleep 0.1
 done
 
 sed -i 's/query.timeout.sec=60/query.timeout.sec=500/' ~/.questdb/conf/server.conf
-questdb-7.3-rt-linux-amd64/bin/questdb.sh stop
-questdb-7.3-rt-linux-amd64/bin/questdb.sh start
+questdb-7.3.3-rt-linux-amd64/bin/questdb.sh stop
+questdb-7.3.3-rt-linux-amd64/bin/questdb.sh start
 
 # Import the data
 
