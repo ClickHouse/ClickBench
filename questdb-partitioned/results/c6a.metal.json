@@ -3,7 +3,7 @@
     "date": "2023-08-07",
     "machine": "c6a.metal, 500gb gp2",
     "cluster_size": 1,
-    "comment": "Changed schema to aling with other DBs and use SHORT instead of SMALLINT, SYMBOL for categorical data columns. Changed queries to use NOT NULL instead of <> '' since QuestDB types are nullable",
+    "comment": "Data load for partitioned tables is multi-threaded and thus more efficient.",
     "tags": ["Java", "time-series"],
     "load_time": 170,
     "data_size": 95922186385,
