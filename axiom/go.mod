@@ -1,4 +1,4 @@
-module axiom-clickbench
+module github.com/axiomhq/ClickBench/axiom
 
 go 1.20
 
