@@ -42,11 +42,11 @@ func runCmd() command {
 
 	return command{fs, func(args []string) error {
 		fs.Parse(args)
-		return run(*version, *apiURL, *traceURL, *org, *token, *iters, *failfast, *noCache, *label)
+		return run(*version, *apiURL, *traceURL, *org, *token, *label, *iters, *failfast, *noCache)
 	}}
 }
 
-func run(version, apiURL, traceURL, org, token string, iters int, failfast, noCache bool, label string) error {
+func run(version, apiURL, traceURL, org, token, label string, iters int, failfast, noCache bool) error {
 	if apiURL == "" {
 		return fmt.Errorf("api-url cannot be empty")
 	}
