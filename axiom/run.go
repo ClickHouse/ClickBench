@@ -38,7 +38,7 @@ func runCmd() command {
 	failfast := fs.Bool("failfast", false, "Exit on first error")
 	noCache := fs.Bool("no-cache", true, "Do not use axiom results caching")
 	version := fs.String("version", firstNonZero(gitSha(), "dev"), "Version of the benchmarking client code")
-	label := fs.String("label", os.Getenv("AXIOM_LABEL"), "Profile label [defaults to $AXIOM_LABEL]")
+	label := fs.String("label", "", "Profile label")
 
 	return command{fs, func(args []string) error {
 		fs.Parse(args)
