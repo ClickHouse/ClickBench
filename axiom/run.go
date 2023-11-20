@@ -134,6 +134,10 @@ func newAxiomClient(cli *http.Client, version, apiURL, org, token, traceURL, lab
 		return nil, fmt.Errorf("error parsing url: %w", err)
 	}
 
+	if label == "" {
+		label = "clickbench" // default profile label if not set
+	}
+
 	return &axiomClient{
 		cli:      cli,
 		apiURL:   parsedAPIURL,
@@ -203,10 +207,6 @@ func (c *axiomClient) do(ctx context.Context, rawURL string, id int, body, v any
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "axiom-clickbench/"+c.version)
 	req.Header.Set("X-Axiom-Org-Id", c.org)
-
-	if c.label == "" {
-		c.label = "clickbench" // default profile label if not set
-	}
 
 	if id >= 0 {
 		req.Header.Set("X-Axiom-Profile-Label", fmt.Sprintf("%s-%d", c.label, id))
