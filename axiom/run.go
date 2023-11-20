@@ -38,14 +38,15 @@ func runCmd() command {
 	failfast := fs.Bool("failfast", false, "Exit on first error")
 	noCache := fs.Bool("no-cache", true, "Do not use axiom results caching")
 	version := fs.String("version", firstNonZero(gitSha(), "dev"), "Version of the benchmarking client code")
+	label := fs.String("label", os.Getenv("AXIOM_TOKEN"), "Axiom auth token [defaults to $AXIOM_TOKEN]")
 
 	return command{fs, func(args []string) error {
 		fs.Parse(args)
-		return run(*version, *apiURL, *traceURL, *org, *token, *iters, *failfast, *noCache)
+		return run(*version, *apiURL, *traceURL, *org, *token, *iters, *failfast, *noCache, *label)
 	}}
 }
 
-func run(version, apiURL, traceURL, org, token string, iters int, failfast, noCache bool) error {
+func run(version, apiURL, traceURL, org, token string, iters int, failfast, noCache bool, label string) error {
 	if apiURL == "" {
 		return fmt.Errorf("api-url cannot be empty")
 	}
@@ -58,7 +59,7 @@ func run(version, apiURL, traceURL, org, token string, iters int, failfast, noCa
 		return fmt.Errorf("iters must be greater than 0")
 	}
 
-	cli, err := newAxiomClient(http.DefaultClient, version, apiURL, org, token, traceURL)
+	cli, err := newAxiomClient(http.DefaultClient, version, apiURL, org, token, traceURL, label)
 	if err != nil {
 		return fmt.Errorf("error creating axiom client: %w", err)
 	}
@@ -119,9 +120,10 @@ type axiomClient struct {
 	version  string
 	token    string
 	org      string
+	label    string
 }
 
-func newAxiomClient(cli *http.Client, version, apiURL, org, token, traceURL string) (*axiomClient, error) {
+func newAxiomClient(cli *http.Client, version, apiURL, org, token, traceURL, label string) (*axiomClient, error) {
 	parsedTraceURL, err := url.Parse(traceURL)
 	if err != nil && traceURL != "" {
 		return nil, fmt.Errorf("error parsing trace url: %w", err)
@@ -139,6 +141,7 @@ func newAxiomClient(cli *http.Client, version, apiURL, org, token, traceURL stri
 		version:  version,
 		token:    token,
 		org:      org,
+		label:    label,
 	}, nil
 }
 
@@ -201,8 +204,12 @@ func (c *axiomClient) do(ctx context.Context, rawURL string, id int, body, v any
 	req.Header.Set("User-Agent", "axiom-clickbench/"+c.version)
 	req.Header.Set("X-Axiom-Org-Id", c.org)
 
+	if c.label == "" {
+		c.label = "clickbench" // default profile label if not set
+	}
+
 	if id >= 0 {
-		req.Header.Set("X-Axiom-Profile-Label", fmt.Sprintf("clickbench-%d", id))
+		req.Header.Set("X-Axiom-Profile-Label", fmt.Sprintf("%s-%d", c.label, id))
 	}
 
 	resp, err := http.DefaultClient.Do(req)
