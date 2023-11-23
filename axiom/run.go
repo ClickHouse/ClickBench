@@ -72,11 +72,14 @@ func run(version, apiURL, traceURL, org, token, label string, iters int, failfas
 	)
 
 	for sc.Scan() {
-		if err := benchmark(ctx, cli, id, sc.Text(), iters, noCache, enc); err != nil {
-			if failfast {
-				return err
+		query := sc.Text()
+		if !strings.HasPrefix(query, "//") {
+			if err := benchmark(ctx, cli, id, query, iters, noCache, enc); err != nil {
+				if failfast {
+					return err
+				}
+				log.Printf("benchmark error: %v", err)
 			}
-			log.Printf("benchmark error: %v", err)
 		}
 		id++
 	}
