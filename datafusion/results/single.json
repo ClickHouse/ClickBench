@@ -1,6 +1,6 @@
 {
     "system": "DataFusion (Parquet, single)",
-    "date": "2023-07-29",
+    "date": "2023-11-29",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
     "comment": "v33.0.0 (d2efaa9)",
