@@ -14,15 +14,20 @@ sudo yum install gcc -y
 # Install DataFusion main branch
 git clone https://github.com/apache/arrow-datafusion.git
 cd arrow-datafusion/datafusion-cli
-git checkout 22.0.0
+git checkout 33.0.0
 CARGO_PROFILE_RELEASE_LTO=true RUSTFLAGS="-C codegen-units=1" cargo build --release
 export PATH="`pwd`/target/release:$PATH"
 cd ../..
 
 
-# Download benchmark target data
+# Download benchmark target data, single file
 wget --no-verbose --continue https://datasets.clickhouse.com/hits_compatible/hits.parquet
 
+# Download benchmark target data, partitioned
+mkdir -p partitioned
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --no-verbose --directory-prefix partitioned --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 
-# Run
-bash run.sh
+# Run benchmarks for single parquet and partitioned
+./run.sh single
+./run.sh partitioned
+
