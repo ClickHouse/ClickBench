@@ -1,6 +1,6 @@
 
 {
-    "machine":       "AWS c7.metal-48xl, 500 GB EBS",
+    "machine":       "AWS c7i.metal-48xl, 500 GB EBS",
     "comment":  "",
     "time":         "2023-12-09 00:00:00",
     "tags": ["cloud", "aws", "intel"],
