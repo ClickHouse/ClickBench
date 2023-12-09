@@ -30,6 +30,8 @@ trap finish EXIT
 
 echo "Waiting for clickhouse-server to start"
 
+timeout 300 tail -n+0 -f /clickhouse-benchmark/server.log | grep --max-count 1 'Ready for connections'
+
 for i in {1..300}; do
     sleep 1
     ./clickhouse client --query "SELECT 'Ok.'" 2>/dev/null && break || echo -n '.'
