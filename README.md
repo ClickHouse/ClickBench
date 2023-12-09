@@ -277,6 +277,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] DolphinDB
 - [ ] Oxla
 - [ ] Quickwit
+- [x] AlloyDB
 
 By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
 
