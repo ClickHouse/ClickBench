@@ -19,7 +19,7 @@ uptime
 
 echo "Starting clickhouse-server"
 
-./clickhouse server >/dev/null 2>&1 &
+./clickhouse server >server.log 2>&1 &
 PID=$!
 
 function finish {
@@ -33,7 +33,7 @@ echo "Waiting for clickhouse-server to start"
 for i in {1..300}; do
     sleep 1
     ./clickhouse client --query "SELECT 'Ok.'" 2>/dev/null && break || echo -n '.'
-    if [[ $i == 300 ]]; then exit 1; fi
+    if [[ $i == 300 ]]; then cat server.log; exit 1; fi
 done
 
 if [[ $(./clickhouse client --query "EXISTS hits") == '1' && $(./clickhouse client --query "SELECT count() FROM hits") == '100000000' ]]; then
