@@ -1,10 +1,8 @@
-
-  
 # AlloyDB
 
 Note: As of current date, AlloyDB can only be accessed by setting up Alloy Auth Proxy on an EC2 instance or similar.
 
-  
+
 ## Setup and benchmark
 
 1. In GCP, setup up AlloyDB Cluster, with a 8 vcpu 64gb primary
@@ -41,7 +39,7 @@ psql -h 127.0.0.1 -p 5432 -U postgres
 \copy hits FROM PROGRAM 'gzip -dc hits.tsv.gz' with (format csv, DELIMITER E'\t', HEADER TRUE);
 ```
 
- 5. Apply AlloyDB Columnar DB flags
+6. Apply AlloyDB Columnar DB flags
   ```bash
   - google_columnar_engine.enabled
   - google_columnar_engine.enable_columnar_scan
@@ -49,12 +47,12 @@ psql -h 127.0.0.1 -p 5432 -U postgres
   - google_columnar_engine.memory_size_in_mb -> 32000
   ```
 
-6. Add table to columnar store
+7. Add table to columnar store
 ```sql
 SELECT google_columnar_engine_add(relation => 'hits');
 ```
 
-7. Add your AlloyDB password in `run.sh`, run `benchmark.sh`
+8. Add your AlloyDB password in `run.sh`, run `benchmark.sh`
 
 ## Tuning
 
