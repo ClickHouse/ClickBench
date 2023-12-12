@@ -240,7 +240,7 @@ func (c *axiomClient) do(ctx context.Context, rawURL string, id int, body, v any
 func (c *axiomClient) query(ctx context.Context, id int, aplQuery string, noCache bool) (*aplQueryResponse, *http.Response, error) {
 	uri := *c.apiURL
 	uri.Path = path.Join(uri.Path, "v1/datasets/_apl")
-	uri.RawQuery = fmt.Sprintf("nocache=%t&format=legacy", noCache)
+	uri.RawQuery = fmt.Sprintf("nocache=%t&format=tabular", noCache)
 
 	body := struct {
 		APL string `json:"apl"`
