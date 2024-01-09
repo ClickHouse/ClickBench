@@ -1,6 +1,6 @@
 {
     "system": "DataFusion (Parquet, partitioned)",
-    "date": "202l-01-08",
+    "date": "2024-01-08",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
     "comment": "v34.0.0 (2693384)",
