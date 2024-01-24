@@ -49,7 +49,6 @@ export PGPASSWORD='mypassword'
 psql -h localhost -U myuser -d mydb -p 5432 -t < create.sql
 psql -h localhost -U myuser -d mydb -p 5432 -t -c 'CALL paradedb.init();' -c '\timing' -c "\\copy hits FROM 'hits.tsv'"
 
-# TODO: Add
 # COPY 99997497
 # Time: 1268695.244 ms (21:08.695)
 
