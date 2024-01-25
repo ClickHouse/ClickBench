@@ -8,7 +8,7 @@ cleanup() {
         sudo docker kill paradedb
     fi
     sudo docker rm paradedb
-  echo "Done, goodbye!"
+    echo "Done, goodbye!"
 }
 
 # Register the cleanup function to run when the script exits

@@ -1,6 +1,6 @@
 # ParadeDB
 
-ParadeDB is PostgreSQL for Search and Analytics. It is an alternative to Elasticsearch built on Postgres.
+ParadeDB is an alternative to Elasticsearch built on Postgres.
 
 - [GitHub](https://github.com/paradedb/paradedb)
 - [Homepage](https://paradedb.com)
