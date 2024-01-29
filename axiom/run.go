@@ -326,6 +326,7 @@ func (c *axiomClient) ServerVersions(ctx context.Context, began time.Time, trace
 
 	cols = columns(r)
 	if len(cols) != 4 {
+		json.NewEncoder(os.Stderr).Encode(cols)
 		return nil, fmt.Errorf("server versions not found")
 	}
 
