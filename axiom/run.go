@@ -383,7 +383,11 @@ func columns(r *aplQueryResponse) [][]any {
 				colTypes[name] = colType
 			}
 
-			colMap[name] = append(colMap[name], colType(v))
+			if v == nil {
+				colMap[name] = append(colMap[name], v)
+			} else {
+				colMap[name] = append(colMap[name], colType(v))
+			}
 		}
 	}
 
