@@ -60,6 +60,8 @@ func serverVersions(apiURL, traceURL, org, token, label string, failfast bool) e
 		earliest time.Time
 	)
 
+	sc.Buffer(make([]byte, 0, 100*64*1024), 100*64*1024)
+
 	for sc.Scan() {
 		var r QueryResult
 		if err := json.Unmarshal(sc.Bytes(), &r); err != nil {
@@ -71,6 +73,8 @@ func serverVersions(apiURL, traceURL, org, token, label string, failfast bool) e
 			continue
 		}
 
+		log.Printf("trace_id: %s", r.TraceID)
+
 		if earliest.IsZero() || r.Time.Before(earliest) {
 			earliest = r.Time
 		}
@@ -79,6 +83,10 @@ func serverVersions(apiURL, traceURL, org, token, label string, failfast bool) e
 			traceIDs = append(traceIDs, r.TraceID)
 			results = append(results, &r)
 		}
+	}
+
+	if sc.Err() != nil {
+		return sc.Err()
 	}
 
 	serverVersions, err := cli.ServerVersions(ctx, earliest.Add(-30*time.Second), traceIDs)
