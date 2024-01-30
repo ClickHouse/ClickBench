@@ -73,8 +73,6 @@ func serverVersions(apiURL, traceURL, org, token, label string, failfast bool) e
 			continue
 		}
 
-		log.Printf("trace_id: %s", r.TraceID)
-
 		if earliest.IsZero() || r.Time.Before(earliest) {
 			earliest = r.Time
 		}
