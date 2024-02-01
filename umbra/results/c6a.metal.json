@@ -7,6 +7,7 @@
     "load_time": 432.753,
     "data_size": 104811147008,
     "comment": "It looks like it caches the data in memory, so the cold run results are incorrect",
+    "hide": true,
     "result": [
 [0.021103,0.014069,0.013841],
 [0.016241,0.015651,0.014398],
