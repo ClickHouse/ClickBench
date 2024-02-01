@@ -6,7 +6,7 @@
     "tags": ["C++", "column-oriented", "PostgreSQL compatible"],
     "load_time": 432.753,
     "data_size": 104811147008,
-    "comment": "It looks like it caches the data in memory, so the cold run results are incorrect",
+    "comment": "It looks like it caches the data in memory, so the cold run results are incorrect. When I attempt to restart the server, it didn't start due to Segmentation fault.",
     "hide": true,
     "result": [
 [0.021103,0.014069,0.013841],
