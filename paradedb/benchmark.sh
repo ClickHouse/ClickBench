@@ -37,7 +37,7 @@ sudo docker run \
     -p 5432:5432 \
     --name paradedb \
     -d \
-    paradedb/paradedb:0.5.1
+    paradedb/paradedb:0.5.4
 
 echo ""
 echo "Waiting for ParadeDB to start..."
