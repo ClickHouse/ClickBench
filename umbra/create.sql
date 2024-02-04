@@ -107,3 +107,5 @@ create table hits (
     primary key (counterid, eventdate, userid, eventtime, watchid)
 ) with (storage=columnar);
 
+copy hits from 'hits.tsv' with (format text);
+
