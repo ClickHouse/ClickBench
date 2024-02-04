@@ -5,7 +5,7 @@ ParadeDB is an alternative to Elasticsearch built on Postgres.
 - [GitHub](https://github.com/paradedb/paradedb)
 - [Homepage](https://paradedb.com)
 
-The published benchmarks are based on ParadeDB version `v0.5.1`.
+The published benchmarks are based on ParadeDB version `v0.5.4`.
 
 ## Benchmarks
 
