@@ -2,9 +2,9 @@
   "hide": false,
   "system": "ParadeDB",
   "date": "2024-02-02",
-  "machine": "c6a.4xlarge, 500gb gp2",
+  "machine": "c6a.4xlarge, 1500gb gp2",
   "cluster_size": 1,
-  "comment": "",
+  "comment": "The results for (c6a.4xlarge, 500gb gp2) are also submitted here for easy comparison with Elasticsearch",
 
   "tags": [
     "Rust",
