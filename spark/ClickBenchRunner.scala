@@ -1,9 +1,17 @@
 import org.apache.spark.sql.{SparkSession, SQLContext}
 import java.sql.Statement
+import java.io.{File, FileWriter}
+import scala.io.Source
+import scala.io.Codec
 import org.apache.spark.sql.types._
 
 val spark = SparkSession.builder.enableHiveSupport().getOrCreate()
 spark.sql("DROP TABLE IF EXISTS hits")
+val logFile = "log.txt"
+
+val file = new File(logFile)
+val writer = new FileWriter(file)
+
 
 val schema = StructType(
   List(
@@ -119,7 +127,7 @@ val df = spark.read.schema(schema).option("header", "false").option("sep", "\t")
 df.createOrReplaceTempView("hits")
 val endTable = System.nanoTime()
 val timeElapsedTable = (endTable - startTable) / 1000000
-println(s"Creating table time: $timeElapsedTable ms")
+writer.write(s"Creating table time: $timeElapsedTable ms")
 
 val queries = Source.fromFile("queries.sql").getLines().toList
 var itr: Int = 0
@@ -128,7 +136,7 @@ var itr: Int = 0
         val result = spark.sql(query)
         val end = System.nanoTime()
         val timeElapsed = (end - start) / 1000000
-        println(s"Query $itr | Time: $timeElapsed ms")
+        writer.write(s"Query $itr | Time: $timeElapsed ms")
         itr += 1
     })
 
