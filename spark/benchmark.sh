@@ -9,8 +9,8 @@ sudo apt-get -y install openjdk-8-jdk-headless
 # wget --continue https://downloads.apache.org/spark/spark-3.5.0/spark-3.5.0-bin-hadoop3.tgz
 # tar -xzf hadoop-3*
 # tar -xzf spark-3*
-# mv hadoop-3* <path/to/hadoop>
-# mv spark-3* </path/to/spark>
+# mv hadoop-3* /usr/local/hadoop
+# mv spark-3* /usr/local/spark
 
 # echo "export HADOOP_HOME=/usr/local/hadoop" >> ~/.bashrc
 # echo "export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin" >> ~/.bashrc
@@ -55,6 +55,6 @@ source ~/.bashrc
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 chmod 777 ~ hits.tsv
-$HADOOP_HOME/bin/hdfs dfs -put hits.tsv /
+hdfs dfs -put hits.tsv /
 
-$SPARK_HOME/bin/spark-shell --master local -i ClickBenchRunner.scala > log.txt
+$SPARK_HOME/bin/spark-shell --master local -i ClickBenchRunner.scala
