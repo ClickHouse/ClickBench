@@ -15,6 +15,9 @@ pip install duckdb psutil
 
 # 4122 seconds
 
+# Note: it does not support transactions,
+# and an attempt to query the table during leaded results in waiting on a global lock.
+
 # Install the command line tool
 
 wget https://github.com/duckdb/duckdb/releases/download/v0.9.2/duckdb_cli-linux-amd64.zip
