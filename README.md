@@ -254,7 +254,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] ScyllaDB
 - [x] Elasticsearch
 - [ ] Apache Ignite
-- [ ] Motherduck
+- [x] Motherduck
 - [x] Infobright
 - [ ] Actian Vector
 - [ ] Manticore Search
