@@ -17,7 +17,7 @@ cat "all_queries.sql" | while read query; do
 
     echo -n "["
     for i in $(seq 1 $TRIES); do
-        RES=$(${CLICKHOUSE_CLIENT} --time --format=Null --max_memory_usage=100000000000 --query="$query" 2>&1)
+        RES=$(${CLICKHOUSE_CLIENT} --database sparse --time --format=Null --max_memory_usage=100000000000 --query="$query" 2>&1)
         [[ "$?" == "0" ]] && echo -n "${RES}" || echo -n "null"
         [[ "$i" != $TRIES ]] && echo -n ", "
     done

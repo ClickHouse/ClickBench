@@ -19,7 +19,7 @@ uptime
 
 echo "Starting clickhouse-server"
 
-./clickhouse server >/dev/null 2>&1 &
+./clickhouse server >server.log 2>&1 &
 PID=$!
 
 function finish {
@@ -30,10 +30,12 @@ trap finish EXIT
 
 echo "Waiting for clickhouse-server to start"
 
-for i in {1..30}; do
+tail -n+0 -f /clickhouse-benchmark/server.log | grep --max-count 1 'Ready for connections'
+
+for i in {1..300}; do
     sleep 1
     ./clickhouse client --query "SELECT 'Ok.'" 2>/dev/null && break || echo -n '.'
-    if [[ $i == 30 ]]; then exit 1; fi
+    if [[ $i == 300 ]]; then cat server.log; exit 1; fi
 done
 
 if [[ $(./clickhouse client --query "EXISTS hits") == '1' && $(./clickhouse client --query "SELECT count() FROM hits") == '100000000' ]]; then
@@ -90,7 +92,7 @@ echo
 
 touch {cpu_model,cpu,df,memory,memory_total,blk,mdstat,instance}.txt
 
-if [ "${OS}" = "Darwin" ] 
+if [ "${OS}" = "Darwin" ]
 then 
     echo '----Version, build id-----------'
     ./clickhouse local --query "SELECT format('Version: {}', version())"
