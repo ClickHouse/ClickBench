@@ -229,6 +229,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Hydra
 - [ ] Impala
 - [ ] Hyper
+- [x] Umbra
 - [x] SQLite
 - [x] Redshift
 - [x] Redshift Serverless
@@ -253,7 +254,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] ScyllaDB
 - [x] Elasticsearch
 - [ ] Apache Ignite
-- [ ] Motherduck
+- [x] Motherduck
 - [x] Infobright
 - [ ] Actian Vector
 - [ ] Manticore Search
@@ -275,11 +276,11 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] Boilingdata
 - [x] Byteconity
 - [ ] DolphinDB
-- [ ] Oxla
+- [x] Oxla
 - [ ] Quickwit
 - [x] AlloyDB
 - [x] ParadeDB
-- [ ] GlareDB
+- [x] GlareDB
 - [ ] Seafowl
 - [ ] Sneller
 
