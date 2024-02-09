@@ -1,5 +1,5 @@
 {
-    "system": "ClickHouse 23.11 (data lake, single)",
+    "system": "ClickHouse (data lake, single)",
     "date": "2023-12-09",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
