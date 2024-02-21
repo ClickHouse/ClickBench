@@ -8,20 +8,25 @@ sudo apt-get -y install openjdk-8-jdk-headless
 export HADOOP_DIR="/usr/local/hadoop"
 export SPARK_DIR="/usr/local/spark"
 export JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"
+export HADOOP_VERSION="3.3.6"
+export SPARK_VERSION="3.5.0"
 
-# wget --continue https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
-# wget --continue https://downloads.apache.org/spark/spark-3.5.0/spark-3.5.0.tgz
-# tar -xzf hadoop-3*.tar.gz
-# tar -xzf spark-3*.tgz
-# sudo rm -f spark-3*.tgz hadoop-3*.tar.gz
-# sudo mv spark-3* spark
-# sudo mv hadoop-3* hadoop
-# sudo mv spark $HADOOP_DIR
-# sudo mv hadoop $SPARK_DIR
 
-echo "export HADOOP_HOME=$HADOOP_DIR" >> ~/.bashrc
-echo "export SPARK_HOME=$SPARK_DIR" >> ~/.bashrc
-echo "export PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH" >> ~/.bashrc
+# export hadoop_file=hadoop-$HADOOP_VERSION.tar.gz
+# export spark_file=spark-$SPARK_VERSION-bin-hadoop3.tgz
+# wget --continue https://downloads.apache.org/hadoop/common/hadoop-$HADOOP_VERSION/$hadoop_file
+# wget --continue https://downloads.apache.org/spark/spark-$SPARK_VERSION/$spark_file
+# sudo tar -xzf $hadoop_file $spark_file
+# sudo rm -f $spark_file $hadoop_file
+# sudo rm -rf $HADOOP_DIR $SPARK_DIR
+# sudo mv spark-$SPARK_VERSION spark
+# sudo mv spark $SPARK_DIR
+# sudo mv hadoop-$HADOOP_VERSION hadoop
+# sudo mv hadoop $HADOOP_DIR
+
+# echo "export HADOOP_HOME=$HADOOP_DIR" >> ~/.bashrc
+# echo "export SPARK_HOME=$SPARK_DIR" >> ~/.bashrc
+# echo "export PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH" >> ~/.bashrc
 # source ~/.bashrc
 
 ### To configure HDFS:
