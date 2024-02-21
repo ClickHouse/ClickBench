@@ -215,7 +215,7 @@ func (c *axiomClient) do(ctx context.Context, rawURL string, id int, body, v any
 		req.Header.Set("X-Axiom-Profile-Label", fmt.Sprintf("%s-%d", c.label, id))
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.cli.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error executing request: %w", err)
 	}
@@ -327,7 +327,7 @@ func (c *axiomClient) ServerVersions(ctx context.Context, began time.Time, trace
 	cols = columns(r)
 	if len(cols) != 4 {
 		json.NewEncoder(os.Stderr).Encode(cols)
-		return nil, fmt.Errorf("server versions not found")
+		return nil, fmt.Errorf("server versions not found in: %+v", cols)
 	}
 
 	// traceID -> serverName -> serverVersion
@@ -350,11 +350,43 @@ type aplLegacyQueryRequest struct {
 }
 
 type aplQueryResponse struct {
-	query.Result
+	Datasets []string         `json:"datasetNames"`
+	Status   query.Status     `json:"status"`
+	Matches  []query.Entry    `json:"matches"`
+	Buckets  query.Timeseries `json:"buckets"`
+	GroupBy  []string         `json:"-"`
+	TraceID  string           `json:"-"`
+	Tables   []struct {
+		Columns [][]any
+		Fields  []struct {
+			Name string
+			Type string
+		}
+		Groups []struct {
+			Name string
+		}
+		Name  string
+		Order []struct {
+			Desc  bool
+			Field string
+		}
+		Range struct {
+			End   string
+			Field string
+			Start string
+		}
+		Sources []struct {
+			Name string
+		}
+	} `json:"tables"`
 	Request aplLegacyQueryRequest `json:"request"`
 }
 
 func columns(r *aplQueryResponse) [][]any {
+	if len(r.Tables) > 0 {
+		return r.Tables[0].Columns
+	}
+
 	colMap := make(map[string][]any)
 	colTypes := map[string]func(any) any{}
 	var colNames []string
