@@ -350,13 +350,9 @@ type aplLegacyQueryRequest struct {
 }
 
 type aplQueryResponse struct {
-	Datasets []string         `json:"datasetNames"`
-	Status   query.Status     `json:"status"`
-	Matches  []query.Entry    `json:"matches"`
-	Buckets  query.Timeseries `json:"buckets"`
-	GroupBy  []string         `json:"-"`
-	TraceID  string           `json:"-"`
-	Tables   []struct {
+	query.Result
+	Request aplLegacyQueryRequest `json:"request"`
+	Tables  []struct {
 		Columns [][]any
 		Fields  []struct {
 			Name string
@@ -379,7 +375,6 @@ type aplQueryResponse struct {
 			Name string
 		}
 	} `json:"tables"`
-	Request aplLegacyQueryRequest `json:"request"`
 }
 
 func columns(r *aplQueryResponse) [][]any {
