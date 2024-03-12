@@ -365,6 +365,13 @@ const queries = [
 "SELECT URLHash, EventDate, count() AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= toDate('2013-07-01') AND EventDate <= toDate('2013-07-31') AND NOT Refresh AND TraficSourceID IN (-1, 6) AND RefererHash = halfMD5('http://yandex.ru/') GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 100",
 "SELECT WindowClientWidth, WindowClientHeight, count() AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= toDate('2013-07-01') AND EventDate <= toDate('2013-07-31') AND NOT Refresh AND NOT DontCountHits AND URLHash = halfMD5('http://yandex.ru/') GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10000;",
 "SELECT toStartOfMinute(EventTime) AS Minute, count() AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= toDate('2013-07-01') AND EventDate <= toDate('2013-07-02') AND NOT Refresh AND NOT DontCountHits GROUP BY Minute ORDER BY Minute;",
+
+/// NY Taxi
+"SELECT cab_type, count(*) FROM trips GROUP BY cab_type;",
+"SELECT passenger_count, avg(total_amount) FROM trips GROUP BY passenger_count;",
+"SELECT passenger_count, toYear(pickup_date) AS year, count(*) FROM trips GROUP BY passenger_count, year;",
+"SELECT passenger_count, toYear(pickup_date) AS year, round(trip_distance) AS distance, count(*) FROM trips GROUP BY passenger_count, year, distance ORDER BY year, count(*) DESC;",
+
 ];
 
 const data = [
@@ -505,11 +512,12 @@ const data = [
 </table>
 
 <div class="comments">
-<p>This includes a combination of three benchmarks: MgBench, Star Schema Benchmark and ClickBench.</p>
+<p>This includes a combination of three benchmarks: MgBench, Star Schema Benchmark, New York Taxi Rides Benchmark and ClickBench.</p>
 <p>Hardware used to run tests: x86_64 AWS m5.8xlarge Ubuntu 20.04.</p>
 <p>In 23.7 sparse columns feature is enabled by default. Tables were populated again to utilize sparse columns.</p>
 <p>Old versions had no support of these features/syntax: toISOWeek, SUBSTRING, EXTRACT, WITH. Queries were changed. All version runs use same queries.</p>
 <p>Star Schema Benchmark Patrick O'Neil, Elizabeth (Betty) O'Neil and Xuedong Chen. "The Star Schema Benchmark," Online Publication of Database Generation program., January 2007. <a href="http://www.cs.umb.edu/~poneil/StarSchemaB.pdf">http://www.cs.umb.edu/~poneil/StarSchemaB.pdf</a></p>
+<p>Summary of the 1.1 Billion Taxi Rides Benchmarks, Mark Litwintschik<a href="https://tech.marksblogg.com/benchmarks.html">https://tech.marksblogg.com/benchmarks.html</a> </p>
 </div>
 
 <script type="text/javascript">
