@@ -6,17 +6,20 @@
 
 PROVIDER=${PROVIDER:-aws}
 REGION=${REGION:-eu-central-1}
-TIER=${TIER:-production}
-MEMORY=${MEMORY:-48}
+TIER=${TIER:-development}
+MEMORY=${MEMORY:-0}
+PARALLEL_REPLICA=${PARALLEL_REPLICA:-false}
 
 command -v jq || exit 1
 command -v curl || exit 1
 command -v clickhouse-client || exit 1
 
-echo "Provisioning a service in ${PROVIDER}, region ${REGION}, ${TIER} tier, memory ${MEMORY}"
+echo "Provisioning a service in ${PROVIDER}, region ${REGION}, ${TIER} tier, memory ${MEMORY}, with parallel replicas set to ${PARALLEL_REPLICA}"
 
-TMPDIR="${PROVIDER}-${REGION}-${TIER}-${MEMORY}-$$"
+TMPDIR="${PROVIDER}-${REGION}-${TIER}-${MEMORY}-${PARALLEL_REPLICA}-$$"
 mkdir -p "${TMPDIR}"
+
+echo $TMPDIR
 
 curl -X POST -H 'Content-Type: application/json' -d '
 {
@@ -28,6 +31,8 @@ curl -X POST -H 'Content-Type: application/json' -d '
     "ipAccessList": [{"source": "0.0.0.0/0", "description": "anywhere"}]
 }
 ' --silent --show-error --user "${KEY_ID}:${KEY_SECRET}" "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services" | tee "${TMPDIR}"/service.json | jq
+
+echo ${KEY_ID}:${KEY_SECRET}" "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services
 
 [ $(jq .status "${TMPDIR}"/service.json) != 200 ] && exit 1
 
@@ -52,6 +57,11 @@ do
     clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "SELECT 1" && break
     sleep 1
 done
+
+if [ ${PARALLEL_REPLICA} = true ]; then
+   echo "Enabling parallel replica to the default user"
+   clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "ALTER USER default SETTINGS allow_experimental_parallel_reading_from_replicas=2;"
+fi
 
 echo "Running the benchmark"
 
