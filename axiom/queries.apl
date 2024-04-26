@@ -2,25 +2,25 @@
 ['clickbench-hits'] | where AdvEngineID != 0 | summarize count()
 ['clickbench-hits'] | summarize sum(AdvEngineID), count(), avg(ResolutionWidth)
 ['clickbench-hits'] | extend userID = toint(UserID) | summarize avg(userID)
-['clickbench-hits'] | extend userID = toint(UserID) | summarize dcount(userID)
+['clickbench-hits'] | summarize dcount(UserID)
 ['clickbench-hits'] | summarize dcount(SearchPhrase)
 ['clickbench-hits'] | extend eventDate = todatetime(EventDate) | summarize min(eventDate), max(eventDate)
 ['clickbench-hits'] | where AdvEngineID != 0 | summarize Count = count() by AdvEngineID | order by Count desc
-['clickbench-hits'] | extend userID = toint(UserID) | summarize u = dcount(userID) by RegionID | order by u desc | take 10
-['clickbench-hits'] | extend userID = toint(UserID) | summarize SumAdvEngineID = sum(AdvEngineID), c = count(), AvgResolutionWidth = avg(ResolutionWidth), CountDistinctUserID = dcount(userID) by RegionID | order by c desc | take 10
-['clickbench-hits'] | extend userID = toint(UserID) | where MobilePhoneModel != "" | summarize u = dcount(userID) by MobilePhoneModel | order by u desc | take 10
-['clickbench-hits'] | extend userID = toint(UserID) | where MobilePhoneModel != "" | summarize u = dcount(userID) by MobilePhone, MobilePhoneModel | order by u desc | take 10
+['clickbench-hits'] | summarize u = dcount(UserID) by RegionID | order by u desc | take 10
+['clickbench-hits'] | summarize SumAdvEngineID = sum(AdvEngineID), c = count(), AvgResolutionWidth = avg(ResolutionWidth), CountDistinctUserID = dcount(UserID) by RegionID | order by c desc | take 10
+['clickbench-hits'] | where MobilePhoneModel != "" | summarize u = dcount(UserID) by MobilePhoneModel | order by u desc | take 10
+['clickbench-hits'] | where MobilePhoneModel != "" | summarize u = dcount(UserID) by MobilePhone, MobilePhoneModel | order by u desc | take 10
 ['clickbench-hits'] | where SearchPhrase != "" | summarize c = count() by SearchPhrase | order by c desc | take 10
-['clickbench-hits'] | extend userID = toint(UserID) | where SearchPhrase != "" | summarize u = dcount(userID) by SearchPhrase | order by u desc | take 10
+['clickbench-hits'] | where SearchPhrase != "" | summarize u = dcount(UserID) by SearchPhrase | order by u desc | take 10
 ['clickbench-hits'] | where SearchPhrase != "" | summarize c = count() by SearchEngineID, SearchPhrase | order by c desc | take 10
-['clickbench-hits'] | extend userID = toint(UserID) | summarize c = count() by userID | order by c desc | take 10
-['clickbench-hits'] | extend userID = toint(UserID) | summarize c = count() by userID, SearchPhrase | order by c desc | take 10
-['clickbench-hits'] | extend userID = toint(UserID) | summarize c = count() by userID, SearchPhrase | take 10
-['clickbench-hits'] | extend m = datetime_part("Minute", _time), userID = toint(UserID) | summarize c = count() by userID, m, SearchPhrase | order by c desc | take 10
+['clickbench-hits'] | summarize c = count() by UserID | order by c desc | take 10
+['clickbench-hits'] | summarize c = count() by UserID, SearchPhrase | order by c desc | take 10
+['clickbench-hits'] | summarize c = count() by UserID, SearchPhrase | take 10
+['clickbench-hits'] | extend m = datetime_part("Minute", _time) | summarize c = count() by UserID, m, SearchPhrase | order by c desc | take 10
 ['clickbench-hits'] | where UserID == "435090932899640449" | project UserID
 ['clickbench-hits'] | where URL contains_cs "google" | summarize Count = count()
 ['clickbench-hits'] | where URL contains_cs "google" and SearchPhrase != "" | summarize c = count(), MinURL = min(URL) by SearchPhrase | order by c desc | take 10
-['clickbench-hits'] | extend userID = toint(UserID) | where Title contains_cs "Google" and URL !contains_cs ".google." and SearchPhrase != "" | summarize c = count(), MinURL = min(URL), MinTitle = min(Title), CountDistinctUserID = dcount(userID) by SearchPhrase | order by c desc | take 10
+['clickbench-hits'] | where Title contains_cs "Google" and URL !contains_cs ".google." and SearchPhrase != "" | summarize c = count(), MinURL = min(URL), MinTitle = min(Title), CountDistinctUserID = dcount(UserID) by SearchPhrase | order by c desc | take 10
 ['clickbench-hits'] | where URL contains_cs "google" | order by _time asc | take 10
 ['clickbench-hits'] | project SearchPhrase, _time | where SearchPhrase != "" | order by _time asc | take 10
 ['clickbench-hits'] | project SearchPhrase | where SearchPhrase != "" | order by SearchPhrase asc | take 10
