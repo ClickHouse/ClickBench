@@ -1,8 +1,6 @@
 name: "Generate index.html"
 on:
   push:
-    branches:    
-      - main
 
 permissions:
   contents: write
@@ -10,20 +8,19 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env: 
+    env:
       CI_COMMIT_MESSAGE: "[bot] update index.html"
       CI_COMMIT_AUTHOR: github
     steps:
-    - uses: actions/checkout@v2.3.2
-    - if: github.event.commits[0].message != env.CI_COMMIT_MESSAGE
-      run: |
-        bash generate-results.sh
-        git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
-        git config --global user.email "${{ env.CI_COMMIT_AUTHOR }}@users.noreply.github.com"
+      - uses: actions/checkout@v2.3.2
+      - run: |
+          bash generate-results.sh
+          git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+          git config --global user.email "${{ env.CI_COMMIT_AUTHOR }}@users.noreply.github.com"
 
-        git add -A
-        if git status | grep -q modified
-        then
-          git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
-          git push
-        fi
+          git add -A
+          if git status | grep -q modified
+          then
+            git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
+            git push origin ${{ github.ref }}
+          fi
