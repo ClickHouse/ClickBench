@@ -1,9 +1,9 @@
 
 {
-    "machine":  "Ampere Altra Q64-22, single memory channel",
-    "comment":  "Ampere Altra Q64-22 (64 cores, Neoverse-N1), single memory channel",
+    "machine":  "Ampere Altra Q64-22, 8 memory channels, DDR4-2933, NVMe SSD",
+    "comment":  "Ampere Altra Q64-22 (64 cores, Neoverse-N1, 2.2 GHz), 8 memory channels, DDR4-2933, NVMe SSD PCIe Gen4 x4 WD SN850",
     "time":     "2024-05-08 00:00:00",
-    "tags": ["desktop", "arm"],
+    "tags": ["server", "arm"],
     "result":
     [
 [0.009, 0.007, 0.007],
