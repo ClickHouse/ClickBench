@@ -11,8 +11,8 @@ apt-get install -y python3-pip
 # Install Opteryx main branch
 git clone https://github.com/mabel-dev/opteryx.git
 cd opteryx
-python -m pip install --upgrade -r requirements.txt
-python -m pip install --upgrade -r tests/requirements.txt
+python3 -m pip install --upgrade -r requirements.txt
+python3 -m pip install --upgrade -r tests/requirements.txt
 make compile
 
 # Download benchmark target data, partitioned
