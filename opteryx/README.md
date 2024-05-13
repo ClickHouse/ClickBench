@@ -22,7 +22,7 @@ The steps are broadly to:
 1. `sudo apt-get install gcc git -y`
 1. `git clone https://github.com/ClickHouse/ClickBench`
 1. `cd ClickBench/opteryx`
-1. `sudo benchmark.sh`
+1. `sudo ./benchmark.sh`
 
 ### Know Issues:
 
