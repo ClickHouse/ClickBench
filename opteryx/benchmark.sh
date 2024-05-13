@@ -9,10 +9,10 @@ source ~/.cargo/env
 apt-get update
 
 # Install required packages
-apt-get install -y python3-full python3-venv git wget
+apt-get install -y python3.11 python3.11-venv git wget
 
-# Create and activate a virtual environment
-python3 -m venv ~/opteryx_venv
+# Create and activate a virtual environment using Python 3.11
+python3.11 -m venv ~/opteryx_venv
 source ~/opteryx_venv/bin/activate
 
 # Upgrade pip in the virtual environment
