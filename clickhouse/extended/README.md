@@ -2,7 +2,7 @@
 
 This is not part of the normal ClickBench.
 
-These are the files for the extended version of the benchmark (based on the Hardware benchmark) with 100 billion records and 10 TB of data, amplified from the source dataset with the `clickhouse-obfuscator` tool.
+These are the files for the extended version of the benchmark (based on the Hardware benchmark) with 100 billion records and 100 TB of data, amplified from the source dataset with the `clickhouse-obfuscator` tool.
 
 This is needed to test the performance of ClickHouse Cloud.
 
