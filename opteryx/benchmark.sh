@@ -12,7 +12,7 @@ add-apt-repository -y ppa:deadsnakes/ppa
 apt-get update
 
 # Install required packages
-apt-get install -y python3.11 python3.11-venv git wget build-essential
+apt-get install -y python3.11 python3.11-venv git wget build-essential python3.11-dev
 
 # Create and activate a virtual environment using Python 3.11
 python3.11 -m venv ~/opteryx_venv
