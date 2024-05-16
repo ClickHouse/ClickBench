@@ -7,12 +7,12 @@ source ~/.cargo/env
 
 # Update package lists
 apt-get update
-apt-get install -y software-properties-common
+apt-get install -y software-properties-common 
 add-apt-repository -y ppa:deadsnakes/ppa
 apt-get update
 
 # Install required packages
-apt-get install -y python3.11 python3.11-venv git wget
+apt-get install -y python3.11 python3.11-venv git wget build-essential
 
 # Create and activate a virtual environment using Python 3.11
 python3.11 -m venv ~/opteryx_venv
@@ -28,7 +28,7 @@ cd opteryx
 ~/opteryx_venv/bin/python -m pip install --upgrade -r tests/requirements.txt
 
 # Compile Opteryx
-make compile
+~/opteryx_venv/bin/python setup.py build_ext --inplace
 
 # Download benchmark target data, partitioned
 mkdir -p hits
