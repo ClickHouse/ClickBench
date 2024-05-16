@@ -41,7 +41,7 @@ seq 0 99 | xargs -P100 -I{} bash -c 'wget --no-verbose --directory-prefix hits -
 if [[ -f ../queries.sql ]]; then
     while read -r query; do
         echo "$query"
-        ~/opteryx_venv/bin/python -m opteryx "$query" --cycles 3 --o "null.parquet" 2>&1
+        ~/opteryx_venv/bin/python -m opteryx "$query" --cycles 3 2>&1
     done < ../queries.sql
 else
     echo "queries.sql not found in the parent directory."
