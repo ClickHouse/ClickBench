@@ -31,11 +31,13 @@ cd opteryx
 ~/opteryx_venv/bin/python setup.py build_ext --inplace
 
 # Download benchmark target data, partitioned
-mkdir -p raw_hits
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --no-verbose --directory-prefix raw_hits --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+mkdir -p hits
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --no-verbose --directory-prefix hits --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 
 # Rewrite the files
-~/opteryx_venv/bin/python ../loader.py
+#cp ../loader.py .
+#rm -f opteryx.yaml
+#~/opteryx_venv/bin/python loader.py
 
 # Run a simple query to check the installation
 ~/opteryx_venv/bin/python -m opteryx "SELECT version()" 2>&1
