@@ -46,8 +46,8 @@ sleep 10
 echo ""
 echo "Loading dataset..."
 export PGPASSWORD='mypassword'
-docker cp hits.parquet paradedb:/tmp/
-psql -h localhost -U myuser -d mydb -p 5432 -t < create.sql
+sudo docker cp hits.parquet paradedb:/tmp/
+psql -h localhost -U postgres -d mydb -p 5432 -t < create.sql
 
 # COPY 99997497
 # Time: 1268695.244 ms (21:08.695)
