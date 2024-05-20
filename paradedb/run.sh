@@ -9,6 +9,6 @@ cat queries.sql | while read query; do
 
     echo "$query";
     for i in $(seq 1 $TRIES); do
-    psql -h localhost -U myuser -d mydb -p 5432 -t -c "CALL paradedb.init();" -c '\timing' -c "$query" | grep 'Time'
+    psql -h localhost -U myuser -d mydb -p 5432 -t -c '\timing' -c "$query" | grep 'Time'
     done;
 done;

@@ -18,11 +18,10 @@ sudo apt-get update
 sudo apt-get install -y docker.io
 sudo apt-get install -y postgresql-client
 
-if [ ! -e hits.tsv ]; then
+if [ ! -e hits.parquet ]; then
     echo ""
     echo "Downloading dataset..."
-    wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-    gzip -d hits.tsv.gz
+    wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 else
     echo ""
     echo "Dataset already downloaded, skipping..."
@@ -31,13 +30,14 @@ fi
 echo ""
 echo "Pulling ParadeDB image..."
 sudo docker run \
-    -e POSTGRES_USER=myuser \
-    -e POSTGRES_PASSWORD=mypassword \
-    -e POSTGRES_DB=mydb \
-    -p 5432:5432 \
-    --name paradedb \
-    -d \
-    paradedb/paradedb:0.5.4
+  --name paradedb \
+  -e POSTGRESQL_USERNAME=myuser \
+  -e POSTGRESQL_PASSWORD=mypassword \
+  -e POSTGRESQL_DATABASE=mydb \
+  -e POSTGRESQL_POSTGRES_PASSWORD=postgres \
+  -p 5432:5432 \
+  -d \
+  paradedb/paradedb:0.7.1
 
 echo ""
 echo "Waiting for ParadeDB to start..."
@@ -46,8 +46,8 @@ sleep 10
 echo ""
 echo "Loading dataset..."
 export PGPASSWORD='mypassword'
+docker cp hits.parquet paradedb:/tmp/
 psql -h localhost -U myuser -d mydb -p 5432 -t < create.sql
-psql -h localhost -U myuser -d mydb -p 5432 -t -c 'CALL paradedb.init();' -c '\timing' -c "\\copy hits FROM 'hits.tsv'"
 
 # COPY 99997497
 # Time: 1268695.244 ms (21:08.695)
@@ -56,7 +56,7 @@ echo ""
 echo "Running queries..."
 ./run.sh 2>&1 | tee log.txt
 
-sudo docker exec -it paradedb du -bcs /var/lib/postgresql/data
+sudo docker exec -it paradedb du -bcs /bitnami/lib/postgresql/data
 
 # 15415061091     /var/lib/postgresql/data
 # 15415061091     total
