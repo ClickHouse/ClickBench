@@ -72,7 +72,7 @@ if [ $FLAG_WORKLOAD == "single" ]; then
     sudo docker exec -it paradedb bash -c "cd /tmp/ && curl -O -L -C - 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'"
 elif [ $FLAG_WORKLOAD == "partitioned" ]; then
     # TODO: Test that this works
-    sudo docker exec -it paradedb bash -c "cd /tmp/ && seq 0 99 | xargs -P100 -I{} bash -c 'curl -s -o /tmp/hits_{}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'"
+    sudo docker exec -it paradedb bash -c "cd /tmp/ && for i in $(seq 0 99); do curl -s -o hits_${i}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_${i}.parquet & done; wait"
 else
     echo "Invalid workload type: $FLAG_WORKLOAD"
     exit 1
