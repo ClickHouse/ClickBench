@@ -15,8 +15,7 @@ cleanup() {
 trap cleanup EXIT
 
 sudo apt-get update -y
-sudo apt-get install -y docker.io
-sudo apt-get install -y postgresql-client
+sudo apt-get install -y docker.io postgresql-client
 
 if [ ! -e hits.parquet ]; then
     echo ""
