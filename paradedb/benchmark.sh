@@ -5,6 +5,7 @@
 PARADEDB_VERSION=0.7.2
 FLAG_WORKLOAD=single
 
+# TODO: Also make it work with S3
 usage() {
   echo "Usage: $0 [OPTIONS]"
   echo "Options:"
@@ -17,7 +18,7 @@ cleanup() {
     echo ""
     echo "Cleaning up..."
     if sudo docker ps -q --filter "name=paradedb" | grep -q .; then
-        sudo docker kill paradedb
+      sudo docker kill paradedb
     fi
     sudo docker rm paradedb
     echo "Done, goodbye!"
@@ -35,10 +36,11 @@ do
       FLAG_WORKLOAD=$OPTARG
     case "$FLAG_WORKLOAD" in single | partitioned ): # Do nothing
         ;;
-        *)
+      *)
         usage
         ;;
     esac
+    ;;
     *)
       usage
       ;;
