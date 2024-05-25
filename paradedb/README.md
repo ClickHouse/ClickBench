@@ -1,5 +1,6 @@
 # ParadeDB
 
+TODO: Edit this
 ParadeDB is an alternative to Elasticsearch built on Postgres.
 
 - [GitHub](https://github.com/paradedb/paradedb)

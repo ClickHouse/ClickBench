@@ -116,4 +116,4 @@ CREATE FOREIGN TABLE IF NOT EXISTS hits
     "CLID" INTEGER NOT NULL
 )
 SERVER local_file_server
-OPTIONS (path 'file:///tmp/hits.parquet', extension 'parquet');
+OPTIONS (path 'file:///tmp/', extension 'parquet');
