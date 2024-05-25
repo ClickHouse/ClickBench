@@ -21,6 +21,8 @@ cleanup() {
       sudo docker kill paradedb
     fi
     sudo docker rm paradedb
+    sudo docker image prune -f
+    sudo docker volume prune -f
     echo "Done, goodbye!"
 }
 
@@ -89,9 +91,9 @@ echo "Running queries..."
 
 sudo docker exec -it paradedb du -bcs /bitnami/postgresql/data
 
-# TODO: Edit this to the right amount
-# 15415061091     /bitnami/postgresql/data
-# 15415061091     total
+# TODO: Is this correct, or I need the Parquet file size?
+# 65906151     /bitnami/postgresql/data
+# 65906151     total
 
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
