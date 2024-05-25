@@ -67,9 +67,9 @@ echo "Waiting for ParadeDB to start..."
 sleep 10
 
 echo ""
-echo "Downloading ClickBench $FLAG_WORKLOAD file(s) dataset..."
+echo "Downloading ClickBench dataset ($FLAG_WORKLOAD)..."
 if [ $FLAG_WORKLOAD == "single" ]; then
-    docker exec -it paradedb bash -c "cd /tmp/ && curl -O -L -C - 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'"
+    sudo docker exec -it paradedb bash -c "cd /tmp/ && curl -O -L -C - 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'"
 elif [ $FLAG_WORKLOAD == "partitioned" ]; then
     sudo docker exec -it paradedb bash -c "cd /tmp/ && seq 0 99 | xargs -P100 -I{} bash -c 'curl -s -o /tmp/hits_{}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'"
 else
