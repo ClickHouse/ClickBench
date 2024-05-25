@@ -71,6 +71,7 @@ echo "Downloading ClickBench dataset ($FLAG_WORKLOAD)..."
 if [ $FLAG_WORKLOAD == "single" ]; then
     sudo docker exec -it paradedb bash -c "cd /tmp/ && curl -O -L -C - 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'"
 elif [ $FLAG_WORKLOAD == "partitioned" ]; then
+    # TODO: Test that this works
     sudo docker exec -it paradedb bash -c "cd /tmp/ && seq 0 99 | xargs -P100 -I{} bash -c 'curl -s -o /tmp/hits_{}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'"
 else
     echo "Invalid workload type: $FLAG_WORKLOAD"
@@ -82,18 +83,14 @@ echo "Creating database..."
 export PGPASSWORD='postgres'
 psql -h localhost -U postgres -d mydb -p 5432 -t < create.sql
 
-# TODO: Edit this to zero, since we use Parquet files
-# COPY 99997497
-# Time: 1268695.244 ms (21:08.695)
-
 echo ""
 echo "Running queries..."
 ./run.sh 2>&1 | tee log.txt
 
-sudo docker exec -it paradedb du -bcs /bitnami/lib/postgresql/data
+sudo docker exec -it paradedb du -bcs /bitnami/postgresql/data
 
 # TODO: Edit this to the right amount
-# 15415061091     /var/lib/postgresql/data
+# 15415061091     /bitnami/postgresql/data
 # 15415061091     total
 
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
