@@ -69,9 +69,9 @@ sleep 10
 echo ""
 echo "Downloading ClickBench $FLAG_WORKLOAD file(s) dataset..."
 if [ $FLAG_WORKLOAD == "single" ]; then
-    sudo docker exec -it paradedb "cd /tmp/ && wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'"
+    sudo docker exec -it paradedb "cd /tmp/ && curl -O -L -C - 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'"
 elif [ $FLAG_WORKLOAD == "partitioned" ]; then
-    sudo docker exec -it paradedb "mkdir -p /tmp/partitioned && seq 0 99 | xargs -P100 -I{} bash -c 'wget --no-verbose --directory-prefix /tmp/partitioned --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'"
+    sudo docker exec -it paradedb "cd /tmp/ && seq 0 99 | xargs -P100 -I{} bash -c 'curl -s -o /tmp/hits_{}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'"
 else
     echo "Invalid workload type: $FLAG_WORKLOAD"
     exit 1
