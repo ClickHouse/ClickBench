@@ -37,7 +37,7 @@ sudo docker run \
   -e POSTGRESQL_POSTGRES_PASSWORD=postgres \
   -p 5432:5432 \
   -d \
-  paradedb/paradedb:0.7.1
+  paradedb/paradedb:0.7.2
 
 echo ""
 echo "Waiting for ParadeDB to start..."
