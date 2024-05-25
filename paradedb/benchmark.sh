@@ -32,7 +32,7 @@ do
     h)
       usage
       ;;
-    p)
+    w)
       FLAG_WORKLOAD=$OPTARG
     case "$FLAG_WORKLOAD" in single | partitioned ): # Do nothing
         ;;
