@@ -14,7 +14,7 @@ cleanup() {
 # Register the cleanup function to run when the script exits
 trap cleanup EXIT
 
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y docker.io
 sudo apt-get install -y postgresql-client
 
