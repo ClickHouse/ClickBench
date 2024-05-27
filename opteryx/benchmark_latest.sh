@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
-bash rust-init.sh -y
-source ~/.cargo/env
-
 # Update package lists
 apt-get update
 apt-get install -y software-properties-common 
@@ -20,15 +15,7 @@ source ~/opteryx_venv/bin/activate
 
 # Upgrade pip in the virtual environment
 ~/opteryx_venv/bin/python -m pip install --upgrade pip
-
-# Clone the Opteryx repository and install dependencies
-git clone https://github.com/mabel-dev/opteryx.git
-cd opteryx
-~/opteryx_venv/bin/python -m pip install --upgrade -r requirements.txt
-~/opteryx_venv/bin/python -m pip install --upgrade -r tests/requirements.txt
-
-# Compile Opteryx
-~/opteryx_venv/bin/python setup.py build_ext --inplace
+~/opteryx_venv/bin/python -m pip install --upgrade opteryx
 
 # Download benchmark target data, partitioned
 mkdir -p hits
