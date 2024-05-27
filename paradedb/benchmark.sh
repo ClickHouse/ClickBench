@@ -3,8 +3,8 @@
 # Run the ClickBench benchmarks for Docker version of ParadeDB.
 
 PARADEDB_VERSION=0.7.2
-FLAG_WORKLOAD=single
 FLAG_LOCATION=local
+FLAG_WORKLOAD=single
 
 # TODO: Also make it work with S3
 usage() {
@@ -85,7 +85,9 @@ if [ $FLAG_WORKLOAD == "single" ]; then
     sudo docker exec -it paradedb bash -c "cd /tmp/ && curl -O -L -C - 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'"
 elif [ $FLAG_WORKLOAD == "partitioned" ]; then
     # TODO: Test that this works
-    sudo docker exec -it paradedb bash -c "cd /tmp/ && for i in \$(seq 0 99); do curl -s -o hits_\${i}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_\${i}.parquet & done; wait"
+    sudo docker exec -it paradedb bash -c "cd /tmp/ && for i in \$(seq 0 99); do echo Downloading hits_\${i}.parquet; curl -s -o hits_\${i}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_\${i}.parquet & done; wait"
+
+    # sudo docker exec -it paradedb bash -c "cd /tmp/ && for i in \$(seq 0 99); do curl -s -o hits_\${i}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_\${i}.parquet & done; wait"
 else
     echo "Invalid workload type: $FLAG_WORKLOAD"
     exit 1
@@ -97,14 +99,14 @@ export PGPASSWORD='postgres'
 psql -h localhost -U postgres -d mydb -p 5432 -t < create.sql
 
 # load_time is zero, since the data is directly read from the Parquet file(s)
-# 0
+# Time: 0000000.000 ms (00:00.000)
+
 echo ""
 echo "Running queries..."
 ./run.sh 2>&1 | tee log.txt
 
 # data_size is the Parquet file(s) total size
 # 14779976446
-sudo docker exec -it paradedb du -bcs /tmp/*.parquet
 
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
