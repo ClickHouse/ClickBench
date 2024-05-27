@@ -38,7 +38,7 @@ do
       ;;
     l)
       FLAG_LOCATION=$OPTARG
-    case "$FLAG_LOCATION" in local | s3 ):
+    case "$FLAG_LOCATION" in local | s3):
         ;;
       *)
         usage
@@ -47,7 +47,7 @@ do
     ;;
     w)
       FLAG_WORKLOAD=$OPTARG
-    case "$FLAG_WORKLOAD" in single | partitioned ):
+    case "$FLAG_WORKLOAD" in single | partitioned):
         ;;
       *)
         usage
@@ -80,6 +80,7 @@ sudo docker run \
 echo ""
 echo "Waiting for ParadeDB to start..."
 sleep 10
+echo "ParadeDB is ready!"
 
 echo ""
 echo "Downloading ClickBench dataset ($FLAG_WORKLOAD)..."
@@ -107,5 +108,7 @@ echo "Running queries..."
 # data_size is the Parquet file(s) total size
 # 14779976446
 
+echo ""
+echo "Parsing results..."
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
   awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'

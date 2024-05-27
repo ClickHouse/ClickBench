@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS pg_lakehouse;
 CREATE FOREIGN DATA WRAPPER local_file_wrapper HANDLER local_file_fdw_handler VALIDATOR local_file_fdw_validator;
 CREATE SERVER local_file_server FOREIGN DATA WRAPPER local_file_wrapper;
 
--- Create the pg_lakehouse table
+-- Create the Postgres table
 CREATE FOREIGN TABLE IF NOT EXISTS hits
 (
     "WatchID" BIGINT NOT NULL,

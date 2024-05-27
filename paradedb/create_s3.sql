@@ -1,11 +1,11 @@
 DROP EXTENSION IF EXISTS pg_lakehouse CASCADE;
 CREATE EXTENSION IF NOT EXISTS pg_lakehouse;
 
--- Create the pg_lakehouse S3 file wrapper
+-- Create the pg_lakehouse AWS S3 file wrapper
 CREATE FOREIGN DATA WRAPPER s3_wrapper HANDLER s3_fdw_handler VALIDATOR s3_fdw_validator;
 CREATE SERVER s3_server FOREIGN DATA WRAPPER s3_wrapper OPTIONS (region 'us-east-2', bucket 'paradedb-benchmarks', allow_anonymous 'true');
 
--- Create the pg_lakehouse table
+-- Create the Postgres table
 CREATE FOREIGN TABLE IF NOT EXISTS hits
 (
     "WatchID" BIGINT NOT NULL,
