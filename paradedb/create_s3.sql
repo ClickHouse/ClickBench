@@ -1,9 +1,9 @@
 DROP EXTENSION IF EXISTS pg_lakehouse CASCADE;
 CREATE EXTENSION IF NOT EXISTS pg_lakehouse;
 
--- Create the pg_lakehouse local file wrapper
-CREATE FOREIGN DATA WRAPPER local_file_wrapper HANDLER local_file_fdw_handler VALIDATOR local_file_fdw_validator;
-CREATE SERVER local_file_server FOREIGN DATA WRAPPER local_file_wrapper;
+-- Create the pg_lakehouse S3 file wrapper
+CREATE FOREIGN DATA WRAPPER s3_wrapper HANDLER s3_fdw_handler VALIDATOR s3_fdw_validator;
+CREATE SERVER s3_server FOREIGN DATA WRAPPER s3_wrapper OPTIONS (region 'us-east-2', bucket 'paradedb-benchmarks', allow_anonymous 'true');
 
 -- Create the pg_lakehouse table
 CREATE FOREIGN TABLE IF NOT EXISTS hits
@@ -115,4 +115,4 @@ CREATE FOREIGN TABLE IF NOT EXISTS hits
     "CLID" INTEGER NOT NULL
 )
 SERVER local_file_server
-OPTIONS (path 'file:///tmp/', extension 'parquet');
+OPTIONS (path 's3://hits.parquet', extension 'parquet');

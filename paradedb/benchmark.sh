@@ -17,15 +17,15 @@ usage() {
 }
 
 cleanup() {
-    echo ""
-    echo "Cleaning up..."
-    if sudo docker ps -q --filter "name=paradedb" | grep -q .; then
-      sudo docker kill paradedb
-    fi
-    sudo docker rm paradedb
-    sudo docker image prune -f
-    sudo docker volume prune -f
-    echo "Done, goodbye!"
+  echo ""
+  echo "Cleaning up..."
+  if sudo docker ps -q --filter "name=paradedb" | grep -q .; then
+    sudo docker kill paradedb
+  fi
+  sudo docker rm paradedb
+  sudo docker image prune -f
+  sudo docker volume prune -f
+  echo "Done, goodbye!"
 }
 
 trap cleanup EXIT
@@ -38,7 +38,7 @@ do
       ;;
     l)
       FLAG_LOCATION=$OPTARG
-    case "$FLAG_LOCATION" in local | s3 ): # Do nothing
+    case "$FLAG_LOCATION" in local | s3 ):
         ;;
       *)
         usage
@@ -47,7 +47,7 @@ do
     ;;
     w)
       FLAG_WORKLOAD=$OPTARG
-    case "$FLAG_WORKLOAD" in single | partitioned ): # Do nothing
+    case "$FLAG_WORKLOAD" in single | partitioned ):
         ;;
       *)
         usage
@@ -60,6 +60,8 @@ do
   esac
 done
 
+echo ""
+echo "Installing dependencies..."
 sudo apt-get update -y
 sudo apt-get install -y docker.io postgresql-client
 
@@ -82,15 +84,12 @@ sleep 10
 echo ""
 echo "Downloading ClickBench dataset ($FLAG_WORKLOAD)..."
 if [ $FLAG_WORKLOAD == "single" ]; then
-    sudo docker exec -it paradedb bash -c "cd /tmp/ && curl -O -L -C - 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'"
+  sudo docker exec -it paradedb bash -c "cd /tmp/ && curl -O -L -C - 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'"
 elif [ $FLAG_WORKLOAD == "partitioned" ]; then
-    # TODO: Test that this works
-    sudo docker exec -it paradedb bash -c "cd /tmp/ && for i in \$(seq 0 99); do echo Downloading hits_\${i}.parquet; curl -s -o hits_\${i}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_\${i}.parquet & done; wait"
-
-    # sudo docker exec -it paradedb bash -c "cd /tmp/ && for i in \$(seq 0 99); do curl -s -o hits_\${i}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_\${i}.parquet & done; wait"
+  sudo docker exec -it paradedb bash -c "cd /tmp/ && for i in \$(seq 0 99); do echo Downloading hits_\${i}.parquet; curl -s -o hits_\${i}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_\${i}.parquet & done; wait"
 else
-    echo "Invalid workload type: $FLAG_WORKLOAD"
-    exit 1
+  echo "Invalid workload type: $FLAG_WORKLOAD"
+  exit 1
 fi
 
 echo ""
@@ -109,4 +108,4 @@ echo "Running queries..."
 # 14779976446
 
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
-    awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+  awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
