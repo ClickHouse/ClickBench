@@ -4,12 +4,14 @@
 
 PARADEDB_VERSION=0.7.2
 FLAG_WORKLOAD=single
+FLAG_LOCATION=local
 
 # TODO: Also make it work with S3
 usage() {
   echo "Usage: $0 [OPTIONS]"
   echo "Options:"
   echo " -h (optional),   Display this help message"
+  echo " -l (location),   Location of the dataset, either <local> or <s3>. Default is <local>."
   echo " -w (optional),   Workload type, either <single> or <partitioned>. Default is <single>."
   exit 1
 }
@@ -28,12 +30,21 @@ cleanup() {
 
 trap cleanup EXIT
 
-while getopts "hw:" flag
+while getopts "hl:w:" flag
 do
   case $flag in
     h)
       usage
       ;;
+    l)
+      FLAG_LOCATION=$OPTARG
+    case "$FLAG_LOCATION" in local | s3 ): # Do nothing
+        ;;
+      *)
+        usage
+        ;;
+    esac
+    ;;
     w)
       FLAG_WORKLOAD=$OPTARG
     case "$FLAG_WORKLOAD" in single | partitioned ): # Do nothing
@@ -74,7 +85,7 @@ if [ $FLAG_WORKLOAD == "single" ]; then
     sudo docker exec -it paradedb bash -c "cd /tmp/ && curl -O -L -C - 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'"
 elif [ $FLAG_WORKLOAD == "partitioned" ]; then
     # TODO: Test that this works
-    sudo docker exec -it paradedb bash -c "cd /tmp/ && for i in $(seq 0 99); do curl -s -o hits_${i}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_${i}.parquet & done; wait"
+    sudo docker exec -it paradedb bash -c "cd /tmp/ && for i in \$(seq 0 99); do curl -s -o hits_\${i}.parquet -C - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_\${i}.parquet & done; wait"
 else
     echo "Invalid workload type: $FLAG_WORKLOAD"
     exit 1
@@ -85,15 +96,15 @@ echo "Creating database..."
 export PGPASSWORD='postgres'
 psql -h localhost -U postgres -d mydb -p 5432 -t < create.sql
 
+# load_time is zero, since the data is directly read from the Parquet file(s)
+# 0
 echo ""
 echo "Running queries..."
 ./run.sh 2>&1 | tee log.txt
 
-sudo docker exec -it paradedb du -bcs /bitnami/postgresql/data
-
-# TODO: Is this correct, or I need the Parquet file size?
-# 65906151     /bitnami/postgresql/data
-# 65906151     total
+# data_size is the Parquet file(s) total size
+# 14779976446
+sudo docker exec -it paradedb du -bcs /tmp/*.parquet
 
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
