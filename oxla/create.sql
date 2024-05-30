@@ -106,3 +106,4 @@ CREATE TABLE hits
     URLHash BIGINT NOT NULL,
     CLID INTEGER NOT NULL
 );
+CREATE INDEX hits ON hits(CounterID, EventDate, UserID, EventTime, WatchID);
