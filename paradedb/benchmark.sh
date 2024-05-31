@@ -1,3 +1,83 @@
+#!/bin/bash
+
+# Run the ClickBench benchmarks for Docker version of ParadeDB.
+
+PARADEDB_VERSION=0.7.3
+FLAG_LOCATION=local
+FLAG_WORKLOAD=single
+
+# TODO: Also make it work with S3
+usage() {
+  echo "Usage: $0 [OPTIONS]"
+  echo "Options:"
+  echo " -h (optional),   Display this help message"
+  echo " -l (location),   Location of the dataset, either <local> or <s3>. Default is <local>."
+  echo " -w (optional),   Workload type, either <single> or <partitioned>. Default is <single>."
+  exit 1
+}
+
+cleanup() {
+  echo "Done, goodbye!"
+}
+
+trap cleanup EXIT
+
+while getopts "hl:w:" flag
+do
+  case $flag in
+    h)
+      usage
+      ;;
+    l)
+      FLAG_LOCATION=$OPTARG
+    case "$FLAG_LOCATION" in local | s3):
+        ;;
+      *)
+        usage
+        ;;
+    esac
+    ;;
+    w)
+      FLAG_WORKLOAD=$OPTARG
+    case "$FLAG_WORKLOAD" in single | partitioned):
+        ;;
+      *)
+        usage
+        ;;
+    esac
+    ;;
+    *)
+      usage
+      ;;
+  esac
+done
+
+echo ""
+echo "Installing dependencies..."
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client
+
+echo ""
+echo "Pulling ParadeDB image..."
+sudo docker run \
+  --name paradedb \
+  -e POSTGRESQL_USERNAME=myuser \
+  -e POSTGRESQL_PASSWORD=mypassword \
+  -e POSTGRESQL_DATABASE=mydb \
+  -e POSTGRESQL_POSTGRES_PASSWORD=postgres \
+  -p 5432:5432 \
+  -d \
+  paradedb/paradedb:$PARADEDB_VERSION
+
+echo ""
+echo "Waiting for ParadeDB to start..."
+sleep 10
+echo "ParadeDB is ready!"
+
+echo ""
+echo "Downloading ClickBench dataset ($FLAG_WORKLOAD)..."
+if [ $FLAG_WORKLOAD == "single" ]; then
+  if [ ! -e /tmp/hits.parquet ]; then
     wget --no-verbose --continue -O /tmp/hits.parquet https://datasets.clickhouse.com/hits_compatible/hits.parquet
   fi
   if ! sudo docker exec paradedb sh -c '[ -f /tmp/hits.parquet ]'; then
@@ -39,4 +119,3 @@ echo ""
 echo "Parsing results..."
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
   awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
-                                                                                                                
