@@ -285,6 +285,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] Sneller
 - [x] Tablespace
 - [x] Tembo
+- [x] Cloudberry
 
 By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
 
