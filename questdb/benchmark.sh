@@ -2,7 +2,7 @@
 
 # Install
 
-wget https://github.com/questdb/questdb/releases/download/7.3.10/questdb-7.3.10-rt-linux-amd64.tar.gz
+wget https://github.com/questdb/questdb/releases/download/8.0.0/questdb-8.0.0-rt-linux-amd64.tar.gz
 tar xf questdb*.tar.gz --one-top-level=questdb --strip-components 1
 questdb/bin/questdb.sh start
 
