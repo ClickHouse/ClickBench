@@ -8,6 +8,6 @@ cat queries.sql | while read query; do
     echo 3 | sudo tee /proc/sys/vm/drop_caches
 
     echo "$query";
-    output=$(psql -h localhost -U postgres -d mydb -p 5432 -t -c '\timing' -c "$query" -c "$query" -c "$query")
+    output=$(psql -h localhost -U postgres -d mydb -p 5432 -t -c "CALL connect_table('hits')"  -c '\timing' -c "$query" -c "$query" -c "$query")
     echo "$output" | grep 'Time'
 done;
