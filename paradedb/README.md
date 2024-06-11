@@ -5,7 +5,7 @@ ParadeDB is an Elasticsearch alternative built on Postgres.
 - [GitHub](https://github.com/paradedb/paradedb)
 - [Homepage](https://paradedb.com)
 
-The published benchmarks are based on ParadeDB version `v0.7.3`.
+The published benchmarks are based on ParadeDB version `v0.7.5`.
 
 ## Benchmarks
 
@@ -22,8 +22,7 @@ To run the benchmarks yourself:
 
 The benchmark script takes the following parameters:
 
-- `-l`: Location of the dataset, either `local` or `s3`. The default is `local`, meaning the dataset is downloaded on the instance. If you pass in `s3`, the queries will be run directly against a copy of the ClickBench dataset stored in a ParadeDB-hosted AWS S3 bucket in `us-east-1`. For the lowest latency, you should run the benchmark in the same region.
-- `-w`: Type of workload, either `single` or `partitioned`. The default is `single`, meaning it uses the single Parquet file `hits.parquet` ClickBench dataset. If you pass in `partitioned`, it uses the one-hundred partitioned Parquet files version of the ClickBench dataset.
+- `-w`: Type of workload, either `single` or `partitioned`. The default is `single`, meaning it uses the single Parquet file `hits.parquet` ClickBench dataset.
 
 \*You can also use Ubuntu 24.04
 \*\*You can also use a gp3 volume

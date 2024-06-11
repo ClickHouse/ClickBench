@@ -2,7 +2,7 @@
 
 # Run the ClickBench benchmarks for Docker version of ParadeDB.
 
-PARADEDB_VERSION=0.7.3
+PARADEDB_VERSION=0.7.5
 FLAG_LOCATION=local
 FLAG_WORKLOAD=single
 
