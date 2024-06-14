@@ -11,7 +11,7 @@ We assume that a Presto cluster is already running. For more information, visit 
 ----------
 ## Steps
 
-1. Download the parquet file and upload it to an S3 Bucket ex. s3://your-bucket/clickbench-parquet/hits/hits.parquet.
+1. Access the parquet file through this path: s3://clickhouse-public-datasets/hits_compatible/hits.parquet or just download the parquet file and upload it to an S3 Bucket yourself ex. s3://your-bucket/clickbench-parquet/hits/hits.parquet.
 2. Create a new schema named `clickbench_parquet` in the Hive metastore (Hive catalog) and create the hits table in the new schema using the create.sql file. Modify the end of the table creation statement to use the parquet file on S3. 
 ```
 WITH (
