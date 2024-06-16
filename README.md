@@ -269,7 +269,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] Apache Drill
 - [ ] Apache Kudu
 - [ ] Apache Kylin
-- [ ] S3 select command in AWS
+- [x] S3 select command in AWS
 - [x] Kinetica
 - [ ] YDB
 - [ ] OceanBase
