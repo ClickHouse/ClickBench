@@ -1,5 +1,5 @@
 {
-    "system": "chDB",
+    "system": "chDB (Parquet, partitioned)",
     "date": "2023-12-03",
     "machine": "c6a.metal, 500gb gp2",
     "cluster_size": 1,
