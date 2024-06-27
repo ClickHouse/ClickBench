@@ -15,7 +15,7 @@ source ~/opteryx_venv/bin/activate
 
 # Upgrade pip in the virtual environment
 ~/opteryx_venv/bin/python -m pip install --upgrade pip
-~/opteryx_venv/bin/python -m pip install --upgrade opteryx==0.15.2
+~/opteryx_venv/bin/python -m pip install --upgrade opteryx==0.15.7
 
 # Download benchmark target data, partitioned
 mkdir -p hits
@@ -32,7 +32,6 @@ seq 0 99 | xargs -P100 -I{} bash -c 'wget --no-verbose --directory-prefix hits -
 # Run benchmarks for partitioned data using queries from queries.sql
 if [[ -f ./queries.sql ]]; then
     while read -r query; do
-        echo "$query"
         ~/opteryx_venv/bin/python -m opteryx "$query" --cycles 3 2>&1
     done < ./queries.sql
 else
