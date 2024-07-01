@@ -1,10 +1,6 @@
 -- Auto-infer the columns from the hits.parquet
 CREATE FOREIGN TABLE hits_auto () SERVER crunchy_lake_analytics OPTIONS (path 's3://clickhouse-public-datasets/hits_compatible/hits.parquet');
 
--- To show representative behavior of Crunchy Bridge for Analytics, we point to the
--- official hits.parquet file on S3 and load it to a local disk before running the queries
-SELECT * FROM crunchy_file_cache.add('s3://clickhouse-public-datasets/hits_compatible/hits.parquet');
-
 -- hits.parquet uses integers for date and time,
 -- which most databases cannot pass directly
 -- to date/time functions. Hence we convert them to date and

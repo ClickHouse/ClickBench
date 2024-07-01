@@ -1,9 +1,6 @@
 
-[Crunchy Bridge for Analytics](https://docs.crunchybridge.com/analytics) allows users to query parquet files on S3 directly. It also automatically downloads files accessed to a local disk to avoid network delays. 
+[Crunchy Bridge for Analytics](https://docs.crunchybridge.com/analytics) allows users to query parquet files on S3 directly.
 
-To best represent the default production behavior of our system,  we benchmark the `(Parquet, Local)` scenario  where:
-- 'Parquet' we directly use `hits.parquet` from `s3://clickhouse-public-datasets`
-- 'Local': We load the `hits.parquet` file to a local disk drive on the machine running the service. In this scenario, it is expected that 'cold run' and 'hot run' results will be similar
 
 1) Setup the cluster:
 
@@ -15,24 +12,35 @@ To best represent the default production behavior of our system,  we benchmark t
 - Step Two: Set Up Analytics Credentials: Click "Skip for now"
 - Wait until the state of the machine becomes "Running"
 
-2) Get the connection string:
+2) Setup a VM on `aws` in the same region as the cluster `eu-central-1`.
 
+This is to make sure the latency between the server and the client is not high. We are going to need `psql` on this VM, so you should install `sudo yum install -y postgresql16` etc. depending on the linux distro.
+
+
+3) Get the application connection strings:
+
+3.1) Application connection
 - Click the "Connection" tab from the left menu
 - Pick role: application, Format psql
 - Click "Copy"
 
-3) Set the `CONNCMD` that we are going to use with what you copied in (2): 
+ Set the `APPCONNCMD` that we are going to use with what you copied above:
 ```bash
-export CONNCMD='psql postgres://application:XXXX@XXXXX.postgresbridge.com:5432/postgres'
+export APPCONNCMD='psql postgres://application:XXXX@XXXXX.postgresbridge.com:5432/postgres'
 ```
 
-4) Create the table, load the data:
+3.2) Get the postgres connection string:
+
+- Click the "Connection" tab from the left menu
+- Pick role: postgres, Format psql
+- Click "Copy"
+
+Set the `SUPERUSERCONNCMD` that we are going to use with what you copied above:
 ```bash
- $CONNCMD -c '\timing' -f create.sql
+export SUPERUSERCONNCMD='psql postgres://postgres:XXXX@XXXX.postgresbridge.com:5432/postgres'
 ```
 
-
-5) Run the script:
+4) Run the script:
 ```bash
  ./run.sh 
  ```
