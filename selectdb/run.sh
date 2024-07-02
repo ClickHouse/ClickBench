@@ -6,6 +6,7 @@ touch result.csv
 truncate -s0 result.csv
 
 while read -r query; do
+    curl http://127.0.0.1:8040/api/clear_data_cache
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
