@@ -1,4 +1,7 @@
-CALL paradedb.init();
+CREATE DATABASE IF NOT EXISTS clickbench ENGINE = Atomic;
+
+USE clickbench;
+
 CREATE TABLE IF NOT EXISTS hits
 (
     WatchID BIGINT NOT NULL,
@@ -105,5 +108,7 @@ CREATE TABLE IF NOT EXISTS hits
     HasGCLID SMALLINT NOT NULL,
     RefererHash BIGINT NOT NULL,
     URLHash BIGINT NOT NULL,
-    CLID INTEGER NOT NULL
-) USING deltalake;
+    CLID INTEGER NOT NULL,
+    PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID)
+)
+ENGINE = MergeTree;

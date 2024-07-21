@@ -6,11 +6,10 @@ set -ex
 # Install
 ROOT=$(pwd)
 
-
 if [[ -n "$1" ]]; then
     url="$1"
 else
-    url='https://doris-clickbench.oss-ap-southeast-1.aliyuncs.com/doris-linux_x64.tar.gz'
+    url='https://doris-release.s3.us-east-1.amazonaws.com/1.2/doris-1.2.0.alpha-x86_64.tar.gz'
 fi
 # Download
 file_name="$(basename ${url})"
@@ -25,27 +24,31 @@ dir_name="${file_name/.tar.gz/}"
 
 # Try to stop SelectDB and remove it first if execute this script multiple times
 set +e
-"$dir_name"/output/fe/bin/stop_fe.sh
-"$dir_name"/output/be/bin/stop_be.sh
+"$dir_name"/fe/bin/stop_fe.sh
+"$dir_name"/be/bin/stop_be.sh
 rm -rf "$dir_name"
 set -e
 
 # Uncompress
 mkdir "$dir_name"
 tar zxf "$file_name" -C "$dir_name"
-DORIS_HOME="$ROOT/$dir_name/output"
+DORIS_HOME="$ROOT/$dir_name/"
 export DORIS_HOME
 
 # Install dependencies
-sudo yum install -y java-17-amazon-corretto.x86_64
-sudo dnf -y localinstall https://dev.mysql.com/get/mysql80-community-release-el9-4.noarch.rpm
-sudo dnf -y install mysql mysql-community-client
-export JAVA_HOME="/usr/lib/jvm/java-17-amazon-corretto.x86_64/"
+sudo yum install -y mysql java-11-amazon-corretto.x86_64
+export JAVA_HOME="/usr/lib/jvm/java-11-amazon-corretto.x86_64/"
 export PATH=$JAVA_HOME/bin:$PATH
 
+IPADDR=$(hostname -i)
+
+# Start Frontend
+echo "priority_networks = ${IPADDR}/24" >>"$DORIS_HOME"/fe/conf/fe_custom.conf
 "$DORIS_HOME"/fe/bin/start_fe.sh --daemon
 
 # Start Backend
+echo "priority_networks = ${IPADDR}/24
+load_process_max_memory_limit_percent=80" >>"$DORIS_HOME"/be/conf/be_custom.conf
 sudo sysctl -w vm.max_map_count=2000000
 "$DORIS_HOME"/be/bin/start_be.sh --daemon
 
@@ -62,7 +65,7 @@ while true; do
 done
 
 # Setup cluster, add Backend to cluster
-mysql -h 127.0.0.1 -P9030 -uroot -e "ALTER SYSTEM ADD BACKEND '127.0.0.1:9050' "
+mysql -h 127.0.0.1 -P9030 -uroot -e "ALTER SYSTEM ADD BACKEND '${IPADDR}:9050' "
 
 # Wait for Backend ready
 while true; do
@@ -75,8 +78,6 @@ while true; do
         sleep 2
     fi
 done
-
-echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
 # Create Database and table
 mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits"
