@@ -20,15 +20,15 @@ The benchmark should be completed in under an hour. On-demand pricing is $0.6 pe
 1. `cd ClickBench/datafusion`
 1. `vi benchmark.sh` and modify following line to target Datafusion version
     ```
-    git checkout 36.0.0
+    git checkout 40.0.0
     ```
 1. `bash benchmark.sh`
 
 ### Know Issues:
 
-1. importing parquet by `datafusion-cli` doesn't support schema, need to add some casting in quries.sql (e.g. converting EventTime from Int to Timestamp via `to_timestamp_seconds`)
-2. importing parquet by `datafusion-cli` make column name column name case-sensitive, i change all column name in quries.sql to double quoted literal (e.g. `EventTime` -> `"EventTime"`)
-3. `comparing binary with utf-8` and `group by binary` don't work in mac, if you run these quries in mac, you'll get some errors for quries contain binary format apache/arrow-datafusion#3050
+1. importing parquet by `datafusion-cli` doesn't support schema, need to add some casting in queries.sql (e.g. converting EventTime from Int to Timestamp via `to_timestamp_seconds`)
+2. importing parquet by `datafusion-cli` make column name column name case-sensitive, i change all column name in queries.sql to double quoted literal (e.g. `EventTime` -> `"EventTime"`)
+3. `comparing binary with utf-8` and `group by binary` don't work in mac, if you run these queries in mac, you'll get some errors for queries contain binary format apache/arrow-datafusion#3050
 
 
 ## Generate full human readable results (for debugging)
