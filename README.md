@@ -269,7 +269,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] Apache Drill
 - [ ] Apache Kudu
 - [ ] Apache Kylin
-- [ ] S3 select command in AWS
+- [x] S3 select command in AWS
 - [x] Kinetica
 - [ ] YDB
 - [ ] OceanBase
@@ -285,6 +285,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] Sneller
 - [x] Tablespace
 - [x] Tembo
+- [x] Cloudberry
 
 By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
 
