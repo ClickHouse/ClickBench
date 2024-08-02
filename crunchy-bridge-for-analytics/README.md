@@ -44,3 +44,5 @@ export SUPERUSERCONNCMD='psql postgres://postgres:XXXX@XXXX.postgresbridge.com:5
 ```bash
  ./run.sh 
  ```
+
+For the cold run, we directly access to S3 while running the queries. For the warm runs, we first download the file from S3 to a local cache drive, then run the queries. This logic is coded into `run.sh ` script.
