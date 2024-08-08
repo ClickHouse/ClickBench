@@ -53,6 +53,7 @@ TLDR: *All Benchmarks Are ~~Bastards~~ Liars*.
 ### How To Add a New Result
 
 To introduce a new system, simply copy-paste one of the directories and edit the files accordingly:
+
 - `benchmark.sh`: this is the main script to run the benchmark on a fresh VM; Ubuntu 22.04 or newer should be used by default, or any other system if specified in the comments. The script may not necessarily run in a fully automated manner - it is recommended always to copy-paste the commands one by one and observe the results. For managed databases, if the setup requires clicking in the UI, write a `README.md` instead.
 - `README.md`: contains comments and observations if needed. For managed databases, it can describe the setup procedure to be used instead of a shell script.
 - `create.sql`: a CREATE TABLE statement. If it's a NoSQL system, another file like `wtf.json` can be presented.
@@ -63,6 +64,12 @@ To introduce a new system, simply copy-paste one of the directories and edit the
 To introduce a new result for an existing system on different hardware configurations, add a new file to `results`.
 
 To introduce a new result for an existing system with a different usage scenario, either copy the whole directory and name it differently (e.g. `timescaledb`, `timescaledb-compression`) or add a new file to the `results` directory.
+
+`index.html` can be re-generated using `./generate-results.sh`. This step is called via a GitHub action and optional.
+
+By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
+
+Please help us add more systems and run the benchmarks on more types of VMs.
 
 ### Installation And Fine-Tuning
 
@@ -191,105 +198,6 @@ The benchmark is created and used by the ClickHouse team. It can be surprising, 
 Now the new benchmark is easy to use and the results for any system can be reproduced in around 20 minutes.
 
 We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/hardware/) for testing servers and VMs.
-
-## Systems Included
-
-- [x] ClickHouse
-- [x] ClickHouse on local Parquet files
-- [x] ClickHouse operating like "Athena" on remote Parquet files
-- [x] ClickHouse on a VFS over HTTPs on CDN
-- [x] MySQL InnoDB
-- [x] MySQL MyISAM
-- [x] MariaDB
-- [x] MariaDB ColumnStore
-- [x] MemSQL/SingleStore
-- [x] PostgreSQL
-- [x] Greenplum
-- [x] TimescaleDB
-- [x] Citus
-- [x] Vertica (without publishing)
-- [x] QuestDB
-- [x] DuckDB
-- [x] DuckDB over local Parquet files
-- [ ] DuckDB operating like "Athena" on remote Parquet files
-- [x] MonetDB
-- [x] mapD/Omnisci/HeavyAI
-- [x] Databend
-- [x] DataFusion
-- [x] ByteHouse
-- [x] Doris/PALO
-- [x] SelectDB
-- [x] Druid
-- [x] Pinot
-- [x] CrateDB
-- [ ] Spark SQL
-- [x] Starrocks
-- [ ] ShitholeDB
-- [ ] Hive
-- [x] Hydra
-- [ ] Impala
-- [ ] Hyper
-- [x] Umbra
-- [x] SQLite
-- [x] Redshift
-- [x] Redshift Serverless
-- [ ] Redshift Spectrum
-- [ ] Presto
-- [ ] Trino
-- [x] Amazon Athena
-- [x] Bigquery (without publishing)
-- [x] Snowflake
-- [ ] Rockset
-- [ ] CockroachDB
-- [ ] CockroachDB Serverless
-- [ ] Databricks
-- [ ] Planetscale (without publishing)
-- [ ] TiDB (TiFlash)
-- [x] Amazon RDS Aurora for MySQL
-- [x] Amazon RDS Aurora for Postgres
-- [ ] InfluxDB
-- [ ] TDEngine
-- [x] MongoDB
-- [ ] Cassandra
-- [ ] ScyllaDB
-- [x] Elasticsearch
-- [ ] Apache Ignite
-- [x] Motherduck
-- [x] Infobright
-- [ ] Actian Vector
-- [ ] Manticore Search
-- [x] Vertica (without publishing)
-- [ ] Azure Synapse
-- [ ] Starburst Galaxy
-- [ ] MS SQL Server with Column Store Index (without publishing)
-- [ ] Dremio (without publishing)
-- [ ] Exasol
-- [ ] LocustDB
-- [ ] EventQL
-- [ ] Apache Drill
-- [ ] Apache Kudu
-- [ ] Apache Kylin
-- [x] S3 select command in AWS
-- [x] Kinetica
-- [ ] YDB
-- [ ] OceanBase
-- [ ] Boilingdata
-- [x] Byteconity
-- [ ] DolphinDB
-- [x] Oxla
-- [ ] Quickwit
-- [x] AlloyDB
-- [x] ParadeDB
-- [x] GlareDB
-- [ ] Seafowl
-- [ ] Sneller
-- [x] Tablespace
-- [x] Tembo
-- [x] Cloudberry
-
-By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
-
-Please help us add more systems and run the benchmarks on more types of VMs.
 
 ## Similar Projects
 
