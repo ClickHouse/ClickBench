@@ -2,6 +2,7 @@
     "system": "ByteHouse",
     "date": "2022-07-27",
     "machine": "M",
+    "cluster_size": 4,
 
     "tags": ["managed", "column-oriented", "ClickHouse derivative", "C++"],
 
