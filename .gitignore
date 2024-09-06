@@ -1,4 +1,5 @@
 *.bak
 .idea
 .clickbench
+*.parquet
 hits.csv
