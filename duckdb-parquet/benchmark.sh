@@ -4,7 +4,7 @@
 
 sudo apt-get update
 sudo apt-get install -y python3-pip
-pip install duckdb psutil
+pip install --break-system-packages duckdb psutil
 
 # Load the data
 seq 0 99 | xargs -P100 -I{} bash -c 'wget --no-verbose --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'

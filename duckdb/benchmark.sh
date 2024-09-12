@@ -4,7 +4,7 @@
 
 sudo apt-get update
 sudo apt-get install -y python3-pip
-pip install duckdb psutil
+pip install --break-system-packages duckdb psutil
 
 # Load the data
 
