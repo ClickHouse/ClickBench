@@ -7,8 +7,7 @@
 export YT_USE_HOSTS=0
 export CHYT_ALIAS=*ch_public
 ```
-In this case we will use default clique ``*ch_public``, but you can create your own
-Also you need to export path to proxy using
+In this case we will use default clique ``*ch_public``, but you can create your own. Also you need to export path to proxy using
 ```console
 export YT_PROXY=path to your proxy
 ```
