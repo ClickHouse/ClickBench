@@ -1,9 +1,12 @@
 #!/bin/bash
 
+[ -n "$HOMEBREW_PREFIX" ] && PATH="${HOMEBREW_PREFIX}/opt/coreutils/libexec/gnubin:${PATH}"
+
 for f in */result
 do
-    PROVIDER=$(echo "$f" | grep -oP '^\w+')
-    MACHINE=$(echo "$f" | sed -r -e 's!^[a-z0-9-]+-([0-9]+)-[0-9]+/.+$!\1!; s/^0/dev/; s/([0-9]+)/\1GB/')
+    echo $f
+    PROVIDER=$(echo "$f" | grep -o -E '^[a-z]+')
+    MACHINE=$(echo "$f" | sed -r -e 's~^[a-z0-9-]+-([0-9]+)-[a-z]+-[0-9]+/.*$~\1~; s/^0/dev/; s/([0-9]+)/\1GB/')
 
     echo '
 {

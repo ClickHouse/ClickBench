@@ -1,60 +1,18 @@
 
 {
-    "system": "ClickHouse Cloud (Azure)",
-    "date": "2024-05-21",
+    "system": "ClickHouse Cloud (azure)",
+    "date": "2024-10-07",
     "machine": "24GB",
     "cluster_size": "serverless",
     "comment": "",
 
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "Azure"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],
 
-    "load_time": 813.926,
-    "data_size": 9941839919,
+    "load_time": Bad arguments: the argument for option '--host' should follow immediately after the equal sign,
+    "data_size": Bad arguments: the argument for option '--host' should follow immediately after the equal sign,
 
     "result": [
-    [0.004, 0.004, 0.004],
-[0.251, 1.408, 0.019],
-[1.838, 0.189, 0.145],
-[5.021, 1.021, 4.774],
-[1.962, 4.411, 1.819],
-[6.523, 9.093, 2.975],
-[0.149, 0.107, 0.039],
-[0.081, 0.056, 0.027],
-[4.278, 3.016, 2.168],
-[3.598, 2.550, 2.416],
-[1.037, 1.629, 0.853],
-[0.996, 1.021, 0.953],
-[3.222, 3.771, 2.984],
-[6.957, 5.927, 5.770],
-[5.439, 3.759, 5.063],
-[2.239, 1.802, 2.676],
-[8.437, 8.411, 7.813],
-[5.595, 5.697, 5.870],
-[26.469, 26.311, 35.612],
-[5.287, 2.774, 0.101],
-[27.510, 29.739, 59.983],
-[4.782, 7.639, 4.802],
-[31.945, 5.677, 5.418],
-[69.892, 95.743, 52.442],
-[1.506, 1.463, 1.394],
-[0.921, 0.973, 0.895],
-[1.446, 1.569, 1.382],
-[4.597, 4.583, 4.468],
-[44.943, 44.315, 44.395],
-[0.164, 0.151, 0.167],
-[2.573, 2.421, 2.520],
-[5.417, 3.320, 6.275],
-[25.855, 23.730, 23.656],
-[20.776, 21.651, 21.178],
-[21.193, 21.851, 20.344],
-[1.432, 1.396, 1.456],
-[0.140, 0.139, 0.140],
-[0.066, 0.054, 0.062],
-[0.063, 0.063, 0.052],
-[0.260, 0.257, 0.256],
-[0.030, 0.024, 0.029],
-[0.022, 0.019, 0.026],
-[0.017, 0.020, 0.015]
-    ]
+[Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)], [Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR), Code: 210. DB::NetException: Connection refused (localhost:9000). (NETWORK_ERROR)]
+]
 }
 
