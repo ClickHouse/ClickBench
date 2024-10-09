@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# This is needed on Mac OS. Do `brew install coreutils`.
 [ -n "$HOMEBREW_PREFIX" ] && PATH="${HOMEBREW_PREFIX}/opt/coreutils/libexec/gnubin:${PATH}"
 
 for f in */result
