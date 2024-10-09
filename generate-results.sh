@@ -5,9 +5,13 @@
 
 # This is needed on Mac OS. Do `brew install coreutils`.
 [ -n "$HOMEBREW_PREFIX" ] && PATH="${HOMEBREW_PREFIX}/opt/coreutils/libexec/gnubin:${PATH}"
+if command -v gsed >/dev/null 2>&1
+then
+    alias sed='gsed'
+fi
 
 (
-    gsed '/^const data = \[$/q' index.html
+    sed '/^const data = \[$/q' index.html
 
     FIRST=1
     LANG="" ls -1 */results/*.json | while read file
@@ -20,7 +24,7 @@
     done
 
     echo ']; // end of data'
-    gsed '0,/^\]; \/\/ end of data$/d' index.html
+    sed '0,/^\]; \/\/ end of data$/d' index.html
 
 ) > index.html.new
 
