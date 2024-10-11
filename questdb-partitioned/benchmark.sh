@@ -2,7 +2,7 @@
 
 # Install
 
-wget https://github.com/questdb/questdb/releases/download/8.0.0/questdb-8.0.0-rt-linux-amd64.tar.gz
+wget https://github.com/questdb/questdb/releases/download/8.1.2/questdb-8.1.2-rt-linux-x86-64.tar.gz
 tar xf questdb*.tar.gz --one-top-level=questdb --strip-components 1
 questdb/bin/questdb.sh start
 
@@ -11,7 +11,7 @@ while ! nc -z localhost 9000; do
 done
 
 sed -i 's/query.timeout.sec=60/query.timeout.sec=500/' ~/.questdb/conf/server.conf
-sed -i "s|#cairo.sql.copy.root=null|cairo.sql.copy.root=$PWD|" ~/.questdb/conf/server.conf
+sed -i "s|cairo.sql.copy.root=import|cairo.sql.copy.root=$PWD|" ~/.questdb/conf/server.conf
 questdb/bin/questdb.sh stop
 questdb/bin/questdb.sh start
 
