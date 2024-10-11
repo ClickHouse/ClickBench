@@ -18,14 +18,14 @@ jobs:
             size: [24 48 96 192 360 720]
           - csp: 'aws'
             region: 'us-east-1'
-            tier: 'dev'
+            tier: 'development'
           - csp: 'gcp'
             region: 'us-east1'
             tier: 'production'
             size: [ 24 48 96 192 360 708 ]
           - csp: 'gcp'
             region: 'us-east1'
-            tier: 'dev'
+            tier: 'development'
           - csp: 'azure'
             region: 'eastus2'
             tier: 'production'
