@@ -9,28 +9,6 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        include:
-          - csp: 'aws'
-            region: 'us-east-1'
-            tier: 'production'
-            size: [24 48 96 192 360 720]
-          - csp: 'aws'
-            region: 'us-east-1'
-            tier: 'development'
-          - csp: 'gcp'
-            region: 'us-east1'
-            tier: 'production'
-            size: [ 24 48 96 192 360 708 ]
-          - csp: 'gcp'
-            region: 'us-east1'
-            tier: 'development'
-          - csp: 'azure'
-            region: 'eastus2'
-            tier: 'production'
-            size: [ 24 48 96 192 360 708 ]
-
     runs-on: ubuntu-latest
     env:
       CI_COMMIT_MESSAGE: "[bot] update results for ClickHouse Cloud"
@@ -38,11 +16,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2.3.2
     - run: |
-        export PROVIDER=${{ matrix.csp }}
-        export REGION=${{ matrix.region }}
-        export TIER=${{ matrix.tier }}
-        export MEMORY=${{ matrix.size }}
-        
         export ORGANIZATION=${{ secrets.CLICKHOUSE_CLOUD_ORGANIZATION }}
         export KEY_ID=${{ secrets.CLICKHOUSE_CLOUD_KEY_ID }}
         export KEY_SECRET=${{ secrets.CLICKHOUSE_CLOUD_KEY_SECRET }}
@@ -51,7 +24,7 @@ jobs:
         curl https://clickhouse.com/ | sh
         sudo ./clickhouse install -y
         
-        bash cloud-api.sh
+        bash combinations.sh
         bash collect-results.sh
         
         git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
