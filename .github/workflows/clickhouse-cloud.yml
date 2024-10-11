@@ -1,5 +1,6 @@
 name: "Run ClickBench on ClickHouse Cloud"
 on:
+  workflow_dispatch:  # This allows manual trigger from the UI
   schedule:
     - cron: '10 10 * * *'
 
