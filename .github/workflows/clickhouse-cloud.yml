@@ -47,10 +47,10 @@ jobs:
         export KEY_ID=${{ secrets.CLICKHOUSE_CLOUD_KEY_ID }}
         export KEY_SECRET=${{ secrets.CLICKHOUSE_CLOUD_KEY_SECRET }}
 
+        cd clickhouse-cloud
         curl https://clickhouse.com/ | sh
         sudo ./clickhouse install -y
         
-        cd clickhouse-cloud
         bash cloud-api.sh
         bash collect-results.sh
         
