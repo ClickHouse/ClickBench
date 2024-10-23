@@ -1,18 +1,18 @@
 
 {
     "system": "ClickHouse Cloud (aws)",
-    "date": "2024-10-22",
+    "date": "2024-10-23",
     "machine": "24GB",
     "cluster_size": "serverless",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "aws"],
 
-    "load_time": 957.961,
-    "data_size": 9948862978,
+    "load_time": Received exception from server (version 24.6.1):,
+    "data_size": (query: SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;)],,
 
     "result": [
-[0.003, 0.002, 0.002], [0.081, 0.057, 2.619], [0.293, 0.298, 0.309], [0.476, 3.566, 1.194], [2.798, 1.533, 1.670], [2.742, 3.718, 2.642], [0.138, 0.080, 0.079], [0.140, 0.046, 0.111], [2.486, 2.234, 2.225], [3.135, 2.469, 2.325], [1.117, 0.989, 0.843], [1.374, 0.995, 1.054], [2.917, 3.436, 3.449], [4.718, 4.175, 4.451], [4.557, 4.189, 3.869], [2.541, 2.001, 2.468], [10.241, 9.921, 10.698], [6.929, 7.519, 7.174], [28.166, 36.838, 29.439], [0.096, 0.092, 0.089], [5.089, 31.046, 5.354], [16.489, 5.100, 5.333], [38.088, 10.389, 7.580], [19.414, 95.279, 93.224], [1.430, 1.396, 2.178], [0.991, 0.931, 0.927], [1.406, 1.386, 1.455], [6.368, 4.589, 4.592], [76.671, 76.409, 49.100], [0.224, 0.220, 0.165], [2.737, 2.737, 2.601], [3.924, 3.365, 5.571], [45.974, 47.984, 26.841], [29.903, 24.349, 31.103], [30.443, 30.617, 30.202], [1.402, 1.467, 1.885], [0.193, 0.154, 0.188], [0.072, 0.074, 0.074], [0.061, 0.078, 0.076], [0.302, 0.248, 0.278], [0.026, 0.036, 0.034], [0.025, 0.020, 0.021], [0.025, 0.023, 0.021]
+[0.005 [0.014 [0.006 [0.006 [0.004 [0.004 [0.017 [0.005 [0.005 [0.007 [0.005 [0.007 [0.010 [0.006 [0.006 [0.007 [0.005 [0.005 [0.005 [0.017 [0.007 [0.006 [0.007 [0.006 [0.005 [0.005 [0.005 [0.006 [0.006 Code: 60. DB::Exception: Received from h72z57xa8x.us-east-1.aws.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;), 0.004 Code: 60. DB::Exception: Received from h72z57xa8x.us-east-1.aws.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;), 0.007 Code: 60. DB::Exception: Received from h72z57xa8x.us-east-1.aws.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;)], [0.007 [0.007 [0.005 [0.006 [0.007 [0.006 [0.007 [0.006 [0.006 [0.006 [0.005 [0.008 [0.008 [0.00
 ]
 }
 
