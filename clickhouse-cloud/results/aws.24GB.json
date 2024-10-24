@@ -1,18 +1,18 @@
 
 {
     "system": "ClickHouse Cloud (aws)",
-    "date": "2024-10-23",
+    "date": "2024-10-24",
     "machine": "24GB",
     "cluster_size": "serverless",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "aws"],
 
-    "load_time": Received exception from server (version 24.6.1):,
-    "data_size": (query: SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;)],,
+    "load_time": 920.928,
+    "data_size": 9949971737,
 
     "result": [
-[0.005 [0.014 [0.006 [0.006 [0.004 [0.004 [0.017 [0.005 [0.005 [0.007 [0.005 [0.007 [0.010 [0.006 [0.006 [0.007 [0.005 [0.005 [0.005 [0.017 [0.007 [0.006 [0.007 [0.006 [0.005 [0.005 [0.005 [0.006 [0.006 Code: 60. DB::Exception: Received from h72z57xa8x.us-east-1.aws.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;), 0.004 Code: 60. DB::Exception: Received from h72z57xa8x.us-east-1.aws.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;), 0.007 Code: 60. DB::Exception: Received from h72z57xa8x.us-east-1.aws.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;)], [0.007 [0.007 [0.005 [0.006 [0.007 [0.006 [0.007 [0.006 [0.006 [0.006 [0.005 [0.008 [0.008 [0.00
+[0.002, 0.003, 0.002], [0.027, 4.139, 0.028], [2.178, 0.424, 0.172], [0.501, 0.543, 3.225], [2.689, 1.778, 2.376], [2.509, 3.237, 3.680], [0.148, 0.082, 0.081], [0.042, 0.131, 0.123], [2.598, 2.358, 2.114], [2.354, 3.360, 2.126], [0.820, 1.168, 0.887], [1.426, 1.143, 1.277], [3.629, 2.715, 3.596], [4.205, 4.822, 5.355], [4.041, 4.635, 3.733], [1.958, 2.693, 1.712], [11.697, 8.751, 9.778], [7.408, 7.316, 6.777], [32.132, 36.310, 29.557], [0.087, 0.093, 0.087], [28.082, 5.272, 4.928], [5.272, 5.185, 5.237], [56.668, 20.470, 7.893], [86.677, 19.714, 18.976], [1.808, 1.807, 1.407], [1.059, 1.307, 0.965], [1.507, 1.511, 1.809], [4.584, 7.908, 6.357], [49.395, 47.580, 48.862], [0.167, 0.158, 0.215], [2.770, 2.768, 2.903], [4.196, 12.976, 3.560], [52.884, 52.742, 30.561], [28.629, 22.905, 21.736], [32.468, 22.005, 24.333], [1.549, 1.431, 1.906], [0.430, 0.160, 0.187], [0.057, 0.058, 0.055], [0.215, 0.080, 0.080], [0.300, 0.627, 0.294], [0.350, 0.034, 0.027], [0.022, 0.021, 0.025], [0.026, 0.020, 0.023]
 ]
 }
 
