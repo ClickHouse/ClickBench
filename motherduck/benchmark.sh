@@ -6,14 +6,14 @@ sudo apt-get update
 sudo apt-get install -y python3-pip
 pip install --break-system-packages duckdb psutil
 
-# Load the data
-
-./load.py
-
 # Go to the web ui and obtain a token
 # https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/
 # Save the token as the motherduck_token environment variable:
 # export motherduck_token=...
+
+# Load the data
+
+./load.py
 
 # Run the queries
 
