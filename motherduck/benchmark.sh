@@ -8,25 +8,11 @@ pip install --break-system-packages duckdb psutil
 
 # Load the data
 
-# Open https://app.motherduck.com/ and paste the contents of create.sql
+./load.py
 
-# Then run:
-# COPY hits FROM 'https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/hits.csv.gz'
-
-# 4122 seconds
-
-# Note: it does not support transactions,
-# and an attempt to query the table during leaded results in waiting on a global lock.
-
-# Install the command line tool
-
-wget https://github.com/duckdb/duckdb/releases/download/v0.9.2/duckdb_cli-linux-amd64.zip
-unzip duckdb_cli-linux-amd64.zip
-
-./duckdb
-
-# .open md:
-# Authenticate and obtain a token.
+# Go to the web ui and obtain a token
+# https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/
+# Save the token as the motherduck_token environment variable:
 # export motherduck_token=...
 
 # Run the queries
