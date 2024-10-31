@@ -1,18 +1,18 @@
 
 {
     "system": "ClickHouse Cloud (azure)",
-    "date": "2024-10-30",
+    "date": "2024-10-31",
     "machine": "192GB",
     "cluster_size": "serverless",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],
 
-    "load_time": 321.577,
-    "data_size": 9948088828,
+    "load_time": Code: 210. DB::NetException: Net Exception: Connection reset by peer (p137dm9vil.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.155:42356). (NETWORK_ERROR),
+    "data_size": (query: SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;)],,
 
     "result": [
-[0.003, 0.005, 0.004], [2.181, 0.012, 1.133], [1.415, 0.037, 0.055], [6.423, 2.318, 0.277], [0.399, 0.555, 0.349], [0.452, 0.937, 0.626], [0.389, 2.271, 0.013], [0.013, 0.013, 0.263], [0.729, 0.482, 0.751], [0.519, 0.503, 0.530], [0.168, 0.163, 0.267], [0.179, 0.374, 0.174], [0.783, 0.701, 0.496], [1.537, 4.815, 0.711], [0.561, 0.612, 0.497], [0.351, 0.531, 0.470], [1.942, 1.826, 1.260], [0.809, 1.201, 0.759], [4.947, 2.334, 2.399], [0.019, 0.027, 0.018], [16.163, 0.617, 3.338], [0.694, 7.619, 0.707], [2.278, 1.489, 1.035], [21.745, 2.393, 3.698], [0.221, 0.315, 0.239], [0.184, 0.189, 0.234], [0.262, 0.227, 0.217], [0.638, 0.617, 0.870], [5.712, 7.914, 5.506], [0.040, 0.043, 0.044], [0.652, 0.663, 0.457], [0.613, 0.581, 0.958], [3.305, 2.446, 2.919], [3.022, 1.926, 1.965], [1.866, 1.925, 1.836], [0.458, 0.287, 0.362], [0.043, 0.065, 0.037], [0.023, 0.040, 0.034], [0.028, 0.042, 0.029], [0.069, 0.106, 0.106], [0.025, 0.018, 0.016], [0.023, 0.013, 0.012], [0.012, 0.017, 0.010]
+[0.100 [0.101 [0.108 [0.100 [0.099 [0.100 [0.109 [0.100 [0.100 [0.100 [0.109 [0.099 [0.100 [0.101 [Code: 210. DB::NetException: Net Exception: Connection reset by peer (p137dm9vil.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.155:38382). (NETWORK_ERROR), 0.103 [0.099 [0.100 [0.099 [0.111 [0.101 [0.100 [0.109 [0.099 [0.108 [0.100 [0.099 [0.101 [0.110 [0.109 Code: 60. DB::Exception: Received from p137dm9vil.eastus2.azure.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;), 0.100 Code: 60. DB::Exception: Received from p137dm9vil.eastus2.azure.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;), 0.099 Code: 60. DB::Exception: Received from p137dm9vil.eastus2.azure.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;)], [0.103 [0.101 [0.101 [0.099 [0.099 [0.100 [0.100 [0.101 [0.100 [0.100 [0.100 [0.100 [0.110 [0.10
 ]
 }
 
