@@ -1,18 +1,18 @@
 
 {
     "system": "ClickHouse Cloud (azure)",
-    "date": "2024-10-31",
+    "date": "2024-11-01",
     "machine": "192GB",
     "cluster_size": "serverless",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],
 
-    "load_time": Code: 210. DB::NetException: Net Exception: Connection reset by peer (p137dm9vil.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.155:42356). (NETWORK_ERROR),
-    "data_size": (query: SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;)],,
+    "load_time": 440.062,
+    "data_size": 9944651608,
 
     "result": [
-[0.100 [0.101 [0.108 [0.100 [0.099 [0.100 [0.109 [0.100 [0.100 [0.100 [0.109 [0.099 [0.100 [0.101 [Code: 210. DB::NetException: Net Exception: Connection reset by peer (p137dm9vil.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.155:38382). (NETWORK_ERROR), 0.103 [0.099 [0.100 [0.099 [0.111 [0.101 [0.100 [0.109 [0.099 [0.108 [0.100 [0.099 [0.101 [0.110 [0.109 Code: 60. DB::Exception: Received from p137dm9vil.eastus2.azure.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;), 0.100 Code: 60. DB::Exception: Received from p137dm9vil.eastus2.azure.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;), 0.099 Code: 60. DB::Exception: Received from p137dm9vil.eastus2.azure.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;)], [0.103 [0.101 [0.101 [0.099 [0.099 [0.100 [0.100 [0.101 [0.100 [0.100 [0.100 [0.100 [0.110 [0.10
+[0.003, 0.003, 0.002], [0.909, 0.012, 0.013], [1.104, 0.036, 0.032], [2.411, 0.048, 0.052], [2.429, 0.229, 0.608], [0.487, 3.130, 0.403], [2.043, 0.013, 0.070], [0.047, 0.268, 0.020], [0.637, 0.555, 0.604], [0.467, 0.789, 0.507], [0.302, 0.212, 0.197], [1.228, 0.254, 0.247], [0.428, 1.054, 0.475], [0.591, 0.566, 0.639], [0.775, 0.538, 0.785], [0.307, 0.444, 0.406], [1.097, 1.028, 1.695], [0.727, 0.994, 0.746], [2.781, 3.781, 2.449], [0.019, 0.018, 0.021], [8.982, 0.621, 2.029], [0.869, 0.662, 0.695], [6.924, 0.937, 1.043], [3.388, 9.601, 2.706], [0.220, 0.199, 0.205], [0.169, 0.200, 0.171], [0.208, 0.255, 0.224], [0.644, 0.589, 0.784], [5.466, 5.593, 5.385], [0.038, 0.042, 0.035], [0.410, 0.455, 0.607], [0.830, 0.734, 0.626], [2.853, 2.780, 2.430], [1.926, 1.753, 1.641], [2.555, 1.946, 2.526], [0.352, 0.262, 0.277], [0.037, 0.037, 0.055], [0.029, 0.022, 0.023], [0.029, 0.031, 0.025], [0.094, 0.099, 0.065], [0.017, 0.019, 0.013], [0.013, 0.013, 0.013], [0.015, 0.014, 0.010]
 ]
 }
 
