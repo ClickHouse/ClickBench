@@ -1,18 +1,18 @@
 
 {
     "system": "ClickHouse Cloud (azure)",
-    "date": "2024-11-05",
+    "date": "2024-11-06",
     "machine": "192GB",
     "cluster_size": "serverless",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],
 
-    "load_time": 598.615,
-    "data_size": 9946062591,
+    "load_time": 298.510,
+    "data_size": 9949368237,
 
     "result": [
-[0.004, 0.003, 0.003], [3.963, 2.195, 0.012], [0.033, 0.035, 0.032], [0.504, 0.049, 3.561], [0.386, 0.265, 0.258], [0.809, Code: 210. DB::NetException: Net Exception: Connection reset by peer (malw1s3vl4.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.63:37030). (NETWORK_ERROR), 2.627], [0.054, 0.021, 0.019], [0.069, 0.017, 0.017], [0.495, 0.486, 0.462], [0.853, 0.775, 0.537], [0.175, 0.146, Code: 210. DB::NetException: Net Exception: Connection reset by peer (malw1s3vl4.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.63:55464). (NETWORK_ERROR)], [0.940, 0.169, 0.182], [0.922, 0.625, 0.653], [0.659, 2.782, 2.300], [0.606, 0.848, 0.607], [0.328, 0.470, 0.421], [1.242, 1.197, 1.123], [0.785, 1.058, 0.986], [2.589, 2.191, 3.627], [0.021, 0.025, 0.018], [7.841, 0.592, 0.569], [0.678, 0.650, 0.670], [0.985, 0.959, 1.001], [2.659, 2.702, 2.620], [2.409, Code: 210. DB::NetException: Net Exception: Connection reset by peer (malw1s3vl4.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.63:58850). (NETWORK_ERROR), 0.211], [0.168, 0.201, 0.164], [0.219, 0.262, 0.224], [0.642, 0.602, 0.740], [9.768, 7.185, 5.581], [0.282, 0.055, 0.039], [0.452, 0.428, 2.250], [0.596, 0.868, 3.150], [3.419, 2.635, 2.084], [1.854, 2.603, 1.890], [1.969, 1.940, 2.598], [0.287, 0.262, 0.379], [0.046, 0.053, 0.058], [0.034, Code: 210. DB::NetException: Net Exception: Connection reset by peer (malw1s3vl4.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.63:42182). (NETWORK_ERROR), 0.042], [0.039, 0.031, 0.030], [0.075, 0.076, 0.071], [0.021, 0.022, 0.015], [0.022, 0.022, 0.022], [0.010, 0.010, 0.010]
+[0.003, 0.003, 0.002], [2.938, 1.057, 0.012], [0.044, 0.656, 0.030], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (z01gn0m17r.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.50:56258). (NETWORK_ERROR), 2.455, 0.064], [0.344, 2.466, Code: 210. DB::NetException: Net Exception: Connection reset by peer (z01gn0m17r.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.50:35982). (NETWORK_ERROR)], [0.532, 2.223, 2.791], [0.017, 0.059, 0.018], [0.021, 0.020, 0.038], [0.703, 0.431, 0.435], [0.684, 0.470, 0.693], [0.178, 0.152, 0.194], [0.208, 0.210, 0.224], [0.643, 0.606, Code: 210. DB::NetException: Net Exception: Connection reset by peer (z01gn0m17r.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.50:44802). (NETWORK_ERROR)], [0.625, 0.591, 0.601], [0.908, 2.615, 2.593], [0.537, 0.473, 0.344], [1.174, 1.842, 1.194], [1.044, 1.012, 0.815], [2.806, 2.246, 2.235], [0.026, 0.020, 0.017], [0.771, 6.122, 0.800], [0.679, 7.404, 0.686], [6.849, 4.877, 1.011], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (z01gn0m17r.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.50:58136). (NETWORK_ERROR), 2.988, 3.026], [0.327, 4.715, 0.241], [0.170, 0.184, 0.242], [0.225, 0.223, 0.219], [0.625, 0.897, 2.408], [7.052, 7.934, 5.721], [0.050, 0.040, 0.055], [0.640, 0.435, 0.606], [0.868, Code: 210. DB::NetException: Net Exception: Connection reset by peer (z01gn0m17r.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.50:42896). (NETWORK_ERROR), 0.580], [2.350, 1.971, 2.376], [1.881, 2.813, 1.820], [1.859, 2.885, 2.822], [0.277, 0.420, Code: 210. DB::NetException: Net Exception: Connection reset by peer (z01gn0m17r.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.50:47742). (NETWORK_ERROR)], [0.067, 0.063, 0.056], [0.033, 0.027, 0.023], [0.026, 0.029, 0.024], [0.071, 0.067, 0.069], [0.015, 0.015, 0.015], [0.020, Code: 210. DB::NetException: Net Exception: Connection reset by peer (z01gn0m17r.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.50:58426). (NETWORK_ERROR), 0.013], [0.017, 0.011, 0.010]
 ]
 }
 
