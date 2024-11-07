@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>ClickHouse Hardware Benchmark</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" href="data:image/gif;base64,R0lGODlhIAAgAOMPAHMUEmkyHOcbF8UvJts/E3BeOih1YziiQmebLt2AFjeyQKqZKNWPjLybfPfcDP///yH5BAEKAA8ALAAAAAAgACAAAATg8MlJ6ws26z0EGcQmZgAhnN6oPg0wDA0zrGMTAADDxEJCZ4Gba8c4hX4Uw+XWeYGOyMdhgkuYrAToqIBQHBCIKQ6wcJhPyINarUBcyuYE+ndQeOsKuNlxmv3CdnZfew5yAlEPC12BhFhZiBJ2CI1GkBMHeoV9PpYPhIUDBqIFnZ8EBaKplqYMqaqIewl8A6iupFF7C1YCoaJqq4UOWQIBBmtTuIQmWWxekJQeYWuWcFYPfl+dLAELOxML2hIYDeEWt7flEufknTZB7+8NBeyINxjqDwU4QYg26BTu6KVTEQEAOw==">
+    <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --color: black;
+            --title-color: black;
+            --background-color: white;
+
+            --link-color: #08F;
+            --link-hover-color: #F40;
+
+            --selector-text-color: black;
+            --selector-active-text-color: black;
+            --selector-background-color: #EEE;
+            --selector-active-background-color: #FFCB80;
+            --selector-hover-text-color: black;
+            --selector-hover-background-color: #FDB;
+
+            --summary-every-other-row-color: #F8F8F8;
+            --highlight-color: #EEE;
+            --bar-color: #FFCB80;
+
+            --tooltip-text-color: white;
+            --tooltip-background-color: black;
+
+            --nothing-selected-color: #CCC;
+            --shadow-color: grey;
+        }
+
+        [data-theme="dark"] {
+            --color: #CCC;
+            --title-color: white;
+            --background-color: #04293A;
+
+            --link-color: #8CF;
+            --link-hover-color: #FFF;
+
+            --selector-text-color: white;
+            --selector-background-color: #444;
+            --selector-active-text-color: white;
+            --selector-active-background-color: #088;
+            --selector-hover-text-color: black;
+            --selector-hover-background-color: white;
+
+            --summary-every-other-row-color: #042e41;
+            --highlight-color: #064663;
+            --bar-color: #088;
+
+            --tooltip-text-color: white;
+            --tooltip-background-color: #444;
+
+            --nothing-selected-color: #666;
+            --shadow-color: black;
+        }
+
+        html, body {
+            color: var(--color);
+            background-color: var(--background-color);
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: auto;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            padding: 1% 3% 0 3%;
+        }
+
+        h1 {
+            color: var(--title-color);
+        }
+
+        table {
+             border-spacing: 1px;
+        }
+
+        .stick-left {
+            position: sticky;
+            left: 0px;
+        }
+
+        .selectors-container {
+            padding: 2rem 0 2rem 0;
+            user-select: none;
+        }
+
+        .selectors-container th {
+            text-align: left;
+            vertical-align: top;
+            white-space: nowrap;
+            padding-top: 0.5rem;
+            padding-right: 1rem;
+        }
+
+        .selector {
+            display: inline-block;
+            margin-left: 0.1rem;
+            padding: 0.2rem 0.5rem 0.2rem 0.5rem;
+            background: var(--selector-background-color);
+            color: var(--selector-text-color);
+            border: 0.2rem solid var(--background-color);
+            border-radius: 0.5rem;
+        }
+
+        .selector-active {
+            color: var(--selector-active-text-color);
+            background: var(--selector-active-background-color);
+        }
+
+        a, a:visited {
+            text-decoration: none;
+            color: var(--link-color);
+            cursor: pointer;
+        }
+
+        a:hover {
+            color: var(--link-hover-color);
+        }
+
+        .selector:hover {
+            color: var(--selector-hover-text-color) !important;
+            background: var(--selector-background-color);
+        }
+
+        .selector-active:hover {
+            background: var(--selector-hover-background-color);
+        }
+
+        #summary tr:nth-child(odd) {
+            background: var(--summary-every-other-row-color);
+        }
+
+        .summary-name {
+            white-space: nowrap;
+            text-align: right;
+            padding-right: 1rem;
+        }
+
+        .summary-bar-cell {
+            width: 100%;
+        }
+
+        .summary-bar {
+            height: 1rem;
+            background: var(--bar-color);
+            border-radius: 0 0.2rem 0.2rem 0;
+        }
+
+        .summary-number {
+            font-family: monospace;
+            text-align: right;
+            padding-left: 1rem;
+            white-space: nowrap;
+        }
+
+        th {
+            padding-bottom: 0.5rem;
+        }
+
+        .th-entry-hilite {
+            background: var(--highlight-color);
+            font-weight: bold;
+        }
+
+        .summary-row:hover, .summary-row-hilite {
+            background: var(--highlight-color) !important;
+            font-weight: bold;
+        }
+
+        #details {
+            padding-bottom: 1rem;
+        }
+
+        #details th {
+            vertical-align: bottom;
+            white-space: pre;
+        }
+
+        #details td {
+            white-space: pre;
+            font-family: monospace;
+            text-align: right;
+            padding: 0.1rem 0.5rem 0.1rem 0.5rem;
+        }
+
+        .shadow:hover {
+            box-shadow: 0 0 1rem var(--shadow-color);
+            position: relative;
+        }
+
+        #nothing-selected {
+            display: none;
+            font-size: 32pt;
+            font-weight: bold;
+            color: var(--nothing-selected-color);
+        }
+
+        .note {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: calc(100% + 0.5rem);
+            visibility: hidden;
+            background-color: var(--tooltip-background-color);
+            color: var(--tooltip-text-color);
+            box-shadow: 0 0 1rem var(--shadow-color);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            z-index: 1;
+            text-align: left;
+            white-space: normal;
+        }
+
+        .tooltip-result {
+            left: calc(50% - 0.25rem);
+            width: 20rem;
+            margin-left: -10rem;
+        }
+
+        .tooltip-query {
+            left: 0;
+            width: 40rem;
+            margin-left: -3rem;
+        }
+
+        .note:hover .tooltip {
+            visibility: visible;
+        }
+
+        .tooltip::after {
+            content: " ";
+            position: absolute;
+            top: 100%;
+            border-width: 0.5rem;
+            border-style: solid;
+            border-color: var(--tooltip-background-color) transparent transparent transparent;
+        }
+
+        .tooltip-result::after {
+            left: 50%;
+            margin-left: -1rem;
+        }
+
+        .tooltip-query::after {
+            left: 3rem;
+            margin-left: 0.5rem;
+        }
+
+        .nowrap {
+            text-wrap: none;
+        }
+
+        .themes {
+            float: right;
+            font-size: 200%;
+            cursor: pointer;
+        }
+
+        #toggle-dark, #toggle-light {
+            padding-right: 0.5rem;
+            cursor: pointer;
+        }
+
+        #toggle-dark:hover, #toggle-light:hover {
+            display: inline-block;
+            transform: translate(1px, 1px);
+            filter: brightness(125%);
+        }
+
+        .comments {
+            font-size: 90%;
+        }
+    </style>
+    <script type="text/javascript">
+
+const queries = [
+"SELECT count() FROM {table};",
+"SELECT count() FROM {table} WHERE AdvEngineID != 0;",
+"SELECT sum(AdvEngineID), count(), avg(ResolutionWidth) FROM {table};",
+"SELECT sum(UserID) FROM {table};",
+"SELECT uniq(UserID) FROM {table};",
+"SELECT uniq(SearchPhrase) FROM {table};",
+"SELECT min(EventDate), max(EventDate) FROM {table};",
+"SELECT AdvEngineID, count() FROM {table} WHERE AdvEngineID != 0 GROUP BY AdvEngineID ORDER BY count() DESC;",
+"SELECT RegionID, uniq(UserID) AS u FROM {table} GROUP BY RegionID ORDER BY u DESC LIMIT 10;",
+"SELECT RegionID, sum(AdvEngineID), count() AS c, avg(ResolutionWidth), uniq(UserID) FROM {table} GROUP BY RegionID ORDER BY c DESC LIMIT 10;",
+"SELECT MobilePhoneModel, uniq(UserID) AS u FROM {table} WHERE MobilePhoneModel != '' GROUP BY MobilePhoneModel ORDER BY u DESC LIMIT 10;",
+"SELECT MobilePhone, MobilePhoneModel, uniq(UserID) AS u FROM {table} WHERE MobilePhoneModel != '' GROUP BY MobilePhone, MobilePhoneModel ORDER BY u DESC LIMIT 10;",
+"SELECT SearchPhrase, count() AS c FROM {table} WHERE SearchPhrase != '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;",
+"SELECT SearchPhrase, uniq(UserID) AS u FROM {table} WHERE SearchPhrase != '' GROUP BY SearchPhrase ORDER BY u DESC LIMIT 10;",
+"SELECT SearchEngineID, SearchPhrase, count() AS c FROM {table} WHERE SearchPhrase != '' GROUP BY SearchEngineID, SearchPhrase ORDER BY c DESC LIMIT 10;",
+"SELECT UserID, count() FROM {table} GROUP BY UserID ORDER BY count() DESC LIMIT 10;",
+"SELECT UserID, SearchPhrase, count() FROM {table} GROUP BY UserID, SearchPhrase ORDER BY count() DESC LIMIT 10;",
+"SELECT UserID, SearchPhrase, count() FROM {table} GROUP BY UserID, SearchPhrase LIMIT 10;",
+"SELECT UserID, toMinute(EventTime) AS m, SearchPhrase, count() FROM {table} GROUP BY UserID, m, SearchPhrase ORDER BY count() DESC LIMIT 10;",
+"SELECT UserID FROM {table} WHERE UserID = 12345678901234567890;",
+"SELECT count() FROM {table} WHERE URL LIKE '%metrika%';",
+"SELECT SearchPhrase, any(URL), count() AS c FROM {table} WHERE URL LIKE '%metrika%' AND SearchPhrase != '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;",
+"SELECT SearchPhrase, any(URL), any(Title), count() AS c, uniq(UserID) FROM {table} WHERE Title LIKE '%Яндекс%' AND URL NOT LIKE '%.yandex.%' AND SearchPhrase != '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;",
+"SELECT * FROM {table} WHERE URL LIKE '%metrika%' ORDER BY EventTime LIMIT 10;",
+"SELECT SearchPhrase FROM {table} WHERE SearchPhrase != '' ORDER BY EventTime LIMIT 10;",
+"SELECT SearchPhrase FROM {table} WHERE SearchPhrase != '' ORDER BY SearchPhrase LIMIT 10;",
+"SELECT SearchPhrase FROM {table} WHERE SearchPhrase != '' ORDER BY EventTime, SearchPhrase LIMIT 10;",
+"SELECT CounterID, avg(length(URL)) AS l, count() AS c FROM {table} WHERE URL != '' GROUP BY CounterID HAVING c > 100000 ORDER BY l DESC LIMIT 25;",
+"SELECT domainWithoutWWW(Referer) AS key, avg(length(Referer)) AS l, count() AS c, any(Referer) FROM {table} WHERE Referer != '' GROUP BY key HAVING c > 100000 ORDER BY l DESC LIMIT 25;",
+"SELECT sum(ResolutionWidth), sum(ResolutionWidth + 1), sum(ResolutionWidth + 2), sum(ResolutionWidth + 3), sum(ResolutionWidth + 4), sum(ResolutionWidth + 5), sum(ResolutionWidth + 6), sum(ResolutionWidth + 7), sum(ResolutionWidth + 8), sum(ResolutionWidth + 9), sum(ResolutionWidth + 10), sum(ResolutionWidth + 11), sum(ResolutionWidth + 12), sum(ResolutionWidth + 13), sum(ResolutionWidth + 14), sum(ResolutionWidth + 15), sum(ResolutionWidth + 16), sum(ResolutionWidth + 17), sum(ResolutionWidth + 18), sum(ResolutionWidth + 19), sum(ResolutionWidth + 20), sum(ResolutionWidth + 21), sum(ResolutionWidth + 22), sum(ResolutionWidth + 23), sum(ResolutionWidth + 24), sum(ResolutionWidth + 25), sum(ResolutionWidth + 26), sum(ResolutionWidth + 27), sum(ResolutionWidth + 28), sum(ResolutionWidth + 29), sum(ResolutionWidth + 30), sum(ResolutionWidth + 31), sum(ResolutionWidth + 32), sum(ResolutionWidth + 33), sum(ResolutionWidth + 34), sum(ResolutionWidth + 35), sum(ResolutionWidth + 36), sum(ResolutionWidth + 37), sum(ResolutionWidth + 38), sum(ResolutionWidth + 39), sum(ResolutionWidth + 40), sum(ResolutionWidth + 41), sum(ResolutionWidth + 42), sum(ResolutionWidth + 43), sum(ResolutionWidth + 44), sum(ResolutionWidth + 45), sum(ResolutionWidth + 46), sum(ResolutionWidth + 47), sum(ResolutionWidth + 48), sum(ResolutionWidth + 49), sum(ResolutionWidth + 50), sum(ResolutionWidth + 51), sum(ResolutionWidth + 52), sum(ResolutionWidth + 53), sum(ResolutionWidth + 54), sum(ResolutionWidth + 55), sum(ResolutionWidth + 56), sum(ResolutionWidth + 57), sum(ResolutionWidth + 58), sum(ResolutionWidth + 59), sum(ResolutionWidth + 60), sum(ResolutionWidth + 61), sum(ResolutionWidth + 62), sum(ResolutionWidth + 63), sum(ResolutionWidth + 64), sum(ResolutionWidth + 65), sum(ResolutionWidth + 66), sum(ResolutionWidth + 67), sum(ResolutionWidth + 68), sum(ResolutionWidth + 69), sum(ResolutionWidth + 70), sum(ResolutionWidth + 71), sum(ResolutionWidth + 72), sum(ResolutionWidth + 73), sum(ResolutionWidth + 74), sum(ResolutionWidth + 75), sum(ResolutionWidth + 76), sum(ResolutionWidth + 77), sum(ResolutionWidth + 78), sum(ResolutionWidth + 79), sum(ResolutionWidth + 80), sum(ResolutionWidth + 81), sum(ResolutionWidth + 82), sum(ResolutionWidth + 83), sum(ResolutionWidth + 84), sum(ResolutionWidth + 85), sum(ResolutionWidth + 86), sum(ResolutionWidth + 87), sum(ResolutionWidth + 88), sum(ResolutionWidth + 89) FROM {table};",
+"SELECT SearchEngineID, ClientIP, count() AS c, sum(Refresh), avg(ResolutionWidth) FROM {table} WHERE SearchPhrase != '' GROUP BY SearchEngineID, ClientIP ORDER BY c DESC LIMIT 10;",
+"SELECT WatchID, ClientIP, count() AS c, sum(Refresh), avg(ResolutionWidth) FROM {table} WHERE SearchPhrase != '' GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;",
+"SELECT WatchID, ClientIP, count() AS c, sum(Refresh), avg(ResolutionWidth) FROM {table} GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;",
+"SELECT URL, count() AS c FROM {table} GROUP BY URL ORDER BY c DESC LIMIT 10;",
+"SELECT 1, URL, count() AS c FROM {table} GROUP BY 1, URL ORDER BY c DESC LIMIT 10;",
+"SELECT ClientIP AS x, x - 1, x - 2, x - 3, count() AS c FROM {table} GROUP BY x, x - 1, x - 2, x - 3 ORDER BY c DESC LIMIT 10;",
+"SELECT URL, count() AS PageViews FROM {table} WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND NOT DontCountHits AND NOT Refresh AND notEmpty(URL) GROUP BY URL ORDER BY PageViews DESC LIMIT 10;",
+"SELECT Title, count() AS PageViews FROM {table} WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND NOT DontCountHits AND NOT Refresh AND notEmpty(Title) GROUP BY Title ORDER BY PageViews DESC LIMIT 10;",
+"SELECT URL, count() AS PageViews FROM {table} WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND NOT Refresh AND IsLink AND NOT IsDownload GROUP BY URL ORDER BY PageViews DESC LIMIT 1000;",
+"SELECT TraficSourceID, SearchEngineID, AdvEngineID, ((SearchEngineID = 0 AND AdvEngineID = 0) ? Referer : '') AS Src, URL AS Dst, count() AS PageViews FROM {table} WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND NOT Refresh GROUP BY TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst ORDER BY PageViews DESC LIMIT 1000;",
+"SELECT URLHash, EventDate, count() AS PageViews FROM {table} WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND NOT Refresh AND TraficSourceID IN (-1, 6) AND RefererHash = halfMD5('http://example.ru/') GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 100;",
+"SELECT WindowClientWidth, WindowClientHeight, count() AS PageViews FROM {table} WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND NOT Refresh AND NOT DontCountHits AND URLHash = halfMD5('http://example.ru/') GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10000;",
+"SELECT toStartOfMinute(EventTime) AS Minute, count() AS PageViews FROM {table} WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-02' AND NOT Refresh AND NOT DontCountHits GROUP BY Minute ORDER BY Minute;"
+];
+
+const data = [
+{"machine":"AWS a1.4xlarge","comment":"","time":"2024-05-21 00:00:00","tags":["aws","16vCPU"],"result":[[0.019,0.004,0.004],[0.056,0.024,0.024],[0.106,0.058,0.059],[0.242,0.156,0.153],[0.962,0.867,0.875],[1.072,0.919,0.907],[0.052,0.039,0.033],[0.1,0.035,0.038],[1.434,1.301,1.292],[1.634,1.556,1.424],[0.537,0.416,0.425],[0.567,0.474,0.475],[1.779,1.552,1.579],[2.757,2.505,2.545],[2.097,1.905,1.891],[1.672,1.472,1.459],[4.414,3.807,3.882],[2.446,2.156,2.165],[9.317,7.339,7.414],[0.221,0.06,0.07],[9.147,3.429,3.28],[10.206,3.744,3.748],[12.273,4.543,4.516],[35.505,7.791,7.687],[1.897,0.894,0.901],[0.71,0.603,0.606],[1.864,0.889,0.898],[8.846,4.001,3.997],[21.623,20.678,20.91],[0.123,0.087,0.09],[1.615,1.405,1.362],[4.915,1.938,1.955],[10.061,9.616,9.639],[11.341,8.414,8.44],[11.34,8.462,8.452],[1.312,1.167,1.156],[0.162,0.127,0.13],[0.096,0.079,0.073],[0.085,0.059,0.055],[0.254,0.21,0.201],[0.055,0.037,0.041],[0.041,0.029,0.027],[0.035,0.034,0.025]],"source":"results/a1.4xlarge.json"}
+,{"machine":"AWS c6g.4xlarge","comment":"","time":"2024-05-21 00:00:00","tags":["aws","16vCPU"],"result":[[0.005,0.002,0.002],[0.023,0.011,0.011],[0.057,0.028,0.027],[0.731,0.04,0.039],[0.79,0.294,0.288],[0.866,0.42,0.419],[0.023,0.016,0.013],[0.073,0.018,0.016],[0.552,0.473,0.448],[0.741,0.529,0.566],[0.386,0.191,0.197],[0.873,0.222,0.229],[1.741,0.471,0.475],[2.404,0.722,0.696],[1.031,0.646,0.64],[0.412,0.324,0.339],[1.78,1.402,1.4],[1.207,0.914,0.915],[4.34,2.714,2.833],[0.217,0.016,0.017],[9.874,0.709,0.697],[10.713,0.76,0.748],[12.893,0.947,0.927],[34.714,2.197,2.174],[1.837,0.219,0.214],[0.751,0.156,0.154],[2.375,0.219,0.214],[9.044,0.705,0.679],[10.22,9.64,9.578],[0.064,0.04,0.041],[1.375,0.427,0.416],[4.599,0.496,0.484],[4.801,2.1,2.156],[9.722,2.169,2.19],[9.22,2.176,2.18],[0.36,0.258,0.24],[0.075,0.046,0.045],[0.045,0.038,0.027],[0.047,0.037,0.024],[0.099,0.065,0.057],[0.038,0.018,0.023],[0.035,0.017,0.014],[0.023,0.029,0.016]],"source":"results/c6g.4xlarge.json"}
+,{"machine":"AWS c7g.4xlarge","comment":"","time":"2024-05-21 00:00:00","tags":["aws","16vCPU"],"result":[[0.004,0.002,0.002],[0.043,0.008,0.008],[0.09,0.02,0.02],[0.458,0.03,0.03],[0.794,0.211,0.21],[0.99,0.322,0.319],[0.018,0.011,0.014],[0.073,0.013,0.012],[0.613,0.354,0.358],[0.859,0.407,0.395],[0.276,0.145,0.15],[0.552,0.167,0.167],[1.15,0.316,0.307],[1.829,0.505,0.508],[0.87,0.447,0.466],[0.37,0.249,0.25],[1.88,1.045,1.043],[1.709,0.757,0.717],[3.867,2.017,2.027],[0.302,0.036,0.012],[9.747,0.483,0.482],[10.445,0.548,0.532],[12.548,0.671,0.647],[35.49,1.563,1.538],[1.856,0.157,0.156],[1.277,0.106,0.104],[2.665,0.159,0.154],[9.6,0.492,0.474],[8.211,6.063,6.054],[0.061,0.03,0.029],[2.05,0.296,0.294],[4.692,0.362,0.35],[3.797,1.471,1.48],[9.273,1.665,1.682],[9.227,1.68,1.685],[0.34,0.222,0.207],[0.055,0.031,0.033],[0.031,0.023,0.029],[0.041,0.016,0.023],[0.075,0.047,0.047],[0.027,0.02,0.016],[0.021,0.013,0.013],[0.021,0.014,0.017]],"source":"results/c7g.4xlarge.json"}
+,{"machine":"AWS r6g.8xlarge","comment":"","time":"2024-05-21 00:00:00","tags":["aws","32vCPU"],"result":[[0.043,0.002,0.002],[0.046,0.01,0.01],[0.037,0.017,0.016],[0.183,0.022,0.022],[0.599,0.206,0.206],[0.679,0.233,0.226],[0.02,0.011,0.011],[0.044,0.019,0.017],[0.396,0.369,0.363],[0.6,0.399,0.389],[0.182,0.148,0.137],[0.396,0.161,0.158],[1.134,0.264,0.267],[1.739,0.399,0.398],[0.893,0.313,0.311],[0.384,0.202,0.191],[2.093,0.774,0.752],[1.488,0.471,0.491],[3.689,1.502,1.544],[0.078,0.064,0.039],[9.493,0.398,0.393],[10.292,0.436,0.427],[12.4,0.548,0.542],[34.304,1.262,1.232],[1.814,0.122,0.118],[1.162,0.09,0.087],[2.488,0.122,0.121],[9.326,0.44,0.424],[7.731,4.719,4.745],[0.054,0.042,0.04],[2.107,0.231,0.229],[4.752,0.291,0.28],[4.168,1.394,1.412],[9.443,1.347,1.347],[9.371,1.36,1.364],[0.258,0.168,0.153],[0.048,0.065,0.039],[0.045,0.029,0.036],[0.045,0.044,0.026],[0.098,0.071,0.067],[0.031,0.026,0.018],[0.022,0.019,0.031],[0.025,0.015,0.015]],"source":"results/r6g.8xlarge.json"}
+,{"machine":"AWS r6i.24xlarge","comment":"","time":"2024-05-21 00:00:00","tags":["aws","96vCPU"],"result":[[0.02,0.002,0.002],[0.024,0.01,0.009],[0.034,0.015,0.014],[0.545,0.015,0.015],[0.727,0.152,0.151],[0.976,0.179,0.168],[0.014,0.012,0.011],[0.035,0.018,0.021],[0.662,0.316,0.315],[0.617,0.326,0.33],[0.139,0.106,0.112],[0.393,0.107,0.119],[1.174,0.22,0.207],[1.985,0.273,0.253],[1.21,0.212,0.201],[0.354,0.163,0.169],[1.838,0.497,0.462],[1.171,0.32,0.316],[3.173,0.947,0.911],[0.055,0.021,0.01],[8.863,0.214,0.194],[10.977,0.257,0.238],[13.122,0.331,0.304],[34.679,24.272,0.788],[1.774,0.097,0.081],[0.94,0.059,0.056],[2.432,0.087,0.079],[9.09,0.272,0.262],[7.493,1.942,2.003],[0.053,0.031,0.032],[1.304,0.14,0.14],[4.755,0.196,0.191],[3.965,1.246,1.139],[8.853,0.783,0.711],[8.809,0.78,0.71],[0.157,0.108,0.112],[0.049,0.032,0.032],[0.033,0.026,0.025],[0.028,0.031,0.024],[0.084,0.058,0.054],[0.025,0.024,0.017],[0.021,0.009,0.014],[0.021,0.015,0.011]],"source":"results/r6i.24xlarge.json"}
+,{"machine":"AWS r6i.8xlarge","comment":"","time":"2024-05-21 00:00:00","tags":["aws","32vCPU"],"result":[[0.015,0.002,0.001],[0.025,0.007,0.006],[0.048,0.018,0.018],[0.246,0.025,0.025],[0.666,0.221,0.215],[0.753,0.324,0.319],[0.019,0.009,0.008],[0.03,0.013,0.013],[0.456,0.394,0.399],[0.567,0.426,0.432],[0.2,0.154,0.148],[0.203,0.154,0.148],[0.81,0.314,0.325],[1.357,0.475,0.468],[0.609,0.432,0.442],[0.343,0.273,0.274],[1.551,1.017,0.996],[1.183,0.648,0.63],[3.568,2.065,2.08],[0.114,0.019,0.024],[8.827,0.411,0.381],[10.074,0.5,0.475],[12.234,0.603,0.581],[34.336,1.557,1.529],[1.823,0.169,0.154],[0.88,0.128,0.118],[2.437,0.162,0.163],[9.266,0.478,0.456],[7.416,5.117,5.133],[0.054,0.025,0.028],[1.366,0.29,0.258],[4.674,0.358,0.333],[4.006,1.701,1.732],[9.249,1.515,1.522],[9.27,1.526,1.502],[0.299,0.262,0.211],[0.057,0.031,0.03],[0.027,0.023,0.021],[0.028,0.022,0.021],[0.084,0.054,0.051],[0.021,0.011,0.011],[0.017,0.009,0.008],[0.013,0.009,0.009]],"source":"results/r6i.8xlarge.json"}
+,{"machine":"AWS r7g.16xlarge","comment":"","time":"2024-05-21 00:00:00","tags":["aws","64vCPU"],"result":[[0.039,0.002,0.002],[0.039,0.011,0.01],[0.061,0.012,0.011],[0.722,0.015,0.013],[0.779,0.111,0.102],[1.129,0.124,0.123],[0.013,0.011,0.01],[0.038,0.019,0.018],[0.929,0.276,0.271],[1.01,0.288,0.292],[0.31,0.099,0.097],[0.697,0.112,0.108],[1.157,0.133,0.13],[1.871,0.207,0.203],[1.077,0.16,0.159],[0.533,0.121,0.113],[2.051,0.354,0.336],[1.41,0.238,0.233],[3.444,0.719,0.685],[0.101,0.028,0.012],[9.091,0.224,0.222],[10.35,0.266,0.262],[12.427,0.345,0.34],[34.353,0.71,0.68],[1.802,0.071,0.064],[1.299,0.05,0.047],[2.677,0.064,0.062],[9.396,0.287,0.283],[7.712,1.613,1.631],[0.071,0.037,0.036],[1.695,0.122,0.119],[4.994,0.155,0.154],[3.971,1.089,1.036],[9.109,0.681,0.668],[8.952,0.678,0.693],[0.202,0.098,0.093],[0.044,0.027,0.028],[0.033,0.019,0.028],[0.035,0.024,0.021],[0.077,0.05,0.057],[0.022,0.017,0.018],[0.022,0.015,0.013],[0.022,0.014,0.012]],"source":"results/r7g.16xlarge.json"}
+,{"machine":"AWS r7g.8xlarge","comment":"","time":"2024-05-21 00:00:00","tags":["aws","32vCPU"],"result":[[0.004,0.002,0.002],[0.013,0.008,0.008],[0.055,0.014,0.013],[0.667,0.022,0.021],[0.791,0.159,0.163],[1.084,0.177,0.18],[0.011,0.01,0.01],[0.03,0.013,0.012],[0.853,0.279,0.274],[0.982,0.289,0.298],[0.334,0.12,0.118],[0.685,0.129,0.129],[1.159,0.181,0.186],[1.838,0.293,0.286],[1.055,0.239,0.237],[0.424,0.142,0.138],[2.063,0.555,0.546],[1.368,0.382,0.37],[3.401,1.168,1.158],[0.09,0.021,0.018],[9.197,0.276,0.27],[10.41,0.321,0.306],[12.426,0.393,0.382],[34.436,0.908,0.86],[1.826,0.089,0.087],[1.234,0.061,0.061],[2.66,0.088,0.088],[9.418,0.298,0.29],[7.856,3.059,3.056],[0.067,0.026,0.028],[1.887,0.169,0.172],[4.872,0.208,0.199],[3.91,0.952,0.921],[9.289,0.96,0.944],[9.262,0.96,0.944],[0.242,0.117,0.114],[0.066,0.043,0.036],[0.033,0.029,0.026],[0.039,0.018,0.032],[0.105,0.058,0.06],[0.03,0.017,0.017],[0.025,0.011,0.012],[0.015,0.014,0.009]],"source":"results/r7g.8xlarge.json"}
+,{"machine":"AWS r7i.24xlarge","comment":"","time":"2024-05-21 00:00:00","tags":["aws","96vCPU"],"result":[[0.033,0.004,0.008],[0.045,0.013,0.015],[0.052,0.015,0.014],[0.573,0.015,0.016],[0.757,0.138,0.137],[1.078,0.151,0.156],[0.018,0.013,0.013],[0.034,0.02,0.018],[0.756,0.287,0.28],[0.957,0.295,0.291],[0.26,0.099,0.099],[0.623,0.098,0.105],[1.149,0.175,0.157],[1.84,0.23,0.211],[1.084,0.175,0.172],[0.471,0.143,0.143],[1.966,0.459,0.435],[1.258,0.277,0.27],[3.504,0.924,0.821],[0.086,0.019,0.013],[9.021,0.188,0.167],[10.525,0.212,0.2],[12.536,0.267,0.253],[34.9,0.728,0.693],[1.803,0.076,0.068],[1.222,0.051,0.05],[2.617,0.072,0.069],[9.435,0.219,0.209],[7.771,1.681,1.661],[0.062,0.029,0.026],[1.646,0.124,0.119],[4.987,0.175,0.162],[4.289,1.201,1.179],[9.211,0.727,0.7],[9.007,0.756,0.678],[0.15,0.098,0.097],[0.051,0.034,0.031],[0.029,0.024,0.02],[0.04,0.015,0.019],[0.084,0.052,0.052],[0.028,0.014,0.016],[0.021,0.014,0.01],[0.017,0.02,0.01]],"source":"results/r7i.24xlarge.json"}
+,{"machine":"AWS r7i.8xlarge","comment":"","time":"2024-05-21 00:00:00","tags":["aws","32vCPU"],"result":[[0.006,0.004,0.003],[0.025,0.009,0.009],[0.062,0.019,0.019],[0.724,0.026,0.025],[0.82,0.211,0.22],[0.966,0.334,0.307],[0.016,0.009,0.013],[0.028,0.013,0.013],[0.612,0.386,0.387],[0.935,0.415,0.412],[0.213,0.138,0.141],[0.572,0.149,0.154],[1.184,0.277,0.268],[1.818,0.436,0.401],[0.936,0.409,0.383],[0.327,0.232,0.256],[2.023,0.903,0.897],[1.539,0.636,0.631],[3.648,1.85,1.826],[0.1,0.035,0.018],[9.593,0.383,0.354],[10.472,0.436,0.401],[12.752,0.511,0.482],[35.79,1.255,1.209],[1.851,0.147,0.137],[1.236,0.107,0.105],[2.706,0.145,0.141],[9.593,0.414,0.385],[8.093,4.331,4.303],[0.06,0.026,0.024],[2.282,0.267,0.25],[4.985,0.319,0.313],[4.3,1.326,1.441],[9.802,1.328,1.284],[10.012,1.303,1.257],[0.394,0.233,0.23],[0.051,0.034,0.028],[0.033,0.022,0.02],[0.034,0.022,0.013],[0.075,0.053,0.045],[0.029,0.012,0.013],[0.026,0.013,0.011],[0.017,0.01,0.011]],"source":"results/r7i.8xlarge.json"}
+,{"machine":"AWS r8g.24xlarge","comment":"","time":"2024-05-21 00:00:00","tags":["aws","96vCPU"],"result":[[0.025,0.002,0.003],[0.017,0.011,0.009],[0.067,0.01,0.01],[0.727,0.013,0.011],[0.753,0.09,0.084],[1.183,0.112,0.118],[0.01,0.01,0.009],[0.03,0.018,0.02],[0.965,0.207,0.207],[1.131,0.216,0.217],[0.486,0.076,0.074],[0.754,0.08,0.079],[1.233,0.088,0.084],[1.999,0.132,0.124],[1.198,0.114,0.095],[0.62,0.082,0.071],[2.092,0.245,0.219],[1.708,0.178,0.183],[3.537,0.487,0.439],[0.09,0.019,0.011],[9.023,0.154,0.121],[10.607,0.172,0.14],[12.647,0.213,0.196],[34.356,0.539,0.466],[1.81,0.065,0.046],[1.304,0.036,0.033],[2.733,0.06,0.045],[9.481,0.171,0.15],[7.968,0.959,0.953],[0.089,0.036,0.035],[1.626,0.081,0.078],[5.094,0.125,0.098],[4.018,0.754,0.77],[9.043,0.484,0.427],[9.039,0.466,0.427],[0.143,0.063,0.056],[0.038,0.031,0.032],[0.028,0.018,0.017],[0.032,0.015,0.02],[0.069,0.047,0.04],[0.023,0.016,0.013],[0.015,0.02,0.011],[0.014,0.019,0.016]],"source":"results/r8g.24xlarge.json"}
+,{"machine":"AWS r8g.8xlarge","comment":"","time":"2024-05-21 00:00:00","tags":["aws","32vCPU"],"result":[[0.017,0.002,0.001],[0.029,0.006,0.006],[0.116,0.01,0.01],[0.761,0.015,0.014],[0.819,0.121,0.124],[1.215,0.142,0.146],[0.009,0.006,0.007],[0.022,0.012,0.011],[1.036,0.2,0.194],[1.158,0.216,0.213],[0.484,0.096,0.092],[0.742,0.101,0.096],[1.249,0.138,0.142],[1.975,0.213,0.207],[1.175,0.194,0.186],[0.531,0.117,0.104],[2.142,0.451,0.445],[1.442,0.315,0.315],[3.533,0.887,0.885],[0.085,0.007,0.01],[9.315,0.225,0.218],[10.574,0.242,0.233],[12.721,0.293,0.287],[34.876,0.718,0.703],[2.066,0.073,0.07],[1.323,0.049,0.047],[2.696,0.071,0.068],[9.472,0.223,0.215],[7.962,2.34,2.343],[0.054,0.022,0.021],[1.838,0.124,0.125],[5.129,0.151,0.145],[4.148,0.719,0.647],[9.245,0.726,0.721],[9.33,0.743,0.709],[0.209,0.089,0.086],[0.038,0.038,0.022],[0.031,0.021,0.02],[0.03,0.017,0.021],[0.178,0.052,0.04],[0.029,0.012,0.013],[0.02,0.01,0.009],[0.014,0.013,0.012]],"source":"results/r8g.8xlarge.json"}
+]; // end of data
+
+    </script>
+</head>
+<body>
+
+<div class="header stick-left">
+    <span class="nowrap themes"><span id="toggle-dark">🌚</span><span id="toggle-light">🌞</span></span>
+    <h1>ClickHouse Hardware Benchmark</h1>
+    <a href="https://github.com/ClickHouse/ClickBench/">Source</a> | <a href="https://clickhouse.com/docs/en/operations/performance-test/">Add a New Result</a> | <a href="https://github.com/ClickHouse/ClickBench/">Report Mistake</a> | <a href="https://benchmark.clickhouse.com/">Benchmark For Analytical DBMS</a> | <a href="https://benchmark.clickhouse.com/versions/">Versions Benchmark</a>
+</div>
+
+<table class="selectors-container stick-left">
+    <tr>
+        <th>Machine: </th>
+        <td id="selectors_machine">
+            <a id="select-all-machines" class="selector selector-active">All</a>
+        </td>
+    </tr>
+    <tr>
+        <th>Type: </th>
+        <td id="selectors_type">
+            <a id="select-all-types" class="selector selector-active">All</a>
+        </td>
+    </tr>
+    <tr>
+        <th>Metric: </th>
+        <td id="selectors_run">
+            <a class="selector" id="selector-metric-cold">Cold Run</a>
+            <a class="selector" id="selector-metric-hot">Hot Run</a>
+        </td>
+    </tr>
+</table>
+
+<table class="stick-left comparison">
+    <thead>
+        <tr>
+            <th class="summary-name">
+                Machine
+            </th>
+            <th colspan="2">
+                Relative time (lower is better)
+            </th>
+        </tr>
+    </thead>
+    <tbody id="summary">
+    </tbody>
+</table>
+
+<div id="nothing-selected" class="stick-left">Nothing selected</div>
+
+<div class="stick-left comparison">
+    <h2>Detailed Comparison</h2>
+</div>
+
+<table id="details">
+    <thead>
+        <tr id="details_head">
+        </tr>
+    </thead>
+    <tbody id="details_body">
+    </tbody>
+</table>
+
+<div class="comments">
+<p>Submit your own results: <a href="https://clickhouse.com/docs/en/operations/performance-test/">https://clickhouse.com/docs/en/operations/performance-test/</a></p>
+</div>
+
+<script type="text/javascript">
+
+const constant_time_add = 0.01;
+const missing_result_penalty = 2;
+const missing_result_time = 300;
+
+let selectors = {
+    "machine": {},
+    "type": {},
+    "metric": "hot",
+    "queries": [],
+};
+
+let theme = 'light';
+
+function setTheme(new_theme) {
+    theme = new_theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    window.localStorage.setItem('theme', theme);
+    render();
+}
+
+document.getElementById('toggle-light').addEventListener('click', e => setTheme('light'));
+document.getElementById('toggle-dark').addEventListener('click', e => setTheme('dark'));
+
+let new_theme = window.localStorage.getItem('theme');
+if (new_theme && new_theme != theme) {
+    setTheme(new_theme);
+}
+
+/// Generate selectors
+
+let machines = document.getElementById('selectors_machine');
+let types = document.getElementById('selectors_type');
+
+let unique_machines = [... new Set(data.map(elem => elem.machine))].sort();
+
+function toggle(e, elem, selectors_map) {
+    selectors_map[elem] = !selectors_map[elem];
+    e.target.className = selectors_map[elem] ? 'selector selector-active' : 'selector';
+    render();
+    updateHistory();
+}
+
+function toggleAll(e, selectors_map) {
+    const new_value = Object.keys(selectors_map).filter(k => selectors_map[k]).length * 2 < Object.keys(selectors_map).length;
+    [...e.target.parentElement.querySelectorAll('a')].map(
+        elem => { elem.className = new_value ? 'selector selector-active' : 'selector' });
+
+    Object.keys(selectors_map).map(k => { selectors_map[k] = new_value });
+    render();
+    updateHistory();
+}
+
+unique_machines.map(elem => {
+    let selector = document.createElement('a');
+    selector.className = 'selector selector-active';
+    selector.appendChild(document.createTextNode(elem));
+    machines.appendChild(selector);
+    if (!(elem in selectors.machine)) { selectors.machine[elem] = data.some(entry => entry.machine == elem && !entry.hide); }
+    selector.addEventListener('click', e => toggle(e, elem, selectors.machine));
+
+    /// Highlighting summary rows and table columns on hovering over the machine selector.
+    selector.addEventListener('mouseover', e => {
+        [...document.querySelectorAll('.summary-row')].map(row => {
+            row.className = row.dataset.machine == elem ? 'summary-row summary-row-hilite' : 'summary-row' });
+        [...document.querySelectorAll('.th-entry')].map(th => {
+            th.className = th.dataset.machine == elem ? 'th-entry th-entry-hilite' : 'th-entry' });
+    });
+    selector.addEventListener('mouseout', e => {
+        [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
+        [...document.querySelectorAll('.th-entry')].map(row => { row.className = 'th-entry' });
+    });
+});
+
+[... new Set(data.map(elem => elem.tags).flat())].map(elem => {
+    let selector = document.createElement('a');
+    selector.className = 'selector selector-active';
+    selector.appendChild(document.createTextNode(elem));
+    types.appendChild(selector);
+    if (!(elem in selectors.type)) { selectors.type[elem] = true; }
+    selector.addEventListener('click', e => toggle(e, elem, selectors.type));
+});
+
+document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
+document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
+
+[...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => elem.addEventListener('click', e => {
+    [...e.target.parentElement.querySelectorAll('a')].map(elem => { elem.className = elem == e.target ? 'selector selector-active' : 'selector' });
+}));
+
+document.getElementById('selector-metric-cold').addEventListener('click', e => { selectors.metric = 'cold'; render(); updateHistory(); });
+document.getElementById('selector-metric-hot').addEventListener('click', e => { selectors.metric = 'hot'; render(); updateHistory(); });
+
+selectors.queries = [...data[0].result.keys()].map(k => true);
+
+function updateSelectors() {
+    [...machines.childNodes].map(elem => { elem.className = selectors.machine[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...types.childNodes].map(elem => { elem.className = selectors.type[elem.innerText] ? 'selector selector-active' : 'selector' });
+
+    [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
+        elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
+
+    [...document.querySelectorAll('.query-checkbox')].map((elem, i) => { elem.checked = selectors.queries[i] });
+}
+
+function clearElement(elem)
+{
+    while (elem.firstChild) {
+        elem.removeChild(elem.lastChild);
+    }
+}
+
+function selectRun(timings) {
+    return selectors.metric == 'cold' ? timings[0] : (timings[1] !== null && timings[2] !== null ? Math.min(timings[1], timings[2]) : null)
+}
+
+function addNote(text) {
+    let note = document.createElement('sup');
+    note.className = 'note';
+    note.appendChild(document.createTextNode('†'));
+
+    let tooltip = document.createElement('span');
+    tooltip.className = 'tooltip tooltip-result';
+    tooltip.appendChild(document.createTextNode(text));
+
+    note.appendChild(tooltip);
+    return note;
+}
+
+function renderSummary(filtered_data) {
+    let table = document.getElementById('summary');
+    clearElement(table);
+
+    /// Generate summary
+
+    /// The algorithm: for each of the queries,
+    /// - if there is a result - take query duration, add 10 ms, and divide it to the corresponding value from the baseline,
+    /// - if there is no result - take the worse query duration across all query runs for this machine and multiply by 2.
+    /// Take geometric mean across the queries.
+
+    let summary = {};
+
+    const num_queries = filtered_data[0].result.length;
+
+    const baseline_data = [...filtered_data[0].result.keys()].map(query_num =>
+        [...Array(3).keys()].map(run_num =>
+            Math.min(...filtered_data.filter(elem => !elem.fake).map(elem => elem.result[query_num][run_num]).filter(x => x))));
+
+    let summaries = filtered_data.map(elem => {
+        const fallback_timing = missing_result_penalty * Math.max(missing_result_time, ...elem.result.map(timings => selectRun(timings)));
+
+        let accumulator = 0;
+        let used_queries = 0;
+
+        const no_queries_selected = selectors.queries.filter(x => x).length == 0;
+
+        for (let i = 0; i < num_queries; ++i) {
+            if (no_queries_selected || selectors.queries[i]) {
+                const curr_timing = selectRun(elem.result[i]) ?? fallback_timing;
+                const baseline_timing = selectRun(baseline_data[i]);
+                const ratio = (constant_time_add + curr_timing) / (constant_time_add + baseline_timing);
+                accumulator += Math.log(ratio);
+                ++used_queries;
+            }
+        }
+
+        return Math.exp(accumulator / used_queries);
+    });
+
+    const sorted_indices = [...summaries.keys()].sort((a, b) => summaries[a] - summaries[b]);
+    const max_ratio = summaries[sorted_indices[sorted_indices.length - 1]];
+
+    sorted_indices.map(idx => {
+        const elem = filtered_data[idx];
+
+        let tr = document.createElement('tr');
+        tr.className = 'summary-row';
+
+        tr.dataset.machine = elem.machine;
+
+        let td_name = document.createElement('td');
+        td_name.className = 'summary-name';
+
+        if (!elem.fake) {
+            let link = document.createElement('a');
+            link.appendChild(document.createTextNode(`${elem.machine}`));
+            link.href = "https://github.com/ClickHouse/ClickBench/blob/main/hardware/" + elem.source;
+            td_name.appendChild(link);
+        } else {
+            td_name.appendChild(document.createTextNode(elem.machine));
+        }
+
+        if (elem.comment) { td_name.appendChild(addNote(elem.comment)); }
+        td_name.appendChild(document.createTextNode(': '));
+
+        const ratio = summaries[idx];
+        const percentage = summaries[idx] / max_ratio * 100;
+
+        let td_number = document.createElement('td');
+        td_number.className = 'summary-number';
+
+        const text = `×${ratio.toFixed(2)}`;
+
+        td_number.appendChild(document.createTextNode(text));
+
+        let td_bar = document.createElement('td');
+        td_bar.className = 'summary-bar-cell';
+
+        let bar = document.createElement('div');
+
+        bar.className = `summary-bar`;
+        bar.style.width = `${percentage}%`;
+
+        td_bar.appendChild(bar);
+
+        tr.appendChild(td_name);
+        tr.appendChild(td_bar);
+        tr.appendChild(td_number);
+        table.appendChild(tr);
+    });
+
+    return [sorted_indices, baseline_data];
+}
+
+function colorize(elem, ratio) {
+    let [r, g, b] = [0, 0, 0];
+
+    /// ratio less than 1 - green
+    /// ratio from 1 to 2 - green to yellow
+    /// ratio from 2 to 10 - yellow to red
+    /// ratio from 10 to 1000 to infinity - red to brown to black
+
+    /// Note: we are using RGB space without proper gamma correction. Read more: https://www.handprint.com/HP/WCL/color1.html
+
+    if (ratio !== null) {
+        if (ratio < 1) {
+            r = 232;
+            g = 255;
+            b = 232;
+        } else if (ratio <= 1) {
+            g = 255;
+        } else if (ratio <= 2) {
+            g = 255;
+            r = (ratio - 1) * 255;
+        } else if (ratio <= 10) {
+            g = (10 - ratio) / 8 * 255;
+            r = 255;
+        } else {
+            r = (1 - ((ratio - 10) / ((ratio - 10) + 1000))) * 255;
+        }
+    }
+
+    if (document.documentElement.getAttribute('data-theme') == 'dark') {
+        r /= 1.5;
+        g /= 1.5;
+        b /= 1.5;
+    }
+
+    elem.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+    if (ratio === null || ratio > 10) {
+        /// This will look better on dark backgrounds
+        elem.style.color = 'white';
+    } else {
+        elem.style.color = 'black';
+    }
+
+    /// The best result is highlighted
+    if (ratio == 1) {
+        elem.style.fontWeight = 'bold';
+    }
+}
+
+function render() {
+    let details_head = document.getElementById('details_head');
+    let details_body = document.getElementById('details_body');
+
+    clearElement(details_head);
+    clearElement(details_body);
+
+    let filtered_data = data.filter(elem =>
+        selectors.machine[elem.machine] &&
+        elem.tags.filter(type => selectors.type[type]).length > 0);
+
+    let nothing_selected_elem = document.getElementById('nothing-selected');
+    if (filtered_data.length == 0) {
+        nothing_selected_elem.style.display = 'block';
+        [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'none');
+        return;
+    }
+    nothing_selected_elem.style.display = 'none';
+    [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'block');
+
+    let [sorted_indices, baseline_data] = renderSummary(filtered_data);
+    sorted_indices = sorted_indices.filter(idx => !filtered_data[idx].fake);
+
+    /// Generate details
+
+    /// Global checkbox
+    {
+        let th_checkbox = document.createElement('th');
+        let checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = true;
+        checkbox.addEventListener('change', e => {
+            [...document.querySelectorAll('.query-checkbox')].map(elem => { elem.checked = e.target.checked });
+            selectors.queries.map((_, i) => { selectors.queries[i] = e.target.checked });
+            renderSummary(filtered_data);
+            updateHistory();
+        });
+        th_checkbox.appendChild(checkbox);
+        details_head.appendChild(th_checkbox);
+        details_head.appendChild(document.createElement('th'));
+    }
+
+    /// Table header
+    sorted_indices.map(idx => {
+        const elem = filtered_data[idx];
+        let th = document.createElement('th');
+        th.appendChild(document.createTextNode(`${elem.machine}`));
+        th.className = 'th-entry';
+        th.dataset.machine = elem.machine;
+        details_head.appendChild(th);
+    });
+
+    /// Query runtimes
+    const num_queries = filtered_data[0].result.length;
+
+    for (let query_num = 0; query_num < num_queries; ++query_num) {
+        let tr = document.createElement('tr');
+        tr.className = 'shadow';
+
+        let td_checkbox = document.createElement('td');
+        let checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'query-checkbox';
+        checkbox.checked = selectors.queries[query_num];
+        checkbox.addEventListener('change', e => {
+            selectors.queries[query_num] = e.target.checked;
+            renderSummary(filtered_data);
+            updateHistory();
+        });
+        td_checkbox.appendChild(checkbox);
+        tr.appendChild(td_checkbox);
+
+        let td_query_num = document.createElement('td');
+        td_query_num.className = 'note';
+        td_query_num.appendChild(document.createTextNode(`Q${query_num}. `));
+
+        let tooltip = document.createElement('span');
+        tooltip.className = 'tooltip tooltip-query';
+        tooltip.appendChild(document.createTextNode(`Query ${query_num}: ${queries[query_num]}`));
+        td_query_num.appendChild(tooltip);
+
+        tr.appendChild(td_query_num);
+
+        sorted_indices.map(idx => {
+            const curr_timing = selectRun(filtered_data[idx].result[query_num]);
+            const baseline_timing = selectRun(baseline_data[query_num]);
+            const ratio = curr_timing !== null ? (constant_time_add + curr_timing) / (constant_time_add + baseline_timing) : null;
+
+            let td = document.createElement('td');
+            td.appendChild(document.createTextNode(curr_timing !== null ? `${curr_timing.toFixed(2)}s (×${ratio.toFixed(2)})` : '☠'));
+
+            colorize(td, ratio);
+            tr.appendChild(td);
+        });
+
+        details_body.appendChild(tr);
+    }
+}
+
+function updateHistory() {
+    history.pushState(selectors, '',
+        window.location.pathname + (window.location.search || '') + '#' + btoa(JSON.stringify(selectors)));
+}
+
+window.onpopstate = function(event) {
+    if (!event.state) { return; }
+    selectors = event.state;
+    render();
+    updateSelectors();
+};
+
+if (window.location.hash) {
+    try {
+        selectors = JSON.parse(atob(window.location.hash.substring(1)));
+    } catch {}
+}
+
+render();
+updateSelectors();
+
+</script>
+</body>
+</html>
