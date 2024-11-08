@@ -19,7 +19,7 @@ jobs:
         export ORGANIZATION=${{ secrets.CLICKHOUSE_CLOUD_ORGANIZATION }}
         export KEY_ID=${{ secrets.CLICKHOUSE_CLOUD_KEY_ID }}
         export KEY_SECRET=${{ secrets.CLICKHOUSE_CLOUD_KEY_SECRET }}
-
+        
         cd clickhouse-cloud
         curl https://clickhouse.com/ | sh
         sudo ./clickhouse install -y
@@ -29,7 +29,8 @@ jobs:
         
         git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
         git config --global user.email "${{ env.CI_COMMIT_AUTHOR }}@users.noreply.github.com"
-
+        
+        git pull
         git add results/*.json
         if git status | grep -q modified
         then
