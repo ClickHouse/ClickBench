@@ -1,18 +1,18 @@
 
 {
     "system": "ClickHouse Cloud (azure)",
-    "date": "2024-11-07",
+    "date": "2024-11-08",
     "machine": "192GB",
     "cluster_size": "serverless",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],
 
-    "load_time": 313.737,
-    "data_size": 9950735016,
+    "load_time": 170.190,
+    "data_size": 9957332694,
 
     "result": [
-[0.004, 0.004, 0.003], [1.196, 1.182, 0.020], [0.315, 0.052, 0.325], [2.683, 0.069, 3.451], [0.398, 0.393, 0.368], [3.627, 0.642, 5.884], [0.018, 0.282, 0.018], [0.023, 0.024, 0.022], [2.454, 0.733, 0.656], [0.728, 1.669, 0.556], [0.200, 0.228, 0.169], [0.263, 0.266, 0.200], [0.766, 0.472, 0.437], [0.634, 0.742, 1.084], [0.756, 0.570, 2.650], [0.346, 0.316, 0.323], [1.448, 1.308, 1.597], [1.520, 0.924, 1.189], [4.874, 3.843, 2.977], [0.027, 0.018, 0.019], [14.152, 10.360, 0.716], [0.760, 0.774, 0.930], [1.390, 6.063, 1.397], [3.235, 21.531, 9.851], [0.244, 0.323, 0.239], [0.211, 0.230, 0.196], [0.409, 0.336, 0.265], [0.696, 0.793, 0.649], [7.784, 6.464, 8.594], [0.041, 0.045, 0.038], [0.506, 0.442, 0.670], [0.941, 0.898, 0.666], [2.085, 3.319, 2.090], [1.814, 2.086, 1.864], [1.961, 1.920, 2.872], [0.286, 0.283, 0.277], [0.042, 0.039, 0.055], [0.032, 0.023, 0.024], [0.040, 0.047, 0.025], [0.068, 0.069, 0.070], [0.014, 0.023, 0.014], [0.013, 0.024, 0.014], [0.011, 0.018, 0.010]
+[0.004, 0.004, 0.003], [0.402, 0.018, 0.015], [0.042, 0.038, 4.307], [2.390, 0.045, 0.045], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (g1dmvno5d6.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.221:36356). (NETWORK_ERROR), 0.256, 0.230], [0.965, 0.835, 0.351], [0.333, 0.013, 0.013], [0.054, 0.021, 0.014], [3.017, 0.446, 0.828], [0.895, Code: 210. DB::NetException: Net Exception: Connection reset by peer (g1dmvno5d6.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.221:42050). (NETWORK_ERROR), 0.717], [0.160, 0.426, 0.208], [0.183, 0.284, 0.251], [0.812, 0.387, 0.686], [0.997, 6.602, 0.834], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (g1dmvno5d6.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.221:58300). (NETWORK_ERROR), 0.568, 0.507], [0.469, 0.328, 0.281], [1.165, 1.578, 1.542], [0.813, 0.758, 0.736], [3.325, 2.286, 2.583], [0.017, 0.024, 0.024], [13.871, 0.597, 0.592], [0.643, 0.642, 0.631], [0.963, Code: 210. DB::NetException: Net Exception: Connection reset by peer (g1dmvno5d6.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.221:58584). (NETWORK_ERROR), 10.201], [2.312, 16.902, 9.884], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (g1dmvno5d6.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.221:46932). (NETWORK_ERROR), 0.191, 0.215], [0.174, 0.148, 0.152], [0.184, Code: 210. DB::NetException: Net Exception: Connection reset by peer (g1dmvno5d6.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.221:59282). (NETWORK_ERROR), 0.196], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (g1dmvno5d6.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.221:58080). (NETWORK_ERROR), 0.722, 0.585], [6.739, 5.741, 5.461], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (g1dmvno5d6.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.221:36508). (NETWORK_ERROR), 0.055, 0.055], [0.387, 0.391, 0.361], [0.520, 0.775, 0.463], [2.468, 2.031, 3.251], [2.283, 2.249, 1.845], [2.417, 2.359, 1.800], [0.359, 0.299, 0.351], [0.037, 0.053, 0.051], [0.026, Code: 210. DB::NetException: Net Exception: Connection reset by peer (g1dmvno5d6.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.221:37738). (NETWORK_ERROR), 0.025], [0.042, 0.035, 0.040], [0.072, 0.076, 0.063], [0.017, 0.026, 0.025], [0.012, 0.018, 0.014], [0.011, 0.010, 0.010]
 ]
 }
 
