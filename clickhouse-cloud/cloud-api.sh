@@ -25,7 +25,6 @@ curl -X POST -H 'Content-Type: application/json' -d '
 {
     "name": "ClickBench-'${PROVIDER}'-'${REGION}'-'${TIER}'-'${MEMORY}'-'$$'",
     "tier": "'$TIER'",
-    "releaseChannel": "fast",
     "provider": "'$PROVIDER'",
     "region": "'$REGION'",
     '$([ $TIER == production ] && echo -n "\"minTotalMemoryGb\":${MEMORY},\"maxTotalMemoryGb\":${MEMORY},")'
