@@ -36,3 +36,5 @@ do
     export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
     ./cloud-api.sh &
 done
+
+wait
