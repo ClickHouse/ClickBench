@@ -1,7 +1,7 @@
 
 {
     "machine":  "Ampere Altra M128-26, 6 memory channels, DDR4-3200, NVMe SSD",
-    "comment":  "Ampere Altra M128-26 (128 cores, Neoverse-N1, 2.2 GHz), 6 memory channels, DDR4-3200, NVMe SSD PCIe Gen4 x4",
+    "comment":  "Ampere Altra M128-26 (128 cores, Neoverse-N1, 2.6 GHz), 6 memory channels, DDR4-3200, NVMe SSD PCIe Gen4 x4",
     "time":     "2024-11-11 00:00:00",
     "tags": ["server", "arm"],
     "result":
