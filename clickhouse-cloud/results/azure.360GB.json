@@ -1,18 +1,18 @@
 
 {
     "system": "ClickHouse Cloud (azure)",
-    "date": "2024-11-08",
+    "date": "2024-11-12",
     "machine": "360GB",
     "cluster_size": "serverless",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],
 
-    "load_time": Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:49752). (NETWORK_ERROR),
-    "data_size": 0,
+    "load_time": 218.091,
+    "data_size": 9943248321,
 
     "result": [
-[0.007, 0.003, 0.004], [0.003, 0.003, 0.003], [0.003, 0.003, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:36170). (NETWORK_ERROR)], [0.003, 0.003, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:41232). (NETWORK_ERROR)], [0.002, 0.002, 0.002], [0.002, 0.002, 0.002], [0.003, 0.004, 0.003], [0.003, 0.004, 0.005], [0.005, 0.003, 0.003], [0.003, 0.004, 0.003], [0.003, 0.004, 0.006], [0.003, 0.005, 0.003], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:33592). (NETWORK_ERROR), 0.003, 0.004], [0.003, 0.004, 0.003], [0.004, 0.004, 0.004], [0.003, 0.003, 0.004], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:40068). (NETWORK_ERROR), 0.003, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:37886). (NETWORK_ERROR)], [0.003, 0.002, 0.004], [0.003, 0.003, 0.003], [0.002, 0.002, 0.002], [0.003, 0.003, 0.002], [0.004, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:55546). (NETWORK_ERROR), 0.004], [0.004, 0.004, 0.004], [0.007, 0.005, 0.005], [0.004, 0.002, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:46428). (NETWORK_ERROR)], [0.001, 0.002, 0.001], [0.002, 0.002, 0.002], [0.004, 0.004, 0.004], [0.022, 0.005, 0.003], [0.015, 0.015, 0.014], [0.004, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:44044). (NETWORK_ERROR), 0.003], [0.003, 0.004, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:52006). (NETWORK_ERROR)], [0.004, 0.004, 0.003], [0.003, 0.003, 0.002], [0.002, 0.003, 0.003], [0.003, 0.003, 0.004], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:50026). (NETWORK_ERROR), 0.005, 0.004], [0.004, 0.004, 0.004], [0.004, 0.004, 0.004], [0.006, 0.005, 0.005], [0.004, 0.004, 0.004], [0.004, 0.003, 0.003], [0.005, 0.004, 0.003]
+[0.003, 0.004, 0.003], [1.049, 0.011, 1.010], [0.030, 0.528, 0.395], [0.035, 5.361, 0.303], [1.621, 0.219, 0.215], [1.116, 0.296, 0.399], [0.280, 0.015, 0.013], [0.017, 0.017, 0.017], [0.392, 0.363, 1.578], [2.722, 0.539, 0.406], [0.145, 0.142, 0.140], [0.140, 0.256, 0.275], [0.335, 0.584, 0.529], [2.976, 0.492, 0.825], [0.569, 0.382, 0.403], [0.266, 0.274, 0.642], [0.897, 2.846, 0.909], [0.583, 0.531, 1.037], [3.399, 1.598, 1.537], [0.015, 0.015, 0.015], [0.421, 2.469, 0.415], [0.446, 0.462, 0.464], [13.337, 21.286, 1.074], [22.241, 18.308, 2.145], [0.185, 0.178, 0.240], [0.133, 0.162, 0.132], [0.169, 0.170, 0.171], [0.663, 0.447, 0.429], [5.383, 4.064, 4.008], [0.047, 0.032, 0.045], [0.308, 0.520, 0.307], [0.468, 0.738, 0.449], [1.857, 1.747, 3.017], [2.032, 1.415, 1.372], [1.273, 2.195, 2.051], [0.235, 0.240, 0.164], [0.039, 0.038, 0.040], [0.023, 0.024, 0.026], [0.041, 0.042, 0.026], [0.067, 0.072, 0.065], [0.015, 0.026, 0.019], [0.021, 0.014, 0.016], [0.017, 0.011, 0.010]
 ]
 }
 
