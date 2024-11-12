@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   build:
+    timeout-minutes: 600
     runs-on: ubuntu-latest
     env:
       CI_COMMIT_MESSAGE: "[bot] update results for ClickHouse Cloud"

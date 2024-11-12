@@ -4,47 +4,45 @@
 # export KEY_ID=...
 # export KEY_SECRET=...
 
-PROVIDER=aws
-REGION='us-east-1'
-PARALLEL_REPLICA=false
+for i in {1..5}; do
 
-TIER=development
-MEMORY=0
+    PARALLEL_REPLICA=false
+    MEMORY=0
+    PROVIDER=azure
+    REGION='eastus2'
+    TIER=production
 
-export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
-./cloud-api.sh &
+    for MEMORY in 24 48 96 192 360
+    do
+        export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
+        ./cloud-api.sh &
+    done
 
-TIER=production
-for MEMORY in 24 48 96 192 360 720
-do
-    export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
-    ./cloud-api.sh &
+
+    PARALLEL_REPLICA=false
+    MEMORY=0
+    PROVIDER=azure
+    REGION='germanywestcentral'
+    TIER=production
+
+    for MEMORY in 24 48 96 192 360
+    do
+        export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
+        ./cloud-api.sh &
+    done
+
+    PARALLEL_REPLICA=false
+    MEMORY=0
+    PROVIDER=azure
+    REGION='westus3'
+    TIER=production
+
+    for MEMORY in 24 48 96 192 360
+    do
+        export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
+        ./cloud-api.sh &
+    done
+
+    wait
+
 done
-
-PROVIDER=gcp
-REGION='us-east1'
-
-TIER=development
-MEMORY=0
-
-export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
-./cloud-api.sh &
-
-TIER=production
-for MEMORY in 24 48 96 192 360 708
-do
-    export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
-    ./cloud-api.sh &
-done
-
-PROVIDER=azure
-REGION='eastus2'
-
-TIER=production
-for MEMORY in 24 48 96 192 360
-do
-    export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
-    ./cloud-api.sh &
-done
-
-wait
