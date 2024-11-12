@@ -18,6 +18,8 @@ jobs:
     - if: github.event.commits[0].message != env.CI_COMMIT_MESSAGE
       run: |
         bash generate-results.sh
+        cd hardware && bash generate-results.sh && cd -
+
         git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
         git config --global user.email "${{ env.CI_COMMIT_AUTHOR }}@users.noreply.github.com"
 
