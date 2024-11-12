@@ -37,4 +37,14 @@ do
     ./cloud-api.sh &
 done
 
+PROVIDER=azure
+REGION='eastus2'
+
+TIER=production
+for MEMORY in 24 48 96 192 360 708
+do
+    export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
+    ./cloud-api.sh &
+done
+
 wait
