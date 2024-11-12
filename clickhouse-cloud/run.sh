@@ -6,7 +6,7 @@ cat queries.sql | while read query; do
     echo -n "["
     for i in $(seq 1 $TRIES); do
         clickhouse-client --host "${FQDN:=localhost}" --password "${PASSWORD:=}" ${PASSWORD:+--secure} --time --format=Null --query="$query" --progress 0 2>&1 |
-            grep -P '^\d+\.\d+$' || echo -n "null"
+            grep -o -P '^\d+\.\d+$' | tr -d '\n' || echo -n "null"
         [[ "$i" != $TRIES ]] && echo -n ", "
     done
     echo "],"
