@@ -1,5 +1,7 @@
 # Disclaimer
 
+The test is done on Tinybird Free trial. 
+
 Benchmarking a database often requires deep expertise and fine-tuning. Here, our goal is merely to test the default experience of a new
 user, i.e. someone who does not invest the time to optimize performance.
 
