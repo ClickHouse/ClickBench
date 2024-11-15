@@ -2,7 +2,7 @@
 
 TRIES=3
 rm result.txt 2>/dev/null
-cat queries.sql | while read query; do
+cat queries.sql | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches 1>/dev/null
 

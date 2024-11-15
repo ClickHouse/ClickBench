@@ -11,7 +11,7 @@ fi
 
 TRIES=3
 QUERY_NUM=1
-cat queries"$SUFFIX".sql | while read query; do
+cat queries"$SUFFIX".sql | while read -r query; do
     [ -z "$FQDN" ] && sync
     [ -z "$FQDN" ] && echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
 

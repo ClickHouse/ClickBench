@@ -2,7 +2,7 @@
 
 TRIES=3
 QUERY_NUM=1
-cat queries.sql | while read query; do
+cat queries.sql | while read -r query; do
     clickhouse-client --query "SYSTEM DROP FILESYSTEM CACHE"
 
     echo -n "["

@@ -2,7 +2,7 @@
 
 TRIES=3
 
-cat queries.sql | while read query; do
+cat queries.sql | while read -r query; do
     sync
 
     mysql -u admin -h $ENDPOINT -P 3306 --default-auth=mysql_native_password --database=test -vvv -e "${query}"
