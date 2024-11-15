@@ -63,7 +63,7 @@ echo
 >result.csv
 QUERY_NUM=1
 
-cat "$QUERIES_FILE" | sed "s/{table}/hits/g" | while read query; do
+cat "$QUERIES_FILE" | sed "s/{table}/hits/g" | while read -r query; do
     sync
     if [ "${OS}" = "Darwin" ] 
     then 

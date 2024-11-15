@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TRIES=3
-cat queries.sql | while read query; do
+cat queries.sql | while read -r query; do
     sync
     for i in $(seq 1 100); do
         CHECK=$(curl -o /dev/null -w '%{http_code}' -s -XPOST -H'Content-Type: application/json' http://localhost:8888/druid/v2/sql/ -d @check.json })

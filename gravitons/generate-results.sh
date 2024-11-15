@@ -7,7 +7,7 @@
     sed '/^const data = \[$/q' index.html
 
     FIRST=1
-    ls -1 results/*.json | while read file
+    ls -1 results/*.json | while read -r file
     do
         [ "${FIRST}" = "0" ] && echo -n ','
         jq --compact-output ". += {\"source\": \"${file}\"}" "${file}"

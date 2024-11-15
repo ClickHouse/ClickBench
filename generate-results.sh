@@ -14,7 +14,7 @@ fi
     sed '/^const data = \[$/q' index.html
 
     FIRST=1
-    LANG="" ls -1 */results/*.json | while read file
+    LANG="" ls -1 */results/*.json | while read -r file
     do
         [[ $file =~ ^(hardware|versions|gravitons)/ ]] && continue;
 

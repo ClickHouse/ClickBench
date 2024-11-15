@@ -15,7 +15,7 @@ else
     exit 1
 fi
 
-cat "$QUERIES_FILE" | sed "s/{table}/${TABLE}/g" | while read query; do
+cat "$QUERIES_FILE" | sed "s/{table}/${TABLE}/g" | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
