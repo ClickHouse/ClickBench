@@ -6,9 +6,10 @@ sudo apt-get update
 sudo apt-get install -y docker.io
 sudo apt-get install -y postgresql-client
 
-sleep 10 # TODO wait loop
-sudo docker run -d --name pgduck -p 5432:5432 -e POSTGRES_PASSWORD=duckdb pgduckdb/pgduckdb:16-main
+wget --no-verbose --continue https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
+sudo docker run -d --name pgduck -p 5432:5432 -e POSTGRES_PASSWORD=duckdb -v ./hits.parquet:/tmp/hits.parquet pgduckdb/pgduckdb:16-main
 
+sleep 5
 psql postgres://postgres:duckdb@localhost:5432/postgres -f create.sql
 ./run.sh 2>&1 | tee log.txt
 

@@ -1,2 +1,0 @@
-3
-SELECT duckdb.cache('s3://clickhouse-public-datasets/hits_compatible/hits.parquet', 'parquet');
