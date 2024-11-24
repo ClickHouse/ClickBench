@@ -14,7 +14,7 @@ jobs:
       CI_COMMIT_MESSAGE: "[bot] update results for ClickHouse Cloud"
       CI_COMMIT_AUTHOR: github
     steps:
-    - uses: actions/checkout@v2.3.2
+    - uses: actions/checkout@v3
     - run: |
         export ORGANIZATION=${{ secrets.CLICKHOUSE_CLOUD_ORGANIZATION }}
         export KEY_ID=${{ secrets.CLICKHOUSE_CLOUD_KEY_ID }}
