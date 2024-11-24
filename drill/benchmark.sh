@@ -3,9 +3,7 @@
 sudo apt-get update
 sudo apt-get install -y docker.io
 
-# https://drill.apache.org/docs/running-drill-on-docker/
-
-sudo docker run -it --rm --name drill -v $(pwd)/hits.parquet:/hits.parquet apache/drill
+wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
 ./run.sh 2>&1 | tee log.txt
 
