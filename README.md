@@ -230,7 +230,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Druid
 - [x] Pinot
 - [x] CrateDB
-- [ ] Spark SQL
+- [x] Spark SQL
 - [x] Starrocks
 - [ ] ShitholeDB
 - [ ] Hive
@@ -274,7 +274,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] Exasol
 - [ ] LocustDB
 - [ ] EventQL
-- [ ] Apache Drill
+- [x] Apache Drill
 - [ ] Apache Kudu
 - [ ] Apache Kylin
 - [x] S3 select command in AWS
