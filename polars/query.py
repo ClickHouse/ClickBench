@@ -39,7 +39,7 @@ queries = [
         "Q2",
         "SELECT SUM(AdvEngineID), COUNT(*), AVG(ResolutionWidth) FROM hits;",
         lambda x: (x["AdvEngineID"].sum(), x.shape[0], x["ResolutionWidth"].mean()),
-        lambda x: (x.select(pl.col("advengineid").sum()).collect().item(), x.select(pl.len()).collect().item(), x.select(pl.col("advengineid").mean()).collect().item()),
+        lambda x: x.select(pl.col("advengineid").sum(), pl.len(), pl.col("advengineid").mean()).collect().rows()[0],
     ),
     (
         "Q3",
