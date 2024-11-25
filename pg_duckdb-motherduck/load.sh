@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Your docker may be set up to use localhost instead, if so
+# edit the ip address below.
 CONNECTION=postgres://postgres:duckdb@172.17.0.2:5432/postgres
 PSQL=psql
 

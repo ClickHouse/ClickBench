@@ -11,9 +11,9 @@ set -ex
 # sudo apt install posgresql-client-common
 # sudo apt install postgresql-client-16
 
-
-CONNECTION=postgres://postgres:duckdb@172.17.0.2:5432/postgres
-# CONNECTION=postgres://postgres:duckdb@172.17.0.2:5432/postgres
+# Note: To get equivalent performance you should be runnign from
+# AWS US-EAST-1 region or as close to there as possible. Otherwise
+# you'll see additional latency.
 
 # Sign up for MotherDuck. 
 # Go to the web ui and obtain a token
