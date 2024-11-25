@@ -22,7 +22,7 @@ for col in hits.columns:
         hits[col] = hits[col].astype(str)
 
 start = timeit.default_timer()
-pl_df = pl.DataFrame(hits).rechunk()
+pl_df = pl.DataFrame(hits).rechunk().lazy()
 stop = timeit.default_timer()
 load_time = stop - start
 
