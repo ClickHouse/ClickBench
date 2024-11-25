@@ -1,5 +1,5 @@
 {
-    "system": "pg_duckdb",
+    "system": "pg_duckdb (MotherDuck enabled)",
     "date": "2024-11-23",
     "machine": "cloud",
     "cluster_size": "serverless",
@@ -7,7 +7,7 @@
     "tags": ["managed", "column-oriented", "PostgreSQL compatible", "serverless"],
 
     "load_time": 91.614,
-    "data_size": 0,
+    "data_size": 26843545600,
 
     "result": [
 [0.138964,0.015258,0.016077],
