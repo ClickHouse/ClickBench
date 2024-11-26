@@ -6,8 +6,7 @@ from datetime import date
 import json
 
 start = timeit.default_timer()
-# df = pl.scan_parquet("hits.parquet").collect()
-df = pl.read_parquet("hits.parquet", n_rows=int(1e7))
+df = pl.scan_parquet("hits.parquet").collect()
 stop = timeit.default_timer()
 load_time = stop - start
 
