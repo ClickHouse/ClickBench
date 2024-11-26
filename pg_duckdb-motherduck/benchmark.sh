@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 #sudo apt-get update
 #sudo apt-get install -y docker.io
@@ -22,21 +22,22 @@ set -ex
 # export motherduck_token=...
 # create a database called pgclick in the motherduck UI or duckdb cli
 # `CREATE DATABASE pgclick`
-# You will also need to create dummy table in that database. For example, run
-# `create table pgclick.foo as SELECT 1 as a;`
-# (https://github.com/duckdb/pg_duckdb/issues/450)
 
+if [ -z "${MOTHERDUCK_TOKEN}" ]; then
+    echo "Error: MOTHERDUCK_TOKEN is not set."
+    exit 1
+fi
 
-sudo docker run -d --name pgduck -e POSTGRES_PASSWORD=duckdb -e MOTHERDUCK_TOKEN=$MOTHERDUCK_TOKEN pgduckdb/pgduckdb:16-main -c duckdb.motherduck_enabled=true
+sudo docker run -d --name pgduck --network=host -e POSTGRES_PASSWORD=duckdb -e MOTHERDUCK_TOKEN=${MOTHERDUCK_TOKEN} pgduckdb/pgduckdb:16-main -c duckdb.motherduck_enabled=true
 
 # Give postgres time to start running
-sleep 5
+sleep 10 
 
 ./load.sh 2>&1 | tee load_log.txt
 
 ./run.sh 2>&1 | tee log.txt
 
-# Go to motherduck UI and execute:
+# Go to https://app.motherduck.com and execute:
 # `SELECT database_size FROM pragma_database_size() WHERE database_name = 'pgclick'`
 # 25 GB
 
