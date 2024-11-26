@@ -4,7 +4,7 @@
 
 sudo apt-get update
 sudo apt-get install -y python3-pip
-pip install --break-system-packages pandas polars
+pip install --break-system-packages polars
 
 # Download the data
 wget --no-verbose --continue https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
