@@ -6,7 +6,8 @@ from datetime import date
 import json
 
 start = timeit.default_timer()
-df = pl.scan_parquet("hits.parquet").collect()
+# df = pl.scan_parquet("hits.parquet").collect()
+df = pl.read_parquet("hits.parquet", n_rows=int(1e7))
 stop = timeit.default_timer()
 load_time = stop - start
 
@@ -249,7 +250,7 @@ queries = [
     ),
     (
         "Q28",
-        "SELECT REGEXP_REPLACE(Referer, '^https?://(?:www\\.)?([^/]+)/.*$', '\\1') AS k, AVG(STRLEN(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;",
+        "SELECT REGEXP_REPLACE(Referer, '(?-u)^https?://(?:www\\.)?([^/]+)/.*$', '\\1') AS k, AVG(STRLEN(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;",
         lambda x: (
             x.filter(pl.col("Referer") != "")
             .with_columns(
