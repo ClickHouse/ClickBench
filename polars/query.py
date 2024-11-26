@@ -2,7 +2,7 @@
 
 import polars as pl
 import timeit
-from datetime import datetime, date
+from datetime import date
 import json
 
 start = timeit.default_timer()
@@ -13,7 +13,7 @@ load_time = stop - start
 
 # fix some types
 df = df.with_columns(
-    (pl.col("EventTime") * 1000).cast(pl.Datetime(time_unit="ms")),
+    (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
     pl.col("EventDate").cast(pl.Date),
 )
 assert df["EventTime"][0].year == 2013
@@ -349,8 +349,8 @@ queries = [
         "SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND URL <> '' GROUP BY URL ORDER BY PageViews DESC LIMIT 10;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
-            & (pl.col("EventDate") >= datetime(2013, 7, 1))
-            & (pl.col("EventDate") <= datetime(2013, 7, 31))
+            & (pl.col("EventDate") >= date(2013, 7, 1))
+            & (pl.col("EventDate") <= date(2013, 7, 31))
             & (pl.col("DontCountHits") == 0)
             & (pl.col("IsRefresh") == 0)
             & (pl.col("URL") != "")
@@ -365,8 +365,8 @@ queries = [
         "SELECT Title, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND Title <> '' GROUP BY Title ORDER BY PageViews DESC LIMIT 10;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
-            & (pl.col("EventDate") >= datetime(2013, 7, 1))
-            & (pl.col("EventDate") <= datetime(2013, 7, 31))
+            & (pl.col("EventDate") >= date(2013, 7, 1))
+            & (pl.col("EventDate") <= date(2013, 7, 31))
             & (pl.col("DontCountHits") == 0)
             & (pl.col("IsRefresh") == 0)
             & (pl.col("Title") != "")
@@ -381,8 +381,8 @@ queries = [
         "SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND IsLink <> 0 AND IsDownload = 0 GROUP BY URL ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
-            & (pl.col("EventDate") >= datetime(2013, 7, 1))
-            & (pl.col("EventDate") <= datetime(2013, 7, 31))
+            & (pl.col("EventDate") >= date(2013, 7, 1))
+            & (pl.col("EventDate") <= date(2013, 7, 31))
             & (pl.col("IsRefresh") == 0)
             & (pl.col("IsLink") != 0)
             & (pl.col("IsDownload") == 0)
@@ -397,8 +397,8 @@ queries = [
         "SELECT TraficSourceID, SearchEngineID, AdvEngineID, CASE WHEN (SearchEngineID = 0 AND AdvEngineID = 0) THEN Referer ELSE '' END AS Src, URL AS Dst, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 GROUP BY TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
-            & (pl.col("EventDate") >= datetime(2013, 7, 1))
-            & (pl.col("EventDate") <= datetime(2013, 7, 31))
+            & (pl.col("EventDate") >= date(2013, 7, 1))
+            & (pl.col("EventDate") <= date(2013, 7, 31))
             & (pl.col("IsRefresh") == 0)
         )
         .group_by(
@@ -408,22 +408,22 @@ queries = [
                 "AdvEngineID",
                 pl.when(pl.col("SearchEngineID").eq(0) & pl.col("AdvEngineID").eq(0))
                 .then(pl.col("Referer"))
-                .otherwise("")
+                .otherwise(pl.lit(""))
                 .alias("Src"),
                 "URL",
             ]
         )
         .agg(pl.len().alias("PageViews"))
         .sort("PageViews", descending=True)
-        .slice(1000, 10),
+        .slice(1000, 10).collect(),
     ),
     (
         "Q40",
         "SELECT URLHash, EventDate, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND TraficSourceID IN (-1, 6) AND RefererHash = 3594120000172545465 GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 10 OFFSET 100;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
-            & (pl.col("EventDate") >= datetime(2013, 7, 1))
-            & (pl.col("EventDate") <= datetime(2013, 7, 31))
+            & (pl.col("EventDate") >= date(2013, 7, 1))
+            & (pl.col("EventDate") <= date(2013, 7, 31))
             & (pl.col("IsRefresh") == 0)
             & (pl.col("TraficSourceID").is_in([-1, 6]))
             & (pl.col("RefererHash") == 3594120000172545465)
@@ -438,8 +438,8 @@ queries = [
         "SELECT WindowClientWidth, WindowClientHeight, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND DontCountHits = 0 AND URLHash = 2868770270353813622 GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10 OFFSET 10000;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
-            & (pl.col("EventDate") >= datetime(2013, 7, 1))
-            & (pl.col("EventDate") <= datetime(2013, 7, 31))
+            & (pl.col("EventDate") >= date(2013, 7, 1))
+            & (pl.col("EventDate") <= date(2013, 7, 31))
             & (pl.col("IsRefresh") == 0)
             & (pl.col("DontCountHits") == 0)
             & (pl.col("URLHash") == 2868770270353813622)
@@ -455,19 +455,20 @@ queries = [
         lambda x: None,
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
-            & (pl.col("EventDate") >= datetime(2013, 7, 14))
-            & (pl.col("EventDate") <= datetime(2013, 7, 15))
+            & (pl.col("EventDate") >= date(2013, 7, 14))
+            & (pl.col("EventDate") <= date(2013, 7, 15))
             & (pl.col("IsRefresh") == 0)
             & (pl.col("DontCountHits") == 0)
         )
         .group_by(pl.col("EventTime").dt.truncate("minute"))
         .agg(pl.len().alias("PageViews"))
-        .slice(1000, 10),
+        .slice(1000, 10).collect(),
     ),
 ]
 
 queries_times = []
 for q in queries:
+    print(q[0])
     times = []
     for _ in range(3):
         start = timeit.default_timer()
