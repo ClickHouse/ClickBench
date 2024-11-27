@@ -2,24 +2,20 @@
 
 set -e
 
-#sudo apt-get update
-#sudo apt-get install -y docker.io
-#sudo apt-get install -y postgresql-client
-
-# Ubuntu:
-# snap install docker
-# sudo apt install posgresql-client-common
+# Setup on Ubuntu (your package manager may vary):
+# sudo snap install docker
+# sudo apt install postgresql-client-common
 # sudo apt install postgresql-client-16
 
-# Note: To get equivalent performance you should be runnign from
+# Note: To get equivalent performance you should be running from
 # AWS US-EAST-1 region or as close to there as possible. Otherwise
 # you'll see additional latency.
 
 # Sign up for MotherDuck. 
 # Go to the web ui and obtain a token
 # https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/
-# Save the token as the motherduck_token environment variable:
-# export motherduck_token=...
+# Save the token as the MOTHERDUCK_TOKEN environment variable:
+# export MOTHERDUCK_TOKEN=...
 # create a database called pgclick in the motherduck UI or duckdb cli
 # `CREATE DATABASE pgclick`
 
