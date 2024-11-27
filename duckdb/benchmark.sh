@@ -4,7 +4,7 @@
 
 sudo apt-get update
 sudo apt-get install -y python3-pip
-pip install --break-system-packages duckdb psutil
+pip install --break-system-packages duckdb==1.1.3 psutil
 
 # Load the data
 
@@ -12,7 +12,6 @@ wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hi
 gzip -d hits.csv.gz
 
 ./load.py
-# 414 seconds
 
 # Run the queries
 
