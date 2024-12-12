@@ -19,7 +19,12 @@ jobs:
         export ORGANIZATION=${{ secrets.CLICKHOUSE_CLOUD_ORGANIZATION }}
         export KEY_ID=${{ secrets.CLICKHOUSE_CLOUD_KEY_ID }}
         export KEY_SECRET=${{ secrets.CLICKHOUSE_CLOUD_KEY_SECRET }}
-        
+
+        if [ -z "$ORGANIZATION" ] || [ -z "$KEY_ID" ] || [ -z "$KEY_SECRET" ]; then
+          echo "Required secrets are not set. Skipping workflow."
+          exit 0
+        fi
+
         cd clickhouse-cloud
         curl https://clickhouse.com/ | sh
         sudo ./clickhouse install -y
