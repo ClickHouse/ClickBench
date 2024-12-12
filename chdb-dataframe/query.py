@@ -20,22 +20,31 @@ hits["EventTime"] = pd.to_datetime(hits["EventTime"], unit="s")
 hits["EventDate"] = pd.to_datetime(hits["EventDate"], unit="D")
 
 # fix all object columns to string
+start = timeit.default_timer()
 for col in hits.columns:
     if hits[col].dtype == "O":
         hits[col] = hits[col].astype(str)
+
+print("Dataframe(numpy) normalization time:", timeit.default_timer() - start)
 
 queries = []
 with open("queries.sql") as f:
     queries = f.readlines()
 
 queries_times = []
+
+# conn = chdb.connect("./tmp?verbose&log-level=test")
+conn = chdb.connect("./tmp")
+i = 0
 for q in queries:
+    i += 1
     times = []
     for _ in range(3):
         start = timeit.default_timer()
-        result = chdb.query(q, "Null")
+        result = conn.query(q, "Null")
         end = timeit.default_timer()
         times.append(end - start)
+    print(f"Q{i}: ", times)
     queries_times.append(times)
 
 result_json = {
@@ -61,7 +70,7 @@ result_json = {
 # if cpuinfo contains "AMD EPYC 9654" update machine and write result into results/epyc-9654.json
 if "AMD EPYC 9654" in open("/proc/cpuinfo").read():
     result_json["machine"] = "EPYC 9654, 384G"
-    with open("results/epyc-9654.json", "w") as f:
+    with open("results/epyc-9654-2.2.json", "w") as f:
         f.write(json.dumps(result_json, indent=4))
 else:
     # write result into results/c6a.metal.json
