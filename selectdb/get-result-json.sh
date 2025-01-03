@@ -4,12 +4,12 @@
 if [[ ! -d results ]]; then mkdir results; fi
 
 echo -e "{
-    \"system\": \"SelectDB\",
+    \"system\": \"Apache Doris\",
     \"date\": \"$(date '+%Y-%m-%d')\",
     \"machine\": \"$(sudo dmidecode -s system-product-name), 500gb gp2\",
     \"cluster_size\": 1,
     \"comment\": \"\",
-    \"tags\": [\"C++\", \"column-oriented\", \"MySQL compatible\"],
+    \"tags\": [\"C++\", \"column-oriented\", \"MySQL compatible\", \"ClickHouse derivative\"],
     \"load_time\": $(cat loadtime),
     \"data_size\": $(cat storage_size),
     \"result\": [

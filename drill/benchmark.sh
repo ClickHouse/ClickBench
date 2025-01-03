@@ -3,6 +3,9 @@
 sudo apt-get update
 sudo apt-get install -y docker.io
 
-# https://drill.apache.org/docs/running-drill-on-docker/
+wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
-sudo docker run -it --rm --name drill -p 8047:8047 -p 31010:31010 apache/drill
+./run.sh 2>&1 | tee log.txt
+
+cat log.txt | grep -P '\([\d\.]+ seconds\)|Errors' | sed -r -e 's/Errors:/null/; s/^.+\(([.0-9]+) seconds\)/\1/' |
+    awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'

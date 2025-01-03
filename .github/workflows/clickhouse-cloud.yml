@@ -1,0 +1,44 @@
+name: "Run ClickBench on ClickHouse Cloud"
+on:
+  workflow_dispatch:  # This allows manual trigger from the UI
+  schedule:
+    - cron: '10 10 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CI_COMMIT_MESSAGE: "[bot] update results for ClickHouse Cloud"
+      CI_COMMIT_AUTHOR: github
+    steps:
+    - uses: actions/checkout@v3
+    - run: |
+        export ORGANIZATION=${{ secrets.CLICKHOUSE_CLOUD_ORGANIZATION }}
+        export KEY_ID=${{ secrets.CLICKHOUSE_CLOUD_KEY_ID }}
+        export KEY_SECRET=${{ secrets.CLICKHOUSE_CLOUD_KEY_SECRET }}
+
+        if [ -z "$ORGANIZATION" ] || [ -z "$KEY_ID" ] || [ -z "$KEY_SECRET" ]; then
+          echo "Required secrets are not set. Skipping workflow."
+          exit 0
+        fi
+
+        cd clickhouse-cloud
+        curl https://clickhouse.com/ | sh
+        sudo ./clickhouse install -y
+        
+        bash combinations.sh
+        bash collect-results.sh
+        
+        git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+        git config --global user.email "${{ env.CI_COMMIT_AUTHOR }}@users.noreply.github.com"
+        
+        git pull
+        git add results/*.json
+        if git status | grep -q modified
+        then
+          git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
+          git push
+        fi

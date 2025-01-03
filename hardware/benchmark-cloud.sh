@@ -20,7 +20,7 @@ fi
 QUERY_ID_PREFIX="benchmark_$RANDOM"
 QUERY_NUM=1
 
-cat "$QUERIES_FILE" | sed "s/{table}/${TABLE}/g" | while read query
+cat "$QUERIES_FILE" | sed "s/{table}/${TABLE}/g" | while read -r query
     do
     for i in $(seq 1 $TRIES)
     do

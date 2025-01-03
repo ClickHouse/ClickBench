@@ -30,7 +30,7 @@ curl -X POST -H 'Content-Type: application/json' -d '
     '$([ $TIER == production ] && echo -n "\"minTotalMemoryGb\":${MEMORY},\"maxTotalMemoryGb\":${MEMORY},")'
     "ipAccessList": [{"source": "0.0.0.0/0", "description": "anywhere"}]
 }
-' --silent --show-error --user "${KEY_ID}:${KEY_SECRET}" "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services" | tee "${TMPDIR}"/service.json | jq
+' --silent --show-error --user "${KEY_ID}:${KEY_SECRET}" "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services" | tee "${TMPDIR}"/service.json | jq | grep -v password
 
 echo ${KEY_ID}:${KEY_SECRET}" "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services
 
@@ -48,14 +48,24 @@ do
     curl --silent --show-error --user $KEY_ID:$KEY_SECRET "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services/${SERVICE_ID}" | jq --raw-output .result.state | tee "${TMPDIR}"/state
     grep 'running' "${TMPDIR}"/state && break
     sleep 1
+    if [[ $i == 1000 ]]
+    then
+        echo "Too many retries"
+        exit 1
+    fi
 done
 
 echo "Waiting for clickhouse-server to start"
 
-for _ in {1..1000}
+for i in {1..1000}
 do
     clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "SELECT 1" && break
     sleep 1
+    if [[ $i == 1000 ]]
+    then
+        echo "Too many retries"
+        exit 1
+    fi
 done
 
 if [ ${PARALLEL_REPLICA} = true ]; then
@@ -79,6 +89,11 @@ do
     curl --silent --show-error --user $KEY_ID:$KEY_SECRET "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services/${SERVICE_ID}" | jq --raw-output .result.state | tee "${TMPDIR}"/state
     grep 'stopped' "${TMPDIR}"/state && break
     sleep 1
+    if [[ $i == 1000 ]]
+    then
+        echo "Too many retries"
+        exit 1
+    fi
 done
 
 echo "Deleting the service"

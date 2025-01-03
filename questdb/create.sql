@@ -105,4 +105,4 @@ CREATE TABLE hits
     RefererHash long,
     URLHash long,
     CLID int
-);
+) TIMESTAMP(EventTime) PARTITION BY DAY;

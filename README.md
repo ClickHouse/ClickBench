@@ -53,6 +53,7 @@ TLDR: *All Benchmarks Are ~~Bastards~~ Liars*.
 ### How To Add a New Result
 
 To introduce a new system, simply copy-paste one of the directories and edit the files accordingly:
+
 - `benchmark.sh`: this is the main script to run the benchmark on a fresh VM; Ubuntu 22.04 or newer should be used by default, or any other system if specified in the comments. The script may not necessarily run in a fully automated manner - it is recommended always to copy-paste the commands one by one and observe the results. For managed databases, if the setup requires clicking in the UI, write a `README.md` instead.
 - `README.md`: contains comments and observations if needed. For managed databases, it can describe the setup procedure to be used instead of a shell script.
 - `create.sql`: a CREATE TABLE statement. If it's a NoSQL system, another file like `wtf.json` can be presented.
@@ -63,6 +64,12 @@ To introduce a new system, simply copy-paste one of the directories and edit the
 To introduce a new result for an existing system on different hardware configurations, add a new file to `results`.
 
 To introduce a new result for an existing system with a different usage scenario, either copy the whole directory and name it differently (e.g. `timescaledb`, `timescaledb-compression`) or add a new file to the `results` directory.
+
+`index.html` can be re-generated using `./generate-results.sh`. This step is called via a GitHub action and optional.
+
+By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
+
+Please help us add more systems and run the benchmarks on more types of VMs.
 
 ### Installation And Fine-Tuning
 
@@ -209,6 +216,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Citus
 - [x] Vertica (without publishing)
 - [x] QuestDB
+- [x] chdb
 - [x] DuckDB
 - [x] DuckDB over local Parquet files
 - [ ] DuckDB operating like "Athena" on remote Parquet files
@@ -222,7 +230,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Druid
 - [x] Pinot
 - [x] CrateDB
-- [ ] Spark SQL
+- [x] Spark SQL
 - [x] Starrocks
 - [ ] ShitholeDB
 - [ ] Hive
@@ -266,7 +274,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] Exasol
 - [ ] LocustDB
 - [ ] EventQL
-- [ ] Apache Drill
+- [x] Apache Drill
 - [ ] Apache Kudu
 - [ ] Apache Kylin
 - [x] S3 select command in AWS
@@ -286,6 +294,10 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Tablespace
 - [x] Tembo
 - [x] Cloudberry
+- [ ] Daft
+- [x] Pandas
+- [x] Polars
+- [x] OctoSQL
 
 By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
 
@@ -444,7 +456,7 @@ In addition, I collect every benchmark that includes ClickHouse [here](https://g
 
 ## Additional Outcomes
 
-This benchmark can be used to collect the snippets for installation and data loading across a wide variety of DBMS. The usability and quality of the documentation can be compared. It has been used to improve the quality of the participants as demonstrated in [duckdb#3969](https://github.com/duckdb/duckdb/issues/3969), [timescaledb#4473](https://github.com/timescale/timescaledb/issues/4473), [mariadb-corporation#16](https://github.com/mariadb-corporation/mariadb-community-columnstore-docker/issues/16), [MonetDB#7309](https://github.com/duckdb/duckdb/issues/3969), [questdb#2272](https://github.com/questdb/questdb/issues/2272), [crate#12654](https://github.com/crate/crate/issues/12654), [LocustDB#152](https://github.com/cswinter/LocustDB/issues/152), [databend#9738](https://github.com/datafuselabs/databend/pull/9738), [databend#9612](https://github.com/datafuselabs/databend/pull/9612), [databend#10226](https://github.com/datafuselabs/databend/pull/10226 ), [databend#10195](https://github.com/datafuselabs/databend/pull/10195), [databend#9978](https://github.com/datafuselabs/databend/pull/9978), [databend#9965](https://github.com/datafuselabs/databend/pull/9965), [databend#9809](https://github.com/datafuselabs/databend/pull/9809), [databend#9716](https://github.com/datafuselabs/databend/pull/9716), [databend#9600](https://github.com/datafuselabs/databend/pull/9600), [databend#9565](https://github.com/datafuselabs/databend/pull/9565) etc.
+This benchmark can be used to collect the snippets for installation and data loading across a wide variety of DBMS. The usability and quality of the documentation can be compared. It has been used to improve the quality of the participants as demonstrated in [duckdb#3969](https://github.com/duckdb/duckdb/issues/3969), [timescaledb#4473](https://github.com/timescale/timescaledb/issues/4473), [mariadb-corporation#16](https://github.com/mariadb-corporation/mariadb-community-columnstore-docker/issues/16), [duckdb#3969](https://github.com/duckdb/duckdb/issues/3969), [questdb#2272](https://github.com/questdb/questdb/issues/2272), [crate#12654](https://github.com/crate/crate/issues/12654), [LocustDB#152](https://github.com/cswinter/LocustDB/issues/152), [databend#9738](https://github.com/datafuselabs/databend/pull/9738), [databend#9612](https://github.com/datafuselabs/databend/pull/9612), [databend#10226](https://github.com/datafuselabs/databend/pull/10226 ), [databend#10195](https://github.com/datafuselabs/databend/pull/10195), [databend#9978](https://github.com/datafuselabs/databend/pull/9978), [databend#9965](https://github.com/datafuselabs/databend/pull/9965), [databend#9809](https://github.com/datafuselabs/databend/pull/9809), [databend#9716](https://github.com/datafuselabs/databend/pull/9716), [databend#9600](https://github.com/datafuselabs/databend/pull/9600), [databend#9565](https://github.com/datafuselabs/databend/pull/9565) etc.
 ### References and Citation
 
-Alexey Milovidov, 2022.
+[Alexey Milovidov](https://github.com/alexey-milovidov), 2022.

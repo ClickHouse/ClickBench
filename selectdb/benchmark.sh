@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ex
 
-# This benchmark should run on Amazon Linux
+# This benchmark should run on Ubuntu 20.04
 
 # Install
 ROOT=$(pwd)
@@ -9,7 +9,7 @@ ROOT=$(pwd)
 if [[ -n "$1" ]]; then
     url="$1"
 else
-    url='https://selectdb.s3.amazonaws.com/selectdb-2.0.0-linux_x64.tar.gz'
+    url='https://qa-build.oss-cn-beijing.aliyuncs.com/enterprise-doris-release-output/selectdb-doris-2.1.7-rc01-bin-x64.tar.gz'
 fi
 # Download
 file_name="$(basename ${url})"
@@ -24,31 +24,33 @@ dir_name="${file_name/.tar.gz/}"
 
 # Try to stop SelectDB and remove it first if execute this script multiple times
 set +e
-"$dir_name"/fe/bin/stop_fe.sh
-"$dir_name"/be/bin/stop_be.sh
+"$dir_name"/selectdb-doris-2.1.7-rc01-bin-x64/fe/bin/stop_fe.sh
+"$dir_name"/selectdb-doris-2.1.7-rc01-bin-x64/be/bin/stop_be.sh
 rm -rf "$dir_name"
 set -e
 
 # Uncompress
 mkdir "$dir_name"
 tar zxf "$file_name" -C "$dir_name"
-DORIS_HOME="$ROOT/$dir_name/"
+DORIS_HOME="$ROOT/$dir_name/selectdb-doris-2.1.7-rc01-bin-x64"
 export DORIS_HOME
 
 # Install dependencies
-sudo yum install -y mysql java-11-amazon-corretto.x86_64
-export JAVA_HOME="/usr/lib/jvm/java-11-amazon-corretto.x86_64/"
+sudo apt update
+sudo apt install -y openjdk-17-jdk
+sudo apt install -y mysql-client
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64/"
 export PATH=$JAVA_HOME/bin:$PATH
 
-IPADDR=$(hostname -i)
+sudo systemctl disable unattended-upgrades
+sudo systemctl stop unattended-upgrades
+sudo systemctl stop mssql-server
 
-# Start Frontend
-echo "priority_networks = ${IPADDR}/24" >>"$DORIS_HOME"/fe/conf/fe_custom.conf
 "$DORIS_HOME"/fe/bin/start_fe.sh --daemon
 
 # Start Backend
-echo "priority_networks = ${IPADDR}/24" >>"$DORIS_HOME"/be/conf/be_custom.conf
 sudo sysctl -w vm.max_map_count=2000000
+ulimit -n 65535
 "$DORIS_HOME"/be/bin/start_be.sh --daemon
 
 # Wait for Frontend ready
@@ -64,7 +66,7 @@ while true; do
 done
 
 # Setup cluster, add Backend to cluster
-mysql -h 127.0.0.1 -P9030 -uroot -e "ALTER SYSTEM ADD BACKEND '${IPADDR}:9050' "
+mysql -h 127.0.0.1 -P9030 -uroot -e "ALTER SYSTEM ADD BACKEND '127.0.0.1:9050' "
 
 # Wait for Backend ready
 while true; do
@@ -77,6 +79,8 @@ while true; do
         sleep 2
     fi
 done
+
+echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
 # Create Database and table
 mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits"

@@ -7,7 +7,7 @@ TRIES=5
 
 for i in {1..10}; do ${CLICKHOUSE_CLIENT} --query 'SELECT version();' > /dev/null && break || sleep 1; done
 
-cat "all_queries.sql" | while read query; do
+cat "all_queries.sql" | while read -r query; do
     [ -z "$HOST" ] && sync
     if [ -z "$HOST" ]; 
     	then echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null; 

@@ -1,5 +1,5 @@
 {
-    "system": "AlloyDB",
+    "system": "AlloyDB (tuned)",
     "date": "2023-11-25",
     "machine": "8 vCPU 64GB",
     "cluster_size": "serverless",

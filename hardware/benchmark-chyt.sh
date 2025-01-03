@@ -4,7 +4,7 @@ QUERIES_FILE="queries.sql"
 TABLE=$1
 TRIES=3
 
-cat "$QUERIES_FILE" | sed "s|{table}|\"${TABLE}\"|g" | while read query; do
+cat "$QUERIES_FILE" | sed "s|{table}|\"${TABLE}\"|g" | while read -r query; do
 
     echo -n "["
     for i in $(seq 1 $TRIES); do

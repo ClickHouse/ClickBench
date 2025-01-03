@@ -21,7 +21,7 @@ ${CLICKHOUSE_CLIENT} --query 'SELECT version();'
 
 echo "Brown Benchmark:"
 
-cat "$BROWN_QUERIES_FILE" | while read query; do
+cat "$BROWN_QUERIES_FILE" | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
@@ -36,7 +36,7 @@ done
 
 echo "SSB Benchmark:"
 
-cat "$SSB_QUERIES_FILE" | while read query; do
+cat "$SSB_QUERIES_FILE" | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
@@ -52,7 +52,7 @@ done
 
 echo "ClickHouse Benchmark:"
 
-cat "$CH_QUERIES_FILE" | sed "s/{table}/${CH_TABLE}/g" | while read query; do
+cat "$CH_QUERIES_FILE" | sed "s/{table}/${CH_TABLE}/g" | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
 

@@ -19,7 +19,7 @@ fi
 TRIES=3
 QUERY_NUM=1
 echo $1
-cat queries.sql | while read query; do
+cat queries.sql | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
@@ -31,7 +31,7 @@ cat queries.sql | while read query; do
         # 2. each query contains a "Query took xxx seconds", we just grep these 2 lines
         # 3. use sed to take the second line
         # 4. use awk to take the number we want
-        RES=`datafusion-cli -f $CREATE_SQL_FILE /tmp/query.sql 2>&1 | grep "Query took" | sed -n 2p | awk '{print $7}'`
+        RES=`datafusion-cli -f $CREATE_SQL_FILE /tmp/query.sql 2>&1 | grep "Elapsed" |sed -n 2p | awk '{ print $2 }'`
         [[ $RES != "" ]] && \
             echo -n "$RES" || \
             echo -n "null"
