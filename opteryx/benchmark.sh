@@ -27,8 +27,7 @@ seq 0 99 | xargs -P100 -I{} bash -c 'wget --no-verbose --directory-prefix hits -
 # Run benchmarks for partitioned data using queries from queries.sql
 if [[ -f ./queries.sql ]]; then
     while read -r query; do
-        sync
-        echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
+        sudo sync && echo 3 | sudo tee /proc/sys/vm/drop_caches
 
         ~/opteryx_venv/bin/python -m opteryx "$query" --cycles 3 2>&1
     done < ./queries.sql
