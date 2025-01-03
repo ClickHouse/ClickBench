@@ -21,9 +21,9 @@ The steps are broadly to:
 1. wait for status check passed, then ssh to EC2 `ssh ec2-user@{ip}`
 1. `sudo apt-get update -y`
 1. `sudo apt-get install git -y`
-1. `git clone https://github.com/mabel-dev/ClickBench`
+1. `git clone https://github.com/ClickHouse/ClickBench`
 1. `cd ClickBench/opteryx`
-1. `sudo ./benchmark_latest.sh`
+1. `sudo ./benchmark.sh`
 
 ### Know Issues:
 
