@@ -13,10 +13,11 @@ The steps are broadly to:
 - run the benchmark
 
 1. manually start a AWS EC2 instance
-    - `c6a.4xlarge`
     - Ubuntu 24
-    - Root 500GB gp2 SSD
-    - no EBS optimized
+    - 64-bit Architecture
+    - `c6a.4xlarge`
+    - Root Storage: 500GB gp2 SSD
+    - Advanced: EBS-optimized, disabled
 1. wait for status check passed, then ssh to EC2 `ssh ec2-user@{ip}`
 1. `sudo apt-get update -y`
 1. `sudo apt-get install git -y`
