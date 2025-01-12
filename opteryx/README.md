@@ -1,30 +1,59 @@
 # Opteryx
 
-Opteryx is an in-process query engine written in Python/Cython, that uses Apache Arrow as its in-memory format. For more information, please check <https://opteryx.dev/>
+Opteryx is an in-process SQL query engine written in Python/Cython that leverages Apache Arrow as its in-memory format. Designed for ad hoc queries, Opteryx directly queries data from storage without requiring any preloading or preprocessing.
 
-We use the split parquet files for benchmarking and collect them into a folder. Opteryx is an ad hoc engine so there is no loading or preprocessing of the files before querying.
+For more information, visit:
 
-## Generate benchmark results
+- [Opteryx Documentation](https://opteryx.dev/)
+- [Opteryx GitHub Repository](https://github.com/mabel-dev/opteryx)
 
-The steps are broadly to:
-- create the environment
-- install python
-- download the benchmark
-- run the benchmark
+This page provides instructions for benchmarking Opteryx using the split Parquet files provided by ClickBench.
 
-1. manually start a AWS EC2 instance
-    - Ubuntu 24
-    - 64-bit Architecture
-    - `c6a.4xlarge`
-    - Root Storage: 500GB gp2 SSD
-    - Advanced: EBS-optimized, disabled
-1. wait for status check passed, then ssh to EC2 `ssh ec2-user@{ip}`
-1. `sudo apt-get update -y`
-1. `sudo apt-get install git -y`
-1. `git clone https://github.com/ClickHouse/ClickBench`
-1. `cd ClickBench/opteryx`
-1. `sudo ./benchmark.sh`
+---
 
-### Know Issues:
+## Generating Benchmark Results
 
-1. Not all functions used in queries are supported
+To generate benchmark results, follow these steps:
+
+### **High-level Steps**
+1. Set up the environment.
+2. Install Python and required dependencies.
+3. Download the benchmark dataset.
+4. Run the benchmark script.
+
+### **Detailed Instructions**
+
+1. **Start an AWS EC2 instance**
+   - OS: Ubuntu 24
+   - Architecture: 64-bit
+   - Instance Type: `c6a.4xlarge`
+   - Root Storage: 500 GB gp2 SSD
+   - Advanced Settings: Ensure EBS-optimization is **disabled**.
+
+2. **SSH into the instance** (after the status checks are complete):
+   ~~~bash
+   ssh ec2-user@{ip}
+   ~~~
+
+3. **Update the package list and install Git**
+   ~~~bash
+   sudo apt-get update -y
+   sudo apt-get install git -y
+   ~~~
+
+4. **Clone the ClickBench repository**
+   ~~~bash
+   git clone https://github.com/ClickHouse/ClickBench
+   cd ClickBench/opteryx
+   ~~~
+
+5. **Run the benchmark script**
+   ~~~bash
+   sudo ./benchmark.sh
+   ~~~
+
+### Known Issues
+
+- `COUNT(DISTINCT a)` does not distinct the values and instead performs `COUNT(a)` 
+- Queries 28 and 29 fail due to errors with result handling.
+- Queries 33 and 34 fail due to Out of Memory (OOM) errors.
