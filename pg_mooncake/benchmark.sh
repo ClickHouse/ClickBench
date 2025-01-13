@@ -6,7 +6,7 @@ sudo apt-get install -y docker.io
 sudo apt-get install -y postgresql-client
 
 wget --no-verbose --continue https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
-sudo docker run -d --name pg_mooncake -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust - -v ./hits.parquet:/tmp/hits.parquet mooncakelabs/pg_mooncake
+sudo docker run -d --name pg_mooncake -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -v ./hits.parquet:/tmp/hits.parquet mooncakelabs/pg_mooncake:17-v0.1.0
 
 sleep 5
 psql postgres://postgres:pg_mooncake@localhost:5432/postgres -f create.sql
