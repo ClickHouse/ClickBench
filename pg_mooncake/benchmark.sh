@@ -3,10 +3,10 @@
 
 #install docker if needed.
 
-# sudo apt-get update
-# sudo apt-get install -y docker.io
-# sudo usermod -aG docker $USER
-# newgrp docker
+sudo apt-get update
+sudo apt-get install -y docker.io
+sudo usermod -aG docker $USER
+newgrp docker
 
 sudo apt-get install -y postgresql-client
 
