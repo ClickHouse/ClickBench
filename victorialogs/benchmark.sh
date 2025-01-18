@@ -6,7 +6,7 @@ RELEASE_VERSION=v1.6.0-victorialogs
 
 wget --no-verbose --continue https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${RELEASE_VERSION}/victoria-logs-linux-amd64-${RELEASE_VERSION}.tar.gz
 tar xzf victoria-logs-linux-amd64-${RELEASE_VERSION}.tar.gz
-./victoria-logs-prod -loggerOutput=stdout > server.log &
+./victoria-logs-prod -loggerOutput=stdout -retentionPeriod=20y --search.maxQueryDuration=5m > server.log &
 
 while true
 do
