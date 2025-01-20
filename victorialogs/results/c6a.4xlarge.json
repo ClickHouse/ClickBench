@@ -1,5 +1,5 @@
 {
-    "system": "VictoriaMetrics",
+    "system": "VictoriaLogs",
     "date": "2025-01-16",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
