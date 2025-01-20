@@ -2,7 +2,7 @@
 
 sudo apt-get update
 sudo apt-get install -y python3-pip
-pip install tableauhyperapi
+pip install --break-system-packages tableauhyperapi
 
 wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 gzip -d hits.csv.gz
