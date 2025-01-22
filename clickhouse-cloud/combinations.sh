@@ -14,6 +14,7 @@ do
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
         ./cloud-api.sh &
+        sleep 1 # Prevent "Too many requests" to the API
     done
 done
 
@@ -23,6 +24,7 @@ do
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
         ./cloud-api.sh &
+        sleep 1
     done
 done
 
@@ -35,6 +37,7 @@ do
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
         ./cloud-api.sh &
+        sleep 1
     done
 done
 
@@ -44,6 +47,7 @@ do
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
         ./cloud-api.sh &
+        sleep 1
     done
 done
 
@@ -56,6 +60,7 @@ do
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
         ./cloud-api.sh &
+        sleep 1
     done
 done
 
@@ -65,6 +70,7 @@ do
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
         ./cloud-api.sh &
+        sleep 1
     done
 done
 
