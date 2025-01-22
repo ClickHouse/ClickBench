@@ -236,7 +236,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] Hive
 - [x] Hydra
 - [ ] Impala
-- [ ] Hyper
+- [x] Hyper
 - [x] Umbra
 - [x] SQLite
 - [x] Redshift
