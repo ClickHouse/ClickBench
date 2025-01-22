@@ -16,7 +16,7 @@ command -v clickhouse-client || exit 1
 
 echo "Provisioning a service in ${PROVIDER}, region ${REGION}, memory ${MEMORY}, replicas ${REPLICAS}, with parallel replicas set to ${PARALLEL_REPLICA}"
 
-TMPDIR="${PROVIDER}-${REGION}-${REPLICAS}-${MEMORY}-${PARALLEL_REPLICA}-$$"
+TMPDIR="csp-${PROVIDER}-region-${REGION}-replicas-${REPLICAS}-memory-${MEMORY}-parallel-${PARALLEL_REPLICA}-$$"
 mkdir -p "${TMPDIR}"
 
 echo $TMPDIR
