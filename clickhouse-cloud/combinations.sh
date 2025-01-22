@@ -13,7 +13,7 @@ do
     for MEMORY in 8 12 16 32 64 128 256
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
-        ./cloud-api.sh
+        ./cloud-api.sh &
     done
 done
 
@@ -25,7 +25,7 @@ do
     for MEMORY in 8 12 16 32 64 128 256
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
-        ./cloud-api.sh
+        ./cloud-api.sh &
     done
 done
 
@@ -37,7 +37,7 @@ do
     for MEMORY in 8 12 16 32 64 128 256
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
-        ./cloud-api.sh
+        ./cloud-api.sh &
     done
 done
 
