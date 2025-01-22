@@ -7,14 +7,15 @@ for f in */result
 do
     echo $f
     PROVIDER=$(echo "$f" | grep -o -E '^[a-z]+')
-    MACHINE=$(echo "$f" | sed -r -e 's~^[a-z0-9-]+-([0-9]+)-[a-z]+-[0-9]+/.*$~\1~; s/^0/dev/; s/([0-9]+)/\1GB/')
+    MACHINE=$(echo "$f" | sed -r -e 's~^[a-z0-9-]+-([0-9]+)-[0-9]+-[0-9]+/.*$~\1~; s/([0-9]+)/\1GB/')
+    REPLICAS=$(echo "$f" | sed -r -e 's~^[a-z0-9-]+-[0-9]+-([0-9]+)-[0-9]+/.*$~\1~')
 
     echo '
 {
     "system": "ClickHouse Cloud ('$PROVIDER')",
     "date": "'$(date +%F)'",
     "machine": "'$MACHINE'",
-    "cluster_size": "serverless",
+    "cluster_size": "'$REPLICAS'",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "'$PROVIDER'"],
@@ -26,5 +27,5 @@ do
 '$(grep -F "[" "$f" | head -c-2)'
 ]
 }
-' > "results/${PROVIDER}.${MACHINE}.json"
+' > "results/${PROVIDER}.${MACHINE}.r${REPLICAS}.json"
 done

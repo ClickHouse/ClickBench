@@ -6,28 +6,28 @@
 
 PROVIDER=${PROVIDER:-aws}
 REGION=${REGION:-eu-central-1}
-TIER=${TIER:-development}
-MEMORY=${MEMORY:-0}
+MEMORY=${MEMORY:-8}
+REPLICAS=${REPLICAS:-2}
 PARALLEL_REPLICA=${PARALLEL_REPLICA:-false}
 
 command -v jq || exit 1
 command -v curl || exit 1
 command -v clickhouse-client || exit 1
 
-echo "Provisioning a service in ${PROVIDER}, region ${REGION}, ${TIER} tier, memory ${MEMORY}, with parallel replicas set to ${PARALLEL_REPLICA}"
+echo "Provisioning a service in ${PROVIDER}, region ${REGION}, memory ${MEMORY}, replicas ${REPLICAS}, with parallel replicas set to ${PARALLEL_REPLICA}"
 
-TMPDIR="${PROVIDER}-${REGION}-${TIER}-${MEMORY}-${PARALLEL_REPLICA}-$$"
+TMPDIR="${PROVIDER}-${REGION}-${REPLICAS}-${MEMORY}-${PARALLEL_REPLICA}-$$"
 mkdir -p "${TMPDIR}"
 
 echo $TMPDIR
 
 curl -X POST -H 'Content-Type: application/json' -d '
 {
-    "name": "ClickBench-'${PROVIDER}'-'${REGION}'-'${TIER}'-'${MEMORY}'-'$$'",
-    "tier": "'$TIER'",
+    "name": "ClickBench-'${PROVIDER}'-'${REGION}'-'${REPLICAS}'-'${MEMORY}'-'$$'",
     "provider": "'$PROVIDER'",
     "region": "'$REGION'",
-    '$([ $TIER == production ] && echo -n "\"minTotalMemoryGb\":${MEMORY},\"maxTotalMemoryGb\":${MEMORY},")'
+    "numReplicas": '$REPLICAS',
+    "minReplicaMemoryGb":'$MEMORY',"maxReplicaMemoryGb":'$MEMORY',
     "ipAccessList": [{"source": "0.0.0.0/0", "description": "anywhere"}]
 }
 ' --silent --show-error --user "${KEY_ID}:${KEY_SECRET}" "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services" | tee "${TMPDIR}"/service.json | jq | grep -v password
@@ -69,8 +69,8 @@ do
 done
 
 if [ ${PARALLEL_REPLICA} = true ]; then
-   echo "Enabling parallel replica to the default user"
-   clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "ALTER USER default SETTINGS allow_experimental_parallel_reading_from_replicas=2;"
+    echo "Enabling parallel replica to the default user"
+    clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "ALTER USER default SETTINGS enable_parallel_replicas = 1"
 fi
 
 echo "Running the benchmark"
