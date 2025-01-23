@@ -6,7 +6,7 @@
 for f in */result
 do
     echo $f
-    REGEXP='^csp-([a-z0-9-]+)-region-([a-z0-9-]+)-replicas-([a-z0-9-]+)-memory-([a-z0-9-]+)-parallel-([a-z0-9-]+)-pid-([a-z0-9-]+)$'
+    REGEXP='^csp-([a-z0-9-]+)-region-([a-z0-9-]+)-replicas-([a-z0-9-]+)-memory-([a-z0-9-]+)-parallel-([a-z0-9-]+)-pid-([a-z0-9-]+)/result$'
     PROVIDER=$(echo "$f" | sed -r -e 's!'$REGEXP'!\1!')
     REPLICAS=$(echo "$f" | sed -r -e 's!'$REGEXP'!\3!')
     MEMORY=$(echo "$f" | sed -r -e 's!'$REGEXP'!\4!')
