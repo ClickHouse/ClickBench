@@ -6,15 +6,17 @@
 for f in */result
 do
     echo $f
-    PROVIDER=$(echo "$f" | grep -o -E '^[a-z]+')
-    MACHINE=$(echo "$f" | sed -r -e 's~^[a-z0-9-]+-([0-9]+)-[a-z]+-[0-9]+/.*$~\1~; s/^0/dev/; s/([0-9]+)/\1GB/')
+    REGEXP='^csp-([a-z0-9-]+)-region-([a-z0-9-]+)-replicas-([a-z0-9-]+)-memory-([a-z0-9-]+)-parallel-([a-z0-9-]+)-pid-([a-z0-9-]+)/result$'
+    PROVIDER=$(echo "$f" | sed -r -e 's!'$REGEXP'!\1!')
+    REPLICAS=$(echo "$f" | sed -r -e 's!'$REGEXP'!\3!')
+    MEMORY=$(echo "$f" | sed -r -e 's!'$REGEXP'!\4!')
 
     echo '
 {
     "system": "ClickHouse Cloud ('$PROVIDER')",
     "date": "'$(date +%F)'",
-    "machine": "'$MACHINE'",
-    "cluster_size": "serverless",
+    "machine": "'$MEMORY'GiB",
+    "cluster_size": "'$REPLICAS'",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "'$PROVIDER'"],
@@ -26,5 +28,5 @@ do
 '$(grep -F "[" "$f" | head -c-2)'
 ]
 }
-' > "results/${PROVIDER}.${MACHINE}.json"
+' > "results/${PROVIDER}.${REPLICAS}.${MEMORY}.json"
 done
