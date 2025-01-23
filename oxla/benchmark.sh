@@ -16,25 +16,25 @@ wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hi
 echo "Unpack dataset."
 gzip -d hits.csv.gz
 chmod 777 ~ hits.csv
-mkdir data
+mkdir ~/data
 mv hits.csv ~/data
 
 # get and configure Oxla image
 echo "Install and run Oxla."
 
-sudo docker run --rm -p 5432:5432 -v ~/data:/data --name oxlacontainer public.ecr.aws/oxla/release:1.20.0-beta > /dev/null 2>&1 &
+sudo docker run --rm -p 5432:5432 -v ~/data:/data --name oxlacontainer public.ecr.aws/oxla/release:1.53.0-beta > /dev/null 2>&1 &
 sleep 30 # waiting for container start and db initialisation (leader election, etc.)
 
 # create table and ingest data
 export PGCLIENTENCODING=UTF8
 
-psql -h localhost -t < create.sql
+PGPASSWORD=oxla psql -h localhost -U oxla -t < create.sql
 echo "Insert data."
-psql -h localhost -t -c '\timing' -c "COPY hits FROM '/data/hits.csv';"
+PGPASSWORD=oxla psql -h localhost -U oxla -t -c '\timing' -c "COPY hits FROM '/data/hits.csv';"
 
 # get ingested data size
 echo "data size after ingest:"
-psql -h localhost -t -c '\timing' -c "SELECT pg_total_relation_size('hits');"
+PGPASSWORD=oxla psql -h localhost -U oxla -t -c '\timing' -c "SELECT pg_total_relation_size('hits');"
 
 # wait for merges to finish
 sleep 60
