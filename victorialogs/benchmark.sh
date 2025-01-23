@@ -2,7 +2,7 @@
 
 # Install
 
-RELEASE_VERSION=v1.6.0-victorialogs
+RELEASE_VERSION=v1.7.0-victorialogs
 
 wget --no-verbose --continue https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${RELEASE_VERSION}/victoria-logs-linux-amd64-${RELEASE_VERSION}.tar.gz
 tar xzf victoria-logs-linux-amd64-${RELEASE_VERSION}.tar.gz
