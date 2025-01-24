@@ -2,7 +2,7 @@
 {
     "system": "ClickHouse Cloud (aws)",
     "date": "2025-01-24",
-    "machine": "8GiB",
+    "machine": "8GiB, 2 nodes",
     "cluster_size": "2",
     "comment": "",
 

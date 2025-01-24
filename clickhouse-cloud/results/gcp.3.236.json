@@ -2,7 +2,7 @@
 {
     "system": "ClickHouse Cloud (gcp)",
     "date": "2025-01-24",
-    "machine": "236GiB",
+    "machine": "236GiB, 3 nodes",
     "cluster_size": "3",
     "comment": "",
 
