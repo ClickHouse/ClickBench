@@ -15,7 +15,7 @@ do
 {
     "system": "ClickHouse Cloud ('$PROVIDER')",
     "date": "'$(date +%F)'",
-    "machine": "'$MEMORY'GiB, '$REPLICAS' replicas",
+    "machine": "'$MEMORY'GiB, '$REPLICAS' replica(s)",
     "cluster_size": "'$REPLICAS'",
     "comment": "",
 
