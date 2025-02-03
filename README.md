@@ -308,6 +308,12 @@ Please help us add more systems and run the benchmarks on more types of VMs.
 
 Many alternative benchmarks are applicable to OLAP DBMS with their own advantages and disadvantages.
 
+### JSONBench
+
+https://github.com/ClickHouse/JSONBench
+
+A benchmark for data analytics on JSON.
+
 ### Brown University Mgbench
 
 https://github.com/crottyan/mgbench
