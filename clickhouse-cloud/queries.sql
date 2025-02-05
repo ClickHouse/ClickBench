@@ -1,3 +1,15 @@
+ALTER TABLE hits UPDATE AdvEngineID = AdvEngineID + 1000 WHERE UserID = 2024196079653811357;
+ALTER TABLE hits UPDATE AdvEngineID = AdvEngineID + 1001 WHERE UserID = 716193124913893974;
+ALTER TABLE hits UPDATE AdvEngineID = AdvEngineID + 1002 WHERE UserID = 298885038437240179;
+ALTER TABLE hits UPDATE SearchPhrase = SearchPhrase || '(updated)' WHERE UserID = 835157184735512989;
+ALTER TABLE hits UPDATE SearchPhrase = SearchPhrase || '(updated)' WHERE UserID = 2287597373798436401;
+ALTER TABLE hits UPDATE SearchPhrase = SearchPhrase || '(updated)' WHERE UserID = 1623599965592509841;
+ALTER TABLE hits UPDATE ResolutionWidth = ResolutionWidth * 10 WHERE CounterID = 140443;
+ALTER TABLE hits UPDATE ResolutionWidth = ResolutionWidth * 10 WHERE CounterID = 62;
+ALTER TABLE hits UPDATE ResolutionWidth = ResolutionWidth * 10 WHERE CounterID = 3035;
+ALTER TABLE hits UPDATE URL = URL || '/updated' WHERE Title LIKE '%Google%';
+ALTER TABLE hits UPDATE URL = URL || '/updated' WHERE Title LIKE '%Amazon%';
+ALTER TABLE hits UPDATE URL = URL || '/updated' WHERE Title LIKE '%Facebook%'
 SELECT COUNT(*) FROM hits;
 SELECT COUNT(*) FROM hits WHERE AdvEngineID <> 0;
 SELECT SUM(AdvEngineID), COUNT(*), AVG(ResolutionWidth) FROM hits;
