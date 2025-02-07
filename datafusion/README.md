@@ -20,7 +20,7 @@ The benchmark should be completed in under an hour. On-demand pricing is $0.6 pe
 1. `cd ClickBench/datafusion`
 1. `vi benchmark.sh` and modify following line to target Datafusion version
     ```
-    git checkout 43.0.0
+    git checkout 44.0.0
     ```
 1. `bash benchmark.sh`
 
