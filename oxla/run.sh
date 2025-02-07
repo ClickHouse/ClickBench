@@ -13,7 +13,7 @@ cat queries.sql | while read -r query; do
     else
     	results+="["
 	for i in $(seq 1 $TRIES); do
-            time=$(psql -h localhost -t -c '\timing' -c "$query" | grep 'Time' | perl -nle 'm/Time: ([^ ]*) ms/; print $1 / 1000')
+            time=$(PGPASSWORD=oxla psql -h localhost -U oxla -t -c '\timing' -c "$query" | grep 'Time' | perl -nle 'm/Time: ([^ ]*) ms/; print $1 / 1000')
             echo "$time s"
             results+="$time,"
         done
