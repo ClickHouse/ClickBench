@@ -19,7 +19,7 @@ fi
         [[ $file =~ ^(hardware|versions|gravitons)/ ]] && continue;
 
         [ "${FIRST}" = "0" ] && echo -n ','
-        jq --compact-output ". += {\"source\": \"${file}\"}" "${file}"
+        jq --compact-output ". += {\"source\": \"${file}\"}" "${file}" || echo "Error in $file" >&2
         FIRST=0
     done
 

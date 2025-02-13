@@ -14,7 +14,7 @@ sudo yum install gcc -y
 # Install DataFusion main branch
 git clone https://github.com/apache/arrow-datafusion.git
 cd arrow-datafusion/datafusion-cli
-git checkout 43.0.0
+git checkout 45.0.0
 CARGO_PROFILE_RELEASE_LTO=true RUSTFLAGS="-C codegen-units=1" cargo build --release
 export PATH="`pwd`/target/release:$PATH"
 cd ../..

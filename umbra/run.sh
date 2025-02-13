@@ -23,6 +23,5 @@ cat queries.sql | while read -r query; do
     done
 
     
-    killall -9 server
-    sleep 2
+    killall -9 -w server
 done

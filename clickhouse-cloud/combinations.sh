@@ -8,43 +8,70 @@ PROVIDER=aws
 REGION='us-east-1'
 PARALLEL_REPLICA=false
 
-TIER=development
-MEMORY=0
-
-export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
-./cloud-api.sh &
-
-TIER=production
-for MEMORY in 24 48 96 192 360 720
+for REPLICAS in 1
 do
-    export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
-    ./cloud-api.sh &
+    for MEMORY in 8 12
+    do
+        export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
+        ./cloud-api.sh &
+        sleep 1 # Prevent "Too many requests" to the API
+    done
+done
+
+for REPLICAS in 2 3
+do
+    for MEMORY in 8 12 16 32 64 120 236
+    do
+        export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
+        ./cloud-api.sh &
+        sleep 1
+    done
 done
 
 PROVIDER=gcp
 REGION='us-east1'
 
-TIER=development
-MEMORY=0
-
-export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
-./cloud-api.sh &
-
-TIER=production
-for MEMORY in 24 48 96 192 360 708
+for REPLICAS in 1
 do
-    export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
-    ./cloud-api.sh &
+    for MEMORY in 8 12
+    do
+        export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
+        ./cloud-api.sh &
+        sleep 1
+    done
+done
+
+for REPLICAS in 2 3
+do
+    for MEMORY in 8 12 16 32 64 120 236
+    do
+        export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
+        ./cloud-api.sh &
+        sleep 1
+    done
 done
 
 PROVIDER=azure
 REGION='eastus2'
 
-TIER=production
-for MEMORY in 24 48 96 192 360
+for REPLICAS in 1
 do
-    export PROVIDER TIER REGION MEMORY PARALLEL_REPLICA
-    ./cloud-api.sh &
+    for MEMORY in 8 12
+    do
+        export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
+        ./cloud-api.sh &
+        sleep 1
+    done
+done
+
+for REPLICAS in 2 3
+do
+    for MEMORY in 8 12 16 32 64 120
+    do
+        export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
+        ./cloud-api.sh &
+        sleep 1
+    done
 done
 
 wait
