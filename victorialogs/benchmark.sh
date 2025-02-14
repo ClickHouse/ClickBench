@@ -2,7 +2,7 @@
 
 # Install
 
-RELEASE_VERSION=v1.10.0-victorialogs
+RELEASE_VERSION=v1.10.1-victorialogs
 
 # Stop the existing victorialogs instance if any and drop its data
 while true
