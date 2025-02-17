@@ -11,5 +11,5 @@ cat queries.sql | while read -r query; do
         echo "set search_path=$DATABASE;"
         echo '\timing'
         yes "$query" | head -n $TRIES
-    ) | psql $CONNECTION | grep 'Time'
+    ) | psql --no-psqlrc --tuples-only $CONNECTION | grep 'Time'
 done
