@@ -4,8 +4,7 @@ set -ex
 
 # Setup on Ubuntu (your package manager may vary):
 # sudo snap install docker
-# sudo apt install postgresql-client-common
-# sudo apt install postgresql-client-16
+# sudo apt install postgresql-client
 
 # Note: To get equivalent performance you should be running from
 # AWS US-EAST-1 region or as close to there as possible. Otherwise
