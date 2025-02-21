@@ -10,7 +10,14 @@ chmod 777 ~ hits.tsv
 
 sudo -u postgres psql -t -c 'CREATE DATABASE test'
 sudo -u postgres psql test -t < create.sql
-sudo -u postgres psql test -t -c '\timing' -c "\\copy hits FROM 'hits.tsv' with freeze"
+
+# Load data: wrap TRUNCATE and \copy FREEZE in a single transaction
+sudo -u postgres psql test <<'EOF'
+BEGIN;
+TRUNCATE TABLE hits;
+\copy hits FROM 'hits.tsv' with freeze;
+COMMIT;
+EOF
 
 sudo -u postgres psql test -t -c 'VACUUM ANALYZE hits'
 
