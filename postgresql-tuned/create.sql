@@ -1,3 +1,5 @@
+-- Optimized column order according to
+-- https://github.com/ClickHouse/ClickBench/issues/234
 CREATE TABLE hits
 (
     WatchID BIGINT NOT NULL,
