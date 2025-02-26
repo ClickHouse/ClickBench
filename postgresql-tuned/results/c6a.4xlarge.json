@@ -1,5 +1,5 @@
 {
-    "system": "PostgreSQL Tuned",
+    "system": "PostgreSQL (tuned)",
     "date": "2025-02-26",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
