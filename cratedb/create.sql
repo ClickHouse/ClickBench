@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS hits;
+
 CREATE TABLE hits
 (
     WatchID BIGINT NOT NULL,
