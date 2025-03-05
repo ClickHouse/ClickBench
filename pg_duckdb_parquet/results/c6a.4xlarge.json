@@ -1,5 +1,5 @@
 {
-    "system": "pg_duckdb",
+    "system": "pg_duckdb (Parquet)",
     "date": "2024-11-18",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
