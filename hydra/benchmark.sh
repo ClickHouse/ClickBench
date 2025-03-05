@@ -2,34 +2,15 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# sets up PG14, configs, and build deps on ubuntu 22.04
-sudo ./install.sh
+# install `psql` if necessary, e.g.:
+#sudo apt-get update
+#sudo apt-get install -y postgresql-client
 
-# download hits.tsv if we dont already have it
-if [ ! -e hits.tsv ]; then
-    wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-    gzip -d hits.tsv.gz
-fi
-
-# ensure postgres user can access hits.tsv
-chmod a+rX . hits.tsv
-
-# set up db, user, table; load data.
-sudo -u postgres psql -t -c 'CREATE DATABASE test'
-sudo -u postgres psql test -t < create.sql
-sudo -u postgres psql test -t -c 'TRUNCATE hits'
-sudo -u postgres psql test -t -c '\timing' -c "\\copy hits FROM 'hits.tsv'"
-
-# COPY 99997497
-# Time: 1320024.670 ms (22:00.025)
+# load data
+psql "$DATABASE_URL" -c '\timing on' -t -f create.sql
 
 # run test
-./run.sh 2>&1 | tee log.txt
-
-# disk usage
-sudo du -bcs /var/lib/postgresql/14/main/
-
-# 18979994590
+DATABASE_URL="$DATABASE_URL" ./run.sh 2>&1 | tee log.txt
 
 # parse results for json file
 ./parse.sh < log.txt

@@ -1,16 +1,15 @@
 # Hydra
 
-Hydra is an open source data warehouse built on Postgres.
+Hydra is a high-performance Postgres database with serverless
+online analytical processing (OLAP). It is designed for low-latency
+applications built on time series and event data.
 
-* [Homepage](https://hydras.io)
-* [GitHub](https://github.com/HydrasDB/hydra)
+* [Homepage](https://hydra.so)
 
 ## Running the benchmark
 
-The benchmark has been configured for a `c6a.4xlarge` running Ubuntu 22.04 and can be run without attendance.
+Obtain the connection string and set it as `DATABASE_URL`.
 
 ```
-export FQDN=ec2-127-0-0-1.compute-1.amazonaws.com
-scp -i ~/.ssh/aws.pem *.sh *.sql ubuntu@$FQDN:~
-ssh -i ~/.ssh/aws.pem ubuntu@$FQDN ./benchmark.sh
+DATABASE_URL="..." ./benchmark.sh
 ```
