@@ -21,10 +21,6 @@ sudo sed -i -e '
 
 sudo systemctl restart postgresql@$PGVERSION-main
 
-sudo mkdir /benchmark
-sudo chmod 777 /benchmark
-cd /benchmark
-
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 chmod 666 hits.tsv
