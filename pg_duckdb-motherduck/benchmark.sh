@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 # Setup on Ubuntu (your package manager may vary):
 # sudo snap install docker
