@@ -3,3 +3,4 @@
 .clickbench
 *.parquet
 hits.csv
+hits.tsv
