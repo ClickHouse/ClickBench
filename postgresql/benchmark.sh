@@ -14,7 +14,7 @@ sudo apt-get install -y postgresql-$PGVERSION
 
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
-chmod 777 ~ hits.tsv
+chmod 777 hits.tsv
 
 sudo -u postgres psql -t -c 'CREATE DATABASE test'
 sudo -u postgres psql test -t < create.sql
