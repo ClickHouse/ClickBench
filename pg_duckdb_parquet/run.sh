@@ -6,8 +6,9 @@ cat queries.sql | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches
 
-    echo "$query";
-    for i in $(seq 1 $TRIES); do
-        psql postgres://postgres:duckdb@localhost:5432/postgres -t -c '\timing' -c "$query" | grep 'Time'
-    done;
-done;
+    echo "$query"
+    (
+        echo '\timing'
+        yes "$query" | head -n $TRIES
+    ) | psql --no-psqlrc --tuples-only postgres://postgres:duckdb@localhost:5432/postgres | grep 'Time'
+done
