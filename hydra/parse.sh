@@ -3,11 +3,11 @@
 # OS X: you need to use the gnu tools from homebrew
 GREP="grep"
 if command -v ggrep >/dev/null 2>&1; then
-    grep="ggrep"
+    GREP="ggrep"
 fi
 SED="sed"
 if command -v gsed >/dev/null 2>&1; then
-    sed="gsed"
+    SED="gsed"
 fi
 
 $GREP -oP 'Time: \d+\.\d+ ms' | $SED -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
