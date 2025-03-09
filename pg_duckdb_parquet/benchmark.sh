@@ -7,7 +7,7 @@ set -ex
 #sudo apt-get install -y postgresql-client
 
 wget --no-verbose --continue https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
-sudo docker run -d --name pgduck -p 5432:5432 -e POSTGRES_PASSWORD=duckdb -v ./hits.parquet:/tmp/hits.parquet pgduckdb/pgduckdb:16-main
+sudo docker run -d --name pgduck -p 5432:5432 -e POSTGRES_PASSWORD=duckdb -v ./hits.parquet:/tmp/hits.parquet pgduckdb/pgduckdb:17-v0.3.1 -c duckdb.max_memory=10GB
 
 sleep 5
 psql postgres://postgres:duckdb@localhost:5432/postgres -f create.sql
