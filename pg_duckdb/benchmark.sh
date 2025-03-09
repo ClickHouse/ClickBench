@@ -6,7 +6,7 @@ set -ex
 #sudo apt-get install -y docker.io
 #sudo apt-get install -y postgresql-client
 
-wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 sudo chmod 777 *
 

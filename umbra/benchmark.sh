@@ -8,12 +8,12 @@ sudo apt-get install -y postgresql-client gzip
 # yum install nc postgresql15
 
 rm -rf hits.tsv
-wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 chmod 777 hits.tsv
 
 rm -rf umbra-25-01-23.tar.xz umbra
-wget --no-verbose --continue 'https://db.in.tum.de/~schmidt/umbra-2025-01-23.tar.xz'
+wget --continue 'https://db.in.tum.de/~schmidt/umbra-2025-01-23.tar.xz'
 tar -xf umbra-2025-01-23.tar.xz
 
 rm -rf db
