@@ -16,7 +16,7 @@ mysql --password="${PASSWORD}" --host 127.0.0.1 test < create.sql
 
 # Load the data
 
-wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 
 time mysql --password="${PASSWORD}" --host 127.0.0.1 test -e "

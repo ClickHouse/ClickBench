@@ -3,7 +3,7 @@
 wget https://github.com/cube2222/octosql/releases/download/v0.13.0/octosql_0.13.0_linux_amd64.tar.gz
 tar xf octosql_0.13.0_linux_amd64.tar.gz
 
-wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
 ./run.sh 2>&1 | tee log.txt
 
