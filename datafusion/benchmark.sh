@@ -21,11 +21,11 @@ cd ../..
 
 
 # Download benchmark target data, single file
-wget --no-verbose --continue https://datasets.clickhouse.com/hits_compatible/hits.parquet
+wget --continue https://datasets.clickhouse.com/hits_compatible/hits.parquet
 
 # Download benchmark target data, partitioned
 mkdir -p partitioned
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --no-verbose --directory-prefix partitioned --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --directory-prefix partitioned --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 
 # Run benchmarks for single parquet and partitioned
 ./run.sh single

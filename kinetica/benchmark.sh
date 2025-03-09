@@ -13,7 +13,7 @@ export KI_PWD=admin
 CLI="./kisql --host localhost --user admin"
 
 # download the ds
-wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 gzip -d hits.csv.gz
 
 # prepare the ds for ingestion; bigger files cause out of memory error
