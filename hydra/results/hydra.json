@@ -1,7 +1,7 @@
 {
     "system": "Hydra",
     "date": "2025-03-04",
-    "machine": "cloud",
+    "machine": "XL",
     "cluster_size": "serverless",
     "tags": [
         "managed",
