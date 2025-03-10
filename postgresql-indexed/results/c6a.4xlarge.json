@@ -1,5 +1,5 @@
 {
-    "system": "PostgreSQL (indexed)",
+    "system": "PostgreSQL (with indexes)",
     "date": "2025-03-10",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
