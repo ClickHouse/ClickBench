@@ -1,7 +1,7 @@
 {
     "system": "MotherDuck",
     "date": "2025-03-04",
-    "machine": "jumbo",
+    "machine": "Jumbo",
     "cluster_size": 1,
 
     "tags": ["C++", "column-oriented", "serverless"],

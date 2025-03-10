@@ -1,7 +1,7 @@
 {
     "system": "MotherDuck",
     "date": "2025-03-04",
-    "machine": "pulse",
+    "machine": "Pulse",
     "cluster_size": 1,
 
     "tags": ["C++", "column-oriented", "serverless"],
