@@ -51,7 +51,7 @@ duckdb.max_workers_per_postgres_scan=${cpus}
 max_wal_size=32GB
 work_mem=64MB
 effective_cache_size=${effective_cache_size}kB
-duckdb.max_memory='${duckdb_memory}kB'
+duckdb.max_memory=${duckdb_memory}kB
 EOF
 "
 
