@@ -4,6 +4,7 @@ set -eux
 
 PGVERSION=17
 
+# Source: https://wiki.postgresql.org/wiki/Apt
 sudo apt-get update
 sudo apt install -y postgresql-common
 sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
@@ -15,9 +16,27 @@ sudo apt-get install -y postgresql-$PGVERSION
 memory=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
 threads=$(nproc)
 cpus=$(($threads / 2))
+# Shared buffers is set to 25% of memory in AWS RDS by default. We do the same.
+# https://docs.aws.amazon.com/prescriptive-guidance/latest/tuning-postgresql-parameters/shared-buffers.html
 shared_buffers=$(($memory / 4))
+# Effective cache size does not need to be perfect, but it should be somewhat
+# close to the total memory minus what is expected to be used for queries.
+# https://www.cybertec-postgresql.com/en/effective_cache_size-what-it-means-in-postgresql/
 effective_cache_size=$(($memory - ($memory / 4)))
+# By default, max_worker_processes is set to in postgres. We want to be able to
+# use all the threads for parallel workers so we increase it. We also add a
+# small buffer of 15 for any other background workers that might be created.
 max_worker_processes=$(($threads + 15))
+# Below we make sure to configure the rest of the parallel worker settings to
+# match the number of cpu cores:
+# https://www.crunchydata.com/blog/postgres-tuning-and-performance-for-analytics-data
+#
+# We also increase work_mem because we are doing an analytics workload to allow
+# some more memory for sorting, aggregations, etc.
+#
+# It's necessary to increase max_wal_size to make the dataload not take very
+# long. With the default value it's constantly checkpointing, and the PG logs
+# warn you about that and tell you to increase max_wal_size.
 
 sudo tee /etc/postgresql/$PGVERSION/main/conf.d/clickbench.conf <<EOF
 shared_buffers=${shared_buffers}kB
