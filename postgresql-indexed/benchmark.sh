@@ -11,7 +11,7 @@ sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
 
 sudo apt-get update
 sudo apt-get upgrade
-sudo apt-get install -y postgresql-$PGVERSION
+sudo apt-get install -y postgresql-common postgresql-$PGVERSION
 
 memory=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
 threads=$(nproc)
