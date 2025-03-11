@@ -1,0 +1,420 @@
+{
+	"fields":[
+	 {
+		 "name": "AdvEngineID",
+		 "data_type": "int"
+	 },
+	 {
+		 "name": "Age",
+		 "data_type": "int"
+	 },
+	 {
+		 "name": "BrowserCountry",
+		 "data_type": "string"
+	 },
+	 {
+		 "name": "BrowserLanguage",
+		 "data_type": "string"
+	 },
+	 {
+		 "name": "CLID",
+		 "data_type": "int"
+	 },
+	 {
+		 "name": "ClientEventTime",
+		 "data_type": "datetime"
+	 },
+	 {
+		 "name": "ClientIP",
+		 "data_type": "int"
+	 },
+	 {
+		 "name": "ClientTimeZone",
+		 "data_type": "int"
+	 },
+	 {
+		 "name": "CodeVersion",
+		 "data_type": "int"
+	 },
+	 {
+		 "name": "ConnectTiming",
+		 "data_type": "int"
+	 },
+	 {
+		 "name": "CookieEnable",
+		 "data_type": "int"
+	 },
+	 {
+		 "name": "CounterClass",
+		 "data_type": "int"
+	 },
+	 {
+		 "name": "CounterID",
+		 "data_type": "int"
+	 },
+	 {
+		 "name": "DNSTiming",
+		 "data_type": "int"
+	 },
+	 {
+		 "name": "DontCountHits",
+		 "data_type": "int"
+	 },
+	 {
+		 "name": "EventDate",
+		 "data_type": "date"
+	 },
+	 {
+		 "name": "EventTime",
+		 "data_type": "datetime"
+	 },
+	 {
+		 "name": "FUniqID",
+		 "data_type": "string"
+	 },
+	 {
+		 "name": "FetchTiming",
+		 "data_type": "int"
+	 },
+	 {
+		"name": "FlashMajor",
+		"data_type": "int"
+	},
+	{
+		"name": "FlashMinor",
+		"data_type": "int"
+	},
+	{
+		"name": "FlashMinor2",
+		"data_type": "string"
+	},
+	{
+		"name": "FromTag",
+		"data_type": "string"
+	},
+	{
+		"name": "GoodEvent",
+		"data_type": "int"
+	},
+	{
+		"name": "HID",
+		"data_type": "int"
+	},
+	{
+		"name": "HTTPError",
+		"data_type": "int"
+	},
+	{
+		"name": "HasGCLID",
+		"data_type": "int"
+	},
+	{
+		"name": "HistoryLength",
+		"data_type": "int"
+	},
+	{
+		"name": "HitColor",
+		"data_type": "string"
+	},
+	{
+		"name": "IPNetworkID",
+		"data_type": "int"
+	},
+	{
+		"name": "Income",
+		"data_type": "int"
+	},
+	{
+		"name": "Interests",
+		"data_type": "int"
+	},
+	{
+		"name": "IsArtifical",
+		"data_type": "int"
+	},
+	{
+		"name": "IsDownload",
+		"data_type": "int"
+	},
+	{
+		"name": "IsEvent",
+		"data_type": "int"
+	},
+	{
+		"name": "IsLink",
+		"data_type": "int"
+	},
+	{
+		"name": "IsMobile",
+		"data_type": "int"
+	},
+	{
+		"name": "IsNotBounce",
+		"data_type": "int"
+	},{
+		"name": "IsOldCounter",
+		"data_type": "int"
+	},
+	{
+		"name": "IsParameter",
+		"data_type": "int"
+	},
+	{
+		"name": "IsRefresh",
+		"data_type": "int"
+	},
+	{
+		"name": "JavaEnable",
+		"data_type": "int"
+	},
+	{
+		"name": "JavascriptEnable",
+		"data_type": "int"
+	},
+	{
+		"name": "LocalEventTime",
+		"data_type": "datetime"
+	},
+	{
+		"name": "MobilePhone",
+		"data_type": "int"
+	},
+	{
+		"name": "MobilePhoneModel",
+		"data_type": "string"
+	},
+	{
+		"name": "NetMajor",
+		"data_type": "int"
+	},
+	{
+		"name": "NetMinor",
+		"data_type": "int"
+	},
+	{
+		"name": "OS",
+		"data_type": "int"
+	},
+	{
+		"name": "OpenerName",
+		"data_type": "int"
+	},
+	{
+		"name": "OpenstatAdID",
+		"data_type": "string"
+	},
+	{
+		"name": "OpenstatCampaignID",
+		"data_type": "string"
+	},
+	{
+		"name": "OpenstatServiceName",
+		"data_type": "string"
+	},
+	{
+		"name": "OpenstatSourceID",
+		"data_type": "string"
+	},
+	{
+		"name": "OriginalURL",
+		"data_type": "string"
+	},
+	{
+		"name": "PageCharset",
+		"data_type": "string"
+	},
+	{
+		"name": "ParamCurrency",
+		"data_type": "string"
+	},{
+		"name": "ParamCurrencyID",
+		"data_type": "int"
+	},
+	{
+		"name": "ParamOrderID",
+		"data_type": "string"
+	},
+	{
+		"name": "ParamPrice",
+		"data_type": "string"
+	},
+	{
+		"name": "Params",
+		"data_type": "string"
+	},
+	{
+		"name": "Referer",
+		"data_type": "string"
+	},
+	{
+		"name": "RefererCategoryID",
+		"data_type": "int"
+	},
+	{
+		"name": "RefererHash",
+		"data_type": "int"
+	},
+	{
+		"name": "RefererRegionID",
+		"data_type": "int"
+	},
+	{
+		"name": "RegionID",
+		"data_type": "int"
+	},
+	{
+		"name": "RemoteIP",
+		"data_type": "int"
+	},
+	{
+		"name": "ResolutionDepth",
+		"data_type": "int"
+	},
+	{
+		"name": "ResolutionHeight",
+		"data_type": "int"
+	},
+	{
+		"name": "ResolutionWidth",
+		"data_type": "int"
+	},
+	{
+		"name": "ResponseEndTiming",
+		"data_type": "int"
+	},
+	{
+		"name": "ResponseStartTiming",
+		"data_type": "int"
+	},
+	{
+		"name": "Robotness",
+		"data_type": "int"
+	},
+	{
+		"name": "SearchEngineID",
+		"data_type": "int"
+	},
+	{
+		"name": "SearchPhrase",
+		"data_type": "string"
+	},
+	{
+		"name": "SendTiming",
+		"data_type": "int"
+	},
+	{
+		"name": "Sex",
+		"data_type": "int"
+	},
+	{
+		"name": "SilverlightVersion1",
+		"data_type": "int"
+	},
+	{
+		"name": "SilverlightVersion2",
+		"data_type": "int"
+	},
+	{
+		"name": "SilverlightVersion3",
+		"data_type": "int"
+	},{
+		"name": "SilverlightVersion4",
+		"data_type": "int"
+	},
+	{
+		"name": "SocialAction",
+		"data_type": "string"
+	},
+	{
+		"name": "SocialNetwork",
+		"data_type": "string"
+	},
+	{
+		"name": "SocialSourceNetworkID",
+		"data_type": "int"
+	},
+	{
+		"name": "SocialSourcePage",
+		"data_type": "string"
+	},
+	{
+		"name": "Title",
+		"data_type": "string"
+	},
+	{
+		"name": "TraficSourceID",
+		"data_type": "int"
+	},
+	{
+		"name": "URL",
+		"data_type": "string"
+	},
+	{
+		"name": "URLCategoryID",
+		"data_type": "int"
+	},
+	{
+		"name": "URLHash",
+		"data_type": "int"
+	},
+	{
+		"name": "URLRegionID",
+		"data_type": "int"
+	},
+	{
+		"name": "UTMCampaign",
+		"data_type": "string"
+	},
+	{
+		"name": "UTMContent",
+		"data_type": "string"
+	},
+	{
+		"name": "UTMMedium",
+		"data_type": "string"
+	},
+	{
+		"name": "UTMSource",
+		"data_type": "string"
+	},
+	{
+		"name": "UTMTerm",
+		"data_type": "string"
+	},
+	{
+		"name": "UserAgent",
+		"data_type": "int"
+	},
+	{
+		"name": "UserAgentMajor",
+		"data_type": "int"
+	},
+	{
+		"name": "UserAgentMinor",
+		"data_type": "string"
+	},{
+		"name": "UserID",
+		"data_type": "int"
+	},
+	{
+		"name": "WatchID",
+		"data_type": "int"
+	},
+	{
+		"name": "WindowClientHeight",
+		"data_type": "int"
+	},
+	{
+		"name": "WindowClientWidth",
+		"data_type": "int"
+	},
+	{
+		"name": "WindowName",
+		"data_type": "int"
+	},
+	{
+		"name": "WithHash",
+		"data_type": "int"
+	}
+ ]
+ }
