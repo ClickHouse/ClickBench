@@ -1,8 +1,19 @@
-`benchmark.sh` will download and install the developer edition of `Kinetica` as well as its sql-client `kisql`, ingest the dataset and run the queries.
-It requires `docker` to be already installed on your system.
+# Kinetica
+
+## Setup and benchmark
+
+1. Deploy a c6a.4xlarge with 500 GB gp2 disk; `benchmark.sh` assumes that you are deploying an Ubuntu OS variant and runs the `setup-dev-ubuntu.sh` script. If you deploy any other OS, then you will need to install docker, java, and ripgrep separately.
+
+2. Once you have the VM up and running, you can run the `benchmark.sh` script for a one-click install and run; it will:                                                                                      
+-- download and install the `Kinetica` developer edition and its sql-client `kisql`
+-- increase the RAM tier (via `alter tier`)
+-- ingest the dataset
+-- run the queries
+
 All the queries will be executed on behalf of the user `admin` with the password `admin`.
 
-`99991589` rows will be inserted. Errors of the following kind are expected to happen during ingestion:
-`WARNING: (column: 'Referer', type: string', val: '"http://yandex.ru/domkadrov.irr.ru/catalog/92/women.aspx?group_cod_1s=16&msgid=1917057&lr=46&ps_userial=&only_news.ru/photo/nedelweissearch?text=?????-??? ?????') Quoted field must end with quote, column number: 15`
+## Notes
+`99,997,496` rows will be inserted; `1` row isn't inserted because of bad data:
+> WARNING: Invalid_Argument: quoted field must end with quote (ColumnIndex:100)(ColumnName:UTMTerm)(ColumnType:char256)(Value:"tatuirovarki_redmond 70            0       -296158784638538920     -8631670417943857411    0)
+> WARNING: Skipped: 1, inserted : 99997496 records, updated : 0 records.
 
-**NOTE**: only 19 queries will run successfully because of the very limited support of processing of unlimited size strings (https://kinetica-community.slack.com/archives/C01M29KDP51/p1671493126352899?thread_ts=1671486649.434019&cid=C01M29KDP51).
