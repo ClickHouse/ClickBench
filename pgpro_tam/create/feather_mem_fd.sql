@@ -108,4 +108,4 @@ create table hits
     URLHash BIGINT NOT NULL,
     CLID INTEGER NOT NULL
 )
-using ppg_feather_fmt with(ppg_tam.smgr='ppg_mem_fd_smgr', ppg_tam.rows_per_file=100000000)
+using ppg_feather_fmt with(ppg_tam.smgr='ppg_mem_fd_smgr', ppg_tam.rows_per_file=100000000);
