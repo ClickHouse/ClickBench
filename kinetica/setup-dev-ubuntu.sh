@@ -27,4 +27,4 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 sudo systemctl start docker
 
 # Install java for kisql and rg for run.sh
-sudo apt install openjdk-21-jre-headless ripgrep
+sudo apt install openjdk-21-jre-headless ripgrep -y
