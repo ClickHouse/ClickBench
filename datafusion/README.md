@@ -34,5 +34,5 @@ The benchmark should be completed in under an hour. On-demand pricing is $0.6 pe
 ## Generate full human readable results (for debugging)
 
 1. install datafusion-cli
-2. download the parquet ```wget --no-verbose --continue https://datasets.clickhouse.com/hits_compatible/hits.parquet```
+2. download the parquet ```wget --continue https://datasets.clickhouse.com/hits_compatible/hits.parquet```
 3. execute it ```datafusion-cli -f create.sh queries.sh``` or ```bash run2.sh```

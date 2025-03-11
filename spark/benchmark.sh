@@ -12,7 +12,7 @@ pip install --break-system-packages pyspark psutil
 
 # Load the data
 
-wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
 # Run the queries
 

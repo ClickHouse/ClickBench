@@ -17,7 +17,7 @@ CREATE INDEX regionuser on hits (RegionID,UserID);
 CREATE INDEX mobile2 on hits (mobilephonemodel) WHERE mobilephonemodel <> ''::text;
 CREATE INDEX search2 on hits (searchphrase) WHERE searchphrase <> ''::text;
 
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 CREATE INDEX trgm_idx_title ON hits USING gin (title gin_trgm_ops);
 CREATE INDEX trgm_idx_url ON hits USING gin (url gin_trgm_ops);
 

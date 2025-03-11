@@ -3,7 +3,7 @@
 sudo apt-get update
 sudo apt-get install -y docker.io
 
-wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
 ./run.sh 2>&1 | tee log.txt
 
