@@ -17,6 +17,7 @@ Execution engine modules used in tests:
 1) DuckDB
 
 For parquet the default compression is ZSTD3.
-One of tests uses 'parallel' for loading. In case of inserting a data from one big file, the speed is far from maximum, but a deal is a deal. We do not split the file because it is not recommended by rules.
+One of tests uses 'parallel' for loading. In case of inserting a data from one big file, the speed is far from maximum, but a deal is a deal. We do not split the file because it is not recommended by rules. The same test uses higher block size.
 We also do not use fine tuning as it is not recommended. Tuning each column with own lightweight encoding would give better results.
 Feather format is presented to share our experience. Using an uncompressed format gives gains on some queries, but on average it is worse than parquet.
+Since AWS EC2 is generally unavailable in our region, the tests were run on similar virtual machines. For example, on "16 vCPU 32GB" (AMD EPYC 9354) instead of "c6a.4xlarge".
