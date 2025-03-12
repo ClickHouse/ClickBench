@@ -1,4 +1,4 @@
-###pgpro_tam is an extensible table access method for vanilla Postgres
+pgpro_tam is an extensible table access method for vanilla Postgres
 
 It supports multiple data formats, storage managers and execution engines.
 More: https://hub.docker.com/r/innerlife/pgpro_tam
