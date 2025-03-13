@@ -47,7 +47,7 @@ Once Parseable is started, `ingestion.sh` is triggered which starts the ingestio
    - Splits the large JSON file into smaller files (2,500 lines each)
    - Converts each file to proper JSON array format
    - Creates a static schema in Parseable
-   - Ingests data in parallel (8 files simultaneously)
+   - Ingests data in Parseable
 
 
 ### Running Benchmark Queries

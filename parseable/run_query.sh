@@ -1,4 +1,6 @@
 #!/bin/bash
+
+echo "Running queries..."
 TRIES=3
 QUERY_NUM=1
 rm -f result.csv
@@ -21,11 +23,6 @@ cat 'queries.sql' | while read -r QUERY; do
         echo "Iteration $i:"
 JSON=$(printf '{"query":"%s","startTime":"%s","endTime":"%s"}' "$QUERY" "$START_TIME" "$END_TIME")
 
-
-
-#         JSON=$(jq -n --arg query "$QUERY" --arg start "$START_TIME" --arg end "$END_TIME" \
-#   '{query: $query, startTime: $start, endTime: $end}')
-        echo "$JSON"
         start_time=$(date +%s.%N)
 
         # Execute the query and print the response to terminal
