@@ -62,7 +62,7 @@
 	 },
 	 {
 		 "name": "EventDate",
-		 "data_type": "date"
+		 "data_type": "string"
 	 },
 	 {
 		 "name": "EventTime",
