@@ -42,6 +42,9 @@ pv hits.json | parallel --pipe -N$LINES_PER_CHUNK --block 10M \
 
 echo "Split and process complete"
 
+# Remove original file
+rm hits.json
+
 # Create stream
 echo "Creating stream..."
 SCHEMA_FILE="static_schema.json"
@@ -54,7 +57,7 @@ curl --silent --location --request PUT 'http://localhost:8000/api/v1/logstream/h
 # Ingest files in parallel with progress monitoring
 echo "Ingesting files..."
 
-INGEST_JOBS=8
+INGEST_JOBS=4
 start_time=$(date +%s)
 find . -name "hits_*" -type f | parallel --progress --jobs $INGEST_JOBS \
     'curl --silent -H "Content-Type: application/json" -H "X-P-Stream: hits" -k -XPOST -u "admin:admin" "http://localhost:8000/api/v1/ingest" --data-binary @"{}"'
@@ -63,6 +66,3 @@ end_time=$(date +%s)
 total_time=$((end_time - start_time))
 
 echo "Total load (ingestion) time: ${total_time} seconds"
-
-echo "Cleaning up json files..."
-rm -rf ./partitioned/ hits.json
