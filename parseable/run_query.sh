@@ -13,14 +13,19 @@ cat 'queries.sql' | while read -r QUERY; do
     echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
     echo "$QUERY" > /tmp/query.sql
     echo "Query $QUERY_NUM: $QUERY"
-
+    QUERY=$(echo "$QUERY" | sed 's/"/\\"/g')
     # Create array to store results for this query
     RESULTS=()
 
     for i in $(seq 1 $TRIES); do
         echo "Iteration $i:"
-        JSON=$(jq -n --arg query "$QUERY" --arg start "$START_TIME" --arg end "$END_TIME" \
-            '{query: $query, startTime: $start, endTime: $end}')
+JSON=$(printf '{"query":"%s","startTime":"%s","endTime":"%s"}' "$QUERY" "$START_TIME" "$END_TIME")
+
+
+
+#         JSON=$(jq -n --arg query "$QUERY" --arg start "$START_TIME" --arg end "$END_TIME" \
+#   '{query: $query, startTime: $start, endTime: $end}')
+        echo "$JSON"
         start_time=$(date +%s.%N)
 
         # Execute the query and print the response to terminal
