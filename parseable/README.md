@@ -10,7 +10,7 @@ This benchmark utilizes Parquet files with an external table configuration to ex
 
 ### Prerequisites
 - AWS EC2 instance (recommended: `c6a.4xlarge`)
-- Amazon Linux 2 AMI
+- Canonical, Ubuntu, 24.04, amd64 noble image
 - 500GB gp2 SSD root volume
 - SSH access to the EC2 instance
 
@@ -20,7 +20,7 @@ This benchmark utilizes Parquet files with an external table configuration to ex
 
 2. Connect to the EC2 instance:
    ```
-   ssh ec2-user@<instance-ip>
+   ssh ubuntu@<instance-ip>
    ```
 
 3. Update system packages and install required dependencies:
