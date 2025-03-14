@@ -7,7 +7,7 @@ rustup update stable
 # Clone Parseable Repository and checkout v1.7.3 branch
 git clone https://github.com/parseablehq/parseable.git
 cd parseable
-git checkout v1.7.3
+git checkout main
 
 # Build and Run Parseable
 cargo build --release
