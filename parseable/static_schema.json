@@ -70,7 +70,7 @@
 	 },
 	 {
 		 "name": "FUniqID",
-		 "data_type": "string"
+		 "data_type": "int"
 	 },
 	 {
 		 "name": "FetchTiming",
@@ -236,7 +236,7 @@
 	},
 	{
 		"name": "ParamPrice",
-		"data_type": "string"
+		"data_type": "int"
 	},
 	{
 		"name": "Params",
