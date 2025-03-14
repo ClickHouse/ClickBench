@@ -43,7 +43,7 @@ JSON=$(printf '{"query":"%s","startTime":"%s","endTime":"%s"}' "$QUERY" "$START_
     done
 
     # Output results to CSV with tab separation
-    echo -e "${RESULTS[0]}\t${RESULTS[1]}\t${RESULTS[2]}" >> result.csv
+    echo -e "${RESULTS[0]},${RESULTS[1]},${RESULTS[2]}" >> result.csv
 
     echo "Query $QUERY_NUM completed. [${RESULTS[0]}, ${RESULTS[1]}, ${RESULTS[2]}]"
     echo "========================================"
