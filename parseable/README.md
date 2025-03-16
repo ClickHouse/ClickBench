@@ -26,7 +26,7 @@ This benchmark utilizes Parquet files with an external table configuration to ex
 3. Update system packages and install required dependencies:
    ```
     sudo apt-get update -y
-    sudo apt-get install -y gcc git curl build-essential pkg-config libssl-dev
+    sudo apt-get install -y git build-essential
    ```
 
 4. Clone the ClickBench repository:
