@@ -284,7 +284,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] Boilingdata
 - [x] Byteconity
 - [ ] DolphinDB
-- [x] Oxla
+- [ ] Oxla
 - [ ] Quickwit
 - [x] AlloyDB
 - [x] ParadeDB
