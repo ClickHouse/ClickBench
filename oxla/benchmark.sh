@@ -32,8 +32,12 @@ PGPASSWORD=oxla psql -h localhost -U oxla -t -c '\timing' -c "COPY hits FROM '/d
 echo "data size after ingest:"
 PGPASSWORD=oxla psql -h localhost -U oxla -t -c '\timing' -c "SELECT pg_total_relation_size('hits');"
 
+# Note from the ClickBench maintainers: The original submission had below sleep statement. The benchmark rules are sceptical of such calls:
+#     "You should not wait for cool down after data loading or running OPTIMIZE / VACUUM before the main benchmark queries unless it is strictly required for the system."
+# I (rschu1ze) therefore re-ran the benchmark without sleep and it did not change the result. Therefore commenting sleep out.
+#
 # wait for merges to finish
-sleep 60
+# sleep 60
 
 # run benchmark
 echo "running benchmark..."
