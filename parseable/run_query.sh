@@ -26,10 +26,9 @@ JSON=$(printf '{"query":"%s","startTime":"%s","endTime":"%s"}' "$QUERY" "$START_
         start_time=$(date +%s.%N)
 
         # Execute the query and print the response to terminal
-        RESPONSE=$(curl -s -H "Content-Type: application/json" -k -XPOST -u "admin:admin" "http://localhost:8000/api/v1/query" --data "${JSON}")
-        echo "$RESPONSE" | jq '.'
-
+        curl -s -H "Content-Type: application/json" -k -XPOST -u "admin:admin" "http://localhost:8000/api/v1/query" --data "${JSON}" > /dev/null
         end_time=$(date +%s.%N)
+
         # Calculate elapsed time in seconds with millisecond precision
         elapsed_time=$(echo "$end_time - $start_time" | bc)
         # Convert to desired format
@@ -43,7 +42,7 @@ JSON=$(printf '{"query":"%s","startTime":"%s","endTime":"%s"}' "$QUERY" "$START_
     done
 
     # Output results to CSV with tab separation
-    echo -e "${RESULTS[0]},${RESULTS[1]},${RESULTS[2]}" >> result.csv
+    echo -e "${RESULTS[0]} ${RESULTS[1]} ${RESULTS[2]}" >> result.csv
 
     echo "Query $QUERY_NUM completed. [${RESULTS[0]}, ${RESULTS[1]}, ${RESULTS[2]}]"
     echo "========================================"

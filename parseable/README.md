@@ -9,7 +9,7 @@ This benchmark utilizes Parquet files with an external table configuration to ex
 ## Benchmark Setup and Execution
 
 ### Prerequisites
-- AWS EC2 instance (recommended: `c6a.4xlarge`)
+- AWS EC2 instance (recommended: `c6a.metal` or `c6a.4xlarge`)
 - Canonical, Ubuntu, 24.04, amd64 noble image
 - 500GB gp2 SSD root volume
 - SSH access to the EC2 instance
@@ -23,19 +23,13 @@ This benchmark utilizes Parquet files with an external table configuration to ex
    ssh ubuntu@<instance-ip>
    ```
 
-3. Update system packages and install required dependencies:
-   ```
-    sudo apt-get update -y
-    sudo apt-get install -y git build-essential
-   ```
-
-4. Clone the ClickBench repository:
+3. Clone the ClickBench repository:
    ```
    git clone https://github.com/ClickHouse/ClickBench
    cd ClickBench/parseable
    ```
 
-5. Start the Parseable benchmark environment:
+4. Start the Parseable benchmark environment:
    ```
    bash benchmark.sh
    ```

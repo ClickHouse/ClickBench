@@ -57,7 +57,7 @@ curl --silent --location --request PUT 'http://localhost:8000/api/v1/logstream/h
 # Ingest files in parallel with progress monitoring
 echo "Ingesting files..."
 
-INGEST_JOBS=4
+INGEST_JOBS=6
 start_time=$(date +%s)
 find . -name "hits_*" -type f | parallel --progress --jobs $INGEST_JOBS \
     'curl --silent -H "Content-Type: application/json" -H "X-P-Stream: hits" -k -XPOST -u "admin:admin" "http://localhost:8000/api/v1/ingest" --data-binary @"{}"'
