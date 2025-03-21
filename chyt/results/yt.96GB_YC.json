@@ -2,7 +2,7 @@
 {
     "system": "CHYT",
     "date": "2024-09-16",
-    "machine": "96GB",
+    "machine": "12 vCPU 48GB",
     "cluster_size": 2,
     "comment": "",
 
