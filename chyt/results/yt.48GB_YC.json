@@ -2,8 +2,8 @@
 {
     "system": "CHYT",
     "date": "2024-09-16",
-    "machine": "12 vCPU 48GB",
-    "cluster_size": "1",
+    "machine": "48GB",
+    "cluster_size": 1,
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "YT"],
