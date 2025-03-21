@@ -9,7 +9,7 @@ sudo service mysql restart
 
 # Load the data
 
-wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 
 sudo mysql -e "CREATE DATABASE test"

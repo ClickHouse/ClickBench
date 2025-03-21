@@ -6,31 +6,31 @@
 
 PROVIDER=${PROVIDER:-aws}
 REGION=${REGION:-eu-central-1}
-TIER=${TIER:-development}
-MEMORY=${MEMORY:-0}
+MEMORY=${MEMORY:-8}
+REPLICAS=${REPLICAS:-2}
 PARALLEL_REPLICA=${PARALLEL_REPLICA:-false}
 
 command -v jq || exit 1
 command -v curl || exit 1
 command -v clickhouse-client || exit 1
 
-echo "Provisioning a service in ${PROVIDER}, region ${REGION}, ${TIER} tier, memory ${MEMORY}, with parallel replicas set to ${PARALLEL_REPLICA}"
+echo "Provisioning a service in ${PROVIDER}, region ${REGION}, memory ${MEMORY}, replicas ${REPLICAS}, with parallel replicas set to ${PARALLEL_REPLICA}"
 
-TMPDIR="${PROVIDER}-${REGION}-${TIER}-${MEMORY}-${PARALLEL_REPLICA}-$$"
+TMPDIR="csp-${PROVIDER}-region-${REGION}-replicas-${REPLICAS}-memory-${MEMORY}-parallel-${PARALLEL_REPLICA}-pid-$$"
 mkdir -p "${TMPDIR}"
 
 echo $TMPDIR
 
 curl -X POST -H 'Content-Type: application/json' -d '
 {
-    "name": "ClickBench-'${PROVIDER}'-'${REGION}'-'${TIER}'-'${MEMORY}'-'$$'",
-    "tier": "'$TIER'",
+    "name": "ClickBench-'${PROVIDER}'-'${REGION}'-'${REPLICAS}'-'${MEMORY}'-'$$'",
     "provider": "'$PROVIDER'",
     "region": "'$REGION'",
-    '$([ $TIER == production ] && echo -n "\"minTotalMemoryGb\":${MEMORY},\"maxTotalMemoryGb\":${MEMORY},")'
+    "numReplicas": '$REPLICAS',
+    "minReplicaMemoryGb":'$MEMORY',"maxReplicaMemoryGb":'$MEMORY',
     "ipAccessList": [{"source": "0.0.0.0/0", "description": "anywhere"}]
 }
-' --silent --show-error --user "${KEY_ID}:${KEY_SECRET}" "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services" | tee "${TMPDIR}"/service.json | jq
+' --silent --show-error --user "${KEY_ID}:${KEY_SECRET}" "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services" | tee "${TMPDIR}"/service.json | jq | grep -v password
 
 echo ${KEY_ID}:${KEY_SECRET}" "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services
 
@@ -48,19 +48,29 @@ do
     curl --silent --show-error --user $KEY_ID:$KEY_SECRET "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services/${SERVICE_ID}" | jq --raw-output .result.state | tee "${TMPDIR}"/state
     grep 'running' "${TMPDIR}"/state && break
     sleep 1
+    if [[ $i == 1000 ]]
+    then
+        echo "Too many retries"
+        exit 1
+    fi
 done
 
 echo "Waiting for clickhouse-server to start"
 
-for _ in {1..1000}
+for i in {1..1000}
 do
     clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "SELECT 1" && break
     sleep 1
+    if [[ $i == 1000 ]]
+    then
+        echo "Too many retries"
+        exit 1
+    fi
 done
 
 if [ ${PARALLEL_REPLICA} = true ]; then
-   echo "Enabling parallel replica to the default user"
-   clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "ALTER USER default SETTINGS allow_experimental_parallel_reading_from_replicas=2;"
+    echo "Enabling parallel replica to the default user"
+    clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "ALTER USER default SETTINGS enable_parallel_replicas = 1"
 fi
 
 echo "Running the benchmark"
@@ -79,6 +89,11 @@ do
     curl --silent --show-error --user $KEY_ID:$KEY_SECRET "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services/${SERVICE_ID}" | jq --raw-output .result.state | tee "${TMPDIR}"/state
     grep 'stopped' "${TMPDIR}"/state && break
     sleep 1
+    if [[ $i == 1000 ]]
+    then
+        echo "Too many retries"
+        exit 1
+    fi
 done
 
 echo "Deleting the service"

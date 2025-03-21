@@ -199,9 +199,120 @@ Now the new benchmark is easy to use and the results for any system can be repro
 
 We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/hardware/) for testing servers and VMs.
 
+## Systems Included
+
+- [x] ClickHouse
+- [x] ClickHouse on local Parquet files
+- [x] ClickHouse operating like "Athena" on remote Parquet files
+- [x] ClickHouse on a VFS over HTTPs on CDN
+- [x] MySQL InnoDB
+- [x] MySQL MyISAM
+- [x] MariaDB
+- [x] MariaDB ColumnStore
+- [x] MemSQL/SingleStore
+- [x] PostgreSQL
+- [x] Greenplum
+- [x] TimescaleDB
+- [x] Citus
+- [x] Vertica (without publishing)
+- [x] QuestDB
+- [x] chdb
+- [x] DuckDB
+- [x] DuckDB over local Parquet files
+- [ ] DuckDB operating like "Athena" on remote Parquet files
+- [x] MonetDB
+- [x] mapD/Omnisci/HeavyAI
+- [x] Databend
+- [x] DataFusion
+- [x] ByteHouse
+- [x] Doris/PALO
+- [x] SelectDB
+- [x] Druid
+- [x] Pinot
+- [x] CrateDB
+- [x] Spark SQL
+- [x] Starrocks
+- [ ] ShitholeDB
+- [ ] Hive
+- [x] Hydra
+- [ ] Impala
+- [x] Hyper
+- [x] Umbra
+- [x] SQLite
+- [x] Redshift
+- [x] Redshift Serverless
+- [ ] Redshift Spectrum
+- [ ] Presto
+- [ ] Trino
+- [x] Amazon Athena
+- [x] Bigquery (without publishing)
+- [x] Snowflake
+- [ ] Rockset
+- [ ] CockroachDB
+- [ ] CockroachDB Serverless
+- [ ] Databricks
+- [ ] Planetscale (without publishing)
+- [ ] TiDB (TiFlash)
+- [x] Amazon RDS Aurora for MySQL
+- [x] Amazon RDS Aurora for Postgres
+- [ ] InfluxDB
+- [ ] TDEngine
+- [x] MongoDB
+- [ ] Cassandra
+- [ ] ScyllaDB
+- [x] Elasticsearch
+- [ ] Apache Ignite
+- [x] Motherduck
+- [x] Infobright
+- [ ] Actian Vector
+- [ ] Manticore Search
+- [x] Vertica (without publishing)
+- [ ] Azure Synapse
+- [ ] Starburst Galaxy
+- [ ] MS SQL Server with Column Store Index (without publishing)
+- [ ] Dremio (without publishing)
+- [ ] Exasol
+- [ ] LocustDB
+- [ ] EventQL
+- [x] Apache Drill
+- [ ] Apache Kudu
+- [ ] Apache Kylin
+- [x] S3 select command in AWS
+- [x] Kinetica
+- [ ] YDB
+- [ ] OceanBase
+- [ ] Boilingdata
+- [x] Byteconity
+- [ ] DolphinDB
+- [x] Oxla
+- [ ] Quickwit
+- [x] AlloyDB
+- [x] ParadeDB
+- [x] GlareDB
+- [ ] Seafowl
+- [ ] Sneller
+- [x] Tablespace
+- [x] Tembo
+- [x] Cloudberry
+- [ ] Daft
+- [x] Pandas
+- [x] Polars
+- [x] OctoSQL
+- [x] VictoriaLogs
+
+By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
+
+Please help us add more systems and run the benchmarks on more types of VMs.
+
 ## Similar Projects
 
 Many alternative benchmarks are applicable to OLAP DBMS with their own advantages and disadvantages.
+
+### JSONBench
+
+https://github.com/ClickHouse/JSONBench
+
+A benchmark for data analytics on JSON.
 
 ### Brown University Mgbench
 
@@ -352,7 +463,7 @@ In addition, I collect every benchmark that includes ClickHouse [here](https://g
 
 ## Additional Outcomes
 
-This benchmark can be used to collect the snippets for installation and data loading across a wide variety of DBMS. The usability and quality of the documentation can be compared. It has been used to improve the quality of the participants as demonstrated in [duckdb#3969](https://github.com/duckdb/duckdb/issues/3969), [timescaledb#4473](https://github.com/timescale/timescaledb/issues/4473), [mariadb-corporation#16](https://github.com/mariadb-corporation/mariadb-community-columnstore-docker/issues/16), [MonetDB#7309](https://github.com/duckdb/duckdb/issues/3969), [questdb#2272](https://github.com/questdb/questdb/issues/2272), [crate#12654](https://github.com/crate/crate/issues/12654), [LocustDB#152](https://github.com/cswinter/LocustDB/issues/152), [databend#9738](https://github.com/datafuselabs/databend/pull/9738), [databend#9612](https://github.com/datafuselabs/databend/pull/9612), [databend#10226](https://github.com/datafuselabs/databend/pull/10226 ), [databend#10195](https://github.com/datafuselabs/databend/pull/10195), [databend#9978](https://github.com/datafuselabs/databend/pull/9978), [databend#9965](https://github.com/datafuselabs/databend/pull/9965), [databend#9809](https://github.com/datafuselabs/databend/pull/9809), [databend#9716](https://github.com/datafuselabs/databend/pull/9716), [databend#9600](https://github.com/datafuselabs/databend/pull/9600), [databend#9565](https://github.com/datafuselabs/databend/pull/9565) etc.
+This benchmark can be used to collect the snippets for installation and data loading across a wide variety of DBMS. The usability and quality of the documentation can be compared. It has been used to improve the quality of the participants as demonstrated in [duckdb#3969](https://github.com/duckdb/duckdb/issues/3969), [timescaledb#4473](https://github.com/timescale/timescaledb/issues/4473), [mariadb-corporation#16](https://github.com/mariadb-corporation/mariadb-community-columnstore-docker/issues/16), [duckdb#3969](https://github.com/duckdb/duckdb/issues/3969), [questdb#2272](https://github.com/questdb/questdb/issues/2272), [crate#12654](https://github.com/crate/crate/issues/12654), [LocustDB#152](https://github.com/cswinter/LocustDB/issues/152), [databend#9738](https://github.com/datafuselabs/databend/pull/9738), [databend#9612](https://github.com/datafuselabs/databend/pull/9612), [databend#10226](https://github.com/datafuselabs/databend/pull/10226 ), [databend#10195](https://github.com/datafuselabs/databend/pull/10195), [databend#9978](https://github.com/datafuselabs/databend/pull/9978), [databend#9965](https://github.com/datafuselabs/databend/pull/9965), [databend#9809](https://github.com/datafuselabs/databend/pull/9809), [databend#9716](https://github.com/datafuselabs/databend/pull/9716), [databend#9600](https://github.com/datafuselabs/databend/pull/9600), [databend#9565](https://github.com/datafuselabs/databend/pull/9565) etc.
 ### References and Citation
 
-Alexey Milovidov, 2022.
+[Alexey Milovidov](https://github.com/alexey-milovidov), 2022.

@@ -1,8 +1,15 @@
 #!/bin/bash
 
+MODE=$1
 TRIES=3
 
-cat queries.sql | while read query; do
+if [[ $MODE == "tuned" ]]; then
+    FILE_NAME="queries-tuned.sql"
+else
+    FILE_NAME="queries.sql"
+fi;
+
+cat $FILE_NAME | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches
 

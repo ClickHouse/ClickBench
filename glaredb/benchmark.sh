@@ -7,7 +7,7 @@ curl https://glaredb.com/install.sh | sh
 
 wget https://clickhouse-public-datasets.s3.eu-central-1.amazonaws.com/hits_compatible/athena/hits.parquet
 
-cat queries.sql | while read query
+cat queries.sql | while read -r query
 do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches

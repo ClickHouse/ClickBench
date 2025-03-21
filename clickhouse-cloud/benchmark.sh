@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # Go to https://clickhouse.cloud/ and create a service.
 # To get results for various scale, go to "Actions / Advanced Scaling" and turn the slider of the minimum scale to the right.

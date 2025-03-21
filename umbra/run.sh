@@ -2,7 +2,7 @@
 
 TRIES=3
 
-cat queries.sql | while read query; do
+cat queries.sql | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches
     umbra/bin/server -createSSLFiles -certFile db/umbra.cert -keyFile db/umbra.pem -address 0.0.0.0 db/umbra.db &> umbra.log &
@@ -23,6 +23,5 @@ cat queries.sql | while read query; do
     done
 
     
-    killall -9 server
-    sleep 2
+    killall -9 -w server
 done

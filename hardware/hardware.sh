@@ -63,9 +63,9 @@ echo
 >result.csv
 QUERY_NUM=1
 
-cat "$QUERIES_FILE" | sed "s/{table}/hits/g" | while read query; do
+cat "$QUERIES_FILE" | sed "s/{table}/hits/g" | while read -r query; do
     sync
-    if [ "${OS}" = "Darwin" ] 
+    if [[ "$OSTYPE" == "darwin"* ]] 
     then 
         sudo purge > /dev/null
     else
@@ -92,7 +92,7 @@ echo
 
 touch {cpu_model,cpu,df,memory,memory_total,blk,mdstat,instance}.txt
 
-if [ "${OS}" = "Darwin" ]
+if [[ "$OSTYPE" == "darwin"* ]]
 then 
     echo '----Version, build id-----------'
     ./clickhouse local --query "SELECT format('Version: {}', version())"
