@@ -14,7 +14,9 @@ export CLUSTER_NAME=ytdemo
 export YT_PROXY=https://http-proxy-XXXXXXXX.demo.ytsaurus.tech
 export YT_CONTROLLER=https://strawberry-XXXXXXXX.demo.ytsaurus.tech
 ```
+
 **Note:** It is essential to execute `sudo su` before exporting variables to ensure correct permissions and environment configuration.
+
 ## 3. Running the Benchmark
 
 Once the environment is configured, execute the `run.sh` script. This script automates the following steps:
@@ -27,5 +29,7 @@ To start the benchmark, simply execute:
 ```console
 ./run.sh
 ```
+
 ### Compatibility
+
 The `run.sh` script has been tested on **Ubuntu 24.04.2 LTS**
