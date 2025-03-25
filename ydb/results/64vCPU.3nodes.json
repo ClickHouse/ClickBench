@@ -1,5 +1,5 @@
 {
-    "system": "ydb",
+    "system": "YDB",
     "date": "2025-03-25",
     "machine": "64 vCPU 256GB",
     "cluster_size": 3,
