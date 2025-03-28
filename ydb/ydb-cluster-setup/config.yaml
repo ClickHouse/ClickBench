@@ -1,0 +1,160 @@
+storage_config_generation: 0
+static_erasure: mirror-3-dc
+host_configs:
+- drive:
+  - path: /dev/disk/by-partlabel/ydb_disk_1
+    type: SSD
+  - path: /dev/disk/by-partlabel/ydb_disk_2
+    type: SSD
+  - path: /dev/disk/by-partlabel/ydb_disk_3
+    type: SSD
+  host_config_id: 1
+hosts:
+- host: $host1$host_suffix
+  host_config_id: 1
+  walle_location:
+    body: 1
+    data_center: 'zone-a'
+    rack: '1'
+- host: $host2$host_suffix
+  host_config_id: 1
+  walle_location:
+    body: 2
+    data_center: 'zone-b'
+    rack: '2'
+- host: $host3$host_suffix
+  host_config_id: 1
+  walle_location:
+    body: 3
+    data_center: 'zone-d'
+    rack: '3'
+domains_config:
+  domain:
+  - name: Root
+    storage_pool_types:
+    - kind: ssd
+      pool_config:
+        box_id: 1
+        erasure_species: mirror-3-dc
+        kind: ssd
+        geometry:
+          realm_level_begin: 10
+          realm_level_end: 20
+          domain_level_begin: 10
+          domain_level_end: 256
+        pdisk_filter:
+        - property:
+          - type: SSD
+        vdisk_kind: Default
+  state_storage:
+  - ring:
+      node: [1, 2, 3]
+      nto_select: 3
+    ssid: 1
+  security_config:
+    enforce_user_token_requirement: true
+    monitoring_allowed_sids:
+    - "root"
+    - "ADMINS"
+    - "DATABASE-ADMINS"
+    administration_allowed_sids:
+    - "root"
+    - "ADMINS"
+    - "DATABASE-ADMINS"
+    viewer_allowed_sids:
+    - "root"
+    - "ADMINS"
+    - "DATABASE-ADMINS"
+    register_dynamic_node_allowed_sids:
+    - firstGroup@cert
+    - root@builtin
+blob_storage_config:
+  service_set:
+    groups:
+    - erasure_species: mirror-3-dc
+      rings:
+      - fail_domains:
+        - vdisk_locations:
+          - node_id: $host1$host_suffix
+            pdisk_category: SSD
+            path: /dev/disk/by-partlabel/ydb_disk_1
+        - vdisk_locations:
+          - node_id: $host1$host_suffix
+            pdisk_category: SSD
+            path: /dev/disk/by-partlabel/ydb_disk_2
+        - vdisk_locations:
+          - node_id: $host1$host_suffix
+            pdisk_category: SSD
+            path: /dev/disk/by-partlabel/ydb_disk_3
+      - fail_domains:
+        - vdisk_locations:
+          - node_id: $host2$host_suffix
+            pdisk_category: SSD
+            path: /dev/disk/by-partlabel/ydb_disk_1
+        - vdisk_locations:
+          - node_id: $host2$host_suffix
+            pdisk_category: SSD
+            path: /dev/disk/by-partlabel/ydb_disk_2
+        - vdisk_locations:
+          - node_id: $host2$host_suffix
+            pdisk_category: SSD
+            path: /dev/disk/by-partlabel/ydb_disk_3
+      - fail_domains:
+        - vdisk_locations:
+          - node_id: $host3$host_suffix
+            pdisk_category: SSD
+            path: /dev/disk/by-partlabel/ydb_disk_1
+        - vdisk_locations:
+          - node_id: $host3$host_suffix
+            pdisk_category: SSD
+            path: /dev/disk/by-partlabel/ydb_disk_2
+        - vdisk_locations:
+          - node_id: $host3$host_suffix
+            pdisk_category: SSD
+            path: /dev/disk/by-partlabel/ydb_disk_3
+channel_profile_config:
+  profile:
+  - channel:
+    - erasure_species: mirror-3-dc
+      pdisk_category: 1   # 0=ROT, 1=SSD, 2=NVME
+      storage_pool_kind: ssd
+    - erasure_species: mirror-3-dc
+      pdisk_category: 1
+      storage_pool_kind: ssd
+    - erasure_species: mirror-3-dc
+      pdisk_category: 1
+      storage_pool_kind: ssd
+    profile_id: 0
+interconnect_config:
+    start_tcp: true
+    encryption_mode: OPTIONAL
+    path_to_certificate_file: "/opt/ydb/certs/node.crt"
+    path_to_private_key_file: "/opt/ydb/certs/node.key"
+    path_to_ca_file: "/opt/ydb/certs/ca.crt"
+grpc_config:
+    cert: "/opt/ydb/certs/node.crt"
+    key: "/opt/ydb/certs/node.key"
+    ca: "/opt/ydb/certs/ca.crt"
+    services_enabled:
+    - legacy
+    - discovery
+auth_config:
+  path_to_root_ca: /opt/ydb/certs/ca.crt
+client_certificate_authorization:
+  request_client_certificate: true
+  client_certificate_definitions:
+      - member_groups: ["databaseNodes@cert"]
+        subject_terms:
+        - short_name: "O"
+          values: ["YDB"]
+        - short_name: "CN"
+          values: ["YDB CA"]
+
+column_shard_config:
+  disabled_on_scheme_shard: false
+
+memory_controller_config:
+  target_utilization_bytes: 50952616000
+  shared_cache_max_percent: 10
+  hard_limit_bytes: 50952616000
+  soft_limit_percent: 10
