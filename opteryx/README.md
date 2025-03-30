@@ -17,7 +17,7 @@ To generate benchmark results, follow these steps:
 
 ### **High-level Steps**
 1. Set up the environment.
-2. Install Python and required dependencies.
+2. Install Python and the required dependencies.
 3. Download the benchmark dataset.
 4. Run the benchmark script.
 
@@ -28,7 +28,7 @@ To generate benchmark results, follow these steps:
    - Architecture: 64-bit
    - Instance Type: `c6a.4xlarge`
    - Root Storage: 500 GB gp2 SSD
-   - Advanced Settings: Ensure EBS-optimization is **disabled**.
+   - Advanced Details: Ensure 'EBS-optimized instance' is **disabled**.
 
 2. **SSH into the instance** (after the status checks are complete):
    ~~~bash
@@ -54,6 +54,4 @@ To generate benchmark results, follow these steps:
 
 ### Known Issues
 
-- `COUNT(DISTINCT a)` does not distinct the values and instead performs `COUNT(a)` 
-- Queries 28 and 29 fail due to errors with result handling.
 - Queries 33 and 34 fail due to Out of Memory (OOM) errors.
