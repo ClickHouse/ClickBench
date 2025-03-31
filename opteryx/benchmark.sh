@@ -15,7 +15,7 @@ source ~/opteryx_venv/bin/activate
 
 # Upgrade pip in the virtual environment
 ~/opteryx_venv/bin/python -m pip install --upgrade pip
-~/opteryx_venv/bin/python -m pip install --upgrade opteryx==0.19.1
+~/opteryx_venv/bin/python -m pip install --upgrade opteryx==0.21.0
 
 # Download benchmark target data, partitioned
 mkdir -p hits
