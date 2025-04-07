@@ -14,6 +14,34 @@ command -v jq || exit 1
 command -v curl || exit 1
 command -v clickhouse-client || exit 1
 
+NAME_PREFIX="ClickBench-${PROVIDER}-${REGION}-${REPLICAS}-${MEMORY}"
+NAME_FULL="${NAME_PREFIX}-$$"
+
+curl -X GET -H 'Content-Type: application/json' --silent --show-error --user "${KEY_ID}:${KEY_SECRET}" "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services" | jq .result \
+| ch --input-format JSONEachRow --query "SELECT id FROM table WHERE startsWith(name, '${NAME_PREFIX}')" \
+| while read -r OLD_SERVICE_ID
+do
+    echp "Found an old service, ${OLD_SERVICE_ID}. Stopping it."
+    curl -X PATCH -H 'Content-Type: application/json' -d '{"command": "stop"}' --silent --show-error --user $KEY_ID:$KEY_SECRET "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services/${OLD_SERVICE_ID}/state" | jq
+    echo "Waiting for the service to stop"
+
+    for i in {0..1000}
+    do
+        echo -n "$i seconds... "
+        curl --silent --show-error --user $KEY_ID:$KEY_SECRET "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services/${OLD_SERVICE_ID}" | jq --raw-output .result.state | tee "${TMPDIR}"/state
+        grep 'stopped' "${TMPDIR}"/state && break
+        sleep 1
+        if [[ $i == 1000 ]]
+        then
+            echo "Too many retries"
+            exit 1
+        fi
+    done
+
+    echo "Deleting the service"
+    curl -X DELETE --silent --show-error --user $KEY_ID:$KEY_SECRET "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services/${OLD_SERVICE_ID}" | jq
+done
+
 echo "Provisioning a service in ${PROVIDER}, region ${REGION}, memory ${MEMORY}, replicas ${REPLICAS}, with parallel replicas set to ${PARALLEL_REPLICA}"
 
 TMPDIR="csp-${PROVIDER}-region-${REGION}-replicas-${REPLICAS}-memory-${MEMORY}-parallel-${PARALLEL_REPLICA}-pid-$$"
@@ -23,7 +51,7 @@ echo $TMPDIR
 
 curl -X POST -H 'Content-Type: application/json' -d '
 {
-    "name": "ClickBench-'${PROVIDER}'-'${REGION}'-'${REPLICAS}'-'${MEMORY}'-'$$'",
+    "name": "'${NAME_FULL}'",
     "provider": "'$PROVIDER'",
     "region": "'$REGION'",
     "numReplicas": '$REPLICAS',
