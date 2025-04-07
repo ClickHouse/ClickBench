@@ -6,7 +6,7 @@
     "cluster_size": 4,
     "comment": "",
 
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "YT"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "YTsaurus"],
 
     "load_time": 0,
     "data_size": 11991598975,
