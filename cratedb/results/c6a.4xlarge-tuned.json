@@ -1,5 +1,5 @@
 {
-    "system": "CrateDB",
+    "system": "CrateDB (tuned)",
     "date": "2025-02-28",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
