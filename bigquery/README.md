@@ -10,8 +10,8 @@ It will take two seconds to create a table.
 
 Download Google Cloud CLI:
 ```
-curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-392.0.0-linux-x86_64.tar.gz
-tar -xf google-cloud-cli-392.0.0-linux-x86_64.tar.gz
+wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
+tar -xf google-cloud-cli-linux-x86_64.tar.gz
 ./google-cloud-sdk/install.sh
 source .bashrc
 ./google-cloud-sdk/bin/gcloud init
