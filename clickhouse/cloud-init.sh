@@ -14,11 +14,10 @@ BASE_URL='https://raw.githubusercontent.com/ClickHouse/ClickBench/main/clickhous
 apt-get update
 apt-get install -y wget curl
 
-wget $BASE_URL/{benchmark.sh,run.sh,create.sql,queries.sql}
-# wget $BASE_URL/{benchmark.sh,run.sh,create-tuned-memory.sql,queries-tuned-memory.sql}
+wget $BASE_URL/{benchmark.sh,run.sh,create.sql,queries.sql,create-tuned-memory.sql,queries-tuned-memory.sql}
 chmod +x *.sh
-./benchmark.sh 2>&1 | tee log
-# ./benchmark.sh tuned-memory 2>&1 | tee log
+./benchmark.sh 2>&1 | tee -a log
+./benchmark.sh tuned-memory 2>&1 | tee -a log
 
 echo $BASE_URL >> log
 curl 'http://169.254.169.254/latest/meta-data/instance-type' >> log
