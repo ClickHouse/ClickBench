@@ -8,7 +8,7 @@ SELECT format(
 $${{
     "system": "ClickHouse (web)",
     "date": "{}",
-    "machine": "c5n.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
     "comment": "",
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "serverless", "stateless"],
@@ -20,9 +20,9 @@ $${{
 }}
 $$, time::Date, time_results_size[1], time_results_size[3], replaceRegexpOne(time_results_size[2], ',\n$', '')) AS res
 FROM sink.data
-WHERE suite_machine[1] = 'clickhouse-web' AND suite_machine[2] = 'c5n.4xlarge'
+WHERE suite_machine[1] = 'clickhouse-web' AND suite_machine[2] = 'c6a.4xlarge'
 ORDER BY time DESC LIMIT 1
-INTO OUTFILE 'results/c5n.4xlarge.json' TRUNCATE
+INTO OUTFILE 'results/c6a.4xlarge.json' TRUNCATE
 FORMAT Raw;
 
 WITH
