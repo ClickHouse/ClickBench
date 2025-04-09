@@ -1,5 +1,12 @@
-BigQuery has "DeWitt" clause that restricts from disclosing the benchmark results.
-Nevertheless, it does not prevent from doing the benchmarks.
+Google's [General Service Terms](https://cloud.google.com/terms/service-terms/index-20230814) allow benchmarking under certain conditions (i.e. no DeWitt clause):
+
+```
+7. Benchmarking. Customer may conduct benchmark tests of the Services (each a "Test"). Customer may only publicly disclose the results of
+   such Tests if (a) the public disclosure includes all necessary information to replicate the Tests, and (b) Customer allows Google to
+   conduct benchmark tests of Customer's publicly available products or services and publicly disclose the results of such tests.
+   Notwithstanding the foregoing, Customer may not do either of the following on behalf of a hyperscale public cloud provider without
+   Google's prior written consent: (i) conduct (directly or through a third party) any Test or (ii) disclose the results of any such Test.
+```
 
 It's very difficult to find, how to create a database.
 Databases are named "datasets". You need to press on `⋮` near project.
