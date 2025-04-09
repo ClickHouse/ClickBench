@@ -2,8 +2,11 @@
 
 # Install
 
-curl https://clickhouse.com/ | sh
-sudo ./clickhouse install --noninteractive
+if [ ! -x /usr/bin/clickhouse ]
+then
+    curl https://clickhouse.com/ | sh
+    sudo ./clickhouse install --noninteractive
+fi
 
 # Optional: if you want to use higher compression:
 if (( 0 )); then
@@ -35,8 +38,11 @@ fi
 
 clickhouse-client < create"$SUFFIX".sql
 
-wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -d hits.tsv.gz
+if [ ! -f hits.tsv ]
+then
+    wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+    gzip -d hits.tsv.gz
+fi
 
 clickhouse-client --time --query "INSERT INTO hits FORMAT TSV" < hits.tsv
 
