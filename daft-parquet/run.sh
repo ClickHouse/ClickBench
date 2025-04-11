@@ -39,8 +39,7 @@ echo '{
         "Rust",
         "stateless",
         "serverless",
-        "embedded",
-        "dataframe"
+        "embedded"
     ],
     "load_time": 0,
     "data_size": '$FILE_SIZE',
