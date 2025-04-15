@@ -3,7 +3,7 @@
     "date": "2025-01-23",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
-    "comment": "Ingests data only from non-compressed cvs.",
+    "comment": "Ingests data only from non-compressed CSV files",
 
     "tags": ["C", "analytical", "somewhat PostgreSQL compatible"],
 
