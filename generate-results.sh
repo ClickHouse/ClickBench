@@ -7,6 +7,7 @@
 [ -n "$HOMEBREW_PREFIX" ] && PATH="${HOMEBREW_PREFIX}/opt/coreutils/libexec/gnubin:${PATH}"
 if command -v gsed >/dev/null 2>&1
 then
+    shopt -s expand_aliases
     alias sed='gsed'
 fi
 
