@@ -2,18 +2,19 @@
 
 # This benchmark should run on Amazon Linux
 
-VERSION=3.0.0-preview
-DOWNLOAD_URL=https://releases.starrocks.io/starrocks/StarRocks-3.0.0-preview.tar.gz
+set -e
+
+VERSION=3.4.2-ubuntu-amd64
 # Install
-wget $DOWNLOAD_URL
+wget -q https://releases.starrocks.io/starrocks/StarRocks-$VERSION.tar.gz -O StarRocks-$VERSION.tar.gz
 tar zxvf StarRocks-${VERSION}.tar.gz
 
 cd StarRocks-${VERSION}/
 
 # Install dependencies
-sudo yum install -y java-1.8.0-openjdk-devel.x86_64 mysql
-
-export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk/
+# NOTE: with latest java-24 the FE crashes and 9030 endpoint is broken, but 17 is used in the official docker images
+sudo yum install -y java-17-amazon-corretto-devel mariadb105
+export JAVA_HOME=/usr/lib/jvm/java-17
 export PATH=$JAVA_HOME/bin:$PATH
 
 # Create directory for FE and BE
