@@ -104,7 +104,7 @@ CREATE TABLE hits (
     RefererHash BIGINT NOT NULL,
     URLHash BIGINT NOT NULL,
     CLID INT NOT NULL
-)  
-DUPLICATE KEY (CounterID, EventDate, UserID, EventTime, WatchID) 
-DISTRIBUTED BY HASH(UserID) BUCKETS 192
+)
+DUPLICATE KEY (CounterID, EventDate, UserID, EventTime, WatchID)
+DISTRIBUTED BY RANDOM BUCKETS 1
 PROPERTIES ( "replication_num"="1");
