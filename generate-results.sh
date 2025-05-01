@@ -25,7 +25,7 @@ fi
     done
 
     echo ']; // end of data'
-    sed '0,/^\]; \/\/ end of data$/d' index.html
+    sed -n '/^\]; \/\/ end of data$/,$p' index.html | sed '1d'
 
 ) > index.html.new
 
