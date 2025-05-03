@@ -45,7 +45,7 @@ fi
 psql -h 127.0.0.1 -U postgres -t < create/"$CREATE_FILE".sql
 
 #get and unpack hits.tsv
-sudo docker exec pgpro_tam bash -c "cd /tmp && wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz' && gzip -d hits.tsv.gz"
+sudo docker exec pgpro_tam bash -c "cd /tmp && wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz' && gzip -d -f hits.tsv.gz"
 
 #insert data to table
 if [ "$1" == "parquet_fd_parall" ] ; then

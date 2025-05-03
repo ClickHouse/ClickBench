@@ -17,7 +17,7 @@ sudo -u postgres psql -c "CREATE DATABASE nocolumnstore"
 sudo -u postgres psql nocolumnstore -c "CREATE EXTENSION timescaledb WITH VERSION '2.17.2';"
 
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -d hits.tsv.gz
+gzip -d -f hits.tsv.gz
 sudo chmod og+rX ~
 chmod 777 hits.tsv
 

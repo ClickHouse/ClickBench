@@ -8,7 +8,7 @@ pip install --break-system-packages chdb==2.2.0b1
 
 # Load the data
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
-gzip -d hits.csv.gz
+gzip -d -f hits.csv.gz
 ./load.py
 
 # Run the queries

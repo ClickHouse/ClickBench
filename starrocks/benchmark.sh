@@ -39,7 +39,7 @@ sleep 30
 # Prepare Data
 cd ../
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -d hits.tsv.gz
+gzip -d -f hits.tsv.gz
 
 # Create Table
 mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits"

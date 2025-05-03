@@ -35,7 +35,7 @@ do
 done
 
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz' -O /tmp/hits.tsv.gz
-gzip -d /tmp/hits.tsv.gz
+gzip -d -f /tmp/hits.tsv.gz
 chmod 444 /tmp/hits.tsv
 
 psql -U crate -h localhost --no-password -t < $CREATE_FILE
