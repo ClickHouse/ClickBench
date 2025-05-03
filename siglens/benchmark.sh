@@ -15,7 +15,7 @@ cd ..
 
 echo "Download and unzip dataset"
 wget --continue https://datasets.clickhouse.com/hits_compatible/hits.json.gz
-gzip -d hits.json.gz
+gzip -d -f hits.json.gz
 
 # Add the _index line and fix the UserID from string to num and preprocesses the dataset for loading
 python3 fix_hits.py

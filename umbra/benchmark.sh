@@ -9,7 +9,7 @@ sudo apt-get install -y postgresql-client gzip
 
 rm -rf hits.tsv
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -d hits.tsv.gz
+gzip -d -f hits.tsv.gz
 chmod 777 hits.tsv
 
 rm -rf umbra-25-01-23.tar.xz umbra

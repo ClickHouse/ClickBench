@@ -28,7 +28,7 @@ sudo systemctl enable heavydb
 # Load the data
 
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
-gzip -d hits.csv.gz
+gzip -d -f hits.csv.gz
 chmod 777 ~ hits.csv
 
 sudo bash -c "echo 'allowed-import-paths = [\"/home/ubuntu/\"]' > /var/lib/heavyai/heavy.conf_"

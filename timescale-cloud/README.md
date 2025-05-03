@@ -10,7 +10,7 @@
 
    ```bash
    wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-   gzip -d hits.tsv.gz
+   gzip -d -f hits.tsv.gz
    
    export $CONNECTION_STRING=...  
    time ./load.sh 

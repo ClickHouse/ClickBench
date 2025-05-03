@@ -22,7 +22,7 @@ sudo docker exec -it memsql-ciab memsql -p"${ROOT_PASSWORD}"
 # Load the data
 
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -d hits.tsv.gz
+gzip -d -f hits.tsv.gz
 sudo docker cp hits.tsv memsql-ciab:/
 
 sudo docker exec -it memsql-ciab memsql -p"${ROOT_PASSWORD}" -e "CREATE DATABASE test"
