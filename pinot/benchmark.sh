@@ -18,7 +18,7 @@ sleep 30
 # Load the data
 
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -d hits.tsv.gz
+gzip -d -f hits.tsv.gz
 
 # Pinot was unable to load data as a single file wihout any errors returned. We have to split the data
 split -d --additional-suffix .tsv --verbose -n l/100 hits.tsv parts
