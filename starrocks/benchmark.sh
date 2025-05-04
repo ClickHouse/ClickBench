@@ -6,15 +6,15 @@ set -e
 
 VERSION=3.4.2-ubuntu-amd64
 # Install
-wget -q https://releases.starrocks.io/starrocks/StarRocks-$VERSION.tar.gz -O StarRocks-$VERSION.tar.gz
+wget https://releases.starrocks.io/starrocks/StarRocks-$VERSION.tar.gz -O StarRocks-$VERSION.tar.gz
 tar zxvf StarRocks-${VERSION}.tar.gz
 
 cd StarRocks-${VERSION}/
 
 # Install dependencies
-# NOTE: with latest java-24 the FE crashes and 9030 endpoint is broken, but 17 is used in the official docker images
-sudo yum install -y java-17-amazon-corretto-devel mariadb105
-export JAVA_HOME=/usr/lib/jvm/java-17
+sudo apt update
+sudo apt install openjdk-17-jre mariadb-client
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH=$JAVA_HOME/bin:$PATH
 
 # Create directory for FE and BE
@@ -40,7 +40,7 @@ sleep 30
 # Prepare Data
 cd ../
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -f -d hits.tsv.gz
+gzip -d hits.tsv.gz
 
 # Create Table
 mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits"

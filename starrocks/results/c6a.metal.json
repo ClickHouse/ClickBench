@@ -1,10 +1,10 @@
 {
     "system": "StarRocks",
-    "date": "2023-02-10",
+    "date": "2025-05-01",
     "machine": "c6a.metal, 500gb gp2",
     "cluster_size": 1,
     "comment": "",
-    "tags": ["C++", "column-oriented", "MySQL compatible", "ClickHouse derivative"],
+    "tags": ["C++", "column-oriented", "MySQL compatible"],
     "load_time": 341,
     "data_size": 16334421700,
     "result": [
