@@ -1,20 +1,42 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Install
+set -e
 
-sudo apt-get install -y unzip
-curl https://glaredb.com/install.sh | sh
+repo_root=$(git rev-parse --show-toplevel)
+script_dir=$(dirname "$0")
 
-wget https://clickhouse-public-datasets.s3.eu-central-1.amazonaws.com/hits_compatible/athena/hits.parquet
+if [[ "$(basename "$repo_root")" == "glaredb" ]]; then
+    # Inside glaredb repo, build from source.
+    cargo build --release --bin glaredb
+    cp "${repo_root}/target/release/glaredb" "${script_dir}/glaredb"
+else
+    # Not in glaredb repo, use prebuilt binary.
+    export GLAREDB_INSTALL_DIR="${script_dir}"
+    export GLAREDB_VERSION="v25.5.2"
+    curl -fsSL https://glaredb.com/install.sh | sh
+fi
 
-cat queries.sql | while read -r query
-do
-    sync
-    echo 3 | sudo tee /proc/sys/vm/drop_caches
+# Get the data.
+mkdir -p "${script_dir}/data"
+pushd "${script_dir}/data"
 
-    for i in $(seq 1 3); do
-        ./glaredb --timing --query "${query}"
-    done;
-done 2>&1 | tee log.txt
+mode="${1:-single}" # Default to 'single' if no arg given.
+case "${mode}" in
+    single)
+        wget --continue https://clickhouse-public-datasets.s3.eu-central-1.amazonaws.com/hits_compatible/athena/hits.parquet
+        ;;
+    partitioned)
+        seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+        ;;
+    *)
+        echo "Invalid argument to 'benchmark.sh', expected 'single' or 'partitioned'"
+        exit 1
+        ;;
+esac
+popd
 
-cat log.txt | grep -oP 'Time: \d+\.\d+s|Error' | sed -r -e 's/Time: ([0-9]+\.[0-9]+)s/\1/; s/Error/null/' | awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+# Ensure working directory is the script dir. The view that gets created uses a
+# relative path.
+pushd "${script_dir}"
+
+./run.sh "${mode}"
