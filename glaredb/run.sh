@@ -21,11 +21,7 @@ echo "query_num,iteration,duration" > results.csv
 
 cat queries.sql | while read -r query; do
     sync
-    if [[ -r /proc/sys/vm/drop_caches ]]; then
-        # Only try to run this if we have a proc file system.
-        # Aka not mac.
-        echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
-    fi
+    echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
 
     echo "${QUERY_NUM}: ${query}"
 
