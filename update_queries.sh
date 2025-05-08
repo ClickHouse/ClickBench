@@ -1,4 +1,4 @@
 #!/bin/bash
 
-PASSWORD=${PASSWORD:-}
-clickhouse client --host z0ur79yngg.us-central1.gcp.clickhouse-staging.com --password "$PASSWORD" --secure --query "SELECT formatQuerySingleLine(query) FROM queries ORDER BY number ASC FORMAT LineAsString" > queries.new.sql
+PASSWORD=${CLICKHOUSE_PASSWORD:-}
+clickhouse client --host "${CLICKHOUSE_HOST}" --password "$CLICKHOUSE_PASSWORD" --secure --query "SELECT formatQuerySingleLine(query) FROM queries ORDER BY number ASC FORMAT LineAsString" > queries.new.sql

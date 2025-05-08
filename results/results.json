@@ -1,0 +1,5 @@
+{"system":"Cloud","date":"2025-05-08","machine":"720 GB","cluster_size":3,"comment":"","settings":["max_threads=16","enable_parallel_replicas=1"],"version":"24.12.1.18350","data_size":26070714781426,"result":[
+[0.005,0.005,0.005,0.005,0.005],
+[0.607,0.457,0.450,0.458,0.683],
+[5.541,5.407,5.509,5.545,5.362]
+]}

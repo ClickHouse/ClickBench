@@ -301,15 +301,15 @@ const queries = [
 
 <table class="selectors-container stick-left">
     <tr>
-        <th>System: </th>
-        <td id="selectors_system">
-            <a id="select-all-systems" class="selector selector-active">All</a>
+        <th>Version: </th>
+        <td id="selectors_version">
+            <a id="select-all-versions" class="selector selector-active">All</a>
         </td>
     </tr>
     <tr>
-        <th>Type: </th>
-        <td id="selectors_type">
-            <a id="select-all-types" class="selector selector-active">All</a>
+        <th>Settings: </th>
+        <td id="selectors_setting">
+            <a id="select-all-settings" class="selector selector-active">All</a>
         </td>
     </tr>
     <tr>
@@ -338,7 +338,7 @@ const queries = [
     <thead>
         <tr>
             <th class="summary-name">
-                System &amp; Machine
+                Version &amp; Machine
             </th>
             <th colspan="2">
                 Relative <span id="time-or-size">time</span> (lower is better)
@@ -371,8 +371,8 @@ const missing_result_penalty = 2;
 const missing_result_time = 300;
 
 let selectors = {
-    "system": {},
-    "type": {},
+    "version": {},
+    "setting": {},
     "machine": {},
     "cluster_size": {},
     "metric": "hot",
@@ -398,12 +398,12 @@ if (new_theme && new_theme != theme) {
 
 /// Generate selectors
 
-let systems = document.getElementById('selectors_system');
-let types = document.getElementById('selectors_type');
+let versions = document.getElementById('selectors_version');
+let settings = document.getElementById('selectors_setting');
 let machines = document.getElementById('selectors_machine');
 let cluster_sizes = document.getElementById('selectors_cluster_size');
 
-let unique_systems = [... new Set(data.map(elem => elem.system))];
+let unique_versions = [... new Set(data.map(elem => elem.version))];
 
 function toggle(e, elem, selectors_map) {
     selectors_map[elem] = !selectors_map[elem];
@@ -422,20 +422,20 @@ function toggleAll(e, selectors_map) {
     updateHistory();
 }
 
-unique_systems.map(elem => {
+unique_versions.map(elem => {
     let selector = document.createElement('a');
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
-    systems.appendChild(selector);
-    if (!(elem in selectors.system)) { selectors.system[elem] = data.some(entry => entry.system == elem && !entry.hide); }
-    selector.addEventListener('click', e => toggle(e, elem, selectors.system));
+    versions.appendChild(selector);
+    if (!(elem in selectors.version)) { selectors.version[elem] = data.some(entry => entry.version == elem && !entry.hide); }
+    selector.addEventListener('click', e => toggle(e, elem, selectors.version));
 
-    /// Highlighting summary rows and table columns on hovering over the system selector.
+    /// Highlighting summary rows and table columns on hovering over the version selector.
     selector.addEventListener('mouseover', e => {
         [...document.querySelectorAll('.summary-row')].map(row => {
-            row.className = row.dataset.system == elem ? 'summary-row summary-row-hilite' : 'summary-row' });
+            row.className = row.dataset.version == elem ? 'summary-row summary-row-hilite' : 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(th => {
-            th.className = th.dataset.system == elem ? 'th-entry th-entry-hilite' : 'th-entry' });
+            th.className = th.dataset.version == elem ? 'th-entry th-entry-hilite' : 'th-entry' });
     });
     selector.addEventListener('mouseout', e => {
         [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
@@ -443,14 +443,15 @@ unique_systems.map(elem => {
     });
 });
 
-[... new Set(data.map(elem => elem.tags).flat())].map(elem => {
+[... new Set(data.map(elem => elem.settings).flat())].map(elem => {
     let selector = document.createElement('a');
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
-    types.appendChild(selector);
-    if (!(elem in selectors.type)) { selectors.type[elem] = true; }
-    selector.addEventListener('click', e => toggle(e, elem, selectors.type));
+    settings.appendChild(selector);
+    if (!(elem in selectors.setting)) { selectors.setting[elem] = true; }
+    selector.addEventListener('click', e => toggle(e, elem, selectors.setting));
 });
+
 
 [... new Set(data.map(elem => elem.machine))].map(elem => {
     let selector = document.createElement('a');
@@ -471,8 +472,8 @@ unique_systems.map(elem => {
     selector.addEventListener('click', e => toggle(e, elem, selectors.cluster_size));
 });
 
-document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
-document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
+document.getElementById('select-all-versions').addEventListener('click', e => toggleAll(e, selectors.version));
+document.getElementById('select-all-settings').addEventListener('click', e => toggleAll(e, selectors.setting));
 document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
 document.getElementById('select-all-cluster-sizes').addEventListener('click', e => toggleAll(e, selectors.cluster_size));
 
@@ -486,9 +487,11 @@ document.getElementById('selector-metric-size').addEventListener('click', e => {
 
 selectors.queries = [...data[0].result.keys()].map(k => true);
 
+console.log(selectors)
+
 function updateSelectors() {
-    [...systems.childNodes].map(elem => { elem.className = selectors.system[elem.innerText] ? 'selector selector-active' : 'selector' });
-    [...types.childNodes].map(elem => { elem.className = selectors.type[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...versions.childNodes].map(elem => { elem.className = selectors.version[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...settings.childNodes].map(elem => { elem.className = selectors.setting[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...machines.childNodes].map(elem => { elem.className = selectors.machine[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...cluster_sizes.childNodes].map(elem => { elem.className = selectors.cluster_size[elem.innerText] ? 'selector selector-active' : 'selector' });
 
@@ -582,18 +585,18 @@ function renderSummary(filtered_data) {
         let tr = document.createElement('tr');
         tr.className = 'summary-row';
 
-        tr.dataset.system = elem.system;
+        tr.dataset.version = elem.version;
 
         let td_name = document.createElement('td');
         td_name.className = 'summary-name';
 
         if (!elem.fake) {
             let link = document.createElement('a');
-            link.appendChild(document.createTextNode(`${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
-            link.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + elem.source;
+            link.appendChild(document.createTextNode(`${elem.version} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+            link.href = "https://github.com/ClickHouse/DemoBench/blob/main/" + elem.source;
             td_name.appendChild(link);
         } else {
-            td_name.appendChild(document.createTextNode(elem.system));
+            td_name.appendChild(document.createTextNode(elem.version));
         }
 
         if (elem.comment) { td_name.appendChild(addNote(elem.comment)); }
@@ -685,10 +688,10 @@ function render() {
     clearElement(details_body);
 
     let filtered_data = data.filter(elem =>
-        selectors.system[elem.system] &&
+        selectors.version[elem.version] &&
         selectors.machine[elem.machine] &&
         selectors.cluster_size[elem.cluster_size] &&
-        elem.tags.filter(type => selectors.type[type]).length > 0);
+        elem.settings.filter(setting => selectors.setting[setting]).length > 0);
 
     let nothing_selected_elem = document.getElementById('nothing-selected');
     if (filtered_data.length == 0) {
@@ -729,9 +732,9 @@ function render() {
     sorted_indices.map(idx => {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
-        th.appendChild(document.createTextNode(`${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+        th.appendChild(document.createTextNode(`${elem.version}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
         th.className = 'th-entry';
-        th.dataset.system = elem.system;
+        th.dataset.version = elem.version;
         details_head.appendChild(th);
     });
 
@@ -823,7 +826,15 @@ window.onpopstate = function(event) {
 
 if (window.location.hash) {
     try {
-        selectors = JSON.parse(atob(window.location.hash.substring(1)));
+        const parsed = JSON.parse(atob(window.location.hash.substring(1)));
+        selectors = {
+            version: parsed.version || {},
+            setting: parsed.setting || {},
+            machine: parsed.machine || {},
+            cluster_size: parsed.cluster_size || {},
+            metric: parsed.metric || "hot",
+            queries: parsed.queries || [],
+        };
     } catch {}
 }
 
