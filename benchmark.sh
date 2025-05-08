@@ -19,7 +19,7 @@ REPLICA_CHECK_QUERY="SELECT count() FROM clusterAllReplicas('default', view(SELE
 while true; do
     count=$(clickhouse client \
         --host "${CLICKHOUSE_HOST}" \
-        --user "${CLICKHOUSE_USER:=playbench}" \
+        --user "${CLICKHOUSE_USER:=demobench}" \
         --password "${CLICKHOUSE_PASSWORD:=}" \
         --secure \
         --query="$REPLICA_CHECK_QUERY" 2>/dev/null)
@@ -61,15 +61,15 @@ fi
 echo "${SETTINGS}"
 
 # grab version
-version=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER:=playbench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --query="SELECT version()")
-data_size=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER:=playbench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --query="SELECT sum(total_bytes) FROM system.tables WHERE database NOT IN ('system', 'default')")
+version=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --query="SELECT version()")
+data_size=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --query="SELECT sum(total_bytes) FROM system.tables WHERE database NOT IN ('system', 'default')")
 now=$(date +'%Y-%m-%d')
 echo "{\"system\":\"Cloud\",\"date\":\"${now}\",\"machine\":\"720 GB\",\"cluster_size\":3,\"comment\":\"\",\"settings\":${settings_json},\"version\":\"${version}\",\"data_size\":${data_size},\"result\":[" > temp.json
 cat queries.sql | while read query; do
-    clickhouse client --host "${HOST:=localhost}" --user "${USER:=playbench}" --password "${PASSWORD:=}" --secure --format=Null --query="SYSTEM DROP FILESYSTEM CACHE${on_cluster}"
+    clickhouse client --host "${CLICKHOUSE_HOST:=localhost}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --format=Null --query="SYSTEM DROP FILESYSTEM CACHE${on_cluster}"
     echo -n "[" >> temp.json
     for i in $(seq 1 $TRIES); do
-        RES=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER:=playbench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --time --format=Null --query="${query} ${SETTINGS}" 2>&1)
+        RES=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --time --format=Null --query="${query} ${SETTINGS}" 2>&1)
         if [ "$?" == "0" ] && [ "${#RES}" -lt "10" ]; then
             echo "${QUERY_NUM}, ${i} - OK"
             echo -n "${RES}" >> temp.json
