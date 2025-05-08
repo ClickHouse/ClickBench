@@ -4,3 +4,5 @@
 *.parquet
 hits.csv
 hits.tsv
+queries.new.sql
+temp.json
