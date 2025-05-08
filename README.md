@@ -4,7 +4,7 @@ Based on [ClickBench](https://github.com/ClickHouse/ClickBench/#results-usage-an
 
 ## Overview
 
-This benchmark aims to measure the performance of sql.clickhouse.com over time as we upgrade versions and change default settings. Queries are based on the example queries in the public demo environment [sql.clickhouse.com](sql.clickhouse.com). These queries include those in docs and blogs.
+This benchmark aims to measure the performance of sql.clickhouse.com over time as we upgrade versions and change default settings. Queries are based on the example queries in the public demo environment [sql.clickhouse.com](sql.clickhouse.com). These queries include those in docs and blogs. **As of '2025-05-08' this is over 250 queries over 35 datasets.**
 
 ## Goals
 
