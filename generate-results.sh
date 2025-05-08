@@ -1,33 +1,30 @@
 #!/bin/bash -e
 
-# This script will substitute the benchmark results into the HTML page.
+# This script will generate the benchmark results into the HTML page.
 # Note: editing HTML with sed may look strange, but at least we avoid using node.js and npm, and that's good.
 
-# This is needed on Mac OS. Do `brew install coreutils`.
-[ -n "$HOMEBREW_PREFIX" ] && PATH="${HOMEBREW_PREFIX}/opt/coreutils/libexec/gnubin:${PATH}"
-if command -v gsed >/dev/null 2>&1
-then
-    shopt -s expand_aliases
-    alias sed='gsed'
-fi
-
 (
-    sed '/^const data = \[$/q' index.html
+    sed '/^const data = \[$/q' index.html.template
 
     FIRST=1
-    LANG="" ls -1 */results/*.json | while read -r file
+    ls -1 results/*.json | while read file
     do
-        [[ $file =~ ^(hardware|versions|gravitons)/ ]] && continue;
+        [[ $file =~ ^(hardware|versions)/ ]] && continue;
 
         [ "${FIRST}" = "0" ] && echo -n ','
-        jq --compact-output ". += {\"source\": \"${file}\"}" "${file}" || echo "Error in $file" >&2
+        jq --compact-output ". += {\"source\": \"${file}\"}" "${file}"
         FIRST=0
     done
-
+    set -o noglob
     echo ']; // end of data'
-    sed '0,/^\]; \/\/ end of data$/d' index.html
-
-) > index.html.new
-
-mv index.html index.html.bak
-mv index.html.new index.html
+    echo 'const queries = ['
+    FIRST=1
+    cat queries.sql | while read query; do
+        [ "${FIRST}" = "0" ] && echo -n ','
+        echo $query | jq  --raw-input .
+        FIRST=0
+    done
+    echo ']; // end of queries'
+    sed '1,/^\]; \/\/ end of queries$/d' index.html.template
+    set +o noglob
+) > index.html

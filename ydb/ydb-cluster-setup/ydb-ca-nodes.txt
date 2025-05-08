@@ -1,3 +1,0 @@
-$host1 $host1$host_suffix.
-$host2 $host2$host_suffix.
-$host3 $host3$host_suffix.
