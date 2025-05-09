@@ -63,10 +63,17 @@ echo "${SETTINGS}"
 # grab version
 version=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --query="SELECT version()")
 data_size=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --query="SELECT sum(total_bytes) FROM system.tables WHERE database NOT IN ('system', 'default')")
-now=$(date +'%Y-%m-%d')
+timestamp=$(date +'%Y-%m-%d-%H-%M-%S')
+now=${timestamp:0:10}
+output_file="${timestamp}.json"
+
 echo "{\"system\":\"Cloud\",\"date\":\"${now}\",\"machine\":\"720 GB\",\"cluster_size\":3,\"comment\":\"\",\"settings\":${settings_json},\"version\":\"${version}\",\"data_size\":${data_size},\"result\":[" > temp.json
 cat queries.sql | while read query; do
-    clickhouse client --host "${CLICKHOUSE_HOST:=localhost}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --format=Null --query="SYSTEM DROP FILESYSTEM CACHE${on_cluster}"
+    while true; do
+        clickhouse client --host "${CLICKHOUSE_HOST:=localhost}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --format=Null --query="SYSTEM DROP FILESYSTEM CACHE${on_cluster}" && break
+        echo "⏳ Retrying SYSTEM DROP FILESYSTEM CACHE..."
+        sleep 2
+    done
     echo -n "[" >> temp.json
     for i in $(seq 1 $TRIES); do
         RES=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --time --format=Null --query="${query} ${SETTINGS}" 2>&1)
@@ -86,6 +93,6 @@ done
 
 sed '$ s/.$//' temp.json > results.json
 echo ']}' >> results.json
-cat results.json | jq > temp.json
-
+cat results.json | jq > "$output_file"
+rm temp.json results.json
 set +o noglob
