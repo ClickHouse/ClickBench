@@ -294,7 +294,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Tablespace
 - [x] Tembo
 - [x] Cloudberry
-- [ ] Daft
+- [x] Daft
 - [x] Pandas
 - [x] Polars
 - [x] OctoSQL
