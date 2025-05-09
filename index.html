@@ -1072,12 +1072,30 @@ function render() {
 
         let td_query_num = document.createElement('td');
         td_query_num.className = 'note';
-        td_query_num.appendChild(document.createTextNode(`Q${query_num}. `));
 
+        const label = `Q${query_num}. `;
+        td_query_num.appendChild(document.createTextNode(label));
+
+        // Tooltip for full query
         let tooltip = document.createElement('span');
         tooltip.className = 'tooltip tooltip-query';
         tooltip.appendChild(document.createTextNode(`Query ${query_num}: ${queries[query_num]}`));
         td_query_num.appendChild(tooltip);
+
+        // Copy button
+        let copyBtn = document.createElement('button');
+        copyBtn.innerText = '📋';
+        copyBtn.style.marginLeft = '0.5rem';
+        copyBtn.style.cursor = 'pointer';
+        copyBtn.title = 'Copy to clipboard';
+        copyBtn.onclick = () => {
+            navigator.clipboard.writeText(queries[query_num]).then(() => {
+                copyBtn.innerText = '✅';
+                setTimeout(() => { copyBtn.innerText = '📋'; }, 1500);
+            });
+        };
+
+        td_query_num.appendChild(copyBtn);
 
         tr.appendChild(td_query_num);
 
