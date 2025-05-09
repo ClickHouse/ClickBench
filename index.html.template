@@ -540,9 +540,18 @@ function renderSummary(filtered_data) {
 
     const num_queries = filtered_data[0].result.length;
 
-    const baseline_data = [...filtered_data[0].result.keys()].map(query_num =>
-        [...Array(5).keys()].map(run_num =>
-            Math.min(...filtered_data.filter(elem => !elem.fake).map(elem => elem.result[query_num][run_num]).filter(x => x))));
+    const baseline_data = [...filtered_data[0].result.keys()].map(
+                    (query_num) =>
+                        [...Array(5).keys()].map((run_num) => {
+                            const times = filtered_data
+                                .filter((elem) => !elem.fake)
+                                .map((elem) => elem.result[query_num][run_num])
+                                .filter((x) => x !== null && x !== undefined);
+                            return times.length > 0
+                                ? Math.min(...times)
+                                : missing_result_time;
+                        }),
+                );
 
     const min_data_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x));
 
@@ -562,6 +571,7 @@ function renderSummary(filtered_data) {
             for (let i = 0; i < num_queries; ++i) {
                 if (no_queries_selected || selectors.queries[i]) {
                     const curr_timing = selectRun(elem.result[i]) ?? fallback_timing;
+
                     const baseline_timing = selectRun(baseline_data[i]);
                     const ratio = (constant_time_add + curr_timing) / (constant_time_add + baseline_timing);
                     accumulator += Math.log(ratio);
@@ -592,7 +602,8 @@ function renderSummary(filtered_data) {
 
         if (!elem.fake) {
             let link = document.createElement('a');
-            link.appendChild(document.createTextNode(`${elem.version} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+            const settings_label = elem.settings.length ? ` [${elem.settings.join(", ")}]` : "";
+            link.appendChild(document.createTextNode(`${elem.version} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine}) ${settings_label}`));
             link.href = "https://github.com/ClickHouse/DemoBench/blob/main/" + elem.source;
             td_name.appendChild(link);
         } else {
@@ -732,7 +743,10 @@ function render() {
     sorted_indices.map(idx => {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
-        th.appendChild(document.createTextNode(`${elem.version}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+        const settings_label = elem.settings.length
+                        ? ` [${elem.settings.join(", ")}]`
+                        : "";
+        th.appendChild(document.createTextNode(`${elem.version}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})\n${settings_label}`));
         th.className = 'th-entry';
         th.dataset.version = elem.version;
         details_head.appendChild(th);

@@ -41,7 +41,7 @@ done
 
 SETTINGS=${SETTINGS:-}
 
-settings_json="[]"
+settings_json="[\"default\"]"
 if [[ -n "$SETTINGS" ]]; then
     settings_json=$(echo "$SETTINGS" | awk -F',' '
     BEGIN { printf("[") }
@@ -64,10 +64,9 @@ echo "${SETTINGS}"
 version=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --query="SELECT version()")
 data_size=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --query="SELECT sum(total_bytes) FROM system.tables WHERE database NOT IN ('system', 'default')")
 timestamp=$(date +'%Y-%m-%d-%H-%M-%S')
-now=${timestamp:0:10}
 output_file="${timestamp}.json"
 
-echo "{\"system\":\"Cloud\",\"date\":\"${now}\",\"machine\":\"720 GB\",\"cluster_size\":3,\"comment\":\"\",\"settings\":${settings_json},\"version\":\"${version}\",\"data_size\":${data_size},\"result\":[" > temp.json
+echo "{\"system\":\"Cloud\",\"date\":\"${timestamp}\",\"machine\":\"720 GB\",\"cluster_size\":3,\"comment\":\"\",\"settings\":${settings_json},\"version\":\"${version}\",\"data_size\":${data_size},\"result\":[" > temp.json
 cat queries.sql | while read query; do
     while true; do
         clickhouse client --host "${CLICKHOUSE_HOST:=localhost}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --format=Null --query="SYSTEM DROP FILESYSTEM CACHE${on_cluster}" && break
