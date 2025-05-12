@@ -5,7 +5,7 @@ TRIES=5
 
 
 QUERY_NUM=1
-CLICKHOUSE_HOST="htw00czilh.us-central1.gcp.clickhouse-staging.com"
+CLICKHOUSE_HOST="${CLICKHOUSE_HOST:=htw00czilh.us-central1.gcp.clickhouse-staging.com}"
 on_cluster=" ON CLUSTER 'default'"
 
 
@@ -67,28 +67,57 @@ timestamp=$(date +'%Y-%m-%d-%H-%M-%S')
 output_file="${timestamp}.json"
 
 echo "{\"system\":\"Cloud\",\"date\":\"${timestamp}\",\"machine\":\"720 GB\",\"cluster_size\":3,\"comment\":\"\",\"settings\":${settings_json},\"version\":\"${version}\",\"data_size\":${data_size},\"result\":[" > temp.json
-cat queries.sql | while read query; do
+
+param_flags=""
+query_stmt=""
+
+while IFS= read -r line || [ -n "$line" ]; do
+    [[ -z "$line" ]] && continue
+
+    if [[ "$line" =~ ^--[[:space:]]*\{.*\} ]]; then
+        json=$(echo "$line" | sed 's/^--[[:space:]]*//')
+        param_flags=""
+        while IFS="=" read -r key value; do
+            param_flags+="--param_${key}=${value} "
+        done < <(echo "$json" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
+        continue
+    fi
+
+    query_stmt="$line"
+    [[ -z "$query_stmt" || "$query_stmt" =~ ^-- ]] && continue
+    echo $query_stmt
+    # Drop cache
     while true; do
-        clickhouse client --host "${CLICKHOUSE_HOST:=localhost}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --format=Null --query="SYSTEM DROP FILESYSTEM CACHE${on_cluster}" && break
+        clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER}" --password "${CLICKHOUSE_PASSWORD}" --secure --format=Null --query="SYSTEM DROP FILESYSTEM CACHE${on_cluster}" && break
         echo "⏳ Retrying SYSTEM DROP FILESYSTEM CACHE..."
         sleep 2
     done
+
     echo -n "[" >> temp.json
-    for i in $(seq 1 $TRIES); do
-        RES=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER:=demobench}" --password "${CLICKHOUSE_PASSWORD:=}" --secure --time --format=Null --query="${query} ${SETTINGS}" 2>&1)
+    for j in $(seq 1 $TRIES); do
+        RES=$(clickhouse client \
+            --host "${CLICKHOUSE_HOST}" \
+            --user "${CLICKHOUSE_USER}" \
+            --password "${CLICKHOUSE_PASSWORD}" \
+            --secure \
+            --time \
+            --format=Null \
+            $param_flags \
+            --query="${query_stmt} ${SETTINGS}" 2>&1)
+
         if [ "$?" == "0" ] && [ "${#RES}" -lt "10" ]; then
-            echo "${QUERY_NUM}, ${i} - OK"
+            echo "${QUERY_NUM}, ${j} - OK"
             echo -n "${RES}" >> temp.json
         else
-            echo "${QUERY_NUM}, ${i} - FAIL - ${RES}"
+            echo "${QUERY_NUM}, ${j} - FAIL - ${RES}"
             echo -n "null" >> temp.json
         fi
-        [[ "$i" != $TRIES ]] && echo -n "," >> temp.json
+        [[ "$j" != $TRIES ]] && echo -n "," >> temp.json
     done
     echo "]," >> temp.json
 
     QUERY_NUM=$((QUERY_NUM + 1))
-done
+done < queries.sql
 
 sed '$ s/.$//' temp.json > results.json
 echo ']}' >> results.json
