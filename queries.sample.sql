@@ -1,0 +1,4 @@
+SELECT disk_name, formatReadableSize(sum(data_compressed_bytes) AS size) AS compressed, formatReadableSize(sum(data_uncompressed_bytes) AS usize) AS uncompressed, round(usize / size, 2) AS compr_rate, sum(rows) AS rows, count() AS part_count FROM system.parts WHERE (active = 1) AND (`table` = 'amazon_reviews') GROUP BY disk_name ORDER BY size DESC
+SELECT product_title, review_headline FROM amazon.amazon_reviews ORDER BY helpful_votes DESC LIMIT 10
+-- {"packages": "['boto3','urllib3','botocore','requests','setuptools']"}
+WITH (SELECT max(upload_time) AS max_date FROM pypi.projects) AS max_date SELECT release_month AS x, name AS y, uniqExact(version) AS z FROM pypi.projects WHERE (name IN ({packages:Array(String) })) AND (toStartOfMonth(upload_time) > toStartOfMonth(max_date - toIntervalMonth(6))) GROUP BY name, toMonth(upload_time) AS month, formatDateTime(upload_time, '%b') AS release_month ORDER BY month ASC LIMIT 30

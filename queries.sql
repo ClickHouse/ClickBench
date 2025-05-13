@@ -226,6 +226,7 @@ SELECT toStartOfWeek(transit_timestamp) AS week, 'weekday' AS period, sum(riders
 SELECT station_complex, toHour(hour_of_day) AS hour, CAST(avg(total_entries), 'UInt64') AS avg_entries FROM (SELECT toStartOfHour(transit_timestamp) AS hour_of_day, station_complex, sum(ridership) AS total_entries FROM mta.transit_data WHERE toDayOfWeek(transit_timestamp) <= 5 GROUP BY station_complex, hour_of_day) GROUP BY hour, station_complex ORDER BY hour ASC, avg_entries DESC LIMIT 3 BY hour
 SELECT created_at, text FROM twitter.twitter WHERE tupleElement(user, 'screen_name') = 'elonmusk' ORDER BY created_at ASC
 SELECT toStartOfYear(date) AS year, quantileExact(0.99)(tempAvg / 10) AS `99th_avg_temp`, dictGet(country.country_iso_codes, 'name', code) AS country FROM noaa.noaa_v2 WHERE (date > '1990-01-01') AND (code IN ('FR', 'UK', 'IN', 'NZ', 'SP', 'US')) GROUP BY year, substring(station_id, 1, 2) AS code HAVING `99th_avg_temp` > 0 ORDER BY country ASC, year ASC LIMIT 100000
+-- {"packages": "['boto3','urllib3','botocore','requests','setuptools']"}
 WITH (SELECT max(upload_time) AS max_date FROM pypi.projects) AS max_date SELECT release_month AS x, name AS y, uniqExact(version) AS z FROM pypi.projects WHERE (name IN ({packages:Array(String) })) AND (toStartOfMonth(upload_time) > toStartOfMonth(max_date - toIntervalMonth(6))) GROUP BY name, toMonth(upload_time) AS month, formatDateTime(upload_time, '%b') AS release_month ORDER BY month ASC LIMIT 30
 SELECT project, sum(count) AS c FROM pypi.pypi_downloads GROUP BY project ORDER BY c DESC LIMIT 5
 SELECT formatReadableQuantity(sum(count)) AS total, uniqExact(project) AS projects FROM pypi.pypi_downloads
@@ -236,9 +237,9 @@ SELECT language, sum(posts) AS posts FROM bluesky.posts_per_language GROUP BY la
 WITH top_liked_cids AS (SELECT cid, sum(reposts) AS reposts FROM bluesky.reposts_per_post GROUP BY cid ORDER BY reposts DESC LIMIT 10) SELECT t1.reposts, t2.text FROM top_liked_cids AS t1 LEFT JOIN (SELECT * FROM bluesky.cid_to_text WHERE cid IN (SELECT cid FROM top_liked_cids)) AS t2 ON t1.cid = t2.cid
 WITH top_liked_cids AS (SELECT cid, SUM(likes) AS likes FROM bluesky.likes_per_post GROUP BY cid ORDER BY likes DESC LIMIT 10) SELECT t1.likes, t2.text FROM top_liked_cids AS t1 LEFT JOIN (SELECT * FROM bluesky.cid_to_text WHERE cid IN (SELECT cid FROM top_liked_cids)) AS t2 ON t1.cid = t2.cid
 WITH top_liked_cids AS (SELECT cid, SUM(likes) AS likes FROM bluesky.likes_per_post_about_clickhouse GROUP BY cid ORDER BY likes DESC LIMIT 3) SELECT t1.likes, t2.text FROM top_liked_cids AS t1 LEFT JOIN (SELECT * FROM bluesky.cid_to_text WHERE cid IN (SELECT cid FROM top_liked_cids)) AS t2 ON t1.cid = t2.cid
-SELECT collection, sum(posts) AS posts FROM bluesky.top_event_types GROUP BY collection ORDER BY posts DESC
-SELECT collection, uniqMerge(users) AS users FROM bluesky.top_event_types GROUP BY collection ORDER BY users DESC
-SELECT collection, sum(posts) AS posts, uniqMerge(users) AS users FROM bluesky.top_event_types GROUP BY collection ORDER BY posts DESC
+SELECT event, sum(count) AS posts FROM bluesky.top_event_types GROUP BY event ORDER BY posts DESC
+SELECT event, uniqMerge(users) AS users FROM bluesky.top_event_types GROUP BY event ORDER BY users DESC
+SELECT event, sum(count) AS posts, uniqMerge(users) AS users FROM bluesky.top_event_types GROUP BY event ORDER BY posts DESC
 SELECT count() FROM bluesky.bluesky
 SELECT toDateTime(toStartOfInterval(TimestampTime, toIntervalSecond(60))) AS time, SeverityText, count() AS count FROM otel.otel_logs WHERE time >= (NOW() - toIntervalHour(1)) GROUP BY SeverityText, time ORDER BY time ASC
 SELECT Timestamp AS log_time, Body FROM otel.otel_logs WHERE TimestampTime >= (NOW() - toIntervalHour(1)) LIMIT 100

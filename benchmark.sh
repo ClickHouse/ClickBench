@@ -83,11 +83,14 @@ while IFS= read -r line || [ -n "$line" ]; do
         continue
     fi
 
+    echo $param_flags
+
     query_stmt="$line"
     [[ -z "$query_stmt" || "$query_stmt" =~ ^-- ]] && continue
     echo $query_stmt
     # Drop cache
     while true; do
+        echo "Dropping Cache..."
         clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_USER}" --password "${CLICKHOUSE_PASSWORD}" --secure --format=Null --query="SYSTEM DROP FILESYSTEM CACHE${on_cluster}" && break
         echo "⏳ Retrying SYSTEM DROP FILESYSTEM CACHE..."
         sleep 2
