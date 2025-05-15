@@ -1,8 +1,8 @@
 #!/bin/bash -e
 
 # docker
-apt-get update
-apt-get install -y  docker.io postgresql-client gzip
+sudo apt-get update
+sudo apt-get install -y  docker.io postgresql-client gzip
 
 # download dataset
 echo "Downloading dataset..."
