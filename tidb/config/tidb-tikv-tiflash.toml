@@ -1,0 +1,8 @@
+[isolation-read]
+engines = ["tikv", "tiflash"]
+
+[performance]
+# Increase per-transaction-limits so we do not run into problems
+max-txn-ttl = 10800000
+txn-entry-size-limit = 125829120 # max value
+txn-total-size-limit = 1099511627776 # max value

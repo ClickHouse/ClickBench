@@ -252,7 +252,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] CockroachDB Serverless
 - [ ] Databricks
 - [ ] Planetscale (without publishing)
-- [ ] TiDB (TiFlash)
+- [x] TiDB (TiKV only, TiFlash only, TiKV & TiFlash)
 - [x] Amazon RDS Aurora for MySQL
 - [x] Amazon RDS Aurora for Postgres
 - [ ] InfluxDB

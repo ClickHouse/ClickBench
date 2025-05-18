@@ -1,0 +1,21 @@
+[lightning]
+level = "info"
+file = "tidb-lightning.log"
+
+[tidb]
+host = "127.0.0.1"
+port = 4000
+user = "root"
+status-port = 10080
+pd-addr = "127.0.0.1:2379"
+sql-mode = "STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION"
+
+[tikv-importer]
+backend = "local"
+sorted-kv-dir = "/tmp/sorted-kv-dir"
+
+[mydumper]
+data-source-dir = "/tmp/data"
+
+[mydumper.csv]
+header = false
