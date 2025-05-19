@@ -1,6 +1,6 @@
 {
     "machine":       "GCP c4a-highmem-72-lssd",
-    "comment":  "GCP c4a-highmem-72-lssd, AMD EPYC 7B12, 72vCPU, 6000 GiB RAM",
+    "comment":  "GCP c4a-highmem-72-lssd, Google Axion, 72vCPU, 576 GiB RAM",
     "time":         "2025-05-11 13:20:03",
     "tags": ["cloud", "gcp", "amd"],
     "result":
