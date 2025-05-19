@@ -2,7 +2,7 @@
     "machine":       "GCP c4a-highmem-72-lssd",
     "comment":  "GCP c4a-highmem-72-lssd, Google Axion, 72vCPU, 576 GiB RAM",
     "time":         "2025-05-11 13:20:03",
-    "tags": ["cloud", "gcp", "amd"],
+    "tags": ["cloud", "gcp", "arm"],
     "result":
     [
 [0.001, 0.001, 0.001],
