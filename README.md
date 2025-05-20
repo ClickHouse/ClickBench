@@ -248,7 +248,7 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [x] Bigquery (without publishing)
 - [x] Snowflake
 - [ ] Rockset
-- [ ] CockroachDB
+- [x] CockroachDB
 - [ ] CockroachDB Serverless
 - [ ] Databricks
 - [ ] Planetscale (without publishing)
