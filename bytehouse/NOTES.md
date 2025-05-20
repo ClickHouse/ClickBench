@@ -200,7 +200,7 @@ Will try CSV.
 
 ```
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
-gzip -d hits.csv.gz
+gzip -d -f hits.csv.gz
 ```
 
 Now it started to work:

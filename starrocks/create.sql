@@ -1,9 +1,9 @@
 CREATE TABLE hits (
-    CounterID INT NOT NULL, 
-    EventDate Date NOT NULL, 
-    UserID BIGINT NOT NULL, 
-    EventTime DateTime NOT NULL, 
-    WatchID BIGINT NOT NULL, 
+    CounterID INT NOT NULL,
+    EventDate Date NOT NULL,
+    UserID BIGINT NOT NULL,
+    EventTime DateTime NOT NULL,
+    WatchID BIGINT NOT NULL,
     JavaEnable SMALLINT NOT NULL,
     Title STRING NOT NULL,
     GoodEvent SMALLINT NOT NULL,
@@ -104,7 +104,7 @@ CREATE TABLE hits (
     RefererHash BIGINT NOT NULL,
     URLHash BIGINT NOT NULL,
     CLID INT NOT NULL
-)  
-DUPLICATE KEY (CounterID, EventDate, UserID, EventTime, WatchID) 
-DISTRIBUTED BY HASH(UserID) BUCKETS 192
+)
+DUPLICATE KEY (CounterID, EventDate, UserID, EventTime, WatchID)
+DISTRIBUTED BY RANDOM BUCKETS 1
 PROPERTIES ( "replication_num"="1");

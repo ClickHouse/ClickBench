@@ -2,18 +2,19 @@
 
 # This benchmark should run on Amazon Linux
 
-VERSION=3.0.0-preview
-DOWNLOAD_URL=https://releases.starrocks.io/starrocks/StarRocks-3.0.0-preview.tar.gz
+set -e
+
+VERSION=3.4.2-ubuntu-amd64
 # Install
-wget $DOWNLOAD_URL
+wget https://releases.starrocks.io/starrocks/StarRocks-$VERSION.tar.gz -O StarRocks-$VERSION.tar.gz
 tar zxvf StarRocks-${VERSION}.tar.gz
 
 cd StarRocks-${VERSION}/
 
 # Install dependencies
-sudo yum install -y java-1.8.0-openjdk-devel.x86_64 mysql
-
-export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk/
+sudo apt update
+sudo apt install openjdk-17-jre mariadb-client
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH=$JAVA_HOME/bin:$PATH
 
 # Create directory for FE and BE
@@ -39,7 +40,7 @@ sleep 30
 # Prepare Data
 cd ../
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -d hits.tsv.gz
+gzip -d -f hits.tsv.gz
 
 # Create Table
 mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits"

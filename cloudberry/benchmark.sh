@@ -105,7 +105,7 @@ elif [[ $1 == 'test' ]]; then
 	chmod +x /home/gpadmin/run.sh
 	chown gpadmin:gpadmin /home/gpadmin/*
 	if [[ $2 != 'no_dl' ]]; then sudo -iu gpadmin wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'; fi
-	if [[ $2 != 'no_dl' ]]; then sudo -iu gpadmin gzip -d hits.tsv.gz; fi
+	if [[ $2 != 'no_dl' ]]; then sudo -iu gpadmin gzip -d -f hits.tsv.gz; fi
 	sudo -iu gpadmin chmod 777 ~ hits.tsv
 	sudo -iu gpadmin psql -d postgres -f /home/gpadmin/create.sql
 	sudo -iu gpadmin nohup gpfdist &

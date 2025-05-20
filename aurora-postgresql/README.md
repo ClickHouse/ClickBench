@@ -37,7 +37,7 @@ Load the data
 
 ```
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -d hits.tsv.gz
+gzip -d -f hits.tsv.gz
 
 psql -U postgres -h "${FQDN}" -t -c 'CREATE DATABASE test'
 psql -U postgres -h "${FQDN}" test -t < create.sql

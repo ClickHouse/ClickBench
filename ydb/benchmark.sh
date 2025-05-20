@@ -276,7 +276,7 @@ fi
 
 if [ ! -f "hits.csv" ]; then
     echo "Unpacking hits.csv.gz"
-    gzip -d -k hits.csv.gz
+    gzip -d -f -k hits.csv.gz
     echo "Done"
 fi
 

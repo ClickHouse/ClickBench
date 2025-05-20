@@ -101,4 +101,4 @@ for array[
     'hits_99.parquet',
     'hits_9.parquet'
 ]
-with (format => 'parquet');
+with (format => 'parquet', binary_as_text => true);

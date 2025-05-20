@@ -4,11 +4,15 @@
 # Note: editing HTML with sed may look strange, but at least we avoid using node.js and npm, and that's good.
 
 # This is needed on Mac OS. Do `brew install coreutils`.
-[ -n "$HOMEBREW_PREFIX" ] && PATH="${HOMEBREW_PREFIX}/opt/coreutils/libexec/gnubin:${PATH}"
-if command -v gsed >/dev/null 2>&1
-then
+if [[ "$(uname)" == "Darwin" ]]; then
+  if ! command -v gsed >/dev/null 2>&1
+  then
+    echo "On macOS, please install GNU sed through homebrew."
+    exit 1
+  else
     shopt -s expand_aliases
     alias sed='gsed'
+  fi
 fi
 
 (
