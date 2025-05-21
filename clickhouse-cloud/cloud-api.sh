@@ -54,6 +54,7 @@ curl -X POST -H 'Content-Type: application/json' -d '
     "name": "'${NAME_FULL}'",
     "provider": "'$PROVIDER'",
     "region": "'$REGION'",
+    "releaseChannel": "fast",
     "numReplicas": '$REPLICAS',
     "minReplicaMemoryGb":'$MEMORY',"maxReplicaMemoryGb":'$MEMORY',
     "ipAccessList": [{"source": "0.0.0.0/0", "description": "anywhere"}]
