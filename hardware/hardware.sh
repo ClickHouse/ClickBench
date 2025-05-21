@@ -135,14 +135,12 @@ AWS_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 1 'http
 if [[ "$AWS_HTTP_CODE" == "200" ]]; then
     AWS_INSTANCE_TYPE=$(curl -s --connect-timeout 1 'http://169.254.169.254/latest/meta-data/instance-type')
     echo "$AWS_INSTANCE_TYPE" > instance.txt
-    exit 0
 fi
 
 GCP_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 1 -H "Metadata-Flavor: Google" 'http://metadata.google.internal/computeMetadata/v1/')
 if [[ "$GCP_HTTP_CODE" == "200" ]]; then
     GCP_INSTANCE_TYPE=$(curl -s --connect-timeout 1 -H "Metadata-Flavor: Google" 'http://metadata.google.internal/computeMetadata/v1/instance/machine-type' | awk -F/ '{print $NF}')
     echo "$GCP_INSTANCE_TYPE" > instance.txt
-    exit 0
 fi
 echo
 
