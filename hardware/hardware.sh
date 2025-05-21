@@ -138,7 +138,7 @@ if [[ "$AWS_HTTP_CODE" == "200" ]]; then
     exit 0
 fi
 
-GCP_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 1 -H "Metadata-Flavor: Google" 'http://metadata.google.internal/computeMetadata/v1/instance/')
+GCP_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 1 -H "Metadata-Flavor: Google" 'http://metadata.google.internal/computeMetadata/v1/')
 if [[ "$GCP_HTTP_CODE" == "200" ]]; then
     GCP_INSTANCE_TYPE=$(curl -s --connect-timeout 1 -H "Metadata-Flavor: Google" 'http://metadata.google.internal/computeMetadata/v1/instance/machine-type' | awk -F/ '{print $NF}')
     echo "$GCP_INSTANCE_TYPE" > instance.txt
