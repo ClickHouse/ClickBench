@@ -1,0 +1,2 @@
+VACUUM hits;
+ANALYZE hits;
