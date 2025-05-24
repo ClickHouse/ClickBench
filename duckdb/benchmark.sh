@@ -8,8 +8,8 @@ export CC=clang
 export CXX=clang++
 git clone https://github.com/duckdb/duckdb
 cd duckdb
-git checkout v1.2-histrionicus
-GEN=ninja NATIVE_ARCH=1 LTO=thin make
+git checkout v1.3-ossivalis
+LATEST_STORAGE=1 GEN=ninja NATIVE_ARCH=1 LTO=thin make
 export PATH="$PATH:`pwd`/build/release/"
 cd ..
 
