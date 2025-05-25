@@ -7,8 +7,11 @@ case "$1" in
     single)
         create_sql_file="create_single.sql"
         ;;
+    partitioned)
+        create_sql_file="create_partitioned.sql"
+        ;;
     *)
-        echo "Invalid argument to 'run.sh', expected 'single'"
+        echo "Invalid argument to 'run.sh', expected 'single' or 'partitioned'"
         exit 1
         ;;
 esac
