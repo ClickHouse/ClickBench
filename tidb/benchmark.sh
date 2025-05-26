@@ -5,6 +5,9 @@ shopt -s expand_aliases
 MODE=$1
 
 TIDBVERSION=8.5.1
+
+TIUP_HOME=$(pwd)
+export TIUP_HOME
 DB_NAME=test
 TABLE_NAME=hits
 DATA_DIR=/tmp/data
@@ -24,13 +27,8 @@ printf "2\n107\n" | sudo DEBIAN_FRONTEND=noninteractive apt-get install --reinst
 wget --https-only --secure-protocol=TLSv1_2 --quiet --continue https://tiup-mirrors.pingcap.com/install.sh
 sudo chmod +x ./install.sh
 ./install.sh
-# Check output of ./install.sh which shell profile should be used (could be .profile or .bashrc)
-source ~/.bashrc
-
-if ! echo "$PATH" | grep -q 'tiup'; then
-  echo "tiup is not on PATH! Check the output of ./install.sh which shell profile should be used and reload it.";
-  exit 1
-fi;
+PATH="$TIUP_HOME/bin/:$PATH"
+export PATH
 
 tiup update --self && tiup update cluster
 
