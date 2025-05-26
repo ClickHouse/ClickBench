@@ -12,7 +12,7 @@ if [[ "$(basename "$repo_root")" == "glaredb" ]]; then
 else
     # Not in glaredb repo, use prebuilt binary.
     export GLAREDB_INSTALL_DIR="${script_dir}"
-    export GLAREDB_VERSION="v25.5.2"
+    export GLAREDB_VERSION="v25.5.11"
     curl -fsSL https://glaredb.com/install.sh | sh
 fi
 
