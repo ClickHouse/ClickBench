@@ -40,10 +40,6 @@ elif [[ $MODE == "tiflash" ]]; then
   echo "Running benchmark on TiFlash only"
   DB_CONFIG_FILE=./config/tidb-tiflash.toml
   NUM_TIFLASH_INSTANCES=1
-elif [[ $MODE == "tikv-tiflash" ]]; then
-  echo "Running benchmark on TiKV & TiFlash"
-  DB_CONFIG_FILE=./config/tidb-tikv-tiflash.toml
-  NUM_TIFLASH_INSTANCES=1
 fi;
 
 echo "Using configuration file $DB_CONFIG_FILE"

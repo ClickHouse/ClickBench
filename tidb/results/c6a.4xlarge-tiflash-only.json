@@ -3,13 +3,10 @@
     "date": "2025-05-23",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
-    "comment": "All components use v8.5.1. data_size break down: 61598458152 (TiKV) + 86270297117 (TiFlash) = 147868755269",
-
+    "comment": "v8.5.1",
     "tags": ["C++", "column-oriented", "MySQL compatible"],
-
     "load_time": 4448,
     "data_size": 147868755269,
-
     "result": [
 [5.12,0.20,0.20],
 [5.35,0.16,0.15],

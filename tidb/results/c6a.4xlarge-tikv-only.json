@@ -3,13 +3,10 @@
     "date": "2025-05-23",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
-    "comment": "All components use v8.5.1.",
-
+    "comment": "v8.5.1",
     "tags": ["Rust", "row-oriented", "MySQL compatible"],
-
     "load_time": 4069,
     "data_size": 61598458152,
-
     "result": [
 [4.80,3.50,3.48],
 [99.08,74.3,73.85],

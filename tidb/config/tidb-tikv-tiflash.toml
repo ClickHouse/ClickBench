@@ -1,2 +1,0 @@
-[isolation-read]
-engines = ["tikv", "tiflash"]
