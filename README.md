@@ -258,8 +258,8 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 - [ ] InfluxDB
 - [ ] TDEngine
 - [x] MongoDB
-- [ ] Cassandra
-- [ ] ScyllaDB
+- [ ] Cassandra (see [discussion](https://github.com/ClickHouse/ClickBench/issues/384))
+- [ ] ScyllaDB (see [discussion](https://github.com/ClickHouse/ClickBench/issues/384))
 - [x] Elasticsearch
 - [ ] Apache Ignite
 - [x] Motherduck
