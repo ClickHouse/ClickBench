@@ -1,0 +1,2 @@
+[isolation-read]
+engines = ["tiflash"]
