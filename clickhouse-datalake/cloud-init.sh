@@ -12,6 +12,13 @@ chmod +x *.sh
 
 curl https://clickhouse.com/ | sh
 
+> clickhouse-local.yaml echo "
+filesystem_caches:
+    cache:
+        path: '/dev/shm/clickhouse/'
+        max_size: '16G'
+"
+
 echo "Partitioned:" > log
 ./run.sh >> log
 
