@@ -18,3 +18,4 @@ cat queries.sql | while read -r query; do
 
     QUERY_NUM=$((QUERY_NUM + 1))
 done
+./clickhouse local --path . --query="DROP TABLE hits"
