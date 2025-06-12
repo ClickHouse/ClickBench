@@ -4,6 +4,7 @@ import polars as pl
 import timeit
 from datetime import date
 import json
+import os
 
 # 0: No., 1: SQL, 2: Polars
 queries = [
@@ -450,7 +451,7 @@ queries = [
 ]
 
 
-def run_timings(lf: pl.LazyFrame, name: str, src: str, load_time: int | None) -> None:
+def run_timings(lf: pl.LazyFrame, name: str, src: str, load_time: int | None, data_size: int) -> None:
     queries_times = []
     for q in queries:
         print(q[0])
@@ -476,6 +477,7 @@ def run_timings(lf: pl.LazyFrame, name: str, src: str, load_time: int | None) ->
             src,
         ],
         "load_time": float(load_time) if load_time is not None else None,
+        "data_size": data_size,
         "result": queries_times,
     }
     # if cpuinfo contains "AMD EPYC 9654" update machine and write result into results/epyc-9654.json
@@ -488,6 +490,7 @@ def run_timings(lf: pl.LazyFrame, name: str, src: str, load_time: int | None) ->
         with open(f"results/{src}_c6a.metal.json", "w") as f:
             f.write(json.dumps(result_json, indent=4))
 
+data_size = os.path.getsize("hits.parquet")
 
 # Run from Parquet
 lf = pl.scan_parquet("hits.parquet").with_columns(
@@ -495,7 +498,7 @@ lf = pl.scan_parquet("hits.parquet").with_columns(
     pl.col("EventDate").cast(pl.Date),
 )
 print("run parquet queries")
-run_timings(lf, "Polars (Parquet)", "parquet", None)
+run_timings(lf, "Polars (Parquet)", "parquet", None, data_size)
 
 
 print("run DataFrame (in-memory) queries, this loads all data in memory!")
@@ -513,4 +516,4 @@ assert df["EventTime"][0].year == 2013
 df = df.rechunk()
 
 lf = df.lazy()
-run_timings(lf, "Polars (DataFrame)", "DataFrame", load_time)
+run_timings(lf, "Polars (DataFrame)", "DataFrame", load_time, data_size)
