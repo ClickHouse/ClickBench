@@ -7,6 +7,7 @@
 
     "tags": ["C", "column-oriented", "PostgreSQL compatible", "managed", "gcp"],
 
+    "load_time": 0,
     "data_size": 9941379875,
 
     "result": [
