@@ -106,6 +106,4 @@ create table hits (
     clid                  integer      not null,
     primary key (counterid, eventdate, userid, eventtime, watchid)
 ) with (storage=columnar);
-
 copy hits from 'hits.tsv' with (format text);
-

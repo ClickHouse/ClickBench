@@ -5,7 +5,6 @@ TRIES=3
 cat queries.sql | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches
-    umbra/bin/server -createSSLFiles -certFile db/umbra.cert -keyFile db/umbra.pem -address 0.0.0.0 db/umbra.db &> umbra.log &
 
     retry_count=0
     while [ $retry_count -lt 120 ]; do
@@ -19,9 +18,6 @@ cat queries.sql | while read -r query; do
 
     echo "$query";
     for i in $(seq 1 $TRIES); do
-        psql -h /tmp -U postgres -t -c '\timing' -c "$query" | grep 'Time'
+        PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -t -c '\timing' -c "$query" | grep 'Time'
     done
-
-    
-    killall -9 -w server
 done
