@@ -2,13 +2,22 @@
 
 # Install
 
+export DEBIAN_FRONTEND=noninteractive
+export TZ=Etc/UTC
+sudo ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 sudo apt-get update
-sudo apt-get install -y python3-pip openjdk-17-jdk
+sudo apt-get install -y software-properties-common
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt-get update
+sudo apt-get install -y python3.11 python3.11-dev python3.11-venv python3.11-distutils
 
-export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64/"
-export PATH=$JAVA_HOME/bin:$PATH
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+     update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
+     curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
-pip install --break-system-packages pysail[spark] pandas psutil
+pip install --break-system-packages --upgrade setuptools wheel
+pip install --break-system-packages pysail[spark]==0.2.6 pandas psutil
 
 # Load the data
 
