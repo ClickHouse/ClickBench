@@ -3,8 +3,8 @@
     "date": "2025-06-10",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
-    "tags": ["C++"],
-    "load_time": 0,
+    "tags": ["C++", "row-oriented", "PostgreSQL compatible"],
+    "load_time": 4683,
     "data_size": 76883037634,
     "result": [
         [1319.85,1274.72,1272.91],
