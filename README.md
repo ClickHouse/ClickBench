@@ -201,109 +201,60 @@ We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/har
 
 ## Systems Included
 
-- [x] ClickHouse
-- [x] ClickHouse on local Parquet files
-- [x] ClickHouse operating like "Athena" on remote Parquet files
-- [x] ClickHouse on a VFS over HTTPs on CDN
-- [x] MySQL InnoDB
-- [x] MySQL MyISAM
-- [x] MariaDB
-- [x] MariaDB ColumnStore
-- [x] MemSQL/SingleStore
-- [x] PostgreSQL
-- [x] Greenplum
-- [x] TimescaleDB
-- [x] Citus
-- [x] Vertica (without publishing)
-- [x] QuestDB
-- [x] chdb
-- [x] DuckDB
-- [x] DuckDB over local Parquet files
-- [ ] DuckDB operating like "Athena" on remote Parquet files
-- [x] MonetDB
-- [x] mapD/Omnisci/HeavyAI
-- [x] Databend
-- [x] DataFusion
-- [x] ByteHouse
-- [x] Doris/PALO
-- [x] SelectDB
-- [x] Druid
-- [x] Pinot
-- [x] CrateDB
-- [x] Spark SQL
-- [x] Starrocks
-- [ ] ShitholeDB
-- [ ] Hive
-- [x] Hydra
-- [ ] Impala
-- [x] Hyper
-- [x] Umbra
-- [x] SQLite
-- [x] Redshift
-- [x] Redshift Serverless
-- [ ] Redshift Spectrum
-- [ ] Presto
-- [ ] Trino
-- [x] Amazon Athena
-- [x] Bigquery (without publishing)
-- [x] Snowflake
-- [ ] Rockset
-- [x] CockroachDB
-- [ ] CockroachDB Serverless
-- [ ] Databricks
-- [ ] Planetscale (without publishing)
-- [x] TiDB (TiKV only, TiFlash only)
-- [x] Amazon RDS Aurora for MySQL
-- [x] Amazon RDS Aurora for Postgres
-- [ ] InfluxDB
-- [ ] TDEngine
-- [x] MongoDB
-- [ ] Cassandra (see [discussion](https://github.com/ClickHouse/ClickBench/issues/384))
-- [ ] ScyllaDB (see [discussion](https://github.com/ClickHouse/ClickBench/issues/384))
-- [x] Elasticsearch
-- [ ] Apache Ignite
-- [x] Motherduck
-- [x] Infobright
-- [ ] Actian Vector
-- [ ] Manticore Search
-- [x] Vertica (without publishing)
-- [ ] Azure Synapse
-- [ ] Starburst Galaxy
-- [ ] MS SQL Server with Column Store Index (without publishing)
-- [ ] Dremio (without publishing)
-- [ ] Exasol
-- [ ] LocustDB
-- [ ] EventQL
-- [x] Apache Drill
-- [ ] Apache Kudu
-- [ ] Apache Kylin
-- [x] S3 select command in AWS
-- [x] Kinetica
-- [ ] YDB
-- [ ] OceanBase
-- [ ] Boilingdata
-- [x] Byteconity
-- [ ] DolphinDB
-- [x] Oxla
-- [ ] Quickwit
-- [x] AlloyDB
-- [x] ParadeDB
-- [x] GlareDB
-- [ ] Seafowl
-- [ ] Sneller
-- [x] Tablespace
-- [x] Tembo
-- [x] Cloudberry
-- [x] Daft
-- [x] Pandas
-- [x] Polars
-- [x] OctoSQL
-- [x] VictoriaLogs
-- [x] Hologres
+ClickBench provides [publicly available benchmark results for over 60 database management systems](https://benchmark.clickhouse.com/).
 
 By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
 
-Please help us add more systems and run the benchmarks on more types of VMs.
+In addition, there are also systems where the code to run the benchmark is provided, but the results cannot be published.
+Currently, this includes
+
+- Vertica
+
+Please help us add more systems and run the benchmarks on more types of VMs:
+
+- [ ] Actian Vector
+- [ ] Apache Ignite
+- [ ] Apache Kudu
+- [ ] Apache Kylin
+- [ ] Azure Synapse
+- [ ] Boilingdata
+- [ ] CockroachDB Serverless
+- [ ] Databricks
+- [ ] DolphinDB
+- [ ] Dremio (without publishing)
+- [ ] DuckDB operating like "Athena" on remote Parquet files
+- [ ] EventQL
+- [ ] Exasol
+- [ ] Hive
+- [ ] Hydrolix
+- [ ] Impala
+- [ ] InfluxDB
+- [ ] LocustDB
+- [ ] Manticore Search
+- [ ] MS SQL Server with Column Store Index (without publishing)
+- [ ] OceanBase
+- [ ] Planetscale (without publishing)
+- [ ] Presto
+- [ ] Quickwit
+- [ ] Redshift Spectrum
+- [ ] Rockset 
+- [ ] Seafowl
+- [ ] ShitholeDB
+- [ ] Sneller
+- [ ] Starburst Galaxy
+- [ ] Trino
+- [ ] TDEngine
+
+The list above _may_ include systems that cannot run ClickBench for various limitations.
+Systems that have been identified to have known limitations or issues and could not be benchmarked are:
+
+- Cassandra (see [discussion](https://github.com/ClickHouse/ClickBench/issues/384))
+- csvq (see [README](https://github.com/ClickHouse/ClickBench/tree/main/csvq))
+- dsq (see [README](https://github.com/ClickHouse/ClickBench/tree/main/dsq))
+- Hydrolix (see [README](https://github.com/ClickHouse/ClickBench/tree/main/hydrolix))
+- LoctusDB (see [README](https://github.com/ClickHouse/ClickBench/tree/main/locustdb))
+- ScyllaDB (see [discussion](https://github.com/ClickHouse/ClickBench/issues/384))
+- S3 select command in AWS (see [README](https://github.com/ClickHouse/ClickBench/tree/main/s3select))
 
 ## Similar Projects
 
