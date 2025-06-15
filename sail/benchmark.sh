@@ -13,7 +13,7 @@ sudo apt-get update
 sudo apt-get install -y python3.11 python3.11-dev python3.11-venv python3.11-distutils
 
 sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
-     update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
+     sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
      curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
 pip install --break-system-packages --upgrade setuptools wheel
