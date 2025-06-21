@@ -1,6 +1,6 @@
 
 {
-    "machine":       "Intel 8vCPU 3.3 GHz, Timeweb Cloud",
+    "machine":       "Intel 1vCPU 3.3 GHz, Timeweb Cloud",
     "comment":  "QEMU, 2 GB RAM, 30 GB NVMe",
     "time":         "2025-06-21 00:00:00",
     "tags": ["cloud", "intel", "qemu", "timeweb"],
