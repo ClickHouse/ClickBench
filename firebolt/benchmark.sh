@@ -4,7 +4,7 @@
 echo "Downloading dataset..."
 rm -rf data
 mkdir -p data
-wget -P data "https://datasets.clickhouse.com/hits_compatible/hits.parquet"
+wget -P data --continue "https://datasets.clickhouse.com/hits_compatible/hits.parquet"
 
 # Start the container
 sudo docker run -dit --name firebolt-core --rm \
