@@ -3,7 +3,7 @@
     "date": "2025-06-23",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
-    "tags": ["C++", "column-oriented", "PostgreSQL compatible"],
+    "tags": ["C++", "column-oriented", "PostgreSQL compatible", "ClickHouse derivative"],
     "load_time": 418.292145,
     "data_size": 15712149035,
     "result": [
