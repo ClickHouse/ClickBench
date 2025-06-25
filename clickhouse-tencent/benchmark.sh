@@ -1,21 +1,11 @@
 #!/bin/bash
 
-# Install
-
 if [ ! -x /usr/bin/clickhouse ]
 then
-    curl https://clickhouse.com/ | sh
-    sudo ./clickhouse install --noninteractive
+wget https://clickhouse-builds.s3.amazonaws.com/PRs/81944/cda07f8aca770d97ea149eec6b477dcfd59d134e/build_amd_release/clickhouse-common-static-25.7.1.1-amd64.tgz -O clickhouse-tencent.tgz
+    mkdir -p clickhouse-tencent && tar -xzf clickhouse-tencent.tgz -C clickhouse-tencent
+    sudo clickhouse-tencent/clickhouse-common-static-25.7.1.1/usr/bin/clickhouse install --noninteractive
 fi
-
-# Optional: if you want to use higher compression:
-if (( 0 )); then
-    echo "
-compression:
-    case:
-        method: zstd
-    " | sudo tee /etc/clickhouse-server/config.d/compression.yaml
-fi;
 
 sudo clickhouse start
 
@@ -25,18 +15,7 @@ do
     sleep 1
 done
 
-# Determine which set of files to use depending on the type of run
-if [ "$1" != "" ] && [ "$1" != "tuned" ] && [ "$1" != "tuned-memory" ]; then
-    echo "Error: command line argument must be one of {'', 'tuned', 'tuned-memory'}"
-    exit 1
-else if [ ! -z "$1" ]; then
-    SUFFIX="-$1"
-fi
-fi
-
-# Load the data
-
-clickhouse-client < create"$SUFFIX".sql
+clickhouse-client < create.sql
 
 if [ ! -f hits.tsv ]
 then
