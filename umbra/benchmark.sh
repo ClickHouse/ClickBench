@@ -8,29 +8,32 @@ sudo apt-get install -y postgresql-client gzip
 # yum install nc postgresql15
 
 # Download + uncompress hits
-rm -rf hits.tsv
+rm -rf data
+mkdir data
 wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d -f hits.tsv.gz
-chmod 777 hits.tsv
+mv hits.tsv data
+chmod 777 -R data
 
 # I spend too much time here battling cryptic error messages only to find out that the data needs to be in some separate directory
-rm -rf /data/db
-mkdir /data/db
-cp hits.tsv /data/db/
-chmod 777 -R /data/db
+rm -rf db
+mkdir db
+chmod 777 -R db
 
 # https://hub.docker.com/r/umbradb/umbra
-docker run -d -v /data/db:/var/db -p 5432:5432 --ulimit nofile=1048576:1048576 --ulimit memlock=8388608:8388608 umbradb/umbra:latest
+docker run -d -v ./db:/var/db -v ./data:/data -p 5432:5432 --ulimit nofile=1048576:1048576 --ulimit memlock=8388608:8388608 umbradb/umbra:25.07
 sleep 5 # Things below fail otherwise ...
 
+start=$(date +%s%3N)
 PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -f create.sql
+end=$(date +%s%3N)
+echo "Load Time: $((end - start)) ms"
 
 ./run.sh 2>&1 | tee log.txt
 
 # Calculate persistence size
-sudo chmod 777 -R /data/db # otherwise 'du' complains about permission denied
-rm /data/db/hits.tsv # not part of the database persistency
-du -bcs /data/db/
+sudo chmod 777 -R db # otherwise 'du' complains about permission denied
+du -bcs db
 
 # Pretty-printing
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
@@ -38,4 +41,4 @@ cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+)
 
 # Cleanup
 docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume prune --all --force
-rm -rf /data/db
+rm -rf data db

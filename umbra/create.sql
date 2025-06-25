@@ -105,5 +105,5 @@ create table hits (
     urlhash               bigint       not null,
     clid                  integer      not null,
     primary key (counterid, eventdate, userid, eventtime, watchid)
-) with (storage=columnar);
-copy hits from 'hits.tsv' with (format text);
+);
+copy hits from '/data/hits.tsv' with (format text);
