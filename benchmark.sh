@@ -1,7 +1,7 @@
 #!/bin/bash 
 
 set -o noglob
-TRIES=1
+TRIES=5
 
 # Parse extra flag
 EXTRA=false
@@ -12,10 +12,19 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         *)
-            shift
+            echo "Error: Unknown flag '$1'"
+            echo "Usage: $0 [--extras otel]"
+            exit 1
             ;;
     esac
 done
+
+# Validate extra flag value
+if [ "$EXTRA" != "false" ] && [ "$EXTRA" != "otel" ]; then
+    echo "Error: Invalid value for --extras flag. Must be 'otel'"
+    echo "Usage: $0 [--extras otel]"
+    exit 1
+fi
 
 cat queries.sql >> queries_tmp.sql
 
