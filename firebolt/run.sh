@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Disable the result and subresult caches. Enable the scan-cache.
-QUERY_PARAMS="enable_result_cache=false&enable_subresult_cache=false&enable_scan_cache=true&output_format=JSON_Compact"
+QUERY_PARAMS="enable_result_cache=false&enable_subresult_cache=false&enable_scan_cache=false&output_format=JSON_Compact"
 
 cat queries.sql | while read -r query; do
     # Firebolt is a database with local on-disk storage: drop the page cache before the first run of each query.
