@@ -587,8 +587,8 @@ const additional_data_size_points = [
     <tr>
         <th>Tuned: </th>
         <td id="selectors_tuned">
-            <a id="selector-tuned-no" class="selector selector-active">No</a>
-            <a id="selector-tuned-yes" class="selector">Yes</a>
+            <a id="selector-tuned-yes" class="selector">No</a>
+            <a id="selector-tuned-no" class="selector selector-active">Yes</a>
         </td>
     </tr>
     <tr>
@@ -990,8 +990,8 @@ function render() {
         selectors.cluster_size[elem.cluster_size] &&
         elem.tags.filter(type => selectors.type[type]).length > 0 &&
         (
-            (selectors.tuned.yes && elem.tuned === "yes") ||
-            (selectors.tuned.no && elem.tuned === "no")
+            (selectors.tuned.yes && elem.tuned === "no") ||
+            (selectors.tuned.no && elem.tuned === "yes")
         ));
 
     let nothing_selected_elem = document.getElementById('nothing-selected');
