@@ -3,6 +3,7 @@
     "date": "2025-02-05",
     "machine": "c6a.metal, 500gb gp2",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "embedded", "stateless"],

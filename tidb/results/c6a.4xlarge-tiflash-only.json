@@ -3,6 +3,7 @@
     "date": "2025-05-23",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "v8.5.1",
     "tags": ["C++", "column-oriented", "MySQL compatible"],
     "load_time": 4448,

@@ -585,6 +585,13 @@ const additional_data_size_points = [
         </td>
     </tr>
     <tr>
+        <th>Tuned: </th>
+        <td id="selectors_tuned">
+            <a id="selector-tuned-no" class="selector selector-active">No</a>
+            <a id="selector-tuned-yes" class="selector">Yes</a>
+        </td>
+    </tr>
+    <tr>
         <th>Metric: </th>
         <td id="selectors_run">
             <a class="selector" id="selector-metric-cold">Cold Run</a>
@@ -636,6 +643,7 @@ let selectors = {
     "type": {},
     "machine": {},
     "cluster_size": {},
+    "tuned": {"yes": true, "no": false},
     "metric": "hot",
     "queries": [],
 };
@@ -732,6 +740,28 @@ unique_systems.map(elem => {
     selector.addEventListener('click', e => toggle(e, elem, selectors.cluster_size));
 });
 
+document.getElementById('selector-tuned-yes').addEventListener('click', e => {
+    selectors.tuned.yes = !selectors.tuned.yes;
+    if (selectors.tuned.yes) {
+        e.target.classList.add('selector-active');
+    } else {
+        e.target.classList.remove('selector-active');
+    }
+    render();
+    updateHistory();
+});
+
+document.getElementById('selector-tuned-no').addEventListener('click', e => {
+    selectors.tuned.no = !selectors.tuned.no;
+    if (selectors.tuned.no) {
+        e.target.classList.add('selector-active');
+    } else {
+        e.target.classList.remove('selector-active');
+    }
+    render();
+    updateHistory();
+});
+
 document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
 document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
 document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
@@ -758,6 +788,9 @@ function updateSelectors() {
         elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
 
     [...document.querySelectorAll('.query-checkbox')].map((elem, i) => { elem.checked = selectors.queries[i] });
+
+    document.getElementById('selector-tuned-yes').className = selectors.tuned.yes ? 'selector selector-active' : 'selector';
+    document.getElementById('selector-tuned-no').className = selectors.tuned.no ? 'selector selector-active' : 'selector';
 }
 
 function clearElement(elem)
@@ -955,7 +988,11 @@ function render() {
         selectors.system[elem.system] &&
         selectors.machine[elem.machine] &&
         selectors.cluster_size[elem.cluster_size] &&
-        elem.tags.filter(type => selectors.type[type]).length > 0);
+        elem.tags.filter(type => selectors.type[type]).length > 0 &&
+        (
+            (selectors.tuned.yes && elem.tuned === "yes") ||
+            (selectors.tuned.no && elem.tuned === "no")
+        ));
 
     let nothing_selected_elem = document.getElementById('nothing-selected');
     if (filtered_data.length == 0) {
@@ -1107,6 +1144,9 @@ function updateHistory() {
 window.onpopstate = function(event) {
     if (!event.state) { return; }
     selectors = event.state;
+    if (!selectors.tuned) {
+        selectors.tuned = {"yes": true, "no": false};
+    }
     render();
     updateSelectors();
 };
@@ -1114,6 +1154,9 @@ window.onpopstate = function(event) {
 if (window.location.hash) {
     try {
         selectors = JSON.parse(atob(window.location.hash.substring(1)));
+        if (!selectors.tuned) {
+            selectors.tuned = {"yes": true, "no": false};
+        }
     } catch {}
 }
 

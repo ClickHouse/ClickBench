@@ -3,6 +3,7 @@
     "date": "2024-06-05",
     "machine": "Analytics-256GB (64 vCores, 256 GB)",
     "cluster_size": 1,
+    "tuned": "no",
     "comment":"",
     "tags": ["column-oriented", "PostgreSQL compatible", "analytical", "managed"],
     "load_time": 0,

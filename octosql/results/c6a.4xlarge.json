@@ -3,6 +3,7 @@
     "date": "2024-11-25",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "",
 
     "tags": ["Go", "stateless"],

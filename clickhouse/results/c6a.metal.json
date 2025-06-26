@@ -4,6 +4,7 @@
     "machine": "c6a.metal, 500gb gp2",
     "cluster_size": 1,
     "comment": "",
+    "tuned": "no",
     "tags": ["C++", "column-oriented", "ClickHouse derivative"],
     "load_time": 123.351,
     "data_size": 14468584382,

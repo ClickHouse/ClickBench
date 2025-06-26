@@ -3,6 +3,7 @@
     "date": "2024-12-15",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "",
     "tags": [
         "column-oriented",

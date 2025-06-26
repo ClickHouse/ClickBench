@@ -3,6 +3,7 @@
     "date": "2024-11-24",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "",
 
     "tags": ["Java", "column-oriented", "stateless"],

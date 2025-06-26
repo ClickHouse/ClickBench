@@ -3,6 +3,7 @@
     "date": "2024-06-06",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "14 segments, ORCA enabled",
 
     "tags": ["C", "column-oriented", "PostgreSQL compatible"],

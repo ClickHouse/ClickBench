@@ -3,6 +3,7 @@
     "date": "2025-05-22",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "v47.0.0 (e44330)",
     "tags": ["Rust", "column-oriented", "embedded", "stateless"],
     "load_time": 0,

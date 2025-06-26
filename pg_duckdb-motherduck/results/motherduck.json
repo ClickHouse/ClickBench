@@ -3,6 +3,7 @@
     "date": "2024-03-07",
     "machine": "Jumbo",
     "cluster_size": "serverless",
+    "tuned": "no",
 
     "tags": ["managed", "column-oriented", "PostgreSQL compatible", "serverless"],
 

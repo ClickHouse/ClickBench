@@ -3,6 +3,7 @@
     "date": "2025-05-21",
     "machine": "16 CU",
     "cluster_size": 4,
+    "tuned": "no",
     "tags": [
         "managed",
         "PostgreSQL compatible",
