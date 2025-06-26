@@ -33,9 +33,14 @@ UNCOMPRESSED_SIZE=$(curl -s "http://localhost:3473/?database=clickbench&output_f
 echo "Load time: $LOAD_TIME seconds"
 echo "Compressed data size: $COMPRESSED_SIZE bytes, uncompressed data size: $UNCOMPRESSED_SIZE bytes"
 
+if [ "$1" != "" ] && [ "$1" != "scan-cache" ]; then
+    echo "Error: command line argument must be one of {'', 'scan-cache'}"
+    exit 1
+fi
+
 # Run the benchmark
 echo "Running the benchmark..."
-./run.sh
+./run.sh "$1"
 
 # Stop the container and remove the data
 sudo docker container stop firebolt-core
