@@ -3,6 +3,7 @@
     "date": "2025-04-09",
     "machine": "serverless",
     "cluster_size": "serverless",
+    "tuned": "no",
     "comment": "",
 
     "tags": ["serverless", "column-oriented"],

@@ -3,6 +3,7 @@
     "date": "2022-07-27",
     "machine": "S",
     "cluster_size": 2,
+    "tuned": "no",
 
     "tags": ["managed", "column-oriented", "ClickHouse derivative", "C++"],
 

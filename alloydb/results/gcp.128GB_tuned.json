@@ -4,6 +4,7 @@
     "machine": "16 vCPU 128GB",
     "cluster_size": "serverless",
     "comment": "",
+    "tuned": "no",
 
     "tags": ["C", "column-oriented", "PostgreSQL compatible", "managed", "gcp"],
 

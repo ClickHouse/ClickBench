@@ -4,6 +4,7 @@
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
     "comment": "",
+    "tuned": "no",
 
     "tags": ["Java", "column-oriented", "embedded", "stateless"],
 

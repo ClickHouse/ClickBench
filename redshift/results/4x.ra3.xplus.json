@@ -3,6 +3,7 @@
   "date": "2022-07-29",
   "machine": "ra3.xlplus",
   "cluster_size": 4,
+  "tuned": "no",
   "comment": "",
 
   "tags": ["managed", "column-oriented"],

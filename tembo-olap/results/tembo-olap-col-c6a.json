@@ -3,6 +3,7 @@
     "date": "2024-02-09",
     "machine": "c6a.4xlarge, 500gb gp3",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "",
 
     "tags": ["C", "PostgreSQL compatible", "column-oriented"],

@@ -4,6 +4,7 @@
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
     "comment": "v8.5.1",
+    "tuned": "no",
     "tags": ["Rust", "row-oriented", "MySQL compatible"],
     "load_time": 4069,
     "data_size": 61598458152,

@@ -3,6 +3,7 @@
     "date": "2025-03-25",
     "machine": "64 vCPU 256GB",
     "cluster_size": 3,
+    "tuned": "no",
     "comment": "",
 
     "tags": ["dedicated", "column-oriented"],

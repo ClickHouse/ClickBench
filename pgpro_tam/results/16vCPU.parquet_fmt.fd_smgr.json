@@ -3,6 +3,7 @@
     "date": "2025-03-12",
     "machine": "16 vCPU 32GB",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "",
 
     "tags": ["C", "column-oriented", "PostgreSQL compatible"],

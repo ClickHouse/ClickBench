@@ -4,6 +4,7 @@
   "date": "2024-02-25",
   "machine": "L1 - 16CPU 32GB",
   "cluster_size": 1,
+  "tuned": "no",
   "comment": "",
 
   "tags": [

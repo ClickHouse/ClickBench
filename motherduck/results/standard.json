@@ -3,6 +3,7 @@
     "date": "2025-03-04",
     "machine": "Standard",
     "cluster_size": 1,
+    "tuned": "no",
 
     "tags": ["C++", "column-oriented", "serverless"],
 

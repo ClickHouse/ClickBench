@@ -4,6 +4,7 @@
     "date": "2025-06-26",
     "machine": "64GiB, 2 replica(s)",
     "cluster_size": "2",
+    "tuned": "no",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],

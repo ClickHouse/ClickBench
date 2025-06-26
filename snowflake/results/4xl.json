@@ -3,6 +3,7 @@
     "date": "2022-07-01",
     "machine": "4XL",
     "cluster_size": 128,
+    "tuned": "no",
     "comment": "",
 
     "tags": ["managed", "column-oriented"],

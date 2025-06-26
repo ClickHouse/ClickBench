@@ -4,6 +4,7 @@
     "date": "2024-09-16",
     "machine": "12 vCPU 48GB",
     "cluster_size": 4,
+    "tuned": "no",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "YTsaurus"],

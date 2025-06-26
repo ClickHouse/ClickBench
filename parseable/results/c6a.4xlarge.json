@@ -3,6 +3,7 @@
     "date": "2025-03-20",
     "machine": "c6a.4xlarge, 500gb gp2",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "v1.7.5 (6e5242f)",
 
     "tags": ["Rust", "column-oriented", "parquet"],

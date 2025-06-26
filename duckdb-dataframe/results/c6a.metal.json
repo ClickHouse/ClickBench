@@ -3,6 +3,7 @@
     "date": "2024-11-27",
     "machine": "c6a.metal, 500gb gp2",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "",
     "tags": [
         "C++",

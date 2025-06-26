@@ -3,6 +3,7 @@
   "date": "2023-03-16",
   "machine": "dc2.8xlarge",
   "cluster_size": 2,
+  "tuned": "no",
   "comment": "",
 
   "tags": ["managed", "column-oriented"],

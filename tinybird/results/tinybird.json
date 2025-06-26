@@ -3,6 +3,7 @@
     "date": "2024-11-11",
     "machine": "serverless",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative"],

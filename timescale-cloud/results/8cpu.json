@@ -8,6 +8,7 @@
     "time-series",
     "managed"
   ],
+  "tuned": "no",
   "load_time": 4100,
   "data_size": 19304824832,
   "result": [

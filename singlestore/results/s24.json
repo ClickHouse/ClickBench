@@ -3,6 +3,7 @@
     "date": "2022-07-15",
     "machine": "S24",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "Previous name: MemSQL. Some queries did not run due to unsupported regex",
 
     "tags": ["MySQL compatible", "column-oriented", "managed"],

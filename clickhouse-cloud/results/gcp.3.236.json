@@ -4,6 +4,7 @@
     "date": "2025-06-26",
     "machine": "236GiB, 3 replica(s)",
     "cluster_size": "3",
+    "tuned": "no",
     "comment": "",
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "gcp"],
