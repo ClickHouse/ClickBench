@@ -1,7 +1,17 @@
 #!/bin/bash
 
+if [ "$1" != "" ] && [ "$1" != "scan-cache" ]; then
+    echo "Error: command line argument must be one of {'', 'scan-cache'}"
+    exit 1
+fi
+
+SCAN_CACHE="false"
+if [ "$1" == "scan-cache" ]; then
+    SCAN_CACHE="true"
+fi
+
 # Disable the result and subresult caches. Enable the scan-cache.
-QUERY_PARAMS="enable_result_cache=false&enable_subresult_cache=false&enable_scan_cache=true&output_format=JSON_Compact"
+QUERY_PARAMS="enable_result_cache=false&enable_subresult_cache=false&enable_scan_cache=${SCAN_CACHE}&output_format=JSON_Compact"
 
 cat queries.sql | while read -r query; do
     # Firebolt is a database with local on-disk storage: drop the page cache before the first run of each query.
