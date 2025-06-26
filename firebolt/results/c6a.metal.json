@@ -1,5 +1,5 @@
 {
-    "system": "Firebolt",
+    "system": "Firebolt (scan cache)",
     "date": "2025-06-23",
     "machine": "c6a.metal, 500gb gp2",
     "cluster_size": 1,
