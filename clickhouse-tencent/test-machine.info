@@ -1,0 +1,54 @@
+ ❯ inxi -F
+System:    Host: ip-172-31-19-192.ap-southeast-2.compute.internal
+           Kernel: 6.1.134-152.225.amzn2023.x86_64 x86_64 bits: 64 Console: tty 18
+           Distro: Amazon Linux 2023
+Machine:   Type: Server System: Amazon EC2 product: c6a.metal v: MP
+           serial: <superuser/root required>
+           Mobo: Amazon EC2 model: N/A serial: <superuser/root required> BIOS: Amazon EC2 v: 1.0
+           date: 10/16/2017
+CPU:       Topology: 2x 48-Core model: AMD EPYC 7R13 bits: 64 type: MT MCP SMP
+           L2 cache: 48.0 MiB
+           Speed: 2644 MHz min/max: 1500/2650 MHz Core speeds (MHz): 1: 1790 2: 2650 3: 2650
+           4: 2650 5: 2650 6: 2650 7: 2650 8: 2650 9: 2100 10: 2650 11: 2980 12: 2071 13: 2650
+           14: 2650 15: 2650 16: 2650 17: 2650 18: 2650 19: 2650 20: 2650 21: 1785 22: 2650
+           23: 2650 24: 2650 25: 2650 26: 2650 27: 2650 28: 3678 29: 3694 30: 2669 31: 3482
+           32: 2650 33: 2650 34: 2650 35: 2650 36: 3172 37: 2650 38: 2650 39: 2650 40: 2650
+           41: 2650 42: 3582 43: 2650 44: 2650 45: 2650 46: 2650 47: 2650 48: 2650 49: 2650
+           50: 2650 51: 2650 52: 2650 53: 2650 54: 2650 55: 2650 56: 2650 57: 2650 58: 2650
+           59: 2650 60: 2650 61: 2650 62: 2650 63: 2650 64: 2650 65: 2650 66: 2650 67: 2650
+           68: 2650 69: 2650 70: 2650 71: 2650 72: 2650 73: 2650 74: 2650 75: 2650 76: 2650
+           77: 2650 78: 2650 79: 2650 80: 2650 81: 2650 82: 2650 83: 2650 84: 3381 85: 2650
+           86: 2650 87: 2650 88: 2650 89: 2650 90: 2650 91: 2650 92: 2650 93: 2650 94: 2650
+           95: 2650 96: 2650 97: 2650 98: 2650 99: 2650 100: 2650 101: 2650 102: 2650 103: 2650
+           104: 3721 105: 2650 106: 2650 107: 2650 108: 2650 109: 2650 110: 2650 111: 2650
+           112: 2650 113: 2650 114: 2650 115: 2650 116: 2650 117: 2971 118: 2650 119: 2161
+           120: 2650 121: 2650 122: 2650 123: 2395 124: 2650 125: 2650 126: 2650 127: 2650
+           128: 2650 129: 1792 130: 2650 131: 2650 132: 2650 133: 2650 134: 2650 135: 2650
+           136: 2650 137: 2650 138: 2650 139: 2650 140: 2650 141: 2650 142: 2650 143: 2650
+           144: 2650 145: 2650 146: 2650 147: 2650 148: 2650 149: 2650 150: 3640 151: 2650
+           152: 2650 153: 2650 154: 2650 155: 2650 156: 2650 157: 2650 158: 2650 159: 2650
+           160: 2650 161: 2650 162: 2650 163: 2650 164: 2650 165: 2650 166: 2976 167: 3723
+           168: 2650 169: 2650 170: 2650 171: 2092 172: 2090 173: 1912 174: 2650 175: 2650
+           176: 2650 177: 2650 178: 2650 179: 2650 180: 2650 181: 2069 182: 2131 183: 3704
+           184: 2650 185: 2650 186: 2081 187: 2650 188: 2650 189: 2650 190: 1892 191: 2650
+           192: 2650
+Graphics:  Message: No Device data found.
+           Display: server: No display server data found. Headless machine? tty: 100x24
+           Message: Unable to show advanced data. Required tool glxinfo missing.
+Audio:     Message: No Device data found.
+Network:   Device-1: Amazon.com Elastic Network Adapter driver: ena
+           IF: ens33 state: up speed: N/A duplex: N/A mac: 0a:e4:00:8b:65:1f
+Drives:    Local Storage: total: 4.88 TiB used: 175.82 GiB (3.5%)
+           ID-1: /dev/nvme0n1 model: Amazon Elastic Block Store size: 4.88 TiB
+Partition: ID-1: / size: 4.88 TiB used: 175.82 GiB (3.5%) fs: xfs dev: /dev/nvme0n1p1
+Swap:      Alert: No Swap data was found.
+Sensors:   Missing: Required tool sensors not installed. Check --recommends
+Info:      Processes: 1668 Uptime: 6d 1h 57m Memory: 376.12 GiB used: 10.37 GiB (2.8%)
+           Init: systemd runlevel: 5 Shell: fish inxi: 3.1.05
+
+
+ ❯ uname -a
+Linux ip-172-31-19-192.ap-southeast-2.compute.internal 6.1.134-152.225.amzn2023.x86_64 #1 SMP PREEMPT_DYNAMIC Wed May  7 09:10:59 UTC 2025 x86_64 AMD EPYC 7R13 48-Core Processor AuthenticAMD GNU/Linux
+
+ ❯ uname -r
+6.1.134-152.225.amzn2023.x86_64
