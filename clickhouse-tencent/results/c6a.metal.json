@@ -1,12 +1,13 @@
 {
     "system": "ClickHouse (TCHouse-C Optimizations)",
-    "date": "2025-06-23",
+    "date": "2025-06-26",
     "machine": "c6a.metal, 500gb gp2",
     "cluster_size": 1,
     "comment": "",
+    "tuned": "no",
     "tags": ["C++", "column-oriented", "ClickHouse derivative"],
-    "load_time": 318.504,
-    "data_size": 14469309834,
+    "load_time": 123.351,
+    "data_size": 14468584382,
     "result": [
 [0.002, 0.002, 0.001],
 [0.015, 0.010, 0.009],
