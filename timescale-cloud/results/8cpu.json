@@ -1,6 +1,7 @@
 {
   "system": "Timescale Cloud",
   "machine": "8 vCPU 32GB",
+  "cluster_size": 1,
   "tags": [
     "C",
     "PostgreSQL compatible",
