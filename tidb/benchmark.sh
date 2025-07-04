@@ -2,7 +2,7 @@
 
 shopt -s expand_aliases
 
-MODE=$1
+MODE=${1:=tiflash}
 
 TIDBVERSION=8.5.1
 
