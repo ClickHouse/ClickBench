@@ -14,8 +14,9 @@ go build -o siglens cmd/siglens/main.go
 cd ..
 
 echo "Download and unzip dataset"
-wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/hits.json.gz
-gzip -d hits.json.gz
+sudo apt-get install -y axel pigz
+axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+pigz -d -f hits.json.gz
 
 echo "Load data into SigLens, this can take a few hours"
 time python3 send_datawithactionline.py

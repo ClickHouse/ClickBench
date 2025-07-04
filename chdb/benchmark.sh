@@ -7,8 +7,9 @@ pip install psutil
 pip install chdb
 
 # Load the data
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
-gzip -d -f hits.csv.gz
+sudo apt-get install -y axel pigz
+axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+pigz -d -f hits.csv.gz
 ./load.py
 
 # Run the queries

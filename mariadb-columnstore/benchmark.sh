@@ -16,8 +16,9 @@ mysql --password="${PASSWORD}" --host 127.0.0.1 test < create.sql
 
 # Load the data
 
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -d -f hits.tsv.gz
+sudo apt-get install -y axel pigz
+axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+pigz -d -f hits.tsv.gz
 
 time mysql --password="${PASSWORD}" --host 127.0.0.1 test -e "
     LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits

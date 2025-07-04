@@ -20,8 +20,9 @@ mv ./yugabyte-$YDBVERSION ./yugabyte
 
 ./yugabyte/bin/yugabyted start --advertise_address 127.0.0.1 --ui false --background true
 
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -d -f hits.tsv.gz
+sudo apt-get install -y axel pigz
+axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+pigz -d -f hits.tsv.gz
 
 ./yugabyte/bin/ysqlsh -U yugabyte -c "CREATE DATABASE test;"
 ./yugabyte/bin/ysqlsh -U yugabyte -c "ALTER DATABASE test SET temp_file_limit=-1;"
