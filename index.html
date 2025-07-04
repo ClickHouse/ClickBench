@@ -628,8 +628,6 @@ function renderSummary(filtered_data) {
     /// - if there is no result - take the worst query duration across all query runs for this system and multiply by 2.
     /// Take geometric mean across the queries.
 
-    let summary = {};
-
     const num_queries = filtered_data[0].result.length;
 
     const baseline_data = [...filtered_data[0].result.keys()].map(query_num =>
