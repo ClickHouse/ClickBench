@@ -43,9 +43,9 @@ SETTINGS
 
 CREATE QUOTA sink
 KEYED BY ip_address
-FOR RANDOMIZED INTERVAL 1 MINUTE MAX query_inserts = 1, written_bytes = 1000000,
-FOR RANDOMIZED INTERVAL 1 HOUR MAX query_inserts = 10, written_bytes = 5000000,
-FOR RANDOMIZED INTERVAL 1 DAY MAX query_inserts = 50, written_bytes = 20000000
+FOR RANDOMIZED INTERVAL 1 MINUTE MAX query_inserts = 10, written_bytes = 10000000,
+FOR RANDOMIZED INTERVAL 1 HOUR MAX query_inserts = 50, written_bytes = 50000000,
+FOR RANDOMIZED INTERVAL 1 DAY MAX query_inserts = 500, written_bytes = 200000000
 TO sink;
 
 GRANT INSERT ON sink.data TO sink;
