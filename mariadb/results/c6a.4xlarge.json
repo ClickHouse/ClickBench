@@ -1,5 +1,4 @@
 {
-    "hide": true,
     "system": "MariaDB",
     "date": "2023-03-16",
     "machine": "c6a.4xlarge, 500gb gp2",
