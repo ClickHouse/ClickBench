@@ -9,7 +9,7 @@
     "tags": ["C++", "column-oriented", "ClickHouse derivative"],
 
     "load_time": 0,
-    "data_size": 0,
+    "data_size": null,
 
     "result": [
   [0.002, 0.002, 0.006],
