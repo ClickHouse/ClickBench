@@ -1160,9 +1160,24 @@ function render() {
     }
 }
 
+function toBase64(str) {
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(str);
+    const binary = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+    return btoa(binary);
+}
+
+function fromBase64(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) { bytes[i] = binary.charCodeAt(i); }
+    const decoder = new TextDecoder();
+    return decoder.decode(bytes);
+}
+
 function updateHistory() {
     history.pushState(selectors, '',
-        window.location.pathname + (window.location.search || '') + '#' + btoa(JSON.stringify(selectors)));
+        window.location.pathname + (window.location.search || '') + '#' + toBase64(JSON.stringify(selectors)));
 }
 
 window.onpopstate = function(event) {
@@ -1177,7 +1192,7 @@ window.onpopstate = function(event) {
 
 if (window.location.hash) {
     try {
-        selectors = JSON.parse(atob(window.location.hash.substring(1)));
+        selectors = JSON.parse(fromBase64(window.location.hash.substring(1)));
         if (!selectors.tuned) {
             selectors.tuned = {"yes": true, "no": false};
         }
