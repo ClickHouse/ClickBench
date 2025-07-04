@@ -860,7 +860,7 @@ function render() {
 
         sorted_indices.map(idx => {
             const curr_timing = filtered_data[idx].load_time;
-            const baseline_timing = Math.min(...filtered_data.map(elem => elem.load_time).filter(x => x));
+            const baseline_timing = Math.min(...filtered_data.map(elem => elem.load_time).filter(x => x >= 5));
             const ratio = curr_timing / baseline_timing;
 
             let td = document.createElement('td');
