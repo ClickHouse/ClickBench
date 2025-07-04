@@ -1,5 +1,5 @@
 {
-    "system": "ClickHouse (TCHouse-C Optimizations)",
+    "system": "ClickHouse (TCHouse-C)",
     "date": "2025-06-26",
     "machine": "c6a.metal, 500gb gp2",
     "cluster_size": 1,
@@ -54,4 +54,3 @@
 [0.021, 0.009, 0.009]
 ]
 }
-
