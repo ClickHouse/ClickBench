@@ -8,7 +8,7 @@ SELECT format(
 $${{
     "system": "ClickHouse",
     "date": "{}",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",
@@ -34,7 +34,7 @@ SELECT format(
 $${{
     "system": "ClickHouse",
     "date": "{}",
-    "machine": "c6a.metal, 500gb gp2",
+    "machine": "c6a.metal",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",
@@ -62,7 +62,7 @@ SELECT format(
 $${{
     "system": "ClickHouse (tuned, memory)",
     "date": "{}",
-    "machine": "c6a.metal, 500gb gp2",
+    "machine": "c6a.metal",
     "cluster_size": 1,
     "tuned": "yes",
     "comment": "",

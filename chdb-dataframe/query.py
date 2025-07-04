@@ -50,7 +50,7 @@ for q in queries:
 result_json = {
     "system": "chDB (DataFrame)",
     "date": datetime.date.today().strftime("%Y-%m-%d"),
-    "machine": "c6a.metal, 500gb gp2",
+    "machine": "c6a.metal",
     "cluster_size": 1,
     "comment": "",
     "tags": [

@@ -1,7 +1,7 @@
 {
     "system": "Parseable (Parquet, partitioned)",
     "date": "2025-03-20",
-    "machine": "c6a.metal, 500gb gp2",
+    "machine": "c6a.metal",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "v1.7.5 (6e5242f)",
@@ -11,7 +11,7 @@
     "load_time": 0,
     "data_size": 14018794333,
 
-    
+
         "result": [
 [0.181, 0.01, 0.011],
 [0.536, 0.314, 0.202],
@@ -57,5 +57,5 @@
 [0.175, 0.078, 0.088],
 [0.173, 0.086, 0.084]
 ]
-      
+
 }

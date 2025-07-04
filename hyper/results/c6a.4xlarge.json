@@ -1,7 +1,7 @@
 {
     "system": "Salesforce Hyper",
     "date": "2024-01-17",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
 

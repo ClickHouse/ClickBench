@@ -1,7 +1,7 @@
 {
     "system": "Druid",
     "date": "2022-07-01",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "Druid is killed and restarted after every query. Otherwise some queries make Druid degraded and results are incorrect. For example after Q13 even SELECT 1 works for 7 seconds",

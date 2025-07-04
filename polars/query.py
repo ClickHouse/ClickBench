@@ -469,7 +469,7 @@ def run_timings(lf: pl.LazyFrame, name: str, src: str, load_time: int | None, da
     result_json = {
         "system": name,
         "date": date.today().strftime("%Y-%m-%d"),
-        "machine": "c6a.metal, 500gb gp2",
+        "machine": "c6a.metal",
         "cluster_size": 1,
         "comment": "",
         "tags": [

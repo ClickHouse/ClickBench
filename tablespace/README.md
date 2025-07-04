@@ -8,7 +8,7 @@ Tablespace is a cloud-native Postgres database platform for running Hybrid Trans
 This benchmark is semi-automated
 1. Navigate to https://cloud.tablespace.io and register.
 2. Create a new `LARGE-1` database. The `LARGE-1` shape which has `16 CPUs` and `32GB of RAM` was used for this benchmark. 
-This has similar specs to `c6a.4xlarge, 500gb gp2`. 
+This has similar specs to `c6a.4xlarge`. 
 3. Make a note of the `hostname` and `password`. 
 4. For your test client create a VM that is close to the database region in East US. e.g. Oracle Cloud `us-ashburn-1` (closest) or AWS `us-east-1`. 
 5. Download the test scripts to this VM and install `psql`.

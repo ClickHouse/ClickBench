@@ -1,7 +1,7 @@
 {
     "system": "Cloudberry",
     "date": "2024-06-06",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "14 segments, ORCA enabled",

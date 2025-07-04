@@ -1,7 +1,7 @@
 {
     "system": "CedarDB",
     "date": "2025-05-13",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
     "tags": ["C++", "column-oriented", "PostgreSQL compatible"],

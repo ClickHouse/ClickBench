@@ -1,7 +1,7 @@
 {
     "system": "QuestDB",
     "date": "2024-11-25",
-    "machine": "c6a.metal, 500gb gp2",
+    "machine": "c6a.metal",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "Uses multi-threaded COPY SQL for data load.",

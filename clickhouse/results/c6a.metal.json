@@ -1,7 +1,7 @@
 {
     "system": "ClickHouse",
     "date": "2025-06-20",
-    "machine": "c6a.metal, 500gb gp2",
+    "machine": "c6a.metal",
     "cluster_size": 1,
     "comment": "",
     "tuned": "no",
@@ -54,4 +54,3 @@
 [0.016, 0.012, 0.011]
     ]
 }
-
