@@ -8,7 +8,7 @@ pip install --break-system-packages pandas
 pip install --break-system-packages chdb==2.2.0b1
 
 # Download the data
-wget --continue https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
+wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
 
 # Run the queries
 

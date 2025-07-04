@@ -9,7 +9,7 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential
 
 # download dataset
 echo "Download dataset."
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 echo "Unpack dataset."
 gzip -d -f hits.csv.gz
 mkdir data

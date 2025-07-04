@@ -6,7 +6,7 @@ PASSWORD="<tablespace-db-password>"
 sudo apt-get update
 sudo apt-get install -y postgresql-client
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d -f hits.tsv.gz
 chmod 777 ~ hits.tsv
 

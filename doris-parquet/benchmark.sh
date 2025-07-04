@@ -10,7 +10,7 @@ url='https://apache-doris-releases.oss-accelerate.aliyuncs.com/apache-doris-3.0.
 file_name="$(basename ${url})"
 if [[ "$url" == "http"* ]]; then
     if [[ ! -f $file_name ]]; then
-        wget --continue ${url}
+        wget --continue --progress=dot:giga ${url}
     else
         echo "$file_name already exists, no need to download."
     fi
@@ -76,7 +76,7 @@ done
 
 # Download Parquet files
 cd "$DORIS_HOME/be"
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 cd -
 
 # Run the queries

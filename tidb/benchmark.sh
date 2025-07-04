@@ -24,7 +24,7 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install curl mysql-client -y
 # Needs to be installed and setup for TiFlash; 2-107 corresponds to America/New_York
 printf "2\n107\n" | sudo DEBIAN_FRONTEND=noninteractive apt-get install --reinstall tzdata
 
-wget --https-only --secure-protocol=TLSv1_2 --quiet --continue https://tiup-mirrors.pingcap.com/install.sh
+wget --https-only --secure-protocol=TLSv1_2 --quiet --continue --progress=dot:giga https://tiup-mirrors.pingcap.com/install.sh
 sudo chmod +x ./install.sh
 ./install.sh
 PATH="$TIUP_HOME/bin/:$PATH"
@@ -65,7 +65,7 @@ mysql -e "SET GLOBAL tidb_enable_non_prepared_plan_cache = OFF;"
 rm -rf $DATA_DIR
 mkdir $DATA_DIR
 # File name must correspond to <db_name>.<table_name>.<extension>
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz' -O "$DATA_DIR/$DB_NAME.$TABLE_NAME.csv.gz"
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz' -O "$DATA_DIR/$DB_NAME.$TABLE_NAME.csv.gz"
 gzip -d -f "$DATA_DIR/$DB_NAME.$TABLE_NAME.csv.gz"
 chmod 444 "$DATA_DIR/$DB_NAME.$TABLE_NAME.csv"
 

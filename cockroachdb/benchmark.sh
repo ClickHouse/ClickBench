@@ -8,7 +8,7 @@ sudo apt-get upgrade -y
 # Includes unbuffer utility program
 sudo apt-get install expect-dev -y
 
-wget --continue https://binaries.cockroachdb.com/cockroach-v$CRDBVERSION.linux-amd64.tgz
+wget --continue --progress=dot:giga https://binaries.cockroachdb.com/cockroach-v$CRDBVERSION.linux-amd64.tgz
 tar -xvzf cockroach-v$CRDBVERSION.linux-amd64.tgz
 sudo cp -r cockroach-v$CRDBVERSION.linux-amd64/* /usr/local/bin/
 # Build Tag:        v25.1.6
@@ -18,7 +18,7 @@ sudo mkdir -p $CRDBDATADIR
 # For details see https://www.cockroachlabs.com/docs/v25.1/recommended-production-settings#cache-and-sql-memory-size
 sudo cockroach start-single-node --insecure --listen-addr=localhost --background --store=$CRDBDATADIR --cache=.25 --pid-file=crdb.pid
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz' -O /tmp/hits.csv.gz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz' -O /tmp/hits.csv.gz
 # Make data file available in "extern" directory, so it can be loaded via nodelocal
 sudo mkdir -p $CRDBDATADIR/extern
 gzip -d -c /tmp/hits.csv.gz | sudo tee $CRDBDATADIR/extern/hits.csv > /dev/null

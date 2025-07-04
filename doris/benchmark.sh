@@ -15,7 +15,7 @@ fi
 file_name="$(basename ${url})"
 if [[ "$url" == "http"* ]]; then
     if [[ ! -f $file_name ]]; then
-        wget --continue ${url}
+        wget --continue --progress=dot:giga ${url}
     else
         echo "$file_name already exists, no need to download."
     fi
@@ -88,7 +88,7 @@ mysql -h 127.0.0.1 -P9030 -uroot hits <"$ROOT"/create.sql
 
 # Download data
 if [[ ! -f hits.tsv.gz ]] && [[ ! -f hits.tsv ]]; then
-    wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+    wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
     gzip -d -f hits.tsv.gz
 fi
 

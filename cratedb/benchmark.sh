@@ -34,7 +34,7 @@ do
   sleep 1
 done
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz' -O /tmp/hits.tsv.gz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz' -O /tmp/hits.tsv.gz
 gzip -d -f /tmp/hits.tsv.gz
 chmod 444 /tmp/hits.tsv
 

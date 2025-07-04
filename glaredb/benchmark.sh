@@ -23,10 +23,10 @@ pushd "${script_dir}/data"
 mode="${1:-single}" # Default to 'single' if no arg given.
 case "${mode}" in
     single)
-        wget --continue https://clickhouse-public-datasets.s3.eu-central-1.amazonaws.com/hits_compatible/athena/hits.parquet
+        wget --continue --progress=dot:giga https://clickhouse-public-datasets.s3.eu-central-1.amazonaws.com/hits_compatible/athena/hits.parquet
         ;;
     partitioned)
-        seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+        seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
         ;;
     *)
         echo "Invalid argument to 'benchmark.sh', expected 'single' or 'partitioned'"

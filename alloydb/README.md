@@ -26,7 +26,7 @@ Note: As of current date, AlloyDB can only be accessed by setting up Alloy Auth 
 	  
 4. Download public dataset and required scripts
 ```bash
- wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 ```
 Load scripts in this repo
 

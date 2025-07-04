@@ -16,23 +16,23 @@ sudo systemctl restart postgresql
 sudo -u postgres psql -c "CREATE DATABASE nocolumnstore"
 sudo -u postgres psql nocolumnstore -c "CREATE EXTENSION timescaledb WITH VERSION '2.17.2';"
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d -f hits.tsv.gz
 sudo chmod og+rX ~
 chmod 777 hits.tsv
 
 #import
-sudo -u postgres psql nocolumnstore < create.sql 
-sudo -u postgres psql nocolumnstore -c "SELECT create_hypertable('hits', 'eventtime', chunk_time_interval => interval '3 day')" 
-sudo -u postgres psql nocolumnstore -c "CREATE INDEX ix_counterid ON hits (counterid)" 
+sudo -u postgres psql nocolumnstore < create.sql
+sudo -u postgres psql nocolumnstore -c "SELECT create_hypertable('hits', 'eventtime', chunk_time_interval => interval '3 day')"
+sudo -u postgres psql nocolumnstore -c "CREATE INDEX ix_counterid ON hits (counterid)"
 sudo -u postgres psql -c "ALTER DATABASE nocolumnstore SET work_mem TO '1GB';"
 sudo -u postgres psql -c "ALTER DATABASE nocolumnstore SET min_parallel_table_scan_size TO '0';"
 
-sudo -u postgres psql nocolumnstore -t -c '\timing' -c "\\copy hits FROM 'hits.tsv'" 
-sudo -u postgres psql nocolumnstore -t -c '\timing' -c "vacuum freeze analyze hits;" 
+sudo -u postgres psql nocolumnstore -t -c '\timing' -c "\\copy hits FROM 'hits.tsv'"
+sudo -u postgres psql nocolumnstore -t -c '\timing' -c "vacuum freeze analyze hits;"
 
 #datasize
-sudo -u postgres psql nocolumnstore -c "\t" -c "SELECT hypertable_size('hits');" 
+sudo -u postgres psql nocolumnstore -c "\t" -c "SELECT hypertable_size('hits');"
 
 ./run.sh 2>&1 | tee log.txt
 

@@ -12,7 +12,7 @@ function byconity()
 export -f byconity
 
 byconity --time -n < create.sql
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -fkd hits.tsv.gz
 byconity --database bench --query "INSERT INTO hits FORMAT TSV" < hits.tsv
 

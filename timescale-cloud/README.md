@@ -9,7 +9,7 @@
 1. Once the service is ready use the provided connection string to import the dataset:  
 
    ```bash
-   wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+   wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
    gzip -d -f hits.tsv.gz
    
    export $CONNECTION_STRING=...  

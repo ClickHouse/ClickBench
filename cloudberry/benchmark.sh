@@ -1,8 +1,8 @@
 #!/bin/bash
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 if [[ $1 == '' ]]; then
-	echo "SELINUX=disabled" > /etc/selinux/config 
-	SHMALL=$(expr $(getconf _PHYS_PAGES) / 2) 
+	echo "SELINUX=disabled" > /etc/selinux/config
+	SHMALL=$(expr $(getconf _PHYS_PAGES) / 2)
 	SHMAX=$(expr $(getconf _PHYS_PAGES) / 2 \* $(getconf PAGE_SIZE))
 	echo "Using shmall=$SHMALL, shmax=$SHMAX"
 	echo "
@@ -104,7 +104,7 @@ elif [[ $1 == 'test' ]]; then
         cp $SCRIPT_DIR/run.sh /home/gpadmin/
 	chmod +x /home/gpadmin/run.sh
 	chown gpadmin:gpadmin /home/gpadmin/*
-	if [[ $2 != 'no_dl' ]]; then sudo -iu gpadmin wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'; fi
+	if [[ $2 != 'no_dl' ]]; then sudo -iu gpadmin wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'; fi
 	if [[ $2 != 'no_dl' ]]; then sudo -iu gpadmin gzip -d -f hits.tsv.gz; fi
 	sudo -iu gpadmin chmod 777 ~ hits.tsv
 	sudo -iu gpadmin psql -d postgres -f /home/gpadmin/create.sql

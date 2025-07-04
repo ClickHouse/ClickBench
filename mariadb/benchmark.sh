@@ -14,7 +14,7 @@ sudo service mariadb restart
 
 # Load the data
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d -f hits.tsv.gz
 
 sudo mariadb -e "CREATE DATABASE test"
