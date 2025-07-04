@@ -6,8 +6,8 @@ PASSWORD="<tablespace-db-password>"
 sudo apt-get update
 sudo apt-get install -y postgresql-client
 
-sudo apt-get install -y axel pigz
-axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+sudo apt-get install -y pigz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -d -f hits.tsv.gz
 chmod 777 ~ hits.tsv
 

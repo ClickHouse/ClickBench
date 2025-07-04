@@ -55,8 +55,8 @@ time mongosh --quiet --eval 'db.hits.createIndex({"ClientIP": 1, "WatchID": 1, "
 
 #################################
 # Load data and import
-sudo apt-get install -y axel pigz
-axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+sudo apt-get install -y pigz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -d -f hits.tsv.gz
 
 # Use mongo import to load data into mongo. By default numInsertionWorkers is 1 so change to half of VM where it would be run

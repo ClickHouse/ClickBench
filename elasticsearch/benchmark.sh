@@ -37,8 +37,8 @@ curl -k -X PUT "https://localhost:9200/hits?pretty" -u "elastic:${PASSWORD}"  -H
 ###### Data loading (JSON dump via ES Bulk API insert)
 
 # Download and unzip dataset
-sudo apt-get install -y axel pigz
-axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+sudo apt-get install -y pigz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
 pigz -d -f hits.json.gz
 
 # Prepare Elasticsearch for large bulk insert. To do the large upload, you have to break up JSON file into smaller files to prevent 'curl' from OOM while doing it, and adjust ELasticsearch HTTP upload size minimum. This creates roughly 250M files (note it takes a while)

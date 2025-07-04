@@ -5,8 +5,8 @@ sudo apt-get install -y sqlite3
 
 sqlite3 mydb < create.sql
 
-sudo apt-get install -y axel pigz
-axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+sudo apt-get install -y pigz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 pigz -d -f hits.csv.gz
 
 time sqlite3 mydb '.import --csv hits.csv hits'

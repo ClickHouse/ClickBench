@@ -9,8 +9,8 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential
 
 # download dataset
 echo "Download dataset."
-sudo apt-get install -y axel pigz
-axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+sudo apt-get install -y pigz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 echo "Unpack dataset."
 pigz -d -f hits.csv.gz
 mkdir data

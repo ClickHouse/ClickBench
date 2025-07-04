@@ -26,8 +26,8 @@ CONF
 # Docs: https://databend.rs/doc/use-cases/analyze-hits-dataset-with-databend
 curl 'http://default@localhost:8124/' --data-binary @create.sql
 
-sudo apt-get install -y axel pigz
-axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+sudo apt-get install -y pigz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -d -f hits.tsv.gz
 
 ## Aws gp2 write performance is not stable, we must load the data when disk's write around ~500MB/s (Don't know much about the rules of gp2)

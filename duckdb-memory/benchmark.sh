@@ -8,8 +8,8 @@ pip install duckdb==1.1.3 psutil
 
 # Load the data
 
-sudo apt-get install -y axel pigz
-axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+sudo apt-get install -y pigz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 pigz -d -f hits.csv.gz
 
 # Run the queries

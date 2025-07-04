@@ -27,8 +27,8 @@ sudo systemctl enable heavydb
 
 # Load the data
 
-sudo apt-get install -y axel pigz
-axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+sudo apt-get install -y pigz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 pigz -d -f hits.csv.gz
 chmod 777 ~ hits.csv
 
