@@ -27,7 +27,11 @@
 
             --summary-every-other-row-color: #F8F8F8;
             --highlight-color: #EEE;
-            --bar-color: #FFCB80;
+
+            --bar-color1: oklch(calc(0.9 - 0.6) 0.1 calc(90 - 60));
+            --bar-color2: oklch(calc(0.9 - 0.4) 0.1 calc(90 - 40));
+            --bar-color3: oklch(calc(0.9 - 0.1) 0.1 calc(90 - 20));
+            --bar-color4: oklch(0.9 0.1 90);
 
             --tooltip-text-color: white;
             --tooltip-background-color: black;
@@ -53,7 +57,11 @@
 
             --summary-every-other-row-color: #042e41;
             --highlight-color: #064663;
-            --bar-color: #088;
+
+            --bar-color1: oklch(calc(0.4 + 0.6) 0.1 calc(250 - 180));
+            --bar-color2: oklch(calc(0.4 + 0.4) 0.1 calc(250 - 120));
+            --bar-color3: oklch(calc(0.4 + 0.2) 0.1 calc(250 - 60));
+            --bar-color4: oklch(0.4 0.1 250);
 
             --tooltip-text-color: white;
             --tooltip-background-color: #444;
@@ -153,8 +161,7 @@
 
         .summary-bar {
             height: 1rem;
-            background: var(--bar-color);
-            border-radius: 0 0.2rem 0.2rem 0;
+            width: 100%;
         }
 
         .summary-number {
@@ -828,7 +835,7 @@ function renderSummary(filtered_data) {
 
     /// The algorithm: for each of the queries,
     /// - if there is a result - take query duration, add 10 ms, and divide it to the corresponding value from the baseline,
-    /// - if there is no result - take the worse query duration across all query runs for this system and multiply by 2.
+    /// - if there is no result - take the worst query duration across all query runs for this system and multiply by 2.
     /// Take geometric mean across the queries.
 
     let summary = {};
@@ -874,7 +881,7 @@ function renderSummary(filtered_data) {
     }
 
     const sorted_indices = [...summaries.keys()].sort((a, b) => summaries[a] - summaries[b]);
-    const max_ratio = summaries[sorted_indices[sorted_indices.length - 1]];
+    const max_ratio = Math.min(10000, summaries[sorted_indices[sorted_indices.length - 1]]);
 
     sorted_indices.map(idx => {
         const elem = filtered_data[idx];
@@ -919,7 +926,17 @@ function renderSummary(filtered_data) {
         let bar = document.createElement('div');
 
         bar.className = `summary-bar`;
-        bar.style.width = `${percentage}%`;
+        bar.style.background = `linear-gradient(to right,
+            var(--bar-color1) 0%,
+            var(--bar-color1) ${Math.min(100, percentage)}%,
+            var(--bar-color2) ${Math.min(100, percentage)}%,
+            var(--bar-color2) ${Math.min(100, percentage * 10)}%,
+            var(--bar-color3) ${Math.min(100, percentage * 10)}%,
+            var(--bar-color3) ${Math.min(100, percentage * 100)}%,
+            var(--bar-color4) ${Math.min(100, percentage * 100)}%,
+            var(--bar-color4) ${Math.min(100, percentage * 1000)}%,
+            transparent ${Math.min(100, percentage * 1000)}%,
+            transparent 100%)`;
 
         td_bar.appendChild(bar);
 
