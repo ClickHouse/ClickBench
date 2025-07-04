@@ -720,7 +720,7 @@ unique_systems.map(elem => {
     });
 });
 
-[... new Set(data.map(elem => elem.tags).flat())].map(elem => {
+[... new Set(data.map(elem => elem.tags).flat())].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())).map(elem => {
     let selector = document.createElement('a');
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
@@ -729,7 +729,10 @@ unique_systems.map(elem => {
     selector.addEventListener('click', e => toggle(e, elem, selectors.type));
 });
 
-[... new Set(data.map(elem => elem.machine))].map(elem => {
+[... new Set(data.map(elem => elem.machine))].sort((a, b) => {
+    const count_diff = data.filter(elem => elem.machine === b).length - data.filter(elem => elem.machine === a).length;
+    return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
+}).map(elem => {
     let selector = document.createElement('a');
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
