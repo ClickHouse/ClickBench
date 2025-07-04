@@ -18,7 +18,7 @@ questdb/bin/questdb.sh start
 # Import the data
 
 sudo apt-get install -y axel pigz
-axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 pigz -d -f hits.csv.gz
 
 curl -G --data-urlencode "query=$(cat create.sql)" 'http://localhost:9000/exec'

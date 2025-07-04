@@ -52,7 +52,7 @@ EOF
 sudo systemctl restart postgresql@$PGVERSION-main
 
 sudo apt-get install -y axel pigz
-axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -d -f hits.tsv.gz
 
 sudo -u postgres psql -t -c 'CREATE DATABASE test'

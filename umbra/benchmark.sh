@@ -11,7 +11,7 @@ sudo apt-get install -y postgresql-client gzip
 rm -rf data
 mkdir data
 sudo apt-get install -y axel pigz
-axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -d -f hits.tsv.gz
 mv hits.tsv data
 chmod 777 -R data

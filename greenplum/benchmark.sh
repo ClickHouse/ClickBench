@@ -64,7 +64,7 @@ sudo chmod 777 /gpmaster /gpdata1 /gpdata2 /gpdata3 /gpdata4 /gpdata5 /gpdata6 /
 gpinitsystem -ac gpinitsystem_singlenode
 export MASTER_DATA_DIRECTORY=/gpmaster/gpsne-1/
 sudo apt-get install -y axel pigz
-axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -d -f hits.tsv.gz
 chmod 777 ~ hits.tsv
 psql -d postgres -f create.sql

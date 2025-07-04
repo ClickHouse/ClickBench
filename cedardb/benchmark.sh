@@ -7,7 +7,7 @@ sudo apt-get install -y  docker.io postgresql-client gzip
 # download dataset
 echo "Downloading dataset..."
 sudo apt-get install -y axel pigz
-axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 echo "Unpacking dataset..."
 pigz -d -f hits.tsv.gz
 mkdir data
