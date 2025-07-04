@@ -7,7 +7,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "gcp"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "proprietary", "managed", "gcp"],
 
     "load_time": 944.739,
     "data_size": 9949363603,

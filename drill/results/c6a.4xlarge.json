@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["Java", "column-oriented", "stateless"],
+    "tags": ["Java", "column-oriented", "stateless", "open-source"],
 
     "load_time": 0,
     "data_size": 14737666736,

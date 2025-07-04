@@ -6,7 +6,7 @@
     "tuned": "no",
   "comment": "",
 
-  "tags": ["row-oriented", "document", "C++"],
+  "tags": ["row-oriented", "document", "C++", "open-source"],
 
   "load_time": 44824,
   "data_size": 86397751448,

@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",
-    "tags": ["column-oriented", "parquet"],
+    "tags": ["column-oriented", "parquet", "open-source"],
     "load_time": null,
     "data_size": 14779976446,
     "result": [

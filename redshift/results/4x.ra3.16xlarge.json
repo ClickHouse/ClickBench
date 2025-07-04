@@ -6,7 +6,7 @@
   "tuned": "no",
   "comment": "",
 
-  "tags": ["managed", "column-oriented"],
+  "tags": ["managed", "column-oriented", "proprietary"],
 
   "load_time": 1829,
   "data_size": 26330791936,

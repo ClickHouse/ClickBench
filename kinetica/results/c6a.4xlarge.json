@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["column-oriented"],
+    "tags": ["column-oriented", "proprietary"],
 
     "load_time": 645,
     "data_size": null,

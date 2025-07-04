@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",
-    "tags": ["C++", "column-oriented",  "ClickHouse derivative", "embedded", "stateless", "serverless"],
+    "tags": ["C++", "column-oriented",  "ClickHouse derivative", "embedded", "stateless", "serverless", "open-source"],
     "load_time": 514.26,
     "data_size": 14737670832,
     "result": [

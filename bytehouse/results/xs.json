@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "tuned": "no",
 
-    "tags": ["managed", "column-oriented", "ClickHouse derivative", "C++"],
+    "tags": ["managed", "column-oriented", "ClickHouse derivative", "C++", "proprietary"],
 
     "load_time": 745,
     "data_size": 27190000000,

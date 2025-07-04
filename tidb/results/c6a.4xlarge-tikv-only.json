@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "comment": "v8.5.1",
     "tuned": "no",
-    "tags": ["Rust", "row-oriented", "MySQL compatible"],
+    "tags": ["Rust", "row-oriented", "MySQL compatible", "open-source"],
     "load_time": 4069,
     "data_size": 61598458152,
     "result": [

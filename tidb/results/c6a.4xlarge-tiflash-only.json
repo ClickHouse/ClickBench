@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "tuned": "no",
     "comment": "v8.5.1",
-    "tags": ["C++", "column-oriented", "MySQL compatible", "ClickHouse derivative"],
+    "tags": ["C++", "column-oriented", "MySQL compatible", "ClickHouse derivative", "open-source"],
     "load_time": 4448,
     "data_size": 147868755269,
     "result": [

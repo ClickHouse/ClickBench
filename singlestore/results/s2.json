@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "Previous name: MemSQL. Some queries did not run due to unsupported regex",
 
-    "tags": ["MySQL compatible", "column-oriented", "managed"],
+    "tags": ["MySQL compatible", "column-oriented", "managed", "proprietary"],
 
     "load_time": 1145,
     "data_size": 19219978649,

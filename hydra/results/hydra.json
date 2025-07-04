@@ -4,7 +4,7 @@
     "machine": "XL",
     "cluster_size": "serverless",
     "tuned": "no",
-    "tags": ["managed", "PostgreSQL compatible", "column-oriented"],
+    "tags": ["managed", "PostgreSQL compatible", "column-oriented", "open-source"],
     "load_time": 136,
     "data_size": 30816390348,
     "result": [
