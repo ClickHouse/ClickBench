@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "Some queries cannot run due to ERROR 1114 (HY000) at line 1: The table '/rdsdbdata/tmp/#sqlaff_e5_0' is full",
 
-    "tags": ["managed", "C++", "MySQL compatible", "row-oriented", "proprietary"],
+    "tags": ["managed", "C++", "MySQL compatible", "row-oriented", "proprietary", "aws"],
 
     "load_time": 7687.318,
     "data_size": 89614492631,

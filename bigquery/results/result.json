@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["serverless", "column-oriented", "proprietary"],
+    "tags": ["serverless", "column-oriented", "proprietary", "gcp"],
 
     "load_time": 1146,
     "data_size": 8760000000,

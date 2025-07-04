@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["stateless", "managed", "Java", "column-oriented", "proprietary"],
+    "tags": ["stateless", "managed", "Java", "column-oriented", "proprietary", "aws"],
 
     "load_time": 0,
     "data_size": 13800000000,

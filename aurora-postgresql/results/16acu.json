@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["managed", "C", "PostgreSQL compatible", "row-oriented", "proprietary"],
+    "tags": ["managed", "C", "PostgreSQL compatible", "row-oriented", "proprietary", "aws"],
 
     "load_time": 2127,
     "data_size": 52183852646,

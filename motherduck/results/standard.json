@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "tuned": "no",
 
-    "tags": ["C++", "column-oriented", "serverless", "proprietary"],
+    "tags": ["C++", "column-oriented", "serverless", "proprietary", "managed"],
 
     "load_time": 76.80,
     "data_size": 23620000000,
