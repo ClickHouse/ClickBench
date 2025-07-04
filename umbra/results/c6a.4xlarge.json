@@ -1,5 +1,5 @@
 {
-    "system": "Umbra 25.07",
+    "system": "Umbra",
     "date": "2025-06-30",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
