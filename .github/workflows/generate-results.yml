@@ -1,7 +1,7 @@
-name: "Generate index.html"
+name: "Build the website"
 on:
   push:
-    branches:    
+    branches:
       - main
 
 permissions:
@@ -10,8 +10,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env: 
-      CI_COMMIT_MESSAGE: "[bot] update index.html"
+    env:
+      CI_COMMIT_MESSAGE: "[bot] Build the website"
       CI_COMMIT_AUTHOR: github
     steps:
     - uses: actions/checkout@v3
