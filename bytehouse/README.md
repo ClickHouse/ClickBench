@@ -16,7 +16,7 @@ Note: S3 import does not support public buckets. And it requires pasting secret 
 Create a machine in ap-southeast-1 region and install Bytehouse CLI:
 
 ```
-wget https://github.com/bytehouse-cloud/cli/releases/download/v1.5.34/bytehouse-cli_1.5.34_Linux_x86_64.tar.gz
+wget --continue --progress=dot:giga https://github.com/bytehouse-cloud/cli/releases/download/v1.5.34/bytehouse-cli_1.5.34_Linux_x86_64.tar.gz
 tar xvf bytehouse-cli_1.5.34_Linux_x86_64.tar.gz
 ```
 

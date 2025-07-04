@@ -8,7 +8,7 @@ export KINETICA_ADMIN_PASSWORD=admin
 curl https://files.kinetica.com/install/kinetica.sh -o kinetica && chmod u+x kinetica && sudo -E ./kinetica start
 
 # set up the cli
-wget https://github.com/kineticadb/kisql/releases/download/v7.1.7.2/kisql
+wget --continue --progress=dot:giga https://github.com/kineticadb/kisql/releases/download/v7.1.7.2/kisql
 
 chmod u+x ./kisql
 

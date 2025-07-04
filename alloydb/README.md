@@ -10,7 +10,7 @@ Note: As of current date, AlloyDB can only be accessed by setting up Alloy Auth 
 2. Setup a EC2 instance with 30gb disk
 	a. SSH in and download Alloy Auth Proxy https://cloud.google.com/alloydb/docs/auth-proxy/overview
 	```bash
-	wget https://storage.googleapis.com/alloydb-auth-proxy/v1.5.0/alloydb-auth-proxy.linux.amd64 -O alloydb-auth-proxy
+	wget --continue --progress=dot:giga https://storage.googleapis.com/alloydb-auth-proxy/v1.5.0/alloydb-auth-proxy.linux.amd64 -O alloydb-auth-proxy
 
 	chmod +x alloydb-auth-proxy
 	```

@@ -27,7 +27,7 @@ curl -k -XGET 'https://localhost:9200' -u "elastic:${PASSWORD}"
 
 ###### Create index with mappings mirroring data types in ClickHouse
 
-# Note: Field types were mapped as closely as possible to https://github.com/ClickHouse/ClickBench/blob/main/clickhouse/create.sql I chose "keyword" because queries are not taking advantage of freetext search. 
+# Note: Field types were mapped as closely as possible to https://github.com/ClickHouse/ClickBench/blob/main/clickhouse/create.sql I chose "keyword" because queries are not taking advantage of freetext search.
 
 # Note: Elasticsearch does not have the concept of a primary key, but it does have an "index sorting" feature, which is intended to help in analytical use cases where sort order on disk matters. I set it to the same parameters as primary key for the ClickHouse tests https://github.com/ClickHouse/ClickBench/blob/main/clickhouse/create.sql
 
@@ -37,8 +37,8 @@ curl -k -X PUT "https://localhost:9200/hits?pretty" -u "elastic:${PASSWORD}"  -H
 ###### Data loading (JSON dump via ES Bulk API insert)
 
 # Download and unzip dataset
-wget https://datasets.clickhouse.com/hits_compatible/hits.json.gz
-gzip -d -f hits.json.gz 
+wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/hits.json.gz
+gzip -d -f hits.json.gz
 
 # Prepare Elasticsearch for large bulk insert. To do the large upload, you have to break up JSON file into smaller files to prevent 'curl' from OOM while doing it, and adjust ELasticsearch HTTP upload size minimum. This creates roughly 250M files (note it takes a while)
 split -l 10000000 hits.json hits_

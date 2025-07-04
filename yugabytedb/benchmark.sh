@@ -12,7 +12,7 @@ sudo locale-gen en_US.UTF-8
 # Should now include en_US.utf8
 locale -a
 
-wget https://software.yugabyte.com/releases/$YDBVERSION/yugabyte-$YDBVERSION-$YDBBUILD-linux-x86_64.tar.gz
+wget --continue --progress=dot:giga https://software.yugabyte.com/releases/$YDBVERSION/yugabyte-$YDBVERSION-$YDBBUILD-linux-x86_64.tar.gz
 tar xvfz yugabyte-$YDBVERSION-$YDBBUILD-linux-x86_64.tar.gz
 mv ./yugabyte-$YDBVERSION ./yugabyte
 # Should print "INSTALL PASSED"
