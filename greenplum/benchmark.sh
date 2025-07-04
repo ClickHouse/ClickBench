@@ -17,7 +17,7 @@ chmod 600 ~/.ssh/authorized_keys
 cat /home/gpadmin/.ssh/id_rsa.pub >> /home/gpadmin/.ssh/authorized_keys
 sudo echo "# kernel.shmall = _PHYS_PAGES / 2 # See Shared Memory Pages
 kernel.shmall = 197951838
-# kernel.shmmax = kernel.shmall * PAGE_SIZE 
+# kernel.shmmax = kernel.shmall * PAGE_SIZE
 kernel.shmmax = 810810728448
 kernel.shmmni = 4096
 vm.overcommit_memory = 2 # See Segment Host Memory
@@ -63,7 +63,7 @@ sudo mkdir /gpmaster /gpdata1 /gpdata2 /gpdata3 /gpdata4 /gpdata5 /gpdata6 /gpda
 sudo chmod 777 /gpmaster /gpdata1 /gpdata2 /gpdata3 /gpdata4 /gpdata5 /gpdata6 /gpdata7 /gpdata8 /gpdata9 /gpdata10 /gpdata11 /gpdata12 /gpdata13 /gpdata14
 gpinitsystem -ac gpinitsystem_singlenode
 export MASTER_DATA_DIRECTORY=/gpmaster/gpsne-1/
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d -f hits.tsv.gz
 chmod 777 ~ hits.tsv
 psql -d postgres -f create.sql

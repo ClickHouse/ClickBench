@@ -2,7 +2,7 @@
 
 curl -LJO 'https://github.com/datafuselabs/databend/releases/download/v0.9.53-nightly/databend-v0.9.53-nightly-x86_64-unknown-linux-musl.tar.gz'
 tar xzvf 'databend-v0.9.53-nightly-x86_64-unknown-linux-musl.tar.gz'
- 
+
 cat > config.toml << CONF
 [storage]
 type = "fs"
@@ -26,7 +26,7 @@ CONF
 # Docs: https://databend.rs/doc/use-cases/analyze-hits-dataset-with-databend
 curl 'http://default@localhost:8124/' --data-binary @create.sql
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d hits.tsv.gz
 
 ## Aws gp2 write performance is not stable, we must load the data when disk's write around ~500MB/s (Don't know much about the rules of gp2)

@@ -11,7 +11,7 @@ newgrp docker
 sudo apt-get install -y postgresql-client
 
 
-wget --continue https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
+wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
 docker run -d --name pg_mooncake -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -v ./hits.parquet:/tmp/hits.parquet mooncakelabs/pg_mooncake:17-v0.1.0
 
 sleep 5

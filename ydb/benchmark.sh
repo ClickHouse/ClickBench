@@ -271,7 +271,7 @@ ansible-playbook ydb_platform.ydb.initial_setup --skip-tags checks
 cd $START_DIR
 
 if [ ! -f "hits.csv.gz" ]; then
-    wget --continue --progress=bar:force:noscroll https://datasets.clickhouse.com/hits_compatible/hits.csv.gz
+    wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/hits.csv.gz
 fi
 
 if [ ! -f "hits.csv" ]; then

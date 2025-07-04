@@ -27,7 +27,7 @@ sudo systemctl enable heavydb
 
 # Load the data
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 gzip -d -f hits.csv.gz
 chmod 777 ~ hits.csv
 

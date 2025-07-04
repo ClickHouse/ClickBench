@@ -64,7 +64,7 @@ echo ""
 echo "Downloading ClickBench dataset ($FLAG_WORKLOAD)..."
 if [ $FLAG_WORKLOAD == "single" ]; then
   if [ ! -e /tmp/hits.parquet ]; then
-    wget --continue -O /tmp/hits.parquet https://datasets.clickhouse.com/hits_compatible/hits.parquet
+    wget --continue --progress=dot:giga -O /tmp/hits.parquet https://datasets.clickhouse.com/hits_compatible/hits.parquet
   fi
   if ! sudo docker exec paradedb sh -c '[ -f /tmp/hits.parquet ]'; then
     sudo docker cp /tmp/hits.parquet paradedb:/tmp/hits.parquet
@@ -72,7 +72,7 @@ if [ $FLAG_WORKLOAD == "single" ]; then
 elif [ $FLAG_WORKLOAD == "partitioned" ]; then
   if [ ! -e /tmp/partitioned/ ]; then
     mkdir -p /tmp/partitioned
-    seq 0 99 | xargs -P100 -I{} bash -c 'wget --directory-prefix /tmp/partitioned --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+    seq 0 99 | xargs -P100 -I{} bash -c 'wget --directory-prefix /tmp/partitioned --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
   fi
   if ! sudo docker exec paradedb sh -c '[ -f /tmp/partitioned ]'; then
     sudo docker cp /tmp/partitioned paradedb:tmp

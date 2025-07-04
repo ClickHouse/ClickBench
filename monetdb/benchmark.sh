@@ -22,7 +22,7 @@ sudo apt-get install -y expect
 
 ./query.expect "$(cat create.sql)"
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d -f hits.tsv.gz
 chmod 777 ~ hits.tsv
 

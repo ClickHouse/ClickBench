@@ -19,7 +19,7 @@ FILENAME="hits.tsv"
 # Check if the file exists
 if [ ! -f "$FILENAME" ]; then
     echo "The file $FILENAME does not exist. Starting to download..."
-    wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+    wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
     gzip -d hits.tsv.gz
     chmod 777 ~ hits.tsv
     if [ $? -eq 0 ]; then

@@ -16,7 +16,7 @@ export KI_PWD="admin"
 CLI="./kisql --host localhost --user admin"
 
 # download the ds
-wget --no-verbose --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 sudo mv hits.tsv.gz ./kinetica-persist/
 
 $CLI --file create.sql

@@ -36,7 +36,7 @@ chmod 400 .pgpass
 Load the data
 
 ```
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d -f hits.tsv.gz
 
 psql -U postgres -h "${FQDN}" -t -c 'CREATE DATABASE test'

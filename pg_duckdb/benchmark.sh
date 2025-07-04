@@ -6,7 +6,7 @@ set -eux
 #sudo apt-get install -y docker.io
 #sudo apt-get install -y postgresql-client
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 gzip -d -f hits.tsv.gz
 
 memory=$(awk '/MemTotal/ {print $2}' /proc/meminfo)

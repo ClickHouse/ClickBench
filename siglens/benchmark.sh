@@ -14,7 +14,7 @@ go build -o siglens cmd/siglens/main.go
 cd ..
 
 echo "Download and unzip dataset"
-wget --continue https://datasets.clickhouse.com/hits_compatible/hits.json.gz
+wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/hits.json.gz
 gzip -d hits.json.gz
 
 echo "Load data into SigLens, this can take a few hours"

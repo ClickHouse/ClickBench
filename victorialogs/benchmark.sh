@@ -13,7 +13,7 @@ done
 rm -rf victoria-logs-data
 
 # Download and start victorialogs
-wget --continue https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${RELEASE_VERSION}/victoria-logs-linux-amd64-${RELEASE_VERSION}.tar.gz
+wget --continue --progress=dot:giga https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${RELEASE_VERSION}/victoria-logs-linux-amd64-${RELEASE_VERSION}.tar.gz
 tar xzf victoria-logs-linux-amd64-${RELEASE_VERSION}.tar.gz
 ./victoria-logs-prod -loggerOutput=stdout -retentionPeriod=20y -search.maxQueryDuration=5m > server.log &
 
@@ -25,7 +25,7 @@ done
 
 # Load the data
 
-wget --continue https://datasets.clickhouse.com/hits_compatible/hits.json.gz
+wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/hits.json.gz
 gunzip hits.json.gz
 time cat hits.json | split -n r/8 -d --filter="curl -T - -X POST 'http://localhost:9428/insert/jsonline?_time_field=EventTime&_stream_fields=AdvEngineID,CounterID'"
 

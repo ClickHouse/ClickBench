@@ -21,7 +21,7 @@ pip install --break-system-packages pysail[spark]==0.2.6 pandas psutil
 
 # Load the data
 
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
 # Run the queries
 

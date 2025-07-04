@@ -6,7 +6,7 @@ sudo apt-get install -y  docker.io postgresql-client gzip
 
 # download dataset
 echo "Downloading dataset..."
-wget --continue 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 echo "Unpacking dataset..."
 gzip -d hits.tsv.gz
 mkdir data
@@ -16,7 +16,7 @@ rm -rf db
 mkdir db
 
 # get and configure CedarDB image
-echo "Starting CedarDB..." 
+echo "Starting CedarDB..."
 docker run --rm -p 5432:5432 -v ./data:/data -v ./db:/var/lib/cedardb/data -e CEDAR_PASSWORD=test --name cedardb cedardb/cedardb:latest > /dev/null 2>&1 &
 
 # wait for container to start

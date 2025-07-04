@@ -19,10 +19,10 @@ pip install --break-system-packages packaging
 pip install --break-system-packages daft==0.4.13
 
 # Use for Daft (Parquet, partitioned)
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 
 # Use for Daft (Parquet, single)
-wget --continue https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
+wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
 
 # Run the queries
 for mode in partitioned single; do
