@@ -849,8 +849,8 @@ function renderSummary(filtered_data) {
         [...Array(3).keys()].map(run_num =>
             Math.min(...filtered_data.filter(elem => !elem.fake).map(elem => elem.result[query_num][run_num]).filter(x => x))));
 
-    const min_load_time = Math.min(...filtered_data.map(elem => elem.load_time).filter(x => x));
-    const min_data_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x));
+    const min_load_time = Math.min(...filtered_data.map(elem => elem.load_time).filter(x => x && x > 5));
+    const min_data_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x && x > 1e9));
 
     let summaries;
     if (selectors.metric == 'load') {
@@ -913,7 +913,7 @@ function renderSummary(filtered_data) {
         td_name.appendChild(document.createTextNode(': '));
 
         const ratio = summaries[idx];
-        const percentage = summaries[idx] / max_ratio * 100;
+        const percentage = ratio / max_ratio * 100;
 
         let td_number = document.createElement('td');
         td_number.className = 'summary-number';
