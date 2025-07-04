@@ -56,7 +56,7 @@ Not Foundubuntu@ip-172-31-22-83:~$
 The GitHub repository https://github.com/bytehouse-cloud/cli/ is hilarious.
 
 ```
-wget https://github.com/bytehouse-cloud/cli/releases/download/v1.5.34/bytehouse-cli_1.5.34_Linux_x86_64.tar.gz
+wget --continue --progress=dot:giga https://github.com/bytehouse-cloud/cli/releases/download/v1.5.34/bytehouse-cli_1.5.34_Linux_x86_64.tar.gz
 tar xvf bytehouse-cli_1.5.34_Linux_x86_64.tar.gz
 ```
 

@@ -6,7 +6,7 @@ set -e
 
 VERSION=3.4.2-ubuntu-amd64
 # Install
-wget https://releases.starrocks.io/starrocks/StarRocks-$VERSION.tar.gz -O StarRocks-$VERSION.tar.gz
+wget --continue --progress=dot:giga https://releases.starrocks.io/starrocks/StarRocks-$VERSION.tar.gz -O StarRocks-$VERSION.tar.gz
 tar zxvf StarRocks-${VERSION}.tar.gz
 
 cd StarRocks-${VERSION}/

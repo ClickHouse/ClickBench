@@ -17,7 +17,7 @@ else
 fi
 
 # Download Parseable v1.7.4 binary
-wget https://github.com/parseablehq/parseable/releases/download/v1.7.5/Parseable_OSS_x86_64-unknown-linux-gnu
+wget --continue --progress=dot:giga https://github.com/parseablehq/parseable/releases/download/v1.7.5/Parseable_OSS_x86_64-unknown-linux-gnu
 mv Parseable_OSS_x86_64-unknown-linux-gnu parseable
 chmod +x parseable
 

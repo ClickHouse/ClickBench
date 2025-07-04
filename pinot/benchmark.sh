@@ -8,7 +8,7 @@ sudo update-alternatives --config java
 
 PINOT_VERSION=0.10.0
 
-wget https://downloads.apache.org/pinot/apache-pinot-$PINOT_VERSION/apache-pinot-$PINOT_VERSION-bin.tar.gz
+wget --continue --progress=dot:giga https://downloads.apache.org/pinot/apache-pinot-$PINOT_VERSION/apache-pinot-$PINOT_VERSION-bin.tar.gz
 tar -zxvf apache-pinot-$PINOT_VERSION-bin.tar.gz
 
 ./apache-pinot-$PINOT_VERSION-bin/bin/pinot-admin.sh QuickStart -type batch &
