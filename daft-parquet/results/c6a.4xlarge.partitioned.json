@@ -5,12 +5,7 @@
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",
-    "tags": [
-        "Rust",
-        "stateless",
-        "serverless",
-        "embedded"
-    ],
+    "tags": ["Rust", "stateless", "serverless", "embedded"],
     "load_time": 0,
     "data_size": 14779976446,
     "result": [

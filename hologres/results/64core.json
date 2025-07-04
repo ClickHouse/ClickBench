@@ -4,11 +4,7 @@
     "machine": "16 CU",
     "cluster_size": 4,
     "tuned": "no",
-    "tags": [
-        "managed",
-        "PostgreSQL compatible",
-        "column-oriented"
-    ],
+    "tags": ["managed", "PostgreSQL compatible", "column-oriented"],
     "load_time": 366,
     "data_size": 19708639814,
     "result": [

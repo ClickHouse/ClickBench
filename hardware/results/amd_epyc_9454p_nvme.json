@@ -2,10 +2,7 @@
     "machine": "AMD EPYC 9454P NVMe",
     "comment": "AMD EPYC 9454P 48-Core Processor  CPU @ 2.7GHz",
     "time": "2024-02-20 11:32:37",
-    "tags": [
-        "server",
-        "amd"
-    ],
+    "tags": ["server", "amd"],
     "result": [
         [
             0.002,
