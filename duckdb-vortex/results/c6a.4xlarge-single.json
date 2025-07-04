@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["rust", "vortex", "column-oriented", "embedded", "stateless"],
+    "tags": ["Rust", "column-oriented", "embedded", "stateless"],
 
     "load_time": 0,
     "data_size": 17138413352,

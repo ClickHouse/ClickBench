@@ -7,7 +7,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "YTsaurus"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed"],
 
     "load_time": 0,
     "data_size": 11991598975,
@@ -58,4 +58,3 @@
 ]
 
 }
-

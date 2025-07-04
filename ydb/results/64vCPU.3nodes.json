@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["dedicated", "column-oriented"],
+    "tags": ["column-oriented", "C++", "ClickHouse derivative"],
 
     "load_time": 978,
     "data_size": 27473988280,
