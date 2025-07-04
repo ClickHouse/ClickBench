@@ -8,7 +8,7 @@ sudo apt-get install -y python3-pip openjdk-17-jdk
 export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64/"
 export PATH=$JAVA_HOME/bin:$PATH
 
-pip install --break-system-packages pyspark==4.0.0 psutil
+pip install pyspark==4.0.0 psutil
 
 # Load the data
 

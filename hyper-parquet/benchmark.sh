@@ -5,7 +5,7 @@ sudo apt-get install -y python3-pip
 
 PIP_MAJOR=$(echo $(pip --version | awk '{print $2}') | cut -d. -f1)
 if [ $PIP_MAJOR -ge 23 ]; then
-    pip install --break-system-packages tableauhyperapi
+    pip install tableauhyperapi
 else
     pip install tableauhyperapi
 fi

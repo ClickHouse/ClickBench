@@ -16,8 +16,8 @@ sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 
      sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
      curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
-pip install --break-system-packages --upgrade setuptools wheel
-pip install --break-system-packages pysail[spark]==0.2.6 pandas psutil
+pip install --upgrade setuptools wheel
+pip install pysail[spark]==0.2.6 pandas psutil
 
 # Load the data
 

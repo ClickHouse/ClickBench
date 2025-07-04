@@ -4,7 +4,7 @@
 
 sudo apt-get update
 sudo apt-get install -y python3-pip
-pip install --break-system-packages duckdb psutil
+pip install duckdb psutil
 
 # Go to the web ui and obtain a token
 # https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/
