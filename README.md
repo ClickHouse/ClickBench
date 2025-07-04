@@ -59,7 +59,7 @@ To introduce a new system, simply copy-paste one of the directories and edit the
 - `create.sql`: a CREATE TABLE statement. If it's a NoSQL system, another file like `wtf.json` can be presented.
 - `queries.sql`: contains 43 queries to run;
 - `run.sh`: a loop for running the queries; every query is run three times; if it's a database with local on-disk storage, the first query should be run after dropping the page cache;
-- `results`: put the .json files with the results for every hardware configuration there.
+- `results`: put the .json files with the results for every hardware configuration there. Please double-check that each file is valid JSON (e.g., no comma errors).
 
 To introduce a new result for an existing system on different hardware configurations, add a new file to `results`.
 
