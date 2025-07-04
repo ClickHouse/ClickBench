@@ -10,8 +10,9 @@ sudo apt-get install -y postgresql-client gzip
 # Download + uncompress hits
 rm -rf data
 mkdir data
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -d -f hits.tsv.gz
+sudo apt-get install -y axel pigz
+axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+pigz -d -f hits.tsv.gz
 mv hits.tsv data
 chmod 777 -R data
 

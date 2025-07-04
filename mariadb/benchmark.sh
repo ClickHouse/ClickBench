@@ -14,8 +14,9 @@ sudo service mariadb restart
 
 # Load the data
 
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-gzip -d -f hits.tsv.gz
+sudo apt-get install -y axel pigz
+axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+pigz -d -f hits.tsv.gz
 
 sudo mariadb -e "CREATE DATABASE test"
 sudo mariadb test < create.sql
