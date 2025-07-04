@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "CrateDB 5.10.2. Some queries exceed the available heap space (CircuitBreakingException).",
 
-    "tags": ["Java", "column-oriented"],
+    "tags": ["Java", "column-oriented", "open-source"],
     "load_time": 5868,
     "data_size": 40704704381,
     "result": [

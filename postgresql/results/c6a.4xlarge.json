@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C", "row-oriented", "PostgreSQL compatible"],
+    "tags": ["C", "row-oriented", "PostgreSQL compatible", "open-source"],
 
     "load_time": 937,
     "data_size": 106489682778,

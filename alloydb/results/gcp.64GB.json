@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C", "column-oriented", "PostgreSQL compatible", "managed", "gcp"],
+    "tags": ["C", "column-oriented", "PostgreSQL compatible", "managed", "gcp", "proprietary"],
 
     "load_time": 1542.701,
     "data_size": 9941379875,

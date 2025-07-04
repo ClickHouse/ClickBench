@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "14 segments, ORCA enabled",
 
-    "tags": ["C", "column-oriented", "PostgreSQL compatible"],
+    "tags": ["C", "column-oriented", "PostgreSQL compatible", "open-source"],
 
     "load_time": 601,
     "data_size": 36000000000,

@@ -4,7 +4,7 @@
     "machine": "c6a.metal",
     "cluster_size": 1,
     "tuned": "no",
-    "tags": ["C++", "column-oriented", "PostgreSQL compatible"],
+    "tags": ["C++", "column-oriented", "PostgreSQL compatible", "proprietary"],
     "load_time": 753.013,
     "data_size": 38785898243,
     "result": [

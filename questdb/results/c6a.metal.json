@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "tuned": "no",
     "comment": "Uses multi-threaded COPY SQL for data load.",
-    "tags": ["Java", "time-series"],
+    "tags": ["Java", "time-series", "open-source"],
     "load_time": 157,
     "data_size": 72847067281,
     "result": [

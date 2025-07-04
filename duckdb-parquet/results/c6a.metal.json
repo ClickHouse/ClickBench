@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C++", "column-oriented", "embedded", "stateless"],
+    "tags": ["C++", "column-oriented", "embedded", "stateless", "open-source"],
 
     "load_time": 0,
     "data_size": 14737666736,

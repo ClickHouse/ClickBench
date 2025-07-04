@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "tuned": "no",
     "comment":"",
-    "tags": ["column-oriented", "PostgreSQL compatible", "managed"],
+    "tags": ["column-oriented", "PostgreSQL compatible", "managed", "proprietary"],
     "load_time": 0,
     "data_size": 14779976446,
 

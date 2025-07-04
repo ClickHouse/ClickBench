@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "comment": "",
     "tuned": "yes",
-    "tags": ["C++", "column-oriented", "ClickHouse derivative"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "open-source"],
     "load_time": 284.697,
     "data_size": 82800083772,
     "result": [

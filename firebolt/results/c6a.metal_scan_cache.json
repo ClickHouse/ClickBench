@@ -4,7 +4,7 @@
     "machine": "c6a.metal",
     "cluster_size": 1,
     "tuned": "yes",
-    "tags": ["C++", "column-oriented", "PostgreSQL compatible", "ClickHouse derivative"],
+    "tags": ["C++", "column-oriented", "PostgreSQL compatible", "ClickHouse derivative", "proprietary"],
     "load_time": 156.778640,
     "data_size": 15716159954,
     "result": [

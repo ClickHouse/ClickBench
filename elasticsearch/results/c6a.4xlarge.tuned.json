@@ -6,7 +6,7 @@
     "tuned": "yes",
     "comment": "Tuned by repeated benchmark to find the optimal Elasticsearch shard number and size for this resource type and workload",
 
-    "tags": ["Java", "search"],
+    "tags": ["Java", "search", "open-source"],
 
     "load_time": 5264.429,
     "data_size": 91680375082,

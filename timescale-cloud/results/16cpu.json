@@ -2,7 +2,7 @@
   "system": "Timescale ☁️",
   "machine": "16 vCPU 64GB",
   "cluster_size": 1,
-  "tags": ["C", "PostgreSQL compatible", "column-oriented", "time-series", "managed"],
+  "tags": ["C", "PostgreSQL compatible", "column-oriented", "time-series", "managed", "proprietary"],
   "tuned": "no",
   "load_time": 3582,
   "data_size": 19304824832,

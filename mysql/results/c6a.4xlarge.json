@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C++", "row-oriented", "MySQL compatible"],
+    "tags": ["C++", "row-oriented", "MySQL compatible", "open-source"],
 
     "load_time": 9472,
     "data_size": 171953585825,

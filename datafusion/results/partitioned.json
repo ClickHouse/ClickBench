@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "tuned": "no",
     "comment": "v47.0.0 (e44330)",
-    "tags": ["Rust", "column-oriented", "embedded", "stateless"],
+    "tags": ["Rust", "column-oriented", "embedded", "stateless", "open-source"],
     "load_time": 0,
     "data_size": 14737666736,
     "result": [

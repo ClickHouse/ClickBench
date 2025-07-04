@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "For some reason many queries run in almost exactly one hour. Most likely a coincidence. It is installed from Debian packages, which might explain the abysmal performance.",
 
-    "tags": ["C++", "row-oriented", "MySQL compatible"],
+    "tags": ["C++", "row-oriented", "MySQL compatible", "open-source"],
 
     "load_time": 8625,
     "data_size": 104270986073,

@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C", "embedded", "row-oriented"],
+    "tags": ["C", "embedded", "row-oriented", "open-source"],
 
     "load_time": 2608,
     "data_size": 75776589824,

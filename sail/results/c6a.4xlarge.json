@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["column-oriented"],
+    "tags": ["column-oriented", "open-source"],
 
     "load_time": 0,
     "data_size": 14737666736,

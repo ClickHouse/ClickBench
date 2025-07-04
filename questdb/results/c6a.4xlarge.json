@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",
-    "tags": ["Java", "time-series"],
+    "tags": ["Java", "time-series", "open-source"],
     "load_time": 24242,
     "data_size": 72842143269,
     "result": [
