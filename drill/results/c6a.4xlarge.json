@@ -1,7 +1,7 @@
 {
     "system": "Drill",
     "date": "2024-11-24",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",

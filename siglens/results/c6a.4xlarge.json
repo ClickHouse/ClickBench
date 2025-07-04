@@ -1,7 +1,7 @@
 {
     "system": "SigLens",
     "date": "2025-07-02",
-    "machine": "c6a.4xlarge, 300gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
     "tags": ["Go", "search"],

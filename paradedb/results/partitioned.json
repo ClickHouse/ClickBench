@@ -2,7 +2,7 @@
   "hide": false,
   "system": "ParadeDB (Parquet, partitioned)",
   "date": "2024-07-13",
-  "machine": "c6a.4xlarge, 500gb gp2",
+  "machine": "c6a.4xlarge",
   "cluster_size": 1,
     "tuned": "no",
   "comment": "",

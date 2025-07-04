@@ -1,7 +1,7 @@
 {
     "system": "DataFusion (Vortex, single)",
     "date": "2025-05-20",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "v47.0.0 (e44330) - Vortex 0.34.0 (4645a2)",

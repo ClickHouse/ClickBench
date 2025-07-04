@@ -2,7 +2,7 @@
 
 machine_name=${1}
 mode=${2}
-full_machine="${1}, 500gb gp2"
+full_machine="${1}"
 
 TRIES=3
 QUERY_COUNT=43

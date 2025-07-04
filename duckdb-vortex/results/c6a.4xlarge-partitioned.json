@@ -1,7 +1,7 @@
 {
     "system": "DuckDB (Vortex, partitioned)",
     "date": "2025-05-21",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",

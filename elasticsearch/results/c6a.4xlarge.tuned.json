@@ -1,7 +1,7 @@
 {
     "system": "Elasticsearch (tuned)",
     "date": "2022-07-25",
-    "machine": "c6a.4xlarge, 1500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "yes",
     "comment": "Tuned by repeated benchmark to find the optimal Elasticsearch shard number and size for this resource type and workload",

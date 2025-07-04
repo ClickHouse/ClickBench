@@ -1,7 +1,7 @@
 {
     "system": "Firebolt (scan cache)",
     "date": "2025-06-23",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "yes",
     "tags": ["C++", "column-oriented", "PostgreSQL compatible", "ClickHouse derivative"],

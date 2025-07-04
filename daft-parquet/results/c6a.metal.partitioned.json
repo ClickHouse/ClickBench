@@ -1,7 +1,7 @@
 {
     "system": "Daft (Parquet, partitioned)",
     "date": "2025-05-07",
-    "machine": "c6a.metal, 500gb gp2",
+    "machine": "c6a.metal",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",

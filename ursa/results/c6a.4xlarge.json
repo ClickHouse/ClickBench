@@ -1,7 +1,7 @@
 {
     "system": "Ursa",
     "date": "2025-03-05",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",
@@ -54,4 +54,3 @@
         [0.027, 0.011, 0.011]
     ]
 }
-

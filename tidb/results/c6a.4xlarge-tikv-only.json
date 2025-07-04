@@ -1,7 +1,7 @@
 {
     "system": "TiDB (TiKV only)",
     "date": "2025-05-23",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "comment": "v8.5.1",
     "tuned": "no",

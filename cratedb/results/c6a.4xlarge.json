@@ -1,7 +1,7 @@
 {
     "system": "CrateDB",
     "date": "2025-02-28",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "CrateDB 5.10.2. Some queries exceed the available heap space (CircuitBreakingException).",

@@ -1,7 +1,7 @@
 {
     "system": "Pinot",
     "date": "2022-07-01",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "It successfully loaded only 94465149 out of 99997497 records. Some queries returned NullPointerException. The loading process is painful - splitting to 100 pieces required. It does not correctly report errors on data loading, the results may be incorrect.",

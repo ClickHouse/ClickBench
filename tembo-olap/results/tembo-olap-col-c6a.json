@@ -1,7 +1,7 @@
 {
     "system": "Tembo OLAP (columnar)",
     "date": "2024-02-09",
-    "machine": "c6a.4xlarge, 500gb gp3",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",

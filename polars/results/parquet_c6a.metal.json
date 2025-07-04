@@ -1,7 +1,7 @@
 {
     "system": "Polars (Parquet)",
     "date": "2024-11-29",
-    "machine": "c6a.metal, 500gb gp2",
+    "machine": "c6a.metal",
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",

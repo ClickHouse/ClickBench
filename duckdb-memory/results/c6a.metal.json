@@ -1,7 +1,7 @@
 {
     "system": "DuckDB (memory)",
     "date": "2024-11-26",
-    "machine": "c6a.metal, 500gb gp2",
+    "machine": "c6a.metal",
     "cluster_size": 1,
     "tuned": "no",
 
