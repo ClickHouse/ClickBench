@@ -881,7 +881,7 @@ function renderSummary(filtered_data) {
     }
 
     const sorted_indices = [...summaries.keys()].sort((a, b) => summaries[a] - summaries[b]);
-    const max_ratio = Math.min(10000, summaries[sorted_indices[sorted_indices.length - 1]]);
+    const max_ratio = 10000;
 
     sorted_indices.map(idx => {
         const elem = filtered_data[idx];
