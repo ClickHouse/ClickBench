@@ -4,7 +4,7 @@
     "machine": "c6a.4xlarge, 300gb gp2",
     "cluster_size": 1,
     "tuned": "no",
-    "tags": ["Go", "logs", "search", "SigLens", "observability"],
+    "tags": ["Go", "search"],
     "load_time": 5070.66,
     "data_size": 28572908,
     "result": [
