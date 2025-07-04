@@ -29,9 +29,8 @@ done
 if [ "$1" != "" ] && [ "$1" != "tuned" ] && [ "$1" != "tuned-memory" ]; then
     echo "Error: command line argument must be one of {'', 'tuned', 'tuned-memory'}"
     exit 1
-else if [ ! -z "$1" ]; then
+elif [ ! -z "$1" ]; then
     SUFFIX="-$1"
-fi
 fi
 
 # Load the data
@@ -44,10 +43,12 @@ then
     gzip -d -f hits.tsv.gz
 fi
 
+echo -n "Load time: "
 clickhouse-client --time --query "INSERT INTO hits FORMAT TSV" < hits.tsv
 
 # Run the queries
 
 ./run.sh "$1"
 
+echo -n "Data size: "
 clickhouse-client --query "SELECT total_bytes FROM system.tables WHERE name = 'hits' AND database = 'default'"

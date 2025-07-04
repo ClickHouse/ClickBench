@@ -54,7 +54,7 @@ TLDR: *All Benchmarks Are ~~Bastards~~ Liars*.
 
 To introduce a new system, simply copy-paste one of the directories and edit the files accordingly:
 
-- `benchmark.sh`: this is the main script to run the benchmark on a fresh VM; Ubuntu 22.04 or newer should be used by default, or any other system if specified in the comments. The script may not necessarily run in a fully automated manner - it is recommended always to copy-paste the commands one by one and observe the results. For managed databases, if the setup requires clicking in the UI, write a `README.md` instead.
+- `benchmark.sh`: this is the main script to run the benchmark on a fresh VM; Ubuntu 24.04 or newer should be used by default. For databases that could be installed locally, the script should be able to run in a fully automated manner, so it can be used as a cloud-init script. It should output the results in the following format: - a line `Load time: 1234` with the time in seconds; - a line `Data size: 1234567890` with the data size in bytes; the data size should include indexes and transaction logs if applicable; - 43 consecutive lines in the form of `[1.234, 5.678, 9.012],` for the runtimes of every query; - the output may include other lines with the logs, that are not used for the report. For managed databases, if the setup requires clicking in the UI, write a `README.md` instead.
 - `README.md`: contains comments and observations if needed. For managed databases, it can describe the setup procedure to be used instead of a shell script.
 - `create.sql`: a CREATE TABLE statement. If it's a NoSQL system, another file like `wtf.json` can be presented.
 - `queries.sql`: contains 43 queries to run;
