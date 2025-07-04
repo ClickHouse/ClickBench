@@ -6,7 +6,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "proprietary"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "proprietary", "managed"],
 
     "load_time": 0,
     "data_size": null,
