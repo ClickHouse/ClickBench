@@ -27,3 +27,5 @@ gzip -d -f hits.tsv.gz
 ./run.sh "$1"
 
 ./ursa client --query "SELECT total_bytes FROM system.tables WHERE name = 'hits' AND database = 'default'"
+
+killall ursa
