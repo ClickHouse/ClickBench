@@ -5,14 +5,7 @@
     "cluster_size": 1,
     "tuned": "no",
     "comment": "",
-    "tags": [
-        "C++",
-        "column-oriented",
-        "embedded",
-        "stateless",
-        "serverless",
-        "dataframe"
-    ],
+    "tags": ["C++", "column-oriented", "embedded", "stateless", "serverless", "dataframe"],
     "load_time": 0,
     "data_size": 46998823718,
     "result": [

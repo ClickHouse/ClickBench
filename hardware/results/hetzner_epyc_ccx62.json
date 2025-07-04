@@ -2,11 +2,7 @@
     "machine": "Hetzner CCX62",
     "comment": "Hetzner CCX62 (AMD EPYC, 48 cores, 192 GiB RAM, NVMe)",
     "time": "2023-02-17 16:00:00",
-    "tags": [
-        "server",
-        "hetzner",
-        "amd"
-    ],
+    "tags": ["server", "hetzner", "amd"],
     "result":
     [
         [0.004, 0.017, 0.002],
