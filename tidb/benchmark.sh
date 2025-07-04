@@ -2,7 +2,11 @@
 
 shopt -s expand_aliases
 
-MODE=${1:=tiflash}
+MODE="$1"
+if [[ -z "$MODE" ]]
+then
+  MODE=tiflash
+fi
 
 TIDBVERSION=8.5.1
 
