@@ -3,8 +3,8 @@
 # Install
 sudo apt-get update
 sudo apt-get install -y python3-pip
-pip install --break-system-packages psutil
-pip install --break-system-packages chdb==2.2.0b1
+pip install psutil
+pip install chdb
 
 # Load the data
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'

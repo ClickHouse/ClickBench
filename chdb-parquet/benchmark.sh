@@ -4,8 +4,8 @@
 
 sudo apt-get update
 sudo apt-get install -y python3-pip
-pip install --break-system-packages psutil
-pip install --break-system-packages chdb==2.2.0b1
+pip install psutil
+pip install chdb
 
 # Load the data
 seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
