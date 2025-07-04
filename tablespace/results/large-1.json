@@ -7,15 +7,7 @@
   "tuned": "no",
   "comment": "",
 
-  "tags": [
-    "C",
-    "Rust",
-    "row-oriented",
-    "column-oriented",
-    "PostgreSQL compatible",
-    "managed",
-    "analytical"
-  ],
+  "tags": ["C", "Rust", "column-oriented", "PostgreSQL compatible", "managed", "analytical"],
 
   "load_time": 13711,
   "data_size": 135469176422,

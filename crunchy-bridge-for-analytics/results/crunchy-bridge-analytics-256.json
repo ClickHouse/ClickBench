@@ -1,7 +1,7 @@
 {
     "system": "Crunchy Bridge for Analytics (Parquet)",
     "date": "2024-06-05",
-    "machine": "Analytics-256GB (64 vCores, 256 GB)",
+    "machine": "Analytics-256GB",
     "cluster_size": 1,
     "tuned": "no",
     "comment":"",
