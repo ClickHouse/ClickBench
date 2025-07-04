@@ -675,7 +675,7 @@ function renderSummary(filtered_data) {
         const elem = filtered_data[idx];
 
         if (selectors.metric == 'size' && elem.data_size === null) { return; }
-        if (selectors.metric == 'load' && !elem.load_time || elem.load_time < 5) { return; }
+        if (selectors.metric == 'load' && (!elem.load_time || elem.load_time < 5)) { return; }
 
         let tr = document.createElement('tr');
         tr.className = 'summary-row';
