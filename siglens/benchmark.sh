@@ -15,7 +15,7 @@ cd ..
 
 echo "Download and unzip dataset"
 sudo apt-get install -y axel pigz
-axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
 pigz -d -f hits.json.gz
 
 echo "Load data into SigLens, this can take a few hours"

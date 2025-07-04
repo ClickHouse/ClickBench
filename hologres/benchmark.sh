@@ -20,7 +20,7 @@ FILENAME="hits.tsv"
 if [ ! -f "$FILENAME" ]; then
     echo "The file $FILENAME does not exist. Starting to download..."
     sudo apt-get install -y axel pigz
-    axel --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+    axel --quiet --num-connections=32 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
     pigz -d -f hits.tsv.gz
     chmod 777 ~ hits.tsv
     if [ $? -eq 0 ]; then
