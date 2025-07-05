@@ -106,13 +106,15 @@ curl --location-trusted \
     http://localhost:8030/api/hits/hits/_stream_load
 END=$(date +%s)
 LOADTIME=$(echo "$END - $START" | bc)
-echo "Load data costs $LOADTIME seconds"
-echo "$LOADTIME" >loadtime
+echo "Load time: $LOADTIME"
+echo "$LOADTIME" > loadtime
 
 # Dataset contains 99997497 rows, storage size is about 17319588503 bytes
 mysql -h 127.0.0.1 -P9030 -uroot hits -e "SELECT count(*) FROM hits"
 du -bs "$DORIS_HOME"/be/storage/ | cut -f1 | tee storage_size
 
+echo "Data size: ${cat storage_size}"
+
 # Run queries
-./run.sh 2>&1 | tee -a run.log
+./run.sh 2>&1 | tee -a run.log | sed -r -e 's/^.+,([0-9\.]+,[0-9\.]+,[0-9\.]+)$/[\1],/'
 date

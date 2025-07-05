@@ -21,4 +21,4 @@ while read -r query; do
     echo "" | tee -a result.csv
 
     QUERY_NUM=$((QUERY_NUM + 1))
-done <queries.sql
+done < queries.sql

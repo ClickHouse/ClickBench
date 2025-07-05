@@ -81,5 +81,5 @@ cd -
 
 # Run the queries
 mysql -h127.1 -P9030 -uroot -vvv < create.sql
-./run.sh 2>&1 | tee run.log
+./run.sh 2>&1 | tee run.log | sed -r -e 's/^.+,([0-9\.]+,[0-9\.]+,[0-9\.]+)$/[\1],/'
 date
