@@ -20,12 +20,16 @@ mv hits.csv data
 echo "Install and run Oxla."
 
 docker run --rm -p 5432:5432 -v data:/data --name oxlacontainer public.ecr.aws/oxla/release:1.53.0-beta > /dev/null 2>&1 &
-sleep 30 # waiting for container start and db initialisation (leader election, etc.)
 
 # create table and ingest data
 export PGCLIENTENCODING=UTF8
 
-PGPASSWORD=oxla psql -h localhost -U oxla -t < create.sql
+for _ in {1..600}
+do
+  PGPASSWORD=oxla psql -h localhost -U oxla -t < create.sql && break
+  sleep 1
+done
+
 echo "Insert data."
 echo -n "Load time: "
 PGPASSWORD=oxla command time -f '%e' psql -h localhost -U oxla -t -c "COPY hits FROM '/data/hits.csv';"
