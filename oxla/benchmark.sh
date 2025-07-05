@@ -13,8 +13,8 @@ sudo apt-get install -y pigz
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 echo "Unpack dataset."
 pigz -d -f hits.csv.gz
-mkdir data
-mv hits.csv data
+sudo mkdir /data
+sudo mv hits.csv /data
 
 # get and configure Oxla image
 echo "Install and run Oxla."
