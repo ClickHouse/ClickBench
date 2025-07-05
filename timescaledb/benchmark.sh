@@ -31,16 +31,19 @@ sudo -u postgres psql -c "ALTER DATABASE test SET work_mem TO '1GB';"
 sudo -u postgres psql -c "ALTER DATABASE test SET min_parallel_table_scan_size TO '0';"
 sudo -u postgres psql test -c "SELECT enable_chunk_skipping('hits', 'counterid');"
 
-sudo -u postgres psql test -t -c '\timing' -c "\\copy hits FROM 'hits.tsv'"
+echo -n "Load time: "
+command time -f '%e' sudo -u postgres psql test -t -c "\\copy hits FROM 'hits.tsv'"
 
 # See https://github.com/timescale/timescaledb/issues/4473#issuecomment-1167095245
 # https://docs.timescale.com/timescaledb/latest/how-to-guides/compression/manually-compress-chunks/#compress-chunks-manually
 # TimescaleDB benchmark wihout compression is available in timescaledb no columnstore directory
 
-sudo -u postgres psql test -c "SELECT compress_chunk(i, if_not_compressed => true) FROM show_chunks('hits') i"
-sudo -u postgres psql test -t -c '\timing' -c "vacuum freeze analyze hits;"
+echo -n "Load time: "
+command time -f '%e' sudo -u postgres psql test -c "SELECT compress_chunk(i, if_not_compressed => true) FROM show_chunks('hits') i"
+echo -n "Load time: "
+command time -f '%e' sudo -u postgres psql test -t -c "vacuum freeze analyze hits;"
 
-#datasize
+echo -n "Data size: "
 sudo -u postgres psql test -c "\t" -c "SELECT hypertable_size('hits');"
 
 ./run.sh 2>&1 | tee log.txt

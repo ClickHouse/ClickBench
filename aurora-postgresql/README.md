@@ -41,7 +41,8 @@ gzip -d -f hits.tsv.gz
 
 psql -U postgres -h "${FQDN}" -t -c 'CREATE DATABASE test'
 psql -U postgres -h "${FQDN}" test -t < create.sql
-psql -U postgres -h "${FQDN}" test -t -c '\timing' -c "\\copy hits FROM 'hits.tsv'"
+echo -n "Load time: "
+command time -f '%e' psql -U postgres -h "${FQDN}" test -t -c "\\copy hits FROM 'hits.tsv'"
 ```
 
 > COPY 99997497

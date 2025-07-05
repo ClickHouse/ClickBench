@@ -9,7 +9,5 @@ PARQUET_FILE='https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
 echo "Loading data"
 (
-    echo "\timing"
-    cat create.sql |
-        sed -e "s=REPLACE_SCHEMA=$DATABASE=g" -e "s=REPLACE_PARQUET_FILE=$PARQUET_FILE=g"
-) | psql --no-psqlrc --tuples-only $CONNECTION | grep 'Time'
+    cat create.sql | sed -e "s=REPLACE_SCHEMA=$DATABASE=g" -e "s=REPLACE_PARQUET_FILE=$PARQUET_FILE=g"
+) | psql --no-psqlrc --tuples-only $CONNECTION

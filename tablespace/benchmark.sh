@@ -12,10 +12,14 @@ pigz -d -f hits.tsv.gz
 chmod 777 ~ hits.tsv
 
 psql "host=$HOSTNAME port=5432 dbname=csdb user=csuser password=$PASSWORD sslmode=require" < create.sql
-psql "host=$HOSTNAME port=5432 dbname=csdb user=csuser password=$PASSWORD sslmode=require" -t -c '\timing' -c "\\copy hits FROM 'hits.tsv'"
-psql "host=$HOSTNAME port=5432 dbname=csdb user=csuser password=$PASSWORD sslmode=require" < index.sql
-psql "host=$HOSTNAME port=5432 dbname=csdb user=csuser password=$PASSWORD sslmode=require" -t -c '\timing' -c "vacuum analyze hits"
-psql "host=$HOSTNAME port=5432 dbname=csdb user=csuser password=$PASSWORD sslmode=require" -t -c '\timing' -c "select columnstore.database_size('csdb')"
+echo -n "Load time: "
+command time -f '%e' psql "host=$HOSTNAME port=5432 dbname=csdb user=csuser password=$PASSWORD sslmode=require" -t -c "\\copy hits FROM 'hits.tsv'"
+echo -n "Load time: "
+command time -f '%e' psql "host=$HOSTNAME port=5432 dbname=csdb user=csuser password=$PASSWORD sslmode=require" < index.sql
+echo -n "Load time: "
+command time -f '%e' psql "host=$HOSTNAME port=5432 dbname=csdb user=csuser password=$PASSWORD sslmode=require" -t -c "vacuum analyze hits"
+echo -n 'Data size: '
+psql "host=$HOSTNAME port=5432 dbname=csdb user=csuser password=$PASSWORD sslmode=require" -t -c "select columnstore.database_size('csdb')"
 
 ./run.sh 2>&1 | tee log.txt
 
