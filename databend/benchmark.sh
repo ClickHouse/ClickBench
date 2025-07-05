@@ -24,7 +24,11 @@ CONF
 
 # Load the data
 # Docs: https://databend.rs/doc/use-cases/analyze-hits-dataset-with-databend
-curl 'http://default@localhost:8124/' --data-binary @create.sql
+for _ in {1..600}
+do
+  curl 'http://default@localhost:8124/' --data-binary @create.sql && break
+  sleep 1
+done
 
 sudo apt-get install -y pigz
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
