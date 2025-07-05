@@ -16,7 +16,7 @@ export PATH="`pwd`/build/release/:$PATH"
 cd ../..
 
 # Load the data
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://pub-3ba949c0f0354ac18db1f0f14f0a2c52.r2.dev/clickbench/parquet_many/hits_{}.parquet'
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 
 # Convert parquet files to vortex partitioned
 seq 0 99 | xargs -P"$(nproc)" -I{} bash -c '
