@@ -451,8 +451,7 @@ queries = [
 ]
 
 
-def run_timings(lf: pl.LazyFrame, name: str, src: str, load_time: int | None, data_size: int) -> None:
-    queries_times = []
+def run_timings(lf: pl.LazyFrame) -> None:
     for q in queries:
         print(q[0])
         times = []
@@ -464,7 +463,7 @@ def run_timings(lf: pl.LazyFrame, name: str, src: str, load_time: int | None, da
                 times.append(None)
             else:
                 times.append(end - start)
-        queries_times.append(times)
+        print(times)
 
 data_size = os.path.getsize("hits.parquet")
 
@@ -483,4 +482,4 @@ assert df["EventTime"][0].year == 2013
 df = df.rechunk()
 
 lf = df.lazy()
-run_timings(lf, "Polars (DataFrame)", "DataFrame", load_time, data_size)
+run_timings(lf)

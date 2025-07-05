@@ -29,3 +29,4 @@ popd
 pushd "${script_dir}"
 
 ./run.sh single
+cat results.json
