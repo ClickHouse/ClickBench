@@ -37,3 +37,5 @@ fi
 
 # Deactivate the virtual environment
 deactivate
+
+echo "Data size: $(du -b hits/*.parquet)"

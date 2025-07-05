@@ -36,7 +36,8 @@ chmod +x ingestion.sh
 chmod +x run_query.sh
 
 #run ingestion script
-./ingestion.sh
+echo -n "Load time: "
+command time -f '%e' ./ingestion.sh
 
 #sleep for 3 minutes to allow sync to complete
 sleep 180
@@ -45,7 +46,10 @@ sleep 180
 ./run_query.sh
 
 #view results
-cat result.csv
+cat result.csv | sed -r -e 's/^([0-9\.]+) ([0-9\.]+) ([0-9\.]+)$/[\1, \2, \3]/'
+
+echo -n "Data size: "
+du -bcs local-store
 
 #kill parseable
 kill $PARSEABLE_PID

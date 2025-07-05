@@ -38,3 +38,5 @@ command time -f '%e' cat hits.json | split -n r/8 -d --filter="curl -sS -T - -X 
 
 echo -n "Data size: "
 du -sb victoria-logs-data
+
+sudo killall victoria-logs-prod
