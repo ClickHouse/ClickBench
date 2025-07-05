@@ -36,15 +36,17 @@ DORIS_HOME="$ROOT/$dir_name/selectdb-doris-2.1.7-rc01-bin-x64"
 export DORIS_HOME
 
 # Install dependencies
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y openjdk-17-jdk
 sudo apt-get install -y mysql-client
 export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64/"
 export PATH=$JAVA_HOME/bin:$PATH
 
+set +e
 sudo systemctl disable unattended-upgrades
 sudo systemctl stop unattended-upgrades
 sudo systemctl stop mysql-server
+set -e
 
 "$DORIS_HOME"/fe/bin/start_fe.sh --daemon
 
