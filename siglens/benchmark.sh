@@ -19,7 +19,8 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 pigz -d -f hits.json.gz
 
 echo "Load data into SigLens, this can take a few hours"
-time python3 send_datawithactionline.py
+echo -n "Load time: "
+command time -f '%e' python3 send_datawithactionline.py
 
 echo "Run queries"
 ./run.sh

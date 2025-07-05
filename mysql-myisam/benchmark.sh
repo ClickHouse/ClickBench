@@ -15,12 +15,14 @@ pigz -d -f hits.tsv.gz
 
 sudo mysql -e "CREATE DATABASE test"
 sudo mysql test < create.sql
-time sudo mysql test -e "LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits"
+echo -n "Load time: "
+command time -f '%e' sudo mysql test -e "LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits"
 
 # 41m8.979s
 
 ./run.sh 2>&1 | tee log.txt
 
+echo -n "Data size: "
 sudo du -bcs /var/lib/mysql
 
 cat log.txt |

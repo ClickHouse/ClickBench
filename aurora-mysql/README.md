@@ -42,7 +42,8 @@ gzip -d -f hits.tsv.gz
 
 mysql -h "${FQDN}" -u admin --password="${PASSWORD}" test < create.sql
 
-time mysql --local-infile=1 -h "${FQDN}" -u admin --password="${PASSWORD}" test -e "LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits"
+echo -n "Load time: "
+command time -f '%e' mysql --local-infile=1 -h "${FQDN}" -u admin --password="${PASSWORD}" test -e "LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits"
 ```
 
 > 128m7.318s

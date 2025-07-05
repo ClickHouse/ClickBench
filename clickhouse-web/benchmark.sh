@@ -27,4 +27,5 @@ clickhouse-client --time < create.sql
 
 ./run.sh
 
+echo -n "Data size: "
 clickhouse-client --query "SELECT total_bytes FROM system.tables WHERE name = 'hits' AND database = 'default'"

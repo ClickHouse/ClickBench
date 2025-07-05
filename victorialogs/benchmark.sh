@@ -27,7 +27,8 @@ done
 
 wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/hits.json.gz
 gunzip hits.json.gz
-time cat hits.json | split -n r/8 -d --filter="curl -T - -X POST 'http://localhost:9428/insert/jsonline?_time_field=EventTime&_stream_fields=AdvEngineID,CounterID'"
+echo -n "Load time: "
+command time -f '%e' cat hits.json | split -n r/8 -d --filter="curl -T - -X POST 'http://localhost:9428/insert/jsonline?_time_field=EventTime&_stream_fields=AdvEngineID,CounterID'"
 
 # Run the queries
 

@@ -28,7 +28,8 @@ sudo docker run -d --name pgduck --network=host -e POSTGRES_PASSWORD=duckdb -e M
 # Give postgres time to start running
 sleep 10
 
-./load.sh 2>&1 | tee load_log.txt
+echo -n "Load time: "
+command time -f '%e' ./load.sh
 
 ./run.sh 2>&1 | tee log.txt
 

@@ -41,4 +41,5 @@ pigz -d -f hits.tsv.gz
 # stop Druid services
 kill %1
 
+echo -n "Data size: "
 du -bcs ./apache-druid-${VERSION}/var

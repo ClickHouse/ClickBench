@@ -13,7 +13,8 @@ pip install duckdb psutil
 
 # Load the data
 
-./load.py
+echo -n "Load time: "
+command time -f '%e' ./load.py
 
 # Run the queries
 

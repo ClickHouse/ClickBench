@@ -15,13 +15,15 @@ wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compati
 docker run -d --name pg_mooncake -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -v ./hits.parquet:/tmp/hits.parquet mooncakelabs/pg_mooncake:17-v0.1.0
 
 sleep 5
-psql postgres://postgres:pg_mooncake@localhost:5432/postgres -f create.sql
+echo -n "Load time: "
+command time -f '%e' psql postgres://postgres:pg_mooncake@localhost:5432/postgres -f create.sql
 
 # COPY 99997497
 # Time: 576219.151 ms (09:36.219)
 
 ./run.sh 2>&1 | tee log.txt
 
+echo -n "Data size: "
 docker exec -it pg_mooncake du -bcs /var/lib/postgresql/data
 
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |

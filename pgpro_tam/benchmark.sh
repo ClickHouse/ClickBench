@@ -58,7 +58,7 @@ fi
 #run benchmark
 ./run.sh 2>&1 | tee log.txt
 
-#calculate db size
+echo -n "Data size: "
 sudo docker exec pgpro_tam du -bcs /var/lib/postgresql/data/base
 
 #parse logfile for query execution time

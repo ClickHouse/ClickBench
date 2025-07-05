@@ -21,10 +21,12 @@ pigz -d -f hits.tsv.gz
 sudo mariadb -e "CREATE DATABASE test"
 sudo mariadb test < create.sql
 
-time split -l 10000 --filter="sudo mariadb test -e \"SET sql_log_bin = 0; LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE hits;\"" hits.tsv
+echo -n "Load time: "
+command time -f '%e' split -l 10000 --filter="sudo mariadb test -e \"SET sql_log_bin = 0; LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE hits;\"" hits.tsv
 
 ./run.sh 2>&1 | tee log.txt
 
+echo -n "Data size: "
 sudo du -bcs /var/lib/mysql
 
 cat log.txt |

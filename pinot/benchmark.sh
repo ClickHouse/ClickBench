@@ -41,4 +41,5 @@ sed local.yaml 's PWD_DIR_PLACEHOLDER '$PWD' g' -i
 # stop Druid services
 kill %1
 
+echo -n "Data size: "
 du -bcs ./batch

@@ -34,6 +34,7 @@ echo "Load Time: $((end - start)) ms"
 
 # Calculate persistence size
 sudo chmod 777 -R db # otherwise 'du' complains about permission denied
+echo -n "Data size: "
 du -bcs db
 
 # Pretty-printing

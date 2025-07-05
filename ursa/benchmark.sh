@@ -21,12 +21,14 @@ sudo apt-get install -y pigz
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -d -f hits.tsv.gz
 
+echo -n "Load time: "
 ./ursa client --time --query "INSERT INTO hits FORMAT TSV" < hits.tsv
 
 # Run the queries
 
 ./run.sh "$1"
 
+echo -n "Data size: "
 ./ursa client --query "SELECT total_bytes FROM system.tables WHERE name = 'hits' AND database = 'default'"
 
 killall ursa

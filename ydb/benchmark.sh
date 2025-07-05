@@ -286,7 +286,8 @@ fi
 
 cert_dir=$(find $START_DIR/ydb-ansible-examples/TLS/CA/certs -maxdepth 1 -type d -not -path "." -printf "%T@ %p\n" | sort -n | tail -n 1 | cut -d' ' -f2-)
 echo $YDB_PASSWORD|$START_DIR/ydb-ansible-examples/3-nodes-mirror-3-dc/files/ydb -e grpcs://$host1$host_suffix:2135 -d /Root/database --ca-file $cert_dir/ca.crt --user root  workload clickbench init --datetime --store column
-time echo $YDB_PASSWORD|$START_DIR/ydb-ansible-examples/3-nodes-mirror-3-dc/files/ydb -e grpcs://$host1$host_suffix:2135 -d /Root/database --ca-file $cert_dir/ca.crt --user root import file csv hits.csv -p clickbench/hits
+echo -n "Load time: "
+command time -f '%e' echo $YDB_PASSWORD|$START_DIR/ydb-ansible-examples/3-nodes-mirror-3-dc/files/ydb -e grpcs://$host1$host_suffix:2135 -d /Root/database --ca-file $cert_dir/ca.crt --user root import file csv hits.csv -p clickbench/hits
 
 cd $START_DIR
 ./run.sh

@@ -65,6 +65,7 @@ fi;
 ./run.sh "$MODE" 2>&1 | tee log.txt
 
 # Look up shard sizes from system tables. Only consider primary shards in case of multi-node setups with replication.
+echo -n "Data size: "
 psql -U crate -h localhost --no-password -t -c "SELECT SUM(size) FROM sys.shards WHERE table_name = 'hits' AND primary = TRUE;"
 
 grep -oP 'Time: \d+\.\d+ ms|ERROR' < log.txt | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
