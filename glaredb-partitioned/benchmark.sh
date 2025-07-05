@@ -20,7 +20,7 @@ fi
 mkdir -p "${script_dir}/data"
 pushd "${script_dir}/data"
 
-wget --continue --progress=dot:giga https://clickhouse-public-datasets.s3.eu-central-1.amazonaws.com/hits_compatible/athena/hits.parquet
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 echo "Data size: $(du -bcs hits*.parquet)"
 popd
 
@@ -28,4 +28,4 @@ popd
 # relative path.
 pushd "${script_dir}"
 
-./run.sh single
+./run.sh partitioned

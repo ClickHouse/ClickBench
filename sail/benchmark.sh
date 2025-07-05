@@ -29,3 +29,5 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 
 cat log.txt | grep -P '^Time:\s+([\d\.]+)|Failure!' | sed -r -e 's/Time: //; s/^Failure!$/null/' |
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+
+echo "Data size: $(du -b hits.parquet)"
