@@ -73,7 +73,7 @@ echo -n "Load time: "
 command time -f '%e' mongoimport --collection hits --type tsv hits.tsv --fieldFile=create.txt --columnsHaveTypes
 
 echo -n "Data size: "
-sudo du -bcs /var/lib/mongodb/
+sudo du -bcs /var/lib/mongodb/ | grep total
 # total size:   82937405440 (77.2 Gb)
 # indexes size: 38326390784 (35.6 Gb) // heh, so much but indexes should be
 # storage size: 44610863104 (41.5 Gb)

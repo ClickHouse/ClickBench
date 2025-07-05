@@ -30,7 +30,7 @@ command time -f '%e' mysql --password="${PASSWORD}" --host 127.0.0.1 test -e "
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "
-sudo docker exec mcs_container du -bcs /var/lib/columnstore
+sudo docker exec mcs_container du -bcs /var/lib/columnstore | grep total
 
 cat log.txt |
   grep -P 'rows? in set|Empty set|^ERROR' |
