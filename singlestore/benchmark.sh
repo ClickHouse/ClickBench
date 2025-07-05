@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # Install
 
@@ -13,7 +13,7 @@ sudo docker run -i --init \
     -e LICENSE_KEY="${LICENSE_KEY}" \
     -e ROOT_PASSWORD="${ROOT_PASSWORD}" \
     -p 3306:3306 -p 8080:8080 \
-    memsql/cluster-in-a-box
+    singlestore/cluster-in-a-box
 
 sudo docker start memsql-ciab
 
