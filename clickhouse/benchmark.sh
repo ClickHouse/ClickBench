@@ -37,15 +37,12 @@ fi
 
 clickhouse-client < create"$SUFFIX".sql
 
-if [ ! -f hits.tsv ]
-then
-    sudo apt-get install -y pigz
-    wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-    pigz -d -f hits.tsv.gz
-fi
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+sudo mv hits_*.parquet /var/lib/clickhouse/user_files/
+sudo chown clickhouse:clickhouse /var/lib/clickhouse/user_files/hits_*.parquet
 
 echo -n "Load time: "
-clickhouse-client --time --query "INSERT INTO hits FORMAT TSV" < hits.tsv
+clickhouse-client --time --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" --max-insert-threads $(( $(nproc) / 4 ))
 
 # Run the queries
 
