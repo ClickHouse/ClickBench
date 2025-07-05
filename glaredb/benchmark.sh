@@ -21,7 +21,7 @@ mkdir -p "${script_dir}/data"
 pushd "${script_dir}/data"
 
 wget --continue --progress=dot:giga https://clickhouse-public-datasets.s3.eu-central-1.amazonaws.com/hits_compatible/athena/hits.parquet
-echo "Data size: $(du -bcs hits*.parquet)"
+echo "Data size: $(du -bcs hits*.parquet | grep total)"
 popd
 
 # Ensure working directory is the script dir. The view that gets created uses a

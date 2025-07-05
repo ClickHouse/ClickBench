@@ -42,4 +42,4 @@ pigz -d -f hits.tsv.gz
 kill %1
 
 echo -n "Data size: "
-du -bcs ./apache-druid-${VERSION}/var
+du -bcs ./apache-druid-${VERSION}/var | grep total

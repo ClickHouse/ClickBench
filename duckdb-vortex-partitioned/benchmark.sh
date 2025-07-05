@@ -38,4 +38,4 @@ cat log-p.txt |
   sed -r -e 's/^.*(Killed|Segmentation).*$/null\nnull\nnull/; s/^Run Time \(s\): real\s*([0-9.]+).*$/\1/' |
   awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 
-echo "Data size: $(du -bcs hits_*.vortex)"
+echo "Data size: $(du -bcs hits_*.vortex | grep total)"

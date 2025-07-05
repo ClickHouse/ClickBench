@@ -64,7 +64,7 @@ echo "Load data costs $LOADTIME seconds"
 # This is because the trashed data generated during the compaction process.
 # After about tens of minutes, when the gc is completed, the system includes about 16.5GB of data.
 echo -n "Data size: "
-du -bcs StarRocks-${VERSION}/storage/
+du -bcs StarRocks-${VERSION}/storage/ | grep total
 # Dataset contains 99997497 rows
 mysql -h 127.0.0.1 -P9030 -uroot hits -e "SELECT count(*) FROM hits"
 

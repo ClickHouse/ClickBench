@@ -45,4 +45,4 @@ command time -f '%e' ./apache-pinot-$PINOT_VERSION-bin/bin/pinot-admin.sh Launch
 kill %1
 
 echo -n "Data size: "
-du -bcs ./batch
+du -bcs ./batch | grep total
