@@ -9,7 +9,7 @@ then
 fi
 
 # Optional: if you want to use higher compression:
-if (( 0 )); then
+if (( 1 )); then
     echo "
 compression:
     case:
