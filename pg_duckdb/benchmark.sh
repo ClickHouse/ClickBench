@@ -60,8 +60,12 @@ docker restart pgduck
 export PGUSER=postgres
 export PGPASSWORD=duckdb
 
-sleep 5
-psql -t <create.sql
+for _ in {1..300}
+do
+  psql -t < create.sql && break
+  sleep 1
+done
+
 echo -n "Load time: "
 command time -f '%e' ./load.sh
 
