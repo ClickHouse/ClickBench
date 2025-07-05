@@ -113,7 +113,7 @@ echo "$LOADTIME" > loadtime
 mysql -h 127.0.0.1 -P9030 -uroot hits -e "SELECT count(*) FROM hits"
 du -bs "$DORIS_HOME"/be/storage/ | cut -f1 | tee storage_size
 
-echo "Data size: ${cat storage_size}"
+echo "Data size: $(cat storage_size)"
 
 # Run queries
 ./run.sh 2>&1 | tee -a run.log | sed -r -e 's/^.+,([0-9\.]+,[0-9\.]+,[0-9\.]+)$/[\1],/'
