@@ -20,10 +20,5 @@ cd ..
 echo "Download benchmark target data, single file"
 wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/hits.parquet
 
-echo "Download benchmark target data, partitioned"
-mkdir -p partitioned
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --directory-prefix partitioned --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
-
-echo "Run benchmarks for single parquet and partitioned"
-./run.sh single
-./run.sh partitioned
+echo "Run benchmarks"
+./run.sh
