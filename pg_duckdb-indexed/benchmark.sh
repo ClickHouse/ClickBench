@@ -2,9 +2,8 @@
 
 set -eux
 
-#sudo apt-get update
-#sudo apt-get install -y docker.io
-#sudo apt-get install -y postgresql-client
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client
 
 sudo apt-get install -y pigz
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
