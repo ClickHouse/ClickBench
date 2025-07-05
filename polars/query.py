@@ -451,8 +451,7 @@ queries = [
 ]
 
 
-def run_timings(lf: pl.LazyFrame, name: str, src: str, load_time: int | None, data_size: int) -> None:
-    queries_times = []
+def run_timings(lf: pl.LazyFrame) -> None:
     for q in queries:
         print(q[0])
         times = []
@@ -464,7 +463,7 @@ def run_timings(lf: pl.LazyFrame, name: str, src: str, load_time: int | None, da
                 times.append(None)
             else:
                 times.append(end - start)
-        queries_times.append(times)
+        print(times)
 
 data_size = os.path.getsize("hits.parquet")
 
@@ -474,4 +473,4 @@ lf = pl.scan_parquet("hits.parquet").with_columns(
     pl.col("EventDate").cast(pl.Date),
 )
 print("run parquet queries")
-run_timings(lf, "Polars (Parquet)", "parquet", None, data_size)
+run_timings(lf)
