@@ -17,7 +17,7 @@ export HEAVYAI_STORAGE=/var/lib/heavyai
 export HEAVYAI_PATH=/opt/heavyai
 export HEAVYAI_LOG=/var/lib/heavyai/data/mapd_log
 
-cd $HEAVYAI_PATH/systemd
+pushd $HEAVYAI_PATH/systemd
 ./install_heavy_systemd.sh
 
 # Press Enter multiple times.
@@ -32,7 +32,7 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 pigz -d -f hits.csv.gz
 chmod 777 ~ hits.csv
 
-sudo bash -c "echo 'allowed-import-paths = [\"/home/ubuntu/\"]' > /var/lib/heavyai/heavy.conf_"
+sudo bash -c "echo 'allowed-import-paths = [\"$(echo ~)\"]' > /var/lib/heavyai/heavy.conf_"
 sudo bash -c "cat /var/lib/heavyai/heavy.conf >> /var/lib/heavyai/heavy.conf_"
 sudo bash -c "mv /var/lib/heavyai/heavy.conf_ /var/lib/heavyai/heavy.conf && chown heavyai /var/lib/heavyai/heavy.conf"
 sudo systemctl restart heavydb
@@ -43,6 +43,7 @@ command time -f '%e' /opt/heavyai/bin/heavysql -t -p HyperInteractive <<< "COPY 
 
 # Loaded: 99997497 recs, Rejected: 0 recs in 572.633000 secs
 
+popd
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "
