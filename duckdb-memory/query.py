@@ -5,7 +5,7 @@ import timeit
 import sys
 import os
 
-con = duckdb.connect(read_only=False)
+con = duckdb.connect(':memory:')
 
 # enable the progress bar
 con.execute('PRAGMA enable_progress_bar;')
@@ -23,9 +23,6 @@ print(end - start)
 
 with open('queries.sql', 'r') as file:
     for query in file:
-        os.system("sync")
-        os.system("echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null")
-
         print(query)
 
         for try_num in range(3):

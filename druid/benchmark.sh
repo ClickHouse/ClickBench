@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 sudo apt-get update
 sudo apt-get install -y openjdk-8-jdk python2
@@ -6,7 +6,7 @@ sudo update-alternatives --config java
 
 # Install
 
-VERSION=0.23.0
+VERSION=33.0.0
 
 wget -O"apache-druid-${VERSION}-bin.tar.gz" "https://dlcdn.apache.org/druid/${VERSION}/apache-druid-${VERSION}-bin.tar.gz"
 tar xf apache-druid-${VERSION}-bin.tar.gz

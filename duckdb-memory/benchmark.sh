@@ -14,9 +14,10 @@ pigz -d -f hits.csv.gz
 
 # Run the queries
 
-./query.py | tee log.txt 2>&1
+/usr/bin/time -v ./query.py 2>&1 | tee log.txt
 
-cat log.txt | grep -P '^\d|Killed|Segmentation' | sed -r -e 's/^.*(Killed|Segmentation).*$/null\nnull\nnull/' |
+echo -n "Load time: "
+cat log.txt | grep -P '^\d|Killed|Segmentation' | head -n1
+
+cat log.txt | grep -P '^\d|Killed|Segmentation' | tail -n+2 | sed -r -e 's/^.*(Killed|Segmentation).*$/null\nnull\nnull/' |
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
-
-/usr/bin/time -v ./memory.py

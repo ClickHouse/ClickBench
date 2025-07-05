@@ -25,6 +25,7 @@ command time -f '%e' duckdb hits.db -f create.sql -c "COPY hits FROM 'hits.tsv' 
 
 ./run.sh 2>&1 | tee log.txt
 
+echo -n "Data size: "
 wc -c hits.db
 
 cat log.txt |

@@ -41,7 +41,7 @@ sudo docker run -d --name pgduck -p 5432:5432 -e POSTGRES_PASSWORD=duckdb pgduck
 
 sleep 2
 
-sudo docker exec -it pgduck bash -c "
+sudo docker exec -i pgduck bash -c "
 cat >> /var/lib/postgresql/data/postgresql.conf <<'EOF'
 shared_buffers=${shared_buffers}kB
 max_worker_processes=${max_worker_processes}

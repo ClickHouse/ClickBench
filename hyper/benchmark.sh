@@ -15,3 +15,6 @@ command time -f '%e' ./load.py
 
 cat log.txt |
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+
+echo -n "Data size: "
+du -b hits.hyper
