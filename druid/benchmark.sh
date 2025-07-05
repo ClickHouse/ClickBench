@@ -1,7 +1,7 @@
 #!/bin/bash
 
 sudo apt-get update
-sudo apt install -y openjdk-8-jdk python2
+sudo apt-get install -y openjdk-8-jdk python2
 sudo update-alternatives --config java
 
 # Install

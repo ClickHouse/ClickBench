@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 # docker
-sudo apt install docker.io
+sudo apt-get install -y docker.io
 
 # base
 sudo apt-get install -y postgresql-client curl wget apt-transport-https ca-certificates software-properties-common gnupg2 parallel

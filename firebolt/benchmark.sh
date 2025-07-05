@@ -7,6 +7,7 @@ mkdir -p data
 wget -P data --continue --progress=dot:giga "https://datasets.clickhouse.com/hits_compatible/hits.parquet"
 
 # Start the container
+sudo apt-get install -y docker.io
 sudo docker run -dit --name firebolt-core --rm \
     --ulimit memlock=8589934592:8589934592 \
     --security-opt seccomp=unconfined \

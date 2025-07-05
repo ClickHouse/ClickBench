@@ -3,7 +3,7 @@
 cat /etc/os-release | grep 'ID=ubuntu' > /dev/null
 RC=$?
 
-if [ $RC -eq 1 ]; then 
+if [ $RC -eq 1 ]; then
  echo 'Not running an Ubuntu OS, make sure docker, java, and ripgrep are installed'
  exit
 fi
@@ -27,4 +27,4 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 sudo systemctl start docker
 
 # Install java for kisql and rg for run.sh
-sudo apt install openjdk-21-jre-headless ripgrep -y
+sudo apt-get install openjdk-21-jre-headless ripgrep -y

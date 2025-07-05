@@ -12,7 +12,7 @@ The benchmark itself requires `psql` to execute. You will need to install `psql`
 
 ```
 # Debian, Ubuntu, etc
-apt install postgresql-client
+apt-get install postgresql-client
 # MacOS
 brew install postgresql
 ```
