@@ -98,19 +98,23 @@ while ! grep -q 'the whole procedure completed' tidb-lightning.log; do
 done
 
 echo "Data loading is done! Checking log file for time taken to load the data."
-grep 'the whole procedure completed' tidb-lightning.log
+echo -n "Load time: "
+grep 'the whole procedure completed' tidb-lightning.log | sed -r -e 's/^.+\[takeTime=([0-9\.hms])+\].+?$/\1/'
 
-mysql test -e "ANALYZE TABLE $TABLE_NAME;"
+echo -n "Load time: "
+command time -f '%e' mysql test -e "ANALYZE TABLE $TABLE_NAME;"
 
 ./run.sh 2>&1 | tee log.txt
 
 # Take storage size of TiKV for ALL modes into account, because directly loading data into TiFlash only is currently not supported
 echo "Calculating storage size of TiKV in bytes..."
-mysql test -e "SELECT (DATA_LENGTH + INDEX_LENGTH) AS TIKV_STORAGE_SIZE_BYTES FROM information_schema.tables WHERE table_schema = '$DB_NAME' AND table_name = '$TABLE_NAME';"
+echo "Data size: "
+mysql test -e "SELECT (DATA_LENGTH + INDEX_LENGTH) AS TIKV_STORAGE_SIZE_BYTES FROM information_schema.tables WHERE table_schema = '$DB_NAME' AND table_name = '$TABLE_NAME';" | tail -n1
 
 if [[ $MODE == "tiflash" || $MODE == "tikv-tiflash" ]]; then
   echo "Calculating additional storage size of TiFlash in bytes..."
-  mysql test -e "SELECT TOTAL_SIZE AS TIFLASH_STORAGE_SIZE_BYTES FROM information_schema.tiflash_tables WHERE TIDB_DATABASE = '$DB_NAME' AND TIDB_TABLE = '$TABLE_NAME';"
+  echo "Data size: "
+  mysql test -e "SELECT TOTAL_SIZE AS TIFLASH_STORAGE_SIZE_BYTES FROM information_schema.tiflash_tables WHERE TIDB_DATABASE = '$DB_NAME' AND TIDB_TABLE = '$TABLE_NAME';" | tail -n1
 fi;
 
 grep -P 'rows? in set|Empty set|^ERROR' log.txt |

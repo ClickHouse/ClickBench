@@ -28,7 +28,7 @@ $CLI --sql "load into hits from file paths 'hits.tsv.gz' format delimited text (
 
 END=$(date +%s)
 LOADTIME=$(echo "$END - $START" | bc)
-echo "Load time is $LOADTIME seconds"
+echo "Load time: $LOADTIME"
 
 # run the queries
 ./run.sh
