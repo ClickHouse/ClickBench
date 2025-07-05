@@ -468,10 +468,19 @@ def run_timings(lf: pl.LazyFrame, name: str, src: str, load_time: int | None, da
 
 data_size = os.path.getsize("hits.parquet")
 
-# Run from Parquet
-lf = pl.scan_parquet("hits.parquet").with_columns(
+print("run DataFrame (in-memory) queries, this loads all data in memory!")
+start = timeit.default_timer()
+df = pl.scan_parquet("hits.parquet").collect()
+stop = timeit.default_timer()
+load_time = stop - start
+
+# fix some types
+df = df.with_columns(
     (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
     pl.col("EventDate").cast(pl.Date),
 )
-print("run parquet queries")
-run_timings(lf, "Polars (Parquet)", "parquet", None, data_size)
+assert df["EventTime"][0].year == 2013
+df = df.rechunk()
+
+lf = df.lazy()
+run_timings(lf, "Polars (DataFrame)", "DataFrame", load_time, data_size)

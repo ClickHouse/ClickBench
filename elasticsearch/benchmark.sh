@@ -1,15 +1,18 @@
 #!/bin/bash
 
-###### Set up Elasticsearch
+# Install prerequisite packages
+sudo apt-get update -y
+sudo apt-get install -y apt-transport-https ca-certificates wget
 
-# Follow:
-# https://www.elastic.co/guide/en/elasticsearch/reference/current/rpm.html
-# https://www.elastic.co/guide/en/elasticsearch/reference/current/starting-elasticsearch.html#start-rpm
+# Add Elastic's signing key
+wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
 
-sudo rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+# Add the repository
+echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list
 
-sudo vim /etc/zypp/repos.d/elasticsearch.repo
-# Add Elasticsearch repo information per documentation https://www.elastic.co/guide/en/elasticsearch/reference/current/rpm.html
+# Update package list and install
+sudo apt-get update -y
+sudo apt-get install -y elasticsearch
 
 sudo /bin/systemctl daemon-reload
 sudo /bin/systemctl enable elasticsearch.service
