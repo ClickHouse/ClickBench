@@ -13,7 +13,7 @@ fi;
 
 # Install prerequisites.
 sudo apt update
-sudo apt install -y apt-transport-https apt-utils curl gnupg lsb-release
+sudo apt-get install -y apt-transport-https apt-utils curl gnupg lsb-release
 
 # Import the public GPG key for verifying the package signatures.
 curl -sS https://cdn.crate.io/downloads/debian/DEB-GPG-KEY-crate | \

@@ -2,7 +2,7 @@
 
 # Ubuntu
 sudo apt-get update
-sudo apt-get install -y postgresql-client gzip
+sudo apt-get install -y docker.io postgresql-client gzip
 
 # Amazon Linux
 # yum install nc postgresql15

@@ -72,7 +72,7 @@ update_file() {
 
 sudo apt update
 sudo apt-get upgrade -y
-sudo apt install software-properties-common -y
+sudo apt-get install software-properties-common -y
 sudo add-apt-repository --yes --update ppa:ansible/ansible
 sudo apt-get install ansible-core -y
 
