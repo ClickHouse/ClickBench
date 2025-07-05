@@ -36,7 +36,7 @@ DORIS_HOME="$ROOT/$dir_name/apache-doris-2.1.7-rc01-bin-x64"
 export DORIS_HOME
 
 # Install dependencies
-sudo apt update
+sudo apt-get update
 sudo apt-get install -y openjdk-17-jdk
 sudo apt-get install -y mysql-client
 export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64/"
