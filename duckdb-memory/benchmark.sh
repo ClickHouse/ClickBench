@@ -21,3 +21,6 @@ cat log.txt | grep -P '^\d|Killed|Segmentation' | head -n1
 
 cat log.txt | grep -P '^\d|Killed|Segmentation' | tail -n+2 | sed -r -e 's/^.*(Killed|Segmentation).*$/null\nnull\nnull/' |
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+
+echo -n "Data size: "
+grep -F 'Maximum resident set size' log.txt | grep -o -P '\d+$' | awk '{ print $1 * 1024 }'

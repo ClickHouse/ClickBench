@@ -52,7 +52,8 @@ if [ "$1" == "parquet_fd_parall" ] ; then
     #insert data in parallel; not ordered insert is much faster, but breaks query performance
     sudo docker exec pgpro_tam bash -c "time cat /tmp/hits.tsv | parallel -l 2000000 -j 50 -N1 -k --spreadstdin 'psql -U postgres -t -c \"copy hits FROM STDIN\"'"
 else
-    psql -h 127.0.0.1 -U postgres -t -c '\timing' -c "COPY hits FROM '/tmp/hits.tsv'"
+    echo -n "Load time: "
+    command time -f '%e' psql -h 127.0.0.1 -U postgres -t -c "COPY hits FROM '/tmp/hits.tsv'"
 fi
 
 #run benchmark

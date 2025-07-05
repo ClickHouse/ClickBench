@@ -7,7 +7,8 @@ IFS=$'\n\t'
 #sudo apt-get install -y postgresql-client
 
 # load data
-psql "$DATABASE_URL" -c '\timing on' -t -f create.sql
+echo -n "Load time: "
+command time -f '%e' psql "$DATABASE_URL" -t -f create.sql
 
 # run test
 DATABASE_URL="$DATABASE_URL" ./run.sh 2>&1 | tee log.txt

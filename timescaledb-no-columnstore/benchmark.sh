@@ -29,10 +29,12 @@ sudo -u postgres psql nocolumnstore -c "CREATE INDEX ix_counterid ON hits (count
 sudo -u postgres psql -c "ALTER DATABASE nocolumnstore SET work_mem TO '1GB';"
 sudo -u postgres psql -c "ALTER DATABASE nocolumnstore SET min_parallel_table_scan_size TO '0';"
 
-sudo -u postgres psql nocolumnstore -t -c '\timing' -c "\\copy hits FROM 'hits.tsv'"
-sudo -u postgres psql nocolumnstore -t -c '\timing' -c "vacuum freeze analyze hits;"
+echo -n "Load time: "
+command time -f '%e' sudo -u postgres psql nocolumnstore -t -c "\\copy hits FROM 'hits.tsv'"
+echo -n "Load time: "
+command time -f '%e' sudo -u postgres psql nocolumnstore -t -c "vacuum freeze analyze hits;"
 
-#datasize
+echo -n "Data size: "
 sudo -u postgres psql nocolumnstore -c "\t" -c "SELECT hypertable_size('hits');"
 
 ./run.sh 2>&1 | tee log.txt

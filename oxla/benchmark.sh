@@ -27,11 +27,12 @@ export PGCLIENTENCODING=UTF8
 
 PGPASSWORD=oxla psql -h localhost -U oxla -t < create.sql
 echo "Insert data."
-PGPASSWORD=oxla psql -h localhost -U oxla -t -c '\timing' -c "COPY hits FROM '/data/hits.csv';"
+echo -n "Load time: "
+PGPASSWORD=oxla command time -f '%e' psql -h localhost -U oxla -t -c "COPY hits FROM '/data/hits.csv';"
 
 # get ingested data size
-echo "data size after ingest:"
-PGPASSWORD=oxla psql -h localhost -U oxla -t -c '\timing' -c "SELECT pg_total_relation_size('hits');"
+echo -n "Data size: "
+PGPASSWORD=oxla psql -h localhost -U oxla -t -c "SELECT pg_total_relation_size('hits');"
 
 # run benchmark
 echo "running benchmark..."

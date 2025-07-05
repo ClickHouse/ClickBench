@@ -28,7 +28,7 @@ sleep 5 # Things below fail otherwise ...
 start=$(date +%s%3N)
 PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -f create.sql
 end=$(date +%s%3N)
-echo "Load Time: $((end - start)) ms"
+echo "Load Time: $(( (end - start) / 1000 ))"
 
 ./run.sh 2>&1 | tee log.txt
 

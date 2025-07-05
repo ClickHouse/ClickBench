@@ -32,7 +32,7 @@ sudo docker exec mysql_ib du -bcs /mnt/mysql_data/ /usr/local/infobright-4.0.7-x
 
 # 13 760 341 294
 
-./run.sh 2>&1 | log
+./run.sh 2>&1 | tee log.txt
 
 cat log.txt |
   grep -P 'rows? in set|Empty set|^ERROR' |

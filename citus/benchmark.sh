@@ -15,7 +15,8 @@ chmod 400 .pgpass
 
 psql -U postgres -h localhost -d postgres --no-password -t -c 'CREATE DATABASE test'
 psql -U postgres -h localhost -d postgres --no-password test -t < create.sql
-psql -U postgres -h localhost -d postgres --no-password test -t -c '\timing' -c "\\copy hits FROM 'hits.tsv'"
+echo -n "Load time: "
+command time -f '%e' psql -U postgres -h localhost -d postgres --no-password test -t -c "\\copy hits FROM 'hits.tsv'"
 
 # COPY 99997497
 # Time: 1579203.482 ms (26:19.203)

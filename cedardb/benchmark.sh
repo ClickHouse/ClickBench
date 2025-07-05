@@ -26,11 +26,12 @@ until pg_isready -h localhost --dbname postgres -U postgres > /dev/null 2>&1; do
 # create table and ingest data
 PGPASSWORD=test  psql -h localhost -U postgres -t < create.sql
 echo "Inserting data..."
-PGPASSWORD=test time psql -h localhost -U postgres -t -c '\timing' -c "COPY hits FROM '/data/hits.tsv';"
+echo -n "Load time: "
+PGPASSWORD=test command time -f '%e' psql -h localhost -U postgres -t -c "COPY hits FROM '/data/hits.tsv';"
 
 # get ingested data size
-echo "data size after ingest:"
-PGPASSWORD=test psql -h localhost -U postgres -t -c '\timing' -c "SELECT pg_total_relation_size('hits');"
+echo -n "Data size: "
+PGPASSWORD=test psql -h localhost -U postgres -t -c "SELECT pg_total_relation_size('hits');"
 
 # run benchmark
 echo "running benchmark..."
