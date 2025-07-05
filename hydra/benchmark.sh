@@ -3,8 +3,8 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # install `psql` if necessary, e.g.:
-#sudo apt-get update
-#sudo apt-get install -y postgresql-client
+sudo apt-get update -y
+sudo apt-get install -y postgresql-client
 
 # load data
 echo -n "Load time: "
