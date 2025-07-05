@@ -35,7 +35,7 @@ echo "Load Time: $(( (end - start) / 1000 ))"
 # Calculate persistence size
 sudo chmod 777 -R db # otherwise 'du' complains about permission denied
 echo -n "Data size: "
-du -bcs db
+du -bcs db | grep total
 
 # Pretty-printing
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |

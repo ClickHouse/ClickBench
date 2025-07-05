@@ -54,7 +54,7 @@ curl -s -S -G --data-urlencode "query=select datediff('s', start, finish) took_s
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "
-du -bcs ~/.questdb/db/hits*
+du -bcs ~/.questdb/db/hits* | grep total
 
 cat log.txt | grep -P '"timings"|"error"|null' | sed -r -e 's/^.*"error".*$/null/; s/^.*"execute":([0-9]*),.*$/\1/' |
   awk '{ print ($1) / 1000000000 }' | sed -r -e 's/^0$/null/' |

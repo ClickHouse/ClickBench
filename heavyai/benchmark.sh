@@ -47,7 +47,7 @@ popd
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "
-du -bcs /var/lib/heavyai/
+du -bcs /var/lib/heavyai/ | grep total
 
 cat log.txt | grep -P 'Total time|null' | sed -r -e 's/^.*Total time: ([0-9]+) ms$/\1/' |
   awk '{ if ($1 == "null") { print } else { print $1 / 1000 } }' |

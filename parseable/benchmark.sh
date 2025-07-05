@@ -49,7 +49,7 @@ sleep 180
 cat result.csv | sed -r -e 's/^([0-9\.]+) ([0-9\.]+) ([0-9\.]+)$/[\1, \2, \3]/'
 
 echo -n "Data size: "
-du -bcs local-store
+du -bcs local-store | grep total
 
 #kill parseable
 kill $PARSEABLE_PID

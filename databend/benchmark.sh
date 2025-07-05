@@ -62,7 +62,7 @@ command time -f '%e' curl -XPUT 'http://root:@127.0.0.1:8000/v1/streaming_load' 
 curl 'http://default@localhost:8124/' --data-binary "select count() from hits"
 
 echo -n "Data size: "
-du -bcs _data
+du -bcs _data | grep total
 # 20922561953     _data
 # 20922561953     total
 
