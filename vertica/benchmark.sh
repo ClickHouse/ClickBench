@@ -15,7 +15,7 @@ echo -n "Load time: "
 command time -f '%e' sudo docker exec vertica_ce /opt/vertica/bin/vsql -U dbadmin -c "COPY hits FROM LOCAL '/workdir/hits.tsv' DELIMITER E'\\t' NULL E'\\001' DIRECT"
 
 echo -n "Data size: "
-sudo docker exec vertica_ce du -bcs /data/vertica/VMart
+sudo docker exec vertica_ce du -bcs /data/vertica/VMart | grep total
 
 ./run.sh 2>&1 | tee log.txt
 

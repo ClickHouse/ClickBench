@@ -35,7 +35,7 @@ chmod 777 ~ hits.tsv
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "
-sudo du -bcs /var/monetdb5/
+sudo du -bcs /var/monetdb5/ | grep total
 
 cat log.txt | dos2unix -f | grep -P 'clk|tuple' |
     awk '/tuple/ { ok = 1 } /clk/ { if (ok) { if ($3 == "ms") { print $2 / 1000 } else { print $2 } } else { print "null" }; ok = 0 }' |

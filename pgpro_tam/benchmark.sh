@@ -60,7 +60,7 @@ fi
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "
-sudo docker exec pgpro_tam du -bcs /var/lib/postgresql/data/base
+sudo docker exec pgpro_tam du -bcs /var/lib/postgresql/data/base | grep total
 
 #parse logfile for query execution time
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |

@@ -36,7 +36,7 @@ command time -f '%e' sudo docker exec -i memsql-ciab memsql -vvv -p"${ROOT_PASSW
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "
-sudo docker exec memsql-ciab du -bcs /var/lib/memsql
+sudo docker exec memsql-ciab du -bcs /var/lib/memsql | grep total
 
 # 29836263469 bytes
 

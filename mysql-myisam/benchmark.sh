@@ -23,7 +23,7 @@ command time -f '%e' sudo mysql test -e "LOAD DATA LOCAL INFILE 'hits.tsv' INTO 
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "
-sudo du -bcs /var/lib/mysql
+sudo mysql test -e "SELECT data_length + index_length FROM information_schema.TABLES WHERE table_schema = 'test' AND table_name = 'hits';" | tail -n1
 
 cat log.txt |
   grep -P 'rows? in set|Empty set|^ERROR' |

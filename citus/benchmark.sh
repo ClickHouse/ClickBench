@@ -24,7 +24,7 @@ command time -f '%e' psql -U postgres -h localhost -d postgres --no-password tes
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "
-sudo docker exec -i citus du -bcs /var/lib/postgresql/data
+sudo docker exec -i citus du -bcs /var/lib/postgresql/data | grep total
 
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'

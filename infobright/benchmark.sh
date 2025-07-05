@@ -28,7 +28,7 @@ command time -f '%e' sudo docker run -i --rm --volume $(pwd):/workdir --network 
 # 38m37.466s
 
 echo -n "Data size: "
-sudo docker exec mysql_ib du -bcs /mnt/mysql_data/ /usr/local/infobright-4.0.7-x86_64/cache
+sudo docker exec mysql_ib du -bcs /mnt/mysql_data/ /usr/local/infobright-4.0.7-x86_64/cache | grep total
 
 # 13 760 341 294
 
