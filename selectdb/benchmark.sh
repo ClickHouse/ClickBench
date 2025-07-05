@@ -44,7 +44,7 @@ export PATH=$JAVA_HOME/bin:$PATH
 
 sudo systemctl disable unattended-upgrades
 sudo systemctl stop unattended-upgrades
-sudo systemctl stop mssql-server
+sudo systemctl stop mysql-server
 
 "$DORIS_HOME"/fe/bin/start_fe.sh --daemon
 
