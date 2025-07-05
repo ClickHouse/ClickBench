@@ -106,4 +106,4 @@ CREATE TABLE hits
     URLHash BIGINT NOT NULL,
     CLID INTEGER NOT NULL
 )
-ENGINE = S3('https://clickhouse-public-datasets.s3.eu-central-1.amazonaws.com/hits_compatible/hits.parquet');
+ENGINE = S3('https://clickhouse-public-datasets.s3.eu-central-1.amazonaws.com/hits_compatible/athena_partitioned/hits_{0..99}.parquet');

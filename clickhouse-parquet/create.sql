@@ -106,5 +106,4 @@ CREATE TABLE hits
     URLHash BIGINT NOT NULL,
     CLID INTEGER NOT NULL
 )
-ENGINE = File(Parquet, 'hits_*.parquet'); -- Use for ClickHouse (Parquet, partitioned)
-/* ENGINE = File(Parquet, 'hits.parquet'); -- Use for ClickHouse (Parquet, single) */
+ENGINE = File(Parquet, 'hits.parquet');

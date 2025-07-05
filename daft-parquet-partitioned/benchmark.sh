@@ -18,9 +18,8 @@ pip install pandas
 pip install packaging
 pip install daft==0.4.13
 
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet'
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 
-# Run the queries
-mode=single
+mode=partitioned
 echo "Running $mode mode..."
 ./run.sh $machine_name $mode 2>&1 | tee "daft_log_${mode}.txt"
