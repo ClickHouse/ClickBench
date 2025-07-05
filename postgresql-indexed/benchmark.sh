@@ -7,7 +7,7 @@ PGVERSION=17
 # Source: https://wiki.postgresql.org/wiki/Apt
 sudo apt-get update
 sudo apt-get install -y postgresql-common
-sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
 
 sudo apt-get update
 sudo apt-get upgrade
