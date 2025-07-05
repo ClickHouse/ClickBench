@@ -38,12 +38,14 @@ sudo bash -c "mv /var/lib/heavyai/heavy.conf_ /var/lib/heavyai/heavy.conf && cho
 sudo systemctl restart heavydb
 
 /opt/heavyai/bin/heavysql -t -p HyperInteractive < create.sql
-time /opt/heavyai/bin/heavysql -t -p HyperInteractive <<< "COPY hits FROM '$(pwd)/hits.csv' WITH (HEADER = 'false');"
+echo -n "Load time: "
+command time -f '%e' /opt/heavyai/bin/heavysql -t -p HyperInteractive <<< "COPY hits FROM '$(pwd)/hits.csv' WITH (HEADER = 'false');"
 
 # Loaded: 99997497 recs, Rejected: 0 recs in 572.633000 secs
 
 ./run.sh 2>&1 | tee log.txt
 
+echo -n "Data size: "
 du -bcs /var/lib/heavyai/
 
 cat log.txt | grep -P 'Total time|null' | sed -r -e 's/^.*Total time: ([0-9]+) ms$/\1/' |

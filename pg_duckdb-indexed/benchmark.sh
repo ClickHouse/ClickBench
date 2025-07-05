@@ -62,12 +62,14 @@ export PGUSER=postgres
 export PGPASSWORD=duckdb
 
 sleep 5
-psql -t <create.sql
-time ./load.sh
+psql -t < create.sql
+echo -n "Load time: "
+command time -f '%e' ./load.sh
 
 psql -c "ALTER DATABASE postgres SET duckdb.force_execution = true;"
 ./run.sh 2>&1 | tee log.txt
 
+echo -n "Data size: "
 docker exec -i pgduck du -bcs /var/lib/postgresql/data
 
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |

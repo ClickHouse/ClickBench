@@ -20,7 +20,8 @@ sudo apt-get install -y pigz
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -d -f hits.tsv.gz
 
-time mysql --password="${PASSWORD}" --host 127.0.0.1 test -e "
+echo -n "Load time: "
+command time -f '%e' mysql --password="${PASSWORD}" --host 127.0.0.1 test -e "
     LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits
     FIELDS TERMINATED BY '\\t' ENCLOSED BY '' ESCAPED BY '\\\\' LINES TERMINATED BY '\\n' STARTING BY ''"
 
@@ -28,6 +29,7 @@ time mysql --password="${PASSWORD}" --host 127.0.0.1 test -e "
 
 ./run.sh 2>&1 | tee log.txt
 
+echo -n "Data size: "
 sudo docker exec mcs_container du -bcs /var/lib/columnstore
 
 cat log.txt |

@@ -32,7 +32,8 @@ until [ "$(curl -s -G --data-urlencode "query=select * from sys.text_import_log 
     sleep 5
 done
 
-curl -s -G --data-urlencode "query=select datediff('s', start, finish) took_secs from (select min(ts) start, max(ts) finish from sys.text_import_log where phase is null);" 'http://localhost:9000/exec'
+echo -n "Load time: "
+curl -s -S -G --data-urlencode "query=select datediff('s', start, finish) took_secs from (select min(ts) start, max(ts) finish from sys.text_import_log where phase is null);" 'http://localhost:9000/exec'
 
 # On smaller instances use this:
 # start=$(date +%s)
@@ -52,6 +53,7 @@ curl -s -G --data-urlencode "query=select datediff('s', start, finish) took_secs
 
 ./run.sh 2>&1 | tee log.txt
 
+echo -n "Data size: "
 du -bcs ~/.questdb/db/hits*
 
 cat log.txt | grep -P '"timings"|"error"|null' | sed -r -e 's/^.*"error".*$/null/; s/^.*"execute":([0-9]*),.*$/\1/' |

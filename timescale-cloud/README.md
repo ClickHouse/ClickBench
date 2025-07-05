@@ -13,7 +13,8 @@
    gzip -d -f hits.tsv.gz
    
    export $CONNECTION_STRING=...  
-   time ./load.sh 
+   echo -n "Load time: "
+   command time -f '%e' ./load.sh
    ```
 
 1. Find the datasize:

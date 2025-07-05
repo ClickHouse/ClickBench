@@ -56,7 +56,8 @@ sudo systemctl restart elasticsearch.service
 for file in hits_*; do sed -e 's/^/{ "index" : { "_index" : "hits"} }\n/' -i ${file}; done
 
 # command to load data into ES - process above can take hours, so better run in background and disown
-time for file in hits_*; do curl -s -o /dev/null -H "Content-Type: application/x-ndjson" -k -XPOST -u "elastic:${PASSWORD}" "https://localhost:9200/_bulk" --data-binary @${file}; done
+for file in hits_*; do echo -n "Load time: "
+    command time -f '%e' curl -s -o /dev/null -H "Content-Type: application/x-ndjson" -k -XPOST -u "elastic:${PASSWORD}" "https://localhost:9200/_bulk" --data-binary @${file}; done
 
 # check on progress
 curl -k -X GET "https://localhost:9200/hits/_stats/docs?pretty" -u "elastic:${PASSWORD}"

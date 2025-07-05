@@ -34,6 +34,7 @@ chmod 777 ~ hits.tsv
 
 ./run.sh 2>&1 | tee log.txt
 
+echo -n "Data size: "
 sudo du -bcs /var/monetdb5/
 
 cat log.txt | dos2unix -f | grep -P 'clk|tuple' |

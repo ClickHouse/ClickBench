@@ -24,10 +24,12 @@ then
     pigz -d -f hits.tsv.gz
 fi
 
+echo -n "Load time: "
 clickhouse-client --time --query "INSERT INTO hits FORMAT TSV" < hits.tsv
 
 # Run the queries
 
 ./run.sh "$1"
 
+echo -n "Data size: "
 clickhouse-client --query "SELECT total_bytes FROM system.tables WHERE name = 'hits' AND database = 'default'"

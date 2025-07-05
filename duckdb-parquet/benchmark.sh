@@ -16,7 +16,8 @@ cd ..
 # Load the data
 seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 
-time duckdb hits.db -f create.sql
+echo -n "Load time: "
+command time -f '%e' duckdb hits.db -f create.sql
 
 # Run the queries
 

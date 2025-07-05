@@ -14,11 +14,13 @@ export -f byconity
 byconity --time -n < create.sql
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -fkd hits.tsv.gz
-byconity --database bench --query "INSERT INTO hits FORMAT TSV" < hits.tsv
+echo -n "Load time: "
+command time -f '%e' byconity --database bench --query "INSERT INTO hits FORMAT TSV" < hits.tsv
 
 # NOTE: sometimes may hung due to docker-compose, using docker directly may help
 ./run.sh
 
+echo -n "Data size: "
 byconity --enable_multiple_tables_for_cnch_parts=1 --query "SELECT sum(bytes_on_disk) FROM system.cnch_parts WHERE table = 'hits' AND database = 'bench'"
 
 docker-compose down --volumes

@@ -47,10 +47,10 @@ split -l 10000000 hits.tsv hits_part_
 
 # load data
 echo "Starting to load data..."
-time (
 for file in hits_part_*; do
-    PGUSER=$PG_USER PGPASSWORD=$PG_PASSWORD psql -h $HOST_NAME -p $PORT -d $DATABASE -t -c '\timing' -c "\\copy hits FROM '$file'"
-done )
+    echo -n "Load time: "
+    PGUSER=$PG_USER PGPASSWORD=$PG_PASSWORD command time -f '%e' psql -h $HOST_NAME -p $PORT -d $DATABASE -t -c "\\copy hits FROM '$file'"
+done
 
 # run clickbench test with queries
 echo "Starting to run queries..."

@@ -22,6 +22,7 @@ psql -U postgres -h localhost -d postgres --no-password test -t -c '\timing' -c 
 
 ./run.sh 2>&1 | tee log.txt
 
+echo -n "Data size: "
 sudo docker exec -it citus du -bcs /var/lib/postgresql/data
 
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |

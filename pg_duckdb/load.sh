@@ -9,11 +9,11 @@ export PGPASSWORD=duckdb
 # If we dont' do this, Postgres will throw an error:
 #     "ERROR: cannot perform COPY FREEZE because the table was not created or truncated in the current subtransaction"
 # (i.e. Postgres requires that the table be either created or truncated in the current subtransaction)
-time psql <<'EOF'
+psql <<'EOF'
 BEGIN;
 TRUNCATE TABLE hits;
 \copy hits FROM 'hits.tsv' with freeze;
 COMMIT;
 EOF
 
-time psql -t -c 'VACUUM ANALYZE hits'
+psql -t -c 'VACUUM ANALYZE hits'

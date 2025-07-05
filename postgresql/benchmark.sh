@@ -58,13 +58,15 @@ pigz -d -f hits.tsv.gz
 sudo -u postgres psql -t -c 'CREATE DATABASE test'
 sudo -u postgres psql test -t <create.sql
 
-time ./load.sh
+echo -n "Load time: "
+command time -f '%e' ./load.sh
 
 # COPY 99997497
 # Time: 2341543.463 ms (39:01.543)
 
 ./run.sh 2>&1 | tee log.txt
 
+echo -n "Data size: "
 sudo du -bcs /var/lib/postgresql/$PGVERSION/main/
 
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |

@@ -21,18 +21,22 @@ seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https:/
 # Convert parquet files to vortex partitioned
 seq 0 99 | xargs -P"$(nproc)" -I{} bash -c '
   if [ ! -f "hits_{}.vortex" ]; then
-    duckdb -c "COPY 'hits_{}.parquet' TO hits_{}.vortex (FORMAT vortex)"
+    echo -n "Load time: "
+    command time -f '%e' -c "COPY 'hits_{}.parquet' TO hits_{}.vortex (FORMAT vortex)"
   fi
 '
 
 # Convert parquet files to vortex single
 if [ ! -f "hits.vortex" ]; then
-  duckdb -c "COPY 'hits_*.parquet' TO hits.vortex (FORMAT vortex)"
+  echo -n "Load time: "
+  command time -f '%e' -c "COPY 'hits_*.parquet' TO hits.vortex (FORMAT vortex)"
 fi
 
-time duckdb hits-partitioned.db -c "CREATE VIEW hits AS SELECT * FROM read_vortex('hits_*.vortex')";
+echo -n "Load time: "
+command time -f '%e' duckdb hits-partitioned.db -c "CREATE VIEW hits AS SELECT * FROM read_vortex('hits_*.vortex')";
 
-time duckdb hits-single.db -c "CREATE VIEW hits AS SELECT * FROM read_vortex('hits.vortex')";
+echo -n "Load time: "
+command time -f '%e' duckdb hits-single.db -c "CREATE VIEW hits AS SELECT * FROM read_vortex('hits.vortex')";
 
 
 

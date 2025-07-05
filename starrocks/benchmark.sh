@@ -63,6 +63,7 @@ echo "Load data costs $LOADTIME seconds"
 # Dataset contains about 40GB of data when the import is just completed.
 # This is because the trashed data generated during the compaction process.
 # After about tens of minutes, when the gc is completed, the system includes about 16.5GB of data.
+echo -n "Data size: "
 du -bcs StarRocks-${VERSION}/storage/
 # Dataset contains 99997497 rows
 mysql -h 127.0.0.1 -P9030 -uroot hits -e "SELECT count(*) FROM hits"

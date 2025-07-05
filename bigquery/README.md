@@ -21,7 +21,8 @@ Load the data:
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 gzip -d -f hits.csv.gz
 
-time bq load --source_format CSV --allow_quoted_newlines=1 test.hits hits.csv
+echo -n "Load time: "
+command time -f '%e' bq load --source_format CSV --allow_quoted_newlines=1 test.hits hits.csv
 ```
 
 Run the benchmark:

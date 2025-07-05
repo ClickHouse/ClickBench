@@ -30,8 +30,9 @@ LOAD_TIME=$(curl -w "%{time_total}\n" -s "http://localhost:3473/?database=clickb
 # Print statistics
 COMPRESSED_SIZE=$(curl -s "http://localhost:3473/?database=clickbench&output_format=JSON_Compact" --data-binary "SELECT compressed_bytes FROM information_schema.tables WHERE table_name = 'hits';"  | jq '.data[0][0] | tonumber')
 UNCOMPRESSED_SIZE=$(curl -s "http://localhost:3473/?database=clickbench&output_format=JSON_Compact" --data-binary "SELECT uncompressed_bytes FROM information_schema.tables WHERE table_name = 'hits';"  | jq '.data[0][0] | tonumber')
-echo "Load time: $LOAD_TIME seconds"
-echo "Compressed data size: $COMPRESSED_SIZE bytes, uncompressed data size: $UNCOMPRESSED_SIZE bytes"
+echo "Load time: $LOAD_TIME"
+echo "Data size: $COMPRESSED_SIZE"
+echo "Uncompressed data size: $UNCOMPRESSED_SIZE bytes"
 
 if [ "$1" != "" ] && [ "$1" != "scan-cache" ]; then
     echo "Error: command line argument must be one of {'', 'scan-cache'}"

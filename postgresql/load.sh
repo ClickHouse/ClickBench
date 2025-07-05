@@ -6,11 +6,11 @@ set -eux
 # If we dont' do this, Postgres will throw an error:
 #     "ERROR: cannot perform COPY FREEZE because the table was not created or truncated in the current subtransaction"
 # (i.e. Postgres requires that the table be either created or truncated in the current subtransaction)
-time sudo -u postgres psql test <<'EOF'
+sudo -u postgres psql test <<'EOF'
 BEGIN;
 TRUNCATE TABLE hits;
 \copy hits FROM 'hits.tsv' with freeze;
 COMMIT;
 EOF
 
-time sudo -u postgres psql test -t -c 'VACUUM ANALYZE hits'
+sudo -u postgres psql test -t -c 'VACUUM ANALYZE hits'

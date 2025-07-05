@@ -28,12 +28,14 @@ sudo docker cp hits.tsv memsql-ciab:/
 
 sudo docker exec -it memsql-ciab memsql -p"${ROOT_PASSWORD}" -e "CREATE DATABASE test"
 sudo docker exec memsql-ciab memsql -p"${ROOT_PASSWORD}" --database=test -e "USE test; $(cat create.sql)"
-time sudo docker exec -it memsql-ciab memsql -vvv -p"${ROOT_PASSWORD}" --database=test -e "LOAD DATA INFILE '/hits.tsv' INTO TABLE test.hits"
+echo -n "Load time: "
+command time -f '%e' sudo docker exec -it memsql-ciab memsql -vvv -p"${ROOT_PASSWORD}" --database=test -e "LOAD DATA INFILE '/hits.tsv' INTO TABLE test.hits"
 
 # Query OK, 99997497 rows affected (11 min 30.11 sec)
 
 ./run.sh 2>&1 | tee log.txt
 
+echo -n "Data size: "
 sudo docker exec memsql-ciab du -bcs /var/lib/memsql
 
 # 29836263469 bytes

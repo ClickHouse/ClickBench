@@ -30,7 +30,8 @@ pigz -d -f hits.tsv.gz
 ./yugabyte/bin/ysqlsh -U yugabyte -d test -t < create.sql
 
 # takes around ~78 minutes on AWS EC2 c6a.4xlarge (500GB gp2)
-time ./load.sh
+echo -n "Load time: "
+command time -f '%e' ./load.sh
 
 ./run.sh 2>&1 | tee log.txt
 

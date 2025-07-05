@@ -35,7 +35,8 @@ gzip -d -f hits.csv.gz
 Load the data:
 
 ```
-time ./bytehouse-cli --user "$user" --account "$account" --password "$password" --region ap-southeast-1 --secure --warehouse "$warehouse" --query "INSERT INTO test.hits FORMAT CSV" < hits.csv
+echo -n "Load time: "
+command time -f '%e' ./bytehouse-cli --user "$user" --account "$account" --password "$password" --region ap-southeast-1 --secure --warehouse "$warehouse" --query "INSERT INTO test.hits FORMAT CSV" < hits.csv
 ```
 
 ```

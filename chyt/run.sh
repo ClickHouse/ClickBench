@@ -56,15 +56,11 @@ data_filling_waiting() {
 
 
 fill_data() {
-echo "Creating table"
-time yt clickhouse execute "$(cat create.sql)" --alias *clickbench --proxy $YT_PROXY
-echo "Filling data"
+command time -f '%e' yt clickhouse execute "$(cat create.sql)" --alias *clickbench --proxy $YT_PROXY
 insert_data
 data_filling_waiting &
 throbber $!
-echo "Sorting data"
-time yt sort --src //home/hits --dst //home/hits --sort-by "CounterID" --sort-by "EventDate" --sort-by "UserID" --sort-by "EventTime" --sort-by "WatchID" --proxy $YT_PROXY
-
+yt sort --src //home/hits --dst //home/hits --sort-by "CounterID" --sort-by "EventDate" --sort-by "UserID" --sort-by "EventTime" --sort-by "WatchID" --proxy $YT_PROXY
 }
 
 
@@ -132,8 +128,8 @@ change_clique_size 1 $CPU_HIGH $RAM_HIGH
 
 clique_waiting
 echo "-------------------------------------"
-echo "Filling data"
-fill_data
+echo -n "Load time: "
+command time -f '%e' fill_data
 echo "-------------------------------------"
 
 for i in "1 $CPU_HIGH $RAM_HIGH 48GB" "2 $CPU_HIGH $RAM_HIGH 96GB" "4 $CPU_HIGH $RAM_HIGH 192GB" "9 $CPU_LOW $RAM_LOW 360GB"
@@ -144,4 +140,3 @@ do
 	clique_waiting
 	run
 done
-
