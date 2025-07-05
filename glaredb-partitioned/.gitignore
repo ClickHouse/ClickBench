@@ -1,0 +1,9 @@
+# The binary
+/glaredb
+
+# Any of the hits files
+/data
+
+# Result data, should be manually copied to the right spot if being kept.
+results.csv
+results.json
