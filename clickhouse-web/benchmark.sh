@@ -21,6 +21,7 @@ sudo chown clickhouse:clickhouse /dev/shm/clickhouse
 
 # Load the data
 
+echo -n "Load time: "
 clickhouse-client --time < create.sql
 
 # Run the queries

@@ -12,7 +12,7 @@ else
 fi;
 
 # Install prerequisites.
-sudo apt update
+sudo apt-get update
 sudo apt-get install -y apt-transport-https apt-utils curl gnupg lsb-release
 
 # Import the public GPG key for verifying the package signatures.
