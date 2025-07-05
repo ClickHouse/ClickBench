@@ -11,9 +11,8 @@
 
 clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure < create.sql
 
-echo -n "Load time: "
-command time -f '%e' clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "
-  INSERT INTO hits SELECT * FROM url('https://clickhouse-public-datasets.s3.amazonaws.com/hits_compatible/hits.tsv.gz')
+clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --time --query "
+  INSERT INTO hits SELECT * FROM url('https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_*.parquet')
 "
 
 # 343.455
@@ -22,5 +21,4 @@ command time -f '%e' clickhouse-client --host "$FQDN" --password "$PASSWORD" --s
 
 ./run.sh
 
-echo -n "Data size: "
 clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "SELECT total_bytes FROM system.tables WHERE name = 'hits' AND database = 'default'"
