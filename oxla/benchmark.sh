@@ -36,7 +36,7 @@ PGPASSWORD=oxla command time -f '%e' psql -h localhost -U oxla -t -c "COPY hits 
 
 # get ingested data size
 echo -n "Data size: "
-PGPASSWORD=oxla psql -h localhost -U oxla -t -c "SELECT pg_total_relation_size('hits');"
+PGPASSWORD=oxla psql -h localhost -U oxla -q -t -c "SELECT pg_total_relation_size('hits');"
 
 # run benchmark
 echo "running benchmark..."
