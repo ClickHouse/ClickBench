@@ -1,7 +1,7 @@
 
 {
     "system": "ClickHouse ☁️ (azure)",
-    "date": "2025-07-05",
+    "date": "2025-07-06",
     "machine": "16GiB, 3 replica(s)",
     "cluster_size": "3",
     "tuned": "no",
@@ -9,7 +9,7 @@
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],
 
-    "load_time": 0.110,
+    "load_time": 0.109,
     "data_size": ),
 
     "result": [
