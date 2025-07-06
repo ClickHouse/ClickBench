@@ -23,31 +23,36 @@ pigz -d -f hits.csv.gz
 
 curl -G --data-urlencode "query=$(cat create.sql)" 'http://localhost:9000/exec'
 
-# SQL COPY works best on metal instances:
-curl -G --data-urlencode "query=copy hits from 'hits.csv' with timestamp 'EventTime' format 'yyyy-MM-dd HH:mm:ss';" 'http://localhost:9000/exec'
+if [[ "$(nproc)" -ge 96 ]]
+then
+    # SQL COPY works best on metal instances:
+    start=$(date +%s)
 
-echo 'waiting for import to finish...'
-until [ "$(curl -s -G --data-urlencode "query=select * from sys.text_import_log where phase is null and status='finished';" 'http://localhost:9000/exec' | grep -c '"count":1')" -ge 1 ]; do
-    echo '.'
-    sleep 5
-done
+    curl -G --data-urlencode "query=copy hits from 'hits.csv' with timestamp 'EventTime' format 'yyyy-MM-dd HH:mm:ss';" 'http://localhost:9000/exec'
 
-echo -n "Load time: "
-curl -s -S -G --data-urlencode "query=select datediff('s', start, finish) took_secs from (select min(ts) start, max(ts) finish from sys.text_import_log where phase is null);" 'http://localhost:9000/exec'
+    echo 'waiting for import to finish...'
+    until [ "$(curl -s -G --data-urlencode "query=select * from sys.text_import_log where phase is null and status='finished';" 'http://localhost:9000/exec' | grep -c '"count":1')" -ge 1 ]; do
+        echo '.'
+        sleep 5
+    done
 
-# On smaller instances use this:
-# start=$(date +%s)
+    end=$(date +%s)
+    echo "Load time: $((end - start))"
+else
+    # On smaller instances use this:
+    start=$(date +%s)
 
-# curl -F data=@hits.csv 'http://localhost:9000/imp?name=hits'
+    curl -F data=@hits.csv 'http://localhost:9000/imp?name=hits'
 
-# echo 'waiting for rows to become readable...'
-# until [ "$(curl -s -G --data-urlencode "query=select 1 from (select count() c from hits) where c = 99997497;" 'http://localhost:9000/exec' | grep -c '"count":1')" -ge 1 ]; do
-#     echo '.'
-#     sleep 1
-# done
+    echo 'waiting for rows to become readable...'
+    until [ "$(curl -s -G --data-urlencode "query=select 1 from (select count() c from hits) where c = 99997497;" 'http://localhost:9000/exec' | grep -c '"count":1')" -ge 1 ]; do
+        echo '.'
+        sleep 5
+    done
 
-# end=$(date +%s)
-# echo "import took: $(($end-$start)) secs"
+    end=$(date +%s)
+    echo "Load time: $((end - start))"
+fi
 
 # Run queries
 
