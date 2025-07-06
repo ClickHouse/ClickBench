@@ -1,5 +1,6 @@
 name: "Build the website"
 on:
+  workflow_dispatch:  # This allows manual trigger from the UI
   push:
     branches:
       - main
