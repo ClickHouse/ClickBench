@@ -26,11 +26,6 @@ sudo docker run \
   paradedb/paradedb:$PARADEDB_VERSION
 
 echo ""
-echo "Waiting for ParadeDB to start..."
-sleep 10
-echo "ParadeDB is ready!"
-
-echo ""
 echo "Downloading ClickBench dataset..."
 if [ ! -e /tmp/partitioned/ ]; then
   mkdir -p /tmp/partitioned
