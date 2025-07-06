@@ -13,5 +13,5 @@ cat queries.sql | while read -r query; do
     (
         echo '\timing'
         yes "$query" | head -n $TRIES
-    ) | psql --no-psqlrc --tuples-only | grep 'Time'
+    ) | psql $CONNECTION --no-psqlrc --tuples-only | grep 'Time'
 done

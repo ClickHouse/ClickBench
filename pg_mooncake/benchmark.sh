@@ -15,7 +15,7 @@ docker run -d --name pg_mooncake -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust
 
 sleep 5
 echo -n "Load time: "
-command time -f '%e' psql postgres://postgres:pg_mooncake@localhost:5432/postgres -f create.sql
+command time -f '%e' psql postgres://postgres:pg_mooncake@localhost:5432/postgres -q -f create.sql
 
 # COPY 99997497
 # Time: 576219.151 ms (09:36.219)
