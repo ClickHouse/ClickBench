@@ -24,3 +24,6 @@ seq 0 99 | xargs -P100 -I{} bash -c 'wget --directory-prefix partitioned --conti
 
 echo "Run benchmarks for single parquet and partitioned"
 ./run.sh
+
+echo "Load time: 0"
+echo "Data size: $(du -bcs partitioned | grep total)"

@@ -10,5 +10,5 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 
 ./run.sh
 
-# Use for ClickHouse (Parquet, single)
-# du -b hits.parquet
+echo "Load time: 0"
+echo "Data size: $(du -bcs hits.parquet)"

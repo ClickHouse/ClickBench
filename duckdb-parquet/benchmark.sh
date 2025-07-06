@@ -19,6 +19,8 @@ seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https:/
 echo -n "Load time: "
 command time -f '%e' duckdb hits.db -f create.sql
 
+echo "Data size: $(du -bcs hits*.parquet | grep total)"
+
 # Run the queries
 
 ./run.sh 2>&1 | tee log.txt

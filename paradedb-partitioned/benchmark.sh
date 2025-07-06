@@ -51,6 +51,7 @@ echo "Running queries..."
 # 14779976446
 
 echo "Data size: $(du -b /tmp/hits*.parquet)"
+echo "Load time: 0"
 
 echo ""
 echo "Parsing results..."

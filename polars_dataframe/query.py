@@ -470,8 +470,9 @@ data_size = os.path.getsize("hits.parquet")
 print("run DataFrame (in-memory) queries, this loads all data in memory!")
 start = timeit.default_timer()
 df = pl.scan_parquet("hits.parquet").collect()
-stop = timeit.default_timer()
-load_time = stop - start
+end = timeit.default_timer()
+load_time = round(end - start, 3)
+print(f"Load time: {load_time}")
 
 # fix some types
 df = df.with_columns(
