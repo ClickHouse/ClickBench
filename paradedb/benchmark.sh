@@ -41,6 +41,7 @@ psql -h localhost -U postgres -d mydb -p 5432 -t < create.sql
 
 # load_time is zero, since the data is directly read from the Parquet file(s)
 # Time: 0000000.000 ms (00:00.000)
+echo "Load time: 0"
 
 echo ""
 echo "Running queries..."

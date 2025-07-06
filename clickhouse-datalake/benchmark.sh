@@ -16,3 +16,6 @@ filesystem_caches:
 # Run the queries
 
 ./run.sh
+
+echo "Load time: 0"
+echo "Data size: 14779976446"
