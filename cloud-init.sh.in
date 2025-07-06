@@ -3,11 +3,11 @@
 # This is the script for cloud-init, to run on a VM in unattended fashion. Example:
 <<///
 sed 's/@system@/clickhouse/' < cloud-init.sh.in > cloud-init.sh
-aws ec2 run-instances --count 1 --image-id ami-0d1ddd83282187d18 --instance-type c6a.4xlarge \
- --block-device-mappings 'DeviceName=/dev/sda1,Ebs={DeleteOnTermination=true,VolumeSize=500,VolumeType=gp2}' \
- --key-name milovidov --security-group-ids sg-013790293e9640422 --instance-initiated-shutdown-behavior terminate \
- --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=clickbench}]' \
- --user-data file://cloud-init.sh
+aws ec2 run-instances --count 1 --image-id ami-02003f9f0fde924ea --instance-type c6a.4xlarge \
+  --block-device-mappings 'DeviceName=/dev/sda1,Ebs={DeleteOnTermination=true,VolumeSize=500,VolumeType=gp2}' \
+  --security-group-ids sg-013790293e9640422 --instance-initiated-shutdown-behavior terminate \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=clickbench}]' \
+  --user-data file://cloud-init.sh
 ///
 
 export DEBIAN_FRONTEND=noninteractive
@@ -23,7 +23,7 @@ echo -n 'Disk usage after: ' >> log
 df -B1 / | tail -n1 | awk '{ print $3 }' >> log
 echo 'System: @system@' >> log
 echo -n 'Machine: ' >> log
-curl 'http://169.254.169.254/latest/meta-data/instance-type' >> log
+curl -H "X-aws-ec2-metadata-token: $(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" -s)" 'http://169.254.169.254/latest/meta-data/instance-type' >> log
 
 # Save the results.
 # Prepare the database as follows:
