@@ -9,7 +9,7 @@ cat queries.sql | while read -r query; do
     echo -n "["
     for i in $(seq 1 $TRIES); do
         RES=$(curl -w 'Time: %{time_total}\n' "http://default@localhost:8124" -d "${query}" 2>&1 | grep -P '^Time: ' | sed 's/Time: //')
-        [[ "$?" == "0" ]] && echo -n "${RES}" || echo -n "null"
+        [[ "$?" == "0" || -z "${RES}" ]] && echo -n "${RES}" || echo -n "null"
         [[ "$i" != $TRIES ]] && echo -n ", "
 
         echo "${QUERY_NUM},${i},${RES}" >> result.csv

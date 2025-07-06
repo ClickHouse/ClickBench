@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 # Note: To get equivalent performance you should be running from
 # AWS US-EAST-1 region or as close to there as possible. Otherwise
