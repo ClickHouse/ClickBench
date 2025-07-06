@@ -59,17 +59,18 @@ docker restart pgduck
 
 export PGUSER=postgres
 export PGPASSWORD=duckdb
+export CONNECTION=postgres://postgres:duckdb@localhost:5432/postgres
 
 for _ in {1..300}
 do
-  psql -t < create.sql && break
+  psql $CONNECTION -t < create.sql && break
   sleep 1
 done
 
 echo -n "Load time: "
 command time -f '%e' ./load.sh
 
-psql -c "ALTER DATABASE postgres SET duckdb.force_execution = true;"
+psql $CONNECTION -c "ALTER DATABASE postgres SET duckdb.force_execution = true;"
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "

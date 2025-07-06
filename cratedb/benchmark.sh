@@ -41,7 +41,7 @@ chmod 444 /tmp/hits.tsv
 psql -U crate -h localhost --no-password -t < $CREATE_FILE
 
 echo -n "Load time: "
-command time -f '%e' psql -U crate -h localhost --no-password -t -c "
+command time -f '%e' psql -U crate -h localhost --no-password -q -t -c "
   COPY hits
   FROM 'file:///tmp/hits.tsv'
   WITH
