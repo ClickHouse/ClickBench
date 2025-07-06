@@ -144,7 +144,7 @@ We allow but do not recommend creating scoreboards from this benchmark or saying
 
 There is a web page to navigate across benchmark results and present a summary report. It allows filtering out some systems, setups, or queries. For example, if you found some subset of the 43 queries are irrelevant, you can simply exclude them from the calculation and share the report without these queries.
 
-You can select the summary metric from one of the following: "Cold Run", "Hot Run", "Load Time", and "Data Size". If you select the "Load Time" or "Data Size", the entries will be simply ordered from best to worst, and additionally, the ratio to the best non-zero result will be shown (the number of times one system is worse than the best system in this metric). Load time can be zero for stateless query engines like `clickhouse-local` or `Amazon Athena`.
+You can select the summary metric from one of the following: "Cold Run", "Hot Run", "Load Time", "Data Size", and "Combined". If you select the "Load Time" or "Data Size", the entries will be simply ordered from best to worst, and additionally, the ratio to the best non-zero result will be shown (the number of times one system is worse than the best system in this metric). Load time can be zero for stateless query engines like `clickhouse-local` or `Amazon Athena`.
 
 If you select "Cold Run" or "Hot Run", the aggregation across the queries is performed in the following way:
 
@@ -170,6 +170,7 @@ For example, one system crashed while trying to run a query which can highlight 
 
 Why geometric mean? The ratios can only be naturally averaged in this way. Imagine there are two queries and two systems. The first system ran the first query in 1s and the second query in 20s. The second system ran the first query in 2s and the second query in 10s. So, the first system is two times faster on the first query and two times slower on the second query and vice-versa. The final score should be identical for these systems.
 
+The "Combined" metric summarizes all the results as a weighted geometric mean with the following weights: load time: 10%, data size: 10%, cold runtime: 20%, hot runtime: 60%.
 
 ## History and Motivation
 

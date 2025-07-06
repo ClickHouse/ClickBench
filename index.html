@@ -17,6 +17,7 @@
 
             --link-color: #08F;
             --link-hover-color: #F40;
+            --hashed-link-lightness: 0.5;
 
             --selector-text-color: black;
             --selector-active-text-color: black;
@@ -47,6 +48,7 @@
 
             --link-color: #8CF;
             --link-hover-color: #FFF;
+            --hashed-link-lightness: 0.82;
 
             --selector-text-color: white;
             --selector-background-color: #444;
@@ -391,6 +393,7 @@ const additional_data_size_points = [
     <tr>
         <th>Metric: </th>
         <td id="selectors_run">
+            <a class="selector" id="selector-metric-combined">Combined</a>
             <a class="selector" id="selector-metric-cold">Cold Run</a>
             <a class="selector" id="selector-metric-hot">Hot Run</a>
             <a class="selector" id="selector-metric-load">Load Time</a>
@@ -571,6 +574,7 @@ document.getElementById('select-all-cluster-sizes').addEventListener('click', e 
     [...e.target.parentElement.querySelectorAll('a')].map(elem => { elem.className = elem == e.target ? 'selector selector-active' : 'selector' });
 }));
 
+document.getElementById('selector-metric-combined').addEventListener('click', e => { selectors.metric = 'combined'; render(); updateHistory(); });
 document.getElementById('selector-metric-cold').addEventListener('click', e => { selectors.metric = 'cold'; render(); updateHistory(); });
 document.getElementById('selector-metric-hot').addEventListener('click', e => { selectors.metric = 'hot'; render(); updateHistory(); });
 document.getElementById('selector-metric-load').addEventListener('click', e => { selectors.metric = 'load'; render(); updateHistory(); });
@@ -600,8 +604,38 @@ function clearElement(elem)
     }
 }
 
-function selectRun(timings) {
-    return selectors.metric == 'cold' ? timings[0] : (timings[1] !== null && timings[2] !== null ? Math.min(timings[1], timings[2]) : null)
+const combined_load_time_share = 0.1;
+const combined_data_size_share = 0.1;
+const combined_cold_share = 0.2;
+const combined_hot_share = 0.6;
+
+function selectRun(timings, metric) {
+    const cold_timing = timings[0];
+    const hot_timing = (timings[1] !== null && timings[2] !== null ? Math.min(timings[1], timings[2]) : null);
+
+    return metric == 'cold' ? cold_timing : metric == 'hot' ? hot_timing :
+        ((hot_timing * combined_hot_share + cold_timing * combined_cold_share) / (combined_hot_share + combined_cold_share));
+}
+
+function relativeQueryTime(num_queries, baseline_data, elem, metric) {
+    const fallback_timing = missing_result_penalty * Math.max(missing_result_time, ...elem.result.map(timings => selectRun(timings, metric)));
+
+    let accumulator = 0;
+    let used_queries = 0;
+
+    const no_queries_selected = selectors.queries.filter(x => x).length == 0;
+
+    for (let i = 0; i < num_queries; ++i) {
+        if (no_queries_selected || selectors.queries[i]) {
+            const curr_timing = selectRun(elem.result[i], metric) ?? fallback_timing;
+            const baseline_timing = selectRun(baseline_data[i], metric);
+            const ratio = (constant_time_add + curr_timing) / (constant_time_add + baseline_timing);
+            accumulator += Math.log(ratio);
+            ++used_queries;
+        }
+    }
+
+    return Math.exp(accumulator / used_queries);
 }
 
 function addNote(text) {
@@ -615,6 +649,17 @@ function addNote(text) {
 
     note.appendChild(tooltip);
     return note;
+}
+
+function nameToColor(str) {
+    let x = 0;
+    for (let i = 0; i < str.length; i++) {
+        x += str.charCodeAt(i);
+        x *= 0xff51afd7;
+        x ^= x >> 17;
+    }
+
+    return 60 + Math.abs(x % 240);
 }
 
 function renderSummary(filtered_data) {
@@ -644,28 +689,16 @@ function renderSummary(filtered_data) {
     } else if (selectors.metric == 'size') {
         summaries = filtered_data.map(elem => elem.data_size / min_data_size);
         document.getElementById('time-or-size').innerText = 'size';
-    } else {
-        summaries = filtered_data.map(elem => {
-            const fallback_timing = missing_result_penalty * Math.max(missing_result_time, ...elem.result.map(timings => selectRun(timings)));
-
-            let accumulator = 0;
-            let used_queries = 0;
-
-            const no_queries_selected = selectors.queries.filter(x => x).length == 0;
-
-            for (let i = 0; i < num_queries; ++i) {
-                if (no_queries_selected || selectors.queries[i]) {
-                    const curr_timing = selectRun(elem.result[i]) ?? fallback_timing;
-                    const baseline_timing = selectRun(baseline_data[i]);
-                    const ratio = (constant_time_add + curr_timing) / (constant_time_add + baseline_timing);
-                    accumulator += Math.log(ratio);
-                    ++used_queries;
-                }
-            }
-
-            return Math.exp(accumulator / used_queries);
-        });
+    } else if (selectors.metric == 'hot' || selectors.metric == 'cold') {
+        summaries = filtered_data.map(elem => relativeQueryTime(num_queries, baseline_data, elem, selectors.metric));
         document.getElementById('time-or-size').innerText = 'time';
+    } else if (selectors.metric == 'combined') {
+        summaries = filtered_data.map(elem => Math.exp(
+            combined_load_time_share * Math.log(elem.load_time >= 5 ? (elem.load_time / min_load_time) : 1) +
+            combined_data_size_share * Math.log(elem.data_size >= 1e9 ? (elem.data_size / min_data_size) : 2) +
+            combined_cold_share * Math.log(relativeQueryTime(num_queries, baseline_data, elem, 'cold')) +
+            combined_hot_share * Math.log(relativeQueryTime(num_queries, baseline_data, elem, 'hot'))));
+        document.getElementById('time-or-size').innerText = 'time and data size';
     }
 
     const sorted_indices = [...summaries.keys()].sort((a, b) => summaries[a] - summaries[b]);
@@ -689,6 +722,7 @@ function renderSummary(filtered_data) {
             let link = document.createElement('a');
             link.appendChild(document.createTextNode(`${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
             link.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + elem.source;
+            link.style.color = `oklch(var(--hashed-link-lightness) 0.2018 ${nameToColor(elem.system.split(' ')[0])})`
             td_name.appendChild(link);
         } else {
             td_name.appendChild(document.createTextNode(elem.system));
@@ -930,8 +964,8 @@ function render() {
         tr.appendChild(td_query_num);
 
         sorted_indices.map(idx => {
-            const curr_timing = selectRun(filtered_data[idx].result[query_num]);
-            const baseline_timing = selectRun(baseline_data[query_num]);
+            const curr_timing = selectRun(filtered_data[idx].result[query_num], selectors.metric);
+            const baseline_timing = selectRun(baseline_data[query_num], selectors.metric);
             const ratio = curr_timing !== null ? (constant_time_add + curr_timing) / (constant_time_add + baseline_timing) : null;
 
             let td = document.createElement('td');
