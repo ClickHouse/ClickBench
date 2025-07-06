@@ -47,10 +47,8 @@ pigz -d -f hits.json.gz
 # Prepare Elasticsearch for large bulk insert. To do the large upload, you have to break up JSON file into smaller files to prevent 'curl' from OOM while doing it, and adjust ELasticsearch HTTP upload size minimum. This creates roughly 250M files (note it takes a while)
 split -l 10000000 hits.json hits_
 
-# You need to modify Elasticsearch settings to accept it (default is 100M bulk API uploads)
-sudo vim /etc/elasticsearch/elasticsearch.yml
-# Add "http.max_content_length: 500mb" to the Network Settings section, leaving some buffer for additional commands for bulk import
-# Save file, restart Elasticsearch server
+# Modify Elasticsearch settings to accept it (default is 100M bulk API uploads)
+echo "http.max_content_length: 500mb" >> /etc/elasticsearch/elasticsearch.yml
 sudo systemctl restart elasticsearch.service
 
 # Re-format and import all the small JSON files sequentially
