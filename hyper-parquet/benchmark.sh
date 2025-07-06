@@ -2,6 +2,8 @@
 
 sudo apt-get update -y
 sudo apt-get install -y python3-pip
+python3 -m venv myenv
+source myenv/bin/activate
 
 PIP_MAJOR=$(echo $(pip --version | awk '{print $2}') | cut -d. -f1)
 if [ $PIP_MAJOR -ge 23 ]; then
