@@ -837,6 +837,12 @@ function render() {
             (selectors.tuned.no && elem.tuned === "yes")
         ));
 
+    if (selectors.metric == 'size') {
+        filtered_data = filtered_data.filter(elem => elem.data_size);
+    } else if (selectors.metric == 'load') {
+        filtered_data = filtered_data.filter(elem => elem.load_time >= 5);
+    }
+
     let nothing_selected_elem = document.getElementById('nothing-selected');
     if (filtered_data.length == 0) {
         nothing_selected_elem.style.display = 'block';
