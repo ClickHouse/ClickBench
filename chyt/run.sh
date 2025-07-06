@@ -7,7 +7,7 @@ CPU_LOW=10
 RAM_HIGH=51539607552
 RAM_LOW=42949672960
 
-apt-get install -y python3-pip
+apt-get install -y python3-pip python3-venv
 python3 -m venv myenv
 source myenv/bin/activate
 pip install ytsaurus-client --break-system-packages

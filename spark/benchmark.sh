@@ -3,7 +3,7 @@
 # Install
 
 sudo apt-get update -y
-sudo apt-get install -y python3-pip openjdk-17-jdk
+sudo apt-get install -y python3-pip python3-venv openjdk-17-jdk
 
 export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64/"
 export PATH=$JAVA_HOME/bin:$PATH

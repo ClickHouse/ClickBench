@@ -1,7 +1,7 @@
 #!/bin/bash
 
 sudo apt-get update -y
-sudo apt-get install -y python3-pip
+sudo apt-get install -y python3-pip python3-venv
 python3 -m venv myenv
 source myenv/bin/activate
 pip install tableauhyperapi
