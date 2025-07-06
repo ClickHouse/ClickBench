@@ -29,6 +29,7 @@ $CLI --sql "load into hits from file paths 'hits.tsv.gz' format delimited text (
 END=$(date +%s)
 LOADTIME=$(echo "$END - $START" | bc)
 echo "Load time: $LOADTIME"
+echo "Data size: $(du -bcs ./kinetica-persist/data | grep total)"
 
 # run the queries
 ./run.sh

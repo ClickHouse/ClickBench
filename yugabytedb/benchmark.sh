@@ -35,6 +35,7 @@ command time -f '%e' ./load.sh
 ./run.sh 2>&1 | tee log.txt
 
 # 76977854454 bytes
+echo -n "Data size: "
 ./yugabyte/bin/ysqlsh -U yugabyte -d test -c "SELECT pg_total_relation_size('public.hits') AS TOTAL_TABLE_SIZE_IN_BYTES;"
 
 grep -oP 'Time: \d+\.\d+ ms' log.txt |

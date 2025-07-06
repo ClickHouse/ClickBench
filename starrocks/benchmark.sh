@@ -58,7 +58,7 @@ curl --location-trusted \
     http://localhost:8030/api/hits/hits/_stream_load
 END=$(date +%s)
 LOADTIME=$(echo "$END - $START" | bc)
-echo "Load data costs $LOADTIME seconds"
+echo "Load time: $LOADTIME"
 
 # Dataset contains about 40GB of data when the import is just completed.
 # This is because the trashed data generated during the compaction process.

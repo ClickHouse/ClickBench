@@ -30,7 +30,8 @@ sudo apt-get install -y pigz
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -d -f hits.tsv.gz
 
-./apache-druid-${VERSION}/bin/post-index-task --file ingest.json --url http://localhost:8081
+echo -n "Load time: "
+command time -f '%e' ./apache-druid-${VERSION}/bin/post-index-task --file ingest.json --url http://localhost:8081
 
 # The command above will fail due to timeout but still continue to run in background.
 # The loading time should be checked from the logs.

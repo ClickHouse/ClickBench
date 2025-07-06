@@ -24,6 +24,7 @@ df -B1 / | tail -n1 | awk '{ print $3 }' >> log
 echo 'System: @system@' >> log
 echo -n 'Machine: ' >> log
 curl -H "X-aws-ec2-metadata-token: $(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" -s)" 'http://169.254.169.254/latest/meta-data/instance-type' >> log
+ls -l -R . >> log
 
 # Save the results.
 # Prepare the database as follows:

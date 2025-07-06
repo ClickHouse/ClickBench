@@ -31,7 +31,8 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 pigz -d -f hits.tsv.gz
 chmod 777 ~ hits.tsv
 
-./query.expect "COPY INTO hits FROM '$(pwd)/hits.tsv' USING DELIMITERS '\t'"
+echo -n "Load time: "
+command time -f '%e' ./query.expect "COPY INTO hits FROM '$(pwd)/hits.tsv' USING DELIMITERS '\t'"
 
 # 99997497 affected rows
 # clk: 15:39 min
