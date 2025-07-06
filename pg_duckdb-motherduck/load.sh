@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 CONNECTION=postgres://postgres:duckdb@localhost:5432/postgres
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 sudo apt-get update -y
 sudo apt-get install -y docker.io postgresql-client

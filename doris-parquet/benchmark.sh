@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 # This benchmark should run on Ubuntu 22.04
 
