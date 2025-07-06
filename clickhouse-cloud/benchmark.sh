@@ -12,7 +12,7 @@
 clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure < create.sql
 
 clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --time --query "
-  INSERT INTO hits SELECT * FROM url('https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_*.parquet')
+  INSERT INTO hits SELECT * FROM url('https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{0..99}.parquet')
 "
 
 # 343.455
