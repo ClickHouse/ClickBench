@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PARADEDB_VERSION=0.8.4
+PARADEDB_VERSION=latest
 
 cleanup() {
   echo "Done, goodbye!"
