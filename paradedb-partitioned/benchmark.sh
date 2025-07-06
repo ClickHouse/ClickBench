@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PARADEDB_VERSION=0.8.4
+PARADEDB_VERSION=latest
 
 cleanup() {
   echo "Done, goodbye!"
@@ -24,11 +24,6 @@ sudo docker run \
   -p 5432:5432 \
   -d \
   paradedb/paradedb:$PARADEDB_VERSION
-
-echo ""
-echo "Waiting for ParadeDB to start..."
-sleep 10
-echo "ParadeDB is ready!"
 
 echo ""
 echo "Downloading ClickBench dataset..."
