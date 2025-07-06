@@ -14,5 +14,5 @@ for try_num in range(3):
     start = timeit.default_timer()
     results = con.sql(query).fetchall()
     end = timeit.default_timer()
-    print(end - start)
+    print(round(end - start, 3))
     del results

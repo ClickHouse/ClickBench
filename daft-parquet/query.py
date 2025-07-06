@@ -115,7 +115,7 @@ def run_single_query(query, i):
         if "extra_api" in query:
             result = query["extra_api"](result)
 
-        run_time = timeit.default_timer() - start
+        run_time = round(timeit.default_timer() - start, 3)
 
         return run_time
     except Exception as e:

@@ -19,7 +19,7 @@ start = timeit.default_timer()
 con.execute(open("create.sql").read())
 con.execute("COPY hits FROM 'hits.csv';")
 end = timeit.default_timer()
-print(end - start)
+print(round(end - start, 3))
 
 with open('queries.sql', 'r') as file:
     for query in file:
@@ -29,5 +29,5 @@ with open('queries.sql', 'r') as file:
             start = timeit.default_timer()
             results = con.sql(query).fetchall()
             end = timeit.default_timer()
-            print(end - start)
+            print(round(end - start, 3))
             del results

@@ -21,7 +21,7 @@ curl -X GET -H 'Content-Type: application/json' --silent --show-error --user "${
 | ch --input-format JSONEachRow --query "SELECT id FROM table WHERE startsWith(name, '${NAME_PREFIX}')" \
 | while read -r OLD_SERVICE_ID
 do
-    echp "Found an old service, ${OLD_SERVICE_ID}. Stopping it."
+    echo "Found an old service, ${OLD_SERVICE_ID}. Stopping it."
     curl -X PATCH -H 'Content-Type: application/json' -d '{"command": "stop"}' --silent --show-error --user $KEY_ID:$KEY_SECRET "https://api.clickhouse.cloud/v1/organizations/${ORGANIZATION}/services/${OLD_SERVICE_ID}/state" | jq
     echo "Waiting for the service to stop"
 

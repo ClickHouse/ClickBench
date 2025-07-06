@@ -12,7 +12,6 @@ with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU) as hype
             start = timeit.default_timer()
             try:
                 connection.execute_list_query(query)
-                print(timeit.default_timer() - start)
+                print(round(timeit.default_timer() - start, 3))
             except HyperException:
                 print("null")
-
