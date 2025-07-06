@@ -4,7 +4,8 @@ sudo apt-get update -y
 sudo apt-get install -y docker.io
 sudo apt-get install -y postgresql-client
 
-sudo docker run -d --name citus -p 5432:5432 -e POSTGRES_PASSWORD=mypass citusdata/citus:11.0
+export PGPASSWORD=mypass
+sudo docker run -d --name citus -p 5432:5432 -e POSTGRES_PASSWORD=$PGPASSWORD citusdata/citus:11.0
 
 sudo apt-get install -y pigz
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
@@ -13,10 +14,10 @@ pigz -d -f hits.tsv.gz
 echo "*:*:*:*:mypass" > .pgpass
 chmod 400 .pgpass
 
-psql -U postgres -h localhost -d postgres --no-password -t -c 'CREATE DATABASE test'
-psql -U postgres -h localhost -d postgres --no-password test -t < create.sql
+psql -U postgres -h localhost -d postgres -t -c 'CREATE DATABASE test'
+psql -U postgres -h localhost -d postgres test -t < create.sql
 echo -n "Load time: "
-command time -f '%e' psql -U postgres -h localhost -d postgres --no-password test -t -c "\\copy hits FROM 'hits.tsv'"
+command time -f '%e' psql -U postgres -h localhost -d postgres test -t -c "\\copy hits FROM 'hits.tsv'"
 
 # COPY 99997497
 # Time: 1579203.482 ms (26:19.203)
