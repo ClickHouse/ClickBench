@@ -468,9 +468,14 @@ def run_timings(lf: pl.LazyFrame) -> None:
 data_size = os.path.getsize("hits.parquet")
 
 # Run from Parquet
+start = timeit.default_timer()
 lf = pl.scan_parquet("hits.parquet").with_columns(
     (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
     pl.col("EventDate").cast(pl.Date),
 )
+end = timeit.default_timer()
+load_time = round(end - start, 3)
+print(f"Load time: {load_time}")
+
 print("run parquet queries")
 run_timings(lf)

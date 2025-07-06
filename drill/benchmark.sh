@@ -11,3 +11,4 @@ cat log.txt | grep -P '\([\d\.]+ seconds\)|Errors' | sed -r -e 's/Errors:/null/;
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 
 echo "Data size: $(du -b hits.parquet)"
+echo "Load time: 0"

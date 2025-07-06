@@ -83,3 +83,6 @@ cd -
 mysql -h127.1 -P9030 -uroot -vvv < create.sql
 ./run.sh 2>&1 | tee run.log | sed -r -e 's/^.+,([0-9\.]+,[0-9\.]+,[0-9\.]+)$/[\1],/'
 date
+
+echo "Load time: 0"
+echo "Data size: $(du -bcs hits*.parquet | grep total)"

@@ -8,7 +8,8 @@ import json
 start = timeit.default_timer()
 hits = pd.read_parquet("hits.parquet")
 end = timeit.default_timer()
-load_time = end - start
+load_time = round(end - start, 3)
+print(f"Load time: {load_time}")
 
 dataframe_size = hits.memory_usage().sum()
 
@@ -488,7 +489,6 @@ queries = [
     ),
 ]
 
-queries_times = []
 for q in queries:
     times = []
     for _ in range(3):
@@ -496,27 +496,4 @@ for q in queries:
         result = q[2](hits)
         end = timeit.default_timer()
         times.append(round(end - start, 3))
-    queries_times.append(times)
-
-result_json = {
-    "system": "Pandas (DataFrame)",
-    "date": datetime.date.today().strftime("%Y-%m-%d"),
-    "machine": "c6a.metal",
-    "cluster_size": 1,
-    "comment": "",
-    "tags": [
-        "C++",
-        "column-oriented",
-        "embedded",
-        "stateless",
-        "serverless",
-        "dataframe",
-    ],
-    "load_time": 0,
-    "data_size": int(dataframe_size),
-    "result": queries_times,
-}
-
-# write result into results/c6a.metal.json
-with open("results/c6a.metal.json", "w") as f:
-    f.write(json.dumps(result_json, indent=4))
+    print(times)

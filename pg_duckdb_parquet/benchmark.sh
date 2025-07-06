@@ -18,6 +18,7 @@ done
 
 echo -n "Data size: "
 sudo docker exec -i pgduck du -bcs /var/lib/postgresql/data /tmp/hits.parquet | grep total
+echo "Load time: 0"
 
 cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'

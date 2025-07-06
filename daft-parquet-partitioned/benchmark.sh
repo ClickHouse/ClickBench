@@ -23,3 +23,6 @@ seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https:/
 mode=partitioned
 echo "Running $mode mode..."
 ./run.sh $machine_name $mode 2>&1 | tee "daft_log_${mode}.txt"
+
+echo "Load time: 0"
+echo "Data size: $(du -bcs hits*.parquet | grep total)"

@@ -13,3 +13,6 @@ wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compati
 # Run the queries
 
 ./run.sh 2>&1 | tee log.txt
+
+echo "Load time: 0"
+echo "Data size: $(du -bcs hits.parquet)"

@@ -30,3 +30,5 @@ pushd "${script_dir}"
 
 ./run.sh single
 cat results.json
+
+echo "Load time: 0"

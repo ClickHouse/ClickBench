@@ -9,7 +9,8 @@ import chdb
 start = timeit.default_timer()
 hits = pd.read_parquet("hits.parquet")
 end = timeit.default_timer()
-load_time = end - start
+load_time = round(end - start, 3)
+print(f"Load time: {load_time}")
 
 dataframe_size = hits.memory_usage().sum()
 

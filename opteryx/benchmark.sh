@@ -39,3 +39,4 @@ fi
 deactivate
 
 echo "Data size: $(du -b hits/*.parquet)"
+echo "Load time: 0"

@@ -15,5 +15,7 @@ if [ ! -f hits_0.parquet ]; then
 fi
 
 ./run.sh | tee log.txt
+echo "Data size: $(du -bcs hits*.parquet | grep total)"
+echo "Load time: 0"
 
 cat log.txt | awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'

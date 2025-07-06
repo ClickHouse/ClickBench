@@ -14,3 +14,4 @@ cat log.txt |
   awk '{ if ($1 == "null") { skip = 1 } else { if (i % 3 == 0) { printf "[" }; printf skip ? "null" : $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; skip = 0; } }'
 
 echo "Data size: $(du -b hits.parquet)"
+echo "Load time: 0"
