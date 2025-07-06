@@ -15,7 +15,11 @@ sudo monetdbd create /var/lib/monetdb
 sudo monetdbd start /var/lib/monetdb
 sudo usermod -a -G monetdb $USER
 
-sudo monetdb create test
+for _ in {1..300}
+do
+  sudo monetdb create test && break
+  sleep 1
+done
 sudo monetdb release test
 
 sudo apt-get install -y expect
