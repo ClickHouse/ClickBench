@@ -17,7 +17,7 @@ def main():
         start = timeit.default_timer()
         cur._cursor.execute(query)
         end = timeit.default_timer()
-        print(end - start)
+        print(round(end - start, 3))
 
     cur.close()
     con.close()

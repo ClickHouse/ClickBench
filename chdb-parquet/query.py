@@ -12,6 +12,6 @@ for try_num in range(3):
     start = timeit.default_timer()
     conn.query(query, "Null")
     end = timeit.default_timer()
-    print(end - start)
+    print(round(end - start, 3))
 
 conn.close()

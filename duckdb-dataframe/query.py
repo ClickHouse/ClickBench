@@ -36,7 +36,7 @@ for q in queries:
         start = timeit.default_timer()
         result = conn.execute(q).fetchall()
         end = timeit.default_timer()
-        times.append(end - start)
+        times.append(round(end - start, 3))
     queries_times.append(times)
 
 result_json = {

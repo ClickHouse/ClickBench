@@ -43,7 +43,7 @@ for q in queries:
         start = timeit.default_timer()
         result = conn.query(q, "Null")
         end = timeit.default_timer()
-        times.append(end - start)
+        times.append(round(end - start, 3))
     print(f"Q{i}: ", times)
     queries_times.append(times)
 

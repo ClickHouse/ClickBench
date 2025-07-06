@@ -462,7 +462,7 @@ def run_timings(lf: pl.LazyFrame) -> None:
             if result is None:
                 times.append(None)
             else:
-                times.append(end - start)
+                times.append(round(end - start, 3))
         print(times)
 
 data_size = os.path.getsize("hits.parquet")

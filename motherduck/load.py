@@ -16,7 +16,7 @@ print("Will load the data")
 start = timeit.default_timer()
 con.execute(open("create.sql").read())
 file = '''https://datasets.clickhouse.com/hits_compatible/hits.parquet'''
-# The parquet file doen't have the timestamps as timestamps, so we 
+# The parquet file doen't have the timestamps as timestamps, so we
 # need to coerce them into proper timestamps.
 con.execute(f"""
     INSERT INTO hits 
@@ -29,7 +29,7 @@ con.execute(f"""
     FROM read_parquet('{file}', binary_as_string=True)
      """)
 end = timeit.default_timer()
-print(end - start)
+print(round(end - start, 3))
 
 # Print the database size.
 print(con.execute("""
