@@ -2,6 +2,8 @@
 
 sudo apt-get update -y
 sudo apt-get install -y python3-pip
+python3 -m venv myenv
+source myenv/bin/activate
 pip install tableauhyperapi
 
 sudo apt-get install -y pigz

@@ -14,6 +14,8 @@ esac
 # Install
 sudo apt-get update -y
 sudo apt-get install -y python3-pip
+python3 -m venv myenv
+source myenv/bin/activate
 pip install pandas
 pip install packaging
 pip install daft==0.4.13

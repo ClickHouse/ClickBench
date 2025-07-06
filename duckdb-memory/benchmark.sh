@@ -4,7 +4,9 @@
 
 sudo apt-get update -y
 sudo apt-get install -y python3-pip
-pip install duckdb==1.1.3 psutil
+python3 -m venv myenv
+source myenv/bin/activate
+pip install duckdb psutil
 
 # Load the data
 

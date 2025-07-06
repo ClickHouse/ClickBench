@@ -69,7 +69,9 @@ elif [[ $1 == 'db-install' ]]; then
 	yum install https://cdn.amazonlinux.com/2/core/2.0/x86_64/6b0225ccc542f3834c95733dcf321ab9f1e77e6ca6817469771a8af7c49efe6c/../../../../../blobstore/4846e71174e99f1b7f0985aa01631de003633d3a5f1a950812323c175214ae16/xerces-c-3.1.1-10.amzn2.x86_64.rpm
 	yum install 	https://cdn.amazonlinux.com/2/core/2.0/x86_64/6b0225ccc542f3834c95733dcf321ab9f1e77e6ca6817469771a8af7c49efe6c/../../../../../blobstore/53208ffe95cd1e38bba94984661e79134b3cc1b039922e828c40df7214ecaee8/xerces-c-devel-3.1.1-10.amzn2.x86_64.rpm
 
-	pip install PygreSQL psutil
+	python3 -m venv myenv
+  source myenv/bin/activate
+  pip install PygreSQL psutil
 	if [[ $2 != 'no_dl' ]]; then wget --continue --progress=dot:giga https://github.com/cloudberrydb/cloudberrydb/archive/refs/tags/1.5.3.tar.gz; fi
 	tar -xzf 1.5.3.tar.gz
 	cd cloudberrydb-1.5.3/
