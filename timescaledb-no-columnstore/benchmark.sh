@@ -24,8 +24,8 @@ chmod 777 hits.tsv
 
 #import
 sudo -u postgres psql nocolumnstore < create.sql
-sudo -u postgres psql nocolumnstore -c "SELECT create_hypertable('hits', 'eventtime', chunk_time_interval => interval '3 day')"
-sudo -u postgres psql nocolumnstore -c "CREATE INDEX ix_counterid ON hits (counterid)"
+sudo -u postgres psql nocolumnstore -q -c "SELECT create_hypertable('hits', 'eventtime', chunk_time_interval => interval '3 day')"
+sudo -u postgres psql nocolumnstore -q -c "CREATE INDEX ix_counterid ON hits (counterid)"
 sudo -u postgres psql -c "ALTER DATABASE nocolumnstore SET work_mem TO '1GB';"
 sudo -u postgres psql -c "ALTER DATABASE nocolumnstore SET min_parallel_table_scan_size TO '0';"
 

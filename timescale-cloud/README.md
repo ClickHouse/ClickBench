@@ -19,7 +19,7 @@
 
 1. Find the datasize:
    ```bash
-   psql "$CONNECTION_STRING" -c "SELECT hypertable_size('hits');"    
+   psql "$CONNECTION_STRING" -q -c "SELECT hypertable_size('hits');"
    ```
 
 1. Run the and benchmark the queries:

@@ -39,12 +39,12 @@ command time -f '%e' sudo -u postgres psql test -t -c "\\copy hits FROM 'hits.ts
 # TimescaleDB benchmark wihout compression is available in timescaledb no columnstore directory
 
 echo -n "Load time: "
-command time -f '%e' sudo -u postgres psql test -c "SELECT compress_chunk(i, if_not_compressed => true) FROM show_chunks('hits') i"
+command time -f '%e' sudo -u postgres psql test -q -c "SELECT compress_chunk(i, if_not_compressed => true) FROM show_chunks('hits') i"
 echo -n "Load time: "
-command time -f '%e' sudo -u postgres psql test -t -c "vacuum freeze analyze hits;"
+command time -f '%e' sudo -u postgres psql test -q -t -c "vacuum freeze analyze hits;"
 
 echo -n "Data size: "
-sudo -u postgres psql test -c "\t" -c "SELECT hypertable_size('hits');"
+sudo -u postgres psql test -q -c "\t" -c "SELECT hypertable_size('hits');"
 
 ./run.sh 2>&1 | tee log.txt
 
