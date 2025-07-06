@@ -5,7 +5,7 @@
 echo "deb https://dev.monetdb.org/downloads/deb/ $(lsb_release -cs) monetdb" | sudo tee /etc/apt/sources.list.d/monetdb.list
 
 sudo wget --output-document=/etc/apt/trusted.gpg.d/monetdb.gpg https://www.monetdb.org/downloads/MonetDB-GPG-KEY.gpg
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y monetdb5-sql monetdb-client dos2unix
 
 sudo systemctl enable monetdbd

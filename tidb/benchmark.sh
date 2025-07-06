@@ -21,10 +21,9 @@ if [[ ! $MODE =~ ^(tikv|tikv-tiflash|tiflash)$ ]]; then
    exit 1
 fi
 
-sudo apt-get update
-sudo apt-get upgrade -y
+sudo apt-get update -y
 # TiUp installer depends on curl
-sudo DEBIAN_FRONTEND=noninteractive apt-get install curl mysql-client -y
+sudo DEBIAN_FRONTEND=noninteractive -y apt-get install curl mysql-client
 # Needs to be installed and setup for TiFlash; 2-107 corresponds to America/New_York
 printf "2\n107\n" | sudo DEBIAN_FRONTEND=noninteractive apt-get install --reinstall tzdata
 

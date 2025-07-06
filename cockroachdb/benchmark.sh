@@ -3,10 +3,9 @@
 CRDBVERSION=25.1.6
 CRDBDATADIR=/var/lib/cockroach-data
 
-sudo apt-get update
-sudo apt-get upgrade -y
+sudo apt-get update -y
 # Includes unbuffer utility program
-sudo apt-get install expect-dev -y
+sudo apt-get install -y expect-dev
 
 wget --continue --progress=dot:giga https://binaries.cockroachdb.com/cockroach-v$CRDBVERSION.linux-amd64.tgz
 tar -xvzf cockroach-v$CRDBVERSION.linux-amd64.tgz

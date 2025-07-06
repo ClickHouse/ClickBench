@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Install
-sudo apt-get update
-sudo apt-get install ninja-build cmake build-essential make ccache pip clang pkg-config -y
+sudo apt-get update -y
+sudo apt-get install -y ninja-build cmake build-essential make ccache pip clang pkg-config
 
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --no-modify-path
 

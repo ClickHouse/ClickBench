@@ -20,7 +20,7 @@ Find the writer instance endpoint.
 Example: database-1.cluster-cnkeohbxcwr1.eu-central-1.rds.amazonaws.com
 
 ```
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y mysql-client
 ```
 

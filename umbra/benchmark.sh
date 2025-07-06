@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Ubuntu
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y docker.io postgresql-client gzip
 
 # Amazon Linux

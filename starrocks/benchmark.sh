@@ -13,7 +13,7 @@ cd StarRocks-${VERSION}/
 
 # Install dependencies
 sudo apt-get update -y
-sudo apt-get install openjdk-17-jre mariadb-client -y
+sudo apt-get install -y openjdk-17-jre mariadb-client
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH=$JAVA_HOME/bin:$PATH
 

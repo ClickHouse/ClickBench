@@ -3,11 +3,10 @@
 YDBVERSION=2.25.2.0
 YDBBUILD=b359
 
-sudo apt-get update
-sudo apt-get upgrade -y
+sudo apt-get update -y
 
 # Needed dependencies
-sudo apt-get install python3 locales -y
+sudo apt-get install -y python3 locales
 sudo locale-gen en_US.UTF-8
 # Should now include en_US.utf8
 locale -a

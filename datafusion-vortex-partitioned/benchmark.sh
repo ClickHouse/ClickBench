@@ -9,8 +9,8 @@ export HOME=${HOME:=~}
 source ~/.cargo/env
 
 # Install Dependencies
-sudo apt-get update
-sudo apt-get install --yes gcc jq build-essential
+sudo apt-get update -y
+sudo apt-get install -y gcc jq build-essential
 
 # Install Vortex from latest release main branch
 git clone https://github.com/spiraldb/vortex.git || true
