@@ -3,6 +3,7 @@
 echo "Install Rust"
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
 bash rust-init.sh -y
+export HOME=${HOME:=~}
 source ~/.cargo/env
 
 echo "Install Dependencies"

@@ -41,7 +41,7 @@ command time -f '%e' ./apache-pinot-$PINOT_VERSION-bin/bin/pinot-admin.sh Launch
 # Run the queries
 ./run.sh
 
-# stop Druid services
+# stop Pinot services
 kill %1
 
 echo -n "Data size: "
