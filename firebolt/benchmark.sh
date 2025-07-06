@@ -7,7 +7,7 @@ mkdir -p data
 wget -P data --continue --progress=dot:giga "https://datasets.clickhouse.com/hits_compatible/hits.parquet"
 
 # Start the container
-sudo apt-get install -y docker.io
+sudo apt-get install -y docker.io jq
 sudo docker run -dit --name firebolt-core --rm \
     --ulimit memlock=8589934592:8589934592 \
     --security-opt seccomp=unconfined \
@@ -17,7 +17,7 @@ sudo docker run -dit --name firebolt-core --rm \
     ghcr.io/firebolt-db/firebolt-core:preview-rc
 
 # Wait until Firebolt is ready
-while true
+for _ in {1..600}
 do
     curl -s "http://localhost:3473/" --data-binary "SELECT 'Firebolt is ready';" > /dev/null && break
     sleep 1
