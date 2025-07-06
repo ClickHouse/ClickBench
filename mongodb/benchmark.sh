@@ -17,6 +17,12 @@ sudo apt-get install -y mongodb-org
 sudo systemctl start mongod
 sudo systemctl status mongod
 
+for _ in {1..300}
+do
+  mongosh --quiet --eval "db.runCommand('ping').ok" && break
+  sleep 1
+done
+
 #################################
 # set params `internalQueryPlannerGenerateCoveredWholeIndexScans` to true because we know that collscan is
 # always bad. Decision about enabling should be made if collection data couldn't fit to RAM.
