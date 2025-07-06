@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y python3-pip
 
 PIP_MAJOR=$(echo $(pip --version | awk '{print $2}') | cut -d. -f1)

@@ -2,7 +2,7 @@
 
 # Install
 
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y python3-pip
 pip install duckdb psutil
 

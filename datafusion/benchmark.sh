@@ -7,8 +7,8 @@ export HOME=${HOME:=~}
 source ~/.cargo/env
 
 echo "Install Dependencies"
-sudo apt-get update
-sudo apt-get install --yes gcc
+sudo apt-get update -y
+sudo apt-get install -y gcc
 
 echo "Install DataFusion main branch"
 git clone https://github.com/apache/arrow-datafusion.git

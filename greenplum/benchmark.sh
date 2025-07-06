@@ -5,11 +5,11 @@
 
 echo "This script must be run from gpadmin user. Press enter to continue."
 read
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y software-properties-common
 sudo add-apt-repository ppa:greenplum/db
-sudo apt-get update
-sudo apt-get install greenplum-db-6
+sudo apt-get update -y
+sudo apt-get install -y greenplum-db-6
 sudo rm -rf /gpmaster /gpdata*
 ssh-keygen -t rsa -b 4096
 touch /home/gpadmin/.ssh/authorized_keys

@@ -2,12 +2,12 @@
 
 # Install
 export DEBIAN_FRONTEND=noninteractive
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y gnupg postgresql-common apt-transport-https lsb-release wget
 sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
 sudo bash -c 'echo "deb https://packagecloud.io/timescale/timescaledb/ubuntu/ $(lsb_release -c -s) main" > /etc/apt/sources.list.d/timescaledb.list'
 wget --quiet -O - https://packagecloud.io/timescale/timescaledb/gpgkey | sudo apt-key add -
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y timescaledb-2-postgresql-17 postgresql-client-17
 sudo timescaledb-tune -yes
 

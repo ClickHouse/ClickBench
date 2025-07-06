@@ -4,7 +4,7 @@
 
 BASE_URL='https://raw.githubusercontent.com/ClickHouse/ClickBench/main/hardware/'
 
-apt-get update
+apt-get update -y
 apt-get install -y curl
 
 wget $BASE_URL/hardware.sh

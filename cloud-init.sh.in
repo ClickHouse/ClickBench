@@ -10,7 +10,8 @@ aws ec2 run-instances --count 1 --image-id ami-0d1ddd83282187d18 --instance-type
  --user-data file://cloud-init.sh
 ///
 
-apt-get update
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
 apt-get install -y wget curl git
 
 git clone --depth 1 https://github.com/ClickHouse/ClickBench.git

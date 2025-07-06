@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Update package lists
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y software-properties-common
 sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt-get update
+sudo apt-get update -y
 
 # Install required packages
 sudo apt-get install -y python3.11 python3.11-venv git wget build-essential python3.11-dev

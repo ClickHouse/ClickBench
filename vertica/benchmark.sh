@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y docker.io
 
 sudo docker run -p 5433:5433 -p 5444:5444 --volume $(pwd):/workdir --mount type=volume,source=vertica-data,target=/data --name vertica_ce vertica/vertica-ce

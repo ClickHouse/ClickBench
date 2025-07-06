@@ -3,7 +3,7 @@
 HOSTNAME="<tablespace-db-hostname>"
 PASSWORD="<tablespace-db-password>"
 
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y postgresql-client
 
 sudo apt-get install -y pigz

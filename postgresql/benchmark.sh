@@ -5,12 +5,11 @@ set -eux
 PGVERSION=17
 
 # Source: https://wiki.postgresql.org/wiki/Apt
-sudo apt-get update
-sudo apt-get install -y postgresql-common
+sudo apt-get update -y
+sudo apt-get install -y postgresql-common -y
 sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
 
-sudo apt-get update
-sudo apt-get upgrade
+sudo apt-get update -y
 sudo apt-get install -y postgresql-$PGVERSION
 
 memory=$(awk '/MemTotal/ {print $2}' /proc/meminfo)

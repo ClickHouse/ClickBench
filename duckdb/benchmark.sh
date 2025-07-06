@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Install
-sudo apt-get update
-sudo apt-get install ninja-build cmake build-essential make ccache pip clang -y
+sudo apt-get update -y
+sudo apt-get install -y ninja-build cmake build-essential make ccache pip clang
 
 export CC=clang
 export CXX=clang++

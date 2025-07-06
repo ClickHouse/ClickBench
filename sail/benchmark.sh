@@ -6,10 +6,10 @@ export DEBIAN_FRONTEND=noninteractive
 export TZ=Etc/UTC
 sudo ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y software-properties-common
 sudo add-apt-repository ppa:deadsnakes/ppa -y
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y python3.11 python3.11-dev python3.11-venv python3.11-distutils
 
 sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \

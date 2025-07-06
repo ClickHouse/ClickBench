@@ -1,7 +1,7 @@
 #!/bin/bash
 
-sudo apt-get update
-sudo apt-get install openjdk-11-jdk jq -y
+sudo apt-get update -y
+sudo apt-get install -y openjdk-11-jdk jq
 sudo update-alternatives --config java
 
 # Install

@@ -2,7 +2,7 @@
 
 set -ex
 
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y docker.io postgresql-client
 
 wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet

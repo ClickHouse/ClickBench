@@ -19,7 +19,7 @@ if [ -z "${MOTHERDUCK_TOKEN}" ]; then
     exit 1
 fi
 
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y docker.io postgresql-client
 sudo docker run -d --name pgduck --network=host -e POSTGRES_PASSWORD=duckdb -e MOTHERDUCK_TOKEN=${MOTHERDUCK_TOKEN} pgduckdb/pgduckdb:17-v0.3.1 -c duckdb.motherduck_enabled=true
 

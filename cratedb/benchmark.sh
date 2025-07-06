@@ -12,7 +12,7 @@ else
 fi;
 
 # Install prerequisites.
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y apt-transport-https apt-utils curl gnupg lsb-release
 
 # Import the public GPG key for verifying the package signatures.
@@ -23,7 +23,7 @@ curl -sS https://cdn.crate.io/downloads/debian/DEB-GPG-KEY-crate | \
 echo "deb https://cdn.crate.io/downloads/debian/testing/ default main" | \
     sudo tee /etc/apt/sources.list.d/crate-stable.list
 
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y postgresql-client crate
 
 sudo systemctl start crate
