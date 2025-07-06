@@ -64,7 +64,7 @@ elif [[ $1 == 'db-install' ]]; then
 	echo "Database installation"
 	yum install -y go
 	export GOPROXY=https://goproxy.io,direct
-	yum -y install R apr apr-devel apr-util automake autoconf bash bison bison-devel bzip2 bzip2-devel flex flex-devel gcc gcc-c++ git gdb iproute krb5-devel less libevent libevent-devel libxml2 libxml2-devel libyaml libzstd-devel libzstd make openldap openssh openssh-clients openssh-server openssl openssl-devel openssl-libs perl python3-devel readline readline-devel rsync sed sudo tar vim wget which zip zlib python3-pip python3-psycopg2 postgresql15 libpq-devel psutils
+	yum -y install R apr apr-devel apr-util automake autoconf bash bison bison-devel bzip2 bzip2-devel flex flex-devel gcc gcc-c++ git gdb iproute krb5-devel less libevent libevent-devel libxml2 libxml2-devel libyaml libzstd-devel libzstd make openldap openssh openssh-clients openssh-server openssl openssl-devel openssl-libs perl python3-devel readline readline-devel rsync sed sudo tar vim wget which zip zlib python3-pip python3-venv python3-psycopg2 postgresql15 libpq-devel psutils
 	yum install curl libcurl-devel --allowerasing
 	yum install https://cdn.amazonlinux.com/2/core/2.0/x86_64/6b0225ccc542f3834c95733dcf321ab9f1e77e6ca6817469771a8af7c49efe6c/../../../../../blobstore/4846e71174e99f1b7f0985aa01631de003633d3a5f1a950812323c175214ae16/xerces-c-3.1.1-10.amzn2.x86_64.rpm
 	yum install 	https://cdn.amazonlinux.com/2/core/2.0/x86_64/6b0225ccc542f3834c95733dcf321ab9f1e77e6ca6817469771a8af7c49efe6c/../../../../../blobstore/53208ffe95cd1e38bba94984661e79134b3cc1b039922e828c40df7214ecaee8/xerces-c-devel-3.1.1-10.amzn2.x86_64.rpm

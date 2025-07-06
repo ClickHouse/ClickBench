@@ -41,7 +41,7 @@ for try_num in range(3):
         if try_num == 0:
             print(res)
         end = timeit.default_timer()
-        print("Time: ", end - start)
+        print("Time: ", round(end - start, 3))
     except Exception as e:
         print(e);
         print("Failure!")
