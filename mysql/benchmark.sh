@@ -16,7 +16,7 @@ pigz -d -f hits.tsv.gz
 sudo mysql -e "CREATE DATABASE test"
 sudo mysql test < create.sql
 echo -n "Load time: "
-command time -f '%e' sudo mysql test -e "LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits"
+command time -f '%e' sudo mysql test -e "SET sql_log_bin = 0; LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits"
 
 # 2:37:52 elapsed
 
