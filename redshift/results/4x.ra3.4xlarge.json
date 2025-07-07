@@ -3,10 +3,11 @@
   "date": "2022-07-25",
   "machine": "ra3.4xlarge",
   "cluster_size": 4,
+  "proprietary": "yes",
   "tuned": "no",
   "comment": "",
 
-  "tags": ["managed", "column-oriented", "proprietary", "aws"],
+  "tags": ["managed", "column-oriented", "aws"],
 
   "load_time": 1904,
   "data_size": 22313697280,

@@ -3,10 +3,11 @@
     "date": "2022-07-01",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C", "embedded", "row-oriented", "open-source"],
+    "tags": ["C", "embedded", "row-oriented"],
 
     "load_time": 2608,
     "data_size": 75776589824,

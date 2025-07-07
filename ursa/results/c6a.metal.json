@@ -3,9 +3,10 @@
   "date": "2025-07-04",
   "machine": "c6a.metal",
   "cluster_size": 1,
+  "proprietary": "yes",
   "tuned": "no",
   "comment": "",
-  "tags": ["C++", "column-oriented", "ClickHouse derivative", "proprietary"],
+  "tags": ["C++", "column-oriented", "ClickHouse derivative"],
   "load_time": 153.331,
   "data_size": 15565240886,
   "result": [

@@ -3,8 +3,9 @@
     "date": "2025-07-02",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "yes",
     "tuned": "no",
-    "tags": ["Go", "search", "proprietary"],
+    "tags": ["Go", "search"],
     "load_time": 5070.66,
     "data_size": 28572908000,
     "result": [

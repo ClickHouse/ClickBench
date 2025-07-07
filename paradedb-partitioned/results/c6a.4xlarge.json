@@ -3,9 +3,10 @@
   "date": "2024-07-13",
   "machine": "c6a.4xlarge",
   "cluster_size": 1,
+    "proprietary": "no",
   "tuned": "no",
   "comment": "",
-  "tags": ["Rust", "column-oriented", "search", "PostgreSQL compatible", "open-source"],
+  "tags": ["Rust", "column-oriented", "search", "PostgreSQL compatible"],
   "load_time": 0,
   "data_size": 14779976446,
 

@@ -4,8 +4,9 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "comment": "v8.5.1",
+    "proprietary": "no",
     "tuned": "no",
-    "tags": ["Rust", "row-oriented", "MySQL compatible", "open-source"],
+    "tags": ["Rust", "row-oriented", "MySQL compatible"],
     "load_time": 4069,
     "data_size": 61598458152,
     "result": [

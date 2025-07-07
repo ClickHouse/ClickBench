@@ -3,10 +3,11 @@
     "date": "2022-07-01",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "Previous name: InfiniDB.",
 
-    "tags": ["C++", "column-oriented", "MySQL compatible", "open-source"],
+    "tags": ["C++", "column-oriented", "MySQL compatible"],
 
     "load_time": 2507.8,
     "data_size": 19712857022,

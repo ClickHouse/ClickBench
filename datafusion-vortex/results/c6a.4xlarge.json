@@ -3,9 +3,10 @@
     "date": "2025-05-20",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "v47.0.0 (e44330) - Vortex 0.34.0 (4645a2)",
-    "tags": ["Rust", "column-oriented", "embedded", "stateless", "open-source"],
+    "tags": ["Rust", "column-oriented", "embedded", "stateless"],
     "load_time": 0,
     "data_size": 17215640128,
     "result": [

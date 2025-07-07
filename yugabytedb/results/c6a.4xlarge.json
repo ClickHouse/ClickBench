@@ -3,8 +3,9 @@
     "date": "2025-06-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
-    "tags": ["C++", "row-oriented", "PostgreSQL compatible", "open-source"],
+    "tags": ["C++", "row-oriented", "PostgreSQL compatible"],
     "load_time": 4683,
     "data_size": 76883037634,
     "result": [

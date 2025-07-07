@@ -3,9 +3,10 @@
     "date": "2024-11-29",
     "machine": "c6a.metal",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
-    "tags": ["column-oriented", "dataframe", "open-source"],
+    "tags": ["column-oriented", "dataframe"],
     "load_time": 2.3000679460001265,
     "data_size": 14779976446,
     "result": [

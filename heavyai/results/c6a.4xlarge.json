@@ -3,10 +3,11 @@
     "date": "2022-07-01",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "Previous names: OmniSci, mapD. Many queries cannot run due to errors and limitations.",
 
-    "tags": ["C++", "column-oriented", "open-source"],
+    "tags": ["C++", "column-oriented"],
 
     "load_time": 572.633,
     "data_size": 50887437386,

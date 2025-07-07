@@ -3,10 +3,11 @@
     "date": "2023-11-25",
     "machine": "8 vCPU 64GB",
     "cluster_size": "serverless",
+    "proprietary": "yes",
     "tuned": "yes",
     "comment": "",
 
-    "tags": ["C", "column-oriented", "PostgreSQL compatible", "managed", "gcp", "proprietary"],
+    "tags": ["C", "column-oriented", "PostgreSQL compatible", "managed", "gcp"],
 
     "load_time": 0,
     "data_size": 9941379875,

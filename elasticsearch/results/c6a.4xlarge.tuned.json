@@ -3,10 +3,11 @@
     "date": "2022-07-25",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "yes",
     "comment": "Tuned by repeated benchmark to find the optimal Elasticsearch shard number and size for this resource type and workload",
 
-    "tags": ["Java", "search", "open-source"],
+    "tags": ["Java", "search"],
 
     "load_time": 5264.429,
     "data_size": 91680375082,

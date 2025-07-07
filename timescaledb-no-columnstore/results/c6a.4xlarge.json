@@ -2,9 +2,10 @@
   "system": "TimescaleDB (no columnstore)",
   "machine": "c6a.4xlarge",
   "cluster_size": 1,
+  "proprietary": "no",
   "tuned": "no",
   "comment": "",
-  "tags": ["C", "PostgreSQL compatible", "row-oriented", "time-series", "open-source"],
+  "tags": ["C", "PostgreSQL compatible", "row-oriented", "time-series"],
   "load_time": 2633,
   "data_size": 72021778432,
   "result": [

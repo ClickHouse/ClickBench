@@ -3,9 +3,10 @@
     "date": "2024-11-29",
     "machine": "c6a.metal",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
-    "tags": ["column-oriented", "parquet", "open-source"],
+    "tags": ["column-oriented", "parquet"],
     "load_time": null,
     "data_size": 14779976446,
     "result": [

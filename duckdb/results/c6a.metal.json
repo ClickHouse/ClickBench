@@ -3,9 +3,10 @@
     "date": "2025-05-22",
     "machine": "c6a.metal",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
 
-    "tags": ["C++", "column-oriented", "embedded", "open-source"],
+    "tags": ["C++", "column-oriented", "embedded"],
 
     "load_time": 102.28,
     "data_size": 18022150144,

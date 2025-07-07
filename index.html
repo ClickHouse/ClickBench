@@ -384,6 +384,13 @@ const additional_data_size_points = [
         </td>
     </tr>
     <tr>
+        <th>Open source: </th>
+        <td id="selectors_proprietary">
+            <a id="selector-proprietary-yes" class="selector">Yes</a>
+            <a id="selector-proprietary-no" class="selector selector-active">No</a>
+        </td>
+    </tr>
+    <tr>
         <th>Tuned: </th>
         <td id="selectors_tuned">
             <a id="selector-tuned-yes" class="selector">No</a>
@@ -443,6 +450,7 @@ let selectors = {
     "type": {},
     "machine": {},
     "cluster_size": {},
+    "proprietary": {"yes": true, "no": false},
     "tuned": {"yes": true, "no": false},
     "metric": "hot",
     "queries": [],
@@ -543,6 +551,28 @@ unique_systems.map(elem => {
     selector.addEventListener('click', e => toggle(e, elem, selectors.cluster_size));
 });
 
+document.getElementById('selector-proprietary-yes').addEventListener('click', e => {
+    selectors.proprietary.yes = !selectors.proprietary.yes;
+    if (selectors.proprietary.yes) {
+        e.target.classList.add('selector-active');
+    } else {
+        e.target.classList.remove('selector-active');
+    }
+    render();
+    updateHistory();
+});
+
+document.getElementById('selector-proprietary-no').addEventListener('click', e => {
+    selectors.proprietary.no = !selectors.proprietary.no;
+    if (selectors.proprietary.no) {
+        e.target.classList.add('selector-active');
+    } else {
+        e.target.classList.remove('selector-active');
+    }
+    render();
+    updateHistory();
+});
+
 document.getElementById('selector-tuned-yes').addEventListener('click', e => {
     selectors.tuned.yes = !selectors.tuned.yes;
     if (selectors.tuned.yes) {
@@ -592,6 +622,9 @@ function updateSelectors() {
         elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
 
     [...document.querySelectorAll('.query-checkbox')].map((elem, i) => { elem.checked = selectors.queries[i] });
+
+    document.getElementById('selector-proprietary-yes').className = selectors.proprietary.yes ? 'selector selector-active' : 'selector';
+    document.getElementById('selector-proprietary-no').className = selectors.proprietary.no ? 'selector selector-active' : 'selector';
 
     document.getElementById('selector-tuned-yes').className = selectors.tuned.yes ? 'selector selector-active' : 'selector';
     document.getElementById('selector-tuned-no').className = selectors.tuned.no ? 'selector selector-active' : 'selector';
@@ -832,10 +865,9 @@ function render() {
         selectors.machine[elem.machine] &&
         selectors.cluster_size[elem.cluster_size] &&
         elem.tags.filter(type => selectors.type[type]).length > 0 &&
-        (
-            (selectors.tuned.yes && elem.tuned === "no") ||
-            (selectors.tuned.no && elem.tuned === "yes")
-        ));
+        ((selectors.tuned.yes && elem.tuned === "no") || (selectors.tuned.no && elem.tuned === "yes")) &&
+        ((selectors.proprietary.yes && elem.proprietary === "no") || (selectors.proprietary.no && elem.proprietary === "yes"))
+        );
 
     if (selectors.metric == 'size') {
         filtered_data = filtered_data.filter(elem => elem.data_size);
@@ -1008,6 +1040,9 @@ function updateHistory() {
 window.onpopstate = function(event) {
     if (!event.state) { return; }
     selectors = event.state;
+    if (!selectors.proprietary) {
+        selectors.proprietary = {"yes": true, "no": false};
+    }
     if (!selectors.tuned) {
         selectors.tuned = {"yes": true, "no": false};
     }
@@ -1018,6 +1053,9 @@ window.onpopstate = function(event) {
 if (window.location.hash) {
     try {
         selectors = JSON.parse(fromBase64(window.location.hash.substring(1)));
+        if (!selectors.proprietary) {
+            selectors.proprietary = {"yes": true, "no": false};
+        }
         if (!selectors.tuned) {
             selectors.tuned = {"yes": true, "no": false};
         }

@@ -3,9 +3,10 @@
     "date": "2023-02-26",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
-    "tags": ["Rust", "column-oriented", "ClickHouse derivative", "open-source"],
+    "tags": ["Rust", "column-oriented", "ClickHouse derivative"],
     "load_time": 357,
     "data_size": 20922561953,
     "result": [

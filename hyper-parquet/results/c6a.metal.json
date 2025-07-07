@@ -3,9 +3,10 @@
     "date": "2025-05-03",
     "machine": "c6a.metal",
     "cluster_size": 1,
+    "proprietary": "yes",
     "tuned": "no",
 
-    "tags": ["C++", "column-oriented", "proprietary"],
+    "tags": ["C++", "column-oriented"],
 
     "load_time": 0,
     "data_size": 14737666736,

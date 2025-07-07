@@ -4,6 +4,7 @@
     "date": "2025-07-07",
     "machine": "64GiB, 3 replica(s)",
     "cluster_size": 3,
+    "proprietary": "yes",
     "tuned": "no",
     "comment": "",
 

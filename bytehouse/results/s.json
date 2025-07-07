@@ -3,9 +3,10 @@
     "date": "2022-07-27",
     "machine": "S",
     "cluster_size": 2,
+    "proprietary": "yes",
     "tuned": "no",
 
-    "tags": ["managed", "column-oriented", "ClickHouse derivative", "C++", "proprietary"],
+    "tags": ["managed", "column-oriented", "ClickHouse derivative", "C++"],
 
     "load_time": 745,
     "data_size": 27190000000,

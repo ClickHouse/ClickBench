@@ -3,10 +3,11 @@
     "date": "2022-07-01",
     "machine": "serverless",
     "cluster_size": "serverless",
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["stateless", "managed", "Java", "column-oriented", "proprietary", "aws"],
+    "tags": ["stateless", "managed", "Java", "column-oriented", "aws"],
 
     "load_time": 0,
     "data_size": 13800000000,

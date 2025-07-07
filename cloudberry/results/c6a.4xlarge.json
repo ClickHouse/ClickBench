@@ -3,10 +3,11 @@
     "date": "2024-06-06",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "14 segments, ORCA enabled",
 
-    "tags": ["C", "column-oriented", "PostgreSQL compatible", "open-source"],
+    "tags": ["C", "column-oriented", "PostgreSQL compatible"],
 
     "load_time": 601,
     "data_size": 36000000000,

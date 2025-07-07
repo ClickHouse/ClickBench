@@ -4,8 +4,9 @@
     "machine": "c6a.metal",
     "cluster_size": 1,
     "comment": "",
+    "proprietary": "no",
     "tuned": "no",
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "open-source"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative"],
     "load_time": 123.351,
     "data_size": 14468584382,
     "result": [

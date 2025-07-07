@@ -3,9 +3,10 @@
     "date": "2025-05-25",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "yes",
     "tuned": "no",
     "comment": "",
-    "tags": ["Rust", "serverless", "proprietary"],
+    "tags": ["Rust", "serverless"],
     "load_time": 0,
     "data_size": 14779976446,
     "result": [

@@ -3,9 +3,10 @@
     "date": "2024-03-07",
     "machine": "Jumbo",
     "cluster_size": "serverless",
+    "proprietary": "yes",
     "tuned": "no",
 
-    "tags": ["managed", "column-oriented", "PostgreSQL compatible", "serverless", "proprietary"],
+    "tags": ["managed", "column-oriented", "PostgreSQL compatible", "serverless"],
 
     "load_time": 118.616,
     "data_size": 26306674688,

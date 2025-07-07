@@ -17,6 +17,7 @@ do
     "date": "'$(date +%F)'",
     "machine": "'$MEMORY'GiB, '$REPLICAS' replica(s)",
     "cluster_size": '$REPLICAS',
+    "proprietary": "yes",
     "tuned": "no",
     "comment": "",
 

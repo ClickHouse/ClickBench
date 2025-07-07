@@ -3,9 +3,10 @@
     "date": "2024-11-25",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
-    "tags": ["Java", "time-series", "open-source"],
+    "tags": ["Java", "time-series"],
     "load_time": 24242,
     "data_size": 72842143269,
     "result": [
