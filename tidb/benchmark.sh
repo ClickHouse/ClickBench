@@ -119,5 +119,5 @@ fi;
 
 grep -P 'rows? in set|Empty set|^ERROR' log.txt |
   sed -r -e 's/^ERROR.*$/null/; s/^.*?\((([0-9.]+) min )?([0-9.]+) sec\).*?$/\2 \3/' |
-  awk '{ if ($2) { print $1 * 60 + $2 } else { print $1 } }' |
+  awk '{ if ($2 != '') { print $1 * 60 + $2 } else { print $1 } }' |
   awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
