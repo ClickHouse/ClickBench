@@ -41,3 +41,5 @@ grep -oP 'Time: \K[\d.]+s|Time: \K\d+ms' log.txt |
   sed -E 's/([0-9]+(\.[0-9]+)?)s/\1/; s/([0-9]+)ms/\1\/1000/' |
   awk '{if ($0 ~ /\//) {print $1/1000} else {print $0}}' |
   awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+
+sudo killall cockroach
