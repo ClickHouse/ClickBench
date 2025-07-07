@@ -3,9 +3,10 @@
     "date": "2025-03-07",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
 
-    "tags": ["column-oriented", "PostgreSQL compatible", "open-source"],
+    "tags": ["column-oriented", "PostgreSQL compatible"],
 
     "load_time": 0,
     "data_size": 14820803219,

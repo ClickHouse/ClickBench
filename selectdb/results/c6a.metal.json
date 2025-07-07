@@ -3,9 +3,10 @@
     "date": "2024-09-19",
     "machine": "c6a.metal",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
-    "tags": ["C++", "column-oriented", "MySQL compatible", "ClickHouse derivative", "open-source"],
+    "tags": ["C++", "column-oriented", "MySQL compatible", "ClickHouse derivative"],
     "load_time": 459,
     "data_size": 17365253189,
     "result": [

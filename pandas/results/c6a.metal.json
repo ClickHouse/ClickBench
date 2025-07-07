@@ -3,9 +3,10 @@
     "date": "2024-09-09",
     "machine": "c6a.metal",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
-    "tags": ["C++", "column-oriented", "embedded", "stateless", "serverless", "dataframe", "open-source"],
+    "tags": ["C++", "column-oriented", "embedded", "stateless", "serverless", "dataframe"],
     "load_time": 0,
     "data_size": 46998823718,
     "result": [

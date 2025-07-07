@@ -4,9 +4,10 @@
     "machine": "S",
     "cluster_size": 2,
     "comment": "",
+    "proprietary": "yes",
     "tuned": "no",
 
-    "tags": ["managed", "column-oriented", "proprietary"],
+    "tags": ["managed", "column-oriented"],
 
     "load_time": 2524,
     "data_size": 12300000000,

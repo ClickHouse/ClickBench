@@ -4,10 +4,11 @@
     "date": "2024-09-16",
     "machine": "12 vCPU 48GB",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "open-source"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed"],
 
     "load_time": 0,
     "data_size": 11991598975,

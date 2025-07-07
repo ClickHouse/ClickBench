@@ -3,10 +3,11 @@
     "date": "2025-03-04",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "yes",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["column-oriented", "proprietary"],
+    "tags": ["column-oriented"],
 
     "load_time": 645,
     "data_size": null,

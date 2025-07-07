@@ -4,9 +4,10 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "comment": "",
+    "proprietary": "no",
     "tuned": "no",
 
-    "tags": ["Java", "column-oriented", "embedded", "stateless", "open-source"],
+    "tags": ["Java", "column-oriented", "embedded", "stateless"],
 
     "load_time": 0,
     "data_size": 14737666736,

@@ -3,10 +3,11 @@
     "date": "2022-07-20",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["Java", "search", "open-source"],
+    "tags": ["Java", "search"],
 
     "load_time": 10071.796,
     "data_size": 76633643596,

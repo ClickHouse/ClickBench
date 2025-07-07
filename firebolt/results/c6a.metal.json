@@ -3,8 +3,9 @@
     "date": "2025-06-23",
     "machine": "c6a.metal",
     "cluster_size": 1,
+    "proprietary": "yes",
     "tuned": "no",
-    "tags": ["C++", "column-oriented", "PostgreSQL compatible", "ClickHouse derivative", "proprietary"],
+    "tags": ["C++", "column-oriented", "PostgreSQL compatible", "ClickHouse derivative"],
     "load_time": 189.244161,
     "data_size": 15711137296,
     "result": [

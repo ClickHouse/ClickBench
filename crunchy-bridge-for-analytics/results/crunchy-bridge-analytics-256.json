@@ -3,9 +3,10 @@
     "date": "2024-06-05",
     "machine": "Analytics-256GB",
     "cluster_size": 1,
+    "proprietary": "yes",
     "tuned": "no",
     "comment":"",
-    "tags": ["column-oriented", "PostgreSQL compatible", "managed", "proprietary"],
+    "tags": ["column-oriented", "PostgreSQL compatible", "managed"],
     "load_time": 0,
     "data_size": 14779976446,
 

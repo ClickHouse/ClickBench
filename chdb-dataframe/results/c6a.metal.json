@@ -3,9 +3,10 @@
     "date": "2024-12-12",
     "machine": "c6a.metal",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
-    "tags": ["C++", "column-oriented", "embedded", "stateless", "serverless", "dataframe", "ClickHouse derivative", "open-source"],
+    "tags": ["C++", "column-oriented", "embedded", "stateless", "serverless", "dataframe", "ClickHouse derivative"],
     "load_time": 0,
     "data_size": 46998823722,
     "result": [

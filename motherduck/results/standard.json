@@ -3,9 +3,10 @@
     "date": "2025-03-04",
     "machine": "Standard",
     "cluster_size": 1,
+    "proprietary": "yes",
     "tuned": "no",
 
-    "tags": ["C++", "column-oriented", "serverless", "proprietary", "managed"],
+    "tags": ["C++", "column-oriented", "serverless", "managed"],
 
     "load_time": 76.80,
     "data_size": 23620000000,

@@ -3,10 +3,11 @@
     "date": "2025-03-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C", "row-oriented", "PostgreSQL compatible", "open-source"],
+    "tags": ["C", "row-oriented", "PostgreSQL compatible"],
 
     "load_time": 937,
     "data_size": 106489682778,

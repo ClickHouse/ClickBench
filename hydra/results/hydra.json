@@ -3,8 +3,9 @@
     "date": "2025-03-04",
     "machine": "XL",
     "cluster_size": "serverless",
+    "proprietary": "no",
     "tuned": "no",
-    "tags": ["managed", "PostgreSQL compatible", "column-oriented", "open-source"],
+    "tags": ["managed", "PostgreSQL compatible", "column-oriented"],
     "load_time": 136,
     "data_size": 30816390348,
     "result": [

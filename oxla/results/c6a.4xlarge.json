@@ -3,9 +3,10 @@
     "date": "2025-06-11",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "yes",
     "tuned": "no",
     "comment": "",
-    "tags": ["C", "proprietary"],
+    "tags": ["C"],
     "load_time": 635.603,
     "data_size": 17793214380,
     "result": [

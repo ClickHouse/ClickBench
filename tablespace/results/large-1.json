@@ -3,10 +3,11 @@
   "date": "2024-02-25",
   "machine": "L1 - 16CPU 32GB",
   "cluster_size": 1,
+  "proprietary": "yes",
   "tuned": "no",
   "comment": "",
 
-  "tags": ["Rust", "column-oriented", "PostgreSQL compatible", "managed", "proprietary"],
+  "tags": ["Rust", "column-oriented", "PostgreSQL compatible", "managed"],
 
   "load_time": 13711,
   "data_size": 135469176422,

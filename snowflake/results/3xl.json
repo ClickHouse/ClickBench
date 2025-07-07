@@ -3,10 +3,11 @@
     "date": "2022-07-01",
     "machine": "3XL",
     "cluster_size": 64,
+    "proprietary": "yes",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["managed", "column-oriented", "proprietary"],
+    "tags": ["managed", "column-oriented"],
 
     "load_time": 2524,
     "data_size": 12300000000,

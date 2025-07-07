@@ -3,10 +3,11 @@
     "date": "2025-03-20",
     "machine": "c6a.metal",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "v1.7.5 (6e5242f)",
 
-    "tags": ["Rust", "column-oriented", "parquet", "open-source"],
+    "tags": ["Rust", "column-oriented", "parquet"],
 
     "load_time": 0,
     "data_size": 14018794333,

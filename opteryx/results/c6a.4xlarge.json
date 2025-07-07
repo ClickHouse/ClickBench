@@ -3,9 +3,10 @@
     "date": "2025-03-30",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
 
-    "tags": ["stateless", "column-oriented", "serverless", "embedded", "open-source"],
+    "tags": ["stateless", "column-oriented", "serverless", "embedded"],
 
     "load_time": 0,
     "data_size": 14737666736,

@@ -3,10 +3,11 @@
     "date": "2024-11-11",
     "machine": "serverless",
     "cluster_size": 1,
+    "proprietary": "yes",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "proprietary", "managed"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed"],
 
     "load_time": 0,
     "data_size": null,

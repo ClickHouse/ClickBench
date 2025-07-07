@@ -3,10 +3,11 @@
     "date": "2022-07-01",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C++", "row-oriented", "MySQL compatible", "open-source"],
+    "tags": ["C++", "row-oriented", "MySQL compatible"],
 
     "load_time": 10710,
     "data_size": 90561314816,

@@ -3,10 +3,11 @@
     "date": "2023-03-16",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "For some reason many queries run in almost exactly one hour. Most likely a coincidence. It is installed from Debian packages, which might explain the abysmal performance.",
 
-    "tags": ["C++", "row-oriented", "MySQL compatible", "open-source"],
+    "tags": ["C++", "row-oriented", "MySQL compatible"],
 
     "load_time": 8625,
     "data_size": 104270986073,

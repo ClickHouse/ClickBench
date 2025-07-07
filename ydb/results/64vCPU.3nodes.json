@@ -3,10 +3,11 @@
     "date": "2025-03-25",
     "machine": "64 vCPU 256GB",
     "cluster_size": 3,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["column-oriented", "C++", "ClickHouse derivative", "open-source"],
+    "tags": ["column-oriented", "C++", "ClickHouse derivative"],
 
     "load_time": 978,
     "data_size": 27473988280,

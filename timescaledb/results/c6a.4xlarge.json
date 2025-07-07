@@ -3,13 +3,14 @@
   "date": "2024-11-12",
   "machine": "c6a.4xlarge",
   "cluster_size": 1,
+  "proprietary": "no",
   "tuned": "no",
   "comment": "",
   "tags": [
     "C",
     "PostgreSQL compatible",
     "column-oriented",
-    "time-series", "open-source"
+    "time-series"
   ],
   "load_time": 2925,
   "data_size": 19304833024,

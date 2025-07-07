@@ -3,10 +3,11 @@
   "date": "2023-03-16",
   "machine": "dc2.8xlarge",
   "cluster_size": 2,
+  "proprietary": "yes",
   "tuned": "no",
   "comment": "",
 
-  "tags": ["managed", "column-oriented", "proprietary", "aws"],
+  "tags": ["managed", "column-oriented", "aws"],
 
   "load_time": 2485,
   "data_size": 27278704640,

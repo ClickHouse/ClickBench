@@ -3,10 +3,11 @@
     "date": "2025-05-18",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "CockroachDB v25.1.6. Cache size: 25%.",
 
-    "tags": ["Go", "row-oriented", "PostgreSQL compatible", "open-source"],
+    "tags": ["Go", "row-oriented", "PostgreSQL compatible"],
 
     "load_time": 813,
     "data_size": 67948956585,

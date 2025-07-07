@@ -3,10 +3,11 @@
     "date": "2022-07-15",
     "machine": "S2",
     "cluster_size": 1,
+    "proprietary": "yes",
     "tuned": "no",
     "comment": "Previous name: MemSQL. Some queries did not run due to unsupported regex",
 
-    "tags": ["MySQL compatible", "column-oriented", "managed", "proprietary"],
+    "tags": ["MySQL compatible", "column-oriented", "managed"],
 
     "load_time": 1145,
     "data_size": 19219978649,

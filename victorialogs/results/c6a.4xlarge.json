@@ -3,9 +3,10 @@
     "date": "2025-02-14",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
-    "tags": ["Go", "column-oriented", "open-source"],
+    "tags": ["Go", "column-oriented"],
     "load_time": 2108,
     "data_size": 16975699551,
     "result": [

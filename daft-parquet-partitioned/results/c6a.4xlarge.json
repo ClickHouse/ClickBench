@@ -3,9 +3,10 @@
     "date": "2025-05-06",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
+    "proprietary": "no",
     "tuned": "no",
     "comment": "",
-    "tags": ["Rust", "stateless", "serverless", "embedded", "open-source"],
+    "tags": ["Rust", "stateless", "serverless", "embedded"],
     "load_time": 0,
     "data_size": 14779976446,
     "result": [

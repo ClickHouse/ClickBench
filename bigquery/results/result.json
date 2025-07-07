@@ -3,10 +3,11 @@
     "date": "2025-04-09",
     "machine": "serverless",
     "cluster_size": "serverless",
+    "proprietary": "yes",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["serverless", "column-oriented", "proprietary", "gcp", "managed"],
+    "tags": ["serverless", "column-oriented", "gcp", "managed"],
 
     "load_time": 1146,
     "data_size": 8760000000,
