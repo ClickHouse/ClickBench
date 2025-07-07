@@ -21,7 +21,7 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 pigz -d -f hits.tsv.gz
 
 echo -n "Load time: "
-command time -f '%e' mysql --password="${PASSWORD}" --host 127.0.0.1 test -e "
+command time -f '%e' mysql --password="${PASSWORD}" --host 127.0.0.1 test -e "SET sql_log_bin = 0;
     LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits
     FIELDS TERMINATED BY '\\t' ENCLOSED BY '' ESCAPED BY '\\\\' LINES TERMINATED BY '\\n' STARTING BY ''"
 
