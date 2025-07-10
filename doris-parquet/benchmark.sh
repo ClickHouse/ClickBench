@@ -81,8 +81,14 @@ cd -
 
 # Run the queries
 mysql -h127.1 -P9030 -uroot -vvv < create.sql
-./run.sh 2>&1 | tee run.log | sed -r -e 's/^.+,([0-9\.]+,[0-9\.]+,[0-9\.]+)$/[\1],/'
-date
+
+./run.sh 2>&1 | tee -a log.txt
+
+cat log.txt |
+  grep -P 'rows? in set|Empty set|^ERROR' |
+  sed -r -e 's/^ERROR.*$/null/; s/^.*?\((([0-9.]+) min )?([0-9.]+) sec\).*?$/\2 \3/' |
+  awk '{ if ($2 != "") { print $1 * 60 + $2 } else { print $1 } }' |
+  awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 
 echo "Load time: 0"
 echo "Data size: $(du -bcs "$DORIS_HOME/be/hits*.parquet" | grep total)"

@@ -89,6 +89,7 @@ echo "Starting to check for completion on $(date +"%T")"
 while ! grep -q 'the whole procedure completed' tidb-lightning.log; do
   if grep -q 'tidb lightning exit.*finished=false' tidb-lightning.log || grep -q 'ERROR' tidb-lightning.log; then
     echo "An error occurred during the import. Check the log file for details."
+    cat tiup-tidb-lightning.out
     cat tidb-lightning.log
     exit 1
   fi;

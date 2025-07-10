@@ -3,8 +3,7 @@
 # Install
 
 sudo apt-get update -y
-sudo apt-get install -y default-jre-headless
-sudo apt-get install -y apt-transport-https
+sudo apt-get install -y default-jre-headless libtinfo5 apt-transport-https
 sudo useradd -U -m heavyai
 sudo curl https://releases.heavy.ai/GPG-KEY-heavyai | sudo apt-key add -
 echo "deb https://releases.heavy.ai/os/apt/ stable cpu" | sudo tee /etc/apt/sources.list.d/heavyai.list
