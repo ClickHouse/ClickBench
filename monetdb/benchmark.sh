@@ -12,6 +12,7 @@ sudo systemctl enable monetdbd
 sudo systemctl start monetdbd
 
 sudo monetdbd create /var/lib/monetdb
+sudo netstat -tulpn | grep :50000
 sudo monetdbd start /var/lib/monetdb
 sudo usermod -a -G monetdb $USER
 
