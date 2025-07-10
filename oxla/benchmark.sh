@@ -32,7 +32,7 @@ done
 
 echo "Insert data."
 echo -n "Load time: "
-PGPASSWORD=oxla command time -f '%e' psql -h localhost -U oxla -t -c "COPY hits FROM '/data/hits.csv';"
+PGPASSWORD=oxla command time -f '%e' psql -h localhost -U oxla -q -t -c "COPY hits FROM '/data/hits.csv';"
 
 # get ingested data size
 echo -n "Data size: "

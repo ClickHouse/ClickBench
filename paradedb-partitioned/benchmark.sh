@@ -20,7 +20,7 @@ sudo docker run \
   -e POSTGRESQL_USERNAME=myuser \
   -e POSTGRESQL_PASSWORD=mypassword \
   -e POSTGRESQL_DATABASE=mydb \
-  -e POSTGRESQL_POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_PASSWORD=postgres \
   -p 5432:5432 \
   -d \
   paradedb/paradedb:$PARADEDB_VERSION
@@ -38,7 +38,7 @@ fi
 echo ""
 echo "Creating database..."
 export PGPASSWORD='postgres'
-psql -h localhost -U postgres -d mydb -p 5432 -t < create.sql
+psql -h localhost -U postgres -p 5432 -t < create.sql
 
 # load_time is zero, since the data is directly read from the Parquet file(s)
 # Time: 0000000.000 ms (00:00.000)

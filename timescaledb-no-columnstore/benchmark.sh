@@ -30,12 +30,12 @@ sudo -u postgres psql -c "ALTER DATABASE nocolumnstore SET work_mem TO '1GB';"
 sudo -u postgres psql -c "ALTER DATABASE nocolumnstore SET min_parallel_table_scan_size TO '0';"
 
 echo -n "Load time: "
-command time -f '%e' sudo -u postgres psql nocolumnstore -t -c "\\copy hits FROM 'hits.tsv'"
+command time -f '%e' sudo -u postgres psql nocolumnstore -q -t -c "\\copy hits FROM 'hits.tsv'"
 echo -n "Load time: "
-command time -f '%e' sudo -u postgres psql nocolumnstore -t -c "vacuum freeze analyze hits;"
+command time -f '%e' sudo -u postgres psql nocolumnstore -q -t -c "vacuum freeze analyze hits;"
 
 echo -n "Data size: "
-sudo -u postgres psql nocolumnstore -c "\t" -c "SELECT hypertable_size('hits');"
+sudo -u postgres psql nocolumnstore -q -t -c "SELECT hypertable_size('hits');"
 
 ./run.sh 2>&1 | tee log.txt
 

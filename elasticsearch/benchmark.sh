@@ -44,8 +44,10 @@ sudo apt-get install -y pigz
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
 pigz -d -f hits.json.gz
 
+START=$(date +%s)
+
 # Prepare Elasticsearch for large bulk insert. To do the large upload, you have to break up JSON file into smaller files to prevent 'curl' from OOM while doing it, and adjust ELasticsearch HTTP upload size minimum. This creates roughly 250M files (note it takes a while)
-split -l 10000000 hits.json hits_
+split -l 1000000 hits.json hits_
 
 # Modify Elasticsearch settings to accept it (default is 100M bulk API uploads)
 echo "http.max_content_length: 500mb" >> /etc/elasticsearch/elasticsearch.yml
@@ -54,11 +56,16 @@ sudo systemctl restart elasticsearch.service
 # Re-format and import all the small JSON files sequentially
 
 # command to split the files - process above can take hours, so better run in background and disown
-for file in hits_*; do sed -e 's/^/{ "index" : { "_index" : "hits"} }\n/' -i ${file}; done
+for file in hits_*
+do
+    sed -e 's/^/{ "index" : { "_index" : "hits"} }\n/' -i ${file}
+done
 
 # command to load data into ES - process above can take hours, so better run in background and disown
-for file in hits_*; do echo -n "Load time: "
-    command time -f '%e' curl -s -o /dev/null -H "Content-Type: application/x-ndjson" -k -XPOST -u "elastic:${PASSWORD}" "https://localhost:9200/_bulk" --data-binary @${file}; done
+for file in hits_*
+do
+    command time -f '%e' curl -sS -o /dev/null -H "Content-Type: application/x-ndjson" -k -XPOST -u "elastic:${PASSWORD}" "https://localhost:9200/_bulk" --data-binary @${file}
+done
 
 # check on progress
 curl -k -X GET "https://localhost:9200/hits/_stats/docs?pretty" -u "elastic:${PASSWORD}"
@@ -68,6 +75,8 @@ curl -k -X GET "https://localhost:9200/hits/_stats/docs?pretty" -u "elastic:${PA
 # For Data size, look at: store.total_data_set_size_in_bytes
 curl -k -X GET "https://localhost:9200/hits/_stats?pretty" -u "elastic:${PASSWORD}"
 
+END=$(date +%s)
+echo "Load time: $(echo "$END - $START" | bc)"
 
 ######  Run the queries
 ./run.sh
