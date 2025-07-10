@@ -7,7 +7,7 @@ sudo apt-get install -y python3-pip
 pip install -U polars
 
 # On small machines it can only work with swap
-sudo fallocate -l 100G /swapfile
+sudo fallocate -l 200G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile

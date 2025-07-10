@@ -25,7 +25,7 @@ split_and_process() {
     local chunk_num=$1
     local content=$(cat)
     local output_file="./partitioned/hits_${chunk_num}.json"
-    
+
     # Format with brackets and commas in one step
     (
         echo "["
@@ -61,6 +61,9 @@ INGEST_JOBS=6
 start_time=$(date +%s)
 find . -name "hits_*" -type f | parallel --progress --jobs $INGEST_JOBS \
     'curl --silent -H "Content-Type: application/json" -H "X-P-Stream: hits" -k -XPOST -u "admin:admin" "http://localhost:8000/api/v1/ingest" --data-binary @"{}"'
+
+#sleep for 3 minutes to allow sync to complete
+sleep 180
 
 end_time=$(date +%s)
 total_time=$((end_time - start_time))
