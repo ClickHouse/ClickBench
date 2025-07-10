@@ -4,7 +4,6 @@ mode=${1}
 
 TRIES=3
 QUERY_COUNT=43
-FILE_SIZE=$(wc -c < hits.parquet | awk '{print $1}')
 
 declare -a results=()
 for ((i=0; i<QUERY_COUNT; i++)); do

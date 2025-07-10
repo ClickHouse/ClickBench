@@ -9,7 +9,7 @@ source myenv/bin/activate
 pip install -U polars
 
 # On small machines it can only work with swap
-sudo fallocate -l 100G /swapfile
+sudo fallocate -l 200G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
@@ -19,6 +19,7 @@ wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compati
 
 # Run the queries
 
-./run.sh 2>&1 | tee log.txt
+/usr/bin/time -f "Memory usage: %M KB" ./run.sh 2>&1 | tee log.txt
 
-echo "Data size: $(du -bcs hits.parquet)"
+echo -n "Data size: "
+grep -F "Memory usage" log.txt | grep -o -P '\d+ KB' | sed 's/KB/*1024/' | bc -l

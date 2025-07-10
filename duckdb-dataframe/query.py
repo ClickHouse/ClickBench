@@ -3,7 +3,6 @@
 import pandas as pd
 import timeit
 import datetime
-import json
 import duckdb
 
 start = timeit.default_timer()
@@ -58,13 +57,3 @@ result_json = {
     "data_size": int(dataframe_size),
     "result": queries_times,
 }
-
-# if cpuinfo contains "AMD EPYC 9654" update machine and write result into results/epyc-9654.json
-if "AMD EPYC 9654" in open("/proc/cpuinfo").read():
-    result_json["machine"] = "EPYC 9654, 384G"
-    with open("results/epyc-9654.json", "w") as f:
-        f.write(json.dumps(result_json, indent=4))
-else:
-    # write result into results/c6a.metal.json
-    with open("results/c6a.metal.json", "w") as f:
-        f.write(json.dumps(result_json, indent=4))

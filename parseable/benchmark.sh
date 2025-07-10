@@ -39,9 +39,6 @@ chmod +x run_query.sh
 echo -n "Load time: "
 command time -f '%e' ./ingestion.sh
 
-#sleep for 3 minutes to allow sync to complete
-sleep 180
-
 #run query script
 ./run_query.sh
 
