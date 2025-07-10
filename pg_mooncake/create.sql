@@ -1,6 +1,5 @@
 CREATE EXTENSION pg_mooncake;
 alter database postgres set mooncake.enable_memory_metadata_cache = true;
-\timing
 CREATE TABLE hits
 (
     WatchID BIGINT NOT NULL,

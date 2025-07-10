@@ -9,7 +9,7 @@ cat queries.sql | while read -r query; do
     echo -n "["
     for i in $(seq 1 $TRIES); do
         RES=$(curl -w 'Time: %{time_total}\n' "http://default@localhost:8124" -d "${query}" 2>&1 | grep -P '^Time: ' | sed 's/Time: //')
-        if [[ "$?" == "0" || -z "${RES}" ]]
+        if [[ "$?" == "0" && -n "${RES}" ]]
         then
             echo -n "${RES}"
         else
