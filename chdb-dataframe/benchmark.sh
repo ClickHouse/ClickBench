@@ -9,6 +9,12 @@ source myenv/bin/activate
 pip install pandas
 pip install chdb
 
+# On small machines it can only work with swap
+sudo fallocate -l 100G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
 # Download the data
 wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
 

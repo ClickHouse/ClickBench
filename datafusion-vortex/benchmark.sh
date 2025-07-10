@@ -30,4 +30,4 @@ command time -f '%e' clickbench -i 1 --targets datafusion:vortex --display-forma
 # Run benchmarks for single parquet and partitioned, our CLI generates the relevant vortex files.
 ./run.sh single
 
-echo "Data size: $(find . name '*.vortex' | xargs wc -c | grep total)"
+echo "Data size: $(find . -name '*.vortex' | xargs wc -c | grep total)"

@@ -35,8 +35,11 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 pigz -d -f hits.tsv.gz
 
 ## Aws gp2 write performance is not stable, we must load the data when disk's write around ~500MB/s (Don't know much about the rules of gp2)
-echo -n "Load time: "
-command time -f '%e' curl -sS -XPUT 'http://root:@127.0.0.1:8000/v1/streaming_load' -H 'insert_sql: insert into hits FILE_FORMAT = (type = TSV)' -F 'upload=@"./hits.tsv"'
+# Load Data
+START=$(date +%s)
+curl -sS -XPUT 'http://root:@127.0.0.1:8000/v1/streaming_load' -H 'insert_sql: insert into hits FILE_FORMAT = (type = TSV)' -F 'upload=@"./hits.tsv"'
+END=$(date +%s)
+LOADTIME=$(echo "$END - $START" | bc)
 
 ## in c5.4x large, it's 368s
 # {"id":"17477ed9-9f1a-46d9-b6cf-12a5971f4450","state":"SUCCESS","stats":{"rows":99997497,"bytes":74807831229},"error":null,"files":["hits.tsv"]}

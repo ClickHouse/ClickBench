@@ -85,4 +85,4 @@ mysql -h127.1 -P9030 -uroot -vvv < create.sql
 date
 
 echo "Load time: 0"
-echo "Data size: $(du -bcs hits*.parquet | grep total)"
+echo "Data size: $(du -bcs "$DORIS_HOME/be/hits*.parquet" | grep total)"

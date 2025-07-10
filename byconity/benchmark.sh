@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 sudo apt-get update -y
 sudo apt-get install -y ca-certificates curl gnupg
@@ -16,14 +16,14 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 # Make sure docker is running
 sudo systemctl start docker
 
-docker-compose up -d
+docker compose up -d
 sleep 5
 
 hdfs/create_users.sh
 
 function byconity()
 {
-    docker-compose exec -T server clickhouse-client --port 52145 "$@"
+    docker compose exec -T server clickhouse-client --port 52145 "$@"
 }
 export -f byconity
 
@@ -39,4 +39,4 @@ command time -f '%e' byconity --database bench --query "INSERT INTO hits FORMAT 
 echo -n "Data size: "
 byconity --enable_multiple_tables_for_cnch_parts=1 --query "SELECT sum(bytes_on_disk) FROM system.cnch_parts WHERE table = 'hits' AND database = 'bench'"
 
-docker-compose down --volumes
+docker compose down --volumes

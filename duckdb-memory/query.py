@@ -17,7 +17,7 @@ con.execute("SET preserve_insertion_order = false;")
 print("Will load the data")
 start = timeit.default_timer()
 con.execute(open("create.sql").read())
-con.execute("COPY hits FROM 'hits.csv';")
+con.execute("COPY hits FROM 'hits.tsv' (QUOTE '');")
 end = timeit.default_timer()
 print(round(end - start, 3))
 

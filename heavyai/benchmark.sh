@@ -9,7 +9,7 @@ sudo useradd -U -m heavyai
 sudo curl https://releases.heavy.ai/GPG-KEY-heavyai | sudo apt-key add -
 echo "deb https://releases.heavy.ai/os/apt/ stable cpu" | sudo tee /etc/apt/sources.list.d/heavyai.list
 sudo apt-get update -y
-sudo apt-get install-y heavyai
+sudo apt-get install heavyai -y
 
 export HEAVYAI_USER=heavyai
 export HEAVYAI_GROUP=heavyai
