@@ -9,6 +9,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --defaul
 export CC=clang
 export CXX=clang++
 git clone https://github.com/vortex-data/vortex --recursive
+git fetch --tags
 git checkout 0.35.0
 cd vortex/duckdb-vortex
 GEN=ninja NATIVE_ARCH=1 LTO=thin make
@@ -16,7 +17,7 @@ export PATH="`pwd`/build/release/:$PATH"
 cd ../..
 
 # Load the data
-wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
 # Convert parquet files to vortex partitioned
 echo -n "Load time: "

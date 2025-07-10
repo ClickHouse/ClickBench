@@ -23,7 +23,7 @@ fi
 
 sudo apt-get update -y
 # TiUp installer depends on curl
-sudo DEBIAN_FRONTEND=noninteractive -y apt-get install curl mysql-client
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl mysql-client
 # Needs to be installed and setup for TiFlash; 2-107 corresponds to America/New_York
 printf "2\n107\n" | sudo DEBIAN_FRONTEND=noninteractive apt-get install --reinstall tzdata
 
@@ -119,5 +119,5 @@ fi;
 
 grep -P 'rows? in set|Empty set|^ERROR' log.txt |
   sed -r -e 's/^ERROR.*$/null/; s/^.*?\((([0-9.]+) min )?([0-9.]+) sec\).*?$/\2 \3/' |
-  awk '{ if ($2 != '') { print $1 * 60 + $2 } else { print $1 } }' |
+  awk '{ if ($2 != "") { print $1 * 60 + $2 } else { print $1 } }' |
   awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'

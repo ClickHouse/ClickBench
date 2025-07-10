@@ -7,7 +7,7 @@ sudo apt-get install -y docker.io
 sudo docker run -d -p 3306:3306 -e ANALYTICS_ONLY=1 --name mcs_container mariadb/columnstore
 
 export PASSWORD="tsFgm457%3cj"
-sudo docker exec mcs_container mariadb -e "GRANT ALL PRIVILEGES ON *.* TO 'ubuntu'@'%' IDENTIFIED BY '${PASSWORD}';"
+sudo docker exec mcs_container mariadb -e "GRANT ALL PRIVILEGES ON *.* TO '%'@'%' IDENTIFIED BY '${PASSWORD}';"
 
 sudo apt-get install -y mariadb-client
 
@@ -35,5 +35,5 @@ sudo docker exec mcs_container du -bcs /var/lib/columnstore | grep total
 cat log.txt |
   grep -P 'rows? in set|Empty set|^ERROR' |
   sed -r -e 's/^ERROR.*$/null/; s/^.*?\((([0-9.]+) min )?([0-9.]+) sec\).*?$/\2 \3/' |
-  awk '{ if ($2 != '') { print $1 * 60 + $2 } else { print $1 } }' |
+  awk '{ if ($2 != "") { print $1 * 60 + $2 } else { print $1 } }' |
   awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'

@@ -38,5 +38,5 @@ fi
 # Deactivate the virtual environment
 deactivate
 
-echo "Data size: $(du -b hits/*.parquet)"
+echo "Data size: $(du -bcs hits | grep total)"
 echo "Load time: 0"
