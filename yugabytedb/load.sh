@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eux
+set -eu
 
 ./yugabyte/bin/ysqlsh -U yugabyte -d test <<'EOF'
 \copy hits FROM 'hits.tsv';
