@@ -39,7 +39,7 @@ pigz -d -f hits.tsv.gz
 START=$(date +%s)
 curl -sS -XPUT 'http://root:@127.0.0.1:8000/v1/streaming_load' -H 'insert_sql: insert into hits FILE_FORMAT = (type = TSV)' -F 'upload=@"./hits.tsv"'
 END=$(date +%s)
-LOADTIME=$(echo "$END - $START" | bc)
+echo "Load time: $(echo "$END - $START" | bc)"
 
 ## in c5.4x large, it's 368s
 # {"id":"17477ed9-9f1a-46d9-b6cf-12a5971f4450","state":"SUCCESS","stats":{"rows":99997497,"bytes":74807831229},"error":null,"files":["hits.tsv"]}
