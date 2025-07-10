@@ -10,11 +10,15 @@ export PATH=$JAVA_HOME/bin:$PATH
 
 python3 -m venv myenv
 source myenv/bin/activate
-pip install pyspark==4.0.0 psutil
+pip install pyspark==3.5.6 psutil
 
 # Load the data
 
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+
+# Install Comet
+
+wget --progress=dot:giga 'https://repo1.maven.org/maven2/org/apache/datafusion/comet-spark-spark3.5_2.12/0.9.0/comet-spark-spark3.5_2.12-0.9.0.jar' -O comet.jar
 
 # Run the queries
 

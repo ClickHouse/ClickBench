@@ -24,6 +24,15 @@ spark = (
     .config("spark.driver", "local[*]") # To ensure using all cores
     .config("spark.driver.memory", f"{ram}g") # Set amount of memory SparkSession can use
     .config("spark.sql.parquet.binaryAsString", True) # Treat binary as string to get correct length calculations and text results
+    
+    # Comet configuration
+    .config("spark.jars", "comet.jar")
+    .config("spark.driver.extraClassPath", "comet.jar") # Otherwise fails on some queries - see https://datafusion.apache.org/comet/user-guide/installation.html#additional-configuration
+    .config("spark.plugins", "org.apache.spark.CometPlugin")
+    .config("spark.shuffle.manager", "org.apache.spark.sql.comet.execution.shuffle.CometShuffleManager")
+    .config("spark.memory.offHeap.enabled", "true")
+    .config("spark.memory.offHeap.size", "4g")
+
     .getOrCreate()
 )
 
