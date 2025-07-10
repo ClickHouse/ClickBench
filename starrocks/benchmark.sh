@@ -68,5 +68,10 @@ du -bcs StarRocks-${VERSION}/storage/ | grep total
 # Dataset contains 99997497 rows
 mysql -h 127.0.0.1 -P9030 -uroot hits -e "SELECT count(*) FROM hits"
 
-# Run queries
-./run.sh 2>&1 | tee run.log | sed -r -e 's/^.+,([0-9\.]+,[0-9\.]+,[0-9\.]+)$/[\1],/'
+./run.sh 2>&1 | tee -a log.txt
+
+cat log.txt |
+  grep -P 'rows? in set|Empty set|^ERROR' |
+  sed -r -e 's/^ERROR.*$/null/; s/^.*?\((([0-9.]+) min )?([0-9.]+) sec\).*?$/\2 \3/' |
+  awk '{ if ($2 != "") { print $1 * 60 + $2 } else { print $1 } }' |
+  awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
