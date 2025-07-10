@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eux
+set -eu
 
 threads=$(nproc)
 cpus=$(($threads / 2))

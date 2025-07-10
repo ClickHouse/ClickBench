@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eux
+set -eu
 
 # Load data: wrap TRUNCATE and \copy FREEZE in a single transaction
 # If we dont' do this, Postgres will throw an error:
