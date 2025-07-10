@@ -40,7 +40,7 @@ chmod 444 /tmp/hits.tsv
 
 psql -U crate -h localhost --no-password -t < $CREATE_FILE
 
-echo -n "Load time: "
+START=$(date +%s)
 command time -f '%e' psql -U crate -h localhost --no-password -q -t -c "
   COPY hits
   FROM 'file:///tmp/hits.tsv'
@@ -52,6 +52,8 @@ command time -f '%e' psql -U crate -h localhost --no-password -q -t -c "
     "empty_string_as_null"=${EMPTY_STRING_AS_NULL}
   )
   RETURN SUMMARY;"
+END=$(date +%s)
+echo "Load time: $(echo "$END - $START" | bc)"
 
 # One record did not load:
 # 99997496
