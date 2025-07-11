@@ -8,12 +8,7 @@ sudo wget --output-document=/etc/apt/trusted.gpg.d/monetdb.gpg https://www.monet
 sudo apt-get update -y
 sudo apt-get install -y monetdb5-sql monetdb-client dos2unix net-tools
 
-sudo systemctl enable monetdbd
-sudo systemctl start monetdbd
-
 sudo monetdbd create /var/lib/monetdb
-sudo netstat -tulpn | grep :50000
-sudo monetdbd start /var/lib/monetdb
 sudo usermod -a -G monetdb $USER
 
 for _ in {1..300}
