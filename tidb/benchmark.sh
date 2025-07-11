@@ -72,6 +72,8 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 gzip -d -f "$DATA_DIR/$DB_NAME.$TABLE_NAME.csv.gz"
 chmod 444 "$DATA_DIR/$DB_NAME.$TABLE_NAME.csv"
 
+START=$(date +%s)
+
 mysql -e "DROP DATABASE IF EXISTS $DB_NAME;"
 mysql -e "CREATE DATABASE $DB_NAME;"
 mysql test < create.sql
@@ -99,11 +101,11 @@ while ! grep -q 'the whole procedure completed' tidb-lightning.log; do
 done
 
 echo "Data loading is done! Checking log file for time taken to load the data."
-echo -n "Load time: "
 grep 'the whole procedure completed' tidb-lightning.log | sed -r -e 's/^.+\[takeTime=([0-9\.hms])+\].+?$/\1/'
-
-echo -n "Load time: "
 command time -f '%e' mysql test -e "ANALYZE TABLE $TABLE_NAME;"
+
+END=$(date +%s)
+echo "Load time: $(echo "$END - $START" | bc)"
 
 ./run.sh 2>&1 | tee log.txt
 
