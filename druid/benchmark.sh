@@ -4,6 +4,12 @@ sudo apt-get update -y
 sudo apt-get install -y openjdk-11-jdk
 sudo update-alternatives --config java
 
+# On small machines it can only work with swap
+sudo fallocate -l 200G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
 # Install
 
 VERSION=33.0.0

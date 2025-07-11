@@ -9,7 +9,7 @@ source myenv/bin/activate
 pip install pandas pyarrow
 
 # On small machines it can only work with swap
-sudo fallocate -l 200G /swapfile
+sudo fallocate -l 400G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
