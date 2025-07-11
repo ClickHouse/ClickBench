@@ -108,5 +108,5 @@ ATTACH TABLE hits UUID 'c449dfbf-ba06-4d13-abec-8396559eb955'
     PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID)
 )
 ENGINE = MergeTree
-SETTINGS disk = disk(type = cache, path = '/dev/shm/clickhouse/', max_size = '16G',
+SETTINGS disk = disk(type = cache, path = '/dev/shm/clickhouse/', max_size_ratio_to_total_space = 0.9,
          disk = disk(type = web, endpoint = 'https://clickhouse-public-datasets.s3.amazonaws.com/web/'));
