@@ -3,6 +3,12 @@
 # Run setup.sh (assume we are running on ubuntu)
 ./setup-dev-ubuntu.sh
 
+# On small machines it can only work with swap
+sudo fallocate -l 200G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
 # download the db
 export KINETICA_ADMIN_PASSWORD=admin
 curl https://files.kinetica.com/install/kinetica.sh -o kinetica && chmod u+x kinetica && sudo -E ./kinetica start
