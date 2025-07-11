@@ -39,7 +39,7 @@ export DORIS_HOME
 sudo apt-get update -y
 sudo apt-get install -y openjdk-17-jdk
 sudo apt-get install -y mysql-client
-export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64/"
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-$(dpkg --print-architecture)/"
 export PATH=$JAVA_HOME/bin:$PATH
 
 set +e

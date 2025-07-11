@@ -7,7 +7,7 @@
     "tuned":  "no",
     "tags":  ["Rust","column-oriented","embedded","stateless"],
     "load_time": 2025,
-    "data_size": 211637613,
+    "data_size": 16030812776,
     "result": [
         [0.222, 0.012, 0.012],
         [0.285, 0.028, 0.028],

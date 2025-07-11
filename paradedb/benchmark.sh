@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PARADEDB_VERSION=latest
+PARADEDB_VERSION=0.10.0
 
 echo "Installing dependencies..."
 sudo apt-get update -y

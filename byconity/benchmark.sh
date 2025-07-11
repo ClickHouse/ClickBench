@@ -30,8 +30,11 @@ export -f byconity
 byconity --time -n < create.sql
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -fkd hits.tsv.gz
-echo -n "Load time: "
-command time -f '%e' byconity --database bench --query "INSERT INTO hits FORMAT TSV" < hits.tsv
+
+START=$(date +%s)
+byconity --database bench --query "INSERT INTO hits FORMAT TSV" < hits.tsv
+END=$(date +%s)
+echo "Load time: $(echo "$END - $START" | bc)"
 
 # NOTE: sometimes may hung due to docker-compose, using docker directly may help
 ./run.sh

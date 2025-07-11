@@ -34,7 +34,7 @@ export DORIS_HOME
 sudo apt-get update -y
 sudo apt-get install -y openjdk-17-jdk
 sudo apt-get install -y mysql-client
-export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64/"
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-$(dpkg --print-architecture)/"
 export PATH=$JAVA_HOME/bin:$PATH
 
 sudo systemctl disable unattended-upgrades
@@ -91,4 +91,4 @@ cat log.txt |
   awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 
 echo "Load time: 0"
-echo "Data size: $(du -bcs "$DORIS_HOME/be/hits*.parquet" | grep total)"
+echo "Data size: $(find "$DORIS_HOME/be/" -name '*.parquet' | xargs wc -c | grep total)"

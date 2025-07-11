@@ -3,7 +3,12 @@
 # Install
 
 sudo apt-get update -y
-sudo apt-get install -y default-jre-headless libtinfo5 apt-transport-https
+sudo apt-get install -y default-jre-headless apt-transport-https
+
+sudo apt-get install -y docker.io
+sudo docker run -it --rm -v $(pwd):/host ubuntu:18.04 cp /lib/x86_64-linux-gnu/libtinfo.so.5 /host/
+sudo cp libtinfo.so.5 /usr/lib/x86_64-linux-gnu/
+
 sudo useradd -U -m heavyai
 sudo curl https://releases.heavy.ai/GPG-KEY-heavyai | sudo apt-key add -
 echo "deb https://releases.heavy.ai/os/apt/ stable cpu" | sudo tee /etc/apt/sources.list.d/heavyai.list
