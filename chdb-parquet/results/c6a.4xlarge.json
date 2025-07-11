@@ -1,11 +1,11 @@
 {
-    "system": "chDB (Parquet, partitioned)",
+    "system":  "chDB (Parquet, partitioned)",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless"],
     "load_time": 0,
     "data_size": 14737666736,
     "result": [
@@ -52,5 +52,5 @@
         [0.166, 0.064, 0.067],
         [0.147, 0.069, 0.057],
         [0.144, 0.048, 0.045]
-],
+]
 }

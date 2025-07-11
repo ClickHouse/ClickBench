@@ -1,11 +1,11 @@
 {
-    "system": "Drill",
+    "system":  "Drill",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["Java","column-oriented","stateless"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["Java","column-oriented","stateless"],
     "load_time": 0,
     "data_size": 14779976446,
     "result": [
@@ -52,5 +52,5 @@
         [null, null, null],
         [null, null, null],
         [null, null, null]
-],
+]
 }

@@ -1,11 +1,11 @@
 {
-    "system": "DuckDB",
+    "system":  "DuckDB",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C++","column-oriented","embedded"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C++","column-oriented","embedded"],
     "load_time": 359,
     "data_size": 18005635072,
     "result": [
@@ -52,5 +52,5 @@
         [0.099, 0.004, 0.004],
         [0.093, 0.006, 0.005],
         [0.093, 0.007, 0.005]
-],
+]
 }

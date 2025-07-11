@@ -1,11 +1,11 @@
 {
-    "system": "Ursa",
+    "system":  "Ursa",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "yes",
-    "tuned": "no",
-    "tags": ["C++","column-oriented","ClickHouse derivative"],
+    "proprietary":  "yes",
+    "tuned":  "no",
+    "tags":  ["C++","column-oriented","ClickHouse derivative"],
     "load_time": 211,
     "data_size": 15442611709,
     "result": [
@@ -52,5 +52,5 @@
         [0.028, 0.014, 0.014],
         [0.027, 0.01, 0.011],
         [0.023, 0.01, 0.01]
-],
+]
 }

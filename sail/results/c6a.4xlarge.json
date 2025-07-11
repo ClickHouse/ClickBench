@@ -1,11 +1,11 @@
 {
-    "system": "Sail (Parquet)",
+    "system":  "Sail (Parquet)",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["column-oriented"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["column-oriented"],
     "load_time": 0,
     "data_size": 14779976446,
     "result": [
@@ -52,5 +52,5 @@
         [0.67, 0.416, 0.399],
         [0.629, 0.35, 0.391],
         [0.671, 0.439, 0.452]
-],
+]
 }

@@ -1,11 +1,11 @@
 {
-    "system": "CedarDB",
+    "system":  "CedarDB",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "yes",
-    "tuned": "no",
-    "tags": ["C++","column-oriented","PostgreSQL compatible"],
+    "proprietary":  "yes",
+    "tuned":  "no",
+    "tags":  ["C++","column-oriented","PostgreSQL compatible"],
     "load_time": 670,
     "data_size": 34221940432,
     "result": [
@@ -52,5 +52,5 @@
         [0.027, 0.003, 0.004],
         [0.015, 0.003, 0.003],
         [0.019, 0.004, 0.004]
-],
+]
 }

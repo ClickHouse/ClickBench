@@ -1,11 +1,11 @@
 {
-    "system": "PostgreSQL with pg_mooncake",
+    "system":  "PostgreSQL with pg_mooncake",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C","column-oriented","PostgreSQL compatible"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C","column-oriented","PostgreSQL compatible"],
     "load_time": 537,
     "data_size": 14623184166,
     "result": [
@@ -52,5 +52,5 @@
         [0.279, 0.029, 0.03],
         [0.663, 0.029, 0.027],
         [0.661, 0.029, 0.028]
-],
+]
 }

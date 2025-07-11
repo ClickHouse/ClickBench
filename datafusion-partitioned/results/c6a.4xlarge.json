@@ -1,11 +1,11 @@
 {
-    "system": "DataFusion (Parquet, partitioned)",
+    "system":  "DataFusion (Parquet, partitioned)",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["Rust","column-oriented","embedded","stateless"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["Rust","column-oriented","embedded","stateless"],
     "load_time": 0,
     "data_size": 14737666736,
     "result": [
@@ -52,5 +52,5 @@
         [0.183, 0.04, 0.043],
         [0.171, 0.04, 0.041],
         [0.143, 0.035, 0.037]
-],
+]
 }

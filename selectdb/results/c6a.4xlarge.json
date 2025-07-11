@@ -1,11 +1,11 @@
 {
-    "system": "SelectDB",
+    "system":  "SelectDB",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C++","column-oriented","MySQL compatible","ClickHouse derivative"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C++","column-oriented","MySQL compatible","ClickHouse derivative"],
     "load_time": 487,
     "data_size": 17103182575,
     "result": [
@@ -52,5 +52,5 @@
         [1.43, 0.03, 0.03],
         [1.84, 0.03, 0.03],
         [1.45, 0.03, 0.04]
-],
+]
 }

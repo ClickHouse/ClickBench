@@ -1,11 +1,11 @@
 {
-    "system": "CrateDB",
+    "system":  "CrateDB",
     "date": "2025-07-11",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["Java","column-oriented"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["Java","column-oriented"],
     "load_time": 5891,
     "data_size": 59620541258,
     "result": [
@@ -52,5 +52,5 @@
         [0.161, 0.053, 0.038],
         [0.085, 0.033, 0.023],
         [0.141, 0.039, 0.059]
-],
+]
 }

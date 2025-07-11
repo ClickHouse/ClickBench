@@ -1,11 +1,11 @@
 {
-    "system": "MariaDB",
+    "system":  "MariaDB",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C++","row-oriented","MySQL compatible"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C++","row-oriented","MySQL compatible"],
     "load_time": 8875,
     "data_size": 90182376487,
     "result": [
@@ -52,5 +52,5 @@
         [22.94, 22.925, 22.926],
         [22.857, 22.99, 22.929],
         [null, null, null]
-],
+]
 }

@@ -1,11 +1,11 @@
 {
-    "system": "Oxla",
+    "system":  "Oxla",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "yes",
-    "tuned": "no",
-    "tags": ["C"],
+    "proprietary":  "yes",
+    "tuned":  "no",
+    "tags":  ["C"],
     "load_time": 632,
     "data_size": 17823718769,
     "result": [
@@ -52,5 +52,5 @@
         [1.193, 0.012, 0.01],
         [0.942, 0.016, 0.012],
         [1.099, 0.016, 0.015]
-],
+]
 }

@@ -1,11 +1,11 @@
 {
-    "system": "Citus",
+    "system":  "Citus",
     "date": "2025-07-11",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C","PostgreSQL compatible","column-oriented"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C","PostgreSQL compatible","column-oriented"],
     "load_time": 1408,
     "data_size": 18980595583,
     "result": [
@@ -52,5 +52,5 @@
         [1.396, 0.606, 0.609],
         [1.39, 0.584, 0.584],
         [1.417, 0.67, 0.656]
-],
+]
 }

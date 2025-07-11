@@ -1,11 +1,11 @@
 {
-    "system": "Spark",
+    "system":  "Spark",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["Java","column-oriented","embedded","stateless"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["Java","column-oriented","embedded","stateless"],
     "load_time": 0,
     "data_size": 14779976446,
     "result": [
@@ -52,5 +52,5 @@
         [3.964, 1.331, 0.997],
         [3.799, 1.326, 0.961],
         [3.474, 1.135, 1.043]
-],
+]
 }

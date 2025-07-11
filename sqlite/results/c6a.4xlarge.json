@@ -1,11 +1,11 @@
 {
-    "system": "SQLite",
+    "system":  "SQLite",
     "date": "2025-07-11",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C","embedded","row-oriented"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C","embedded","row-oriented"],
     "load_time": 2674,
     "data_size": 75776589824,
     "result": [
@@ -52,5 +52,5 @@
         [2.853, 0.398, 0.398],
         [2.882, 0.425, 0.425],
         [3.105, 0.69, 0.688]
-],
+]
 }

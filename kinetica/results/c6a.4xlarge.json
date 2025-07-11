@@ -1,11 +1,11 @@
 {
-    "system": "Kinetica",
+    "system":  "Kinetica",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "yes",
-    "tuned": "no",
-    "tags": ["column-oriented"],
+    "proprietary":  "yes",
+    "tuned":  "no",
+    "tags":  ["column-oriented"],
     "load_time": 668,
     "data_size": 57932249716,
     "result": [
@@ -52,5 +52,5 @@
         [0.143, 0.068, 0.069],
         [0.12, 0.064, 0.066],
         [0.129, 0.072, 0.069]
-],
+]
 }

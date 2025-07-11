@@ -1,11 +1,11 @@
 {
-    "system": "pg_duckdb (Parquet)",
+    "system":  "pg_duckdb (Parquet)",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["column-oriented","PostgreSQL compatible"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["column-oriented","PostgreSQL compatible"],
     "load_time": 0,
     "data_size": 14820803219,
     "result": [
@@ -52,5 +52,5 @@
         [0.212, 0.126, 0.129],
         [0.398, 0.127, 0.128],
         [0.419, 0.156, 0.153]
-],
+]
 }

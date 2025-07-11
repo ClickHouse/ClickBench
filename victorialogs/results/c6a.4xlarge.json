@@ -1,11 +1,11 @@
 {
-    "system": "VictoriaLogs",
+    "system":  "VictoriaLogs",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["Go","column-oriented"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["Go","column-oriented"],
     "load_time": 1050,
     "data_size": 16972898296,
     "result": [
@@ -52,5 +52,5 @@
         [0.123, 0.023, 0.024],
         [0.12, 0.027, 0.033],
         [0.123, 0.026, 0.03]
-],
+]
 }

@@ -1,11 +1,11 @@
 {
-    "system": "Databend",
+    "system":  "Databend",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["Rust","column-oriented","ClickHouse derivative"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["Rust","column-oriented","ClickHouse derivative"],
     "load_time": 393,
     "data_size": 20917119994,
     "result": [
@@ -52,5 +52,5 @@
         [0.046, 0.017, 0.02],
         [0.039, 0.014, 0.014],
         [0.036, 0.017, 0.014]
-],
+]
 }

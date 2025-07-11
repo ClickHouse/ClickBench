@@ -1,11 +1,11 @@
 {
-    "system": "StarRocks",
+    "system":  "StarRocks",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C++","column-oriented","MySQL compatible"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C++","column-oriented","MySQL compatible"],
     "load_time": 412,
     "data_size": 16343382212,
     "result": [
@@ -52,5 +52,5 @@
         [0.075, 0.027, 0.026],
         [0.034, 0.026, 0.025],
         [0.037, 0.024, 0.024]
-],
+]
 }

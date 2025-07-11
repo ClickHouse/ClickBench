@@ -1,11 +1,11 @@
 {
-    "system": "DataFusion (Vortex, partitioned)",
+    "system":  "DataFusion (Vortex, partitioned)",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["Rust","column-oriented","embedded","stateless"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["Rust","column-oriented","embedded","stateless"],
     "load_time": 2025,
     "data_size": 16030812776,
     "result": [
@@ -52,5 +52,5 @@
         [0.278, 0.046, 0.05],
         [0.26, 0.048, 0.049],
         [0.267, 0.069, 0.062]
-],
+]
 }

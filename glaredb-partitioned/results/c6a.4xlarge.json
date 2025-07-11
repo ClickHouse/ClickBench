@@ -1,11 +1,11 @@
 {
-    "system": "GlareDB (Parquet, partitioned)",
+    "system":  "GlareDB (Parquet, partitioned)",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "yes",
-    "tuned": "no",
-    "tags": ["Rust","serverless"],
+    "proprietary":  "yes",
+    "tuned":  "no",
+    "tags":  ["Rust","serverless"],
     "load_time": 0,
     "data_size": 14737666736,
     "result": [
@@ -52,5 +52,5 @@
         [0.097, 0.054, 0.056],
         [0.095, 0.052, 0.054],
         [0.091, 0.06, 0.077]
-],
+]
 }

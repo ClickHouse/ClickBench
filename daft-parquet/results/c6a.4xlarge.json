@@ -1,11 +1,11 @@
 {
-    "system": "Daft (Parquet, single)",
+    "system":  "Daft (Parquet, single)",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["Rust","stateless","serverless","embedded"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["Rust","stateless","serverless","embedded"],
     "load_time": 0,
     "data_size": 14779976446,
     "result": [
@@ -52,5 +52,5 @@
         [0.492, 0.092, 0.083],
         [0.47, 0.091, 0.081],
         [null, null, null]
-],
+]
 }

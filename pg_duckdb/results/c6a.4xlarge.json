@@ -1,11 +1,11 @@
 {
-    "system": "pg_duckdb",
+    "system":  "pg_duckdb",
     "date": "2025-07-11",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["column-oriented","PostgreSQL compatible"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["column-oriented","PostgreSQL compatible"],
     "load_time": 1013,
     "data_size": 106482563210,
     "result": [
@@ -52,5 +52,5 @@
         [326.75, 314.418, 316.138],
         [326.303, 315.963, 296.315],
         [268.887, 257.516, 257.51]
-],
+]
 }

@@ -1,11 +1,11 @@
 {
-    "system": "DuckDB (Parquet, partitioned)",
+    "system":  "DuckDB (Parquet, partitioned)",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C++","column-oriented","embedded","stateless"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C++","column-oriented","embedded","stateless"],
     "load_time": 0,
     "data_size": 14737666736,
     "result": [
@@ -52,5 +52,5 @@
         [0.085, 0.019, 0.018],
         [0.08, 0.019, 0.018],
         [0.077, 0.02, 0.023]
-],
+]
 }

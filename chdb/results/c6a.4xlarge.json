@@ -1,11 +1,11 @@
 {
-    "system": "chDB",
+    "system":  "chDB",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless"],
     "load_time": 516,
     "data_size": 14476359987,
     "result": [
@@ -52,5 +52,5 @@
         [0.104, 0.017, 0.017],
         [0.094, 0.013, 0.012],
         [0.083, 0.012, 0.013]
-],
+]
 }

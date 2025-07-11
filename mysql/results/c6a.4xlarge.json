@@ -1,11 +1,11 @@
 {
-    "system": "MySQL",
+    "system":  "MySQL",
     "date": "2025-07-11",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C++","row-oriented","MySQL compatible"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C++","row-oriented","MySQL compatible"],
     "load_time": 10004,
     "data_size": 94435803136,
     "result": [
@@ -52,5 +52,5 @@
         [7.29, 0.67, 0.67],
         [7.21, 0.67, 0.66],
         [7.61, 0.99, 1]
-],
+]
 }

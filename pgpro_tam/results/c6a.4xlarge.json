@@ -1,11 +1,11 @@
 {
-    "system": "pgpro_tam",
+    "system":  "pgpro_tam",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "yes",
-    "tuned": "no",
-    "tags": ["C","column-oriented","PostgreSQL compatible"],
+    "proprietary":  "yes",
+    "tuned":  "no",
+    "tags":  ["C","column-oriented","PostgreSQL compatible"],
     "load_time": 984,
     "data_size": 9690683705,
     "result": [
@@ -52,5 +52,5 @@
         [0.43, 0.052, 0.055],
         [0.427, 0.05, 0.052],
         [0.399, 0.059, 0.056]
-],
+]
 }

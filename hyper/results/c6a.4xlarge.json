@@ -1,11 +1,11 @@
 {
-    "system": "Salesforce Hyper",
+    "system":  "Salesforce Hyper",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "yes",
-    "tuned": "no",
-    "tags": ["C++","column-oriented"],
+    "proprietary":  "yes",
+    "tuned":  "no",
+    "tags":  ["C++","column-oriented"],
     "load_time": 687,
     "data_size": 18959040512,
     "result": [
@@ -52,5 +52,5 @@
         [0.171, 0.004, 0.003],
         [0.17, 0.004, 0.004],
         [0.117, 0.005, 0.004]
-],
+]
 }

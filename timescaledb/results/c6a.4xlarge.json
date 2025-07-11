@@ -1,11 +1,11 @@
 {
-    "system": "TimescaleDB",
+    "system":  "TimescaleDB",
     "date": "2025-07-11",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C","PostgreSQL compatible","column-oriented","time-series"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C","PostgreSQL compatible","column-oriented","time-series"],
     "load_time": 1265,
     "data_size": 19304833024,
     "result": [
@@ -52,5 +52,5 @@
         [0.229, 0.044, 0.043],
         [0.099, 0.031, 0.032],
         [0.173, 0.041, 0.041]
-],
+]
 }

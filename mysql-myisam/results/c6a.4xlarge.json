@@ -1,11 +1,11 @@
 {
-    "system": "MySQL (MyISAM)",
+    "system":  "MySQL (MyISAM)",
     "date": "2025-07-11",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["C++","row-oriented","MySQL compatible"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["C++","row-oriented","MySQL compatible"],
     "load_time": 1458,
     "data_size": 56422266688,
     "result": [
@@ -52,5 +52,5 @@
         [2.61, 2.16, 2.16],
         [2.65, 2.14, 2.14],
         [2.89, 2.57, 2.58]
-],
+]
 }

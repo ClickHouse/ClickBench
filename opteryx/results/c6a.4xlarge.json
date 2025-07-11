@@ -1,11 +1,11 @@
 {
-    "system": "Opteryx",
+    "system":  "Opteryx",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "proprietary": "no",
-    "tuned": "no",
-    "tags": ["stateless","column-oriented","serverless","embedded"],
+    "proprietary":  "no",
+    "tuned":  "no",
+    "tags":  ["stateless","column-oriented","serverless","embedded"],
     "load_time": 0,
     "data_size": 14737666736,
     "result": [
@@ -52,5 +52,5 @@
         [1.671, 0.332, 0.331],
         [1.691, 0.327, 0.327],
         [1.74, 0.465, 0.467]
-],
+]
 }
