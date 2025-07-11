@@ -1084,12 +1084,9 @@ function decodeState(state) {
         } else if (typeof selectors[k] === 'object') {
             decoded[k] = Array.isArray(selectors[k]) ? [] : {};
 
-            console.log(v.substring(1, v.length).split('|').filter(s => s !== '').map(x => decodeURIComponent(x)));
-
             const filtered = v.substring(1, v.length).split('|').filter(s => s !== '')
                 .map(substr => Object.keys(selectors[k]).filter(x => isSubsequence(x, decodeURIComponent(substr))).reduce((a, b) => a.length <= b.length ? a : b));
 
-            console.log(filtered);
             if (v.startsWith('+')) {
                 Object.keys(selectors[k]).forEach(x => {
                     decoded[k][x] = filtered.includes(x);
