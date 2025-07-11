@@ -13,8 +13,8 @@ done
 rm -rf victoria-logs-data
 
 # Download and start victorialogs
-wget --continue --progress=dot:giga https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${RELEASE_VERSION}/victoria-logs-linux-amd64-${RELEASE_VERSION}.tar.gz
-tar xzf victoria-logs-linux-amd64-${RELEASE_VERSION}.tar.gz
+wget --continue --progress=dot:giga https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${RELEASE_VERSION}/victoria-logs-linux-$(dpkg --print-architecture)-${RELEASE_VERSION}.tar.gz
+tar xzf victoria-logs-linux-$(dpkg --print-architecture)-${RELEASE_VERSION}.tar.gz
 ./victoria-logs-prod -loggerOutput=stdout -retentionPeriod=20y -search.maxQueryDuration=5m > server.log &
 
 while true

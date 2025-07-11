@@ -7,9 +7,9 @@ sudo apt-get update -y
 # Includes unbuffer utility program
 sudo apt-get install -y expect-dev
 
-wget --continue --progress=dot:giga https://binaries.cockroachdb.com/cockroach-v$CRDBVERSION.linux-amd64.tgz
-tar -xvzf cockroach-v$CRDBVERSION.linux-amd64.tgz
-sudo cp -r cockroach-v$CRDBVERSION.linux-amd64/* /usr/local/bin/
+wget --continue --progress=dot:giga https://binaries.cockroachdb.com/cockroach-v$CRDBVERSION.linux-$(dpkg --print-architecture).tgz
+tar -xvzf cockroach-v$CRDBVERSION.linux-$(dpkg --print-architecture).tgz
+sudo cp -r cockroach-v$CRDBVERSION.linux-$(dpkg --print-architecture)/* /usr/local/bin/
 # Build Tag:        v25.1.6
 cockroach version | grep "^Build Tag"
 sudo mkdir -p $CRDBDATADIR

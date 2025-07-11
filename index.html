@@ -958,6 +958,7 @@ function render() {
         sorted_indices.map(idx => {
             const curr_size = filtered_data[idx].data_size;
             const baseline_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x));
+            console.log(baseline_size);
             const ratio = curr_size !== null ? curr_size / baseline_size : null;
 
             let td = document.createElement('td');

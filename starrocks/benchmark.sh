@@ -4,7 +4,7 @@
 
 set -e
 
-VERSION=3.4.2-ubuntu-amd64
+VERSION=3.4.2-ubuntu-$(dpkg --print-architecture)
 # Install
 wget --continue --progress=dot:giga https://releases.starrocks.io/starrocks/StarRocks-$VERSION.tar.gz -O StarRocks-$VERSION.tar.gz
 tar zxvf StarRocks-${VERSION}.tar.gz
@@ -14,7 +14,7 @@ cd StarRocks-${VERSION}/
 # Install dependencies
 sudo apt-get update -y
 sudo apt-get install -y openjdk-17-jre mariadb-client
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-$(dpkg --print-architecture)
 export PATH=$JAVA_HOME/bin:$PATH
 
 # Create directory for FE and BE
