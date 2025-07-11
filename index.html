@@ -385,16 +385,16 @@ const additional_data_size_points = [
     </tr>
     <tr>
         <th>Open source: </th>
-        <td id="selectors_proprietary">
-            <a id="selector-proprietary-yes" class="selector selector-active">Yes</a>
-            <a id="selector-proprietary-no" class="selector selector-active">No</a>
+        <td id="selectors_opensource">
+            <a id="selector-opensource-yes" class="selector selector-active">Yes</a>
+            <a id="selector-opensource-no" class="selector selector-active">No</a>
         </td>
     </tr>
     <tr>
         <th>Tuned: </th>
         <td id="selectors_tuned">
-            <a id="selector-tuned-yes" class="selector">No</a>
-            <a id="selector-tuned-no" class="selector selector-active">Yes</a>
+            <a id="selector-tuned-no" class="selector">No</a>
+            <a id="selector-tuned-yes" class="selector selector-active">Yes</a>
         </td>
     </tr>
     <tr>
@@ -450,8 +450,8 @@ let selectors = {
     "type": {},
     "machine": {},
     "cluster_size": {},
-    "proprietary": {"yes": true, "no": true},
-    "tuned": {"yes": true, "no": false},
+    "opensource": {"yes": true, "no": true},
+    "tuned": {"no": true, "yes": false},
     "metric": "hot",
     "queries": [],
 };
@@ -551,9 +551,9 @@ unique_systems.map(elem => {
     selector.addEventListener('click', e => toggle(e, elem, selectors.cluster_size));
 });
 
-document.getElementById('selector-proprietary-yes').addEventListener('click', e => {
-    selectors.proprietary.yes = !selectors.proprietary.yes;
-    if (selectors.proprietary.yes) {
+document.getElementById('selector-opensource-yes').addEventListener('click', e => {
+    selectors.opensource.yes = !selectors.opensource.yes;
+    if (selectors.opensource.yes) {
         e.target.classList.add('selector-active');
     } else {
         e.target.classList.remove('selector-active');
@@ -562,9 +562,9 @@ document.getElementById('selector-proprietary-yes').addEventListener('click', e 
     updateHistory();
 });
 
-document.getElementById('selector-proprietary-no').addEventListener('click', e => {
-    selectors.proprietary.no = !selectors.proprietary.no;
-    if (selectors.proprietary.no) {
+document.getElementById('selector-opensource-no').addEventListener('click', e => {
+    selectors.opensource.no = !selectors.opensource.no;
+    if (selectors.opensource.no) {
         e.target.classList.add('selector-active');
     } else {
         e.target.classList.remove('selector-active');
@@ -623,8 +623,8 @@ function updateSelectors() {
 
     [...document.querySelectorAll('.query-checkbox')].map((elem, i) => { elem.checked = selectors.queries[i] });
 
-    document.getElementById('selector-proprietary-yes').className = selectors.proprietary.yes ? 'selector selector-active' : 'selector';
-    document.getElementById('selector-proprietary-no').className = selectors.proprietary.no ? 'selector selector-active' : 'selector';
+    document.getElementById('selector-opensource-yes').className = selectors.opensource.yes ? 'selector selector-active' : 'selector';
+    document.getElementById('selector-opensource-no').className = selectors.opensource.no ? 'selector selector-active' : 'selector';
 
     document.getElementById('selector-tuned-yes').className = selectors.tuned.yes ? 'selector selector-active' : 'selector';
     document.getElementById('selector-tuned-no').className = selectors.tuned.no ? 'selector selector-active' : 'selector';
@@ -865,8 +865,8 @@ function render() {
         selectors.machine[elem.machine] &&
         selectors.cluster_size[elem.cluster_size] &&
         elem.tags.filter(type => selectors.type[type]).length > 0 &&
-        ((selectors.tuned.yes && elem.tuned === "no") || (selectors.tuned.no && elem.tuned === "yes")) &&
-        ((selectors.proprietary.yes && elem.proprietary === "no") || (selectors.proprietary.no && elem.proprietary === "yes"))
+        ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
+        ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes"))
         );
 
     if (selectors.metric == 'size') {
@@ -1017,34 +1017,106 @@ function render() {
     }
 }
 
-function toBase64(str) {
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(str);
-    const binary = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
-    return btoa(binary);
+function isSubsequence(str, subseq) {
+    let i = 0, j = 0;
+    while (i < str.length && j < subseq.length) {
+        if (str[i] === subseq[j]) j++;
+        i++;
+    }
+    return j === subseq.length;
 }
 
-function fromBase64(base64) {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) { bytes[i] = binary.charCodeAt(i); }
-    const decoder = new TextDecoder();
-    return decoder.decode(bytes);
+/// A greedy algorithm to find a unique subsequence of a string in a set. Does not necessarily the smallest one.
+function findUniqueSubsequence(target, others) {
+    const num_matches = others.filter(s => isSubsequence(s, target)).length;
+    let num_failures = 0;
+    for (let i = 0; i < 1000; ++i) {
+        /// We cut characters from pseudorandom places, this gives shorter subsequences than cutting prefix/suffix.
+        const cut_idx = (i + 123) * 67601 % target.length;
+        const cut = target.substring(0, cut_idx) + target.substring(cut_idx + 1, target.length);
+        if (others.filter(s => isSubsequence(s, cut)).length == num_matches) {
+            target = cut;
+            num_failures = 0;
+        } else {
+            ++num_failures;
+            if (num_failures == target.length) {
+                break;
+            }
+        }
+    }
+    return target;
+}
+
+function encodedStrings(strings) {
+    let res = {};
+    strings.forEach(s => { res[s] = findUniqueSubsequence(s, strings) });
+    return res;
+}
+
+let encoded_keys = {};
+function encodeState(selectors) {
+    return Object.keys(selectors).map(k => {
+        let encoded_str = k + '=';
+        if (typeof selectors[k] === 'string') {
+            return encoded_str + selectors[k];
+        }
+        if (!encoded_keys[k]) {
+            encoded_keys[k] = encodedStrings(Object.keys(selectors[k]));
+        }
+        const count_total = Object.values(selectors[k]).length;
+        const count_selected = Object.values(selectors[k]).filter(x => x).length;
+        if (count_selected * 2 <= count_total) {
+            encoded_str += '+' + Object.keys(selectors[k]).filter(x => selectors[k][x]).map(x => encoded_keys[k][x]).join('|');
+        } else {
+            encoded_str += '-' + Object.keys(selectors[k]).filter(x => !selectors[k][x]).map(x => encoded_keys[k][x]).join('|');
+        }
+        return encoded_str;
+    }).join('&');
+}
+
+function decodeState(state) {
+    let decoded = {};
+    state.split('&').forEach(kv => {
+        let [k, v] = kv.split('=');
+
+        if (typeof selectors[k] === 'string') {
+            decoded[k] = v;
+        } else if (typeof selectors[k] === 'object') {
+            decoded[k] = Array.isArray(selectors[k]) ? [] : {};
+
+            console.log(v.substring(1, v.length).split('|').filter(s => s !== '').map(x => decodeURIComponent(x)));
+
+            const filtered = v.substring(1, v.length).split('|').filter(s => s !== '')
+                .map(substr => Object.keys(selectors[k]).filter(x => isSubsequence(x, decodeURIComponent(substr))).reduce((a, b) => a.length <= b.length ? a : b));
+
+            console.log(filtered);
+            if (v.startsWith('+')) {
+                Object.keys(selectors[k]).forEach(x => {
+                    decoded[k][x] = filtered.includes(x);
+                });
+            } else if (v.startsWith('-')) {
+                Object.keys(selectors[k]).forEach(x => {
+                    decoded[k][x] = !filtered.includes(x);
+                });
+            }
+        }
+    });
+    return decoded;
 }
 
 function updateHistory() {
     history.pushState(selectors, '',
-        window.location.pathname + (window.location.search || '') + '#' + toBase64(JSON.stringify(selectors)));
+        window.location.pathname + (window.location.search || '') + '#' + encodeState(selectors));
 }
 
 window.onpopstate = function(event) {
     if (!event.state) { return; }
     selectors = event.state;
-    if (!selectors.proprietary) {
-        selectors.proprietary = {"yes": true, "no": false};
+    if (!selectors.opensource) {
+        selectors.opensource = {"yes": true, "no": false};
     }
     if (!selectors.tuned) {
-        selectors.tuned = {"yes": true, "no": false};
+        selectors.tuned = {"no": true, "yes": false};
     }
     render();
     updateSelectors();
@@ -1052,12 +1124,12 @@ window.onpopstate = function(event) {
 
 if (window.location.hash) {
     try {
-        selectors = JSON.parse(fromBase64(window.location.hash.substring(1)));
-        if (!selectors.proprietary) {
-            selectors.proprietary = {"yes": true, "no": false};
+        selectors = decodeState(window.location.hash.substring(1));
+        if (!selectors.opensource) {
+            selectors.opensource = {"yes": true, "no": false};
         }
         if (!selectors.tuned) {
-            selectors.tuned = {"yes": true, "no": false};
+            selectors.tuned = {"no": true, "yes": false};
         }
     } catch {}
 }
