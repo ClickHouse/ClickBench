@@ -10,7 +10,7 @@ curl https://clickhouse.com/ | sh
 filesystem_caches:
     cache:
         path: '/dev/shm/clickhouse/'
-        max_size: '16G'
+        max_size_ratio_to_total_space: 0.9
 "
 
 # Run the queries
