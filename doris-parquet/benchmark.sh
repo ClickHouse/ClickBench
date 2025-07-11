@@ -91,4 +91,4 @@ cat log.txt |
   awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 
 echo "Load time: 0"
-echo "Data size: $(du -bcs "$DORIS_HOME/be/hits*.parquet" | grep total)"
+echo "Data size: $(find "$DORIS_HOME/be/" -name '*.parquet' | xargs wc -c | grep total)"

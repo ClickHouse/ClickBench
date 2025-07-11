@@ -7,7 +7,7 @@ sudo apt-get install -y docker.io
 sudo docker run -d -p 3306:3306 -e ANALYTICS_ONLY=1 --name mcs_container mariadb/columnstore
 
 export PASSWORD="tsFgm457%3cj"
-sudo docker exec mcs_container mariadb -e "GRANT ALL PRIVILEGES ON *.* TO '%'@'%' IDENTIFIED BY '${PASSWORD}';"
+sudo docker exec mcs_container mariadb -e "GRANT ALL PRIVILEGES ON *.* TO '$(whoami)'@'%' IDENTIFIED BY '${PASSWORD}';"
 
 sudo apt-get install -y mariadb-client
 
