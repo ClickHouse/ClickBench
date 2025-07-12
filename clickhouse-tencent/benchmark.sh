@@ -9,7 +9,7 @@ fi
 
 sudo clickhouse start
 
-while true
+for _ in {1..300}
 do
     clickhouse-client --query "SELECT 1" && break
     sleep 1

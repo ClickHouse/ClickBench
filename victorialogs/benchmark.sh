@@ -5,7 +5,7 @@
 RELEASE_VERSION=v1.10.1-victorialogs
 
 # Stop the existing victorialogs instance if any and drop its data
-while true
+for _ in {1..300}
 do
     pidof victoria-logs-prod && kill `pidof victoria-logs-prod` || break
     sleep 1
@@ -17,7 +17,7 @@ wget --continue --progress=dot:giga https://github.com/VictoriaMetrics/VictoriaM
 tar xzf victoria-logs-linux-$(dpkg --print-architecture)-${RELEASE_VERSION}.tar.gz
 ./victoria-logs-prod -loggerOutput=stdout -retentionPeriod=20y -search.maxQueryDuration=5m > server.log &
 
-while true
+for _ in {1..300}
 do
     curl -s http://localhost:9428/select/logsql/query -d 'query=_time:2100-01-01Z' && break
     sleep 1

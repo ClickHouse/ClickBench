@@ -56,7 +56,8 @@ ulimit -n 65535
 "$DORIS_HOME"/be/bin/start_be.sh --daemon
 
 # Wait for Frontend ready
-while true; do
+for _ in {1..300}
+do
     fe_version=$(mysql -h127.0.0.1 -P9030 -uroot -e 'show frontends' | cut -f16 | sed -n '2,$p')
     if [[ -n "${fe_version}" ]] && [[ "${fe_version}" != "NULL" ]]; then
         echo "Frontend version: ${fe_version}"
@@ -71,7 +72,8 @@ done
 mysql -h 127.0.0.1 -P9030 -uroot -e "ALTER SYSTEM ADD BACKEND '127.0.0.1:9050' "
 
 # Wait for Backend ready
-while true; do
+for _ in {1..300}
+do
     be_version=$(mysql -h127.0.0.1 -P9030 -uroot -e 'show backends' | cut -f22 | sed -n '2,$p')
     if [[ -n "${be_version}" ]]; then
         echo "Backend version: ${be_version}"
