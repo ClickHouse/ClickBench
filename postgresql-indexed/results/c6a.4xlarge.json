@@ -4,7 +4,7 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
-    "tuned": "no",
+    "tuned": "yes",
     "comment": "",
 
     "tags": ["C", "row-oriented", "PostgreSQL compatible"],
