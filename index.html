@@ -511,7 +511,7 @@ unique_systems.map(elem => {
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
     systems.appendChild(selector);
-    if (!(elem in selectors.system)) { selectors.system[elem] = data.some(entry => entry.system == elem && !entry.hide); }
+    selectors.system[elem] = data.some(entry => entry.system == elem && !entry.hide);
     selector.addEventListener('click', e => toggle(e, elem, selectors.system));
 
     /// Highlighting summary rows and table columns on hovering over the system selector.
@@ -532,7 +532,7 @@ unique_systems.map(elem => {
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
     types.appendChild(selector);
-    if (!(elem in selectors.type)) { selectors.type[elem] = true; }
+    selectors.type[elem] = true;
     selector.addEventListener('click', e => toggle(e, elem, selectors.type));
 });
 
@@ -540,11 +540,12 @@ unique_systems.map(elem => {
     const count_diff = data.filter(elem => elem.machine === b).length - data.filter(elem => elem.machine === a).length;
     return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
 }).map(elem => {
+    const selected = elem != 'c6a.2xlarge' && elem != 'c6a.xlarge' && elem != 'c6a.large' && elem != 'c8g.4xlarge';
     let selector = document.createElement('a');
-    selector.className = 'selector selector-active';
+    selector.className = selected ? 'selector selector-active' : 'selector';
     selector.appendChild(document.createTextNode(elem));
     machines.appendChild(selector);
-    if (!(elem in selectors.machine)) { selectors.machine[elem] = true; }
+    selectors.machine[elem] = selected;
     selector.addEventListener('click', e => toggle(e, elem, selectors.machine));
 });
 
@@ -554,7 +555,7 @@ unique_systems.map(elem => {
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
     cluster_sizes.appendChild(selector);
-    if (!(elem in selectors.cluster_size)) { selectors.cluster_size[elem] = true; }
+    selectors.cluster_size[elem] = true;
     selector.addEventListener('click', e => toggle(e, elem, selectors.cluster_size));
 });
 
