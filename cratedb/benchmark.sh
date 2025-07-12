@@ -28,7 +28,7 @@ sudo apt-get install -y postgresql-client crate
 
 sudo systemctl start crate
 
-while true
+for _ in {1..300}
 do
   psql -U crate -h localhost --no-password -t -c 'SELECT 1' && break
   sleep 1

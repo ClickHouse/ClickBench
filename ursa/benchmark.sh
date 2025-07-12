@@ -7,7 +7,7 @@ chmod +x ursa
 
 ./ursa server > server.log 2>&1 &
 
-while true
+for _ in {1..300}
 do
     ./ursa client --query "SELECT 1" && break
     sleep 1

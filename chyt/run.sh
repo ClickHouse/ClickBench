@@ -45,7 +45,8 @@ insert_data() {
 }
 
 data_filling_waiting() {
-        while true; do
+        for _ in {1..300}
+        do
                 COUNT=$(yt clickhouse execute --alias *clickbench 'select count(*) as c from `//home/hits`')
                 if [[ "$COUNT" == 99997497 ]]; then
                         yt abort-query $(cat fill_query_id)
@@ -108,7 +109,8 @@ run() {
 }
 
 clique_waiting() {
-        while true; do
+        for _ in {1..300}
+        do
                 if check_ready; then
                         echo "Clique is almost ready. Waiting 1 minute to stabilize"
                         sleep 60
