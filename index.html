@@ -23,6 +23,7 @@
             --selector-active-text-color: black;
             --selector-background-color: #EEE;
             --selector-active-background-color: #FFCB80;
+            --selector-passive-background-color: #EEDDCC;
             --selector-hover-text-color: black;
             --selector-hover-background-color: #FDB;
 
@@ -54,6 +55,7 @@
             --selector-background-color: #444;
             --selector-active-text-color: white;
             --selector-active-background-color: #088;
+            --selector-passive-background-color: #566;
             --selector-hover-text-color: black;
             --selector-hover-background-color: white;
 
@@ -128,6 +130,11 @@
             background: var(--selector-active-background-color);
         }
 
+        .selector-passive {
+            color: var(--selector-active-text-color);
+            background: var(--selector-passive-background-color);
+        }
+
         a, a:visited {
             text-decoration: none;
             color: var(--link-color);
@@ -143,7 +150,7 @@
             background: var(--selector-background-color);
         }
 
-        .selector-active:hover {
+        .selector-active:hover, .selector-passive:hover {
             background: var(--selector-hover-background-color);
         }
 
@@ -630,6 +637,25 @@ function updateSelectors() {
     document.getElementById('selector-tuned-no').className = selectors.tuned.no ? 'selector selector-active' : 'selector';
 }
 
+function findPassiveSelectors(filtered_data) {
+    function process(name, container) {
+        const filtered = new Set(filtered_data.map(elem => elem[name]).flat().map(x => String(x)));
+        for (let elem of container.childNodes) {
+            if (elem.tagName == 'A') {
+                if (elem.classList.contains('selector-active') && !filtered.has(elem.innerText)) {
+                    elem.className = 'selector selector-passive';
+                } else if (elem.classList.contains('selector-passive') && filtered.has(elem.innerText)) {
+                    elem.className = 'selector selector-active';
+                }
+            }
+        }
+    }
+    process('system', systems);
+    process('tags', types);
+    process('machine', machines);
+    process('cluster_size', cluster_sizes);
+}
+
 function clearElement(elem)
 {
     while (elem.firstChild) {
@@ -958,7 +984,6 @@ function render() {
         sorted_indices.map(idx => {
             const curr_size = filtered_data[idx].data_size;
             const baseline_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x));
-            console.log(baseline_size);
             const ratio = curr_size !== null ? curr_size / baseline_size : null;
 
             let td = document.createElement('td');
@@ -1016,6 +1041,8 @@ function render() {
 
         details_body.appendChild(tr);
     }
+
+    findPassiveSelectors(filtered_data);
 }
 
 function isSubsequence(str, subseq) {
@@ -1116,8 +1143,8 @@ window.onpopstate = function(event) {
     if (!selectors.tuned) {
         selectors.tuned = {"no": true, "yes": false};
     }
-    render();
     updateSelectors();
+    render();
 };
 
 if (window.location.hash) {
@@ -1132,8 +1159,8 @@ if (window.location.hash) {
     } catch {}
 }
 
-render();
 updateSelectors();
+render();
 
 </script>
 </body>
