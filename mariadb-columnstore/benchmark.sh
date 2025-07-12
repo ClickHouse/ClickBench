@@ -5,7 +5,7 @@
 sudo apt-get update -y
 sudo apt-get install -y docker.io
 docker run -d -p 3306:3306 --shm-size=512m -e PM1=mcs1 --hostname=mcs1 --name mcs1 mariadb/columnstore
-docker exec -it mcs1 provision mcs1
+docker exec -i mcs1 provision mcs1
 
 export PASSWORD="tsFgm457%3cj"
 for _ in {1..300}
