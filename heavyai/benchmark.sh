@@ -46,7 +46,7 @@ sudo systemctl restart heavydb
 echo -n "Load time: "
 command time -f '%e' /opt/heavyai/bin/heavysql -q -t -p HyperInteractive <<< "COPY hits FROM '$(pwd)/hits.csv' WITH (HEADER = 'false');"
 
-# Loaded: 99997497 recs, Rejected: 0 recs in 572.633000 secs
+# Loaded: 99997497 recs, Rejected: 0 recs in 572.633 secs
 
 ./run.sh 2>&1 | tee log.txt
 
