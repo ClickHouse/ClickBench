@@ -15,23 +15,25 @@ print(query)
 
 # Calculate available memory to configurate SparkSession
 ram = int(round(psutil.virtual_memory().available / (1024 ** 3) * 0.7))
-print(f"SparkSession will use {ram} GB of memory")
+heap = ram // 2
+off_heap = ram - heap
+print(f"SparkSession will use {heap} GB of heap and {off_heap} GB of off-heap memory")
 
 spark = (
     SparkSession
     .builder
     .appName("ClickBench")
     .config("spark.driver", "local[*]") # To ensure using all cores
-    .config("spark.driver.memory", f"{ram}g") # Set amount of memory SparkSession can use
+    .config("spark.driver.memory", f"{heap}g") # Set amount of memory SparkSession can use
     .config("spark.sql.parquet.binaryAsString", True) # Treat binary as string to get correct length calculations and text results
     
     # Comet configuration
     .config("spark.jars", "comet.jar")
-    .config("spark.driver.extraClassPath", "comet.jar") # Otherwise fails on some queries - see https://datafusion.apache.org/comet/user-guide/installation.html#additional-configuration
+    .config("spark.driver.extraClassPath", "comet.jar") # Otherwise fails on some queries (see https://datafusion.apache.org/comet/user-guide/installation.html#additional-configuration)
     .config("spark.plugins", "org.apache.spark.CometPlugin")
     .config("spark.shuffle.manager", "org.apache.spark.sql.comet.execution.shuffle.CometShuffleManager")
     .config("spark.memory.offHeap.enabled", "true")
-    .config("spark.memory.offHeap.size", "4g")
+    .config("spark.memory.offHeap.size", f"{off_heap}g")
 
     .getOrCreate()
 )
