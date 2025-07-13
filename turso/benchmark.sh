@@ -5,6 +5,7 @@ sudo apt-get install -y curl
 
 # Download and install Turso
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/tursodatabase/turso/releases/download/v0.1.2-pre.2/turso_cli-installer.sh | sh
+export HOME=${HOME:=~}
 source $HOME/.turso/env
 
 tursodb mydb < create.sql
