@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Differences with Spark setup (see README.md for details):
+# - pyspark==3.5.6 version is used (latest possible for Comet 0.9.0)
+# - Comet installation is added
+# - auto-save results
+
 # Install
 
 sudo apt-get update -y

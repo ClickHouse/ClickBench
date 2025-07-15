@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+Differences with Spark setup (see README.md for details):
+- memory is split between heap (for Spark) and off-heap (for Comet)
+- Comet configuration is added to `SparkSession`
+"""
+
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 
@@ -29,7 +35,7 @@ spark = (
     
     # Comet configuration
     .config("spark.jars", "comet.jar")
-    .config("spark.driver.extraClassPath", "comet.jar") # Otherwise fails on some queries (see https://datafusion.apache.org/comet/user-guide/installation.html#additional-configuration)
+    .config("spark.driver.extraClassPath", "comet.jar")
     .config("spark.plugins", "org.apache.spark.CometPlugin")
     .config("spark.shuffle.manager", "org.apache.spark.sql.comet.execution.shuffle.CometShuffleManager")
     .config("spark.memory.offHeap.enabled", "true")
