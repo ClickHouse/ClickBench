@@ -10,9 +10,7 @@ source $HOME/.turso/env
 
 tursodb mydb < create.sql
 
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
-pigz -d -f hits.csv.gz
+../lib/download-csv.sh
 
 echo -n "Load time: "
 command time -f '%e' tursodb mydb '.import --csv hits.csv hits'

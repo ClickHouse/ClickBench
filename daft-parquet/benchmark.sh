@@ -9,7 +9,7 @@ pip install pandas
 pip install packaging
 pip install daft
 
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
 # Run the queries
 mode=single

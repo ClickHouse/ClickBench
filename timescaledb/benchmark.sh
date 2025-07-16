@@ -17,9 +17,7 @@ sudo -u postgres psql -c "CREATE DATABASE test"
 sudo -u postgres psql test -c "CREATE EXTENSION timescaledb WITH VERSION '2.17.2';"
 
 # Import the data
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+../lib/download-tsv.sh
 sudo chmod og+rX ~
 chmod 777 hits.tsv
 

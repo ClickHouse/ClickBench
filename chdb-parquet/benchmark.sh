@@ -10,7 +10,7 @@ pip install psutil
 pip install chdb
 
 # Load the data
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+../lib/download-parquet-partitioned.sh
 
 # Run the queries
 

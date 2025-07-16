@@ -18,7 +18,7 @@ export PATH="`pwd`/build/release/:$PATH"
 cd ../..
 
 # Load the data
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+../lib/download-parquet-partitioned.sh
 
 # Convert parquet files to vortex partitioned
 echo -n "Load time: "

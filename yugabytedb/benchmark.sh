@@ -19,9 +19,7 @@ mv ./yugabyte-$YDBVERSION ./yugabyte
 
 ./yugabyte/bin/yugabyted start --advertise_address 127.0.0.1 --ui false --background true
 
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+../lib/download-tsv.sh
 
 ./yugabyte/bin/ysqlsh -U yugabyte -c "CREATE DATABASE test;"
 ./yugabyte/bin/ysqlsh -U yugabyte -c "ALTER DATABASE test SET temp_file_limit=-1;"

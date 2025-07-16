@@ -6,7 +6,7 @@ python3 -m venv myenv
 source myenv/bin/activate
 pip install tableauhyperapi
 
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+../lib/download-parquet-partitioned.sh
 
 ./run.sh | tee log.txt
 echo "Data size: $(du -bcs hits*.parquet | grep total)"

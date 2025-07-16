@@ -5,9 +5,7 @@ set -eu
 sudo apt-get update -y
 sudo apt-get install -y docker.io postgresql-client
 
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+../lib/download-tsv.sh
 
 memory=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
 threads=$(nproc)

@@ -91,12 +91,7 @@ mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits"
 sleep 5
 mysql -h 127.0.0.1 -P9030 -uroot hits <"$ROOT"/create.sql
 
-# Download data
-if [[ ! -f hits.tsv.gz ]] && [[ ! -f hits.tsv ]]; then
-    sudo apt-get install -y pigz
-    wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-    pigz -d -f hits.tsv.gz
-fi
+../lib/download-tsv.sh
 
 # Load data
 echo "start loading hits.tsv, estimated to take about 9 minutes ..."

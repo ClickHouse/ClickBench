@@ -13,9 +13,7 @@ sudo docker run -i --rm --network host mysql:5 mysql --host 127.0.0.1 --port 502
 
 # Load the data
 
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+../lib/download-tsv.sh
 
 # ERROR 2 (HY000) at line 1: Wrong data or column definition. Row: 93557187, field: 100.
 head -n 90000000 hits.tsv > hits90m.tsv

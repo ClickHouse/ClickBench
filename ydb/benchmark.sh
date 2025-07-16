@@ -269,19 +269,7 @@ ansible-playbook ydb_platform.ydb.initial_setup --skip-tags checks
 
 cd $START_DIR
 
-if [ ! -f "hits.csv.gz" ]; then
-    wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/hits.csv.gz
-fi
-
-if [ ! -f "hits.csv" ]; then
-    echo "Unpacking hits.csv.gz"
-    gzip -d -f -k hits.csv.gz
-    echo "Done"
-fi
-
-# if [ -f "$HOME/.config/ydb/import_progress/hits.csv" ]; then
-#     rm "$HOME/.config/ydb/import_progress/hits.csv"
-# fi
+../lib/download-csv.sh
 
 cert_dir=$(find $START_DIR/ydb-ansible-examples/TLS/CA/certs -maxdepth 1 -type d -not -path "." -printf "%T@ %p\n" | sort -n | tail -n 1 | cut -d' ' -f2-)
 echo $YDB_PASSWORD|$START_DIR/ydb-ansible-examples/3-nodes-mirror-3-dc/files/ydb -e grpcs://$host1$host_suffix:2135 -d /Root/database --ca-file $cert_dir/ca.crt --user root  workload clickbench init --datetime --store column

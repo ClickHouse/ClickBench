@@ -22,15 +22,15 @@ export KI_PWD="admin"
 CLI="./kisql --host localhost --user admin"
 
 # download the ds
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-sudo mv hits.tsv.gz ./kinetica-persist/
+../lib/download-tsv.sh
+sudo mv hits.tsv ./kinetica-persist/
 
 $CLI --file create.sql
 $CLI --sql "ALTER TIER ram WITH OPTIONS ('capacity' = '27000000000');"
 
 START=$(date +%s)
 
-$CLI --sql "load into hits from file paths 'hits.tsv.gz' format delimited text (INCLUDES HEADER=false, DELIMITER = '\t') WITH OPTIONS (NUM_TASKS_PER_RANK=16, ON ERROR=SKIP);"
+$CLI --sql "load into hits from file paths 'hits.tsv' format delimited text (INCLUDES HEADER=false, DELIMITER = '\t') WITH OPTIONS (NUM_TASKS_PER_RANK=16, ON ERROR=SKIP);"
 
 END=$(date +%s)
 LOADTIME=$(echo "$END - $START" | bc)

@@ -32,9 +32,7 @@ sudo systemctl enable heavydb
 
 # Load the data
 
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
-pigz -d -f hits.csv.gz
+../lib/download-csv.sh
 chmod 777 ~ hits.csv
 
 sudo bash -c "echo 'allowed-import-paths = [\"$(pwd)\"]' > /var/lib/heavyai/heavy.conf_"

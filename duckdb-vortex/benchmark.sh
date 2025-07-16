@@ -18,7 +18,7 @@ export PATH="`pwd`/build/release/:$PATH"
 cd ../..
 
 # Load the data
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+../lib/download-parquet.sh
 
 # Convert parquet files to vortex partitioned
 echo -n "Load time: "

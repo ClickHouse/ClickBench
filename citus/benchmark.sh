@@ -7,9 +7,7 @@ sudo apt-get install -y postgresql-client
 export PGPASSWORD=mypass
 sudo docker run -d --name citus -p 5432:5432 -e POSTGRES_PASSWORD=$PGPASSWORD citusdata/citus:11.0
 
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+../lib/download-tsv.sh
 
 echo "*:*:*:*:mypass" > .pgpass
 chmod 400 .pgpass

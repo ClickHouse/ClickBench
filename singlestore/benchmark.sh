@@ -21,9 +21,7 @@ sudo docker exec -i memsql-ciab memsql -p"${ROOT_PASSWORD}"
 
 # Load the data
 
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+../lib/download-tsv.sh
 sudo docker cp hits.tsv memsql-ciab:/
 
 sudo docker exec -i memsql-ciab memsql -p"${ROOT_PASSWORD}" -e "CREATE DATABASE test"

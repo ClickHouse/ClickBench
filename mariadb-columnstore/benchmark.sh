@@ -21,9 +21,7 @@ mysql --password="${PASSWORD}" --host 127.0.0.1 clickbench < create.sql
 
 # Load the data
 
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+../lib/download-tsv.sh
 
 echo -n "Load time: "
 command time -f '%e' mysql --password="${PASSWORD}" --host 127.0.0.1 clickbench -e "SET sql_log_bin = 0;

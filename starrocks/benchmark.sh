@@ -9,7 +9,7 @@ VERSION=3.4.2-ubuntu-$(dpkg --print-architecture)
 wget --continue --progress=dot:giga https://releases.starrocks.io/starrocks/StarRocks-$VERSION.tar.gz -O StarRocks-$VERSION.tar.gz
 tar zxvf StarRocks-${VERSION}.tar.gz
 
-cd StarRocks-${VERSION}/
+pushd StarRocks-${VERSION}/
 
 # Install dependencies
 sudo apt-get update -y
@@ -38,10 +38,8 @@ mysql -h 127.0.0.1 -P9030 -uroot -e "ALTER SYSTEM ADD BACKEND '${IPADDR}:9050' "
 sleep 30
 
 # Prepare Data
-cd ../
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+popd
+../lib/download-tsv.sh
 
 # Create Table
 mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits"

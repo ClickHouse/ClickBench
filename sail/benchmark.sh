@@ -23,7 +23,7 @@ pip install pysail[spark]==0.2.6 pandas psutil
 
 # Load the data
 
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+../lib/download-parquet.sh
 
 # Run the queries
 

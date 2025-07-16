@@ -16,7 +16,7 @@ sudo mkswap /swapfile
 sudo swapon /swapfile
 
 # Download the data
-wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
+../lib/download-parquet-partitioned.sh
 
 # Run the queries
 

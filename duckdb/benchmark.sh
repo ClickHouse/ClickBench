@@ -14,9 +14,7 @@ export PATH="$PATH:`pwd`/build/release/"
 cd ..
 
 # Load the data
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+../lib/download-tsv.sh
 
 echo -n "Load time: "
 command time -f '%e' duckdb hits.db -f create.sql -c "COPY hits FROM 'hits.tsv' (QUOTE '')"

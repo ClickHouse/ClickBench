@@ -3,7 +3,7 @@
 sudo apt-get update -y
 sudo apt-get install -y docker.io
 
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+../lib/download-parquet.sh
 
 ./run.sh 2>&1 | tee log.txt
 

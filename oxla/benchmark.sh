@@ -7,12 +7,7 @@ sudo apt-get install -y docker.io
 sudo apt-get install -y postgresql-client curl wget apt-transport-https ca-certificates software-properties-common gnupg2 parallel
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential
 
-# download dataset
-echo "Download dataset."
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
-echo "Unpack dataset."
-pigz -d -f hits.csv.gz
+../lib/download-csv.sh
 sudo mkdir data
 sudo mv hits.csv data
 

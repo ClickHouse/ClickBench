@@ -9,9 +9,7 @@ pip install psutil
 pip install chdb
 
 # Load the data
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
-pigz -d -f hits.csv.gz
+../lib/download-csv.sh
 
 echo -n "Load time: "
 command time -f '%e' ./load.py

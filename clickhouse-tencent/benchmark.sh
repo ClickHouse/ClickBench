@@ -17,7 +17,7 @@ done
 
 clickhouse-client < create.sql
 
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+../lib/download-parquet-partitioned.sh
 sudo mv hits_*.parquet /var/lib/clickhouse/user_files/
 sudo chown clickhouse:clickhouse /var/lib/clickhouse/user_files/hits_*.parquet
 

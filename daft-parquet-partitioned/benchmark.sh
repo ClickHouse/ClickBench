@@ -9,7 +9,7 @@ pip install pandas
 pip install packaging
 pip install daft==0.4.13
 
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+../lib/download-parquet-partitioned.sh
 
 mode=partitioned
 echo "Running $mode mode..."

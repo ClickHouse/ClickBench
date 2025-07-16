@@ -5,11 +5,7 @@ sudo apt-get update -y
 sudo apt-get install -y docker.io postgresql-client gzip
 
 # download dataset
-echo "Downloading dataset..."
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-echo "Unpacking dataset..."
-pigz -d -f hits.tsv.gz
+../lib/download-tsv.sh
 mkdir data
 mv hits.tsv data
 chmod -R 777 data
