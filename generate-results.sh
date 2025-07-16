@@ -1,5 +1,6 @@
 #!/bin/bash -e
 
+
 echo "const data = [" > data.generated.js.new
 FIRST=1
 LANG="" ls -1 */results/*.json | while read -r file
