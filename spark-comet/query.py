@@ -40,6 +40,7 @@ spark = (
     .config("spark.shuffle.manager", "org.apache.spark.sql.comet.execution.shuffle.CometShuffleManager")
     .config("spark.memory.offHeap.enabled", "true")
     .config("spark.memory.offHeap.size", f"{off_heap}g")
+    .config("spark.comet.regexp.allowIncompatible", True)
 
     .getOrCreate()
 )
