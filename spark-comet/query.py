@@ -6,14 +6,14 @@ Differences with Spark setup (see README.md for details):
 - Comet configuration is added to `SparkSession`
 """
 
-from pyspark.sql import SparkSession
-import pyspark.sql.functions as F
-
-import timeit
-import psutil
-import sys
-import re
 import os
+import re
+import sys
+import timeit
+
+import psutil
+import pyspark.sql.functions as F
+from pyspark.sql import SparkSession
 
 query = sys.stdin.read()
 # Replace \1 to $1 because spark recognizes only this pattern style (in query 28)
@@ -33,7 +33,7 @@ builder = (
     .config("spark.driver", "local[*]") # To ensure using all cores
     .config("spark.driver.memory", f"{heap}g") # Set amount of memory SparkSession can use
     .config("spark.sql.parquet.binaryAsString", True) # Treat binary as string to get correct length calculations and text results
-    
+
     # Comet configuration
     .config("spark.jars", "comet.jar")
     .config("spark.driver.extraClassPath", "comet.jar")
@@ -64,5 +64,5 @@ for try_num in range(3):
         end = timeit.default_timer()
         print("Time: ", end - start)
     except Exception as e:
-        print(e);
+        print(e)
         print("Failure!")
