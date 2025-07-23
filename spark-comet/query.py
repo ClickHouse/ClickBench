@@ -13,6 +13,7 @@ import timeit
 import psutil
 import sys
 import re
+import os
 
 query = sys.stdin.read()
 # Replace \1 to $1 because spark recognizes only this pattern style (in query 28)
@@ -25,7 +26,7 @@ heap = ram // 2
 off_heap = ram - heap
 print(f"SparkSession will use {heap} GB of heap and {off_heap} GB of off-heap memory")
 
-spark = (
+builder = (
     SparkSession
     .builder
     .appName("ClickBench")
@@ -41,9 +42,13 @@ spark = (
     .config("spark.memory.offHeap.enabled", "true")
     .config("spark.memory.offHeap.size", f"{off_heap}g")
     .config("spark.comet.regexp.allowIncompatible", True)
-
-    .getOrCreate()
 )
+
+if os.getenv("DEBUG") == "1":
+    builder.config("spark.comet.explainFallback.enabled", "true")
+    builder.config("spark.sql.debug.maxToStringFields", "10000")
+
+spark = builder.getOrCreate()
 
 df = spark.read.parquet("hits.parquet")
 # Do casting before creating the view so no need to change to unreadable integer dates in SQL
