@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+⚠️ Used as a base for spark-*/query.py — keep in sync where possible (check README-accelerators.md for the details).
+"""
+
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 

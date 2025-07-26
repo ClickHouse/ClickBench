@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# ⚠️ Used as a base for spark-*/benchmark.sh — keep in sync where possible (check README-accelerators.md for the details).
+
 # Install
 
 sudo apt-get update -y

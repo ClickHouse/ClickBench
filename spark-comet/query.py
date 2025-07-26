@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 """
-Differences with Spark setup (see README.md for details):
+⚠️ Derived from spark/query.py — keep in sync where possible (check README.md for the details).
+Current differences:
 - memory is split between heap (for Spark) and off-heap (for Comet)
 - Comet configuration is added to `SparkSession`
+- debug mode is added
 """
 
 import os
