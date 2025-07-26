@@ -44,6 +44,7 @@ builder = (
     .config("spark.memory.offHeap.enabled", "true")
     .config("spark.memory.offHeap.size", f"{off_heap}g")
     .config("spark.comet.regexp.allowIncompatible", True)
+    .config("spark.comet.scan.allowIncompatible", True)
 )
 
 if os.getenv("DEBUG") == "1":
