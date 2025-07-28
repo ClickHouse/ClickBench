@@ -7,10 +7,10 @@ Note: Keep in sync with spark-*/query.sh (see README-accelerators.md for details
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 
-import timeit
 import psutil
-import sys
 import re
+import sys
+import timeit
 
 query = sys.stdin.read()
 # Replace \1 to $1 because spark recognizes only this pattern style (in query 28)

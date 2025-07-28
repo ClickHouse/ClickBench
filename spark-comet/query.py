@@ -9,14 +9,15 @@ Current differences:
 - debug mode is added
 """
 
+from pyspark.sql import SparkSession
+import pyspark.sql.functions as F
+
 import os
+import psutil
 import re
 import sys
 import timeit
 
-import psutil
-import pyspark.sql.functions as F
-from pyspark.sql import SparkSession
 
 query = sys.stdin.read()
 # Replace \1 to $1 because spark recognizes only this pattern style (in query 28)
@@ -37,7 +38,7 @@ builder = (
     .config("spark.driver.memory", f"{heap}g") # Set amount of memory SparkSession can use
     .config("spark.sql.parquet.binaryAsString", True) # Treat binary as string to get correct length calculations and text results
 
-    # Comet configuration
+    # Additional Comet configuration
     .config("spark.jars", "comet.jar")
     .config("spark.driver.extraClassPath", "comet.jar")
     .config("spark.plugins", "org.apache.spark.CometPlugin")
@@ -48,6 +49,7 @@ builder = (
     .config("spark.comet.scan.allowIncompatible", True)
 )
 
+# Even more Comet configuration
 if os.getenv("DEBUG") == "1":
     builder.config("spark.comet.explainFallback.enabled", "true")
     builder.config("spark.sql.debug.maxToStringFields", "10000")

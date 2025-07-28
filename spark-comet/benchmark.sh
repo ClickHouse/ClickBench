@@ -68,7 +68,7 @@ EOF
 
 cat log.txt | grep -P '^Time:\s+([\d\.]+)|Failure!' | sed -r -e 's/Time: //; s/^Failure!$/null/' |
     awk -v total=$(grep -cP '^Time:\s+[\d\.]+|Failure!' log.txt) '
-        { 
+        {
             if (i % 3 == 0) printf "\t\t[";
             printf $1;
             if (i % 3 != 2) printf ",";
