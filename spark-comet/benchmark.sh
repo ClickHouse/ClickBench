@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ⚠️ Derived from spark/benchmark.sh — keep in sync where possible (check README.md for the details).
+# Note: Derived from spark/benchmark.sh — keep in sync where possible (check README.md for the details).
 # Current differences:
 # - pyspark==3.5.6 version is used (latest stable for Comet 0.9.0)
 # - Comet installation is added
