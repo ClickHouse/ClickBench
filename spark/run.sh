@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ⚠️ Used as a base for spark-*/run.sh — keep in sync where possible (check README-accelerators.md for the details).
+# Note: Keep in sync with spark-*/run.sh (see README-accelerators.md for details)
 
 cat queries.sql | while read query; do
     sync

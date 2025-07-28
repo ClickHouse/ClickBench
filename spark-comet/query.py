@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 """
-⚠️ Derived from spark/query.py — keep in sync where possible (check README.md for the details).
+Note: Keep in sync with spark-*/query.py (see README-accelerators.md for details)
+
 Current differences:
 - memory is split between heap (for Spark) and off-heap (for Comet)
 - Comet configuration is added to `SparkSession`

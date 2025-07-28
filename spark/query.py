@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-⚠️ Used as a base for spark-*/query.py — keep in sync where possible (check README-accelerators.md for the details).
+Note: Keep in sync with spark-*/query.sh (see README-accelerators.md for details)
 """
 
 from pyspark.sql import SparkSession

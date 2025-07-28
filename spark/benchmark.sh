@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ⚠️ Used as a base for spark-*/benchmark.sh — keep in sync where possible (check README-accelerators.md for the details).
+# Note: Keep in sync with spark-*/benchmark.sh (see README-accelerators.md for details)
 
 # Install
 
