@@ -4,7 +4,7 @@
   "machine": "c6a.4xlarge",
   "cluster_size": 1,
   "comment": "c6a.4xlarge, 500gb gp2, aws, 25.3.3.20186.altinityantalya",
-  "tags": ["C++", "ClickHouse", "column-oriented", "Altinity"],
+  "tags": ["C++","ClickHouse", "column-oriented", "Altinity"],
   "proprietary":  "no",
   "tuned":  "no",
   "load_time": 293.379,
