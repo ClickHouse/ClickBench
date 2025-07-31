@@ -1,5 +1,5 @@
 {
-  "system": "Altinity-Antalya",
+  "system": "Altinity-Antalya_local",
   "date": "2025-07-16",
   "machine": "c6a.4xlarge",
   "cluster_size": 1,
@@ -7,7 +7,7 @@
   "tags": ["C++","ClickHouse", "column-oriented", "Altinity"],
   "proprietary":  "no",
   "tuned":  "no",
-  "load_time": 000.379,
+  "load_time": 000.000,
   "data_size": 14466542515,
   "result": [ [0.002,0.002,0.002],
 [0.016,0.013,0.012],
