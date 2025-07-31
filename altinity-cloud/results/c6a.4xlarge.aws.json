@@ -3,7 +3,7 @@
   "date": "2025-07-16",
   "machine": "c6a.4xlarge",
   "cluster_size": 1,
-  "comment": "c6a.4xlarge, 500gb gp2, aws",
+  "comment": "c6a.4xlarge, 500gb gp3, aws",
   "tags": ["C++", "ClickHouse", "column-oriented","Altinity"],
   "proprietary":  "no",
   "tuned":  "no",
