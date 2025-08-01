@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Note: Keep in sync with spark-*/benchmark.sh (see README-accelerators.md for details)
+
 # Install
 
 sudo apt-get update -y
