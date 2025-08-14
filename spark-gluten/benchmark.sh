@@ -3,8 +3,8 @@
 # Note: Keep in sync with spark-*/benchmark.sh (see README-accelerators.md for details)
 #
 # Current differences:
-# - pyspark==3.5.6 version is used (latest stable for Comet 0.9.0)
-# - Comet installation is added
+# - pyspark==3.5.x version is used (compatible with Gluten 1.2.x)
+# - Gluten installation is added
 # - auto-save results
 
 # Install
@@ -23,11 +23,13 @@ pip install pyspark==3.5.6 psutil
 
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
-# Install Comet
+# Install Gluten
 
-COMET_JAR_URL='https://repo1.maven.org/maven2/org/apache/datafusion/comet-spark-spark3.5_2.12/0.9.0/comet-spark-spark3.5_2.12-0.9.0.jar'
+# Note: Pick a jar matching your Spark/Scala/OS. Default below targets Spark 3.5 (Scala 2.12) on Ubuntu 20.04 x86_64.
+# See: https://gluten.apache.org/downloads/
+GLUTEN_JAR_URL=${GLUTEN_JAR_URL:-'https://downloads.apache.org/incubator/gluten/1.2.0/gluten-velox-bundle-spark3.5_2.12-ubuntu_20.04_x86_64-1.2.0.jar'}
 
-wget --continue --progress=dot:giga $COMET_JAR_URL -O comet.jar
+wget --continue --progress=dot:giga "$GLUTEN_JAR_URL" -O gluten.jar
 
 # Run the queries
 
@@ -45,7 +47,7 @@ echo "Load time: 0"
 # Save results as JSON
 
 MACHINE="${1:-c6a.4xlarge}"  # Use first argument as machine name, default to c6a.4xlarge
-COMET_VERSION=$(echo $COMET_JAR_URL | grep -Po ".{5}(?=.jar)")
+GLUTEN_VERSION=$(echo "$GLUTEN_JAR_URL" | grep -Po "[0-9]+\.[0-9]+\.[0-9]+(?=\.jar$)")
 SPARK_VERSION=$(pip freeze | grep '^pyspark==' | cut -d '=' -f3)
 
 mkdir -p results
@@ -53,14 +55,14 @@ mkdir -p results
 (
 cat << EOF
 {
-    "system": "Spark (Comet)",
+    "system": "Spark (Gluten)",
     "date": "$(date +%Y-%m-%d)",
     "machine": "${MACHINE}",
     "cluster_size": 1,
     "proprietary": "no",
     "tuned": "no",
-    "comment": "Using Comet ${COMET_VERSION} with Spark ${SPARK_VERSION}",
-    "tags": ["Java", "Rust", "column-oriented", "Spark derivative", "DataFusion", "Parquet"],
+    "comment": "Using Gluten ${GLUTEN_VERSION} with Spark ${SPARK_VERSION}",
+    "tags": ["Java", "C++", "column-oriented", "Spark derivative", "Velox", "Parquet"],
     "load_time": 0,
     "data_size": ${DATA_SIZE},
     "result": [
