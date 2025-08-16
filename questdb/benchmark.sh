@@ -2,7 +2,7 @@
 
 # Install
 
-wget --continue --progress=dot:giga https://github.com/questdb/questdb/releases/download/8.2.0/questdb-8.2.0-rt-linux-x86-64.tar.gz
+wget --continue --progress=dot:giga https://github.com/questdb/questdb/releases/download/9.0.2/questdb-9.0.2-rt-linux-x86-64.tar.gz
 tar xf questdb*.tar.gz --one-top-level=questdb --strip-components 1
 questdb/bin/questdb.sh start
 
@@ -42,7 +42,7 @@ else
     # On smaller instances use this:
     start=$(date +%s)
 
-    curl -F data=@hits.csv 'http://localhost:9000/imp?name=hits'
+    curl -F data=@hits.csv 'http://localhost:9000/imp?name=hits&maxUncommittedRows=5000000'
 
     echo 'waiting for rows to become readable...'
     until [ "$(curl -s -G --data-urlencode "query=select 1 from (select count() c from hits) where c = 99997497;" 'http://localhost:9000/exec' | grep -c '"count":1')" -ge 1 ]; do
