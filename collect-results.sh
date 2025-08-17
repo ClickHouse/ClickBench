@@ -1,4 +1,4 @@
-machine='t3a.small'; clickhouse-client --query "
+machine=${machine:=t3a.small}; clickhouse-client --query "
 
 SELECT system FROM (
 
@@ -19,7 +19,7 @@ WITH
 
 SELECT time, system, machine, total_time, disk_space_diff, load_time, data_size, length(runtimes), runtimes
 FROM sink.data
-WHERE time >= today() - 2 AND content NOT LIKE 'Cloud-init%' AND good AND machine = '${machine}'
+WHERE time >= today() - 5 AND content NOT LIKE 'Cloud-init%' AND good AND machine = '${machine}'
 ORDER BY time DESC LIMIT 1 BY system
 
 )
