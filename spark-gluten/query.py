@@ -3,16 +3,14 @@
 """
 Note: Keep in sync with spark-*/query.py (see README-accelerators.md for details)
 
-Current differences:
- - memory is split between heap (for Spark) and off-heap (for Gluten)
- - Gluten configuration is added to `SparkSession`
-- debug mode is added
+Highlights:
+- memory is split between heap (for Spark) and off-heap (for Gluten)
+- Gluten configuration is added to `SparkSession`
 """
 
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 
-import os
 import psutil
 import re
 import sys
@@ -41,18 +39,12 @@ builder = (
     # Additional Gluten configuration
     .config("spark.jars", "gluten.jar")
     .config("spark.driver.extraClassPath", "gluten.jar")
-    .config("spark.executor.extraClassPath", "gluten.jar")
     .config("spark.plugins", "org.apache.gluten.GlutenPlugin")
-    .config("spark.gluten.sql.columnar.backend.lib", "velox")
     .config("spark.shuffle.manager", "org.apache.spark.shuffle.sort.ColumnarShuffleManager")
     .config("spark.memory.offHeap.enabled", "true")
     .config("spark.memory.offHeap.size", f"{off_heap}g")
+    .config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true")
 )
-
-# Even more Gluten configuration
-if os.getenv("DEBUG") == "1":
-    builder.config("spark.gluten.sql.columnar.backend.debug", "true")
-    builder.config("spark.sql.debug.maxToStringFields", "10000")
 
 spark = builder.getOrCreate()
 

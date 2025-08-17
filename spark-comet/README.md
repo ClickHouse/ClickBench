@@ -1,10 +1,10 @@
-This README includes info on configuring Comet for ClickBench. For additional details, please refer to [Comet's docs](https://datafusion.apache.org/comet/user-guide/overview.html), [spark-accelerators README](../spark/README-accelerators.md) and [issue](https://github.com/apache/datafusion-comet/issues/2035) discussing the results.
+This README includes info on configuring Apache Comet for ClickBench. For additional details, please refer to [Comet's docs](https://datafusion.apache.org/comet/user-guide/overview.html), [spark-accelerators README](../spark/README-accelerators.md) and [issue](https://github.com/apache/datafusion-comet/issues/2035) discussing the results.
 
 ### Run
 
 As usual, benchmark can be run via `./benchmark.sh`. Additionally, users can provide machine spec like `./benchmark.sh c6a.8xlarge` so script saves it in relevant file.
 
-### Tips
+### Notes
 - To find all unsupported queries from `log.txt` (requires running bench in debug mode):
 ```bash
 >>> grep -P "\[COMET:" log.txt | sed -e 's/^[ \t]*//' | sort | uniq -c

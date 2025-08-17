@@ -3,7 +3,7 @@
 """
 Note: Keep in sync with spark-*/query.py (see README-accelerators.md for details)
 
-Current differences:
+Highlights:
 - memory is split between heap (for Spark) and off-heap (for Comet)
 - Comet configuration is added to `SparkSession`
 - debug mode is added

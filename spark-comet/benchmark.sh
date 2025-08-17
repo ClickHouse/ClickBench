@@ -2,7 +2,7 @@
 
 # Note: Keep in sync with spark-*/benchmark.sh (see README-accelerators.md for details)
 #
-# Current differences:
+# Highlights:
 # - pyspark==3.5.6 version is used (latest stable for Comet 0.9.0)
 # - Comet installation is added
 # - auto-save results
