@@ -423,8 +423,7 @@ const additional_data_size_points = [
                 System &amp; Machine
             </th>
             <th colspan="2">
-                Relative <span id="time-or-size">time</span> (lower is better).<br>
-                <span style="font-weight: normal;">Different shades of brown represent the same value at different scales (1x, 10x, 100x zoom).</span>
+                Relative <span id="time-or-size">time</span> (lower is better)
             </th>
         </tr>
     </thead>
@@ -541,7 +540,7 @@ unique_systems.map(elem => {
     const count_diff = data.filter(elem => elem.machine === b).length - data.filter(elem => elem.machine === a).length;
     return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
 }).map(elem => {
-    const selected = elem != 'c6a.2xlarge' && elem != 'c6a.xlarge' && elem != 'c6a.large' && elem != 'c8g.4xlarge' && elem != 't3a.small';
+    const selected = elem != 'c6a.2xlarge' && elem != 'c6a.xlarge' && elem != 'c6a.large' && elem != 'c8g.4xlarge' && elem != 't3a.small' && elem != 'c8g.metal-48xl';
     let selector = document.createElement('a');
     selector.className = selected ? 'selector selector-active' : 'selector';
     selector.appendChild(document.createTextNode(elem));
