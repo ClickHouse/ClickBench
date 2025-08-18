@@ -2,7 +2,7 @@
 
 # Install
 
-wget --continue --progress=dot:giga https://github.com/questdb/questdb/releases/download/8.2.0/questdb-8.2.0-rt-linux-x86-64.tar.gz
+wget --continue --progress=dot:giga https://github.com/questdb/questdb/releases/download/9.0.2/questdb-9.0.2-rt-linux-x86-64.tar.gz
 tar xf questdb*.tar.gz --one-top-level=questdb --strip-components 1
 questdb/bin/questdb.sh start
 
@@ -42,7 +42,7 @@ else
     # On smaller instances use this:
     start=$(date +%s)
 
-    curl -F data=@hits.csv 'http://localhost:9000/imp?name=hits'
+    curl -F data=@hits.csv 'http://localhost:9000/imp?name=hits&maxUncommittedRows=5000000'
 
     echo 'waiting for rows to become readable...'
     until [ "$(curl -s -G --data-urlencode "query=select 1 from (select count() c from hits) where c = 99997497;" 'http://localhost:9000/exec' | grep -c '"count":1')" -ge 1 ]; do
@@ -61,6 +61,10 @@ fi
 echo -n "Data size: "
 du -bcs ~/.questdb/db/hits* | grep total
 
-cat log.txt | grep -P '"timings"|"error"|null' | sed -r -e 's/^.*"error".*$/null/; s/^.*"execute":([0-9]*),.*$/\1/' |
-  awk '{ print ($1) / 1000000000 }' | sed -r -e 's/^0$/null/' |
-  awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+cat log.txt | \
+    grep -P '"timings"|"error"|null' | \
+    sed -r -e 's/^.*"error".*$/null/; s/^.*"execute":([0-9]*),.*$/\1/' | \
+    awk '{ print ($1) / 1000000000 }' | \
+    awk '{ printf "%.3f\n", $1 }' | \
+    sed -r -e 's/^0$/null/' | \
+    awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
