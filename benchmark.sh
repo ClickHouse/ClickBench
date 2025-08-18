@@ -1,7 +1,52 @@
-#!/bin/bash
+#!/bin/bash 
 
 set -o noglob
 TRIES=5
+
+# Parse extra flag
+EXTRA=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --extras)
+            EXTRA=$2
+            shift 2
+            ;;
+        *)
+            echo "Error: Unknown flag '$1'"
+            echo "Usage: $0 [--extras otel]"
+            exit 1
+            ;;
+    esac
+done
+
+# Validate extra flag value
+if [ "$EXTRA" != "false" ] && [ "$EXTRA" != "otel" ]; then
+    echo "Error: Invalid value for --extras flag. Must be 'otel'"
+    echo "Usage: $0 [--extras otel]"
+    exit 1
+fi
+
+cat queries.sql >> queries_tmp.sql
+
+# Generate OTEL parameters if --extra=otel
+if [ "$EXTRA" = "otel" ]; then
+    echo "Generating OTEL parameters..."
+    # Generate timestamps (1 hour difference)
+    TS_START=$(date -v-1H +%s000)
+    TS_END=$(date +%s000)
+    
+    # Generate dates
+    DATE_NANO=$(date -v-1H +%FT%T.%NZ)
+    DATE_MS=$(date -v-1H +%FT%TZ)
+    
+    # Store OTEL parameters for later merging
+    otel_params="--param_HYPERDX_PARAM_TS_START=$TS_START --param_HYPERDX_PARAM_TS_END=$TS_END"
+    echo "OTEL parameters generated: $otel_params"
+    # Add OTEL queries to the list
+    if [ -f "queries_otel.sql" ]; then
+        cat queries_otel.sql >> queries_tmp.sql
+    fi
+fi
 
 
 QUERY_NUM=1
@@ -73,10 +118,10 @@ query_stmt=""
 
 while IFS= read -r line || [ -n "$line" ]; do
     [[ -z "$line" ]] && continue
-
+    param_flags="$otel_params"
     if [[ "$line" =~ ^--[[:space:]]*\{.*\} ]]; then
         json=$(echo "$line" | sed 's/^--[[:space:]]*//')
-        param_flags=""
+        # Start with OTEL params if they exist
         while IFS="=" read -r key value; do
             param_flags+="--param_${key}=${value} "
         done < <(echo "$json" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
@@ -120,10 +165,10 @@ while IFS= read -r line || [ -n "$line" ]; do
     echo "]," >> temp.json
 
     QUERY_NUM=$((QUERY_NUM + 1))
-done < queries.sql
+done < queries_tmp.sql
 
 sed '$ s/.$//' temp.json > results.json
 echo ']}' >> results.json
 cat results.json | jq > "$output_file"
-rm temp.json results.json
+rm temp.json results.json queries_tmp.sql
 set +o noglob
