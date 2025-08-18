@@ -424,7 +424,7 @@ const additional_data_size_points = [
             </th>
             <th colspan="2">
                 Relative <span id="time-or-size">time</span> (lower is better).<br>
-                <span style="font-weight: normal;">Different shades of brown represent the same value at different scales (1x, 10x, 100x zoom).</span>
+                <span style="font-weight: normal" id="scale_hint"></span>
             </th>
         </tr>
     </thead>
@@ -1045,6 +1045,10 @@ function render() {
     }
 
     findPassiveSelectors(filtered_data);
+
+    /// The small hint below column heading "Relative time (lower is better)"
+    color = (document.documentElement.getAttribute('data-theme') == 'dark') ? 'blue' : 'brown';
+    document.getElementById("scale_hint").textContent = 'Different shades of ' + color + ' represent the same value at different scales (1x, 10x, 100x zoom).';
 }
 
 function isSubsequence(str, subseq) {
