@@ -5,6 +5,7 @@ This README includes info on configuring Apache Comet for ClickBench. For additi
 As usual, benchmark can be run via `./benchmark.sh`. Additionally, users can provide machine spec like `./benchmark.sh c6a.8xlarge` so script saves it in relevant file.
 
 ### Notes
+
 - To find all unsupported queries from `log.txt` (requires running bench in debug mode):
 ```bash
 >>> grep -P "\[COMET:" log.txt | sed -e 's/^[ \t]*//' | sort | uniq -c
@@ -19,6 +20,7 @@ As usual, benchmark can be run via `./benchmark.sh`. Additionally, users can pro
 - Check [here](https://datafusion.apache.org/comet/user-guide/installation.html#run-spark-shell-with-comet-enabled) for _basic Comet configuration_.
 
 ### Configuration
+
 - Comet requires a __dedicated memory pool__, which can be allocated either through memoryOverhead or off-heap memory. The [documentation recommends](https://datafusion.apache.org/comet/user-guide/tuning.html#configuring-comet-memory-in-off-heap-mode) using off-heap memory, which is the approach used in ClickBench.
 Therefore, we need to split available memory between heap (for Spark) and off-heap (for Comet). For both TPC-H and TPC-DS benchmarks, Comet documentation [suggests](https://datafusion.apache.org/comet/contributor-guide/benchmarking.html) a 50/50 split. This allocation appears to be chosen to support Spark execution as well — it happens when Comet can't handle certain operators, which is also relevant for ClickBench.
 - `spark.driver.extraClassPath` is set to prevent Comet from failing on certain queries (check [docs](https://datafusion.apache.org/comet/user-guide/installation.html#additional-configuration) for details).
