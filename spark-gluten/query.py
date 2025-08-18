@@ -4,15 +4,13 @@
 Note: Keep in sync with spark-*/query.py (see README-accelerators.md for details)
 
 Highlights:
-- memory is split between heap (for Spark) and off-heap (for Comet)
-- Comet configuration is added to `SparkSession`
-- debug mode is added
+- memory is split between heap (for Spark) and off-heap (for Gluten)
+- Gluten configuration is added to `SparkSession`
 """
 
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 
-import os
 import psutil
 import re
 import sys
@@ -38,21 +36,15 @@ builder = (
     .config("spark.driver.memory", f"{heap}g") # Set amount of memory SparkSession can use
     .config("spark.sql.parquet.binaryAsString", True) # Treat binary as string to get correct length calculations and text results
 
-    # Additional Comet configuration
-    .config("spark.jars", "comet.jar")
-    .config("spark.driver.extraClassPath", "comet.jar")
-    .config("spark.plugins", "org.apache.spark.CometPlugin")
-    .config("spark.shuffle.manager", "org.apache.spark.sql.comet.execution.shuffle.CometShuffleManager")
+    # Additional Gluten configuration
+    .config("spark.jars", "gluten.jar")
+    .config("spark.driver.extraClassPath", "gluten.jar")
+    .config("spark.plugins", "org.apache.gluten.GlutenPlugin")
+    .config("spark.shuffle.manager", "org.apache.spark.shuffle.sort.ColumnarShuffleManager")
     .config("spark.memory.offHeap.enabled", "true")
     .config("spark.memory.offHeap.size", f"{off_heap}g")
-    .config("spark.comet.regexp.allowIncompatible", True)
-    .config("spark.comet.scan.allowIncompatible", True)
+    .config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true")
 )
-
-# Even more Comet configuration
-if os.getenv("DEBUG") == "1":
-    builder.config("spark.comet.explainFallback.enabled", "true")
-    builder.config("spark.sql.debug.maxToStringFields", "10000")
 
 spark = builder.getOrCreate()
 
