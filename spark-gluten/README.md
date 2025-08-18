@@ -5,10 +5,12 @@ This README includes info on configuring Apache Gluten for ClickBench. For addit
 As usual, benchmark can be run via `./benchmark.sh`. Additionally, users can provide machine spec like `./benchmark.sh c6a.8xlarge` so script saves it in relevant file.
 
 ### Notes
+
 - Check [here](https://gluten.apache.org/downloads/) for _pre-built jars_.
 - Check [here](https://gluten.apache.org/#3-how-to-use) and [here](https://apache.github.io/incubator-gluten/get-started/Velox.html#submit-the-spark-sql-job) for _examples of Gluten configuration_.
 
 ### Configuration
+
 - Spark 3.5.2 is used. [Documentation recommends 3.5.5](https://apache.github.io/incubator-gluten/get-started/Velox.html#prerequisite), but running queries with 3.5.5 leads to warnings like `WARN SparkShimProvider: Spark runtime version 3.5.5 is not matched with Gluten's fully tested version 3.5.2` and produces the following error:
 ```
 An error occurred while calling o59.showString.
