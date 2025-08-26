@@ -38,8 +38,8 @@ echo "Install Python packages"
 python3 -m venv myenv
 source myenv/bin/activate
 pip install --upgrade setuptools wheel
-env RUSTFLAGS="-C target-cpu=native" pip install "pysail==0.3.3" -v --no-binary pysail
-pip install "pyspark[connect]==4.0.0" \
+env RUSTFLAGS="-C target-cpu=native" pip install --no-cache-dir "pysail==0.3.3" -v --no-binary pysail
+pip install "pyspark-client==4.0.0" \
   "protobuf==5.28.3" \
   "grpcio==1.71.2" \
   "grpcio-status==1.71.2" \

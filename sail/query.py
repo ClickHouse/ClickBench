@@ -16,8 +16,7 @@ print(query)
 
 import os
 os.environ["SAIL_PARQUET__BINARY_AS_STRING"] = "true"
-# os.environ["SAIL_PARQUET__PUSHDOWN_FILTERS"] = "true"
-# os.environ["SAIL_PARQUET__REORDER_FILTERS"] = "true"
+os.environ["SAIL_PARQUET__REORDER_FILTERS"] = "true"
 os.environ["SAIL_RUNTIME__ENABLE_SECONDARY"] = "true"
 os.environ["SAIL_PARQUET__ALLOW_SINGLE_FILE_PARALLELISM"] = "true"
 
@@ -34,7 +33,7 @@ for try_num in range(3):
     try:
         start = timeit.default_timer()
         result = spark.sql(query)
-        res = result.collect()
+        res = result.toPandas()
         end = timeit.default_timer()
         if try_num == 0:
             print(res)
