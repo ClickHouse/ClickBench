@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Install
+
+export DEBIAN_FRONTEND=noninteractive
+
+echo "Set Timezone"
+export TZ=Etc/UTC
+sudo ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+echo "Install Rust"
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
+bash rust-init.sh -y
+export HOME=${HOME:=~}
+source ~/.cargo/env
+
+echo "Install Dependencies"
+sudo apt-get update -y
+sudo apt-get install -y software-properties-common
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt-get update -y
+sudo apt-get install -y \
+     gcc protobuf-compiler \
+     libprotobuf-dev \
+     pkg-config \
+     libssl-dev \
+     python3.11 \
+     python3.11-dev \
+     python3.11-venv \
+     python3.11-distutils
+
+echo "Set Python alternatives"
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+     sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
+     curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+
+echo "Install Python packages"
+python3 -m venv myenv
+source myenv/bin/activate
+pip install --upgrade setuptools wheel
+env RUSTFLAGS="-C target-cpu=native" pip install --no-cache-dir "pysail==0.3.3" -v --no-binary pysail
+pip install "pyspark-client==4.0.0" \
+  "protobuf==5.28.3" \
+  "grpcio==1.71.2" \
+  "grpcio-status==1.71.2" \
+  pandas \
+  psutil
+
+# Load the data
+
+echo "Download benchmark target data, partitioned"
+mkdir -p partitioned
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --directory-prefix partitioned --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+
+# Run the queries
+
+./run.sh 2>&1 | tee log.txt
+
+cat log.txt | grep -P '^Time:\s+([\d\.]+)|Failure!' | sed -r -e 's/Time: //; s/^Failure!$/null/' |
+    awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+
+echo "Data size: $(du -b hits.parquet)"
+echo "Load time: 0"
