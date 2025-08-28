@@ -2,7 +2,7 @@
 
 # Install
 curl https://install.duckdb.org | sh
-export PATH='/Users/milovidov/.duckdb/cli/latest':$PATH
+export PATH='/root/.duckdb/cli/latest':$PATH
 
 # Load the data
 sudo apt-get install -y pigz

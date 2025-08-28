@@ -2,7 +2,7 @@
 
 # Install
 curl https://install.duckdb.org | sh
-export PATH='/Users/milovidov/.duckdb/cli/latest':$PATH
+export PATH='/root/.duckdb/cli/latest':$PATH
 
 echo -n "Load time: "
 command time -f '%e' duckdb hits.db -f create.sql
