@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Install
+export HOME=${HOME:=~}
 curl https://install.duckdb.org | sh
-export PATH='/.duckdb/cli/latest':$PATH
+export PATH=$HOME'/.duckdb/cli/latest':$PATH
 
 echo -n "Load time: "
 command time -f '%e' duckdb hits.db -f create.sql
