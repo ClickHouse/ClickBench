@@ -1,11 +1,11 @@
 {
-    "system":    "ClickHouse (data lake, single)",
+    "system":     "ClickHouse (data lake, single)",
     "date": "2025-08-28",
     "machine": "c6a.large",
     "cluster_size": 1,
-    "proprietary":    "no",
-    "tuned":    "no",
-    "tags":    ["C++","column-oriented","embedded","stateless","ClickHouse derivative"],
+    "proprietary":     "no",
+    "tuned":     "no",
+    "tags":     ["C++","column-oriented","embedded","stateless","ClickHouse derivative"],
     "load_time": 0,
     "data_size": 14779976446,
     "result": [
