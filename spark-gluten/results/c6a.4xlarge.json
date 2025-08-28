@@ -6,7 +6,7 @@
     "proprietary": "no",
     "tuned": "no",
     "comment": "Using Gluten 1.4.0 with Spark 3.5.2",
-    "tags": ["Java", "C++", "column-oriented", "Spark derivative", "Velox", "Parquet"],
+    "tags": ["Java", "C++", "column-oriented", "Spark derivative", "Velox", "parquet"],
     "load_time": 0,
     "data_size": 14779976446,
     "result": [
