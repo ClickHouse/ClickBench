@@ -14,7 +14,7 @@ export PATH="$PATH:`pwd`/build/release/"
 cd ..
 
 # Load the data
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 
 echo -n "Load time: "
 command time -f '%e' duckdb hits.db -f create.sql
