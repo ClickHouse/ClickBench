@@ -1,17 +1,8 @@
 #!/bin/bash
 
 # Install
-sudo apt-get update -y
-sudo apt-get install -y ninja-build cmake build-essential make ccache pip clang
-
-export CC=clang
-export CXX=clang++
-git clone https://github.com/duckdb/duckdb
-cd duckdb
-git checkout v1.3-ossivalis
-GEN=ninja NATIVE_ARCH=1 LTO=thin make
-export PATH="$PATH:`pwd`/build/release/"
-cd ..
+curl https://install.duckdb.org | sh
+export PATH='/Users/milovidov/.duckdb/cli/latest':$PATH
 
 # Load the data
 seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
