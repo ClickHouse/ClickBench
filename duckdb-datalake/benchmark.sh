@@ -13,9 +13,6 @@ GEN=ninja NATIVE_ARCH=1 LTO=thin make
 export PATH="$PATH:`pwd`/build/release/"
 cd ..
 
-# Load the data
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
-
 echo -n "Load time: "
 command time -f '%e' duckdb hits.db -f create.sql
 
