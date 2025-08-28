@@ -7,7 +7,7 @@
     "tuned": "no",
     "comment": "v1.7.5 (6e5242f)",
 
-    "tags": ["Rust", "column-oriented", "parquet"],
+    "tags": ["Rust", "column-oriented"],
 
     "load_time": 0,
     "data_size": 14018794333,
