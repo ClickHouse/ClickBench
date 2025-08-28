@@ -1,3 +1,4 @@
+SET home_directory='/root';
 INSTALL httpfs;
 LOAD httpfs;
 
