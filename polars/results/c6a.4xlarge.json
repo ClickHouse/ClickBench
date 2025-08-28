@@ -6,7 +6,7 @@
     "proprietary": "no",
     "tuned": "no",
     "comment": "",
-    "tags": ["column-oriented", "parquet"],
+    "tags": ["column-oriented"],
     "load_time": null,
     "data_size": 14779976446,
     "result": [
