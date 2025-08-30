@@ -34,7 +34,7 @@ for query_num in $(seq 0 42); do
     echo -n "["
     for i in $(seq 1 $TRIES); do
         # Parse query results out of the JSON output, which reports the time in ns
-        RES=$(RUST_LOG=off clickbench -i 1 --flavor $FLAVOR --targets datafusion:vortex --display-format gh-json --queries-file ./queries.sql -q $query_num --hide-progress-bar | jq ".value / 1000000000")
+        RES=$(RUST_LOG=off query_bench clickbench -i 1 --flavor $FLAVOR --targets datafusion:vortex --display-format gh-json --queries-file ./queries.sql -q $query_num --hide-progress-bar | jq ".value / 1000000000")
 
         [[ $RES != "" ]] && \
             echo -n "$RES" || \
