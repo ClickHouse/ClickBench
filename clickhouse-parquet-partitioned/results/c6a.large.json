@@ -1,11 +1,11 @@
 {
-    "system":     "ClickHouse (Parquet, partitioned)",
+    "system":      "ClickHouse (Parquet, partitioned)",
     "date": "2025-08-28",
     "machine": "c6a.large",
     "cluster_size": 1,
-    "proprietary":     "no",
-    "tuned":     "no",
-    "tags":     ["C++","column-oriented","embedded","stateless","ClickHouse derivative"],
+    "proprietary":      "no",
+    "tuned":      "no",
+    "tags":      ["C++","column-oriented","embedded","stateless","ClickHouse derivative"],
     "load_time": 0,
     "data_size": 14737666736,
     "result": [
