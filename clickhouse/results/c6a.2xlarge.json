@@ -1,11 +1,11 @@
 {
-    "system":    "ClickHouse",
+    "system":   "ClickHouse",
     "date": "2025-08-30",
     "machine": "c6a.2xlarge",
     "cluster_size": 1,
-    "proprietary":    "no",
-    "tuned":    "no",
-    "tags":    ["C++","column-oriented","ClickHouse derivative"],
+    "proprietary":   "no",
+    "tuned":   "no",
+    "tags":   ["C++","column-oriented","ClickHouse derivative"],
     "load_time": 276,
     "data_size": 14464710307,
     "result": [
