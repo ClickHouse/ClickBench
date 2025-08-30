@@ -296,6 +296,12 @@
             transform: translate(1px, 1px);
             filter: brightness(125%);
         }
+
+        #scale_hint {
+            font-weight: normal;
+            font-size: 80%;
+            filter: contrast(10%);
+        }
     </style>
     <script type="text/javascript" src="data.generated.js"></script>
     <script type="text/javascript">
@@ -423,8 +429,8 @@ const additional_data_size_points = [
                 System &amp; Machine
             </th>
             <th colspan="2">
-                Relative <span id="time-or-size">time</span> (lower is better).<br>
-                <span style="font-weight: normal" id="scale_hint"></span>
+                Relative <span id="time-or-size">time</span> (lower is better).<br/>
+                <span id="scale_hint"></span>
             </th>
         </tr>
     </thead>
@@ -1047,8 +1053,7 @@ function render() {
     findPassiveSelectors(filtered_data);
 
     /// The small hint below column heading "Relative time (lower is better)"
-    color = (document.documentElement.getAttribute('data-theme') == 'dark') ? 'blue' : 'brown';
-    document.getElementById("scale_hint").textContent = 'Different shades of ' + color + ' represent the same value at different scales (1x, 10x, 100x zoom).';
+    document.getElementById("scale_hint").textContent = 'Different colors on the bar chart represent the same values shown at different scales (1x, 10x, 100x zoom)';
 }
 
 function isSubsequence(str, subseq) {
