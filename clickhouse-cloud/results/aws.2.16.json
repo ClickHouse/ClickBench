@@ -1,7 +1,7 @@
 
 {
     "system": "ClickHouse ☁️ (aws)",
-    "date": "2025-08-29",
+    "date": "2025-08-30",
     "machine": "16GiB",
     "cluster_size": 2,
     "proprietary": "yes",
@@ -10,7 +10,7 @@
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "aws"],
 
-    "load_time": Code: 210. DB::NetException: SSL connection unexpectedly closed, while writing to socket (10.1.0.243:38606 -> 3.217.93.62:9440): (y0m0y7kr5v.us-east-1.aws.clickhouse.cloud:9440, 3.217.93.62, local address: 10.1.0.243:38606). (NETWORK_ERROR),
+    "load_time": Code: 210. DB::NetException: SSL connection unexpectedly closed, while writing to socket (10.1.0.210:35954 -> 3.217.93.62:9440): (rjwe1j6g5j.us-east-1.aws.clickhouse.cloud:9440, 3.217.93.62, local address: 10.1.0.210:35954). (NETWORK_ERROR),
     "data_size": ,
 
     "result": [
