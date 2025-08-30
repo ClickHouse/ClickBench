@@ -29,13 +29,13 @@ ORDER BY time DESC LIMIT 1 BY system
 WITH file('${system}/results/c6a.4xlarge.json') AS template
 
 SELECT '{
-    \"system\": ' || visitParamExtractRaw(template, 'system') || ',
+    \"system\":' || visitParamExtractRaw(template, 'system') || ',
     \"date\": \"' || time::Date || '\",
     \"machine\": \"' || machine || '\",
     \"cluster_size\": 1,
-    \"proprietary\": ' || visitParamExtractRaw(template, 'proprietary') || ',
-    \"tuned\": ' || visitParamExtractRaw(template, 'tuned') || ',
-    \"tags\": ' || visitParamExtractRaw(template, 'tags') || ',
+    \"proprietary\":' || visitParamExtractRaw(template, 'proprietary') || ',
+    \"tuned\":' || visitParamExtractRaw(template, 'tuned') || ',
+    \"tags\":' || visitParamExtractRaw(template, 'tags') || ',
     \"load_time\": ' || load_time || ',
     \"data_size\": ' || data_size || ',
     \"result\": ' || runtimes_formatted || '
