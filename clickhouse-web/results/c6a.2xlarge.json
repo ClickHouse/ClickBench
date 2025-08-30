@@ -1,11 +1,11 @@
 {
-    "system":    "ClickHouse (web)",
+    "system":   "ClickHouse (web)",
     "date": "2025-08-30",
     "machine": "c6a.2xlarge",
     "cluster_size": 1,
-    "proprietary":    "no",
-    "tuned":    "no",
-    "tags":    ["C++","column-oriented","ClickHouse derivative","serverless","stateless"],
+    "proprietary":   "no",
+    "tuned":   "no",
+    "tags":   ["C++","column-oriented","ClickHouse derivative","serverless","stateless"],
     "load_time": 0,
     "data_size": 14557009492,
     "result": [
