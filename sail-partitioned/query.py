@@ -26,7 +26,7 @@ _, port = server.listening_address
 
 spark = SparkSession.builder.remote(f"sc://localhost:{port}").getOrCreate()
 
-df = spark.read.parquet("hits.parquet")
+df = spark.read.parquet("partitioned")
 df.createOrReplaceTempView("hits")
 
 for try_num in range(3):
