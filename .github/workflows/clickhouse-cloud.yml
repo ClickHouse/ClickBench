@@ -1,6 +1,11 @@
 name: "Run ClickBench on ClickHouse Cloud"
 on:
   workflow_dispatch:  # This allows manual trigger from the UI
+    inputs:
+      max_parallel:
+        description: "Max concurrent services (0 = no cap)"
+        required: false
+        default: "0"
   schedule:
     - cron: '10 10 * * *'
 
@@ -13,6 +18,7 @@ jobs:
     env:
       CI_COMMIT_MESSAGE: "[bot] update results for ClickHouse Cloud"
       CI_COMMIT_AUTHOR: github
+      MAX_PARALLEL: ${{ github.event.inputs.max_parallel || '0' }}
     steps:
     - uses: actions/checkout@v3
     - run: |
@@ -24,21 +30,52 @@ jobs:
           echo "Required secrets are not set. Skipping workflow."
           exit 0
         fi
-
         cd clickhouse-cloud
         curl https://clickhouse.com/ | sh
         sudo ./clickhouse install -y
+    - name: Install diagnostics tools
+      run: |
+        sudo apt-get update -y
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y sysstat iproute2 traceroute moreutils procps dnsutils
+    - name: Start diagnostics collectors
+      working-directory: clickhouse-cloud
+      run: |
+        mkdir -p diag
+        # CPU usage per core every second
+        (mpstat -P ALL 1 > diag/mpstat.log 2>&1 &)
+        # System runq/mem/io snapshot every second
+        (vmstat 1 > diag/vmstat.log 2>&1 &)
+        # Network device and TCP stats every second (ignore if sar not available)
+        (sar -n DEV 1 > diag/sar_net_dev.log 2>&1 &) || true
+        (sar -n TCP,ETCP 1 > diag/sar_tcp.log 2>&1 &) || true
+        # Socket summary snapshot once per second
+        (for i in $(seq 1 3600); do date +%FT%T%z >> diag/ss.log; ss -s >> diag/ss.log; sleep 1; done) &
         
         bash combinations.sh
         bash collect-results.sh
         
+    - name: Upload diagnostics and raw run outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: clickhouse-cloud-diag-${{ github.run_id }}
+        path: |
+          clickhouse-cloud/diag/**
+          clickhouse-cloud/csp-*/netdebug.txt
+          clickhouse-cloud/csp-*/chclient_errors.log
+          clickhouse-cloud/csp-*/result
+          clickhouse-cloud/csp-*/state
+          clickhouse-cloud/results/*.json
+        if-no-files-found: ignore
+    - name: Commit results
+      working-directory: clickhouse-cloud
+      run: |
         git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
         git config --global user.email "${{ env.CI_COMMIT_AUTHOR }}@users.noreply.github.com"
-        
         git pull
-        git add results/*.json
-        if git status | grep -q modified
-        then
+        git add results/*.json || true
+        if git status --porcelain | grep -qE "^ M|^A |^\?\? "; then
           git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
           git push
+        else
+          echo "No changes to commit."
         fi
