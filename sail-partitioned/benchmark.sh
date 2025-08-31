@@ -63,5 +63,5 @@ seq 0 99 | xargs -P100 -I{} bash -c 'wget --directory-prefix partitioned --conti
 cat log.txt | grep -P '^Time:\s+([\d\.]+)|Failure!' | sed -r -e 's/Time: //; s/^Failure!$/null/' |
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 
-echo "Data size: $(du -bcs hits*.parquet | grep total)"
+echo "Data size: $(du -bcs partitioned/hits*.parquet | grep total)"
 echo "Load time: 0"
