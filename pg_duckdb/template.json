@@ -1,0 +1,9 @@
+{
+  "system": "pg_duckdb",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "column-oriented",
+    "PostgreSQL compatible"
+  ]
+}

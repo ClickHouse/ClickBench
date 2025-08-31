@@ -1,0 +1,11 @@
+{
+  "system": "Spark (Gluten-on-Velox)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "C++",
+    "column-oriented",
+    "Spark derivative"
+  ]
+}

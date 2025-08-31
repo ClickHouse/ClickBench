@@ -1,0 +1,6 @@
+{
+    "system": "ByConity",
+    "proprietary": "no",
+    "tuned": "no",
+    "tags": ["C++", "column-oriented", "ClickHouse derivative"]
+}

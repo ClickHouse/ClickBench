@@ -1,0 +1,6 @@
+{
+    "system": "Citus",
+    "proprietary": "no",
+    "tuned": "no",
+    "tags": ["C","PostgreSQL compatible","column-oriented"]
+}

@@ -1,0 +1,10 @@
+{
+  "system": "CockroachDB",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Go",
+    "row-oriented",
+    "PostgreSQL compatible"
+  ]
+}

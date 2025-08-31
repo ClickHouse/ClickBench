@@ -1,0 +1,10 @@
+{
+  "system": "DuckDB (memory)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "embedded"
+  ]
+}

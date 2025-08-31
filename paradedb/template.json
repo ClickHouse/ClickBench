@@ -1,0 +1,11 @@
+{
+  "system": "ParadeDB (Parquet, single)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "search",
+    "PostgreSQL compatible"
+  ]
+}

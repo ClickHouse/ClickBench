@@ -1,0 +1,9 @@
+{
+  "system": "Parseable (Parquet, partitioned)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented"
+  ]
+}

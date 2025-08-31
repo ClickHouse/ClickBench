@@ -1,0 +1,11 @@
+{
+  "system": "Daft (Parquet, single)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "stateless",
+    "serverless",
+    "embedded"
+  ]
+}

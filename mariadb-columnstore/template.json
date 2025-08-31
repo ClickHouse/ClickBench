@@ -1,0 +1,10 @@
+{
+  "system": "MariaDB ColumnStore",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "MySQL compatible"
+  ]
+}
