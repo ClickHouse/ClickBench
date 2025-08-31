@@ -1,0 +1,8 @@
+{
+  "system": "Sail (Parquet, partitioned)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "column-oriented"
+  ]
+}
