@@ -1,0 +1,10 @@
+{
+  "system": "MySQL",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "row-oriented",
+    "MySQL compatible"
+  ]
+}

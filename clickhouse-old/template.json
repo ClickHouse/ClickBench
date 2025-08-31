@@ -1,0 +1,10 @@
+{
+  "system": "ClickHouse (25.7)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "system": "ClickHouse (Parquet, partitioned)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "embedded",
+    "stateless",
+    "ClickHouse derivative"
+  ]
+}

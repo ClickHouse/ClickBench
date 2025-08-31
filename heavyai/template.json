@@ -1,0 +1,9 @@
+{
+  "system": "HeavyAI",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented"
+  ]
+}

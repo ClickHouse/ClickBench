@@ -1,0 +1,9 @@
+{
+  "system": "Elasticsearch",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "search"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "system": "MongoDB",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "row-oriented",
+    "document",
+    "C++"
+  ]
+}

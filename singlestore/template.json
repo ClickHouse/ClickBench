@@ -1,0 +1,9 @@
+{
+  "system": "SingleStore",
+  "proprietary": "yes",
+  "tuned": "yes",
+  "tags": [
+    "MySQL compatible",
+    "column-oriented"
+  ]
+}

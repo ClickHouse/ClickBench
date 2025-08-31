@@ -1,0 +1,10 @@
+{
+  "system": "PostgreSQL with pg_mooncake",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C",
+    "column-oriented",
+    "PostgreSQL compatible"
+  ]
+}

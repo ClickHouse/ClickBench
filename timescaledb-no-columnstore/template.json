@@ -1,0 +1,11 @@
+{
+  "system": "TimescaleDB (no columnstore)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C",
+    "PostgreSQL compatible",
+    "row-oriented",
+    "time-series"
+  ]
+}

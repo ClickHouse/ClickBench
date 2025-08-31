@@ -1,0 +1,6 @@
+{
+    "system": "chDB",
+    "proprietary": "no",
+    "tuned": "no",
+    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless"]
+}

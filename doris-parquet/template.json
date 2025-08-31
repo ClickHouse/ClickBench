@@ -1,0 +1,11 @@
+{
+  "system": "Apache Doris (Parquet, partitioned)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "MySQL compatible",
+    "ClickHouse derivative"
+  ]
+}

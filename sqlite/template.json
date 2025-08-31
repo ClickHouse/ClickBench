@@ -1,0 +1,10 @@
+{
+  "system": "SQLite",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C",
+    "embedded",
+    "row-oriented"
+  ]
+}

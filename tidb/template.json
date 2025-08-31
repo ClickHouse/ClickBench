@@ -1,0 +1,11 @@
+{
+  "system": "TiDB (TiFlash only)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "MySQL compatible",
+    "ClickHouse derivative"
+  ]
+}

@@ -47,6 +47,10 @@ FROM (
 WITH
     extract(content, 'System: ([^\n]+)') AS system,
     extract(content, 'Machine: ([^\n]+)') AS machine,
+    extract(content, 'System name: ([^\n]+)') AS system_name,
+    extract(content, 'Proprietary: ([^\n]+)') AS proprietary,
+    extract(content, 'Tuned: ([^\n]+)') AS tuned,
+    extract(content, 'Tags: ([^\n]+)') AS tags,
 
     toUInt64OrZero(extract(content, 'Disk usage after: (\d+)')) - toUInt64OrZero(extract(content, 'Disk usage before: (\d+)')) AS disk_space_diff,
     toUInt64OrZero(extract(content, 'Total time: (\d+)')) AS total_time,
@@ -60,7 +64,7 @@ WITH
     load_time IS NOT NULL AND length(runtimes) = 43 AND data_size >= 5000000000
         AND arrayExists(x -> arrayExists(y -> toFloat64OrZero(y) > 1, x), runtimes) AS good
 
-SELECT time, system, machine, total_time, disk_space_diff, load_time, data_size, length(runtimes), runtimes, runtimes_formatted
+SELECT time, system, machine, system_name, proprietary, tuned, tags, total_time, disk_space_diff, load_time, data_size, length(runtimes), runtimes, runtimes_formatted
 FROM remote('127.0.0.2', sink.data)
 WHERE time >= today() - 2 AND content NOT LIKE 'Cloud-init%' AND good AND machine = '${machine}' AND system = '${system}'
 ORDER BY time DESC LIMIT 1

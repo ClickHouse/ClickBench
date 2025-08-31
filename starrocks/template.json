@@ -1,0 +1,10 @@
+{
+  "system": "StarRocks",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "MySQL compatible"
+  ]
+}
