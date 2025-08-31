@@ -8,7 +8,7 @@
   "proprietary":  "no",
   "tuned":  "no",
   "load_time": 1500,
-  "data_size": 9.2 GiB,
+  "data_size": 9884262400,
   "result": [ [0.053,0.020,0.013],
     [0.282,0.105,0.142],
     [0.216,0.111,0.114],
