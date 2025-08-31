@@ -125,6 +125,7 @@ FOR RANDOMIZED INTERVAL 1 DAY MAX query_inserts = 500, written_bytes = 200000000
 TO sink;
 
 GRANT INSERT ON sink.data TO sink;
+GRANT SELECT ON sink.data TO sink;
 ///
 
 RESULTS_URL="https://play.clickhouse.com/?user=sink&query=INSERT+INTO+data+FORMAT+RawBLOB"
