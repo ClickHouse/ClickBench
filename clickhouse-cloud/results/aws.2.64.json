@@ -1,7 +1,7 @@
 
 {
     "system": "ClickHouse ☁️ (aws)",
-    "date": "2025-08-31",
+    "date": "2025-09-01",
     "machine": "64GiB",
     "cluster_size": 2,
     "proprietary": "yes",
@@ -10,11 +10,11 @@
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "aws"],
 
-    "load_time": 63.055,
-    "data_size": 9946911375,
+    "load_time": Code: 210. DB::NetException: SSL connection unexpectedly closed, while writing to socket (10.1.0.72:54598 -> 52.4.220.199:9440): (enj9njmv2x.us-east-1.aws.clickhouse.cloud:9440, 52.4.220.199, local address: 10.1.0.72:54598). (NETWORK_ERROR),
+    "data_size": ,
 
     "result": [
-[0.002, null, null], [0.017, 0.685, 0.015], [null, null, 0.252], [0.187, null, null], [0.251, null, null], [null, null, null], [0.085, null, 0.020], [0.091, null, null], [0.409, null, 0.517], [0.509, 0.508, null], [0.156, null, 0.248], [null, 0.204, null], [null, 0.502, 0.462], [null, 0.738, null], [null, null, 0.607], [0.289, 0.316, 0.295], [null, null, null], [null, 0.974, null], [2.624, 2.097, null], [0.022, null, 0.007], [0.784, null, null], [null, null, null], [2.666, null, 0.461], [null, null, null], [null, 0.271, 0.247], [0.155, 0.154, null], [0.233, null, null], [1.022, 0.781, 0.768], [7.415, null, 6.661], [0.212, 0.042, 0.043], [0.445, 0.420, 0.621], [0.537, 0.918, 0.477], [1.630, null, 2.047], [2.228, 1.960, 1.951], [1.876, 1.858, 1.820], [0.244, null, 0.236], [0.041, null, 0.205], [0.027, 0.031, 0.030], [null, 0.116, 0.028], [0.201, 0.073, 0.070], [0.018, 0.019, 0.021], [0.018, 0.017, 0.017], [null, 0.014, 0.014]
+
 ]
 }
 
