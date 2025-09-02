@@ -5,7 +5,7 @@
 # export KEY_SECRET=...
 
 PROVIDER=aws
-REGION='us-east-1'
+REGION='ap-southeast-2'
 PARALLEL_REPLICA=false
 
 for REPLICAS in 1
