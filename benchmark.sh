@@ -49,10 +49,58 @@ if [ "$EXTRA" = "otel" ]; then
 fi
 
 
+
+# Check that all nodes have the same ClickHouse version
+version_check() {
+    echo "Checking ClickHouse versions across all nodes..."
+    
+    local versions_query="SELECT \
+        groupUniqArray(version()) AS versions,
+        length(groupArray(hostName())) AS nodes_count,
+        length(groupUniqArray(version())) AS versions_count
+    FROM clusterAllReplicas('default', system.one) SETTINGS skip_unavailable_shards=1"
+    
+    local result
+    result=$(clickhouse client \
+        --host "${CLICKHOUSE_HOST}" \
+        --user "${CLICKHOUSE_USER:=demobench}" \
+        --password "${CLICKHOUSE_PASSWORD:=}" \
+        --secure --query="$versions_query" 2>&1)
+    
+    if [ $? -ne 0 ]; then
+        echo "❌ Error checking versions: $result"
+        return 1
+    fi
+    
+    # Extract values from result: ['25.6.2.5971']	3	1
+    local versions=$(echo "$result" | cut -f1)
+    local nodes_count=$(echo "$result" | cut -f2)
+    local versions_count=$(echo "$result" | cut -f3)
+    
+    if [ "$versions_count" != "1" ]; then
+        echo "❌ Error: Not all nodes have the same version. Found $versions_count different versions."
+        echo "Run this query to see the differences:"
+        echo "  SELECT hostName(), version() FROM clusterAllReplicas('default', system.one)"
+        return 1
+    fi
+    
+    # Extract just the major.minor version (e.g., 25.6 from 25.6.2.5971)
+    local full_version=$(echo "$versions" | tr -d "'[]")
+    local minor_version=$(echo "$full_version" | cut -d. -f1-2)
+    
+    echo "✅ All $nodes_count nodes are running ClickHouse version $full_version"
+    echo "Using version: $minor_version"
+    
+    # Export the version for use in other scripts if needed
+    export CLICKHOUSE_VERSION="$minor_version"
+}
+
+# Run version check
+version_check || exit 1
+
 QUERY_NUM=1
 CLICKHOUSE_HOST="${CLICKHOUSE_HOST:=htw00czilh.us-central1.gcp.clickhouse-staging.com}"
 on_cluster=" ON CLUSTER 'default'"
-
 
 # check all nodes are available
 echo "Waiting for all ${REPLICAS:=3} replicas to be available..."
@@ -86,8 +134,12 @@ done
 
 SETTINGS=${SETTINGS:-}
 
+# Initialize settings_json for output
 settings_json="[\"default\"]"
+
+# Process settings if any
 if [[ -n "$SETTINGS" ]]; then
+    # Convert settings to JSON array for output
     settings_json=$(echo "$SETTINGS" | awk -F',' '
     BEGIN { printf("[") }
     {
@@ -100,7 +152,9 @@ if [[ -n "$SETTINGS" ]]; then
         }
     }
     END { printf("]") }')
-    SETTINGS="SETTINGS ${SETTINGS}"
+    
+    # Convert settings to individual --key=value parameters
+    query_settings=$(echo "$SETTINGS" | tr ',' '\n' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed 's/^/--/' | tr '\n' ' ')
 fi
 
 echo "${SETTINGS}"
@@ -151,7 +205,9 @@ while IFS= read -r line || [ -n "$line" ]; do
             --time \
             --format=Null \
             $param_flags \
-            --query="${query_stmt} ${SETTINGS}" 2>&1)
+            --compatibility ${CLICKHOUSE_VERSION} \
+            $query_settings \
+            --query="${query_stmt}" 2>&1)
 
         if [ "$?" == "0" ] && [ "${#RES}" -lt "10" ]; then
             echo "${QUERY_NUM}, ${j} - OK"

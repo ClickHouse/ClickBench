@@ -16,7 +16,7 @@ We aim to identify where user experience will be better/worse and the types of q
 
 ## Assumptions
 
-Performance can be dramatically different based on specific user quotas and settings. We assume `demo` user settings without limitations on query throughput. We only test queries which execute successfully based on the quotas and limits applied to the `demo` user. This user `demobench` is created on all clusters - [role]() and [user definition]().
+Performance can be dramatically different based on specific user quotas and settings. We assume `demo_bench` user settings without limitations on query throughput. We only test queries which execute successfully based on the quotas and limits applied to the `demo_bench` user. This user `demo_bench` is created on all clusters - [role]() and [user definition]().
 
 We only execute queries which are listed in the query examples on [sql.clickhouse.com](sql.clickhouse.com).
 
@@ -32,7 +32,7 @@ Queries execute against a child service of sql.clickhouse.com. This has the **sa
 
 Child service:
 
-```htw00czilh.us-central1.gcp.clickhouse-staging.com``
+```xuvos08jdh.us-central1.gcp.clickhouse-staging.com```
 
 ### How To Add a New Result
 
@@ -41,13 +41,13 @@ Set the following:
 
 ```bash
 # optional should be defaults
-export CLICKHOUSE_HOST=htw00czilh.us-central1.gcp.clickhouse-staging.com
-export CLICKHOUSE_USER=demobench
+export CLICKHOUSE_HOST=xuvos08jdh.us-central1.gcp.clickhouse-staging.com
+export CLICKHOUSE_USER=demo_bench
 # SET!
 export CLICKHOUSE_PASSWORD=<password>
 ```
 
-The password for `demobench` user can be obtained from the PME team (#product-marketing) in slack. This user is readonly.
+The password for `demo_bench` user can be obtained from the PME team (#product-marketing) in slack. This user is readonly.
 
 To add a test run, simply run `benchmark.sh`.
 
