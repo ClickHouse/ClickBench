@@ -7,6 +7,7 @@
   "settings": [
     "default"
   ],
+  "extras": [],
   "version": "25.6.2.6044",
   "data_size": 29049442691675,
   "result": [
@@ -1605,13 +1606,6 @@
       0.534,
       0.564,
       0.505
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null
     ],
     [
       0.16,

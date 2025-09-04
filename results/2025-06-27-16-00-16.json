@@ -7,6 +7,7 @@
   "settings": [
     "enable_parallel_replicas=1"
   ],
+  "extras": ["otel"],
   "version": "25.6.2.5432",
   "data_size": 27634723186514,
   "result": [
@@ -1605,13 +1606,6 @@
       0.935,
       1.981,
       0.981
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null
     ],
     [
       0.245,

@@ -80,3 +80,9 @@ Validates all queries in `queries.sql` execute.
 ```bash
 ./validate_queries.sh
 ```
+
+## OTel queries
+
+An extra query set is available in `queries_otel.sql` that contains queries executed by the [ClickStack demo environment](https://play-clickstack.clickhouse.com/). By default, those queries are not included in the benchmark. 
+
+You can run the benchmark with those queries by running the `./benchmark.sh --extras otel` flag. To generate the results including the extra OTel queries, run `./generate-results.sh --extras otel`

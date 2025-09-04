@@ -1,6 +1,13 @@
 #!/bin/bash 
 
 set -o noglob
+
+# Handle queries_tmp.sql - remove if exists and create empty file
+if [ -f "queries_tmp.sql" ]; then
+    > queries_tmp.sql
+else
+    touch queries_tmp.sql
+fi
 TRIES=5
 
 # Parse extra flag
@@ -26,18 +33,25 @@ if [ "$EXTRA" != "false" ] && [ "$EXTRA" != "otel" ]; then
     exit 1
 fi
 
+# Append queries to the temporary file
 cat queries.sql >> queries_tmp.sql
 
 # Generate OTEL parameters if --extra=otel
 if [ "$EXTRA" = "otel" ]; then
     echo "Generating OTEL parameters..."
-    # Generate timestamps (1 hour difference)
-    TS_START=$(date -v-1H +%s000)
-    TS_END=$(date +%s000)
-    
-    # Generate dates
-    DATE_NANO=$(date -v-1H +%FT%T.%NZ)
-    DATE_MS=$(date -v-1H +%FT%TZ)
+    if date --version >/dev/null 2>&1; then
+        # GNU date (Linux)
+        TS_START=$(date -d '1 hour ago' +%s000)
+        TS_END=$(date +%s000)
+        DATE_NANO=$(date -d '1 hour ago' --utc +%FT%T.%NZ)
+        DATE_MS=$(date -d '1 hour ago' --utc +%FT%TZ)
+    else
+        # BSD date (macOS)
+        TS_START=$(date -v-1H +%s000)
+        TS_END=$(date +%s000)
+        DATE_NANO=$(date -v-1H -u +%FT%T.%NZ)
+        DATE_MS=$(date -v-1H -u +%FT%TZ)
+    fi
     
     # Store OTEL parameters for later merging
     otel_params="--param_HYPERDX_PARAM_TS_START=$TS_START --param_HYPERDX_PARAM_TS_END=$TS_END"
@@ -99,7 +113,7 @@ version_check() {
 version_check || exit 1
 
 QUERY_NUM=1
-CLICKHOUSE_HOST="${CLICKHOUSE_HOST:=htw00czilh.us-central1.gcp.clickhouse-staging.com}"
+CLICKHOUSE_HOST="${CLICKHOUSE_HOST:=xuvos08jdh.us-central1.gcp.clickhouse-staging.com}"
 on_cluster=" ON CLUSTER 'default'"
 
 # check all nodes are available
@@ -165,7 +179,11 @@ data_size=$(clickhouse client --host "${CLICKHOUSE_HOST}" --user "${CLICKHOUSE_U
 timestamp=$(date +'%Y-%m-%d-%H-%M-%S')
 output_file="${timestamp}.json"
 
-echo "{\"system\":\"Cloud\",\"date\":\"${timestamp}\",\"machine\":\"720 GB\",\"cluster_size\":3,\"comment\":\"\",\"settings\":${settings_json},\"version\":\"${version}\",\"data_size\":${data_size},\"result\":[" > temp.json
+extras_value="[]"
+if [ "$EXTRA" != "false" ]; then
+    extras_value="[\"$EXTRA\"]"
+fi
+echo "{\"system\":\"Cloud\",\"date\":\"${timestamp}\",\"machine\":\"720 GB\",\"cluster_size\":3,\"comment\":\"\",\"settings\":${settings_json},\"extras\":${extras_value},\"version\":\"${version}\",\"data_size\":${data_size},\"result\":[" > temp.json
 
 param_flags=""
 query_stmt=""

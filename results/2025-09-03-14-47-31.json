@@ -7,6 +7,7 @@
   "settings": [
     "enable_parallel_replicas=1"
   ],
+  "extras": [],
   "version": "25.6.2.6044",
   "data_size": 29054024792744,
   "result": [
@@ -1605,13 +1606,6 @@
       1.169,
       0.576,
       0.618
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null
     ],
     [
       0.264,

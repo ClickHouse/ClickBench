@@ -30,9 +30,23 @@ fi
     sed '/^const data = \[$/q' index.html.template
 
     FIRST=1
+    # Filter files based on extras flag
     ls -1 results/*.json | while read file
     do
         [[ $file =~ ^(hardware|versions)/ ]] && continue;
+        
+        # Check if the file matches the extras filter
+        if [ "$EXTRA" = "false" ]; then
+            # For default case, only include files with empty extras array
+            if ! jq -e '.extras | length == 0' "$file" > /dev/null; then
+                continue
+            fi
+        else
+            # For otel case, only include files with "otel" in extras array
+            if ! jq -e --arg extra "$EXTRA" '.extras | index($extra)' "$file" > /dev/null; then
+                continue
+            fi
+        fi
 
         [ "${FIRST}" = "0" ] && echo -n ','
         jq --compact-output ". += {\"source\": \"${file}\"}" "${file}"
