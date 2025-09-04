@@ -18,10 +18,10 @@ SearchPhrase:* | top 10 (SearchEngineID, SearchPhrase)
 * | by (UserID, SearchPhrase) count() | limit 10
 * | math floor((_time % 1h)/1m) m | top 10 (UserID, m, SearchPhrase)
 UserID:=435090932899640449 | keep UserID
-URL:google | count()
-URL:google SearchPhrase:* | by (SearchPhrase) min(URL), count() c | first 10 (c desc)
-Title:Google -URL:".google." SearchPhrase:* | by (SearchPhrase) min(URL), min(Title), count() c, count_uniq(UserID) | first 10 (c desc)
-URL:google | first 10 (_time)
+URL:*google* | count()
+URL:*google* SearchPhrase:* | by (SearchPhrase) min(URL), count() c | first 10 (c desc)
+Title:*Google* -URL:*.google.* SearchPhrase:* | by (SearchPhrase) min(URL), min(Title), count() c, count_uniq(UserID) | first 10 (c desc)
+URL:*google* | first 10 (_time)
 SearchPhrase:* | first 10 (_time) | keep SearchPhrase
 SearchPhrase:* | first 10 (SearchPhrase) | keep SearchPhrase
 SearchPhrase:* | first 10 (_time, SearchPhrase) | keep SearchPhrase
