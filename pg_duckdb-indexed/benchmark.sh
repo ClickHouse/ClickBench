@@ -36,7 +36,7 @@ duckdb_memory=$(($memory / 4))
 # long. With the default value it's constantly checkpointing, and the PG logs
 # warn you about that and tell you to increase max_wal_size.
 
-sudo docker run -d --name pgduck -p 5432:5432 -e POSTGRES_PASSWORD=duckdb pgduckdb/pgduckdb:17-v0.3.1
+sudo docker run -d --name pgduck -p 5432:5432 -e POSTGRES_PASSWORD=duckdb pgduckdb/pgduckdb:17-v1.0.0
 
 sleep 2
 
