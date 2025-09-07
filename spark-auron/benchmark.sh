@@ -3,8 +3,8 @@
 # Note: Keep in sync with spark-*/benchmark.sh (see README-accelerators.md for details)
 #
 # Highlights:
-# - pyspark==3.5.2 version is used (latest stable for Gluten 1.4.0)
-# - Gluten installation is added
+# - pyspark==3.5.6 version is used (latest stable for Auron 5.0.0)
+# - Auron installation is added
 # - auto-save results
 
 # Install
@@ -17,19 +17,17 @@ export PATH=$JAVA_HOME/bin:$PATH
 
 python3 -m venv myenv
 source myenv/bin/activate
-pip install pyspark==3.5.2 psutil
+pip install pyspark==3.5.5 psutil
 
 # Load the data
 
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
-# Install Gluten
+# Install Auron
 
-GLUTEN_JAR_URL='https://github.com/apache/incubator-gluten/releases/download/v1.4.0/apache-gluten-1.4.0-incubating-bin-spark35.tar.gz'
+AURON_JAR_URL='https://github.com/apache/auron/releases/download/v5.0.0/blaze-engine-spark-3.5-release-5.0.0-SNAPSHOT.jar'
 
-wget --continue --progress=dot:giga $GLUTEN_JAR_URL -O gluten.gz
-tar -xzf gluten.gz
-mv gluten-velox-bundle-spark3.5_2.12-linux_amd64-1.4.0.jar gluten.jar
+wget --continue --progress=dot:giga $AURON_JAR_URL -O auron.jar
 
 # Run the queries
 
@@ -47,7 +45,7 @@ echo "Load time: 0"
 # Save results as JSON
 
 MACHINE="${1:-c6a.4xlarge}"  # Use first argument as machine name, default to c6a.4xlarge
-GLUTEN_VERSION=$(echo $GLUTEN_JAR_URL | grep -Po "\d.\d.\d" | head -n 1)
+AURON_VERSION=$(echo $AURON_JAR_URL | grep -Po "\d.\d.\d" | head -n 1)
 SPARK_VERSION=$(pip freeze | grep '^pyspark==' | cut -d '=' -f3)
 
 mkdir -p results
@@ -55,14 +53,14 @@ mkdir -p results
 (
 cat << EOF
 {
-    "system": "Spark (Gluten-on-Velox)",
+    "system": "Spark (Auron)",
     "date": "$(date +%Y-%m-%d)",
     "machine": "${MACHINE}",
     "cluster_size": 1,
     "proprietary": "no",
     "tuned": "no",
-    "comment": "Using Gluten ${GLUTEN_VERSION} with Spark ${SPARK_VERSION}",
-    "tags": ["Java", "C++", "column-oriented", "Spark derivative", "Velox", "Parquet"],
+    "comment": "Using Auron ${AURON_VERSION} with Spark ${SPARK_VERSION}",
+    "tags": ["Java", "Rust", "column-oriented", "Spark derivative", "DataFusion", "Parquet"],
     "load_time": 0,
     "data_size": ${DATA_SIZE},
     "result": [

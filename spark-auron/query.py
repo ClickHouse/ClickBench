@@ -4,8 +4,8 @@
 Note: Keep in sync with spark-*/query.py (see README-accelerators.md for details)
 
 Highlights:
-- memory is split between heap (for Spark) and off-heap (for Gluten)
-- Gluten configuration is added to `SparkSession`
+- memory is split between heap (for Spark) and memoryOverhead (for Auron)
+- Auron configuration is added to `SparkSession`
 """
 
 from pyspark.sql import SparkSession
@@ -24,26 +24,26 @@ print(query)
 
 # Calculate available memory to configurate SparkSession
 ram = int(round(psutil.virtual_memory().available / (1024 ** 3) * 0.7))
-heap = ram // 2
-off_heap = ram - heap
-print(f"SparkSession will use {heap} GB of heap and {off_heap} GB of off-heap memory")
+exec_memory = ram // 3
+exec_overhead = ram - exec_memory
+print(f"SparkSession will be set with {exec_memory} GB of memory and {exec_overhead} GB of memory overhead")
 
 builder = (
     SparkSession
     .builder
     .appName("ClickBench")
     .config("spark.driver", "local[*]") # To ensure using all cores
-    .config("spark.driver.memory", f"{heap}g") # Set amount of memory SparkSession can use
+    .config("spark.driver.memory", f"{exec_memory}g") # Set amount of memory SparkSession can use
     .config("spark.sql.parquet.binaryAsString", True) # Treat binary as string to get correct length calculations and text results
 
-    # Additional Gluten configuration
-    .config("spark.jars", "gluten.jar")
-    .config("spark.driver.extraClassPath", "gluten.jar")
-    .config("spark.plugins", "org.apache.gluten.GlutenPlugin")
-    .config("spark.shuffle.manager", "org.apache.spark.shuffle.sort.ColumnarShuffleManager")
-    .config("spark.memory.offHeap.enabled", "true")
-    .config("spark.memory.offHeap.size", f"{off_heap}g")
-    .config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true")
+    # Additional Auron configuration
+    .config("spark.jars", "auron.jar")
+    .config("spark.driver.extraClassPath", "auron.jar")
+    .config("spark.auron.enable", True)
+    .config("spark.sql.extensions", "org.apache.spark.sql.blaze.BlazeSparkSessionExtension")
+    .config("spark.shuffle.manager", "org.apache.spark.sql.execution.blaze.shuffle.BlazeShuffleManager")
+    .config("spark.memory.offHeap.enabled", "false")
+    .config("spark.driver.memoryOverhead", exec_overhead * 1024)
 )
 
 spark = builder.getOrCreate()
