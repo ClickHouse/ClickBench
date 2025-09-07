@@ -47,7 +47,7 @@ WITH
     '[\n' || arrayStringConcat(arrayMap(x -> '        [' || arrayStringConcat(arrayMap(v -> v == 'null' ? v : round(v::Float64, 3)::String, x), ', ') || ']', runtimes), ',\n') || '\n]' AS runtimes_formatted,
 
     load_time IS NOT NULL AND length(runtimes) = 43 AND data_size >= 5000000000
-        AND arrayExists(x -> arrayExists(y -> toFloat64OrZero(y) > 1, x), runtimes) AS good
+        AND arrayExists(x -> arrayExists(y -> toFloat64OrZero(y) > 0.1, x), runtimes) AS good
 
 SELECT time, system, machine, system_name, proprietary, tuned, tags, total_time, disk_space_diff, load_time, data_size, length(runtimes) AS num_results, runtimes, runtimes_formatted,
 '{
