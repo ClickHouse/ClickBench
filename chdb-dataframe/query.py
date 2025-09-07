@@ -32,48 +32,13 @@ queries = []
 with open("queries.sql") as f:
     queries = f.readlines()
 
-queries_times = []
-
 # conn = chdb.connect("./tmp?verbose&log-level=test")
 conn = chdb.connect("./tmp")
-i = 0
 for q in queries:
-    i += 1
     times = []
     for _ in range(3):
         start = timeit.default_timer()
         result = conn.query(q, "Null")
         end = timeit.default_timer()
         times.append(round(end - start, 3))
-    print(f"Q{i}: ", times)
-    queries_times.append(times)
-
-result_json = {
-    "system": "chDB (DataFrame)",
-    "date": datetime.date.today().strftime("%Y-%m-%d"),
-    "machine": "c6a.metal",
-    "cluster_size": 1,
-    "comment": "",
-    "tags": [
-        "C++",
-        "column-oriented",
-        "embedded",
-        "stateless",
-        "serverless",
-        "dataframe",
-        "ClickHouse derivative",
-    ],
-    "load_time": 0,
-    "data_size": int(dataframe_size),
-    "result": queries_times,
-}
-
-# if cpuinfo contains "AMD EPYC 9654" update machine and write result into results/epyc-9654.json
-if "AMD EPYC 9654" in open("/proc/cpuinfo").read():
-    result_json["machine"] = "EPYC 9654, 384G"
-    with open("results/epyc-9654-2.2.json", "w") as f:
-        f.write(json.dumps(result_json, indent=4))
-else:
-    # write result into results/c6a.metal.json
-    with open("results/c6a.metal.json", "w") as f:
-        f.write(json.dumps(result_json, indent=4))
+    print(times)
