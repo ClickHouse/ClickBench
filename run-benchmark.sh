@@ -11,5 +11,5 @@ sed "s/@system@/${system}/" < cloud-init.sh.in > cloud-init.sh
 AWS_PAGER='' aws ec2 run-instances --image-id $ami --instance-type $machine \
   --block-device-mappings 'DeviceName=/dev/sda1,Ebs={DeleteOnTermination=true,VolumeSize=500,VolumeType=gp2}' \
   --instance-initiated-shutdown-behavior terminate \
-  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=clickbench}]' \
+  --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=clickbench-${system}]" \
   --user-data file://cloud-init.sh
