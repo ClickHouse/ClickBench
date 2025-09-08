@@ -1,4 +1,4 @@
-This README includes info on configuring Apache Auron (formerly Blaze) for ClickBench. For additional details, please refer to [Auron's docs](https://auron.apache.org/) and [spark-accelerators README](../spark/README-accelerators.md).
+This README includes info on configuring Apache Auron (formerly Blaze) for ClickBench. For additional details, please refer to [Auron's docs](https://auron.apache.org/), [spark-accelerators README](../spark/README-accelerators.md) and [issue](https://github.com/apache/auron/issues/1287) discussing the results.
 
 ### Run
 

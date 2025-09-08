@@ -1,4 +1,4 @@
-This README includes info on configuring Apache Gluten for ClickBench. For additional details, please refer to [Gluten's docs](https://apache.github.io/incubator-gluten/get-started/Velox.html) and [spark-accelerators README](../spark/README-accelerators.md).
+This README includes info on configuring Apache Gluten for ClickBench. For additional details, please refer to [Gluten's docs](https://apache.github.io/incubator-gluten/get-started/Velox.html), [spark-accelerators README](../spark/README-accelerators.md) and [discussion](https://github.com/apache/incubator-gluten/discussions/10465).
 
 ### Run
 
