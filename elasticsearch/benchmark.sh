@@ -39,7 +39,7 @@ sudo systemctl restart elasticsearch.service
 
 
 # Check Elasticsearch is alive - you should get a JSON response
-curl -XGET 'http://localhost:9200' 
+curl -sS -X GET 'http://localhost:9200'
 
 
 ###### Create index with mappings mirroring data types in ClickHouse
@@ -48,7 +48,7 @@ curl -XGET 'http://localhost:9200'
 
 # Note: Elasticsearch does not have the concept of a primary key, but it does have an "index sorting" feature, which is intended to help in analytical use cases where sort order on disk matters. I set it to the same parameters as primary key for the ClickHouse tests https://github.com/ClickHouse/ClickBench/blob/main/clickhouse/create.sql
 
-curl -X PUT "http://localhost:9200/hits?pretty" -H 'Content-Type: application/json' -d @mapping.json
+curl -sS -X PUT "http://localhost:9200/hits?pretty" -H 'Content-Type: application/json' -d @mapping.json
 
 
 ###### Data loading (JSON dump via ES Bulk API insert)
@@ -62,15 +62,16 @@ START=$(date +%s)
 python3 load.py
 
 # check on progress
-curl -X GET "http://localhost:9200/hits/_stats/docs?pretty"
+curl -sS -X GET "http://localhost:9200/hits/_stats/docs?pretty"
 
 # Makes sure all data is flushed to disk
-curl -X GET "http://localhost:9200/_flush?pretty"
+curl -sS -X GET "http://localhost:9200/_flush?pretty"
 
 # when data loading is finished, to get all stats run
 # For Load time, look at: bulk.total_time_in_millis
 # For Data size, look at: store.total_data_set_size_in_bytes
-curl -X GET "http://localhost:9200/hits/_stats?pretty"
+curl -sS -X GET "http://localhost:9200/hits/_stats?pretty" | tee stats.json
+echo "Data size: $(jq -r '._all.total.store.total_data_set_size_in_bytes' stats.json)"
 
 END=$(date +%s)
 echo "Load time: $(echo "$END - $START" | bc)"
