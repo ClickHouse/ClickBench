@@ -1,7 +1,7 @@
 {
   "system": "Redshift",
   "date": "2022-07-29",
-  "machine": "ra3.xlplus",
+  "machine": "Redshift: ra3.xlplus",
   "cluster_size": 4,
   "proprietary": "yes",
   "tuned": "no",
