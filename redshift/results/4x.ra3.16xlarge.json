@@ -1,7 +1,7 @@
 {
   "system": "Redshift",
   "date": "2022-07-25",
-  "machine": "ra3.16xlarge",
+  "machine": "Redshift: ra3.16xlarge",
   "cluster_size": 4,
   "proprietary": "yes",
   "tuned": "no",
