@@ -1,7 +1,7 @@
 {
     "system": "MotherDuck",
     "date": "2025-03-04",
-    "machine": "Jumbo",
+    "machine": "Motherduck: Jumbo",
     "cluster_size": 1,
     "proprietary": "yes",
     "tuned": "no",
