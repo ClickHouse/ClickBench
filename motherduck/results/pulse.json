@@ -1,7 +1,7 @@
 {
     "system": "MotherDuck",
     "date": "2025-03-04",
-    "machine": "Pulse",
+    "machine": "Motherduck: Pulse",
     "cluster_size": 1,
     "proprietary": "yes",
     "tuned": "no",

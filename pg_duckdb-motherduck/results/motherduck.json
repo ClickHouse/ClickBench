@@ -1,7 +1,7 @@
 {
     "system": "pg_duckdb (MotherDuck enabled)",
     "date": "2025-09-04",
-    "machine": "Jumbo",
+    "machine": "Motherduck: Jumbo",
     "cluster_size": "serverless",
     "proprietary": "yes",
     "tuned": "no",
