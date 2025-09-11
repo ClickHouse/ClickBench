@@ -1,7 +1,7 @@
 {
     "system": "AlloyDB",
     "date": "2023-11-25",
-    "machine": "16 vCPU 128GB",
+    "machine": "AlloyDB: 16 vCPU 128 GB",
     "cluster_size": "serverless",
     "comment": "",
     "proprietary": "yes",

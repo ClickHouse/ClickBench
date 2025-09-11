@@ -86,27 +86,9 @@ done
 
 echo "Waiting for clickhouse-server to start"
 
-# Collect quick network/TLS diagnostics for this run
-{
-    echo "==== NET DEBUG $(date -Iseconds) ===="
-    echo "Host: $(hostname)"
-    echo "Kernel: $(uname -a)"
-    echo "ulimit -n: $(ulimit -n 2>/dev/null || echo n/a)"
-    echo "FQDN: ${FQDN}"
-    echo "IP route:"; ip route || true
-    echo "IP addr:"; ip -brief address || ip addr || true
-    echo "DNS resolution for ${FQDN}:"; getent hosts "${FQDN}" || nslookup "${FQDN}" 2>&1 || host "${FQDN}" 2>&1 || true
-    echo "Socket summary:"; ss -s || true
-    echo "Public IP (best-effort):"; curl -fsS --max-time 3 https://ifconfig.me || echo "n/a"
-    echo "OpenSSL s_client (short):"; timeout 10s openssl s_client -connect "${FQDN}:9440" -servername "${FQDN}" -brief </dev/null 2>&1 || true
-    echo "Traceroute TCP:9440:"; timeout 20s traceroute -T -p 9440 -n "${FQDN}" 2>&1 || traceroute -n "${FQDN}" 2>&1 || true
-} > "${TMPDIR}/netdebug.txt" 2>&1
-
 for i in {1..1000}
 do
-    if clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "SELECT 1" 1>/dev/null 2>>"${TMPDIR}/chclient_errors.log"; then
-        break
-    fi
+    clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "SELECT 1" && break
     sleep 1
     if [[ $i == 1000 ]]
     then

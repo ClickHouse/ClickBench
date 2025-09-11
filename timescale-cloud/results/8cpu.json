@@ -1,6 +1,6 @@
 {
   "system": "Timescale ☁️",
-  "machine": "8 vCPU 32GB",
+  "machine": "Timescale ☁️: 8 vCPU 32GB",
   "cluster_size": 1,
   "tags": ["C", "PostgreSQL compatible", "column-oriented", "time-series", "managed"],
   "proprietary": "yes",

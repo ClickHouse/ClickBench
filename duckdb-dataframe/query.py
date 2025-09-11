@@ -29,7 +29,6 @@ with open("queries.sql") as f:
     queries = f.readlines()
 
 conn = duckdb.connect()
-queries_times = []
 for q in queries:
     times = []
     for _ in range(3):
@@ -37,23 +36,4 @@ for q in queries:
         result = conn.execute(q).fetchall()
         end = timeit.default_timer()
         times.append(round(end - start, 3))
-    queries_times.append(times)
-
-result_json = {
-    "system": "DuckDB (DataFrame)",
-    "date": datetime.date.today().strftime("%Y-%m-%d"),
-    "machine": "c6a.metal",
-    "cluster_size": 1,
-    "comment": "",
-    "tags": [
-        "C++",
-        "column-oriented",
-        "embedded",
-        "stateless",
-        "serverless",
-        "dataframe",
-    ],
-    "load_time": 0,
-    "data_size": int(dataframe_size),
-    "result": queries_times,
-}
+    print(times)

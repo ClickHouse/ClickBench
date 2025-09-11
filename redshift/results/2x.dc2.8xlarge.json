@@ -1,7 +1,7 @@
 {
   "system": "Redshift",
   "date": "2023-03-16",
-  "machine": "dc2.8xlarge",
+  "machine": "Redshift: dc2.8xlarge",
   "cluster_size": 2,
   "proprietary": "yes",
   "tuned": "no",

@@ -22,7 +22,9 @@ jq -c -r '.tags' template.json | tee -a log
 
 echo -n 'Disk usage before: ' | tee -a log
 df -B1 / | tail -n1 | awk '{ print $3 }' | tee -a log
-./benchmark.sh 2>&1 | tee -a log
+
+timeout 20000 ./benchmark.sh 2>&1 | tee -a log
+
 echo -n 'Disk usage after: ' | tee -a log
 df -B1 / | tail -n1 | awk '{ print $3 }' | tee -a log
 echo 'System: @system@' | tee -a log

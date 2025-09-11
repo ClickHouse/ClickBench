@@ -3,12 +3,11 @@ Disclaimer: I am not an expert in optimizing Elasticsearch for analytical worklo
 Methodology
 
 Infrastructure:
-- Local single-node install of Elasticsearch 8.3 on AWS EC2 instance c6a.4xlarge
-- Per instructions, started with 500GB EBS gp2 per instructions, but ran out of space loading data in Elasticsearch abou a third in, and expanded to 1.5TB
+- Local single-node install of Elasticsearch 9.1 on AWS EC2 instance c6a.4xlarge
 
 Data loading process: 
 - Create index mappings manually, mirroring data types after the ClickHouse benchmark, and using index sorting on the same fields ClickHouse chose for primary keys
-- Split JSON file into smaller files and load them sequentially into Elasticsearch via Bulk API
+- Stream data directly from .gz file into Elasticsearch with a python script. Streaming directly from .gz likely slightly reduces the load time but is accepted as a trade off for a shorter and less complex overall benchmark run.  
 
 Running the benchmark: 
 - Benchmark run is semi-automated: Manually run through steps one by one in `benchmark.sh` in bash, but `run.sh` is provided to run the queries and produce results automatically

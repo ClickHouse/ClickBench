@@ -21,7 +21,7 @@ fi
 
 sudo apt-get update -y
 sudo apt-get install -y docker.io postgresql-client
-sudo docker run -d --name pgduck --network=host -e POSTGRES_PASSWORD=duckdb -e MOTHERDUCK_TOKEN=${MOTHERDUCK_TOKEN} pgduckdb/pgduckdb:17-v0.3.1 -c duckdb.motherduck_enabled=true
+sudo docker run -d --name pgduck --network=host -e POSTGRES_PASSWORD=duckdb -e MOTHERDUCK_TOKEN=${MOTHERDUCK_TOKEN} pgduckdb/pgduckdb:17-v1.0.0 -c duckdb.motherduck_enabled=true
 
 # Give postgres time to start running
 sleep 10

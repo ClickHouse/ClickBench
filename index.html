@@ -466,7 +466,7 @@ let selectors = {
     "cluster_size": {},
     "opensource": {"yes": true, "no": true},
     "tuned": {"no": true, "yes": false},
-    "metric": "hot",
+    "metric": "combined",
     "queries": [],
 };
 
@@ -1160,7 +1160,7 @@ window.onpopstate = function(event) {
 
 if (window.location.hash) {
     try {
-        selectors = decodeState(window.location.hash.substring(1));
+        selectors = decodeState(decodeURIComponent(window.location.hash.substring(1)));
         if (!selectors.opensource) {
             selectors.opensource = {"yes": true, "no": false};
         }

@@ -2,9 +2,9 @@
 
 if [ ! -x /usr/bin/clickhouse ]
 then
-wget --continue --progress=dot:giga https://clickhouse-builds.s3.amazonaws.com/PRs/81944/cda07f8aca770d97ea149eec6b477dcfd59d134e/build_amd_release/clickhouse-common-static-25.7.1.1-amd64.tgz -O clickhouse-tencent.tgz
+wget --continue --progress=dot:giga https://clickhouse-builds.s3.amazonaws.com/PRs/81944/e3a48c0de6d188232cc544244ba6862b63eb4762/build_amd_release/clickhouse-common-static-25.9.1.1-amd64.tgz -O clickhouse-tencent.tgz
     mkdir -p clickhouse-tencent && tar -xzf clickhouse-tencent.tgz -C clickhouse-tencent
-    sudo clickhouse-tencent/clickhouse-common-static-25.7.1.1/usr/bin/clickhouse install --noninteractive
+    sudo clickhouse-tencent/clickhouse-common-static-25.9.1.1/usr/bin/clickhouse install --noninteractive
 fi
 
 sudo clickhouse start

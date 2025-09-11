@@ -2,7 +2,7 @@
 {
     "system": "CHYT",
     "date": "2024-09-16",
-    "machine": "12 vCPU 48GB",
+    "machine": "CHYT: 12 vCPU 48GB",
     "cluster_size": 2,
     "proprietary": "no",
     "tuned": "no",
