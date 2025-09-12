@@ -4,9 +4,7 @@ This README includes info on configuring Apache Comet for ClickBench. For additi
 
 As usual, benchmark can be run via `./benchmark.sh`. Additionally, users can provide machine spec like `./benchmark.sh c6a.8xlarge` so script saves it in relevant file.
 
-## Notes
-
-### Debug
+### Notes
 
 - To find all unsupported queries from `log.txt` (requires running bench in debug mode):
 ```bash
@@ -17,9 +15,6 @@ As usual, benchmark can be run via `./benchmark.sh`. Additionally, users can pro
     123 +-  HashAggregate [COMET: distinct aggregates are not supported]
     ...
 ```
-
-### Links
-
 - Check [here](https://datafusion.apache.org/comet/user-guide/installation.html#supported-spark-versions) for _version compatibility_ between Spark and Comet.
 - Check [here](https://datafusion.apache.org/comet/user-guide/installation.html#using-a-published-jar-file) for _links to Comet jar_.
 - Check [here](https://datafusion.apache.org/comet/user-guide/installation.html#run-spark-shell-with-comet-enabled) for _basic Comet configuration_.
