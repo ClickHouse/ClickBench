@@ -9,7 +9,7 @@ source myenv/bin/activate
 pip install duckdb psutil
 
 # Load the data
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
 # Run the queries
 
