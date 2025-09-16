@@ -16,5 +16,5 @@ To evaluate the performance of Hologres, follow these guidelines to set up and e
 
 3. **Sample Execution**:
    ```bash
-   ./benchmark.sh ak sk host_name 80
+   ./benchmark.sh ak sk host_name port
    ```
