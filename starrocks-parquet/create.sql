@@ -109,6 +109,6 @@ SELECT
     CLID
 FROM
     FILES(
-        "path" = "file:///home/ubuntu/ClickBench/starrocks-parquet/StarRocks-3.5.6-ubuntu-amd64/be/hits_*.parquet",
+        "path" = "file:///home/ubuntu/ClickBench/starrocks-parquet/StarRocks/be/hits_*.parquet",
         "format" = "parquet"
     );
