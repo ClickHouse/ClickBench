@@ -8,7 +8,7 @@ VERSION=3.5.6-ubuntu-$(dpkg --print-architecture)
 # Install
 wget --continue --progress=dot:giga https://releases.starrocks.io/starrocks/StarRocks-$VERSION.tar.gz -O StarRocks-$VERSION.tar.gz
 tar zxvf StarRocks-${VERSION}.tar.gz
-mv StarRocks-3.5.6-ubuntu-amd64 StarRocks
+mv StarRocks-$VERSION StarRocks
 cd StarRocks/
 
 # Install dependencies
