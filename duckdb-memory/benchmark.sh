@@ -9,10 +9,7 @@ source myenv/bin/activate
 pip install duckdb psutil
 
 # Load the data
-
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
 # Run the queries
 

@@ -13,4 +13,4 @@ con.execute('PRAGMA enable_print_progress_bar;')
 con.execute("SET preserve_insertion_order = false;")
 
 con.execute(open("create.sql").read())
-con.execute("COPY hits FROM 'hits.csv';")
+con.execute(open("load.sql").read())
