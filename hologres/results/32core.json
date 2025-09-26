@@ -1,5 +1,5 @@
 {
-    "system": "Hologres",
+    "system": "Alibaba Cloud Hologres",
     "date": "2025-05-21",
     "machine": "Hologres: 16 CU",
     "cluster_size": 2,
