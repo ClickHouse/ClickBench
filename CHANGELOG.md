@@ -9,7 +9,7 @@ Add [changelog](https://github.com/ClickHouse/ClickBench/blob/main/CHANGELOG.md)
 Change the default comparison metric to [combined](https://github.com/ClickHouse/ClickBench/pull/616). (Robert Schulze).
 
 ### 2025-08-31
-Additionally improve the automation scripts, so they can be launch the benchmarks in the AWS environment in any region with no prerequisites, and the final JSON reports are [generated automatically](https://github.com/ClickHouse/ClickBench/pull/596) by materialized views. Create template files for JSON reports for every automated entry. This allows quickly updating results for many systems on all combinations of machines. The [script](https://github.com/ClickHouse/ClickBench/blob/547db775545098319b078d191f4b62be2a5c0987/run-benchmark.sh) is absolutely trivial to use. (Alexey Milovidov)
+Additionally improve the automation scripts, so they can launch the benchmarks in the AWS environment in any region with no prerequisites, and the final JSON reports are [generated automatically](https://github.com/ClickHouse/ClickBench/pull/596) by materialized views. Create template files for JSON reports for every automated entry. This allows quickly updating results for many systems on all combinations of machines. The [script](https://github.com/ClickHouse/ClickBench/blob/547db775545098319b078d191f4b62be2a5c0987/run-benchmark.sh) is absolutely trivial to use. (Alexey Milovidov)
 
 ### 2025-08-28
 For consistency, every entry in the benchmark now resides in its own directory. For example, there is a separate directory for the run on "partitioned" and "non-partitioned" Parquet files. This makes it easier to run each entry in an automated way uniformly.
