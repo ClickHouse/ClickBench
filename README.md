@@ -200,6 +200,8 @@ Now the new benchmark is easy to use and the results for any system can be repro
 
 We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/hardware/) for testing servers and VMs.
 
+See also the [changelog](CHANGELOG.md). 
+
 ## Systems Included
 
 ClickBench provides [publicly available benchmark results for over 60 database management systems](https://benchmark.clickhouse.com/).
