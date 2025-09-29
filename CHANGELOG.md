@@ -66,7 +66,7 @@ Add a new benchmark, [FastFormats](https://fastformats.clickhouse.com/) comparin
 Add a new benchmark, [JSONBench](https://jsonbench.com/) for analytics on semistructured data. Website by Alexey Milovidov, scripts and methodology by Tom Schreiber.
 
 ### 2024-11-08
-Add a [new benchmark](Add a comparison of all generations of AWS Graviton) to compare all generations of AWS Graviton. (Alexey Milovidov)
+Add a [new benchmark](https://pastila.nl/?000b1ba6/c224ddf960900f4f2d0d9e100cef5445.html) to compare all generations of AWS Graviton. (Alexey Milovidov)
 
 ### 2023-09-13
 Add an [action](https://github.com/ClickHouse/ClickBench/pull/136) to run the benchmark on ClickHouse Cloud every day. From now on, it automatically updates daily. (Alexey Milovidov)
