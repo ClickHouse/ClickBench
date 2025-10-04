@@ -47,10 +47,14 @@ split -l 10000000 hits.tsv hits_part_
 
 # load data
 echo "Starting to load data..."
+start_load_time=$(date +%s.%N)
 for file in hits_part_*; do
     echo -n "Load time: "
     PGUSER=$PG_USER PGPASSWORD=$PG_PASSWORD command time -f '%e' psql -h $HOST_NAME -p $PORT -d $DATABASE -t -c "\\copy hits FROM '$file'"
 done
+end_load_time=$(date +%s.%N)
+total_load_time=$(echo "$end_load_time - $start_load_time" | bc)
+echo "Total load time: $total_load_time seconds"
 
 # run clickbench test with queries
 echo "Starting to run queries..."
@@ -58,4 +62,4 @@ echo "Starting to run queries..."
 ./run.sh $PG_USER $PG_PASSWORD $HOST_NAME $PORT $DATABASE 2>&1 | tee log_queries_$DATABASE.txt
 
 cat log_queries_$DATABASE.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
-    awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }' | tee result_queries_$DATABASE.txt
+    awk '{ if (i % 3 == 0) { printf "[" }; printf "%.3f", $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }' | tee result_queries_$DATABASE.txt
