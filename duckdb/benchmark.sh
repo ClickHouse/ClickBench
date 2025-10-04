@@ -6,12 +6,10 @@ curl https://install.duckdb.org | sh
 export PATH=$HOME'/.duckdb/cli/latest':$PATH
 
 # Load the data
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
 echo -n "Load time: "
-command time -f '%e' duckdb hits.db -f create.sql -c "COPY hits FROM 'hits.tsv' (QUOTE '')"
+command time -f '%e' duckdb hits.db -storage_version latest -f create.sql -f load.sql
 
 # Run the queries
 

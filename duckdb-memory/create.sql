@@ -1,3 +1,5 @@
+ATTACH ':memory:' AS compressed_mem (COMPRESS);
+USE compressed_mem;
 CREATE TABLE hits
 (
     WatchID BIGINT NOT NULL,
