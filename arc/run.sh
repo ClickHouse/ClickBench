@@ -1,48 +1,93 @@
 #!/bin/bash
 # Arc ClickBench Benchmark Runner
-# This script was used to generate the benchmark results
+# Queries Arc via HTTP API to measure end-to-end performance
 
 TRIES=3
-PARQUET_FILE="hits.parquet"
+PARQUET_FILE="${PARQUET_FILE:-$(pwd)/hits.parquet}"
+ARC_URL="${ARC_URL:-http://localhost:8000}"
+ARC_API_KEY="${ARC_API_KEY:-benchmark-test-key}"
 
-python3 << 'EOF'
-import duckdb
+# Check if Arc is running
+echo "Checking if Arc is running at $ARC_URL..." >&2
+if ! curl -s -f "$ARC_URL/health" > /dev/null 2>&1; then
+    echo "Error: Arc is not running at $ARC_URL" >&2
+    echo "Please start Arc first or set ARC_URL environment variable" >&2
+    exit 1
+fi
+
+echo "Arc is running. Using parquet file: $PARQUET_FILE" >&2
+
+python3 << EOF
+import requests
 import time
-import multiprocessing
-from pathlib import Path
+import json
+import sys
+import re
 
-PARQUET_FILE = Path("hits.parquet")
+ARC_URL = "$ARC_URL"
+API_KEY = "$ARC_API_KEY"
+PARQUET_FILE = "$PARQUET_FILE"
 
-# Connect to DuckDB
-conn = duckdb.connect()
+# Headers for API requests
+headers = {
+    "x-api-key": API_KEY,
+    "Content-Type": "application/json"
+}
 
-# Configure optimizations
-cpu_count = multiprocessing.cpu_count()
-conn.execute(f"SET threads TO {cpu_count}")
-conn.execute("SET enable_object_cache TO true")
-
-# Create view from parquet
-conn.execute(f"CREATE SCHEMA IF NOT EXISTS clickbench")
-conn.execute(f"CREATE VIEW clickbench.hits AS SELECT * FROM read_parquet('{PARQUET_FILE}')")
-
-# Read queries
+# Read queries - improved parsing
 with open('queries.sql') as f:
     content = f.read()
 
+# Remove comment lines
+lines = [line for line in content.split('\n') if not line.strip().startswith('--')]
+clean_content = '\n'.join(lines)
+
+# Split by semicolons and filter empties
 queries = []
-for query in content.split(';'):
+for query in clean_content.split(';'):
     query = query.strip()
-    if query and not query.startswith('--'):
+    if query:
+        # Replace 'clickbench.hits' table with read_parquet
+        query = re.sub(
+            r'\bclickbench\.hits\b',
+            f"read_parquet('{PARQUET_FILE}', union_by_name=true)",
+            query,
+            flags=re.IGNORECASE
+        )
         queries.append(query)
+
+print(f"Running {len(queries)} queries via Arc HTTP API...", file=sys.stderr)
 
 # Run each query 3 times
 for i, query_sql in enumerate(queries, 1):
     for run in range(3):
         try:
             start = time.perf_counter()
-            conn.execute(query_sql).fetchall()
-            elapsed = time.perf_counter() - start
-            print(f"{elapsed:.4f}")
+            
+            response = requests.post(
+                f"{ARC_URL}/query",
+                headers=headers,
+                json={"sql": query_sql, "format": "json"},
+                timeout=300
+            )
+            
+            if response.status_code == 200:
+                # Parse response to ensure data is received
+                data = response.json()
+                elapsed = time.perf_counter() - start
+                print(f"{elapsed:.4f}")
+            else:
+                print("null")
+                if run == 0:  # Only print error on first run
+                    print(f"Query {i} failed: {response.status_code} - {response.text[:200]}", file=sys.stderr)
+        except requests.exceptions.Timeout:
+            print("null")
+            if run == 0:
+                print(f"Query {i} timed out", file=sys.stderr)
         except Exception as e:
             print("null")
+            if run == 0:
+                print(f"Query {i} error: {e}", file=sys.stderr)
+
+print("Benchmark complete!", file=sys.stderr)
 EOF

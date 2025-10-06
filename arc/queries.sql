@@ -20,7 +20,7 @@ SELECT SearchEngineID, SearchPhrase, COUNT(*) AS c FROM clickbench.hits WHERE Se
 SELECT UserID, COUNT(*) FROM clickbench.hits GROUP BY UserID ORDER BY COUNT(*) DESC LIMIT 10;
 SELECT UserID, SearchPhrase, COUNT(*) FROM clickbench.hits GROUP BY UserID, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
 SELECT UserID, SearchPhrase, COUNT(*) FROM clickbench.hits GROUP BY UserID, SearchPhrase LIMIT 10;
-SELECT UserID, extract(minute FROM CAST(to_timestamp(EventTime) AS TIMESTAMP)) AS m, SearchPhrase, COUNT(*) FROM clickbench.hits GROUP BY UserID, m, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
+SELECT UserID, minute(to_timestamp(EventTime)) AS m, SearchPhrase, COUNT(*) FROM clickbench.hits GROUP BY UserID, m, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
 SELECT UserID FROM clickbench.hits WHERE UserID = 435090932899640449;
 SELECT COUNT(*) FROM clickbench.hits WHERE URL LIKE '%google%';
 SELECT SearchPhrase, MIN(URL), COUNT(*) AS c FROM clickbench.hits WHERE URL LIKE '%google%' AND SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;
@@ -44,4 +44,4 @@ SELECT URL, COUNT(*) AS PageViews FROM clickbench.hits WHERE CounterID = 62 AND 
 SELECT TraficSourceID, SearchEngineID, AdvEngineID, CASE WHEN (SearchEngineID = 0 AND AdvEngineID = 0) THEN Referer ELSE '' END AS Src, URL AS Dst, COUNT(*) AS PageViews FROM clickbench.hits WHERE CounterID = 62 AND EventDate >= 15887 AND EventDate <= 15917 AND IsRefresh = 0 GROUP BY TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;
 SELECT URLHash, EventDate, COUNT(*) AS PageViews FROM clickbench.hits WHERE CounterID = 62 AND EventDate >= 15887 AND EventDate <= 15917 AND IsRefresh = 0 AND TraficSourceID IN (-1, 6) AND RefererHash = 3594120000172545465 GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 10 OFFSET 100;
 SELECT WindowClientWidth, WindowClientHeight, COUNT(*) AS PageViews FROM clickbench.hits WHERE CounterID = 62 AND EventDate >= 15887 AND EventDate <= 15917 AND IsRefresh = 0 AND DontCountHits = 0 AND URLHash = 2868770270353813622 GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10 OFFSET 10000;
-SELECT DATE_TRUNC('minute', CAST(to_timestamp(EventTime) AS TIMESTAMP)) AS M, COUNT(*) AS PageViews FROM clickbench.hits WHERE CounterID = 62 AND EventDate >= 15900 AND EventDate <= 15901 AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', CAST(to_timestamp(EventTime) AS TIMESTAMP)) ORDER BY DATE_TRUNC('minute', CAST(to_timestamp(EventTime) AS TIMESTAMP)) LIMIT 10 OFFSET 1000;
+SELECT DATE_TRUNC('minute', to_timestamp(EventTime)) AS M, COUNT(*) AS PageViews FROM clickbench.hits WHERE CounterID = 62 AND EventDate >= 15900 AND EventDate <= 15901 AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', to_timestamp(EventTime)) ORDER BY DATE_TRUNC('minute', to_timestamp(EventTime)) LIMIT 10 OFFSET 1000;
