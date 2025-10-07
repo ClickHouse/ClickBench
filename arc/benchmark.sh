@@ -11,7 +11,7 @@ pip3 install fastapi uvicorn duckdb pyarrow requests gunicorn
 # Clone Arc repository
 if [ ! -d "arc" ]; then
     echo "Cloning Arc repository..."
-    git clone https://github.com/exydata-ventures/arc.git
+    git clone git@github.com:Basekick-Labs/arc.git
 fi
 
 cd arc
@@ -30,7 +30,7 @@ python3 << EOF
 from api.auth import AuthManager, Permission
 import os
 
-auth = AuthManager(db_path='./data/historian.db')
+auth = AuthManager(db_path='./data/arc.db')
 token = auth.create_token(
     name='clickbench',
     permissions=Permission.FULL_ACCESS,
