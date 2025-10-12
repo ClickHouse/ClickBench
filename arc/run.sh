@@ -17,6 +17,7 @@ if ! curl -s -f "$ARC_URL/health" > /dev/null 2>&1; then
 fi
 
 echo "Arc is running. Querying table: $DATABASE.$TABLE" >&2
+echo "Using API key: ${ARC_API_KEY:0:20}..." >&2
 
 python3 << EOF
 import requests
