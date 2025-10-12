@@ -30,22 +30,47 @@ pip install -r requirements.txt
 # Create data directory
 mkdir -p data logs
 
-# Create API token for benchmark (using correct auth API)
-echo "Creating API token..."
+# Create or reuse API token for benchmark
+echo "Setting up API token..."
 python3 << 'EOF'
 from api.auth import AuthManager
 import os
+import time
 
 # Initialize auth manager
 auth = AuthManager(db_path='./data/historian.db')
 
-# Create token (no Permission import needed)
-token = auth.create_token(
-    name='clickbench',
-    description='ClickBench benchmark access'
-)
+# Try to create token, or reuse if exists
+token = None
+token_name = f'clickbench-{int(time.time())}'
 
-print(f"Created API token: {token}")
+try:
+    # Try to create new token with timestamp
+    token = auth.create_token(
+        name=token_name,
+        description='ClickBench benchmark access'
+    )
+    print(f"Created new API token: {token_name}")
+except Exception as e:
+    # If that fails, try with a simple name and catch if exists
+    try:
+        token = auth.create_token(
+            name='clickbench',
+            description='ClickBench benchmark access'
+        )
+        print(f"Created API token: clickbench")
+    except ValueError:
+        # Token already exists, list and use existing one
+        print("Token 'clickbench' already exists, retrieving...")
+        tokens = auth.list_tokens()
+        for t in tokens:
+            if t.get('name') == 'clickbench':
+                token = t.get('token')
+                print(f"Reusing existing token: clickbench")
+                break
+
+        if not token:
+            raise Exception("Could not create or retrieve token")
 
 # Write token to file for run.sh to use
 with open('../arc_token.txt', 'w') as f:
@@ -53,7 +78,7 @@ with open('../arc_token.txt', 'w') as f:
 EOF
 
 ARC_TOKEN=$(cat ../arc_token.txt)
-echo "Token created successfully"
+echo "Token ready: $ARC_TOKEN"
 
 # Auto-detect CPU cores
 if command -v nproc > /dev/null 2>&1; then
