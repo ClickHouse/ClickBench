@@ -115,13 +115,27 @@ done
 cd ..
 
 # Download and prepare dataset
-if [ ! -f "hits.parquet" ]; then
-    echo "Downloading ClickBench dataset..."
-    wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+DATASET_FILE="hits.parquet"
+DATASET_URL="https://datasets.clickhouse.com/hits_compatible/hits.parquet"
+EXPECTED_SIZE=14779976446  # 14GB
+
+if [ -f "$DATASET_FILE" ]; then
+    CURRENT_SIZE=$(stat -f%z "$DATASET_FILE" 2>/dev/null || stat -c%s "$DATASET_FILE" 2>/dev/null)
+    if [ "$CURRENT_SIZE" -eq "$EXPECTED_SIZE" ]; then
+        echo "✓ Dataset already downloaded (14GB)"
+    else
+        echo "⚠ Dataset exists but size mismatch (expected: $EXPECTED_SIZE, got: $CURRENT_SIZE)"
+        echo "Re-downloading dataset..."
+        rm -f "$DATASET_FILE"
+        wget --continue --progress=dot:giga "$DATASET_URL"
+    fi
+else
+    echo "Downloading ClickBench dataset (14GB)..."
+    wget --continue --progress=dot:giga "$DATASET_URL"
 fi
 
 echo "Dataset size:"
-ls -lh hits.parquet
+ls -lh "$DATASET_FILE"
 
 # Count rows using DuckDB
 echo "Counting rows..."
@@ -132,28 +146,51 @@ count = conn.execute("SELECT COUNT(*) FROM read_parquet('hits.parquet')").fetcho
 print(f"Dataset contains {count:,} rows")
 EOF
 
-# Set environment variables for data loading and benchmarking
+# Set environment variables for benchmarking
 export ARC_URL="http://localhost:8000"
 export ARC_API_KEY="$ARC_TOKEN"
-export PARQUET_FILE="$(pwd)/hits.parquet"
 export DATABASE="clickbench"
 export TABLE="hits"
 
-# Load data into Arc
+# Load data into Arc by copying parquet file to storage
 echo ""
 echo "Loading ClickBench data into Arc..."
 echo "================================================"
-python3 load_data.py 2>&1 | tee load.log
 
-if [ $? -ne 0 ]; then
-    echo "Error: Data loading failed"
-    kill $ARC_PID 2>/dev/null || true
-    exit 1
+STORAGE_BASE="arc/data/arc"
+TARGET_DIR="$STORAGE_BASE/$DATABASE/$TABLE"
+TARGET_FILE="$TARGET_DIR/hits.parquet"
+
+# Create target directory
+mkdir -p "$TARGET_DIR"
+
+# Check if already loaded
+if [ -f "$TARGET_FILE" ]; then
+    SOURCE_SIZE=$(stat -f%z "$DATASET_FILE" 2>/dev/null || stat -c%s "$DATASET_FILE" 2>/dev/null)
+    TARGET_SIZE=$(stat -f%z "$TARGET_FILE" 2>/dev/null || stat -c%s "$TARGET_FILE" 2>/dev/null)
+
+    if [ "$SOURCE_SIZE" -eq "$TARGET_SIZE" ]; then
+        echo "✓ Data already loaded (14GB)"
+        echo "  Location: $TARGET_FILE"
+    else
+        echo "⚠ Existing file has different size, reloading..."
+        rm -f "$TARGET_FILE"
+        echo "  Copying parquet file to Arc storage..."
+        cp "$DATASET_FILE" "$TARGET_FILE"
+        echo "✓ Data loaded successfully!"
+    fi
+else
+    echo "  Copying parquet file to Arc storage..."
+    echo "  Source: $DATASET_FILE"
+    echo "  Target: $TARGET_FILE"
+    cp "$DATASET_FILE" "$TARGET_FILE"
+    echo "✓ Data loaded successfully!"
+    echo "  Table: $DATABASE.$TABLE"
+    ls -lh "$TARGET_FILE"
 fi
 
 echo ""
-echo "Data loading complete. Waiting 10 seconds for buffer flush..."
-sleep 10
+echo "Data loading complete."
 
 # Run benchmark
 echo ""
