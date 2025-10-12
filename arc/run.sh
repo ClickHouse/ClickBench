@@ -3,7 +3,8 @@
 # Queries Arc via HTTP API to measure end-to-end performance
 
 TRIES=3
-PARQUET_FILE="${PARQUET_FILE:-$(pwd)/hits.parquet}"
+DATABASE="${DATABASE:-clickbench}"
+TABLE="${TABLE:-hits}"
 ARC_URL="${ARC_URL:-http://localhost:8000}"
 ARC_API_KEY="${ARC_API_KEY:-benchmark-test-key}"
 
@@ -15,7 +16,7 @@ if ! curl -s -f "$ARC_URL/health" > /dev/null 2>&1; then
     exit 1
 fi
 
-echo "Arc is running. Using parquet file: $PARQUET_FILE" >&2
+echo "Arc is running. Querying table: $DATABASE.$TABLE" >&2
 
 python3 << EOF
 import requests
@@ -26,7 +27,8 @@ import re
 
 ARC_URL = "$ARC_URL"
 API_KEY = "$ARC_API_KEY"
-PARQUET_FILE = "$PARQUET_FILE"
+DATABASE = "$DATABASE"
+TABLE = "$TABLE"
 
 # Headers for API requests
 headers = {
@@ -47,13 +49,7 @@ queries = []
 for query in clean_content.split(';'):
     query = query.strip()
     if query:
-        # Replace 'clickbench.hits' table with read_parquet
-        query = re.sub(
-            r'\bclickbench\.hits\b',
-            f"read_parquet('{PARQUET_FILE}', union_by_name=true)",
-            query,
-            flags=re.IGNORECASE
-        )
+        # Query uses clickbench.hits - keep as is (data should be loaded in that database.table)
         queries.append(query)
 
 print(f"Running {len(queries)} queries via Arc HTTP API...", file=sys.stderr)

@@ -132,10 +132,28 @@ count = conn.execute("SELECT COUNT(*) FROM read_parquet('hits.parquet')").fetcho
 print(f"Dataset contains {count:,} rows")
 EOF
 
-# Set environment variables for run.sh
+# Set environment variables for data loading and benchmarking
 export ARC_URL="http://localhost:8000"
 export ARC_API_KEY="$ARC_TOKEN"
 export PARQUET_FILE="$(pwd)/hits.parquet"
+export DATABASE="clickbench"
+export TABLE="hits"
+
+# Load data into Arc
+echo ""
+echo "Loading ClickBench data into Arc..."
+echo "================================================"
+python3 load_data.py 2>&1 | tee load.log
+
+if [ $? -ne 0 ]; then
+    echo "Error: Data loading failed"
+    kill $ARC_PID 2>/dev/null || true
+    exit 1
+fi
+
+echo ""
+echo "Data loading complete. Waiting 10 seconds for buffer flush..."
+sleep 10
 
 # Run benchmark
 echo ""
