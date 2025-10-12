@@ -217,6 +217,69 @@ fi
 echo ""
 echo "Data loading complete."
 
+# Verify query cache configuration
+echo ""
+echo "Verifying query cache configuration..."
+cd arc
+python3 << 'CACHECHECK'
+import os
+import sys
+
+# Check all possible cache configuration sources
+print("=" * 70)
+print("Query Cache Configuration Check")
+print("=" * 70)
+
+# 1. Check arc.conf
+cache_in_conf = None
+try:
+    from config_loader import get_config
+    arc_config = get_config()
+    cache_config = arc_config.config.get('query_cache', {})
+    cache_in_conf = cache_config.get('enabled', None)
+    print(f"✓ arc.conf:     enabled = {cache_in_conf}")
+except Exception as e:
+    print(f"✗ arc.conf:     Error reading: {e}")
+
+# 2. Check .env file
+cache_in_env = None
+if os.path.exists('.env'):
+    with open('.env', 'r') as f:
+        for line in f:
+            if line.strip().startswith('QUERY_CACHE_ENABLED'):
+                cache_in_env = line.split('=')[1].strip().lower()
+                print(f"✓ .env:         QUERY_CACHE_ENABLED = {cache_in_env}")
+                break
+    if cache_in_env is None:
+        print(f"  .env:         QUERY_CACHE_ENABLED not set")
+else:
+    print(f"  .env:         File not found")
+
+# 3. Check environment variable
+cache_in_os_env = os.getenv("QUERY_CACHE_ENABLED")
+if cache_in_os_env:
+    print(f"✓ Environment:  QUERY_CACHE_ENABLED = {cache_in_os_env}")
+else:
+    print(f"  Environment:  QUERY_CACHE_ENABLED not set")
+
+# 4. Check what init_query_cache will actually use
+try:
+    from api.query_cache import init_query_cache
+    cache_instance = init_query_cache()
+    if cache_instance is None:
+        print(f"\n✓ FINAL RESULT: Query cache is DISABLED")
+    else:
+        print(f"\n⚠️  FINAL RESULT: Query cache is ENABLED")
+        print(f"    TTL: {cache_instance.ttl_seconds}s")
+        print(f"    Max size: {cache_instance.max_size}")
+except Exception as e:
+    print(f"\n✗ Error checking cache initialization: {e}")
+
+print("=" * 70)
+CACHECHECK
+
+cd ..
+
 # Test API token before running benchmark
 echo ""
 echo "Testing API token authentication..."
