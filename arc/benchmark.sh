@@ -38,7 +38,7 @@ import os
 import time
 
 # Initialize auth manager
-auth = AuthManager(db_path='./data/historian.db')
+auth = AuthManager(db_path='./data/arc.db')
 
 # Try to create token, or reuse if exists
 token = None
@@ -216,6 +216,34 @@ fi
 
 echo ""
 echo "Data loading complete."
+
+# Test API token before running benchmark
+echo ""
+echo "Testing API token authentication..."
+TEST_RESPONSE=$(curl -s -w "\n%{http_code}" -H "x-api-key: $ARC_API_KEY" "$ARC_URL/health")
+HTTP_CODE=$(echo "$TEST_RESPONSE" | tail -n1)
+if [ "$HTTP_CODE" = "200" ]; then
+    echo "✓ API token is valid"
+else
+    echo "✗ API token test failed (HTTP $HTTP_CODE)"
+    echo "Response: $(echo "$TEST_RESPONSE" | head -n-1)"
+    echo ""
+    echo "Debugging: Let's verify the token exists in the database..."
+    cd arc
+    python3 << 'DEBUGEOF'
+from api.auth import AuthManager
+auth = AuthManager(db_path='./data/arc.db')
+tokens = auth.list_tokens()
+print(f"Found {len(tokens)} tokens in database:")
+for t in tokens:
+    print(f"  - {t.get('name')}: {t.get('token')[:20]}...")
+DEBUGEOF
+    cd ..
+    echo ""
+    echo "Error: Cannot proceed without valid authentication"
+    kill $ARC_PID 2>/dev/null || true
+    exit 1
+fi
 
 # Run benchmark
 echo ""
