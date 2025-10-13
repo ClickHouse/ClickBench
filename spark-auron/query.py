@@ -19,18 +19,18 @@ import timeit
 query = sys.stdin.read()
 print(query)
 
-# Calculate available memory to configurate SparkSession
-ram = int(round(psutil.virtual_memory().available / (1024 ** 3) * 0.7))
+# Calculate available memory to configurate SparkSession (in MB)
+ram = int(round(psutil.virtual_memory().available / (1024 ** 2) * 0.7))
 exec_memory = ram // 3
 exec_overhead = ram - exec_memory
-print(f"SparkSession will be set with {exec_memory} GB of memory and {exec_overhead} GB of memory overhead")
+print(f"SparkSession will be set with {exec_memory} MB of memory and {exec_overhead} MB of memoryOverhead (total {ram} MB)")
 
 builder = (
     SparkSession
     .builder
     .appName("ClickBench")
     .config("spark.driver", "local[*]") # To ensure using all cores
-    .config("spark.driver.memory", f"{exec_memory}g") # Set amount of memory SparkSession can use
+    .config("spark.driver.memory", f"{exec_memory}m")
     .config("spark.sql.parquet.binaryAsString", True) # Treat binary as string to get correct length calculations and text results
 
     # Additional Auron configuration
@@ -40,7 +40,7 @@ builder = (
     .config("spark.sql.extensions", "org.apache.spark.sql.blaze.BlazeSparkSessionExtension")
     .config("spark.shuffle.manager", "org.apache.spark.sql.execution.blaze.shuffle.BlazeShuffleManager")
     .config("spark.memory.offHeap.enabled", "false")
-    .config("spark.driver.memoryOverhead", exec_overhead * 1024)
+    .config("spark.driver.memoryOverhead", exec_overhead)
 )
 
 spark = builder.getOrCreate()

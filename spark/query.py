@@ -14,16 +14,16 @@ import timeit
 query = sys.stdin.read()
 print(query)
 
-# Calculate available memory to configurate SparkSession
-ram = int(round(psutil.virtual_memory().available / (1024 ** 3) * 0.7))
-print(f"SparkSession will use {ram} GB of memory")
+# Calculate available memory to configurate SparkSession (in MB)
+ram = int(round(psutil.virtual_memory().available / (1024 ** 2) * 0.7))
+print(f"SparkSession will use {ram} MB of memory")
 
 spark = (
     SparkSession
     .builder
     .appName("ClickBench")
     .config("spark.driver", "local[*]") # To ensure using all cores
-    .config("spark.driver.memory", f"{ram}g") # Set amount of memory SparkSession can use
+    .config("spark.driver.memory", f"{ram}m") # Set amount of memory SparkSession can use
     .config("spark.sql.parquet.binaryAsString", True) # Treat binary as string to get correct length calculations and text results
     .getOrCreate()
 )
