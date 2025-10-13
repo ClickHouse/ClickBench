@@ -7,7 +7,6 @@
   "tuned": "no",
   "load_time": 0,
   "data_size": 14779976446,
-  "comment": "Arc queried via HTTP API on AWS c6a.4xlarge (16 vCPU, 32GB RAM, 32 workers). Query cache disabled per ClickBench rules. Local Parquet on EBS gp2 (500GB, 1500 baseline IOPS). First run (cold): 34.43s. Arc is the fastest time-series database in ClickBench, outperforming VictoriaLogs (3.3x), QuestDB (6.5x), Timescale Cloud (18.2x), and TimescaleDB (29.7x). Best of 3 benchmark runs.",
   "result": [
     [0.3385, 0.2606, 0.3211],
     [0.5951, 0.5608, 0.5928],

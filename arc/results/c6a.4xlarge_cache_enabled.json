@@ -7,7 +7,6 @@
   "tuned": "yes",
   "load_time": 0,
   "data_size": 14779976446,
-  "comment": "Arc queried via HTTP API on AWS c6a.4xlarge (16 vCPU, 32GB RAM, 32 workers). Query cache ENABLED (TTL=60s). Local Parquet on EBS gp3. First run (cold): 37.85s. Note: Cache shows inconsistent behavior with some queries not caching properly.",
   "result": [
     [0.1375, 0.0106, 0.0065],
     [0.1138, 0.0072, 0.0052],
