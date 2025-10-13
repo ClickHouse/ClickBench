@@ -12,14 +12,11 @@ from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 
 import psutil
-import re
 import sys
 import timeit
 
 
 query = sys.stdin.read()
-# Replace \1 to $1 because spark recognizes only this pattern style (in query 28)
-query = re.sub(r"""(REGEXP_REPLACE\(.*?,\s*('[^']*')\s*,\s*)('1')""", r"\1'$1'", query)
 print(query)
 
 # Calculate available memory to configurate SparkSession

@@ -23,6 +23,7 @@ As usual, benchmark can be run via `./benchmark.sh`. Additionally, users can pro
 - Check [here](https://datafusion.apache.org/comet/user-guide/installation.html#supported-spark-versions) for _version compatibility_ between Spark and Comet.
 - Check [here](https://datafusion.apache.org/comet/user-guide/installation.html#using-a-published-jar-file) for _links to Comet jar_.
 - Check [here](https://datafusion.apache.org/comet/user-guide/installation.html#run-spark-shell-with-comet-enabled) for _basic Comet configuration_.
+- Check [here](https://github.com/apache/datafusion-comet/blob/main/docs/spark_expressions_support.md?plain=1) for _a list of (un-)supported expressions_.
 
 ### Configuration
 
@@ -32,3 +33,4 @@ Therefore, we need to split available memory between heap (for Spark) and off-he
 - `spark.comet.regexp.allowIncompatible=True` allows Comet to use incompatible regular expressions instead of falling back to Spark (check [docs](https://datafusion.apache.org/comet/user-guide/compatibility.html#regular-expressions) for details).
 - `spark.comet.scan.allowIncompatible=True` allows Comet to use different parquet readers to prevent query failures (check [issue](https://github.com/apache/datafusion-comet/issues/2035#issuecomment-3090666597) for details). <br>
 What happens here: `hits.parquet` contains `short` type columns, so Comet uses the `native_comet` reader for compatibility. However, this reader [doesn't work](https://github.com/apache/datafusion-comet/issues/2038) for some queries (e.g., query 40), causing Comet to fail. As a workaround, we can allow Comet to produce results incompatible with Spark, enabling it to use [other readers](https://datafusion.apache.org/comet/user-guide/compatibility.html#parquet-scans) and successfully execute these queries.
+- For Comet modification of 29 query (containing `REGEXP_REPLACE`) is done similar to Apache Spark (see corresponding README.md) since Comet [doesn't execute this function natively](https://github.com/apache/datafusion-comet/blob/1c462bc6c41b05e69b0ea7dd658e135648deff6c/docs/spark_expressions_support.md?plain=1#L420) and falls back to Spark.

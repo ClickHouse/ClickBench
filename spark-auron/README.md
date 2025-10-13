@@ -34,4 +34,9 @@ As usual, benchmark can be run via `./benchmark.sh`. Additionally, users can pro
 - As of version 5.0, Spark 3.5.5 is chosen since it's used for the `spark-3.5` shim (see `pom.xml`) and TPC-DS testing.
 - Apache Auron was previously named [Blaze](https://github.com/apache/auron/issues/1168). This change occurred after version 5.0, so previous naming references (links, settings) still remain. These will be updated in the next version.
 - In version 5.0, Auron generates extensive INFO logs (~55MB file after ~40 queries), which may impact system performance. This behavior will be manageable in next version and will require setting `spark.auron.native.log.level`.
-- Auron's memory configuration follows the example from the [benchmark page](https://auron.apache.org/documents/benchmarks.html#benchmark-configuration).
+- Auron's memory configuration follows the example from the [benchmark page](https://auron.apache.org/documents/benchmarks.html#benchmark-configuration), specifically 1:2 split between memory and memoryOverhead.
+- For Auron modification of 29 query (containing `REGEXP_REPLACE`) is done similar to Apache Spark (see corresponding README.md) since Auron doesn't execute this function natively and falls back to Spark:
+```
+25/10/11 17:18:29 WARN NativeConverters: Falling back expression: scala.NotImplementedError: unsupported expression: (class org.apache.spark.sql.catalyst.expressions.RegExpReplace) regexp_replace(Referer#14, ^https?://(?:www.)?([^/]+)/.*$, $1, 1)
+```
+Moreover, running original query as-is leads to Rust's panic (see [comment](https://github.com/apache/auron/issues/1287#issuecomment-3387246375) for details).
