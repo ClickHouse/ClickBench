@@ -1,22 +1,12 @@
 {
-  "system": "Arc (cache enabled)",
+  "system": "Arc",
   "date": "2025-10-12",
   "machine": "m3_max",
   "cluster_size": 1,
   "proprietary": "no",
   "tuned": "yes",
-  "tags": [
-    "Python",
-    "DuckDB",
-    "Parquet",
-    "HTTP API",
-    "time-series",
-    "stateless",
-    "cached"
-  ],
   "load_time": 0,
   "data_size": 14779976446,
-  "comment": "Arc queried via HTTP API on M3 Max (14 cores, 36GB RAM, 42 workers). Query cache ENABLED (60s TTL). Local Parquet on NVMe. First run (cold): 23.46s.",
   "result": [
     [0.0441, 0.0287, 0.0036],
     [0.0432, 0.0409, 0.0041],

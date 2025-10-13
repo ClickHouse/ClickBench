@@ -5,15 +5,6 @@
   "cluster_size": 1,
   "proprietary": "no",
   "tuned": "yes",
-  "tags": [
-    "Python",
-    "DuckDB",
-    "Parquet",
-    "HTTP API",
-    "time-series",
-    "stateless",
-    "cached"
-  ],
   "load_time": 0,
   "data_size": 14779976446,
   "comment": "Arc queried via HTTP API on AWS c6a.4xlarge (16 vCPU, 32GB RAM, 32 workers). Query cache ENABLED (TTL=60s). Local Parquet on EBS gp3. First run (cold): 37.85s. Note: Cache shows inconsistent behavior with some queries not caching properly.",

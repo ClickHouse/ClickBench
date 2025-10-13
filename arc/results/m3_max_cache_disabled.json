@@ -4,18 +4,9 @@
   "machine": "m3_max",
   "cluster_size": 1,
   "proprietary": "no",
-  "tuned": "yes",
-  "tags": [
-    "Python",
-    "DuckDB",
-    "Parquet",
-    "HTTP API",
-    "time-series",
-    "stateless"
-  ],
+  "tuned": "no",
   "load_time": 0,
   "data_size": 14779976446,
-  "comment": "Arc queried via HTTP API on M3 Max (14 cores, 36GB RAM, 42 workers). Query cache disabled per ClickBench rules. Local Parquet on NVMe. First run (cold): 25.39s.",
   "result": [
     [0.0529, 0.0325, 0.0279],
     [0.0410, 0.0379, 0.0390],
