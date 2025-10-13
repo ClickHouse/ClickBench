@@ -5,6 +5,7 @@
   "cluster_size": 1,
   "proprietary": "no",
   "tuned": "yes",
+  "tags": ["time-series"],
   "load_time": 0,
   "data_size": 14779976446,
   "result": [
