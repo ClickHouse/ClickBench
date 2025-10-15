@@ -124,7 +124,7 @@ echo "Arc started with PID: $ARC_PID"
 echo "Waiting for Arc to be ready..."
 for i in {1..30}; do
     if curl -s -f http://localhost:8000/health > /dev/null 2>&1; then
-        echo "✓ Arc is ready!"
+        echo "[OK] Arc is ready!"
         break
     fi
     if [ $i -eq 30 ]; then
@@ -147,9 +147,9 @@ EXPECTED_SIZE=14779976446  # 14GB
 if [ -f "$DATASET_FILE" ]; then
     CURRENT_SIZE=$(stat -f%z "$DATASET_FILE" 2>/dev/null || stat -c%s "$DATASET_FILE" 2>/dev/null)
     if [ "$CURRENT_SIZE" -eq "$EXPECTED_SIZE" ]; then
-        echo "✓ Dataset already downloaded (14GB)"
+        echo "[OK] Dataset already downloaded (14GB)"
     else
-        echo "⚠ Dataset exists but size mismatch (expected: $EXPECTED_SIZE, got: $CURRENT_SIZE)"
+        echo "[WARNING] Dataset exists but size mismatch (expected: $EXPECTED_SIZE, got: $CURRENT_SIZE)"
         echo "Re-downloading dataset..."
         rm -f "$DATASET_FILE"
         wget --continue --progress=dot:giga "$DATASET_URL"
@@ -159,8 +159,8 @@ else
     wget --continue --progress=dot:giga "$DATASET_URL"
 fi
 
-echo "Dataset size:"
-ls -lh "$DATASET_FILE"
+FILE_SIZE=$(du -h "$DATASET_FILE" | cut -f1)
+echo "Dataset size: $FILE_SIZE ($DATASET_FILE)"
 
 # Count rows using DuckDB
 echo "Counting rows..."
@@ -195,23 +195,24 @@ if [ -f "$TARGET_FILE" ]; then
     TARGET_SIZE=$(stat -f%z "$TARGET_FILE" 2>/dev/null || stat -c%s "$TARGET_FILE" 2>/dev/null)
 
     if [ "$SOURCE_SIZE" -eq "$TARGET_SIZE" ]; then
-        echo "✓ Data already loaded (14GB)"
+        echo "[OK] Data already loaded (14GB)"
         echo "  Location: $TARGET_FILE"
     else
-        echo "⚠ Existing file has different size, reloading..."
+        echo "[WARNING] Existing file has different size, reloading..."
         rm -f "$TARGET_FILE"
         echo "  Copying parquet file to Arc storage..."
         cp "$DATASET_FILE" "$TARGET_FILE"
-        echo "✓ Data loaded successfully!"
+        echo "[OK] Data loaded successfully!"
     fi
 else
     echo "  Copying parquet file to Arc storage..."
     echo "  Source: $DATASET_FILE"
     echo "  Target: $TARGET_FILE"
     cp "$DATASET_FILE" "$TARGET_FILE"
-    echo "✓ Data loaded successfully!"
+    echo "[OK] Data loaded successfully!"
     echo "  Table: $DATABASE.$TABLE"
-    ls -lh "$TARGET_FILE"
+    TARGET_SIZE=$(du -h "$TARGET_FILE" | cut -f1)
+    echo "  Size: $TARGET_SIZE"
 fi
 
 echo ""
@@ -268,14 +269,14 @@ try:
     from api.query_cache import init_query_cache
     cache_instance = init_query_cache()
     if cache_instance is None:
-        print(f"✓ FINAL RESULT: Query cache is DISABLED")
+        print(f"[OK] FINAL RESULT: Query cache is DISABLED")
     else:
-        print(f"✗ FINAL RESULT: Query cache is ENABLED")
+        print(f"[ERROR] FINAL RESULT: Query cache is ENABLED")
         print(f"    TTL: {cache_instance.ttl_seconds}s")
         print(f"    Max size: {cache_instance.max_size}")
-        print(f"\n  ⚠️  WARNING: Cache must be disabled for valid benchmark results!")
+        print(f"\n  [WARNING] Cache must be disabled for valid benchmark results!")
 except Exception as e:
-    print(f"✗ Error checking cache initialization: {e}")
+    print(f"[ERROR] Error checking cache initialization: {e}")
 
 print("=" * 70)
 CACHECHECK
@@ -288,9 +289,9 @@ echo "Testing API token authentication..."
 TEST_RESPONSE=$(curl -s -w "\n%{http_code}" -H "x-api-key: $ARC_API_KEY" "$ARC_URL/health")
 HTTP_CODE=$(echo "$TEST_RESPONSE" | tail -n1)
 if [ "$HTTP_CODE" = "200" ]; then
-    echo "✓ API token is valid"
+    echo "[OK] API token is valid"
 else
-    echo "✗ API token test failed (HTTP $HTTP_CODE)"
+    echo "[ERROR] API token test failed (HTTP $HTTP_CODE)"
     echo "Response: $(echo "$TEST_RESPONSE" | head -n-1)"
     echo ""
     echo "Debugging: Let's verify the token exists in the database..."
@@ -340,7 +341,7 @@ cat log.txt | \
        END {print "]"}' > results.json
 
 echo ""
-echo "✓ Benchmark complete!"
+echo "[OK] Benchmark complete!"
 echo ""
 echo "Results saved to: results.json"
 echo "Logs saved to: log.txt"

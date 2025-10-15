@@ -1,0 +1,3 @@
+Checking if Arc is running at http://localhost:8000...
+Error: Arc is not running at http://localhost:8000
+Please start Arc first or set ARC_URL environment variable
