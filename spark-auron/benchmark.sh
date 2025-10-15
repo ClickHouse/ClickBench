@@ -31,7 +31,7 @@ wget --continue --progress=dot:giga $AURON_JAR_URL -O auron.jar
 
 # Run the queries
 
-./run.sh 2>&1 | tee log.txt
+./run.sh >log.txt 2>&1
 
 # Print results to stdout as required
 cat log.txt | grep -P '^Time:\s+([\d\.]+)|Failure!' | sed -r -e 's/Time: //; s/^Failure!$/null/' |
@@ -88,3 +88,4 @@ EOF
 ) > "results/${MACHINE}.json"
 
 echo "Results have been saved to results/${MACHINE}.json"
+
