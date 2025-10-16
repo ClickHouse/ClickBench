@@ -12,28 +12,25 @@ from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 
 import psutil
-import re
 import sys
 import timeit
 
 
 query = sys.stdin.read()
-# Replace \1 to $1 because spark recognizes only this pattern style (in query 28)
-query = re.sub(r"""(REGEXP_REPLACE\(.*?,\s*('[^']*')\s*,\s*)('1')""", r"\1'$1'", query)
 print(query)
 
-# Calculate available memory to configurate SparkSession
-ram = int(round(psutil.virtual_memory().available / (1024 ** 3) * 0.7))
+# Calculate available memory to configurate SparkSession (in MB)
+ram = int(round(psutil.virtual_memory().available / (1024 ** 2) * 0.7))
 heap = ram // 2
 off_heap = ram - heap
-print(f"SparkSession will use {heap} GB of heap and {off_heap} GB of off-heap memory")
+print(f"SparkSession will use {heap} MB of heap and {off_heap} MB of off-heap memory (total {ram} MB)")
 
 builder = (
     SparkSession
     .builder
     .appName("ClickBench")
     .config("spark.driver", "local[*]") # To ensure using all cores
-    .config("spark.driver.memory", f"{heap}g") # Set amount of memory SparkSession can use
+    .config("spark.driver.memory", f"{heap}m")
     .config("spark.sql.parquet.binaryAsString", True) # Treat binary as string to get correct length calculations and text results
 
     # Additional Gluten configuration
@@ -42,7 +39,7 @@ builder = (
     .config("spark.plugins", "org.apache.gluten.GlutenPlugin")
     .config("spark.shuffle.manager", "org.apache.spark.shuffle.sort.ColumnarShuffleManager")
     .config("spark.memory.offHeap.enabled", "true")
-    .config("spark.memory.offHeap.size", f"{off_heap}g")
+    .config("spark.memory.offHeap.size", f"{off_heap}m")
     .config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true")
 )
 
