@@ -5,7 +5,7 @@ Arc is a high-performance time-series data warehouse built on DuckDB, Parquet, a
 ## System Information
 
 - **System:** Arc
-- **Date:** 2025-10-07
+- **Date:** 2025-10-15
 - **Machine:** m3_max (14 cores, 36GB RAM)
 - **Tags:** Python, time-series, DuckDB, Parquet, columnar, HTTP API
 - **License:** AGPL-3.0
@@ -24,6 +24,7 @@ Arc achieves:
 - Python 3.11+
 - 8GB+ RAM recommended
 - Internet connection for dataset download
+- Sudo access (only if system dependencies are missing)
 
 ## Quick Start
 
@@ -73,7 +74,7 @@ mkdir -p data logs
 python3 << 'EOF'
 from api.auth import AuthManager
 
-auth = AuthManager(db_path='./data/historian.db')
+auth = AuthManager(db_path='./data/arc.db')
 token = auth.create_token(name='clickbench', description='ClickBench benchmark')
 print(f"Token: {token}")
 EOF
@@ -104,33 +105,39 @@ wget https://datasets.clickhouse.com/hits_compatible/hits.parquet
 ```bash
 export ARC_URL="http://localhost:8000"
 export ARC_API_KEY="your-token-from-step-4"
-export PARQUET_FILE="/path/to/hits.parquet"
+export DATABASE="clickbench"
+export TABLE="hits"
 
 ./run.sh
 ```
 
+**Note:** The benchmark uses Apache Arrow columnar format for optimal performance. Requires `pyarrow` to be installed.
+
 ## Configuration
 
-Arc uses optimal settings for ClickBench:
+Arc uses optimal settings for ClickBench (all automatic, no configuration needed):
 
-- **Workers:** 2x CPU cores (balanced for analytical queries)
+- **Workers:** Auto-detected cores × 2 (optimal for analytical workloads)
 - **Query cache:** Disabled (per ClickBench rules)
 - **Storage:** Local filesystem (fastest for single-node)
 - **Timeout:** 300 seconds per query
+- **Format:** Apache Arrow (columnar, high-performance)
 
 ## Results Format
 
-Results are output in ClickBench JSON format:
+Results are output in official ClickBench format:
 
-```json
-[
-  [0.0226, 0.0233, 0.0284],
-  [0.0324, 0.0334, 0.0392],
-  ...
-]
+```
+Load time: 0
+Data size: 14779976446
+[0.0226, 0.0233, 0.0284]
+[0.0324, 0.0334, 0.0392]
+...
 ```
 
-Each array contains 3 execution times (in seconds) for the same query.
+- **Load time:** Arc queries Parquet files directly without a data loading phase (load time = 0)
+- **Data size:** Size of the dataset in bytes (14GB)
+- **Query results:** 43 lines, each containing 3 execution times (in seconds) for the same query
 
 ## Notes
 
@@ -143,16 +150,17 @@ Each array contains 3 execution times (in seconds) for the same query.
 ## Architecture
 
 ```
-ClickBench Query → Arc HTTP API → DuckDB → Parquet File → Results
+ClickBench Query → Arc Arrow API → DuckDB → Parquet File → Arrow Results
 ```
 
-Arc queries the Parquet file directly via DuckDB's `read_parquet()` function, providing excellent analytical performance without data import.
+Arc queries the Parquet file directly via DuckDB's `read_parquet()` function and returns results in Apache Arrow columnar format for maximum efficiency.
 
 ## Performance Characteristics
 
 Arc is optimized for:
 - **High-throughput writes** (1.89M RPS with MessagePack)
 - **Analytical queries** (DuckDB's columnar engine)
+- **Columnar data transfer** (Apache Arrow IPC for efficient results)
 - **Object storage** (S3, GCS, MinIO compatibility)
 - **Time-series workloads** (built-in time-based indexing)
 

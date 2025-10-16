@@ -1,6 +1,6 @@
 #!/bin/bash
 # Arc ClickBench Benchmark Runner
-# Queries Arc via HTTP API to measure end-to-end performance
+# Queries Arc via HTTP API using Apache Arrow columnar format
 
 TRIES=3
 DATABASE="${DATABASE:-clickbench}"
@@ -16,15 +16,20 @@ if ! curl -s -f "$ARC_URL/health" > /dev/null 2>&1; then
     exit 1
 fi
 
-echo "Arc is running. Querying table: $DATABASE.$TABLE" >&2
+echo "Arc is running. Querying table: $DATABASE.$TABLE (Apache Arrow)" >&2
 echo "Using API key: ${ARC_API_KEY:0:20}..." >&2
 
 python3 << EOF
 import requests
 import time
-import json
 import sys
-import re
+
+try:
+    import pyarrow as pa
+except ImportError:
+    print("Error: pyarrow is required for Arrow format", file=sys.stderr)
+    print("Install with: pip install pyarrow", file=sys.stderr)
+    sys.exit(1)
 
 ARC_URL = "$ARC_URL"
 API_KEY = "$ARC_API_KEY"
@@ -37,7 +42,7 @@ headers = {
     "Content-Type": "application/json"
 }
 
-# Read queries - improved parsing
+# Read queries
 with open('queries.sql') as f:
     content = f.read()
 
@@ -50,32 +55,32 @@ queries = []
 for query in clean_content.split(';'):
     query = query.strip()
     if query:
-        # Query uses clickbench.hits - keep as is (data should be loaded in that database.table)
         queries.append(query)
 
-print(f"Running {len(queries)} queries via Arc HTTP API...", file=sys.stderr)
+print(f"Running {len(queries)} queries via Apache Arrow API...", file=sys.stderr)
 
 # Run each query 3 times
 for i, query_sql in enumerate(queries, 1):
     for run in range(3):
         try:
             start = time.perf_counter()
-            
+
             response = requests.post(
-                f"{ARC_URL}/query",
+                f"{ARC_URL}/query/arrow",
                 headers=headers,
-                json={"sql": query_sql, "format": "json"},
+                json={"sql": query_sql},
                 timeout=300
             )
-            
+
             if response.status_code == 200:
-                # Parse response to ensure data is received
-                data = response.json()
+                # Parse Arrow IPC stream to ensure data is received
+                reader = pa.ipc.open_stream(response.content)
+                arrow_table = reader.read_all()
                 elapsed = time.perf_counter() - start
                 print(f"{elapsed:.4f}")
             else:
                 print("null")
-                if run == 0:  # Only print error on first run
+                if run == 0:
                     print(f"Query {i} failed: {response.status_code} - {response.text[:200]}", file=sys.stderr)
         except requests.exceptions.Timeout:
             print("null")

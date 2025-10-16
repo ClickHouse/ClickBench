@@ -4,10 +4,31 @@
 
 set -e
 
-# Install system dependencies
-echo "Installing system dependencies..."
-sudo apt-get update -y
-sudo apt-get install -y python3-pip python3-venv wget curl
+# Check and install system dependencies
+echo "Checking system dependencies..."
+
+MISSING_DEPS=()
+command -v python3 >/dev/null 2>&1 || MISSING_DEPS+=("python3")
+command -v pip3 >/dev/null 2>&1 || MISSING_DEPS+=("python3-pip")
+command -v wget >/dev/null 2>&1 || MISSING_DEPS+=("wget")
+command -v curl >/dev/null 2>&1 || MISSING_DEPS+=("curl")
+
+# Check for python3-venv by detecting Python version
+PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
+VENV_PACKAGE="python${PYTHON_VERSION}-venv"
+
+# Try to create a test venv to check if venv is properly installed
+if ! python3 -m venv --help >/dev/null 2>&1 || ! python3 -c "import ensurepip" 2>/dev/null; then
+    MISSING_DEPS+=("$VENV_PACKAGE")
+fi
+
+if [ ${#MISSING_DEPS[@]} -eq 0 ]; then
+    echo "[OK] All system dependencies are already installed"
+else
+    echo "Installing missing dependencies: ${MISSING_DEPS[*]}"
+    sudo apt-get update -y
+    sudo apt-get install -y "${MISSING_DEPS[@]}"
+fi
 
 # Create Python virtual environment
 echo "Creating Python virtual environment..."
@@ -80,18 +101,24 @@ EOF
 ARC_TOKEN=$(cat ../arc_token.txt)
 echo "Token ready: $ARC_TOKEN"
 
-# Auto-detect CPU cores
+# Auto-detect CPU cores (supports Linux and macOS)
 if command -v nproc > /dev/null 2>&1; then
+    # Linux: use nproc
     CORES=$(nproc)
+elif command -v sysctl > /dev/null 2>&1; then
+    # macOS: use sysctl
+    CORES=$(sysctl -n hw.ncpu 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
 elif [ -f /proc/cpuinfo ]; then
+    # Linux fallback: parse /proc/cpuinfo
     CORES=$(grep -c processor /proc/cpuinfo)
 else
+    # Final fallback
     CORES=4
 fi
 
-# Use 2x cores for balanced performance
+# Use 2x cores for optimal analytical performance (automatic)
 WORKERS=$((CORES * 2))
-echo "Starting Arc with $WORKERS workers ($CORES cores detected)..."
+echo "Starting Arc with $WORKERS workers ($CORES cores detected, 2x multiplier for optimal performance)..."
 
 # Create minimal .env if not exists
 if [ ! -f ".env" ]; then
@@ -313,9 +340,11 @@ fi
 
 # Run benchmark
 echo ""
-echo "Running ClickBench queries via Arc HTTP API..."
+echo "Running ClickBench queries via Arc Arrow API..."
 echo "================================================"
-./run.sh 2>&1 | tee log.txt
+echo "(Logging to log.txt, this may take a few minutes...)"
+./run.sh > log.txt 2>&1
+echo "Benchmark execution complete!"
 
 # Stop Arc
 echo ""
@@ -326,26 +355,39 @@ wait $ARC_PID 2>/dev/null || true
 # Deactivate venv
 deactivate
 
-# Format results for ClickBench
+# Format results for ClickBench (official format)
 echo ""
 echo "Formatting results..."
-cat log.txt | \
-  grep -oP '^\d+\.\d+|^null' | \
-  awk 'BEGIN {print "["}
-       {
-         if (NR % 3 == 1) printf "  [";
-         printf "%s", $1;
-         if (NR % 3 == 0) print "],";
-         else printf ", ";
-       }
-       END {print "]"}' > results.json
 
+# Extract timing values from log
+cat log.txt | grep -oE '^[0-9]+\.[0-9]+|^null' | \
+  awk '{
+    if (NR % 3 == 1) printf "[";
+    printf "%s", $1;
+    if (NR % 3 == 0) print "]";
+    else printf ", ";
+  }' > results.txt
+
+# Output in official ClickBench format
 echo ""
 echo "[OK] Benchmark complete!"
 echo ""
-echo "Results saved to: results.json"
-echo "Logs saved to: log.txt"
+echo "================================================"
+echo "Official ClickBench Results"
+echo "================================================"
 echo ""
-echo "Results (ClickBench JSON format):"
-echo "=================================="
-cat results.json
+
+# Load time (Arc doesn't load data, it queries Parquet directly)
+echo "Load time: 0"
+
+# Data size in bytes
+echo "Data size: $EXPECTED_SIZE"
+
+# Query results (43 lines)
+cat results.txt
+
+echo ""
+echo "================================================"
+echo "Results saved to: results.txt"
+echo "Full logs saved to: log.txt"
+echo "================================================"
