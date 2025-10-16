@@ -2,5 +2,5 @@
   "system": "Arc",
   "proprietary": "no",
   "tuned": "no",
-  "tags": ["Python", "time-series", "DuckDB", "Parquet", "columnar"]
+  "tags": ["Python", "column-oriented", "time-series"]
 }
