@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# https://github.com/rust-lang/rust/issues/97234#issuecomment-1133564556
+ulimit -n 65536
+
 # Install
 
 export DEBIAN_FRONTEND=noninteractive
