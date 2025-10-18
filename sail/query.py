@@ -18,7 +18,7 @@ import os
 os.environ["SAIL_PARQUET__BINARY_AS_STRING"] = "true"
 os.environ["SAIL_PARQUET__REORDER_FILTERS"] = "true"
 os.environ["SAIL_RUNTIME__ENABLE_SECONDARY"] = "true"
-os.environ["SAIL_PARQUET__ALLOW_SINGLE_FILE_PARALLELISM"] = "true"
+os.environ["SAIL_OPTIMIZER__ENABLE_JOIN_REORDER"] = "true"
 
 server = SparkConnectServer()
 server.start()
