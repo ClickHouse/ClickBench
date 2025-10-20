@@ -1,5 +1,5 @@
 {
-    "system": "PostgreSQL",
+    "system": "Supabase",
     "date": "2025-03-10",
     "machine": "supabase-4XL-16k-IOPS-1000MBps",
     "cluster_size": 1,
