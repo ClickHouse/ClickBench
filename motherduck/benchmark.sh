@@ -9,9 +9,5 @@ if [ "$1" != "--skip-setup" ]; then
   pip install duckdb psutil
 fi
 
-# Go to the web ui and obtain a token
-# https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/#creating-an-access-token
-# Save the token as the motherduck_token environment variable:
-# export motherduck_token=...
-
+# See README.md
 python3 ./benchmark.py 2>&1
