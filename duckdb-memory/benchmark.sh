@@ -15,10 +15,9 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 
 /usr/bin/time -v ./query.py 2>&1 | tee log.txt
 
-echo -n "Load time: "
-cat log.txt | grep -P '^\d|Killed|Segmentation' | head -n1
+cat log.txt | grep -P '^\d|Killed|Segmentation' | grep "Load time: " | head -n1
 
-cat log.txt | grep -P '^\d|Killed|Segmentation' | tail -n+2 | sed -r -e 's/^.*(Killed|Segmentation).*$/null\nnull\nnull/' |
+cat log.txt | grep -P '^\d|Killed|Segmentation' | grep -v "Load time: " | sed -r -e 's/^.*(Killed|Segmentation).*$/null\nnull\nnull/' |
     awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 
 echo -n "Data size: "
