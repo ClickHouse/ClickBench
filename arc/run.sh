@@ -66,7 +66,7 @@ for i, query_sql in enumerate(queries, 1):
             start = time.perf_counter()
 
             response = requests.post(
-                f"{ARC_URL}/query/arrow",
+                f"{ARC_URL}/api/v1/query/arrow",
                 headers=headers,
                 json={"sql": query_sql},
                 timeout=300
