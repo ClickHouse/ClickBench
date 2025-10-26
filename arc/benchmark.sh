@@ -400,8 +400,7 @@ fi
 echo ""
 echo "Running ClickBench queries via Arc Arrow API..."
 echo "================================================"
-echo "(Logging to log.txt, this may take a few minutes...)"
-./run.sh > log.txt 2>&1
+./run.sh 2>&1 | tee log.txt
 echo "Benchmark execution complete!"
 
 # Stop Arc
