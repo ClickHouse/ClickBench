@@ -5,6 +5,7 @@ TRIES=3
 cat queries.sql | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches
+    docker restart $(docker ps -a -q)
 
     retry_count=0
     while [ $retry_count -lt 120 ]; do
