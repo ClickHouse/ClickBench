@@ -9,7 +9,7 @@ cat queries.sql | while read -r query; do
 
     retry_count=0
     while [ $retry_count -lt 120 ]; do
-        if nc -z localhost 5432; then
+        if PGPASSWORD=test psql -h localhost -U postgres -c "SELECT 'Ok';"; then
             break
         fi
 
