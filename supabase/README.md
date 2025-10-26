@@ -1,10 +1,11 @@
 ## Running Supabase Benchmark
 
 ```bash
-$ export PG_PASSWORD="<PASSWORD>"
-$ export SUPABASE_HOST="<HOST>"
+$ export SUPABASE_CONNECTION_STRING="[...]"
 $ ./benchmark.sh
 ```
 
-The Supabase host looks something like: `db.oolfrgytrdoculplvizc.supabase.co`.
-It can be retrieved from the [dashboard](https://supabase.com/docs/guides/troubleshooting/resolving-database-hostname-and-managing-your-ip-address-pVlwE0)
+By default, Supabase requires IPv6 connections.
+This restriction can be bypassed using the "transaction pooler".
+You can get its connection string from the Supabase "Connect to your project" UI.
+It looks something like this: `postgresql://postgres.zlltjtdocmcqiqprpunq:[YOUR-PASSWORD]@aws-1-eu-north-1.pooler.supabase.com:6543/postgres`
