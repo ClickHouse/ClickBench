@@ -8,7 +8,7 @@ export PATH=$HOME'/.duckdb/cli/latest':$PATH
 echo -n "Load time: "
 command time -f '%e' duckdb hits.db -f create.sql
 
-echo "Data size: $(du -bcs hits*.parquet | grep total)"
+echo "Data size: 14779976446"
 
 # Run the queries
 
