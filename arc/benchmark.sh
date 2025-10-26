@@ -135,6 +135,15 @@ BUFFER_MAX_AGE=5
 ENVEOF
 fi
 
+# Disable caching for fair ClickBench comparison
+# These ensure cold runs are truly cold and not artificially fast
+export DUCKDB_ENABLE_OBJECT_CACHE=false  # Disable DuckDB Parquet metadata cache
+export QUERY_CACHE_ENABLED=false          # Disable Arc query result cache
+
+echo "Caching disabled for benchmark compliance:"
+echo "  - DuckDB object cache: disabled"
+echo "  - Query result cache: disabled"
+
 # Start Arc server in background
 gunicorn -w $WORKERS -b 0.0.0.0:8000 \
     -k uvicorn.workers.UvicornWorker \
