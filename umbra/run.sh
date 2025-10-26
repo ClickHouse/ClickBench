@@ -5,10 +5,11 @@ TRIES=3
 cat queries.sql | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches
+    docker restart $(docker ps -a -q)
 
     retry_count=0
     while [ $retry_count -lt 120 ]; do
-        if nc -z localhost 5432; then
+        if PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -c "SELECT 'Ok';"; then
             break
         fi
 
