@@ -136,14 +136,15 @@ ENVEOF
 fi
 
 # Configure caching per ClickBench requirements (Alexey's guidance):
-# - Source data caching (buffer pools, Parquet metadata) is ALLOWED and ENABLED
-# - Query result caching (application-level cache) MUST be DISABLED
-export DUCKDB_ENABLE_OBJECT_CACHE=true   # ENABLED: Source data cache (buffer pool) - ALLOWED per ClickBench rules
-export QUERY_CACHE_ENABLED=false          # DISABLED: Query result cache - MUST disable per ClickBench rules
+# - Query result caching MUST be disabled
+# - DuckDB object cache: While technically "source data" cache, we disable it to be
+#   ultra-conservative since it cannot be flushed per-query (only globally enabled/disabled)
+export DUCKDB_ENABLE_OBJECT_CACHE=false  # DISABLED: Conservative approach - cannot flush per-query
+export QUERY_CACHE_ENABLED=false          # DISABLED: Query result cache - required per ClickBench rules
 
-echo "Cache configuration per ClickBench requirements:"
-echo "  - DuckDB object cache (Parquet metadata/buffer pool): ENABLED (source data cache - allowed)"
-echo "  - Query result cache (application-level): DISABLED (required for compliance)"
+echo "Cache configuration (conservative approach for ClickBench compliance):"
+echo "  - DuckDB object cache: DISABLED (conservative - no per-query flush available)"
+echo "  - Query result cache: DISABLED (required for compliance)"
 
 # Start Arc server in background
 gunicorn -w $WORKERS -b 0.0.0.0:8000 \
