@@ -907,6 +907,8 @@ function render() {
         filtered_data = filtered_data.filter(elem => elem.data_size);
     } else if (selectors.metric == 'load') {
         filtered_data = filtered_data.filter(elem => elem.load_time >= 5);
+    } else if (selectors.metric == 'cold' || selectors.metric == 'combined') {
+        filtered_data = filtered_data.filter(elem => !elem.system.match(/memory|dataframe/i));
     }
 
     let nothing_selected_elem = document.getElementById('nothing-selected');
