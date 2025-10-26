@@ -18,4 +18,5 @@ cat queries.sql | while read -r query; do
     done;
     echo "${cli_params[@]}"
     duckdb hits.db "${cli_params[@]}"
+    rm -rf hits.db.tmp
 done;
