@@ -6,7 +6,7 @@ set -eu
 # If we dont' do this, Postgres will throw an error:
 #     "ERROR: cannot perform COPY FREEZE because the table was not created or truncated in the current subtransaction"
 # (i.e. Postgres requires that the table be either created or truncated in the current subtransaction)
-psql -h ${SUPABASE_HOST} -p 5432 -U postgres -d test <<'EOF'
+psql ${SUPABASE_CONNECTION_STRING} <<'EOF'
 set statement_timeout = '60min';
 BEGIN;
 TRUNCATE TABLE hits;
@@ -14,4 +14,4 @@ TRUNCATE TABLE hits;
 COMMIT;
 EOF
 
-psql -h ${SUPABASE_HOST} -p 5432 -U postgres -d test -t -c 'VACUUM ANALYZE hits'
+psql ${SUPABASE_CONNECTION_STRING} -c 'VACUUM ANALYZE hits'
