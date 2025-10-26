@@ -61,6 +61,16 @@ print(f"Running {len(queries)} queries via Apache Arrow API...", file=sys.stderr
 
 # Run each query 3 times
 for i, query_sql in enumerate(queries, 1):
+    # Flush filesystem cache before first run (ClickBench requirement)
+    if i == 1 or True:  # Flush before each query for cold runs
+        import subprocess
+        try:
+            subprocess.run(['sync'], check=False)
+            subprocess.run(['sudo', 'sh', '-c', 'echo 3 > /proc/sys/vm/drop_caches'],
+                         check=False, stderr=subprocess.DEVNULL)
+        except:
+            pass  # Ignore errors if not on Linux or no sudo access
+
     for run in range(3):
         try:
             start = time.perf_counter()
