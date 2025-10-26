@@ -20,6 +20,7 @@ echo "Arc is running. Querying table: $DATABASE.$TABLE (Apache Arrow)" >&2
 echo "Using API key: ${ARC_API_KEY:0:20}..." >&2
 
 python3 << EOF
+import subprocess
 import requests
 import time
 import sys
@@ -62,6 +63,11 @@ print(f"Running {len(queries)} queries via Apache Arrow API...", file=sys.stderr
 # Run each query 3 times
 for i, query_sql in enumerate(queries, 1):
     for run in range(3):
+        # Flush OS page cache before first run of each query
+        if run == 0:
+            subprocess.run(['sync'], check=True)
+            subprocess.run(['sudo', 'tee', '/proc/sys/vm/drop_caches'], input=b'3', check=True, stdout=subprocess.DEVNULL)
+
         try:
             start = time.perf_counter()
 
