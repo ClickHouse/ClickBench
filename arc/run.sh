@@ -1,6 +1,6 @@
 #!/bin/bash
 # Arc ClickBench Benchmark Runner
-# Queries Arc via HTTP API using Apache Arrow columnar format
+# Queries Arc via HTTP API using JSON format
 
 TRIES=3
 DATABASE="${DATABASE:-clickbench}"
@@ -16,20 +16,14 @@ if ! curl -s -f "$ARC_URL/health" > /dev/null 2>&1; then
     exit 1
 fi
 
-echo "Arc is running. Querying table: $DATABASE.$TABLE (Apache Arrow)" >&2
+echo "Arc is running. Querying table: $DATABASE.$TABLE (JSON)" >&2
 echo "Using API key: ${ARC_API_KEY:0:20}..." >&2
 
 python3 << EOF
 import requests
 import time
 import sys
-
-try:
-    import pyarrow as pa
-except ImportError:
-    print("Error: pyarrow is required for Arrow format", file=sys.stderr)
-    print("Install with: pip install pyarrow", file=sys.stderr)
-    sys.exit(1)
+import json
 
 ARC_URL = "$ARC_URL"
 API_KEY = "$ARC_API_KEY"
@@ -57,7 +51,7 @@ for query in clean_content.split(';'):
     if query:
         queries.append(query)
 
-print(f"Running {len(queries)} queries via Apache Arrow API...", file=sys.stderr)
+print(f"Running {len(queries)} queries via JSON API...", file=sys.stderr)
 
 # Run each query 3 times
 for i, query_sql in enumerate(queries, 1):
@@ -75,16 +69,15 @@ for i, query_sql in enumerate(queries, 1):
             start = time.perf_counter()
 
             response = requests.post(
-                f"{ARC_URL}/api/v1/query/arrow",
+                f"{ARC_URL}/api/v1/query",
                 headers=headers,
                 json={"sql": query_sql},
                 timeout=300
             )
 
             if response.status_code == 200:
-                # Parse Arrow IPC stream to ensure data is received
-                reader = pa.ipc.open_stream(response.content)
-                arrow_table = reader.read_all()
+                # Parse JSON to ensure data is received
+                data = response.json()
                 elapsed = time.perf_counter() - start
                 print(f"{elapsed:.4f}")
             else:
