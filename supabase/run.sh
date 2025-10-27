@@ -10,5 +10,5 @@ cat queries.sql | while read -r query; do
     (
         echo '\timing'
         yes "$query" | head -n $TRIES
-    ) | psql -h ${SUPABASE_HOST} -p 5432 -d test -U postgres -t | grep 'Time'
+    ) | psql ${SUPABASE_CONNECTION_STRING} -t | grep 'Time'
 done

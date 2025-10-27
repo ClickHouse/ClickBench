@@ -1,7 +1,7 @@
 {
     "system": "Supabase",
     "date": "2025-03-10",
-    "machine": "supabase-4XL-16k-IOPS-1000MBps",
+    "machine": "Supabase: 4XL",
     "cluster_size": 1,
     "proprietary": "no",
     "tuned": "no",

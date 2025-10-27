@@ -547,7 +547,7 @@ unique_systems.map(elem => {
     const count_diff = data.filter(elem => elem.machine === b).length - data.filter(elem => elem.machine === a).length;
     return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
 }).map(elem => {
-    const selected = elem != 'c6a.2xlarge' && elem != 'c6a.xlarge' && elem != 'c6a.large' && elem != 'c8g.4xlarge' && elem != 't3a.small' && elem != 'c8g.metal-48xl' && elem != 'c7a.metal-48xl';
+    const selected = elem != 'c6a.2xlarge' && elem != 'c6a.xlarge' && elem != 'c6a.large' && elem != 'c8g.4xlarge' && elem != 't3a.small' && elem != 'c6a.metal';
     let selector = document.createElement('a');
     selector.className = selected ? 'selector selector-active' : 'selector';
     selector.appendChild(document.createTextNode(elem));
