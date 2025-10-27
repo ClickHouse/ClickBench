@@ -177,55 +177,6 @@ done
 
 cd ..
 
-# Log storage information for transparency
-echo ""
-echo "================================================"
-echo "Storage Information"
-echo "================================================"
-
-# Check if running on AWS EC2
-if curl -s -m 1 http://169.254.169.254/latest/meta-data/instance-id > /dev/null 2>&1; then
-    INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-    INSTANCE_TYPE=$(curl -s http://169.254.169.254/latest/meta-data/instance-type)
-    AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
-    REGION=$(echo $AZ | sed 's/[a-z]$//')
-
-    echo "AWS EC2 Instance:"
-    echo "  Instance ID: $INSTANCE_ID"
-    echo "  Instance Type: $INSTANCE_TYPE"
-    echo "  Availability Zone: $AZ"
-    echo ""
-
-    # Get EBS volume information using AWS CLI if available
-    if command -v aws &> /dev/null; then
-        echo "EBS Volume Details:"
-        VOLUME_ID=$(aws ec2 describe-volumes --region $REGION \
-            --filters "Name=attachment.instance-id,Values=$INSTANCE_ID" "Name=attachment.device,Values=/dev/sda1,/dev/xvda" \
-            --query "Volumes[0].VolumeId" --output text 2>/dev/null)
-
-        if [ ! -z "$VOLUME_ID" ] && [ "$VOLUME_ID" != "None" ]; then
-            echo "  Volume ID: $VOLUME_ID"
-            aws ec2 describe-volumes --region $REGION --volume-ids $VOLUME_ID \
-                --query "Volumes[0].[VolumeType,Size,Iops,Throughput]" \
-                --output text 2>/dev/null | awk '{print "  Type: "$1"\n  Size: "$2" GB\n  IOPS: "$3"\n  Throughput: "$4" MB/s"}'
-        else
-            echo "  (Could not retrieve EBS volume details via AWS CLI)"
-        fi
-    else
-        echo "EBS Volume Details: (AWS CLI not available)"
-    fi
-    echo ""
-fi
-
-echo "Block Devices:"
-lsblk -o NAME,SIZE,TYPE,FSTYPE 2>/dev/null || lsblk
-echo ""
-
-echo "Filesystem Usage:"
-df -h / 2>/dev/null || df -h
-echo "================================================"
-echo ""
-
 # Download and prepare dataset
 DATASET_FILE="hits.parquet"
 DATASET_URL="https://datasets.clickhouse.com/hits_compatible/hits.parquet"
