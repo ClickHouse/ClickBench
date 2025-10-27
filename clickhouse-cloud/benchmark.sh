@@ -11,7 +11,9 @@
 
 clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure < create.sql
 
-clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --time --query "
+MAX_INSERT_THREADS=$(clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "SELECT intDiv(getSetting('max_threads'), 4)")
+
+clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --time --enable-parallel-replicas 1 --max-insert-threads $MAX_INSERT_THREADS --query "
   INSERT INTO hits SELECT * FROM url('https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{0..99}.parquet')
 "
 
