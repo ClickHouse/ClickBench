@@ -1,0 +1,10 @@
+{
+  "system": "Arc",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Python",
+    "column-oriented",
+    "time-series"
+  ]
+}
