@@ -16,7 +16,7 @@ SELECT SearchEngineID, SearchPhrase, COUNT(*) AS c FROM clickbench.hits WHERE Se
 SELECT UserID, COUNT(*) FROM clickbench.hits GROUP BY UserID ORDER BY COUNT(*) DESC LIMIT 10;
 SELECT UserID, SearchPhrase, COUNT(*) FROM clickbench.hits GROUP BY UserID, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
 SELECT UserID, SearchPhrase, COUNT(*) FROM clickbench.hits GROUP BY UserID, SearchPhrase LIMIT 10;
-SELECT UserID, EXTRACT(minute FROM EventTime) AS m, SearchPhrase, COUNT(*) FROM clickbench.hits GROUP BY UserID, m, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
+SELECT UserID, EXTRACT(minute FROM CAST(EventTime AS TIMESTAMP)) AS m, SearchPhrase, COUNT(*) FROM clickbench.hits GROUP BY UserID, m, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
 SELECT UserID FROM clickbench.hits WHERE UserID = 435090932899640449;
 SELECT COUNT(*) FROM clickbench.hits WHERE URL LIKE '%google%';
 SELECT SearchPhrase, MIN(URL), COUNT(*) AS c FROM clickbench.hits WHERE URL LIKE '%google%' AND SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;
