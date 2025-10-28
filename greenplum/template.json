@@ -1,0 +1,10 @@
+{
+  "system": "Greenplum",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C",
+    "column-oriented",
+    "PostgreSQL compatible"
+  ]
+}

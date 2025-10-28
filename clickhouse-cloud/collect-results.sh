@@ -15,7 +15,7 @@ do
 {
     "system": "ClickHouse ☁️ ('$PROVIDER')",
     "date": "'$(date +%F)'",
-    "machine": "'$MEMORY'GiB",
+    "machine": "ClickHouse ☁️: '$MEMORY'GiB",
     "cluster_size": '$REPLICAS',
     "proprietary": "yes",
     "tuned": "no",

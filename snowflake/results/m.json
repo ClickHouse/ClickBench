@@ -1,7 +1,7 @@
 {
     "system": "Snowflake",
     "date": "2022-07-01",
-    "machine": "M",
+    "machine": "Snowflake: M",
     "cluster_size": 4,
     "proprietary": "yes",
     "tuned": "no",

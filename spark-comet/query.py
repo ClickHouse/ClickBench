@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+
+"""
+Note: Keep in sync with spark-*/query.py (see README-accelerators.md for details)
+
+Highlights:
+- memory is split between heap (for Spark) and off-heap (for Comet)
+- Comet configuration is added to `SparkSession`
+- debug mode is added
+"""
+
+from pyspark.sql import SparkSession
+import pyspark.sql.functions as F
+
+import os
+import psutil
+import sys
+import timeit
+
+
+query = sys.stdin.read()
+print(query)
+
+# Calculate available memory to configurate SparkSession (in MB)
+ram = int(round(psutil.virtual_memory().available / (1024 ** 2) * 0.7))
+heap = ram // 2
+off_heap = ram - heap
+print(f"SparkSession will use {heap} MB of heap and {off_heap} MB of off-heap memory (total {ram} MB)")
+
+builder = (
+    SparkSession
+    .builder
+    .appName("ClickBench")
+    .config("spark.driver", "local[*]") # To ensure using all cores
+    .config("spark.driver.memory", f"{heap}m")
+    .config("spark.sql.parquet.binaryAsString", True) # Treat binary as string to get correct length calculations and text results
+
+    # Additional Comet configuration
+    .config("spark.jars", "comet.jar")
+    .config("spark.driver.extraClassPath", "comet.jar")
+    .config("spark.plugins", "org.apache.spark.CometPlugin")
+    .config("spark.shuffle.manager", "org.apache.spark.sql.comet.execution.shuffle.CometShuffleManager")
+    .config("spark.memory.offHeap.enabled", "true")
+    .config("spark.memory.offHeap.size", f"{off_heap}m")
+    .config("spark.comet.regexp.allowIncompatible", True)
+    .config("spark.comet.scan.allowIncompatible", True)
+)
+
+# Even more Comet configuration
+if os.getenv("DEBUG") == "1":
+    builder.config("spark.comet.explainFallback.enabled", "true")
+    builder.config("spark.sql.debug.maxToStringFields", "10000")
+
+spark = builder.getOrCreate()
+
+df = spark.read.parquet("hits.parquet")
+# Do casting before creating the view so no need to change to unreadable integer dates in SQL
+df = df.withColumn("EventTime", F.col("EventTime").cast("timestamp"))
+df = df.withColumn("EventDate", F.date_add(F.lit("1970-01-01"), F.col("EventDate")))
+df.createOrReplaceTempView("hits")
+
+for try_num in range(3):
+    try:
+        start = timeit.default_timer()
+        result = spark.sql(query)
+        result.show(100) # some queries should return more than 20 rows which is the default show limit
+        end = timeit.default_timer()
+        print("Time: ", end - start)
+    except Exception as e:
+        print(e)
+        print("Failure!")

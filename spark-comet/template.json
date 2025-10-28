@@ -1,0 +1,11 @@
+{
+  "system": "Spark (Comet)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "Rust",
+    "column-oriented",
+    "Spark derivative"
+  ]
+}

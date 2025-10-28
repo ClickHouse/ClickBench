@@ -1,7 +1,7 @@
 {
     "system": "Crunchy Bridge (Parquet)",
     "date": "2024-06-05",
-    "machine": "Analytics-256GB",
+    "machine": "CrunchyBridge: Analytics-256GB",
     "cluster_size": 1,
     "proprietary": "yes",
     "tuned": "no",

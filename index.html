@@ -253,7 +253,7 @@
             margin-left: -3rem;
         }
 
-        .note:hover .tooltip {
+        .note:hover .tooltip, .note:active .tooltip {
             visibility: visible;
         }
 
@@ -295,6 +295,12 @@
             display: inline-block;
             transform: translate(1px, 1px);
             filter: brightness(125%);
+        }
+
+        #scale_hint {
+            font-weight: normal;
+            font-size: 80%;
+            filter: contrast(10%);
         }
     </style>
     <script type="text/javascript" src="data.generated.js"></script>
@@ -423,7 +429,8 @@ const additional_data_size_points = [
                 System &amp; Machine
             </th>
             <th colspan="2">
-                Relative <span id="time-or-size">time</span> (lower is better)
+                Relative <span id="time-or-size">time</span> (lower is better).<br/>
+                <span id="scale_hint"></span>
             </th>
         </tr>
     </thead>
@@ -459,7 +466,7 @@ let selectors = {
     "cluster_size": {},
     "opensource": {"yes": true, "no": true},
     "tuned": {"no": true, "yes": false},
-    "metric": "hot",
+    "metric": "combined",
     "queries": [],
 };
 
@@ -540,7 +547,7 @@ unique_systems.map(elem => {
     const count_diff = data.filter(elem => elem.machine === b).length - data.filter(elem => elem.machine === a).length;
     return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
 }).map(elem => {
-    const selected = elem != 'c6a.2xlarge' && elem != 'c6a.xlarge' && elem != 'c6a.large' && elem != 'c8g.4xlarge' && elem != 't3a.small';
+    const selected = elem != 'c6a.2xlarge' && elem != 'c6a.xlarge' && elem != 'c6a.large' && elem != 'c8g.4xlarge' && elem != 't3a.small' && elem != 'c6a.metal';
     let selector = document.createElement('a');
     selector.className = selected ? 'selector selector-active' : 'selector';
     selector.appendChild(document.createTextNode(elem));
@@ -900,6 +907,8 @@ function render() {
         filtered_data = filtered_data.filter(elem => elem.data_size);
     } else if (selectors.metric == 'load') {
         filtered_data = filtered_data.filter(elem => elem.load_time >= 5);
+    } else if (selectors.metric == 'cold' || selectors.metric == 'combined') {
+        filtered_data = filtered_data.filter(elem => !elem.system.match(/memory|dataframe/i));
     }
 
     let nothing_selected_elem = document.getElementById('nothing-selected');
@@ -1044,6 +1053,9 @@ function render() {
     }
 
     findPassiveSelectors(filtered_data);
+
+    /// The small hint below column heading "Relative time (lower is better)"
+    document.getElementById("scale_hint").textContent = 'Different colors on the bar chart represent the same values shown at different scales (1x, 10x, 100x zoom)';
 }
 
 function isSubsequence(str, subseq) {
@@ -1150,7 +1162,7 @@ window.onpopstate = function(event) {
 
 if (window.location.hash) {
     try {
-        selectors = decodeState(window.location.hash.substring(1));
+        selectors = decodeState(decodeURIComponent(window.location.hash.substring(1)));
         if (!selectors.opensource) {
             selectors.opensource = {"yes": true, "no": false};
         }

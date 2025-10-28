@@ -1,0 +1,9 @@
+{
+  "system": "VictoriaLogs",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Go",
+    "column-oriented"
+  ]
+}

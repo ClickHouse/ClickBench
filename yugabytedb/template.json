@@ -1,0 +1,10 @@
+{
+  "system": "Yugabyte",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "row-oriented",
+    "PostgreSQL compatible"
+  ]
+}

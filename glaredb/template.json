@@ -1,0 +1,9 @@
+{
+  "system": "GlareDB (Parquet, single)",
+  "proprietary": "yes",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "serverless"
+  ]
+}

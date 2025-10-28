@@ -1,0 +1,10 @@
+{
+  "system": "PostgreSQL (with indexes)",
+  "proprietary": "no",
+  "tuned": "yes",
+  "tags": [
+    "C",
+    "row-oriented",
+    "PostgreSQL compatible"
+  ]
+}

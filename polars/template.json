@@ -1,0 +1,8 @@
+{
+  "system": "Polars (Parquet)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "column-oriented"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "system": "Drill",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "column-oriented",
+    "stateless"
+  ]
+}

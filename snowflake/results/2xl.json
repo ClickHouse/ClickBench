@@ -1,7 +1,7 @@
 {
     "system": "Snowflake",
     "date": "2022-07-01",
-    "machine": "2XL",
+    "machine": "Snowflake: 2XL",
     "cluster_size": 32,
     "proprietary": "yes",
     "tuned": "no",

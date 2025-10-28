@@ -1,0 +1,9 @@
+{
+  "system": "OctoSQL",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Go",
+    "stateless"
+  ]
+}

@@ -1,7 +1,7 @@
 {
     "system": "SingleStore",
     "date": "2022-07-15",
-    "machine": "S24",
+    "machine": "SingleStore: S24",
     "cluster_size": 1,
     "proprietary": "yes",
     "tuned": "no",

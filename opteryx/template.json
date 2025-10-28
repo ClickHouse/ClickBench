@@ -1,0 +1,11 @@
+{
+  "system": "Opteryx",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "stateless",
+    "column-oriented",
+    "serverless",
+    "embedded"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "system": "Polars (DataFrame)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "column-oriented",
+    "dataframe"
+  ]
+}

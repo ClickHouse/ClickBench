@@ -1,7 +1,7 @@
 {
     "system": "pgpro_tam (parquet, local storage)",
     "date": "2025-03-12",
-    "machine": "16 vCPU 32GB",
+    "machine": "pgpro_tam: 16 vCPU 32GB",
     "cluster_size": 1,
     "proprietary": "yes",
     "tuned": "no",

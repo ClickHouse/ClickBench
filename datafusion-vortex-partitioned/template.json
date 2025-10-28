@@ -1,0 +1,11 @@
+{
+  "system": "DataFusion (Vortex, partitioned)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "embedded",
+    "stateless"
+  ]
+}

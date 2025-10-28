@@ -1,0 +1,9 @@
+{
+  "system": "Salesforce Hyper",
+  "proprietary": "yes",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented"
+  ]
+}

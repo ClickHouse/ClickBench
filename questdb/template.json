@@ -1,0 +1,9 @@
+{
+  "system": "QuestDB",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "time-series"
+  ]
+}

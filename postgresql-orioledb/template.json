@@ -1,0 +1,10 @@
+{
+  "system": "PostgreSQL (OrioleDB)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C",
+    "row-oriented",
+    "PostgreSQL compatible"
+  ]
+}

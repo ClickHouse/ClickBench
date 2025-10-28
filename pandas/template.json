@@ -1,0 +1,6 @@
+{
+    "system": "pandas",
+    "proprietary": "no",
+    "tuned": "no",
+    "tags": ["Python","dataframe","row-oriented"]
+}

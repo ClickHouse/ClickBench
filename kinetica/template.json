@@ -1,0 +1,8 @@
+{
+  "system": "Kinetica",
+  "proprietary": "yes",
+  "tuned": "no",
+  "tags": [
+    "column-oriented"
+  ]
+}

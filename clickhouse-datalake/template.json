@@ -1,0 +1,12 @@
+{
+  "system": "ClickHouse (data lake, single)",
+  "proprietary": "no",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "embedded",
+    "stateless",
+    "ClickHouse derivative"
+  ]
+}

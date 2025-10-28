@@ -8,7 +8,7 @@ cat queries.sql | while read -r query; do
 
     echo -n "["
     for i in $(seq 1 $TRIES); do
-        RES=$(./clickhouse local --time --format Null --multiquery --progress 0 --query="$(cat create.sql); $query" 2>&1 | tail -n1)
+        RES=$(./clickhouse local --time --format Null --input_format_parquet_use_native_reader_v3 1 --multiquery --progress 0 --query="$(cat create.sql); $query" 2>&1 | tail -n1)
         [[ "$?" == "0" ]] && echo -n "${RES}" || echo -n "null"
         [[ "$i" != $TRIES ]] && echo -n ", "
 
