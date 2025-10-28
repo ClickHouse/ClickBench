@@ -1,37 +1,21 @@
 #!/bin/bash
 
-# Install
-sudo apt-get update -y
-sudo apt-get install -y git g++ cmake ninja-build libssl-dev build-essential make ccache pip
-
-# Check libcudf environment
-./check_libcudf_env.sh
-if [[ $? -ne 0 ]]; then
-    echo "libcudf environment check failed. Exiting."
-    exit 1
-fi
+# Install dependencies
+source dependencies.sh
 
 # Build Sirius
 git clone --recurse-submodules https://github.com/sirius-db/sirius.git
 cd sirius
-export SIRIUS_HOME_PATH=`pwd`
-cd duckdb
-mkdir -p extension_external && cd extension_external
-git clone https://github.com/duckdb/substrait.git
-cd substrait
-git reset --hard ec9f8725df7aa22bae7217ece2f221ac37563da4 #go to the right commit hash for duckdb substrait extension
-cd $SIRIUS_HOME_PATH
+source setup_sirius.sh
 make -j$(nproc)
 export PATH="$PATH:`pwd`/build/release/"
 cd ..
 
 # Load the data
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
 echo -n "Load time: "
-command time -f '%e' duckdb hits.db -f create.sql -c "COPY hits FROM 'hits.tsv' (QUOTE '')"
+command time -f '%e' duckdb hits.db -f create.sql -f load.sql
 
 # Run the queries
 
