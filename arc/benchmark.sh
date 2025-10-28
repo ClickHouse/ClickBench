@@ -47,6 +47,7 @@ cd arc
 echo "Installing Arc dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install pytz
 
 # Create data directory
 mkdir -p data logs
