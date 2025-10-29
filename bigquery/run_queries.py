@@ -3,6 +3,8 @@ from google.cloud.bigquery.enums import JobCreationMode
 
 import sys
 
+job_config = bigquery.QueryJobConfig()
+job_config.use_query_cache = False
 client = bigquery.Client(
     default_job_creation_mode=JobCreationMode.JOB_CREATION_OPTIONAL
 )
@@ -15,7 +17,7 @@ for query in file:
   for i in range(TRIES):
     print(f"\n[{i}]: {query}", file=sys.stderr)
     try:
-      query_job = client.query(query)
+      query_job = client.query(query, job_config=job_config)
       results = query_job.result()
       print(f"Job ID: **{query_job.job_id}**", file=sys.stderr)
       print(f"State: **{query_job.state}**", file=sys.stderr)
