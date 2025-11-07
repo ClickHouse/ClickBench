@@ -681,7 +681,7 @@ function selectRun(timings, metric) {
     const hot_timing = (timings[1] !== null && timings[2] !== null ? Math.min(timings[1], timings[2]) : null);
 
     return metric == 'cold' ? cold_timing : metric == 'hot' ? hot_timing :
-        ((hot_timing * combined_hot_share + cold_timing * combined_cold_share) / (combined_hot_share + combined_cold_share));
+        (hot_timing !== null && cold_timing !== null ? (hot_timing * combined_hot_share + cold_timing * combined_cold_share) / (combined_hot_share + combined_cold_share) : null);
 }
 
 function relativeQueryTime(num_queries, baseline_data, elem, metric) {
