@@ -2,7 +2,7 @@
 
 # Install
 
-wget --continue --progress=dot:giga https://github.com/questdb/questdb/releases/download/9.0.2/questdb-9.0.2-rt-linux-x86-64.tar.gz
+wget --continue --progress=dot:giga https://github.com/questdb/questdb/releases/download/9.1.0/questdb-9.1.0-rt-linux-x86-64.tar.gz
 tar xf questdb*.tar.gz --one-top-level=questdb --strip-components 1
 questdb/bin/questdb.sh start
 

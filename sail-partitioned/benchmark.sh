@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# https://github.com/rust-lang/rust/issues/97234#issuecomment-1133564556
+ulimit -n 65536
+
 # Install
 
 export DEBIAN_FRONTEND=noninteractive
@@ -42,7 +45,7 @@ echo "Install Python packages"
 python3 -m venv myenv
 source myenv/bin/activate
 pip install --upgrade setuptools wheel
-env RUSTFLAGS="-C target-cpu=native" pip install --no-cache-dir "pysail==0.3.3" -v --no-binary pysail
+env RUSTFLAGS="-C target-cpu=native" pip install --no-cache-dir "pysail==0.3.7" -v --no-binary pysail
 pip install "pyspark-client==4.0.0" \
   "protobuf==5.28.3" \
   "grpcio==1.71.2" \

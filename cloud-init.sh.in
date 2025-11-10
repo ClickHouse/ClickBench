@@ -6,7 +6,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y wget curl git jq
 
-git clone --depth 1 https://github.com/ClickHouse/ClickBench.git
+git clone --depth 1 'https://github.com/@repo@.git' --branch '@branch@' ClickBench
 cd ClickBench/@system@
 
 # The log will be sent to ClickHouse and processed then by materialized views:

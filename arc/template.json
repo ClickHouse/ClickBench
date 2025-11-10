@@ -1,10 +1,10 @@
 {
-  "system": "ClickHouse (25.7)",
+  "system": "Arc",
   "proprietary": "no",
   "tuned": "no",
   "tags": [
-    "C++",
+    "Python",
     "column-oriented",
-    "ClickHouse derivative"
+    "time-series"
   ]
 }
