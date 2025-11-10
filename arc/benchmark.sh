@@ -143,9 +143,14 @@ fi
 export DUCKDB_ENABLE_OBJECT_CACHE=false  # DISABLED: Conservative approach - cannot flush per-query
 export QUERY_CACHE_ENABLED=false          # DISABLED: Query result cache - required per ClickBench rules
 
+# Set memory limit for DuckDB - c6a.4xlarge has 32GB RAM
+# No limit: Let DuckDB use as much as needed, garbage collector will clean up
+# export DUCKDB_MEMORY_LIMIT=20GB
+
 echo "Cache configuration (conservative approach for ClickBench compliance):"
 echo "  - DuckDB object cache: DISABLED (conservative - no per-query flush available)"
 echo "  - Query result cache: DISABLED (required for compliance)"
+echo "  - DuckDB memory limit: UNLIMITED (no limit set)"
 
 # Start Arc server in background
 gunicorn -w $WORKERS -b 0.0.0.0:8000 \
