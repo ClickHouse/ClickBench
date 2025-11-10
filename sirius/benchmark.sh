@@ -6,6 +6,7 @@ source dependencies.sh
 # Build Sirius
 git clone --recurse-submodules https://github.com/sirius-db/sirius.git
 cd sirius
+git checkout clickbench
 source setup_sirius.sh
 make -j$(nproc)
 export PATH="$PATH:`pwd`/build/release/"
