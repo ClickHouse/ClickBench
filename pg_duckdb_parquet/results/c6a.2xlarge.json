@@ -1,11 +1,11 @@
-{
+, "lukewarm-cold-run"{
     "system":   "pg_duckdb (Parquet)",
     "date": "2025-07-10",
     "machine": "c6a.2xlarge",
     "cluster_size": 1,
     "proprietary":   "no",
     "tuned":   "no",
-    "tags":   ["column-oriented","PostgreSQL compatible"],
+    "tags":   ["column-oriented","PostgreSQL compatible", "lukewarm-cold-run"],
     "load_time": 0,
     "data_size": 14820803219,
     "result": [

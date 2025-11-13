@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "proprietary": "no",
     "tuned": "no",
-    "tags": ["C++","column-oriented","embedded"],
+    "tags": ["C++","column-oriented","embedded", "lukewarm-cold-run"],
     "load_time": 97,
     "data_size": 20559179776,
     "result": [

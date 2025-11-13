@@ -6,6 +6,7 @@
     "Rust",
     "column-oriented",
     "search",
-    "PostgreSQL compatible"
+    "PostgreSQL compatible",
+    "lukewarm-cold-run"
   ]
 }

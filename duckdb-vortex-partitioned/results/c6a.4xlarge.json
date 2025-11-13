@@ -7,7 +7,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["Rust", "column-oriented", "embedded", "stateless"],
+    "tags": ["Rust", "column-oriented", "embedded", "stateless", "lukewarm-cold-run"],
 
     "load_time": 742.26,
     "data_size": 15961049404,

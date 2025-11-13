@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "proprietary": "no",
     "tuned": "no",
-    "tags": ["Java","search"],
+    "tags": ["Java","search", "lukewarm-cold-run"],
     "load_time": 9531,
     "data_size": 85859504096,
     "result": [

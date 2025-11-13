@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "proprietary":  "no",
     "tuned":  "no",
-    "tags":  ["C++","column-oriented","MySQL compatible"],
+    "tags":  ["C++","column-oriented","MySQL compatible", "lukewarm-cold-run"],
     "load_time": 386,
     "data_size": 16343224445,
     "result": [

@@ -6,7 +6,7 @@
     "proprietary": "no",
     "tuned": "no",
     "comment": "Uses multi-threaded COPY SQL for data load.",
-    "tags": ["Java", "time-series"],
+    "tags": ["Java", "time-series", "lukewarm-cold-run"],
     "load_time": 231,
     "data_size": 72847100025,
     "result": [

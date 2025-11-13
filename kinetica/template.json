@@ -3,6 +3,7 @@
   "proprietary": "yes",
   "tuned": "no",
   "tags": [
-    "column-oriented"
+    "column-oriented",
+    "lukewarm-cold-run"
   ]
 }

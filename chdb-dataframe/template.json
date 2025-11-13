@@ -2,5 +2,5 @@
     "system": "chDB (DataFrame)",
     "proprietary": "no",
     "tuned": "no",
-    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless","Python","dataframe"]
+    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless","Python","dataframe","lukewarm-cold-run"]
 }

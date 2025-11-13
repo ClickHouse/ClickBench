@@ -6,6 +6,7 @@
     "Java",
     "column-oriented",
     "stateless",
-    "Spark derivative"
+    "Spark derivative",
+    "lukewarm-cold-run"
   ]
 }

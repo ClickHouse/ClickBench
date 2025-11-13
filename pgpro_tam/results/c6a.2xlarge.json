@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "proprietary":   "yes",
     "tuned":   "no",
-    "tags":   ["C","column-oriented","PostgreSQL compatible"],
+    "tags":   ["C","column-oriented","PostgreSQL compatible", "lukewarm-cold-run"],
     "load_time": 1001,
     "data_size": 9690683705,
     "result": [

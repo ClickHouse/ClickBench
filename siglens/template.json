@@ -4,6 +4,7 @@
   "tuned": "no",
   "tags": [
     "Go",
-    "search"
+    "search",
+    "lukewarm-cold-run"
   ]
 }

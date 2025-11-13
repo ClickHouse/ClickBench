@@ -4,6 +4,7 @@
   "tuned": "yes",
   "tags": [
     "MySQL compatible",
-    "column-oriented"
+    "column-oriented",
+    "lukewarm-cold-run"
   ]
 }

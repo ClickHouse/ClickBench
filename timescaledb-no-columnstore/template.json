@@ -6,6 +6,7 @@
     "C",
     "PostgreSQL compatible",
     "row-oriented",
-    "time-series"
+    "time-series",
+    "lukewarm-cold-run"
   ]
 }

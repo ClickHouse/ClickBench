@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "proprietary": "yes",
     "tuned": "no",
-    "tags": ["Go", "search"],
+    "tags": ["Go", "search", "lukewarm-cold-run"],
     "load_time": 5070.66,
     "data_size": 28572908000,
     "result": [

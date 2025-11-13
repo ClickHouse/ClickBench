@@ -2,5 +2,5 @@
     "system": "Citus",
     "proprietary": "no",
     "tuned": "no",
-    "tags": ["C","PostgreSQL compatible","column-oriented"]
+    "tags": ["C","PostgreSQL compatible","column-oriented","lukewarm-cold-run"]
 }

@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "proprietary":  "no",
     "tuned":  "no",
-    "tags":  ["C++","column-oriented","MySQL compatible","ClickHouse derivative"],
+    "tags":  ["C++","column-oriented","MySQL compatible","ClickHouse derivative", "lukewarm-cold-run"],
     "load_time": 487,
     "data_size": 17103182575,
     "result": [

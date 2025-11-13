@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "proprietary": "yes",
     "tuned": "yes",
-    "tags": ["C++", "column-oriented", "PostgreSQL compatible", "ClickHouse derivative"],
+    "tags": ["C++", "column-oriented", "PostgreSQL compatible", "ClickHouse derivative","lukewarm-cold-run"],
     "load_time": 156.778,
     "data_size": 15716159954,
     "result": [
