@@ -40,6 +40,9 @@ for try_num in range(3):
     try:
         cursor = connection.cursor()
 
+        # Disable query result caching for accurate benchmarking
+        cursor.execute("SET use_cached_result = false")
+
         # Execute the query
         cursor.execute(query)
         results = cursor.fetchall()
