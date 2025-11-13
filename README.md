@@ -114,11 +114,19 @@ If a system is of a "multidimensional OLAP" kind, and so is always or implicitly
 
 ### Caching
 
-If the system contains a cache for query results, it should be disabled.
+We distinguish three cases:
 
-It is okay if the system performs caching for source data (buffer pools and similar). If the cache or buffer pools can be flushed, they should be flushed before the first run of every query.
+1. Hot runs. The database starts and then runs all queries sequentially, with three runs per query.
 
-If the system contains a cache for intermediate data, that cache should be disabled if it is located near the end of the query execution pipeline, thus similar to a query result cache.
+2. Cold runs. Before each of the three runs per query, all caches are cleared. This means a) clearing the operating system page cache and b) all caches within the database, including buffer pools. Many databases provide commands to clear internal caches. However, for fairness towards systems which don't offer such statements, it is required to _restart_ the database.
+
+3. Lukewarm runs. Similar to cold runs but _only_ the operating system page cache is cleared before each query. This is what ClickBench historically considered as "cold run", benefiting databases with aggressive internal caching. The benchmark is migrating from lukewarm runs to true cold runs (previous case 2.). Submissions that do not properly restart the database-under-test have a tag "lukewarm-cold-run". Please change the script to a true cold run, remove the label, and send a PR against the repository - thanks.
+
+General rules regarding caching:
+- Query result caches should be disabled.
+- Caching source data (e.g. buffer pools) is fine.
+- Caches for intermediate data (e.g. hash tables) are generally okay, however if such caches are located near the end of the query
+  execution pipeline, the effects are similar to query result caching and such caches should thus be disabled.
 
 ### Incomplete Results
 

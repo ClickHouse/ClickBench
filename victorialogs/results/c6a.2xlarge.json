@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "proprietary":   "no",
     "tuned":   "no",
-    "tags":   ["Go","column-oriented"],
+    "tags":   ["Go","column-oriented", "lukewarm-cold-run"],
     "load_time": 5137,
     "data_size": 16939219271,
     "result": [

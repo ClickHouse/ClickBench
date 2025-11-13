@@ -6,7 +6,7 @@
     "proprietary": "yes",
     "tuned": "no",
 
-    "tags": ["managed", "column-oriented", "PostgreSQL compatible", "serverless"],
+    "tags": ["managed", "column-oriented", "PostgreSQL compatible", "serverless", "lukewarm-cold-run"],
 
     "load_time": 118.616,
     "data_size": 26306674688,

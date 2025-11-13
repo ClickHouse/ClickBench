@@ -2,5 +2,5 @@
     "system": "pandas",
     "proprietary": "no",
     "tuned": "no",
-    "tags": ["Python","dataframe","row-oriented"]
+    "tags": ["Python","dataframe","row-oriented", "lukewarm-cold-run"]
 }

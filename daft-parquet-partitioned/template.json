@@ -6,6 +6,7 @@
     "Rust",
     "stateless",
     "serverless",
-    "embedded"
+    "embedded",
+    "lukewarm-cold-run"
   ]
 }

@@ -5,6 +5,7 @@
   "tags": [
     "C",
     "embedded",
-    "row-oriented"
+    "row-oriented",
+    "lukewarm-cold-run"
   ]
 }

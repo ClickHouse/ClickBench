@@ -7,7 +7,7 @@
     "tuned": "yes",
     "comment": "Previous name: MemSQL. Some queries did not run due to memory limits",
 
-    "tags": ["MySQL compatible", "column-oriented"],
+    "tags": ["MySQL compatible", "column-oriented", "lukewarm-cold-run"],
 
     "load_time": 690,
     "data_size": 29836263469,

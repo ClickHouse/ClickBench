@@ -6,6 +6,7 @@
     "stateless",
     "column-oriented",
     "serverless",
-    "embedded"
+    "embedded",
+    "lukewarm-cold-run"
   ]
 }

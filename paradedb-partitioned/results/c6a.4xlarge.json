@@ -6,7 +6,7 @@
     "proprietary": "no",
   "tuned": "no",
   "comment": "",
-  "tags": ["Rust", "column-oriented", "search", "PostgreSQL compatible"],
+  "tags": ["Rust", "column-oriented", "search", "PostgreSQL compatible", "lukewarm-cold-run"],
   "load_time": 0,
   "data_size": 14779976446,
 

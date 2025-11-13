@@ -6,6 +6,7 @@
     "C++",
     "column-oriented",
     "MySQL compatible",
-    "ClickHouse derivative"
+    "ClickHouse derivative",
+    "lukewarm-cold-run"
   ]
 }

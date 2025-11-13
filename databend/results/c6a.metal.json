@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "proprietary": "no",
     "tuned": "no",
-    "tags": ["Rust","column-oriented","ClickHouse derivative"],
+    "tags": ["Rust","column-oriented","ClickHouse derivative", "lukewarm-cold-run"],
     "load_time": 77,
     "data_size": 21023288089,
     "result": [
