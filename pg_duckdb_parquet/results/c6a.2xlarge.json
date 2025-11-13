@@ -1,4 +1,4 @@
-, "lukewarm-cold-run"{
+{
     "system":   "pg_duckdb (Parquet)",
     "date": "2025-07-10",
     "machine": "c6a.2xlarge",
