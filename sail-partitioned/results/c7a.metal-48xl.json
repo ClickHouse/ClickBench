@@ -1,6 +1,6 @@
 {
-    "system": "Sail (Parquet)",
-    "date": "2025-10-18",
+    "system": "Sail (Parquet, partitioned)",
+    "date": "2025-11-13",
     "machine": "c7a.metal-48xl",
     "cluster_size": 1,
     "proprietary": "no",
