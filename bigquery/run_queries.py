@@ -22,7 +22,7 @@ def log(*objects: Any, sep: str = ' ', end: str = '\n', file: TextIO = sys.stder
     message = sep.join(str(obj) for obj in objects)
 
     # 2. Prepare the log prefix
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     prefix = f"[{timestamp}] [{severity.upper()}]: "
 
     # 3. Combine the prefix and the message
@@ -52,33 +52,17 @@ for query in file:
     log(f"\n[{i}]: {query}")
     try:
       client_start_time = datetime.now()
-      query_job = client.query(query, job_config=job_config)
-      results = query_job.result()
+      results = client.query_and_wait(query, job_config=job_config)
       client_end_time = datetime.now()
       
-      execution_time = query_job.ended - query_job.started
-      total_time = query_job.ended - query_job.created
-      total_time_secs = total_time.total_seconds()
+      client_time = client_end_time - client_start_time
+      client_time_secs = client_time.total_seconds()
       endstr = "],\n" if i == 2 else ","
-      print(f"{total_time_secs}", end=endstr)
+      print(f"{client_time_secs}", end=endstr)
       
-      client_time = client_end_time - client_start_time 
-      log(f"Job ID: **{query_job.job_id}**")
-      log(f"Query ID: **{query_job.query_id}**")
-      log(f"State: **{query_job.state}**")
-      log(f"Results Fetched from Cache: {query_job.cache_hit}")
-      log(f"Created Time: {query_job.created}")
-      log(f"Start Time: {query_job.started}")
-      log(f"End Time: {query_job.ended}")
-      log(f"Execution Time: {execution_time}")
-      log(f"Total Time: {total_time}")
-      log(f"Client Time: {client_time}")
-      log(f"Total Rows Returned: {results.total_rows}")
+      log(f"Job ID: **{results.job_id}**")
+      log(f"Query ID: **{results.query_id}**")
+      log(f"Client time: **{client_time}**")
       
     except Exception as e:
       log(f"Job failed with error: {e}", severity="ERROR")
-      # Print error details from the job itself
-      if query_job.error_result:
-        log("\n--- Job Error Details ---")
-        log(f"Reason: {query_job.error_result.get('reason')}")
-        log(f"Message: {query_job.error_result.get('message')}")
