@@ -1,4 +1,4 @@
-Download Google Cloud CLI and configure your project settings:
+Download Google Cloud CLI and configure your project settings. You can skip this step if you are using [Cloud shell](https://docs.cloud.google.com/shell/docs/launching-cloud-shell):
 ```
 wget --continue --progress=dot:giga https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
 tar -xf google-cloud-cli-linux-x86_64.tar.gz

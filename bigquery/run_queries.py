@@ -3,6 +3,7 @@ from google.cloud.bigquery.enums import JobCreationMode
 
 import sys
 from typing import TextIO, Any
+from datetime import datetime
 
 def log(*objects: Any, sep: str = ' ', end: str = '\n', file: TextIO = sys.stderr, severity: str = 'INFO') -> None:
     """
@@ -50,14 +51,18 @@ for query in file:
   for i in range(TRIES):
     log(f"\n[{i}]: {query}")
     try:
+      client_start_time = datetime.now()
       query_job = client.query(query, job_config=job_config)
       results = query_job.result()
+      client_end_time = datetime.now()
+      
       execution_time = query_job.ended - query_job.started
       total_time = query_job.ended - query_job.created
       total_time_secs = total_time.total_seconds()
       endstr = "],\n" if i == 2 else ","
       print(f"{total_time_secs}", end=endstr)
       
+      client_time = client_end_time - client_start_time 
       log(f"Job ID: **{query_job.job_id}**")
       log(f"Query ID: **{query_job.query_id}**")
       log(f"State: **{query_job.state}**")
@@ -67,6 +72,7 @@ for query in file:
       log(f"End Time: {query_job.ended}")
       log(f"Execution Time: {execution_time}")
       log(f"Total Time: {total_time}")
+      log(f"Client Time: {client_time}")
       log(f"Total Rows Returned: {results.total_rows}")
       
     except Exception as e:
