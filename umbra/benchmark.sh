@@ -22,7 +22,7 @@ mkdir db
 chmod 777 -R db
 
 # https://hub.docker.com/r/umbradb/umbra
-docker run -d -v ./db:/var/db -v ./data:/data -p 5432:5432 --ulimit nofile=1048576:1048576 --ulimit memlock=8388608:8388608 umbradb/umbra:25.07
+docker run -d -v ./db:/var/db -v ./data:/data -p 5432:5432 --ulimit nofile=1048576:1048576 --ulimit memlock=8388608:8388608 umbradb/umbra:latest
 sleep 5 # Things below fail otherwise ...
 
 start=$(date +%s%3N)
