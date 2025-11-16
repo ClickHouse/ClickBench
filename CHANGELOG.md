@@ -2,6 +2,9 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2025-11-16
+Distinguish lukewarm runs (legacy) and [true cold runs](https://github.com/ClickHouse/ClickBench/pull/692). (Robert Schulze)
+
 ### 2025-10-26
 Do not include in-memory databases in "cold" and "combined" ratings, because they cannot have comparable results for cold runs (requested by puz-puz-puz Andrey). (Alexey Milovidov)
 
