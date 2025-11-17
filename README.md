@@ -119,6 +119,9 @@ Additional sources for stateless table engines are provided:
 - https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet (the same parquet file in its own subdirectory)
 - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{0..99}.parquet (100 files)
 
+The datasets are intentionally "dirty", e.g. the Parquet files have no proper logical data types and no bloom filter indexes.
+This reflects the real-world nature of the benchmark better (also see https://github.com/ClickHouse/ClickBench/issues/7#issuecomment-3538940698).
+
 To compare insertion times correctly, the dataset should be downloaded and decompressed before loading (if it's using external compression; the parquet file includes internal compression and can be loaded as is).
 The dataset should be loaded as a single file in the most straightforward way.
 Splitting the dataset for parallel loading is not recommended, as it will make comparisons more difficult.
