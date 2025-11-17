@@ -1,6 +1,6 @@
 ## Setup
 
-1. Create a Databricks workspace and SQL Warehouse
+1. Create a Databricks workspace and SQL Warehouse (you can do this in the Datbricks UI). Once the SQL Warehouse has been created, copy the warehouse path to use in the .env file
 2. Generate a personal access token from your Databricks workspace
 3. Copy `.env.example` to `.env` and fill in your values:
 
@@ -8,15 +8,6 @@
 cp .env.example .env
 # Edit .env with your actual credentials
 ```
-
-Required environment variables:
-- `DATABRICKS_SERVER_HOSTNAME`: Your workspace hostname (e.g., `dbc-xxxxxxxx-xxxx.cloud.databricks.com`)
-- `DATABRICKS_HTTP_PATH`: SQL Warehouse path (e.g., `/sql/1.0/warehouses/your-warehouse-id`)
-- `DATABRICKS_TOKEN`: Your personal access token
-- `databricks_instance_type`: Instance type name for results file naming, e.g., "2X-Large"
-- `DATABRICKS_CATALOG`: Unity Catalog name
-- `DATABRICKS_SCHEMA`: Schema name
-- `DATABRICKS_PARQUET_LOCATION`: S3 path to the parquet file
 
 ## Running the Benchmark
 
