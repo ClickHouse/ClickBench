@@ -55,7 +55,7 @@ The limitations of this benchmark allow to reproduce it and include more systems
 The benchmark represents only a subset of all possible workloads and scenarios.
 While it aims to be as fair as possible, focusing on a specific subset of workloads may give an advantage to the systems that specialize in those workloads.
 
-Note these limitaitons
+Note these limitations:
 
 1. The dataset is a single flat table. This is different from classical data warehouses, which use a normalized star or snowflake data model. Therefore, classical data warehouses may have an unfair disadvantage in ClickHouse.
 
