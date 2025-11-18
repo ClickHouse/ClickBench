@@ -57,7 +57,7 @@ While it aims to be as fair as possible, focusing on a specific subset of worklo
 
 Note these limitaitons
 
-1. The dataset is a single flat table. This is differnet from classical data warehouses, which use a normalized star or snowflake data model. Therefore, classical data warehouses may have an unfair disadvantage in ClickHouse.
+1. The dataset is a single flat table. This is different from classical data warehouses, which use a normalized star or snowflake data model. Therefore, classical data warehouses may have an unfair disadvantage in ClickHouse.
 
 2. The table consists of exactly 99'997'497 records. This is rather small by modern standards but allows tests to be completed in reasonable time.
 
