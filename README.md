@@ -284,7 +284,6 @@ Please help us add more systems and run the benchmarks on more types of VMs:
 - [ ] Azure Synapse
 - [ ] Boilingdata
 - [ ] CockroachDB Serverless
-- [ ] Databricks
 - [ ] DolphinDB
 - [ ] Dremio (without publishing)
 - [ ] DuckDB operating like "Athena" on remote Parquet files
