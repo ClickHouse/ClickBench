@@ -1,5 +1,5 @@
 {
-    "system": "DataFusion 46.0.0 (Parquet, partitioned)",
+    "system": "DataFusion main (Parquet, partitioned)",
     "date": "2025-11-24",
     "machine": "main-c6a.4xlarge",
     "cluster_size": 1,
