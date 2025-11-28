@@ -95,7 +95,7 @@ echo "Loading data into Arc..."
 
 # Determine Arc's data directory (default: /var/lib/arc/data)
 ARC_DATA_DIR="/var/lib/arc/data"
-TARGET_DIR="$ARC_DATA_DIR/arc/clickbench/hits"
+TARGET_DIR="$ARC_DATA_DIR/clickbench/hits"
 TARGET_FILE="$TARGET_DIR/hits.parquet"
 
 sudo mkdir -p "$TARGET_DIR"

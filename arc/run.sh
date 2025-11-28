@@ -9,6 +9,7 @@ ARC_API_KEY="${ARC_API_KEY:-$(cat arc_token.txt 2>/dev/null)}"
 
 echo "Running benchmark with TRUE COLD RUNS (restart + cache clear before each query)" >&2
 echo "API endpoint: $ARC_URL" >&2
+echo "API key: ${ARC_API_KEY:0:20}..." >&2
 
 # Function to restart Arc and clear caches
 restart_arc() {
@@ -25,6 +26,7 @@ restart_arc() {
     # Wait for Arc to be ready
     for i in {1..30}; do
         if curl -sf "$ARC_URL/health" > /dev/null 2>&1; then
+            sleep 0.2  # Extra delay to ensure server is fully ready
             return 0
         fi
         sleep 0.5
@@ -48,13 +50,18 @@ cat queries.sql | while read -r query; do
         # Mark the log position before query
         LOG_MARKER=$(date -u +"%Y-%m-%dT%H:%M:%S")
 
+        # Build JSON payload properly using printf to escape the query
+        JSON_PAYLOAD=$(printf '{"sql": %s}' "$(echo "$query" | jq -Rs .)")
+
         # Execute query
-        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+        RESPONSE=$(curl -s -w "\n%{http_code}" \
             -X POST "$ARC_URL/api/v1/query" \
             -H "x-api-key: $ARC_API_KEY" \
             -H "Content-Type: application/json" \
-            -d "{\"sql\": \"$query\"}" \
+            -d "$JSON_PAYLOAD" \
             --max-time 300 2>/dev/null)
+
+        HTTP_CODE=$(echo "$RESPONSE" | tail -1)
 
         if [ "$HTTP_CODE" = "200" ]; then
             # Extract execution_time_ms from Arc logs
@@ -75,6 +82,7 @@ cat queries.sql | while read -r query; do
             echo "null"
             if [ "$i" -eq 1 ]; then
                 echo "Query failed (HTTP $HTTP_CODE): ${query:0:50}..." >&2
+                echo "Response: $(echo "$RESPONSE" | head -n -1 | head -c 200)" >&2
             fi
         fi
     done
