@@ -6,8 +6,17 @@ set -e
 # 1. INSTALL ARC FROM .DEB PACKAGE
 # ============================================================
 echo "Installing Arc from .deb package..."
-DEB_URL="https://github.com/basekick-labs/arc/releases/download/v25.12.1/arc_25.12.1_amd64.deb"
-DEB_FILE="arc_25.12.1_amd64.deb"
+
+ARCH=$(uname -m)
+if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+    DEB_URL="https://github.com/Basekick-Labs/arc/releases/download/v25.12.1/arc_25.12.1_arm64.deb"
+    DEB_FILE="arc_25.12.1_arm64.deb"
+else
+    DEB_URL="https://github.com/basekick-labs/arc/releases/download/v25.12.1/arc_25.12.1_amd64.deb"
+    DEB_FILE="arc_25.12.1_amd64.deb"
+fi
+
+echo "Detected architecture: $ARCH -> $DEB_FILE"
 
 if [ ! -f "$DEB_FILE" ]; then
     wget -q "$DEB_URL" -O "$DEB_FILE"
