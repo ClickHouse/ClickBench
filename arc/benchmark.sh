@@ -37,23 +37,20 @@ echo ""
 # ============================================================
 echo "Starting Arc service..."
 
-# Clear any existing Arc journal logs to ensure we capture fresh token
-sudo journalctl --rotate --vacuum-time=1s -u arc >/dev/null 2>&1 || true
+# Check if we already have a valid token from a previous run
+if [ -f "arc_token.txt" ]; then
+    EXISTING_TOKEN=$(cat arc_token.txt)
+    echo "Found existing token file, will verify after Arc starts..."
+fi
 
 sudo systemctl start arc
 
-# Wait for Arc to be ready and extract token from logs
-echo "Waiting for Arc to start and generate token..."
-ARC_TOKEN=""
+# Wait for Arc to be ready
+echo "Waiting for Arc to be ready..."
 for i in {1..30}; do
-    # Check if service is running
     if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
-        # Extract token from journald logs
-        ARC_TOKEN=$(sudo journalctl -u arc --no-pager | grep -oP 'Initial admin API token: \K[^\s]+' | head -1)
-        if [ -n "$ARC_TOKEN" ]; then
-            echo "[OK] Arc is ready, token captured"
-            break
-        fi
+        echo "[OK] Arc is ready!"
+        break
     fi
     if [ $i -eq 30 ]; then
         echo "Error: Arc failed to start within 30 seconds"
@@ -63,8 +60,33 @@ for i in {1..30}; do
     sleep 1
 done
 
-# Save token for run.sh
-echo "$ARC_TOKEN" > arc_token.txt
+# Try to get token - either from existing file or from logs (first run)
+ARC_TOKEN=""
+
+# First, check if existing token works
+if [ -n "$EXISTING_TOKEN" ]; then
+    if curl -sf http://localhost:8000/health -H "x-api-key: $EXISTING_TOKEN" > /dev/null 2>&1; then
+        ARC_TOKEN="$EXISTING_TOKEN"
+        echo "[OK] Using existing token from arc_token.txt"
+    else
+        echo "Existing token invalid, looking for new token in logs..."
+    fi
+fi
+
+# If no valid token yet, try to extract from logs (first run scenario)
+if [ -z "$ARC_TOKEN" ]; then
+    ARC_TOKEN=$(sudo journalctl -u arc --no-pager | grep -oP 'Initial admin API token: \K[^\s]+' | head -1)
+    if [ -n "$ARC_TOKEN" ]; then
+        echo "[OK] Captured new token from logs"
+        echo "$ARC_TOKEN" > arc_token.txt
+    else
+        echo "Error: Could not find or validate API token"
+        echo "If this is not the first run, Arc's database may need to be reset:"
+        echo "  sudo rm -rf /var/lib/arc/data/arc.db"
+        exit 1
+    fi
+fi
+
 echo "Token: ${ARC_TOKEN:0:20}..."
 
 # ============================================================
