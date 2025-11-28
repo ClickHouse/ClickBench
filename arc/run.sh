@@ -1,97 +1,83 @@
 #!/bin/bash
-# Arc ClickBench Benchmark Runner
-# Queries Arc via HTTP API using JSON format
+# Arc ClickBench Benchmark Runner - TRUE COLD RUNS
+# Restarts Arc service and clears OS cache before EACH QUERY (not each run)
+# Pattern: restart -> run query 3 times -> next query
 
 TRIES=3
-DATABASE="${DATABASE:-clickbench}"
-TABLE="${TABLE:-hits}"
 ARC_URL="${ARC_URL:-http://localhost:8000}"
-ARC_API_KEY="${ARC_API_KEY:-benchmark-test-key}"
+ARC_API_KEY="${ARC_API_KEY:-$(cat arc_token.txt 2>/dev/null)}"
 
-# Check if Arc is running
-echo "Checking if Arc is running at $ARC_URL..." >&2
-if ! curl -s -f "$ARC_URL/health" > /dev/null 2>&1; then
-    echo "Error: Arc is not running at $ARC_URL" >&2
-    echo "Please start Arc first or set ARC_URL environment variable" >&2
-    exit 1
-fi
+echo "Running benchmark with TRUE COLD RUNS (restart + cache clear before each query)" >&2
+echo "API endpoint: $ARC_URL" >&2
 
-echo "Arc is running. Querying table: $DATABASE.$TABLE (JSON)" >&2
-echo "Using API key: ${ARC_API_KEY:0:20}..." >&2
+# Function to restart Arc and clear caches
+restart_arc() {
+    # Stop Arc
+    sudo systemctl stop arc
 
-python3 << EOF
-import requests
-import time
-import sys
-import json
+    # Clear OS page cache
+    sync
+    echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
 
-ARC_URL = "$ARC_URL"
-API_KEY = "$ARC_API_KEY"
-DATABASE = "$DATABASE"
-TABLE = "$TABLE"
+    # Start Arc
+    sudo systemctl start arc
 
-# Headers for API requests
-headers = {
-    "x-api-key": API_KEY,
-    "Content-Type": "application/json"
+    # Wait for Arc to be ready
+    for i in {1..30}; do
+        if curl -sf "$ARC_URL/health" > /dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.5
+    done
+    echo "Error: Arc failed to restart" >&2
+    return 1
 }
 
-# Read queries
-with open('queries.sql') as f:
-    content = f.read()
+# Read queries line by line
+cat queries.sql | while read -r query; do
+    # Skip empty lines and comments
+    [[ -z "$query" || "$query" =~ ^-- ]] && continue
 
-# Remove comment lines
-lines = [line for line in content.split('\n') if not line.strip().startswith('--')]
-clean_content = '\n'.join(lines)
+    # TRUE COLD RUN: Restart Arc and clear OS cache ONCE per query
+    restart_arc
 
-# Split by semicolons and filter empties
-queries = []
-for query in clean_content.split(';'):
-    query = query.strip()
-    if query:
-        queries.append(query)
+    echo "$query" >&2
 
-print(f"Running {len(queries)} queries via JSON API...", file=sys.stderr)
+    # Run the query 3 times (first is cold, 2-3 benefit from warm DB caches)
+    for i in $(seq 1 $TRIES); do
+        # Mark the log position before query
+        LOG_MARKER=$(date -u +"%Y-%m-%dT%H:%M:%S")
 
-# Run each query 3 times
-for i, query_sql in enumerate(queries, 1):
-    for run in range(3):
-        # Flush filesystem cache before first run only (ClickBench requirement)
-        if run == 0:
-            import subprocess
-            try:
-                subprocess.run(['sync'], check=False)
-                subprocess.run(['sudo', 'sh', '-c', 'echo 3 > /proc/sys/vm/drop_caches'],
-                             check=False, stderr=subprocess.DEVNULL)
-            except:
-                pass  # Ignore errors if not on Linux or no sudo access
-        try:
-            start = time.perf_counter()
+        # Execute query
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "$ARC_URL/api/v1/query" \
+            -H "x-api-key: $ARC_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"sql\": \"$query\"}" \
+            --max-time 300 2>/dev/null)
 
-            response = requests.post(
-                f"{ARC_URL}/api/v1/query",
-                headers=headers,
-                json={"sql": query_sql},
-                timeout=300
-            )
+        if [ "$HTTP_CODE" = "200" ]; then
+            # Extract execution_time_ms from Arc logs
+            # Log format: 2025-11-28T14:20:44Z INF ... execution_time_ms=97 ...
+            sleep 0.1  # Small delay to ensure log is written
+            EXEC_TIME_MS=$(sudo journalctl -u arc --since="$LOG_MARKER" --no-pager 2>/dev/null | \
+                grep -oP 'execution_time_ms=\K[0-9]+' | tail -1)
 
-            if response.status_code == 200:
-                # Parse JSON to ensure data is received
-                data = response.json()
-                elapsed = time.perf_counter() - start
-                print(f"{elapsed:.4f}")
-            else:
-                print("null")
-                if run == 0:
-                    print(f"Query {i} failed: {response.status_code} - {response.text[:200]}", file=sys.stderr)
-        except requests.exceptions.Timeout:
-            print("null")
-            if run == 0:
-                print(f"Query {i} timed out", file=sys.stderr)
-        except Exception as e:
-            print("null")
-            if run == 0:
-                print(f"Query {i} error: {e}", file=sys.stderr)
+            if [ -n "$EXEC_TIME_MS" ]; then
+                # Convert ms to seconds with 4 decimal places
+                EXEC_TIME_SEC=$(echo "scale=4; $EXEC_TIME_MS / 1000" | bc)
+                printf "%.4f\n" "$EXEC_TIME_SEC"
+            else
+                echo "null"
+                echo "Warning: Could not extract execution_time_ms from logs" >&2
+            fi
+        else
+            echo "null"
+            if [ "$i" -eq 1 ]; then
+                echo "Query failed (HTTP $HTTP_CODE): ${query:0:50}..." >&2
+            fi
+        fi
+    done
+done
 
-print("Benchmark complete!", file=sys.stderr)
-EOF
+echo "Benchmark complete!" >&2
