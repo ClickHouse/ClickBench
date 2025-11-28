@@ -6,7 +6,7 @@
     "comment": "",
     "proprietary": "no",
     "tuned": "yes",
-    "tags": ["C++", "column-oriented", "ClickHouse derivative"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "lukewarm-cold-run"],
     "load_time": 284.697,
     "data_size": 82800083772,
     "result": [

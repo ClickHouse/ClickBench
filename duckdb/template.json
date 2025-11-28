@@ -5,6 +5,7 @@
   "tags": [
     "C++",
     "column-oriented",
-    "embedded"
+    "embedded",
+    "lukewarm-cold-run"
   ]
 }

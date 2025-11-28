@@ -4,6 +4,7 @@
   "tuned": "no",
   "tags": [
     "Go",
-    "column-oriented"
+    "column-oriented",
+    "lukewarm-cold-run"
   ]
 }

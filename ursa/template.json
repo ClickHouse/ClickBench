@@ -5,6 +5,7 @@
   "tags": [
     "C++",
     "column-oriented",
-    "ClickHouse derivative"
+    "ClickHouse derivative",
+    "lukewarm-cold-run"
   ]
 }

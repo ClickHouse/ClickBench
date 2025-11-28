@@ -5,6 +5,7 @@
   "tags": [
     "C",
     "row-oriented",
-    "PostgreSQL compatible"
+    "PostgreSQL compatible",
+    "lukewarm-cold-run"
   ]
 }

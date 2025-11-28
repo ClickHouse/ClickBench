@@ -2,7 +2,7 @@
 {
     "machine":       "Lichee Pi 4A",
     "comment":       "Lichee Pi 4A (4 CPU RISC-V @1.8 Ghz, 16 GiB RAM)",
-    "time":          "2020-03-08 00:00:00",
+    "time":          "2025-10-29 00:00:00",
     "tags": ["risc-v"],
     "result":
     [

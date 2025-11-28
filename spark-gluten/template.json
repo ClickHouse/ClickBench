@@ -6,6 +6,7 @@
     "Java",
     "C++",
     "column-oriented",
-    "Spark derivative"
+    "Spark derivative",
+    "lukewarm-cold-run"
   ]
 }

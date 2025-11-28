@@ -4,6 +4,7 @@
   "tuned": "no",
   "tags": [
     "Go",
-    "stateless"
+    "stateless",
+    "lukewarm-cold-run"
   ]
 }

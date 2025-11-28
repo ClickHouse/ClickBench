@@ -2,5 +2,5 @@
     "system": "ByConity",
     "proprietary": "no",
     "tuned": "no",
-    "tags": ["C++", "column-oriented", "ClickHouse derivative"]
+    "tags": ["C++", "column-oriented", "ClickHouse derivative","lukewarm-cold-run"]
 }

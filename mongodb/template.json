@@ -5,6 +5,7 @@
   "tags": [
     "row-oriented",
     "document",
-    "C++"
+    "C++",
+    "lukewarm-cold-run"
   ]
 }

@@ -5,6 +5,7 @@
   "tags": [
     "Java",
     "column-oriented",
-    "stateless"
+    "stateless",
+    "lukewarm-cold-run"
   ]
 }

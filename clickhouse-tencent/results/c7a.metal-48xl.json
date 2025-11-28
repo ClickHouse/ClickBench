@@ -5,7 +5,7 @@
     "cluster_size": 1,
     "proprietary": "no",
     "tuned": "no",
-    "tags": ["C++","column-oriented","ClickHouse derivative"],
+    "tags": ["C++","column-oriented","ClickHouse derivative", "lukewarm-cold-run"],
     "load_time": 5,
     "data_size": 15251226785,
     "result": [

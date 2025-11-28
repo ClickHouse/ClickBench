@@ -6,7 +6,7 @@
     "proprietary": "no",
     "tuned": "no",
     "comment": "beta12-pg17",
-    "tags": ["C", "row-oriented", "PostgreSQL compatible"],
+    "tags": ["C", "row-oriented", "PostgreSQL compatible", "lukewarm-cold-run"],
     "load_time": 1751,
     "data_size": 77198718500,
     "result": [

@@ -7,7 +7,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C", "PostgreSQL compatible", "column-oriented"],
+    "tags": ["C", "PostgreSQL compatible", "column-oriented", "lukewarm-cold-run"],
 
     "load_time": 4903,
     "data_size": 33864704000,
