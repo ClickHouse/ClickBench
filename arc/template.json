@@ -2,10 +2,5 @@
   "system": "Arc",
   "proprietary": "no",
   "tuned": "no",
-  "tags": [
-    "Python",
-    "column-oriented",
-    "time-series",
-    "lukewarm-cold-run"
-  ]
+  "tags": ["Go", "column-oriented", "time-series"]
 }
