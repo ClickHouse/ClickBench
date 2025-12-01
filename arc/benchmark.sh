@@ -7,13 +7,22 @@ set -e
 # ============================================================
 echo "Installing Arc from .deb package..."
 
+# Fetch latest Arc version from GitHub releases
+echo "Fetching latest Arc version..."
+ARC_VERSION=$(curl -s https://api.github.com/repos/Basekick-Labs/arc/releases/latest | grep -oP '"tag_name": "v\K[^"]+')
+if [ -z "$ARC_VERSION" ]; then
+    echo "Error: Could not fetch latest Arc version from GitHub"
+    exit 1
+fi
+echo "Latest Arc version: $ARC_VERSION"
+
 ARCH=$(uname -m)
 if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
-    DEB_URL="https://github.com/Basekick-Labs/arc/releases/download/v25.12.1/arc_25.12.1_arm64.deb"
-    DEB_FILE="arc_25.12.1_arm64.deb"
+    DEB_URL="https://github.com/Basekick-Labs/arc/releases/download/v${ARC_VERSION}/arc_${ARC_VERSION}_arm64.deb"
+    DEB_FILE="arc_${ARC_VERSION}_arm64.deb"
 else
-    DEB_URL="https://github.com/basekick-labs/arc/releases/download/v25.12.1/arc_25.12.1_amd64.deb"
-    DEB_FILE="arc_25.12.1_amd64.deb"
+    DEB_URL="https://github.com/Basekick-Labs/arc/releases/download/v${ARC_VERSION}/arc_${ARC_VERSION}_amd64.deb"
+    DEB_FILE="arc_${ARC_VERSION}_amd64.deb"
 fi
 
 echo "Detected architecture: $ARCH -> $DEB_FILE"
@@ -180,3 +189,16 @@ echo "Load time: 0"
 echo "Data size: $EXPECTED_SIZE"
 cat results.txt
 echo "================================================"
+
+# ============================================================
+# 8. CLEANUP
+# ============================================================
+echo "Cleaning up..."
+
+# Uninstall Arc package
+sudo dpkg -r arc || true
+
+# Remove Arc data directory
+sudo rm -rf /var/lib/arc
+
+echo "[OK] Cleanup complete"
