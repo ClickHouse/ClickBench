@@ -2,8 +2,22 @@
 
 # Install
 
-wget --continue --progress=dot:giga https://github.com/questdb/questdb/releases/download/9.1.0/questdb-9.1.0-rt-linux-x86-64.tar.gz
-tar xf questdb*.tar.gz --one-top-level=questdb --strip-components 1
+qdb_version="9.2.2"
+if [[ $(arch) == "aarch64" ]] || [[ $(arch) == "arm"* ]]; then
+  # ARM uses no-JRE binary, so we need to install JDK
+  wget --continue --progress=dot:giga https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-17.0.9/graalvm-community-jdk-17.0.9_linux-aarch64_bin.tar.gz
+  tar xf graalvm-community-*.tar.gz --one-top-level=graalvm --strip-components 1
+  export JAVA_HOME=$PWD/graalvm
+
+  wget --continue --progress=dot:giga https://github.com/questdb/questdb/releases/download/${qdb_version}/questdb-${qdb_version}-no-jre-bin.tar.gz
+  tar xf questdb*.tar.gz --one-top-level=questdb --strip-components 1
+  mkdir questdb/bin
+  mv questdb/* questdb/bin
+else
+  wget --continue --progress=dot:giga https://github.com/questdb/questdb/releases/download/${qdb_version}/questdb-${qdb_version}-rt-linux-x86-64.tar.gz
+  tar xf questdb*.tar.gz --one-top-level=questdb --strip-components 1
+fi
+
 questdb/bin/questdb.sh start
 
 while ! nc -z localhost 9000; do
