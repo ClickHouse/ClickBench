@@ -173,12 +173,12 @@ echo "================================================"
 echo "Stopping Arc..."
 sudo systemctl stop arc
 
-# Format results
+# Format results as proper JSON array
 cat log.txt | grep -oE '^[0-9]+\.[0-9]+|^null' | \
   awk '{
     if (NR % 3 == 1) printf "[";
     printf "%s", $1;
-    if (NR % 3 == 0) print "]";
+    if (NR % 3 == 0) print "],";
     else printf ", ";
   }' > results.txt
 
