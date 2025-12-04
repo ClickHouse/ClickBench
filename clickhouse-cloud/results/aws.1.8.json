@@ -1,7 +1,7 @@
 
 {
     "system": "ClickHouse ☁️ (aws)",
-    "date": "2025-12-03",
+    "date": "2025-12-04",
     "machine": "ClickHouse ☁️: 8GiB",
     "cluster_size": 1,
     "proprietary": "yes",
@@ -10,7 +10,7 @@
 
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "aws"],
 
-    "load_time": 276.623,
+    "load_time": 276.520,
     "data_size": ),
 
     "result": [
