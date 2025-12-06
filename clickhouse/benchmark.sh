@@ -41,8 +41,22 @@ seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https:/
 sudo mv hits_*.parquet /var/lib/clickhouse/user_files/
 sudo chown clickhouse:clickhouse /var/lib/clickhouse/user_files/hits_*.parquet
 
-echo -n "Load time: "
-clickhouse-client --time --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" --max-insert-threads $(( $(nproc) / 4 ))
+# Do a sync before loading the data to make sure we don't penalize the system for having to sync more than it actually wrote
+sync
+
+# Measure load time including sync to disk
+start=$(date +%s.%N)
+
+clickhouse-client \
+  --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" \
+  --max-insert-threads $(( $(nproc) / 4 ))
+sync
+
+end=$(date +%s.%N)
+elapsed=$(echo "$end - $start" | bc)
+
+echo "Load time: $elapsed s"
+
 
 # Run the queries
 
