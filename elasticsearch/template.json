@@ -1,6 +1,7 @@
 {
   "system": "Elasticsearch",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",

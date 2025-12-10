@@ -1,6 +1,7 @@
 {
   "system": "DuckDB (Vortex, partitioned)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Rust",

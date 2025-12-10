@@ -1,6 +1,7 @@
 {
   "system": "Apache Doris",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

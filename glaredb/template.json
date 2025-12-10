@@ -1,6 +1,7 @@
 {
   "system": "GlareDB (Parquet, single)",
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Rust",

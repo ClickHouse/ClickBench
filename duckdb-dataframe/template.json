@@ -1,6 +1,7 @@
 {
   "system": "DuckDB (DataFrame)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

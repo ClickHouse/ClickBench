@@ -1,6 +1,7 @@
 {
     "system": "Citus",
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "tags": ["C","PostgreSQL compatible","column-oriented","lukewarm-cold-run"]
 }

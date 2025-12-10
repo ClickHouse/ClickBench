@@ -1,6 +1,7 @@
 {
   "system": "Spark (Gluten-on-Velox)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",

@@ -1,6 +1,7 @@
 {
   "system": "Salesforce Hyper (Parquet)",
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

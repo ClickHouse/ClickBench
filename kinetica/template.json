@@ -1,6 +1,7 @@
 {
   "system": "Kinetica",
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "column-oriented",

@@ -1,6 +1,7 @@
 {
   "system": "PostgreSQL with pg_mooncake",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C",

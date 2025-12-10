@@ -1,6 +1,7 @@
 {
   "system": "PostgreSQL (OrioleDB)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C",

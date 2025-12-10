@@ -1,6 +1,7 @@
 {
   "system": "DataFusion (Parquet, single)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Rust",

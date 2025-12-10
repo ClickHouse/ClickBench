@@ -1,6 +1,7 @@
 {
   "system": "Arc",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": ["Go", "column-oriented", "time-series"]
 }

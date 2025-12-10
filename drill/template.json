@@ -1,6 +1,7 @@
 {
   "system": "Drill",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",
