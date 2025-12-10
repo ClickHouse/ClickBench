@@ -4,6 +4,7 @@
     "machine": "c7a.metal-48xl",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "tags": ["C++","column-oriented","embedded","stateless", "lukewarm-cold-run"],
     "load_time": 0,

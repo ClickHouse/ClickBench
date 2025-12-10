@@ -3,6 +3,7 @@
   "machine": "c6a.4xlarge",
   "cluster_size": 1,
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "comment": "",
   "tags": ["C", "PostgreSQL compatible", "row-oriented", "time-series", "lukewarm-cold-run"],

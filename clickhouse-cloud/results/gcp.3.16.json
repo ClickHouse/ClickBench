@@ -5,6 +5,7 @@
     "machine": "ClickHouse ☁️: 16GiB",
     "cluster_size": 3,
     "proprietary": "yes",
+  "hardware": "cpu",
     "tuned": "no",
     "comment": "",
 

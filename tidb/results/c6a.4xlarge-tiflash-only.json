@@ -4,6 +4,7 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "comment": "v8.5.1",
     "tags": ["C++", "column-oriented", "MySQL compatible", "ClickHouse derivative", "lukewarm-cold-run"],

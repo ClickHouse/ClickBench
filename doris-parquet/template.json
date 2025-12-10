@@ -1,6 +1,7 @@
 {
   "system": "Apache Doris (Parquet, partitioned)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

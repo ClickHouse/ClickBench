@@ -1,6 +1,7 @@
 {
   "system": "DuckDB (memory)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

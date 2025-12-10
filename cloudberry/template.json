@@ -1,6 +1,7 @@
 {
   "system": "Cloudberry",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C",

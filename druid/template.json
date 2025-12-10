@@ -1,6 +1,7 @@
 {
   "system": "Druid",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",

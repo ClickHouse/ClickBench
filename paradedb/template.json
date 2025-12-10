@@ -1,6 +1,7 @@
 {
   "system": "ParadeDB (Parquet, single)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Rust",

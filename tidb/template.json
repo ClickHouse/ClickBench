@@ -1,6 +1,7 @@
 {
   "system": "TiDB (TiFlash only)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

@@ -4,6 +4,7 @@
     "machine": "c8g.4xlarge",
     "cluster_size": 1,
     "proprietary":   "no",
+  "hardware": "cpu",
     "tuned":   "no",
     "tags":   ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless", "lukewarm-cold-run"],
     "load_time": 0,

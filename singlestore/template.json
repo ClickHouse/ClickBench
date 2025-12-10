@@ -1,6 +1,7 @@
 {
   "system": "SingleStore",
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "yes",
   "tags": [
     "MySQL compatible",

@@ -1,6 +1,7 @@
 {
   "system": "ClickHouse (TCHouse-C)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

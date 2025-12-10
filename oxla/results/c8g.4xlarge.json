@@ -4,6 +4,7 @@
     "machine": "c8g.4xlarge",
     "cluster_size": 1,
     "proprietary":   "yes",
+  "hardware": "cpu",
     "tuned":   "no",
     "tags":   ["C", "lukewarm-cold-run"],
     "load_time": 633,

@@ -1,6 +1,7 @@
 {
   "system": "ClickHouse (web)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

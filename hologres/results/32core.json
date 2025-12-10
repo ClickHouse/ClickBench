@@ -4,6 +4,7 @@
     "machine": "Hologres: 16 CU",
     "cluster_size": 2,
     "proprietary": "yes",
+  "hardware": "cpu",
     "tuned": "no",
     "tags": ["managed", "PostgreSQL compatible", "column-oriented", "managed"],
     "load_time": 388,

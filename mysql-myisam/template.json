@@ -1,6 +1,7 @@
 {
   "system": "MySQL (MyISAM)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

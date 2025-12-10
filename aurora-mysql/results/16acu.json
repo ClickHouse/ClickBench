@@ -4,6 +4,7 @@
     "machine": "Aurora: 16acu",
     "cluster_size": 1,
     "proprietary": "yes",
+  "hardware": "cpu",
     "tuned": "no",
     "comment": "Some queries cannot run due to ERROR 1114 (HY000) at line 1: The table '/rdsdbdata/tmp/#sqlaff_e5_0' is full",
 

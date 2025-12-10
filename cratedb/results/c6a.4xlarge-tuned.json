@@ -4,6 +4,7 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "yes",
     "comment": "CrateDB 5.10.2. Some queries exceed the available heap space (CircuitBreakingException).",
 

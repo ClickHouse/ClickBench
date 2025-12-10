@@ -4,6 +4,7 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "comment": "Using Gluten 1.4.0 with Spark 3.5.2",
     "tags": ["Java", "C++", "column-oriented", "Spark derivative", "lukewarm-cold-run"],

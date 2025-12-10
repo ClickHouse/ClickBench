@@ -1,6 +1,7 @@
 {
   "system": "ClickHouse (data lake, partitioned)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",
