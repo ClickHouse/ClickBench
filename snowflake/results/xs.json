@@ -5,6 +5,7 @@
     "cluster_size": 1,
     "comment": "",
     "proprietary": "yes",
+  "hardware": "cpu",
     "tuned": "no",
 
     "tags": ["managed", "column-oriented"],

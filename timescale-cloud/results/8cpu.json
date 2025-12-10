@@ -4,6 +4,7 @@
   "cluster_size": 1,
   "tags": ["C", "PostgreSQL compatible", "column-oriented", "time-series", "managed"],
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "no",
   "load_time": 4100,
   "data_size": 19304824832,

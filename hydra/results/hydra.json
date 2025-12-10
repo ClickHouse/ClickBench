@@ -4,6 +4,7 @@
     "machine": "Hydra: XL",
     "cluster_size": "serverless",
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "tags": ["managed", "PostgreSQL compatible", "column-oriented", "lukewarm-cold-run"],
     "load_time": 136,

@@ -4,6 +4,7 @@
     "machine": "c8g.metal-48xl",
     "cluster_size": 1,
     "proprietary":   "no",
+  "hardware": "cpu",
     "tuned":   "no",
     "tags":   ["Java", "Rust", "column-oriented", "Spark derivative", "lukewarm-cold-run"],
     "load_time": 0,
