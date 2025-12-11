@@ -1,10 +1,12 @@
 {
   "system": "Drill",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",
     "column-oriented",
-    "stateless"
+    "stateless",
+    "lukewarm-cold-run"
   ]
 }

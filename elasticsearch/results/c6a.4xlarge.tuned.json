@@ -4,10 +4,11 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "yes",
     "comment": "Tuned by repeated benchmark to find the optimal Elasticsearch shard number and size for this resource type and workload",
 
-    "tags": ["Java", "search"],
+    "tags": ["Java", "search", "lukewarm-cold-run"],
 
     "load_time": 7139.561,
     "data_size": 114316150384,

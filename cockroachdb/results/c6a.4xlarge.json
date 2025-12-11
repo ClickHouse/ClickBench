@@ -4,10 +4,11 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "comment": "CockroachDB v25.1.6. Cache size: 25%.",
 
-    "tags": ["Go", "row-oriented", "PostgreSQL compatible"],
+    "tags": ["Go", "row-oriented", "PostgreSQL compatible", "lukewarm-cold-run"],
 
     "load_time": 813,
     "data_size": 67948956585,

@@ -1,9 +1,11 @@
 {
   "system": "QuestDB",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",
-    "time-series"
+    "time-series",
+    "lukewarm-cold-run"
   ]
 }

@@ -1,10 +1,12 @@
 {
   "system": "ClickHouse (TCHouse-C)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",
     "column-oriented",
-    "ClickHouse derivative"
+    "ClickHouse derivative",
+    "lukewarm-cold-run"
   ]
 }

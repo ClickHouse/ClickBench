@@ -1,9 +1,11 @@
 {
   "system": "pg_duckdb",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "column-oriented",
-    "PostgreSQL compatible"
+    "PostgreSQL compatible",
+    "lukewarm-cold-run"
   ]
 }

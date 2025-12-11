@@ -4,8 +4,9 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary":  "no",
+  "hardware": "cpu",
     "tuned":  "no",
-    "tags":  ["C++","row-oriented","MySQL compatible"],
+    "tags":  ["C++","row-oriented","MySQL compatible", "lukewarm-cold-run"],
     "load_time": 1458,
     "data_size": 56422266688,
     "result": [

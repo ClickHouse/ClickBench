@@ -1,10 +1,12 @@
 {
   "system": "PostgreSQL (with indexes)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "yes",
   "tags": [
     "C",
     "row-oriented",
-    "PostgreSQL compatible"
+    "PostgreSQL compatible",
+    "lukewarm-cold-run"
   ]
 }

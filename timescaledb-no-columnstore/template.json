@@ -1,11 +1,13 @@
 {
   "system": "TimescaleDB (no columnstore)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C",
     "PostgreSQL compatible",
     "row-oriented",
-    "time-series"
+    "time-series",
+    "lukewarm-cold-run"
   ]
 }

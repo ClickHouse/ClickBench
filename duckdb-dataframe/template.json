@@ -1,12 +1,14 @@
 {
   "system": "DuckDB (DataFrame)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",
     "column-oriented",
     "embedded",
     "Python",
-    "dataframe"
+    "dataframe",
+    "lukewarm-cold-run"
   ]
 }

@@ -2,13 +2,16 @@
 
 https://benchmark.clickhouse.com/
 
-Discussion: https://news.ycombinator.com/item?id=32084571
+Discussion on Hackernews: https://news.ycombinator.com/item?id=32084571
 
 ## Overview
 
-This benchmark represents typical workload in the following areas: clickstream and traffic analysis, web analytics, machine-generated data, structured logs, and events data. It covers the typical queries in ad-hoc analytics and real-time dashboards.
+This benchmark represents typical workload in the following areas: clickstream and traffic analysis, web analytics, machine-generated data, structured logs, and events data.
+It covers the typical queries in ad-hoc analytics and real-time dashboards.
 
-The dataset from this benchmark was obtained from the actual traffic recording of one of the world's largest web analytics platforms. It is anonymized while keeping all the essential distributions of the data. The set of queries was improvised to reflect the realistic workloads, while the queries are not directly from production.
+The dataset in this benchmark was obtained from the actual traffic recording of one of the world's largest web analytics platforms.
+It is anonymized while keeping all the essential distributions of the data.
+The set of queries was improvised to reflect realistic workloads (the queries are not directly from production).
 
 ## Goals
 
@@ -16,58 +19,79 @@ The main goals of this benchmark are:
 
 ### Reproducibility
 
-You can quickly reproduce every test in as little as 20 minutes (although some systems may take several hours) in a semi-automated way. The test setup is documented and uses inexpensive cloud VMs. The test process is documented in the form of a shell script, covering the installation of every system, loading of the data, running the workload, and collecting the result numbers. The dataset is published and made available for download in multiple formats.
+The benchmark allows to reproduce every test result quickly in as little as 20 minutes (although some systems may take several hours) in a semi-automated way.
+The test setup is documented and uses inexpensive cloud VMs.
+The test process is documented in the form of a shell script, covering the installation of every system, loading of the data, running the workload, and collecting the result numbers.
+The dataset is published and made available for download in multiple formats.
 
 ### Compatibility
 
-The tables and queries use mostly standard SQL and require minimum or no adaptation for most SQL DBMS. The dataset has been filtered to avoid difficulties with parsing and loading.
+The tables and queries use mostly standard SQL and require minimum or no adaptation for most SQL DBMS.
+The dataset has been filtered to avoid difficulties with parsing and loading.
 
 ### Diversity
 
-The benchmark process is easy enough to cover a wide range of systems. It includes: modern and historical self-managed OLAP DBMS; traditional OLTP DBMS are included for comparison baseline; managed database-as-a-service offerings are included, as well as serverless cloud-native databases; some NoSQL, document, and specialized time-series databases are included as well for a reference, even if they should not be comparable on the same workload.
+The benchmark process is easy enough to cover a wide range of systems, including:
+- modern and historical self-managed OLAP DBMS,
+- traditional OLTP DBMS (for comparison baseline),
+- managed database-as-a-service offerings,
+- as well as serverless cloud-native databases,
+- some NoSQL databases,
+- document databases,
+- and specialized time-series databases
+
+for reference, even if they don't specialize on the ClickBench workload.
 
 ### Realism
 
-The dataset is derived from accurate production data. The realistic data distributions allow for correctly accounting for compression, indices, codecs, custom data structures, etc., which is not possible with most of the random dataset generators. The workload consists of 43 queries and can test the efficiency of full scan and filtered scan, as well as index lookups, and main relational operations. It can test various aspects of hardware as well: some queries require high storage throughput; some queries benefit from a large number of CPU cores, and some benefit from single-core speed; some queries benefit from high main memory bandwidth.
+The dataset is derived from production data.
+The realistic data distributions allow to evaluate compression, indices, codecs, custom data structures, etc., something which is not possible with most of the random dataset generators.
+The workload consists of 43 queries and test the efficiency of full scan and filtered scan, as well as index lookups, and the main relational operations.
+It can test various aspects of hardware as well: some queries require high storage throughput; some queries benefit from a large number of CPU cores, and some benefit from single-core speed; some queries benefit from high main memory bandwidth.
 
 ## Limitations
 
-The limitations of this benchmark allow keeping it easy to reproduce and to include more systems in the comparison. The benchmark represents only a subset of all possible workloads and scenarios. While it aims to be as fair as possible, focusing on a specific subset of workloads may give an advantage to the systems that specialise in those workloads.
+The limitations of this benchmark allow to reproduce it and include more systems in the comparison easily.
+The benchmark represents only a subset of all possible workloads and scenarios.
+While it aims to be as fair as possible, focusing on a specific subset of workloads may give an advantage to the systems that specialize in those workloads.
 
-The following limitations should be acknowledged:
+Note these limitations:
 
-1. The dataset is represented by one flat table. This is not representative of classical data warehouses, which use a normalized star or snowflake data model. The systems for classical data warehouses may get an unfair disadvantage on this benchmark.
+1. The dataset is a single flat table. This is different from classical data warehouses, which use a normalized star or snowflake data model. Therefore, classical data warehouses may have an unfair disadvantage in ClickHouse.
 
-2. The table consists of exactly 99 997 497 records. This is rather small by modern standards but allows tests to be performed in a reasonable time.
+2. The table consists of exactly 99'997'497 records. This is rather small by modern standards but allows tests to be completed in reasonable time.
 
-3. While this benchmark allows testing distributed systems, and it includes multi-node and serverless cloud-native setups, most of the results so far have been obtained on a single node setup.
+3. While the benchmark allows testing distributed systems, and it includes multi-node and serverless cloud-native setups, most of the results so far have been obtained on single node setups.
 
-4. The benchmark runs queries one after another and does not test a workload with concurrent requests; neither does it test for system capacity. Every query is run only a few times, and this allows some variability in the results.
+4. The benchmark runs its queries one after another and does not test workloads with concurrent queries, neither does it test for system capacity. Every query is run only a few times. This allows for some variability in the results.
 
-5. Many setups and systems are different enough to make direct comparison tricky. It is not possible to test the efficiency of storage used for in-memory databases, or the time of data loading for stateless query engines. The goal of the benchmark is to give the numbers for comparison and let you derive the conclusions on your own.
+5. Many setups and systems are different enough to make direct comparison tricky. For example, it is not possible to test the efficiency of storage used for in-memory databases, or the time of data loading for stateless query engines. The goal of the benchmark is to produce numbers. You need to interpret them by your own.
 
-TLDR: *All Benchmarks Are ~~Bastards~~ Liars*.
+Tl;dr: *All Benchmarks Are ~~Bastards~~ Liars*.
 
 ## Rules and Contribution
 
 ### How To Add a New Result
 
-To introduce a new system, simply copy-paste one of the directories and edit the files accordingly:
+To add a new entry, copy-paste one of the existing directories and edit the files accordingly:
 
-- `benchmark.sh`: this is the main script to run the benchmark on a fresh VM; Ubuntu 24.04 or newer should be used by default. For databases that could be installed locally, the script should be able to run in a fully automated manner, so it can be used as a cloud-init script. It should output the results in the following format: - one or more lines `Load time: 1234` with the time in seconds; - a line `Data size: 1234567890` with the data size in bytes; the data size should include indexes and transaction logs if applicable; - 43 consecutive lines in the form of `[1.234, 5.678, 9.012],` for the runtimes of every query; - the output may include other lines with the logs, that are not used for the report. For managed databases, if the setup requires clicking in the UI, write a `README.md` instead.
+- `benchmark.sh`: this is the main script which runs the benchmark on a fresh VM; Ubuntu 24.04 or newer should be used by default. For databases that can be installed locally, the script should be able to run in a fully automated manner so it can be used in the benchmark automation (cloud-init). It should output the results in the following format: - one or more lines `Load time: 1234` with the time in seconds; - a line `Data size: 1234567890` with the data size in bytes; the data size should include indexes and transaction logs if applicable; - 43 consecutive lines in the form of `[1.234, 5.678, 9.012],` for the runtimes of every query; - the output may include other lines with the logs, that are not used for the report. For managed databases, if the setup requires clicking in a UI, write a `README.md` instead.
 - `README.md`: contains comments and observations if needed. For managed databases, it can describe the setup procedure to be used instead of a shell script.
-- `create.sql`: a CREATE TABLE statement. If it's a NoSQL system, another file like `wtf.json` can be presented.
-- `queries.sql`: contains 43 queries to run;
-- `run.sh`: a loop for running the queries; every query is run three times; if it's a database with local on-disk storage, the first query should be run after dropping the page cache;
-- `results`: put the .json files with the results for every hardware configuration there. Please double-check that each file is valid JSON (e.g., no comma errors).
+- `create.sql`: a CREATE TABLE statement. If it's a NoSQL system, another file like `wtf.json` can be used instead.
+- `queries.sql`: contains 43 ClickBench queries to run;
+- `run.sh`: a loop that running the queries; every query is run three times; if it's a database with local on-disk storage, the first query should be run after dropping the page cache (see section "Caching" below).
+- `results/`: put the .json files with the results for every hardware configuration into this directory. Please double-check that each file is valid JSON (e.g., no comma errors).
 
-To introduce a new result for an existing system on different hardware configurations, add a new file to `results`.
+To introduce a new result for an existing system for a different hardware configuration, add a new file to `results`.
 
 To introduce a new result for an existing system with a different usage scenario, either copy the whole directory and name it differently (e.g. `timescaledb`, `timescaledb-compression`) or add a new file to the `results` directory.
 
-`index.html` can be re-generated using `./generate-results.sh`. This step is called via a GitHub action and optional.
+`index.html` can be re-generated using `./generate-results.sh`.
+The CI (GitHub Actions) does this automatically, this step is optional.
 
-By default, all tests are run on c6a.4xlarge VM in AWS with 500 GB gp2.
+All tests were originally run on AWS c6a.4xlarge EC2 VMs with 500 GB gp2 disks.
+With better automation, more EC2 machines were added later: c6a.2xlarge, c6a.metal, c8g.4xlarge, c6a.xlarge, c7a.metal-48xl, c6a.large, c8g.metal-48xl, and t3a.small.
+These represent older and modern machines, and small / medium / large systems (CPU and main memory).
 
 Please help us add more systems and run the benchmarks on more types of VMs.
 
@@ -77,56 +101,79 @@ The systems can be installed or used in any reasonable way: from a binary distri
 
 It's better to use the default settings and avoid fine-tuning. Configuration changes can be applied if it is considered strictly necessary and documented.
 
-Fine-tuning and optimization for the benchmark are not recommended but allowed. In this case, add the results on vanilla configuration and fine-tuned configuration separately.
+Fine-tuning and optimization for the benchmark are not recommended but allowed.
+In this case, add results for the vanilla configuration and tunes results separately (e.g. 'MyDatabase' and 'MyDatabase-tuned')
 
 ### Data Loading
 
-The dataset is available in `CSV`, `TSV`, `JSONlines` and `Parquet` formats by the following links:
+The dataset is available as `CSV`, `TSV`, `JSONlines` and `Parquet` formats by the following links:
 
 - https://datasets.clickhouse.com/hits_compatible/hits.csv.gz
 - https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz
 - https://datasets.clickhouse.com/hits_compatible/hits.json.gz
 - https://datasets.clickhouse.com/hits_compatible/hits.parquet
 
-You can select the dataset format at your convenience.
+You can select the most optimal dataset format for your database at your discretion.
 
 Additional sources for stateless table engines are provided:
 - https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet (the same parquet file in its own subdirectory)
 - https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{0..99}.parquet (100 files)
 
-To correctly compare the insertion time, the dataset should be downloaded and decompressed before loading (if it's using external compression; the parquet file includes internal compression and can be loaded as is). The dataset should be loaded as a single file in the most straightforward way. Splitting the dataset for parallel loading is not recommended, as it will make comparisons more difficult. Splitting the dataset is possible if the system cannot eat it as a whole due to its limitations.
+The datasets are intentionally "dirty", e.g. the Parquet files have no proper logical data types and no bloom filter indexes.
+This reflects the real-world nature of the benchmark better (also see https://github.com/ClickHouse/ClickBench/issues/7#issuecomment-3538940698).
 
-You should not wait for cool down after data loading or running OPTIMIZE / VACUUM before the main benchmark queries unless it is strictly required for the system.
+To compare insertion times correctly, the dataset should be downloaded and decompressed before loading (if it's using external compression; the parquet file includes internal compression and can be loaded as is).
+The dataset should be loaded as a single file in the most straightforward way.
+Splitting the dataset for parallel loading is not recommended, as it will make comparisons more difficult.
+Splitting the dataset is possible if the system cannot eat it as a whole due to limitations.
 
-The used storage size can be measured without accounting for temporary data if there is temporary data that will be removed in the background. The built-in introspection capabilities can be used to measure the storage size, or it can be measured by checking the used space in the filesystem.
+You should not wait for cool down after data loading or running OPTIMIZE / VACUUM before the main benchmark queries unless the database strictly requires this.
+
+The used storage size can be measured without accounting for temporary data if there is temporary data that will be removed in the background.
+Built-in introspection capabilities can be used to measure the storage size, or it can be measured by checking the used space in the filesystem.
 
 ### Indexing
 
-The benchmark table has one index - the primary key. The primary key is not necessary to be unique. The index of the primary key can be made clustered (ordered, partitioned, sharded).
+The benchmark table has one index - the primary key.
+The primary key is not necessary unique.
+The index of the primary key can be clustered (table sorting) or non-clustered (additional datastructure, e.g. B-tree or hash-based index).
 
-Manual creation of other indices is not recommended, although if the system creates indexes automatically, it is considered ok.
+Manual creation of other indices is not recommended, although if a database creates additional indexes automatically, it is considered ok.
 
 ### Preaggregation
 
-The creation of pre-aggregated tables or indices, projections, or materialized views is not recommended for the purpose of this benchmark. Although you can add fine-tuned setup and results for reference, they will be out of competition.
+The creation of pre-aggregated tables or indices, projections, or materialized views is not recommended for the purpose of this benchmark.
+Although you can add fine-tuned setup and results for reference, they will be out of competition.
 
 If a system is of a "multidimensional OLAP" kind, and so is always or implicitly doing aggregations, it can be added for comparison.
 
 ### Caching
 
-If the system contains a cache for query results, it should be disabled.
+We distinguish three cases:
 
-It is okay if the system performs caching for source data (buffer pools and similar). If the cache or buffer pools can be flushed, they should be flushed before the first run of every query.
+1. Hot runs. The database starts and then runs all queries sequentially, with three runs per query.
 
-If the system contains a cache for intermediate data, that cache should be disabled if it is located near the end of the query execution pipeline, thus similar to a query result cache.
+2. Cold runs. Before each of the three runs per query, all caches are cleared. This means a) clearing the operating system page cache and b) all caches within the database, including buffer pools. Many databases provide commands to clear internal caches. However, for fairness towards systems which don't offer such statements, it is required to _restart_ the database.
+
+3. Lukewarm runs. Similar to cold runs but _only_ the operating system page cache is cleared before each query. This is what ClickBench historically considered as "cold run", benefiting databases with aggressive internal caching. The benchmark is migrating from lukewarm runs to true cold runs (previous case 2.). Submissions that do not properly restart the database-under-test have a tag "lukewarm-cold-run". Please change the script to a true cold run, remove the label, and send a PR against the repository - thanks.
+
+General rules regarding caching:
+- Query result caches should be disabled.
+- Caching source data (e.g. buffer pools) is fine.
+- Caches for intermediate data (e.g. hash tables) are generally okay, however if such caches are located near the end of the query
+  execution pipeline, the effects are similar to query result caching and such caches should thus be disabled.
 
 ### Incomplete Results
 
-Many systems cannot run the full benchmark suite successfully due to OOMs, crashes, or unsupported queries. The partial results should be included nevertheless. Put `null` for the missing numbers.
+Many systems cannot run the full benchmark suite successfully due to OOMs, crashes, or unsupported queries.
+Partial results should be included nevertheless - simply place `null` for the missing numbers.
 
 ### If The Results Cannot Be Published
 
-Some vendors don't allow publishing benchmark results due to the infamous [DeWitt Clause](https://cube.dev/blog/dewitt-clause-or-can-you-benchmark-a-database). Most of them still allow the use of the system for benchmarks. In this case, please submit the full information about installation and reproduction, but without the `results` directory. A `.gitignore` file can be added to prevent accidental publishing.
+Some vendors don't allow publishing benchmark results due to the infamous [DeWitt Clause](https://cube.dev/blog/dewitt-clause-or-can-you-benchmark-a-database).
+Most of them still allow the use of the system for benchmarks.
+In this case, please submit the full information about installation and reproduction, but without `results` directory.
+A `.gitignore` file can be added to prevent accidental publishing.
 
 We allow both open-source and proprietary systems in our benchmark, as well as managed services, even if registration, credit card, or salesperson call is required - you still can submit the testing description if you don't violate the TOS.
 
@@ -134,33 +181,46 @@ Please let us know if some results were published by mistake by opening an issue
 
 ### If a Mistake Or Misrepresentation Is Found
 
-It is easy to accidentally misrepresent some systems. While acting in good faith, the authors admit their lack of deep knowledge of most systems. Please send a pull request to correct the mistakes.
+It is easy to accidentally misrepresent some systems.
+While acting in good faith, the authors admit their lack of deep knowledge of most systems.
+Please send a pull request to correct the mistakes.
 
 ### Results Usage And Scoreboards
 
-The results can be used for comparison of various systems, but always take them with a grain of salt due to the vast amount of caveats and hidden details. Always reference the original benchmark and this text.
+The results can be used for comparison of various systems, but always take them with a grain of salt due to the vast amount of caveats and hidden details.
+Always reference the original benchmark and this text.
 
-We allow but do not recommend creating scoreboards from this benchmark or saying that one system is better (faster, cheaper, etc.) than another.
+We allow but do not encourage creating scoreboards from this benchmark or saying that one system is better (faster, cheaper, etc.) than another.
 
-There is a web page to navigate across benchmark results and present a summary report. It allows filtering out some systems, setups, or queries. For example, if you found some subset of the 43 queries are irrelevant, you can simply exclude them from the calculation and share the report without these queries.
+There is an online dashboard to navigate across benchmark results and present a summary report.
+It allows filtering out some systems, setups, or queries.
+For example, if you found some subset of the 43 queries are irrelevant, you can simply exclude them from the calculation and share the report without these queries.
 
-You can select the summary metric from one of the following: "Cold Run", "Hot Run", "Load Time", "Data Size", and "Combined". If you select the "Load Time" or "Data Size", the entries will be simply ordered from best to worst, and additionally, the ratio to the best non-zero result will be shown (the number of times one system is worse than the best system in this metric). Load time can be zero for stateless query engines like `clickhouse-local` or `Amazon Athena`.
+You can select the summary metric from one of the following: "Cold Run", "Hot Run", "Load Time", "Data Size", and "Combined".
+If you select the "Load Time" or "Data Size", the entries will be simply ordered from best to worst, and additionally, the ratio to the best non-zero result will be shown (the number of times one system is worse than the best system in this metric).
+Load time can be zero for stateless query engines like `clickhouse-local` or `Amazon Athena`.
 
 If you select "Cold Run" or "Hot Run", the aggregation across the queries is performed in the following way:
 
-1. The first run for every query is selected for Cold Run. For Hot Run, the minimum from 2nd and 3rd run time is selected, if both runs are successful, or null if some were unsuccessful.
+1. The first run for every query is considered a Cold Run. For the Hot Run, the smaller of the 2nd and 3rd runtime is used if both runs are successful, or null if some were unsuccessful.
 
-By default, the "Hot Run" metric is selected, because it's not always possible to obtain a cold runtime for managed services, while for on-premise a quite slow EBS volume is used by default which makes the comparison slightly less interesting.
+2. For every query, find a system that demonstrated the best (fastest) query time and use it as a baseline.
 
-2. For every query, find a system that demonstrated the best (fastest) query time and take it as a baseline.
+This gives a reference point.
+Alternatively, we can take a benchmark entry like "ClickHouse on c6a.metal" as a baseline and divide all query times by the baseline time.
+This would be quite arbitrary and asymmetric.
+Instead, we take the best result for every query separately.
 
-This gives us a point of comparison. Alternatively, we can take a benchmark entry like "ClickHouse on c6a.metal" as a baseline and divide all query times by the baseline time. This would be quite arbitrary and asymmetric. Instead, we take the best result for every query separately.
+3. For every query, if the result is present, calculate the ratio to the baseline, but add a constant 10ms to the nominator and denominator, so the formula will be: `(10ms + query_time) / (10ms + baseline_query_time)`. This formula gives a value >= 1, which is equal to 1 for the best benchmark entry on this query.
 
-3. For every query, if the result is present, calculate the ratio to the baseline, but add constant 10ms to the nominator and denominator, so the formula will be: `(10ms + query_time) / (10ms + baseline_query_time)`. This formula gives a value >= 1, which is equal to 1 for the best benchmark entry on this query.
+We are interested in relative query run times, not absolute.
+The benchmark has a broad set of queries, and there can be queries that typically run in 100ms (e.g., for interactive dashboards) and some queries that typically run in a minute (e.g., complex ad-hoc queries).
+And we want to treat these queries as equally important in the benchmark, that's why we need relative values.
 
-We are interested in relative query run times, not absolute. The benchmark has a broad set of queries, and there can be queries that typically run in 100ms (e.g., for interactive dashboards) and some queries that typically run in a minute (e.g., complex ad-hoc queries). And we want to treat these queries as equally important in the benchmark, that's why we need relative values.
-
-The constant shift is needed to make the formula well-defined when query time approaches zero. For example, some systems can get query results in 0 ms using table metadata lookup, and another in 10 ms by range scan. But this should not be treated as the infinite advantage of one system over the other. With the constant shift, we will treat it as only two times an advantage.
+The constant shift is needed to make the formula well-defined when query time approaches zero.
+For example, some systems can get query results in 0 ms using table metadata lookup, and another in 10 ms by range scan.
+But this should not be treated as the infinite advantage of one system over the other.
+With the constant shift, we will treat it as only two times an advantage.
 
 4. For every query, if the result is not present, substitute it with a "penalty" calculated as follows: take the maximum query runtime for this benchmark entry across other queries that have a result, but if it is less than 300 seconds, put it 300 seconds. Then multiply the value by 2. Then calculate the ratio as explained above.
 
@@ -169,6 +229,8 @@ For example, one system crashed while trying to run a query which can highlight 
 5. Take the geometric mean of the ratios across the queries. It will be the summary rating.
 
 Why geometric mean? The ratios can only be naturally averaged in this way. Imagine there are two queries and two systems. The first system ran the first query in 1s and the second query in 20s. The second system ran the first query in 2s and the second query in 10s. So, the first system is two times faster on the first query and two times slower on the second query and vice-versa. The final score should be identical for these systems.
+
+For the cold and hot query runtime metrics, the ratio is calculated for each of the 43 queries and then averaged with the geometric mean. It means that the best system might have a resulting ratio of more than 1, if it was worse in some queries. For example, the fastest system can be 1.5 times slower than a hypothetical ideal system that runs each of the 43 queries as fast as the fastest system for each particular query.
 
 The "Combined" metric summarizes all the results as a weighted geometric mean with the following weights: load time: 10%, data size: 10%, cold runtime: 20%, hot runtime: 60%.
 
@@ -200,7 +262,7 @@ Now the new benchmark is easy to use and the results for any system can be repro
 
 We also introduced the [Hardware Benchmark](https://benchmark.clickhouse.com/hardware/) for testing servers and VMs.
 
-See also the [changelog](CHANGELOG.md). 
+See the [changelog](CHANGELOG.md) for more details.
 
 ## Systems Included
 
@@ -222,7 +284,6 @@ Please help us add more systems and run the benchmarks on more types of VMs:
 - [ ] Azure Synapse
 - [ ] Boilingdata
 - [ ] CockroachDB Serverless
-- [ ] Databricks
 - [ ] DolphinDB
 - [ ] Dremio (without publishing)
 - [ ] DuckDB operating like "Athena" on remote Parquet files
@@ -240,7 +301,7 @@ Please help us add more systems and run the benchmarks on more types of VMs:
 - [ ] Presto
 - [ ] Quickwit
 - [ ] Redshift Spectrum
-- [ ] Rockset 
+- [ ] Rockset
 - [ ] Seafowl
 - [ ] ShitholeDB
 - [ ] Sneller

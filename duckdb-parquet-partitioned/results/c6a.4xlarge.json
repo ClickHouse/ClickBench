@@ -4,8 +4,9 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","embedded","stateless"],
+    "tags": ["C++","column-oriented","embedded","stateless", "lukewarm-cold-run"],
     "load_time": 0,
     "data_size": 14737666736,
     "result": [

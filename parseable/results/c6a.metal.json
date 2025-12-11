@@ -4,10 +4,11 @@
     "machine": "c6a.metal",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "comment": "v1.7.5 (6e5242f)",
 
-    "tags": ["Rust", "column-oriented"],
+    "tags": ["Rust", "column-oriented", "lukewarm-cold-run"],
 
     "load_time": 0,
     "data_size": 14018794333,

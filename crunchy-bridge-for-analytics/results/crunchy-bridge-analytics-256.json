@@ -4,6 +4,7 @@
     "machine": "CrunchyBridge: Analytics-256GB",
     "cluster_size": 1,
     "proprietary": "yes",
+  "hardware": "cpu",
     "tuned": "no",
     "comment":"",
     "tags": ["column-oriented", "PostgreSQL compatible", "managed"],

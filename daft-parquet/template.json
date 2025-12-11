@@ -1,11 +1,13 @@
 {
   "system": "Daft (Parquet, single)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Rust",
     "stateless",
     "serverless",
-    "embedded"
+    "embedded",
+    "lukewarm-cold-run"
   ]
 }

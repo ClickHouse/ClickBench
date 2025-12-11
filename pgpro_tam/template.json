@@ -1,10 +1,12 @@
 {
   "system": "pgpro_tam",
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C",
     "column-oriented",
-    "PostgreSQL compatible"
+    "PostgreSQL compatible",
+    "lukewarm-cold-run"
   ]
 }

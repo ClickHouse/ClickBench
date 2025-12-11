@@ -404,6 +404,13 @@ const additional_data_size_points = [
         </td>
     </tr>
     <tr>
+        <th>Hardware: </th>
+        <td id="selectors_hardware">
+            <a id="selector-hardware-cpu" class="selector selector-active">CPU</a>
+            <a id="selector-hardware-gpu" class="selector selector-active">GPU</a>
+        </td>
+    </tr>
+    <tr>
         <th>Tuned: </th>
         <td id="selectors_tuned">
             <a id="selector-tuned-no" class="selector">No</a>
@@ -465,6 +472,7 @@ let selectors = {
     "machine": {},
     "cluster_size": {},
     "opensource": {"yes": true, "no": true},
+    "hardware": {"cpu": true, "gpu": true},
     "tuned": {"no": true, "yes": false},
     "metric": "combined",
     "queries": [],
@@ -588,6 +596,28 @@ document.getElementById('selector-opensource-no').addEventListener('click', e =>
     updateHistory();
 });
 
+document.getElementById('selector-hardware-cpu').addEventListener('click', e => {
+    selectors.hardware.cpu = !selectors.hardware.cpu;
+    if (selectors.hardware.cpu) {
+        e.target.classList.add('selector-active');
+    } else {
+        e.target.classList.remove('selector-active');
+    }
+    render();
+    updateHistory();
+});
+
+document.getElementById('selector-hardware-gpu').addEventListener('click', e => {
+    selectors.hardware.gpu = !selectors.hardware.gpu;
+    if (selectors.hardware.gpu) {
+        e.target.classList.add('selector-active');
+    } else {
+        e.target.classList.remove('selector-active');
+    }
+    render();
+    updateHistory();
+});
+
 document.getElementById('selector-tuned-yes').addEventListener('click', e => {
     selectors.tuned.yes = !selectors.tuned.yes;
     if (selectors.tuned.yes) {
@@ -641,6 +671,9 @@ function updateSelectors() {
     document.getElementById('selector-opensource-yes').className = selectors.opensource.yes ? 'selector selector-active' : 'selector';
     document.getElementById('selector-opensource-no').className = selectors.opensource.no ? 'selector selector-active' : 'selector';
 
+    document.getElementById('selector-hardware-cpu').className = selectors.hardware.cpu ? 'selector selector-active' : 'selector';
+    document.getElementById('selector-hardware-gpu').className = selectors.hardware.gpu ? 'selector selector-active' : 'selector';
+
     document.getElementById('selector-tuned-yes').className = selectors.tuned.yes ? 'selector selector-active' : 'selector';
     document.getElementById('selector-tuned-no').className = selectors.tuned.no ? 'selector selector-active' : 'selector';
 }
@@ -681,7 +714,7 @@ function selectRun(timings, metric) {
     const hot_timing = (timings[1] !== null && timings[2] !== null ? Math.min(timings[1], timings[2]) : null);
 
     return metric == 'cold' ? cold_timing : metric == 'hot' ? hot_timing :
-        ((hot_timing * combined_hot_share + cold_timing * combined_cold_share) / (combined_hot_share + combined_cold_share));
+        (hot_timing !== null && cold_timing !== null ? (hot_timing * combined_hot_share + cold_timing * combined_cold_share) / (combined_hot_share + combined_cold_share) : null);
 }
 
 function relativeQueryTime(num_queries, baseline_data, elem, metric) {
@@ -744,7 +777,7 @@ function renderSummary(filtered_data) {
 
     const baseline_data = [...filtered_data[0].result.keys()].map(query_num =>
         [...Array(3).keys()].map(run_num =>
-            Math.min(...filtered_data.filter(elem => !elem.fake).map(elem => elem.result[query_num][run_num]).filter(x => x))));
+            Math.min(...filtered_data.filter(elem => !elem.fake).map(elem => elem.result[query_num][run_num]).filter(x => x != null))));
 
     const min_load_time = Math.min(...filtered_data.map(elem => elem.load_time).filter(x => x && x > 5));
     const min_data_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x && x > 1e9));
@@ -900,7 +933,8 @@ function render() {
         selectors.cluster_size[elem.cluster_size] &&
         elem.tags.filter(type => selectors.type[type]).length > 0 &&
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
-        ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes"))
+        ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
+        ((selectors.hardware.cpu && elem.hardware === "cpu") || (selectors.hardware.gpu && elem.hardware === "gpu"))
         );
 
     if (selectors.metric == 'size') {
@@ -1153,6 +1187,9 @@ window.onpopstate = function(event) {
     if (!selectors.opensource) {
         selectors.opensource = {"yes": true, "no": false};
     }
+    if (!selectors.hardware) {
+        selectors.hardware = {"cpu": true, "gpu": false};
+    }
     if (!selectors.tuned) {
         selectors.tuned = {"no": true, "yes": false};
     }
@@ -1165,6 +1202,9 @@ if (window.location.hash) {
         selectors = decodeState(decodeURIComponent(window.location.hash.substring(1)));
         if (!selectors.opensource) {
             selectors.opensource = {"yes": true, "no": false};
+        }
+        if (!selectors.hardware) {
+            selectors.hardware = {"cpu": true, "gpu": false};
         }
         if (!selectors.tuned) {
             selectors.tuned = {"no": true, "yes": false};

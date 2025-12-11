@@ -1,11 +1,13 @@
 {
   "system": "DuckDB (Vortex, partitioned)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Rust",
     "column-oriented",
     "embedded",
-    "stateless"
+    "stateless",
+    "lukewarm-cold-run"
   ]
 }

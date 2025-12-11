@@ -1,11 +1,13 @@
 {
   "system": "DataFusion (Vortex, single)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Rust",
     "column-oriented",
     "embedded",
-    "stateless"
+    "stateless",
+    "lukewarm-cold-run"
   ]
 }

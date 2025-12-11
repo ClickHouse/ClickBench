@@ -1,10 +1,12 @@
 {
   "system": "Databend",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Rust",
     "column-oriented",
-    "ClickHouse derivative"
+    "ClickHouse derivative",
+    "lukewarm-cold-run"
   ]
 }

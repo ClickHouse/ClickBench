@@ -4,6 +4,7 @@
     "machine": "ByteHouse: XS",
     "cluster_size": 1,
     "proprietary": "yes",
+  "hardware": "cpu",
     "tuned": "no",
 
     "tags": ["managed", "column-oriented", "ClickHouse derivative", "C++"],

@@ -4,8 +4,9 @@
     "machine": "c8g.metal-48xl",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","embedded","Python","dataframe"],
+    "tags": ["C++","column-oriented","embedded","Python","dataframe", "lukewarm-cold-run"],
     "load_time": 73,
     "data_size": 176077402112,
     "result": [

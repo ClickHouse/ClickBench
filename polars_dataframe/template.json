@@ -1,9 +1,11 @@
 {
   "system": "Polars (DataFrame)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "column-oriented",
-    "dataframe"
+    "dataframe",
+    "lukewarm-cold-run"
   ]
 }

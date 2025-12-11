@@ -1,11 +1,13 @@
 {
   "system": "Spark",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",
     "column-oriented",
     "stateless",
-    "Spark derivative"
+    "Spark derivative",
+    "lukewarm-cold-run"
   ]
 }

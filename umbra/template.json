@@ -1,6 +1,7 @@
 {
   "system": "Umbra",
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

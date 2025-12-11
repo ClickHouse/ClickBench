@@ -1,12 +1,14 @@
 {
   "system": "ClickHouse (web)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",
     "column-oriented",
     "ClickHouse derivative",
     "serverless",
-    "stateless"
+    "stateless",
+    "lukewarm-cold-run"
   ]
 }

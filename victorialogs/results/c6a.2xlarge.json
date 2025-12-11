@@ -4,8 +4,9 @@
     "machine": "c6a.2xlarge",
     "cluster_size": 1,
     "proprietary":   "no",
+  "hardware": "cpu",
     "tuned":   "no",
-    "tags":   ["Go","column-oriented"],
+    "tags":   ["Go","column-oriented", "lukewarm-cold-run"],
     "load_time": 5137,
     "data_size": 16939219271,
     "result": [

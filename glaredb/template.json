@@ -1,9 +1,11 @@
 {
   "system": "GlareDB (Parquet, single)",
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Rust",
-    "serverless"
+    "serverless",
+    "lukewarm-cold-run"
   ]
 }

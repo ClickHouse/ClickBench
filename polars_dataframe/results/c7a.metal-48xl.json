@@ -4,8 +4,9 @@
     "machine": "c7a.metal-48xl",
     "cluster_size": 1,
     "proprietary":  "no",
+  "hardware": "cpu",
     "tuned":  "no",
-    "tags":  ["column-oriented","dataframe"],
+    "tags":  ["column-oriented","dataframe", "lukewarm-cold-run"],
     "load_time": 3,
     "data_size": 182430203904,
     "result": [

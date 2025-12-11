@@ -4,10 +4,11 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "comment": "Only 90% of data successfully loaded. Some queries run for days.",
 
-    "tags": ["C++", "column-oriented", "MySQL compatible"],
+    "tags": ["C++", "column-oriented", "MySQL compatible", "lukewarm-cold-run"],
 
     "load_time": 2317,
     "data_size": 13760341294,

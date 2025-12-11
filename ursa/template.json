@@ -1,10 +1,12 @@
 {
   "system": "Ursa",
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",
     "column-oriented",
-    "ClickHouse derivative"
+    "ClickHouse derivative",
+    "lukewarm-cold-run"
   ]
 }

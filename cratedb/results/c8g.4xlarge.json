@@ -4,8 +4,9 @@
     "machine": "c8g.4xlarge",
     "cluster_size": 1,
     "proprietary":   "no",
+  "hardware": "cpu",
     "tuned":   "no",
-    "tags":   ["Java","column-oriented"],
+    "tags":   ["Java","column-oriented", "lukewarm-cold-run"],
     "load_time": 3696,
     "data_size": 60854888525,
     "result": [

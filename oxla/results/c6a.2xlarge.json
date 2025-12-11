@@ -4,8 +4,9 @@
     "machine": "c6a.2xlarge",
     "cluster_size": 1,
     "proprietary":   "yes",
+  "hardware": "cpu",
     "tuned":   "no",
-    "tags":   ["C"],
+    "tags":   ["C", "lukewarm-cold-run"],
     "load_time": 764,
     "data_size": 17820866692,
     "result": [

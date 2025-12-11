@@ -4,8 +4,9 @@
     "machine": "c8g.4xlarge",
     "cluster_size": 1,
     "proprietary":   "yes",
+  "hardware": "cpu",
     "tuned":   "no",
-    "tags":   ["column-oriented"],
+    "tags":   ["column-oriented", "lukewarm-cold-run"],
     "load_time": 655,
     "data_size": 57836683298,
     "result": [

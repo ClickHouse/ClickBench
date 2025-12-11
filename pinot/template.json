@@ -1,9 +1,11 @@
 {
   "system": "Pinot",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",
-    "column-oriented"
+    "column-oriented",
+    "lukewarm-cold-run"
   ]
 }

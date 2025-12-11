@@ -1,6 +1,7 @@
 {
   "system": "Firebolt",
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

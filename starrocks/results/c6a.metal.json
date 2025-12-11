@@ -4,9 +4,10 @@
     "machine": "c6a.metal",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "comment": "",
-    "tags": ["C++", "column-oriented", "MySQL compatible"],
+    "tags": ["C++", "column-oriented", "MySQL compatible", "lukewarm-cold-run"],
     "load_time": 341,
     "data_size": 16334421700,
     "result": [

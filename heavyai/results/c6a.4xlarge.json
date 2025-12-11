@@ -4,10 +4,11 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "comment": "Previous names: OmniSci, mapD. Many queries cannot run due to errors and limitations.",
 
-    "tags": ["C++", "column-oriented"],
+    "tags": ["C++", "column-oriented", "lukewarm-cold-run"],
 
     "load_time": 572.633,
     "data_size": 50887437386,

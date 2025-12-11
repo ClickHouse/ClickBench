@@ -4,10 +4,11 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C", "column-oriented"],
+    "tags": ["C", "column-oriented", "lukewarm-cold-run"],
 
     "load_time": 939,
     "data_size": 49696606499,

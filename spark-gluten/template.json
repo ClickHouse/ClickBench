@@ -1,11 +1,13 @@
 {
   "system": "Spark (Gluten-on-Velox)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",
     "C++",
     "column-oriented",
-    "Spark derivative"
+    "Spark derivative",
+    "lukewarm-cold-run"
   ]
 }

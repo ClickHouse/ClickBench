@@ -1,11 +1,13 @@
 {
   "system": "DuckDB (data lake, partitioned)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",
     "column-oriented",
     "embedded",
-    "stateless"
+    "stateless",
+    "lukewarm-cold-run"
   ]
 }

@@ -1,9 +1,11 @@
 {
   "system": "HeavyAI",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",
-    "column-oriented"
+    "column-oriented",
+    "lukewarm-cold-run"
   ]
 }

@@ -1,10 +1,12 @@
 {
   "system": "SQLite",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C",
     "embedded",
-    "row-oriented"
+    "row-oriented",
+    "lukewarm-cold-run"
   ]
 }

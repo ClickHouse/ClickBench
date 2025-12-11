@@ -1,10 +1,7 @@
 {
   "system": "Arc",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
-  "tags": [
-    "Python",
-    "column-oriented",
-    "time-series"
-  ]
+  "tags": ["Go", "column-oriented", "time-series"]
 }

@@ -1,12 +1,14 @@
 {
   "system": "ClickHouse (Parquet, single)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",
     "column-oriented",
     "embedded",
     "stateless",
-    "ClickHouse derivative"
+    "ClickHouse derivative",
+    "lukewarm-cold-run"
   ]
 }

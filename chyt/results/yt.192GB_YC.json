@@ -5,10 +5,11 @@
     "machine": "CHYT: 12 vCPU 48GB",
     "cluster_size": 4,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "lukewarm-cold-run"],
 
     "load_time": 0,
     "data_size": 11991598975,

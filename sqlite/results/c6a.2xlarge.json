@@ -4,8 +4,9 @@
     "machine": "c6a.2xlarge",
     "cluster_size": 1,
     "proprietary":   "no",
+  "hardware": "cpu",
     "tuned":   "no",
-    "tags":   ["C","embedded","row-oriented"],
+    "tags":   ["C","embedded","row-oriented", "lukewarm-cold-run"],
     "load_time": 3189,
     "data_size": 75776589824,
     "result": [

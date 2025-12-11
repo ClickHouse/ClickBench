@@ -4,8 +4,9 @@
     "machine": "c6a.2xlarge",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","ClickHouse derivative","serverless","stateless"],
+    "tags": ["C++","column-oriented","ClickHouse derivative","serverless","stateless", "lukewarm-cold-run"],
     "load_time": 0,
     "data_size": 14557009492,
     "result": [

@@ -4,8 +4,9 @@
     "machine": "c6a.2xlarge",
     "cluster_size": 1,
     "proprietary":   "yes",
+  "hardware": "cpu",
     "tuned":   "no",
-    "tags":   ["C++","column-oriented","ClickHouse derivative"],
+    "tags":   ["C++","column-oriented","ClickHouse derivative", "lukewarm-cold-run"],
     "load_time": 277,
     "data_size": 15451849156,
     "result": [

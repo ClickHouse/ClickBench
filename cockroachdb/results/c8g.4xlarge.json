@@ -4,8 +4,9 @@
     "machine": "c8g.4xlarge",
     "cluster_size": 1,
     "proprietary":  "no",
+  "hardware": "cpu",
     "tuned":  "no",
-    "tags":  ["Go", "row-oriented", "PostgreSQL compatible"],
+    "tags":  ["Go", "row-oriented", "PostgreSQL compatible", "lukewarm-cold-run"],
     "load_time": 760,
     "data_size": 67948956585,
     "result": [

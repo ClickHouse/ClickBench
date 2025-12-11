@@ -1,9 +1,11 @@
 {
   "system": "Elasticsearch",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",
-    "search"
+    "search",
+    "lukewarm-cold-run"
   ]
 }

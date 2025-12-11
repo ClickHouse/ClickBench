@@ -1,10 +1,12 @@
 {
   "system": "DuckDB (memory)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",
     "column-oriented",
-    "embedded"
+    "embedded",
+    "lukewarm-cold-run"
   ]
 }

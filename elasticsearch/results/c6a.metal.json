@@ -4,8 +4,9 @@
     "machine": "c6a.metal",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
-    "tags": ["Java","search"],
+    "tags": ["Java","search", "lukewarm-cold-run"],
     "load_time": 9565,
     "data_size": 84661395365,
     "result": [

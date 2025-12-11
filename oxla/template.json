@@ -1,8 +1,10 @@
 {
   "system": "Oxla",
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
-    "C"
+    "C",
+    "lukewarm-cold-run"
   ]
 }

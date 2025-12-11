@@ -1,9 +1,11 @@
 {
   "system": "OctoSQL",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Go",
-    "stateless"
+    "stateless",
+    "lukewarm-cold-run"
   ]
 }

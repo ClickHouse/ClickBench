@@ -4,9 +4,10 @@
     "machine": "c6a.metal",
     "cluster_size": 1,
     "proprietary": "no",
+  "hardware": "cpu",
     "tuned": "no",
     "comment": "",
-    "tags": ["column-oriented", "dataframe"],
+    "tags": ["column-oriented", "dataframe", "lukewarm-cold-run"],
     "load_time": 2.300,
     "data_size": 14779976446,
     "result": [

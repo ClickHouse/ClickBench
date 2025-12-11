@@ -4,8 +4,9 @@
     "machine": "c6a.2xlarge",
     "cluster_size": 1,
     "proprietary":   "no",
+  "hardware": "cpu",
     "tuned":   "no",
-    "tags":   ["column-oriented","PostgreSQL compatible"],
+    "tags":   ["column-oriented","PostgreSQL compatible", "lukewarm-cold-run"],
     "load_time": 0,
     "data_size": 14820803219,
     "result": [

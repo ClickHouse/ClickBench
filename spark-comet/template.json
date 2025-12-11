@@ -1,11 +1,13 @@
 {
   "system": "Spark (Comet)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",
     "Rust",
     "column-oriented",
-    "Spark derivative"
+    "Spark derivative",
+    "lukewarm-cold-run"
   ]
 }

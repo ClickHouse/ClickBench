@@ -1,11 +1,13 @@
 {
   "system": "Opteryx",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "stateless",
     "column-oriented",
     "serverless",
-    "embedded"
+    "embedded",
+    "lukewarm-cold-run"
   ]
 }

@@ -1,6 +1,7 @@
 {
   "system": "Salesforce Hyper",
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",
