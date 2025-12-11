@@ -4,8 +4,9 @@
     "machine": "lambda-GH200",
     "cluster_size": 1,
     "proprietary": "no",
+    "hardware": "gpu",
     "tuned": "no",
-    "tags": ["C++","GPU-accelerated","column-oriented","embedded"],
+    "tags": ["C++","column-oriented","embedded","lukewarm-cold-run"],
     "load_time": 26.30,
     "data_size": 26903326720,
     "result": [
