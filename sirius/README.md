@@ -10,6 +10,8 @@ The benchmark script has been validated on both Lambda Cloud `GH200` instances a
 
 To run the benchmark on AWS, launch an EC2 instance using the `Deep Learning Base AMI with Single CUDA (Ubuntu 22.04)` (x86 version), which includes CUDA preinstalled.
 
+You will also need to make a GPU capacity reservation upfront, e.g. 1 day for ~100 USD.
+
 ### Lambda Cloud
 
 Running the benchmark on Lambda Cloud requires no additional setup.
