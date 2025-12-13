@@ -4,7 +4,7 @@
     "machine": "c6a.large",
     "cluster_size": 1,
     "proprietary": "no",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "tags": ["C++","column-oriented","embedded", "lukewarm-cold-run"],
     "load_time": 846,

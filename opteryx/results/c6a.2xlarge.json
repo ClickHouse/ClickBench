@@ -4,7 +4,7 @@
     "machine": "c6a.2xlarge",
     "cluster_size": 1,
     "proprietary":   "no",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned":   "no",
     "tags":   ["stateless","column-oriented","serverless","embedded", "lukewarm-cold-run"],
     "load_time": 0,

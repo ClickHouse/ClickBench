@@ -4,7 +4,7 @@
     "machine": "c7a.metal-48xl",
     "cluster_size": 1,
     "proprietary":  "no",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned":  "no",
     "tags":  ["Rust","column-oriented","ClickHouse derivative", "lukewarm-cold-run"],
     "load_time": 95,

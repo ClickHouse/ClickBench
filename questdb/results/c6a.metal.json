@@ -4,7 +4,7 @@
     "machine": "c6a.metal",
     "cluster_size": 1,
     "proprietary": "no",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "comment": "Uses multi-threaded COPY SQL for data load.",
     "tags": ["Java", "time-series", "lukewarm-cold-run"],

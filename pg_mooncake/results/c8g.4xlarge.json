@@ -4,7 +4,7 @@
     "machine": "c8g.4xlarge",
     "cluster_size": 1,
     "proprietary":   "no",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned":   "no",
     "tags":   ["C","column-oriented","PostgreSQL compatible", "lukewarm-cold-run"],
     "load_time": 579,

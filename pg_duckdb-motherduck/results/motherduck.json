@@ -4,7 +4,7 @@
     "machine": "Motherduck: Jumbo",
     "cluster_size": "serverless",
     "proprietary": "yes",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
 
     "tags": ["managed", "column-oriented", "PostgreSQL compatible", "serverless", "lukewarm-cold-run"],

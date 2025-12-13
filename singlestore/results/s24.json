@@ -4,7 +4,7 @@
     "machine": "SingleStore: S24",
     "cluster_size": 1,
     "proprietary": "yes",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "comment": "Previous name: MemSQL. Some queries did not run due to unsupported regex",
 

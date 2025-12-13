@@ -4,7 +4,7 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "comment": "CockroachDB v25.1.6. Cache size: 25%.",
 

@@ -4,7 +4,7 @@
     "machine": "c6a.xlarge",
     "cluster_size": 1,
     "proprietary":   "yes",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned":   "no",
     "tags":   ["C","column-oriented","PostgreSQL compatible", "lukewarm-cold-run"],
     "load_time": 937,

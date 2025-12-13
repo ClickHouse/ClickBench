@@ -4,7 +4,7 @@
     "machine": "c7a.metal-48xl",
     "cluster_size": 1,
     "proprietary":  "yes",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned":  "no",
     "tags":  ["C++","column-oriented","PostgreSQL compatible","ClickHouse derivative","lukewarm-cold-run"],
     "load_time": 199,

@@ -4,7 +4,7 @@
     "machine": "Snowflake: L",
     "cluster_size": 8,
     "proprietary": "yes",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "comment": "",
 

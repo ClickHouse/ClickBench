@@ -4,7 +4,7 @@
     "machine": "c6a.metal",
     "cluster_size": 1,
     "proprietary": "yes",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "tags": ["C++","column-oriented"],
     "load_time": 441,

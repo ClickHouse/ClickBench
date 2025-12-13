@@ -4,7 +4,7 @@
     "machine": "c7i.metal-48xl",
     "cluster_size": 1,
     "proprietary": "no",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless","Python","dataframe", "lukewarm-cold-run"],
     "load_time": 140,

@@ -4,7 +4,7 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "yes",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "tags": ["Go", "search", "lukewarm-cold-run"],
     "load_time": 5070.66,
