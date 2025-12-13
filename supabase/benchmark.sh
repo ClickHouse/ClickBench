@@ -17,7 +17,11 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 pigz -d -f hits.tsv.gz
 
 psql ${SUPABASE_CONNECTION_STRING} -c 'CREATE DATABASE test'
-psql ${SUPABASE_CONNECTION_STRING} -t <create.sql
+psql ${SUPABASE_CONNECTION_STRING} -t <create.sql 2>&1 | tee load_out.txt
+if grep 'ERROR' load_out.txt
+then
+    exit 1
+fi
 
 echo -n "Load time: "
 command time -f '%e' ./load.sh
@@ -27,6 +31,6 @@ command time -f '%e' ./load.sh
 
 ./run.sh 2>&1 | tee log.txt
 
-cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
-    awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+cat log.txt | grep -oP 'Time: \d+\.\d+ ms|psql: error' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/; s/^.*psql: error.*$/null/' |
+    awk '{ if (i % 3 == 0) { printf "[" }; if ($1 == "null") { printf $1 } else { printf $1 / 1000 }; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 echo

@@ -22,6 +22,6 @@ cat queries.sql | while read query; do
     for i in $(seq 1 $TRIES); do
         echo "$query" >> $temp_file
     done;
-    PGUSER=$PG_USER PGPASSWORD=$PG_PASSWORD psql -h $HOST_NAME -p $PORT -d $DB -t -f $temp_file | grep 'ms'
+    PGUSER=$PG_USER PGPASSWORD=$PG_PASSWORD psql -h $HOST_NAME -p $PORT -d $DB -t -f $temp_file 2>&1 | grep -P 'ms|psql: error' | tail -n1
     rm "$temp_file"
 done;

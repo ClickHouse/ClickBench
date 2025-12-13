@@ -26,8 +26,12 @@ docker run -d -v ./db:/var/db -v ./data:/data -p 5432:5432 --ulimit nofile=10485
 sleep 5 # Things below fail otherwise ...
 
 start=$(date +%s%3N)
-PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -f create.sql
+PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -f create.sql 2>&1 | tee load_out.txt
 end=$(date +%s%3N)
+if grep 'ERROR' load_out.txt
+then
+    exit 1
+fi
 echo "Load time: $(( (end - start) / 1000 ))"
 
 ./run.sh 2>&1 | tee log.txt
@@ -38,8 +42,8 @@ echo -n "Data size: "
 du -bcs db | grep total
 
 # Pretty-printing
-cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
-    awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+cat log.txt | grep -oP 'Time: \d+\.\d+ ms|psql: error' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/; s/^.*psql: error.*$/null/' |
+    awk '{ if (i % 3 == 0) { printf "[" }; if ($1 == "null") { printf $1 } else { printf $1 / 1000 }; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 
 # Cleanup
 docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume prune --all --force

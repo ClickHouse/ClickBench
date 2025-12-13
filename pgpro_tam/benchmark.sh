@@ -42,7 +42,11 @@ if [ ! -z "$1" ]; then
 else
     CREATE_FILE="parquet_fd"
 fi
-psql -h 127.0.0.1 -U postgres -t < create/"$CREATE_FILE".sql
+psql -h 127.0.0.1 -U postgres -t < create/"$CREATE_FILE".sql 2>&1 | tee load_out.txt
+if grep 'ERROR' load_out.txt
+then
+    exit 1
+fi
 
 #get and unpack hits.tsv
 sudo docker exec pgpro_tam bash -c "cd /tmp && wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz' && gzip -d -f hits.tsv.gz"
@@ -63,5 +67,5 @@ echo -n "Data size: "
 sudo docker exec pgpro_tam du -bcs /var/lib/postgresql/data/base | grep total
 
 #parse logfile for query execution time
-cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
-    awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+cat log.txt | grep -oP 'Time: \d+\.\d+ ms|psql: error' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/; s/^.*psql: error.*$/null/' |
+    awk '{ if (i % 3 == 0) { printf "[" }; if ($1 == "null") { printf $1 } else { printf $1 / 1000 }; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
