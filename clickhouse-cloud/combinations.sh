@@ -20,7 +20,7 @@ done
 
 for REPLICAS in 2 3
 do
-    for MEMORY in 8 12 16 32 64 120 236
+    for MEMORY in 8 12 16 32 64 120 236 356
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
         ./cloud-api.sh &
@@ -43,7 +43,7 @@ done
 
 for REPLICAS in 2 3
 do
-    for MEMORY in 8 12 16 32 64 120 236
+    for MEMORY in 8 12 16 32 64 120 236 356
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
         ./cloud-api.sh &
@@ -52,7 +52,7 @@ do
 done
 
 PROVIDER=azure
-REGION='eastus2'
+REGION='westus3'
 
 for REPLICAS in 1
 do
@@ -66,7 +66,7 @@ done
 
 for REPLICAS in 2 3
 do
-    for MEMORY in 8 12 16 32 64 120
+    for MEMORY in 8 12 16 32 64 120 236 356
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
         ./cloud-api.sh &
