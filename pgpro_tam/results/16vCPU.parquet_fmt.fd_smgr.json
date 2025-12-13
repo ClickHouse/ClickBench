@@ -4,7 +4,7 @@
     "machine": "pgpro_tam: 16 vCPU 32GB",
     "cluster_size": 1,
     "proprietary": "yes",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "comment": "",
 

@@ -4,7 +4,7 @@
     "machine": "serverless",
     "cluster_size": "serverless",
     "proprietary": "no",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "comment": "",
 

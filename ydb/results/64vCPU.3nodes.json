@@ -4,7 +4,7 @@
     "machine": "64 vCPU 256GB",
     "cluster_size": 3,
     "proprietary": "no",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "comment": "",
 

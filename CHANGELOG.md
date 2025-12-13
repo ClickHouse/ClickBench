@@ -2,6 +2,9 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2025-12-10
+Added the first GPU database to the benchmark, Sirius (Yifei Yang). Added a new selector, which allows to choose CPU or GPU databases in the report (Robert Schulze).
+
 ### 2025-11-16
 Distinguish lukewarm runs (legacy) and [true cold runs](https://github.com/ClickHouse/ClickBench/pull/692). (Robert Schulze)
 

@@ -4,7 +4,7 @@
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "comment": "It successfully loaded only 94465149 out of 99997497 records. Some queries returned NullPointerException. The loading process is painful - splitting to 100 pieces required. It does not correctly report errors on data loading, the results may be incorrect.",
 

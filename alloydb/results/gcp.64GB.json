@@ -4,7 +4,7 @@
     "machine": "AlloyDB: 8 vCPU 64 GB",
     "cluster_size": "serverless",
     "proprietary": "yes",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "comment": "",
 

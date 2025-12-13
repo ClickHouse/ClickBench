@@ -4,7 +4,7 @@
     "machine": "Supabase: 4XL",
     "cluster_size": 1,
     "proprietary": "no",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "comment": "",
 

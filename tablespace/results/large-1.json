@@ -4,7 +4,7 @@
   "machine": "Tablespace: L1 - 16CPU 32GB",
   "cluster_size": 1,
   "proprietary": "yes",
-  "hardware": "cpu",
+    "hardware": "cpu",
   "tuned": "no",
   "comment": "",
 

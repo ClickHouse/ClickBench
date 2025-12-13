@@ -4,7 +4,7 @@
   "machine": "Databricks: 2X-Large",
   "cluster_size": 64,
   "proprietary": "yes",
-  "hardware": "cpu",
+    "hardware": "cpu",
   "tuned": "no",
   "tags": ["managed", "column-oriented"],
   "load_time": 36.227,

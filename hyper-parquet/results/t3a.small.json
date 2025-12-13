@@ -4,7 +4,7 @@
     "machine": "t3a.small",
     "cluster_size": 1,
     "proprietary": "yes",
-  "hardware": "cpu",
+    "hardware": "cpu",
     "tuned": "no",
     "tags": ["C++","column-oriented"],
     "load_time": 0,
