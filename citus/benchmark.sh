@@ -15,7 +15,11 @@ echo "*:*:*:*:mypass" > .pgpass
 chmod 400 .pgpass
 
 psql -U postgres -h localhost -d postgres -t -c 'CREATE DATABASE test'
-psql -U postgres -h localhost -d postgres test -t < create.sql
+psql -U postgres -h localhost -d postgres test -t < create.sql 2>&1 | tee load_out.txt
+if grep 'ERROR' load_out.txt
+then
+    exit 1
+fi
 echo -n "Load time: "
 command time -f '%e' psql -U postgres -h localhost -d postgres test -q -t -c "\\copy hits FROM 'hits.tsv'"
 
@@ -27,5 +31,5 @@ command time -f '%e' psql -U postgres -h localhost -d postgres test -q -t -c "\\
 echo -n "Data size: "
 sudo docker exec -i citus du -bcs /var/lib/postgresql/data | grep total
 
-cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
-    awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+cat log.txt | grep -oP 'Time: \d+\.\d+ ms|psql: error' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/; s/^.*psql: error.*$/null/' |
+    awk '{ if (i % 3 == 0) { printf "[" }; if ($1 == "null") { printf $1 } else { printf $1 / 1000 }; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'

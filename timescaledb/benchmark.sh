@@ -23,7 +23,11 @@ pigz -d -f hits.tsv.gz
 sudo chmod og+rX ~
 chmod 777 hits.tsv
 
-sudo -u postgres psql test < create.sql
+sudo -u postgres psql test < create.sql 2>&1 | tee load_out.txt
+if grep 'ERROR' load_out.txt
+then
+    exit 1
+fi
 sudo -u postgres psql test -c "SELECT create_hypertable('hits', 'eventtime', chunk_time_interval => interval '3 day', create_default_indexes => false)"
 sudo -u postgres psql test -c "ALTER TABLE hits SET (timescaledb.compress, timescaledb.compress_segmentby = '', timescaledb.compress_orderby = 'counterid, userid, eventtime')"
 sudo -u postgres psql test -c "ALTER DATABASE test SET timescaledb.enable_chunk_skipping to ON;"
@@ -48,5 +52,5 @@ sudo -u postgres psql test -q -c "\t" -c "SELECT hypertable_size('hits');"
 
 ./run.sh 2>&1 | tee log.txt
 
-cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
-    awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+cat log.txt | grep -oP 'Time: \d+\.\d+ ms|psql: error' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/; s/^.*psql: error.*$/null/' |
+    awk '{ if (i % 3 == 0) { printf "[" }; if ($1 == "null") { printf $1 } else { printf $1 / 1000 }; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'

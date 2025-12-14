@@ -12,7 +12,11 @@ pigz -d -f hits.tsv.gz
 chmod 777 ~ hits.tsv
 
 psql postgresql://postgres:$PASSWORD@$HOSTNAME:5432 -t -c 'CREATE DATABASE test'
-psql "host=$HOSTNAME port=5432 dbname=test user=postgres password=$PASSWORD sslmode=require" < create.sql
+psql "host=$HOSTNAME port=5432 dbname=test user=postgres password=$PASSWORD sslmode=require" < create.sql 2>&1 | tee load_out.txt
+if grep 'ERROR' load_out.txt
+then
+    exit 1
+fi
 echo -n "Load time: "
 command time -f '%e' psql "host=$HOSTNAME port=5432 dbname=test user=postgres password=$PASSWORD sslmode=require" -t -c "\\copy hits FROM 'hits.tsv'"
 echo -n "Load time: "
@@ -23,13 +27,13 @@ psql "host=$HOSTNAME port=5432 dbname=test user=postgres password=$PASSWORD sslm
 ./run.sh "${HOSTNAME}" "${PASSWORD}" 2>&1 | tee log.txt
 
 cat log.txt |
-grep -oP 'Time: \d+\.\d+ ms' |
-sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
+grep -oP 'Time: \d+\.\d+ ms|psql: error' |
+sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/; s/^.*psql: error.*$/null/' |
 awk '{
     if (i % 3 == 0) {
         printf "[";
     }
-    printf $1 / 1000;
+    if ($1 == "null") { printf $1 } else { printf $1 / 1000 };
     if (i % 3 != 2) {
         printf ",";
     } else {

@@ -19,6 +19,6 @@ cat queries.sql | while read -r query; do
 
     echo "$query";
     for i in $(seq 1 $TRIES); do
-        PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -t -c '\timing' -c "$query" | grep 'Time'
+        PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -t -c '\timing' -c "$query" 2>&1 | grep -P 'Time|psql: error' | tail -n1
     done
 done

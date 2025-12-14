@@ -15,6 +15,6 @@ cat $FILE_NAME | while read -r query; do
 
     echo "$query";
     for i in $(seq 1 $TRIES); do
-        psql -U crate -h localhost --no-password -t -c '\timing' -c "$query" | grep 'Time'
+        psql -U crate -h localhost --no-password -t -c '\timing' -c "$query" 2>&1 | grep -P 'Time|psql: error' | tail -n1
     done;
 done;

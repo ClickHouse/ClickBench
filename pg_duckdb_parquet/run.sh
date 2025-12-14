@@ -10,5 +10,5 @@ cat queries.sql | while read -r query; do
     (
         echo '\timing'
         yes "$query" | head -n $TRIES
-    ) | psql --no-psqlrc --tuples-only postgres://postgres:duckdb@localhost:5432/postgres | grep 'Time'
+    ) | psql --no-psqlrc --tuples-only postgres://postgres:duckdb@localhost:5432/postgres 2>&1 | grep -P 'Time|psql: error' | tail -n1
 done

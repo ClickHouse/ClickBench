@@ -10,5 +10,5 @@ cat queries.sql | while read -r query; do
     (
         echo '\timing'
         yes "$query" | head -n $TRIES
-    ) | ./yugabyte/bin/ysqlsh -U yugabyte -d test -t | grep 'Time'
+    ) | ./yugabyte/bin/ysqlsh -U yugabyte -d test -t 2>&1 | grep -P 'Time|ysqlsh: error' | tail -n1
 done

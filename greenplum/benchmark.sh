@@ -67,7 +67,11 @@ sudo apt-get install -y pigz
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -d -f hits.tsv.gz
 chmod 777 ~ hits.tsv
-psql -d postgres -f create.sql
+psql -d postgres -f create.sql 2>&1 | tee load_out.txt
+if grep 'ERROR' load_out.txt
+then
+    exit 1
+fi
 nohup gpfdist &
 echo -n "Load time: "
 command time -f '%e' psql -d postgres -t -c "insert into hits select * from hits_ext;"
@@ -75,4 +79,4 @@ echo -n "Load time: "
 command time -f '%e' psql -d postgres -t -c "ANALYZE hits;"
 du -sh /gpdata*
 ./run.sh 2>&1 | tee log.txt
-cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+cat log.txt | grep -oP 'Time: \d+\.\d+ ms|psql: error' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/; s/^.*psql: error.*$/null/' |awk '{ if (i % 3 == 0) { printf "[" }; if ($1 == "null") { printf $1 } else { printf $1 / 1000 }; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'

@@ -38,7 +38,11 @@ PGUSER=$PG_USER PGPASSWORD=$PG_PASSWORD psql -h $HOST_NAME -p $PORT -d postgres 
 sleep 15  # sleep for 15 seconds
 PGUSER=$PG_USER PGPASSWORD=$PG_PASSWORD psql -h $HOST_NAME -p $PORT -d postgres  -t -c "CREATE DATABASE $DATABASE"
 sleep 15  # sleep for 15 seconds
-PGUSER=$PG_USER PGPASSWORD=$PG_PASSWORD psql -h $HOST_NAME -p $PORT -d $DATABASE -t < create.sql
+PGUSER=$PG_USER PGPASSWORD=$PG_PASSWORD psql -h $HOST_NAME -p $PORT -d $DATABASE -t < create.sql 2>&1 | tee load_out.txt
+if grep 'ERROR' load_out.txt
+then
+    exit 1
+fi
 sleep 15  # sleep for 15 seconds
 
 # split data
@@ -57,5 +61,5 @@ echo "Starting to run queries..."
 
 ./run.sh $PG_USER $PG_PASSWORD $HOST_NAME $PORT $DATABASE 2>&1 | tee log_queries_$DATABASE.txt
 
-cat log_queries_$DATABASE.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
-    awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }' | tee result_queries_$DATABASE.txt
+cat log_queries_$DATABASE.txt | grep -oP 'Time: \d+\.\d+ ms|psql: error' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/; s/^.*psql: error.*$/null/' |
+    awk '{ if (i % 3 == 0) { printf "[" }; if ($1 == "null") { printf $1 } else { printf $1 / 1000 }; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }' | tee result_queries_$DATABASE.txt

@@ -38,6 +38,6 @@ command time -f '%e' ./load.sh
 echo -n "Data size: "
 ./yugabyte/bin/ysqlsh -U yugabyte -d test -q -c "SELECT pg_total_relation_size('public.hits') AS TOTAL_TABLE_SIZE_IN_BYTES;"
 
-grep -oP 'Time: \d+\.\d+ ms' log.txt |
-  sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
-  awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+grep -oP 'Time: \d+\.\d+ ms|ysqlsh: error' log.txt |
+  sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/; s/^.*ysqlsh: error.*$/null/' |
+  awk '{ if (i % 3 == 0) { printf "[" }; if ($1 == "null") { printf $1 } else { printf $1 / 1000 }; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
