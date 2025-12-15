@@ -502,7 +502,7 @@ let types = document.getElementById('selectors_type');
 let machines = document.getElementById('selectors_machine');
 let cluster_sizes = document.getElementById('selectors_cluster_size');
 
-let unique_systems = [... new Set(data.map(elem => elem.system))];
+let unique_systems = [... new Set(data.map(elem => elem.system))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
 
 function toggle(e, elem, selectors_map) {
     selectors_map[elem] = !selectors_map[elem];
