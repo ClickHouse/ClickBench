@@ -5,7 +5,7 @@ CREATE TABLE hits
     Title varchar,
     GoodEvent byte,
     EventTime timestamp,
-    Eventdate timestamp,
+    EventDate timestamp,
     CounterID int,
     ClientIP ipv4,
     RegionID int,
