@@ -107,4 +107,4 @@ CREATE OR REPLACE TABLE hits
     CLID INTEGER NOT NULL,
     PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID)
 )
-ENGINE = MergeTree;
+ENGINE = MergeTree SETTINGS add_minmax_index_for_numeric_columns = 1;
