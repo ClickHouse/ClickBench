@@ -1,6 +1,6 @@
 {
-    "system":   "StarRocks-c8g-5",
-    "date": "2025-07-12",
+    "system": "StarRocks",
+    "date": "2025-12-25",
     "machine": "c8g.metal-48xl",
     "cluster_size": 1,
     "proprietary":   "no",
