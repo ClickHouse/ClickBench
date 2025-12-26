@@ -6,6 +6,10 @@ from datetime import date
 import json
 import os
 
+# The streaming engine will be the default soon
+# https://pola.rs/posts/polars-in-aggregate-dec25/
+pl.Config.set_engine_affinity("streaming")
+
 # 0: No., 1: SQL, 2: Polars
 queries = [
     ("Q0", "SELECT COUNT(*) FROM hits;", lambda x: x.select(pl.len()).collect().height),
