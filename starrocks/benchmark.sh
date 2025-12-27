@@ -4,7 +4,7 @@
 
 set -e
 
-VERSION=3.4.2-ubuntu-$(dpkg --print-architecture)
+VERSION=4.0.2-ubuntu-$(dpkg --print-architecture)
 # Install
 wget --continue --progress=dot:giga https://releases.starrocks.io/starrocks/StarRocks-$VERSION.tar.gz -O StarRocks-$VERSION.tar.gz
 tar zxvf StarRocks-${VERSION}.tar.gz
@@ -23,11 +23,11 @@ export STARROCKS_HOME=`pwd`
 mkdir -p meta storage
 
 # Start Frontend
-echo "meta_dir = ${STARROCKS_HOME}/meta " >> fe/conf/fe.conf
+printf "\nmeta_dir = ${STARROCKS_HOME}/meta \n" >> fe/conf/fe.conf
 fe/bin/start_fe.sh --daemon
 
 # Start Backend
-echo "storage_root_path = ${STARROCKS_HOME}/storage" >> be/conf/be.conf
+printf "\nstorage_root_path = ${STARROCKS_HOME}/storage\n" >> be/conf/be.conf
 be/bin/start_be.sh --daemon
 
 # Setup cluster
