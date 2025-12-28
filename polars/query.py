@@ -467,7 +467,6 @@ queries = [
 
 def run_timings(lf: pl.LazyFrame) -> None:
     for q in queries:
-        print(q[0])
         times = []
         for _ in range(3):
             start = timeit.default_timer()
@@ -477,7 +476,7 @@ def run_timings(lf: pl.LazyFrame) -> None:
                 times.append(None)
             else:
                 times.append(round(end - start, 3))
-        print(times)
+        print(f"{times},")
 
 
 data_size = os.path.getsize("hits.parquet")
