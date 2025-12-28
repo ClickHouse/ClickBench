@@ -12,16 +12,16 @@ pl.Config.set_engine_affinity("streaming")
 
 # 0: No., 1: SQL, 2: Polars
 queries = [
-    ("Q0", "SELECT COUNT(*) FROM hits;", lambda x: x.select(pl.len()).collect().item()),
+    ("Q0", "SELECT COUNT(*) FROM hits;", lambda x: x.select(pl.len()).collect().height),
     (
         "Q1",
         "SELECT COUNT(*) FROM hits WHERE AdvEngineID <> 0;",
-        lambda x: x.filter(pl.col("AdvEngineID") != 0).select(pl.len()).collect().item(),
+        lambda x: x.select(pl.col("AdvEngineID").filter(pl.col("AdvEngineID") != 0).count()).collect().height,
     ),
     (
         "Q2",
         "SELECT SUM(AdvEngineID), COUNT(*), AVG(ResolutionWidth) FROM hits;",
-        lambda x: x.select(a_sum=pl.col("AdvEngineID").sum(), count=pl.len(), a_mean=pl.col("ResolutionWidth").mean()).collect().rows()[0],
+        lambda x: x.select(a_sum=pl.col("AdvEngineID").sum(), count=pl.len(), a_mean=pl.col("AdvEngineID").mean()).collect().rows()[0],
     ),
     (
         "Q3",
@@ -55,8 +55,8 @@ queries = [
         "Q8",
         "SELECT RegionID, COUNT(DISTINCT UserID) AS u FROM hits GROUP BY RegionID ORDER BY u DESC LIMIT 10;",
         lambda x: x.group_by("RegionID")
-        .agg(pl.col("UserID").n_unique().alias("u"))
-        .sort("u", descending=True)
+        .agg(pl.col("UserID").n_unique())
+        .sort("UserID", descending=True)
         .head(10).collect(),
     ),
     (
@@ -66,12 +66,11 @@ queries = [
         .agg(
             [
                 pl.sum("AdvEngineID").alias("AdvEngineID_sum"),
-                pl.len().alias("count"),
                 pl.mean("ResolutionWidth").alias("ResolutionWidth_mean"),
                 pl.col("UserID").n_unique().alias("UserID_nunique"),
             ]
         )
-        .sort("count", descending=True)
+        .sort("AdvEngineID_sum", descending=True)
         .head(10).collect(),
     ),
     (
@@ -244,7 +243,7 @@ queries = [
             x.filter(pl.col("Referer") != "")
             .with_columns(
                 pl.col("Referer")
-                .str.extract("(?-u)^https?://(?:www\\.)?([^/]+)/.*$")
+                .str.extract(r"^https?://(?:www\\.)?([^/]+)/.*$")
                 .alias("k")
             )
             .group_by("k")
@@ -263,7 +262,7 @@ queries = [
     (
         "Q29",
         "SELECT SUM(ResolutionWidth), SUM(ResolutionWidth + 1), SUM(ResolutionWidth + 2), SUM(ResolutionWidth + 3), SUM(ResolutionWidth + 4), SUM(ResolutionWidth + 5), SUM(ResolutionWidth + 6), SUM(ResolutionWidth + 7), SUM(ResolutionWidth + 8), SUM(ResolutionWidth + 9), SUM(ResolutionWidth + 10), SUM(ResolutionWidth + 11), SUM(ResolutionWidth + 12), SUM(ResolutionWidth + 13), SUM(ResolutionWidth + 14), SUM(ResolutionWidth + 15), SUM(ResolutionWidth + 16), SUM(ResolutionWidth + 17), SUM(ResolutionWidth + 18), SUM(ResolutionWidth + 19), SUM(ResolutionWidth + 20), SUM(ResolutionWidth + 21), SUM(ResolutionWidth + 22), SUM(ResolutionWidth + 23), SUM(ResolutionWidth + 24), SUM(ResolutionWidth + 25), SUM(ResolutionWidth + 26), SUM(ResolutionWidth + 27), SUM(ResolutionWidth + 28), SUM(ResolutionWidth + 29), SUM(ResolutionWidth + 30), SUM(ResolutionWidth + 31), SUM(ResolutionWidth + 32), SUM(ResolutionWidth + 33), SUM(ResolutionWidth + 34), SUM(ResolutionWidth + 35), SUM(ResolutionWidth + 36), SUM(ResolutionWidth + 37), SUM(ResolutionWidth + 38), SUM(ResolutionWidth + 39), SUM(ResolutionWidth + 40), SUM(ResolutionWidth + 41), SUM(ResolutionWidth + 42), SUM(ResolutionWidth + 43), SUM(ResolutionWidth + 44), SUM(ResolutionWidth + 45), SUM(ResolutionWidth + 46), SUM(ResolutionWidth + 47), SUM(ResolutionWidth + 48), SUM(ResolutionWidth + 49), SUM(ResolutionWidth + 50), SUM(ResolutionWidth + 51), SUM(ResolutionWidth + 52), SUM(ResolutionWidth + 53), SUM(ResolutionWidth + 54), SUM(ResolutionWidth + 55), SUM(ResolutionWidth + 56), SUM(ResolutionWidth + 57), SUM(ResolutionWidth + 58), SUM(ResolutionWidth + 59), SUM(ResolutionWidth + 60), SUM(ResolutionWidth + 61), SUM(ResolutionWidth + 62), SUM(ResolutionWidth + 63), SUM(ResolutionWidth + 64), SUM(ResolutionWidth + 65), SUM(ResolutionWidth + 66), SUM(ResolutionWidth + 67), SUM(ResolutionWidth + 68), SUM(ResolutionWidth + 69), SUM(ResolutionWidth + 70), SUM(ResolutionWidth + 71), SUM(ResolutionWidth + 72), SUM(ResolutionWidth + 73), SUM(ResolutionWidth + 74), SUM(ResolutionWidth + 75), SUM(ResolutionWidth + 76), SUM(ResolutionWidth + 77), SUM(ResolutionWidth + 78), SUM(ResolutionWidth + 79), SUM(ResolutionWidth + 80), SUM(ResolutionWidth + 81), SUM(ResolutionWidth + 82), SUM(ResolutionWidth + 83), SUM(ResolutionWidth + 84), SUM(ResolutionWidth + 85), SUM(ResolutionWidth + 86), SUM(ResolutionWidth + 87), SUM(ResolutionWidth + 88), SUM(ResolutionWidth + 89) FROM hits;",
-        lambda x: x.select([(pl.col("ResolutionWidth") + i).sum().alias(f"c_{i}") for i in range(90)]).collect(),
+        lambda x: x.select(pl.sum_horizontal([pl.col("ResolutionWidth").shift(i) for i in range(1, 90)])).collect(),
     ),
     (
         "Q30",
@@ -323,21 +322,16 @@ queries = [
         lambda x: x.group_by("URL")
         .agg(pl.len().alias("c"))
         .sort("c", descending=True)
-        .with_columns(pl.lit(1).alias("1"))
         .head(10).collect(),
     ),
     (
         "Q35",
         "SELECT ClientIP, ClientIP - 1, ClientIP - 2, ClientIP - 3, COUNT(*) AS c FROM hits GROUP BY ClientIP, ClientIP - 1, ClientIP - 2, ClientIP - 3 ORDER BY c DESC LIMIT 10;",
-        lambda x: x.group_by("ClientIP")
+        lambda x: x.with_columns([pl.col("ClientIP")])
+        .group_by(["ClientIP"])
         .agg(pl.len().alias("c"))
-        .with_columns([
-            (pl.col("ClientIP") - 1).alias("ClientIP_minus_1"),
-            (pl.col("ClientIP") - 2).alias("ClientIP_minus_2"),
-            (pl.col("ClientIP") - 3).alias("ClientIP_minus_3")
-        ])
         .sort("c", descending=True)
-        .head(10).collect()
+        .head(10).collect(),
     ),
     (
         "Q36",
@@ -396,18 +390,15 @@ queries = [
             & (pl.col("EventDate") <= date(2013, 7, 31))
             & (pl.col("IsRefresh") == 0)
         )
-        .with_columns(
-            pl.when(pl.col("SearchEngineID").eq(0) & pl.col("AdvEngineID").eq(0))
-            .then(pl.col("Referer"))
-            .otherwise(pl.lit(""))
-            .alias("Src"),
-        )
         .group_by(
             [
                 "TraficSourceID",
                 "SearchEngineID",
                 "AdvEngineID",
-                "Src",
+                pl.when(pl.col("SearchEngineID").eq(0) & pl.col("AdvEngineID").eq(0))
+                .then(pl.col("Referer"))
+                .otherwise(pl.lit(""))
+                .alias("Src"),
                 "URL",
             ]
         )
@@ -457,9 +448,8 @@ queries = [
             & (pl.col("IsRefresh") == 0)
             & (pl.col("DontCountHits") == 0)
         )
-        .group_by(pl.col("EventTime").dt.truncate("1m").alias("M"))
+        .group_by(pl.col("EventTime").dt.truncate("1m"))
         .agg(pl.len().alias("PageViews"))
-        .sort("M")
         .slice(1000, 10).collect(),
     ),
 ]
@@ -477,7 +467,6 @@ def run_timings(lf: pl.LazyFrame) -> None:
             else:
                 times.append(round(end - start, 3))
         print(f"{times},")
-
 
 data_size = os.path.getsize("hits.parquet")
 
