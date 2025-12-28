@@ -467,7 +467,6 @@ queries = [
 
 def run_timings(lf: pl.LazyFrame) -> None:
     for q in queries:
-        print(q[0])
         times = []
         for _ in range(3):
             start = timeit.default_timer()
