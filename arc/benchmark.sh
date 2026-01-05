@@ -51,15 +51,9 @@ echo "  Memory limit: ${MEM_LIMIT_GB}GB (80% of ${TOTAL_MEM_GB}GB total)"
 echo ""
 
 # ============================================================
-# 3. START ARC AND CAPTURE TOKEN FROM LOGS
+# 3. START ARC AND CAPTURE TOKEN FROM LOGS (if auth enabled)
 # ============================================================
 echo "Starting Arc service..."
-
-# Check if we already have a valid token from a previous run
-if [ -f "arc_token.txt" ]; then
-    EXISTING_TOKEN=$(cat arc_token.txt)
-    echo "Found existing token file, will verify after Arc starts..."
-fi
 
 sudo systemctl start arc
 
@@ -78,34 +72,49 @@ for i in {1..30}; do
     sleep 1
 done
 
-# Try to get token - either from existing file or from logs (first run)
+# Check if auth is enabled by testing unauthenticated request
 ARC_TOKEN=""
+AUTH_ENABLED=false
 
-# First, check if existing token works
-if [ -n "$EXISTING_TOKEN" ]; then
-    if curl -sf http://localhost:8000/health -H "x-api-key: $EXISTING_TOKEN" > /dev/null 2>&1; then
-        ARC_TOKEN="$EXISTING_TOKEN"
-        echo "[OK] Using existing token from arc_token.txt"
-    else
-        echo "Existing token invalid, looking for new token in logs..."
+# Try a simple query without auth - if it works, auth is disabled
+TEST_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X POST http://localhost:8000/api/v1/query \
+    -H "Content-Type: application/json" \
+    -d '{"sql": "SELECT 1"}' 2>/dev/null)
+
+if [ "$TEST_RESPONSE" = "200" ]; then
+    echo "[OK] Auth is disabled, no token needed"
+else
+    AUTH_ENABLED=true
+    echo "Auth is enabled, looking for token..."
+
+    # Check if we already have a valid token from a previous run
+    if [ -f "arc_token.txt" ]; then
+        EXISTING_TOKEN=$(cat arc_token.txt)
+        if curl -sf http://localhost:8000/health -H "x-api-key: $EXISTING_TOKEN" > /dev/null 2>&1; then
+            ARC_TOKEN="$EXISTING_TOKEN"
+            echo "[OK] Using existing token from arc_token.txt"
+        else
+            echo "Existing token invalid, looking for new token in logs..."
+        fi
     fi
-fi
 
-# If no valid token yet, try to extract from logs (first run scenario)
-if [ -z "$ARC_TOKEN" ]; then
-    ARC_TOKEN=$(sudo journalctl -u arc --no-pager | grep -oP 'Initial admin API token: \K[^\s]+' | head -1)
+    # If no valid token yet, try to extract from logs (first run scenario)
+    if [ -z "$ARC_TOKEN" ]; then
+        ARC_TOKEN=$(sudo journalctl -u arc --no-pager | grep -oP 'Initial admin API token: \K[^\s]+' | head -1)
+        if [ -n "$ARC_TOKEN" ]; then
+            echo "[OK] Captured new token from logs"
+            echo "$ARC_TOKEN" > arc_token.txt
+        else
+            echo "Warning: Could not find API token, continuing without auth"
+            echo "(If auth is required, queries will fail)"
+        fi
+    fi
+
     if [ -n "$ARC_TOKEN" ]; then
-        echo "[OK] Captured new token from logs"
-        echo "$ARC_TOKEN" > arc_token.txt
-    else
-        echo "Error: Could not find or validate API token"
-        echo "If this is not the first run, Arc's database may need to be reset:"
-        echo "  sudo rm -rf /var/lib/arc/data/arc.db"
-        exit 1
+        echo "Token: ${ARC_TOKEN:0:20}..."
     fi
 fi
-
-echo "Token: ${ARC_TOKEN:0:20}..."
 
 # ============================================================
 # 4. DOWNLOAD DATASET

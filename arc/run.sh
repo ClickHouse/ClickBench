@@ -9,7 +9,15 @@ ARC_API_KEY="${ARC_API_KEY:-$(cat arc_token.txt 2>/dev/null)}"
 
 echo "Running benchmark with TRUE COLD RUNS (restart + cache clear before each query)" >&2
 echo "API endpoint: $ARC_URL" >&2
-echo "API key: ${ARC_API_KEY:0:20}..." >&2
+
+# Build auth header if token exists
+AUTH_HEADER=""
+if [ -n "$ARC_API_KEY" ]; then
+    AUTH_HEADER="-H x-api-key: $ARC_API_KEY"
+    echo "API key: ${ARC_API_KEY:0:20}..." >&2
+else
+    echo "No API key (auth disabled)" >&2
+fi
 
 # Function to restart Arc and clear caches
 restart_arc() {
@@ -47,42 +55,43 @@ cat queries.sql | while read -r query; do
 
     # Run the query 3 times (first is cold, 2-3 benefit from warm DB caches)
     for i in $(seq 1 $TRIES); do
-        # Mark the log position before query
-        LOG_MARKER=$(date -u +"%Y-%m-%dT%H:%M:%S")
-
         # Build JSON payload properly using printf to escape the query
         JSON_PAYLOAD=$(printf '{"sql": %s}' "$(echo "$query" | jq -Rs .)")
 
-        # Execute query
-        RESPONSE=$(curl -s -w "\n%{http_code}" \
-            -X POST "$ARC_URL/api/v1/query" \
-            -H "x-api-key: $ARC_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d "$JSON_PAYLOAD" \
-            --max-time 300 2>/dev/null)
+        # Execute query (with or without auth header)
+        if [ -n "$ARC_API_KEY" ]; then
+            RESPONSE=$(curl -s -w "\n%{http_code}" \
+                -X POST "$ARC_URL/api/v1/query" \
+                -H "x-api-key: $ARC_API_KEY" \
+                -H "Content-Type: application/json" \
+                -d "$JSON_PAYLOAD" \
+                --max-time 300 2>/dev/null)
+        else
+            RESPONSE=$(curl -s -w "\n%{http_code}" \
+                -X POST "$ARC_URL/api/v1/query" \
+                -H "Content-Type: application/json" \
+                -d "$JSON_PAYLOAD" \
+                --max-time 300 2>/dev/null)
+        fi
 
         HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+        BODY=$(echo "$RESPONSE" | head -n -1)
 
         if [ "$HTTP_CODE" = "200" ]; then
-            # Extract execution_time_ms from Arc logs
-            # Log format: 2025-11-28T14:20:44Z INF ... execution_time_ms=97 ...
-            sleep 0.1  # Small delay to ensure log is written
-            EXEC_TIME_MS=$(sudo journalctl -u arc --since="$LOG_MARKER" --no-pager 2>/dev/null | \
-                grep -oP 'execution_time_ms=\K[0-9]+' | tail -1)
-
+            # Extract execution_time_ms from JSON response
+            EXEC_TIME_MS=$(echo "$BODY" | jq -r '.execution_time_ms // empty')
             if [ -n "$EXEC_TIME_MS" ]; then
                 # Convert ms to seconds with 4 decimal places
                 EXEC_TIME_SEC=$(echo "scale=4; $EXEC_TIME_MS / 1000" | bc)
                 printf "%.4f\n" "$EXEC_TIME_SEC"
             else
                 echo "null"
-                echo "Warning: Could not extract execution_time_ms from logs" >&2
+                echo "Warning: execution_time_ms not found in response" >&2
             fi
         else
             echo "null"
             if [ "$i" -eq 1 ]; then
                 echo "Query failed (HTTP $HTTP_CODE): ${query:0:50}..." >&2
-                echo "Response: $(echo "$RESPONSE" | head -n -1 | head -c 200)" >&2
             fi
         fi
     done
