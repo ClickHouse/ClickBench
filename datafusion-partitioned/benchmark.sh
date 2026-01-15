@@ -11,8 +11,8 @@ sudo apt-get update -y
 sudo apt-get install -y gcc
 
 echo "Install DataFusion main branch"
-git clone https://github.com/apache/arrow-datafusion.git
-cd arrow-datafusion/
+git clone https://github.com/apache/datafusion.git
+cd datafusion/
 git checkout 52.0.0
 CARGO_PROFILE_RELEASE_LTO=true RUSTFLAGS="-C codegen-units=1" cargo build --release --package datafusion-cli --bin datafusion-cli
 export PATH="`pwd`/target/release:$PATH"

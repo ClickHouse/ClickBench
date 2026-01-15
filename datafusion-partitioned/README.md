@@ -10,12 +10,14 @@ The benchmark should be completed in under an hour. On-demand pricing is $0.6 pe
 
 1. manually start a AWS EC2 instance, the following environments are included in this dir:
 
-    | Instance Type |           OS            |        Disk        |               Others                |
-    | :-----------: | :---------------------: | :----------------: | :---------------------------------: |
-    | `c6a.xlarge`  | `Ubuntu 24.04` or later | Root 500GB gp2 SSD | no EBS optimized, no instance store |
-    | `c6a.2xlarge` |                         |                    |                                     |
-    | `c6a.4xlarge` |                         |                    |                                     |
-    | `c8g.4xlarge` |                         |                    |                                     |
+    | Instance Type |           OS            |        Disk        | Arch  |
+    | :-----------: | :---------------------: | :----------------: | :---: |
+    | `c6a.xlarge`  | `Ubuntu 24.04` or later | Root 500GB gp2 SSD | AMD64 |
+    | `c6a.2xlarge` |                         |                    | AMD64 |
+    | `c6a.4xlarge` |                         |                    | AMD64 |
+    | `c8g.4xlarge` |                         |                    | ARM64 |
+
+    All with no EBS optimized, no instance store. For `c6a.xlarge` instance, its memory is not capable to compile datafusion. It's recommended to enable a 8GB swap with ```sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile```.
 
 2. wait for status check passed, then ssh to EC2 `ssh ubuntu@{ip}`
 3. `git clone https://github.com/ClickHouse/ClickBench`
@@ -38,4 +40,4 @@ The benchmark should be completed in under an hour. On-demand pricing is $0.6 pe
 
 1. install datafusion-cli
 2. download the parquet ```seq 0 99 | xargs -P100 -I{} bash -c 'wget --directory-prefix partitioned --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'```
-3. execute it ```datafusion-cli -f create_single.sql queries.sql``` or ```bash run.sh```
+3. execute it ```datafusion-cli -f create_single.sql queries.sql``` or ```PATH="$(pwd)/datafusion/target/release:$PATH" ./run.sh```
