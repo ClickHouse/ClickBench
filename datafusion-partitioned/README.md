@@ -32,7 +32,7 @@ The benchmark should be completed in under an hour. On-demand pricing is $0.6 pe
     ```
 
 6. `bash benchmark.sh`
-7. `./save-result.sh c6a.4xlarge`
+7. Update corresponding `.json` file under `results`, or run `./save-result.sh` with instance type like `./save-result.sh c6a.4xlarge`
 
 ### Know Issues
 
