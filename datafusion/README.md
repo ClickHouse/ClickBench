@@ -8,16 +8,19 @@ We use parquet file here and create an external table for it; and then execute t
 
 The benchmark should be completed in under an hour. On-demand pricing is $0.6 per hour while spot pricing is only $0.2 to $0.3 per hour (us-east-2).
 
-1. manually start a AWS EC2 instance
-    - `c6a.4xlarge`
-    - Ubuntu 22.04 or later
-    - Root 500GB gp2 SSD
-    - no EBS optimized
-    - no instance store
-1. wait for status check passed, then ssh to EC2 `ssh ubuntu@{ip}`
-1. `git clone https://github.com/ClickHouse/ClickBench`
-1. `cd ClickBench/datafusion`
-1. `vi benchmark.sh` and modify following line to target Datafusion version
+1. manually start a AWS EC2 instance, the following environments are included in this dir:
+
+    | Instance Type |           OS            |        Disk        |               Others                |
+    | :-----------: | :---------------------: | :----------------: | :---------------------------------: |
+    | `c6a.xlarge`  | `Ubuntu 24.04` or later | Root 500GB gp2 SSD | no EBS optimized, no instance store |
+    | `c6a.2xlarge` |                         |                    |                                     |
+    | `c6a.4xlarge` |                         |                    |                                     |
+    | `c8g.4xlarge` |                         |                    |                                     |
+
+2. wait for status check passed, then ssh to EC2 `ssh ubuntu@{ip}`
+3. `git clone https://github.com/ClickHouse/ClickBench`
+4. `cd ClickBench/datafusion`
+5. `vi benchmark.sh` and modify following line to target Datafusion version
 
     ```bash
     git checkout 46.0.0
@@ -35,4 +38,4 @@ The benchmark should be completed in under an hour. On-demand pricing is $0.6 pe
 
 1. install datafusion-cli
 2. download the parquet ```wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/hits.parquet```
-3. execute it ```datafusion-cli -f create_single.sql queries.sql``` or ```bash run2.sh```
+3. execute it ```datafusion-cli -f create_single.sql queries.sql``` or ```bash run.sh```
