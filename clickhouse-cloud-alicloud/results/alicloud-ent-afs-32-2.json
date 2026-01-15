@@ -1,6 +1,6 @@
 
 {
-    "system": "ClickHouse ☁️ (alicloud-als)",
+    "system": "ClickHouse ☁️ (alicloud-afs)",
     "date": "2026-01-12",
     "machine": "AliCloud: 32CCU",
     "cluster_size": 2,

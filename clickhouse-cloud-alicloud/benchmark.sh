@@ -10,14 +10,13 @@
 # export STORAGE=...
 # export REPLICAS=...
 # export CCU=...
-
-url="https://clickhouse-test-clickbench-hangzhou.oss-cn-hangzhou-internal.aliyuncs.com/clickbench/hits_parquets/hits_{0..99}.parquet"
+# export OSS_URL=..., eg. "https://clickhouse-test-clickbench-hangzhou.oss-cn-hangzhou-internal.aliyuncs.com/clickbench/hits_parquets/hits_{0..99}.parquet"
  
 export CATEGORY="ent"
  
 MAX_INSERT_THREADS=$(clickhouse-client --host "$FDQN" --user "$USER" --password "$PASSWORD" --query "SELECT intDiv(getSetting('max_threads'), 4)")
 
-load_time=$(clickhouse-client --host "$FDQN" --user "$USER" --password "$PASSWORD" --enable-parallel-replicas 1 --max-insert-threads $MAX_INSERT_THREADS --query="INSERT INTO hits SELECT * FROM s3Cluster('default', '$url', '$AK', '$SK', 'parquet');" --time 2>&1)
+load_time=$(clickhouse-client --host "$FDQN" --user "$USER" --password "$PASSWORD" --enable-parallel-replicas 1 --max-insert-threads $MAX_INSERT_THREADS --query="INSERT INTO hits SELECT * FROM s3Cluster('default', '$OSS_URL', '$AK', '$SK', 'parquet');" --time 2>&1)
 
 
 result=$(./run.sh)
