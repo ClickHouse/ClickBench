@@ -1,10 +1,13 @@
 # DataFusion
 
-DataFusion is an extensible query execution framework, written in Rust, that uses Apache Arrow as its in-memory format. For more information, please check <https://arrow.apache.org/datafusion/user-guide/introduction.html>
+[Apache DataFusion] is an extensible query execution framework, written in Rust, that uses [Apache Arrow] as its in-memory format. For more information, please check <https://arrow.apache.org/datafusion/user-guide/introduction.html>
+
+[Apache DataFusion]: https://arrow.apache.org/datafusion/
+[Apache Arrow]: https://arrow.apache.org/
 
 We use parquet file here and create an external table for it; and then execute the queries.
 
-## Generate benchmark results
+## Cookbook: Generate benchmark results
 
 The benchmark should be completed in under an hour. On-demand pricing is $0.6 per hour while spot pricing is only $0.2 to $0.3 per hour (us-east-2).
 
@@ -29,12 +32,12 @@ The benchmark should be completed in under an hour. On-demand pricing is $0.6 pe
     ```
 
 6. `bash benchmark.sh`
+7. `./save-result.sh c6a.4xlarge`
 
 ### Know Issues
 
 1. importing parquet by `datafusion-cli` doesn't support schema, need to add some casting in queries.sql (e.g. converting EventTime from Int to Timestamp via `to_timestamp_seconds`)
 2. importing parquet by `datafusion-cli` make column name column name case-sensitive, i change all column name in queries.sql to double quoted literal (e.g. `EventTime` -> `"EventTime"`)
-3. `comparing binary with utf-8` and `group by binary` don't work in mac, if you run these queries in mac, you'll get some errors for queries contain binary format apache/arrow-datafusion#3050
 
 ## Generate full human readable results (for debugging)
 
