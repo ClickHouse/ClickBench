@@ -168,6 +168,17 @@ General rules regarding caching:
 Many systems cannot run the full benchmark suite successfully due to OOMs, crashes, or unsupported queries.
 Partial results should be included nevertheless - simply place `null` for the missing numbers.
 
+### Output Suppression
+
+As an end-to-end benchmark, ClickBench submissions should measure back-to-back runtimes, i.e. the combined time
+
+1. to send a query from the client (e.g. a native client tool, HTTP, etc.),
+2. process the query on the server, and
+3. send the query results back to the client.
+
+Some databases provide means to format the query result as a very compact result, e.g. ClickHouse's `Null` output format ([documentation](https://clickhouse.com/docs/interfaces/formats/Null)).
+This would effectively make step 3. free and is therefore disallowed.
+
 ### If The Results Cannot Be Published
 
 Some vendors don't allow publishing benchmark results due to the infamous [DeWitt Clause](https://cube.dev/blog/dewitt-clause-or-can-you-benchmark-a-database).
