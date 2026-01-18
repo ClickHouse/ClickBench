@@ -17,13 +17,15 @@ cat queries"$SUFFIX".sql | while read -r query; do
 
     echo -n "["
     for i in $(seq 1 $TRIES); do
-        RES=$(clickhouse-client --host "${FQDN:=localhost}" --password "${PASSWORD:=}" ${PASSWORD:+--secure} --time --format=Null --query="$query" --progress 0 2>&1 ||:)
+        RES=$(clickhouse-client --host "${FQDN:=localhost}" --password "${PASSWORD:=}" ${PASSWORD:+--secure} --time --format=Null --query="$query" --progress 0 2>&1 ||:) # (*)
         [[ "$?" == "0" ]] && echo -n "${RES}" || echo -n "null"
         [[ "$i" != $TRIES ]] && echo -n ", "
 
         echo "${QUERY_NUM},${i},${RES}" >> result.csv
     done
     echo "],"
+
+    # (*) --format=Null is client-side formatting. The query result is still sent back to the client.
 
     QUERY_NUM=$((QUERY_NUM + 1))
 done

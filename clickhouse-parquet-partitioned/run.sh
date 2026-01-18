@@ -8,13 +8,15 @@ cat queries.sql | while read -r query; do
 
     echo -n "["
     for i in $(seq 1 $TRIES); do
-        RES=$(./clickhouse local --time --format Null --query="$(cat create.sql); $query" 2>&1 | tail -n1)
+        RES=$(./clickhouse local --time --format Null --query="$(cat create.sql); $query" 2>&1 | tail -n1) # (*)
         [[ "$?" == "0" ]] && echo -n "${RES}" || echo -n "null"
         [[ "$i" != $TRIES ]] && echo -n ", "
 
         echo "${QUERY_NUM},${i},${RES}" >> result.csv
     done
     echo "],"
+
+    # (*) --format=Null is client-side formatting. The query result is still sent back to the client.
 
     QUERY_NUM=$((QUERY_NUM + 1))
 done
