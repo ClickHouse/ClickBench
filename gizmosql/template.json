@@ -1,0 +1,13 @@
+{
+  "system": "GizmoSQL",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "arrow-flight-sql",
+    "duckdb",
+    "lukewarm-cold-run"
+  ]
+}
