@@ -10,9 +10,10 @@
 # export STORAGE=...
 # export REPLICAS=...
 # export CCU=...
+# export ECS=...
 # export OSS_URL=..., eg. "https://clickhouse-test-clickbench-hangzhou.oss-cn-hangzhou-internal.aliyuncs.com/clickbench/hits_parquets/hits_{0..99}.parquet"
  
-export CATEGORY="ent"
+export CATEGORY="enterprise" # enterprise or community
  
 MAX_INSERT_THREADS=$(clickhouse-client --host "$FDQN" --user "$USER" --password "$PASSWORD" --query "SELECT intDiv(getSetting('max_threads'), 4)")
 
@@ -25,9 +26,9 @@ data_size=$(clickhouse-client --host "$FDQN" --user "$USER" --password "$PASSWOR
 
 echo '
 {
-    "system": "ClickHouse ☁️ (alicloud-'$STORAGE')",
+    "system": "ApsaraDB for ClickHouse('$CATEGORY', '$STORAGE')",
     "date": "'$(date +%F)'",
-    "machine": "AliCloud: '$CCU'CCU",
+    "machine": "AliCloud: '$CCU'CCU, '$ECS'",
     "cluster_size": '$REPLICAS',
 
     "proprietary": "yes",

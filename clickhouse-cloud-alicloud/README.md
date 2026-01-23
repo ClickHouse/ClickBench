@@ -51,6 +51,7 @@ To evaluate the performance of ClickHouse Cloud on Alibaba Cloud, follow these g
    export STORAGE=afs                        # Storage type identifier (e.g., afs, oss)
    export REPLICAS=replicas_num              # Number of replicas
    export CCU=your_ccu                       # Compute Capacity Units (CCUs)
+   export ECS=ECS_instance_generation
    export OSS_URL="https://your-bucket-name.oss-cn-hangzhou-internal.aliyuncs.com/clickbench/hits_parquets/hits_{0..99}.parquet"
    ```
    
@@ -90,6 +91,7 @@ To evaluate the performance of ClickHouse Cloud on Alibaba Cloud, follow these g
    export STORAGE=afs
    export REPLICAS=2
    export CCU=32
+   export ECS=r8i
    export OSS_URL="https://clickhouse-test-bucket.oss-cn-hangzhou-internal.aliyuncs.com/clickbench/hits_parquets/hits_{0..99}.parquet"
    
    ./benchmark.sh
