@@ -8,7 +8,7 @@ fi
 
 cat queries.sql | while read -r query; do
     sync
-    [ -w /proc/sys ] && echo 3 | sudo tee /proc/sys/vm/drop_caches
+    echo 3 | sudo tee /proc/sys/vm/drop_caches
 
     (
         echo '\timing'
