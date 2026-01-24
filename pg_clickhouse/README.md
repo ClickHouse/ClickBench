@@ -9,9 +9,6 @@ PostgreSQL and pushing queries down to a ClickHouse database. Files:
     [ClickHouse benchmark script](../clickhouse/benchmark.sh)
 *   `create-postgres.sql`: Loads pg_clickhouse into Postgres and creates the
     foreign table
-*   `create-tuned-memory.sql`, `create-tuned.sql`, and `create.sql`: Scripts
-    that create the ClickHouse table, copied from the [ClickHouse
-    Config](../clickhouse/)
 *   `postgres.sh`: Installs, configures, and starts PostgreSQL; based on the
     [PostgreSQL benchmark script](../postgresql/benchmark.sh)
 *   `queries.sql`: The benchmark queries, identical to the [PostgreSQL
