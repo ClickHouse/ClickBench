@@ -1,5 +1,5 @@
 {
-    "system":  "PostgreSQL with pg_mooncake",
+    "system":  "pg_mooncake",
     "date": "2025-07-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
