@@ -1,15 +1,29 @@
 #!/bin/bash
 
+# Source our env vars
+. util.sh
+
 TRIES=3
 TEMP_SQL_FILE="/tmp/benchmark_queries_$$.sql"
+
+# Ensure server is stopped on script exit
+trap stop_gizmosql EXIT
+
+echo "Clear Linux memory caches to ensure fair benchmark comparisons"
+sync
+echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
 
 # Read queries from file
 mapfile -t queries < queries.sql
 
-# Create the combined SQL script with each query repeated TRIES times
-> "${TEMP_SQL_FILE}"
+echo "Running benchmark with ${#queries[@]} queries, ${TRIES} tries each..."
 
 for query in "${queries[@]}"; do
+    > "${TEMP_SQL_FILE}"
+
+    # Start the GizmoSQL server
+    start_gizmosql
+
     # Add a comment to identify the query in the output
     echo "-- Query: ${query}" >> "${TEMP_SQL_FILE}"
 
@@ -17,16 +31,17 @@ for query in "${queries[@]}"; do
     for i in $(seq 1 ${TRIES}); do
         echo "${query}" >> "${TEMP_SQL_FILE}"
     done
+
+    # Execute the query script
+    gizmosqlline \
+        -u ${GIZMOSQL_SERVER_URI} \
+        -n ${GIZMOSQL_USERNAME} \
+        -p ${GIZMOSQL_PASSWORD} \
+        -f "${TEMP_SQL_FILE}"
+
+    # Stop the server before next query
+    stop_gizmosql
 done
-
-# Execute all queries in one session (so authentication overhead is minimized)
-echo "Running benchmark with $(wc -l < queries.sql) queries, ${TRIES} tries each..."
-
-gizmosqlline \
-  -u 'jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&disableCertificateVerification=true' \
-  -n clickbench \
-  -p clickbench \
-  -f "${TEMP_SQL_FILE}"
 
 # Clean up
 rm -f "${TEMP_SQL_FILE}"

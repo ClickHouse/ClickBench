@@ -1,52 +1,53 @@
 #!/bin/bash
 
+# Install requirements
+sudo apt-get update -y
+sudo apt install openjdk-17-jre-headless unzip netcat-openbsd -y
+
+# Detect architecture (maps x86_64->amd64, aarch64->arm64)
+ARCH=$(uname -m)
+if [ "$ARCH" = "x86_64" ]; then
+    ARCH="amd64"
+elif [ "$ARCH" = "aarch64" ]; then
+    ARCH="arm64"
+fi
+
 # Server setup Install
-sudo apt install docker.io -y
-sudo usermod -aG docker ${USER}
-sudo systemctl start docker
-
-# You must log out, then back into the VM at this point for Docker to work...
-
-# Run the GizmoSQL server in the background with Docker
-docker run --name gizmosql \
-           --detach \
-           --rm \
-           --tty \
-           --init \
-           --publish 31337:31337 \
-           --pull always \
-           --mount type=bind,source=/nfs_data,target=/opt/gizmosql/data \
-           --env GIZMOSQL_USERNAME=clickbench \
-           --env GIZMOSQL_PASSWORD=clickbench \
-           --env DATABASE_FILENAME=/opt/gizmosql/data/clickbench.db \
-           gizmodata/gizmosql:latest
+curl -L -o gizmosql.zip "https://github.com/gizmodata/gizmosql/releases/latest/download/gizmosql_cli_linux_${ARCH}.zip"
+unzip gizmosql.zip
+sudo mv gizmosql_server gizmosql_client /usr/local/bin/
 
 # Install Java and the GizmoSQLLine CLI client
-sudo apt install openjdk-17-jre-headless -y
 pushd /tmp
 curl -L -o gizmosqlline https://github.com/gizmodata/gizmosqlline/releases/latest/download/gizmosqlline
 chmod +x gizmosqlline
 sudo mv gizmosqlline /usr/local/bin/
 popd
 
+# Source our env vars and utility functions for starting/stopping gizmosql server
+. util.sh
+
+# Start the GizmoSQL server in the background
+start_gizmosql
+
 # Create the table
 gizmosqlline \
-  -u 'jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&disableCertificateVerification=true' \
-  -n clickbench \
-  -p clickbench \
+  -u ${GIZMOSQL_SERVER_URI} \
+  -n ${GIZMOSQL_USERNAME} \
+  -p ${GIZMOSQL_PASSWORD} \
   -f create.sql
 
 # Load the data
-pushd /nfs_data
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
-popd
 
 echo -n "Load time: "
 time gizmosqlline \
-  -u 'jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&disableCertificateVerification=true' \
-  -n clickbench \
-  -p clickbench \
+  -u ${GIZMOSQL_SERVER_URI} \
+  -n ${GIZMOSQL_USERNAME} \
+  -p ${GIZMOSQL_PASSWORD} \
   -f load.sql
+
+stop_gizmosql
 
 # Run the queries
 script --quiet --command="./run.sh" log.txt
@@ -55,7 +56,7 @@ script --quiet --command="./run.sh" log.txt
 sed -i 's/\r$//' log.txt
 
 echo -n "Data size: "
-wc -c /nfs_data/clickbench.db
+wc -c clickbench.db
 
 cat log.txt | \
   grep -E 'rows? selected \([0-9.]+ seconds\)|Killed|Segmentation' | \
