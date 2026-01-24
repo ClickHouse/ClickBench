@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","arrow-flight-sql","duckdb-backend","cold-run","tls-enabled"],
+    "tags": ["C++","column-oriented","arrow-flight-sql","duckdb-backend","cold-run","tls-disabled"],
     "load_time": 131.966,
     "data_size": 26924298240,
     "result": [
