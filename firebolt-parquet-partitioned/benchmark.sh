@@ -19,14 +19,14 @@ sudo docker run -dit --name firebolt-core --rm \
 # Wait until Firebolt is ready
 for _ in {1..600}
 do
-    curl -s "http://localhost:3473/" --data-binary "SELECT 'Firebolt is ready';" > /dev/null && break
+    curl -sS "http://localhost:3473/" --data-binary "SELECT 'Firebolt is ready';" > /dev/null && break
     sleep 1
 done
 
 # Create the database and external table
 echo "Creating external table..."
-curl -s "http://localhost:3473/?enable_multi_query_requests=true" --data-binary "DROP DATABASE IF EXISTS clickbench;CREATE DATABASE clickbench;"
-curl -s "http://localhost:3473/?database=clickbench&enable_multi_query_requests=true" --data-binary @create.sql
+curl -sS "http://localhost:3473/?enable_multi_query_requests=true" --data-binary "DROP DATABASE IF EXISTS clickbench;CREATE DATABASE clickbench;"
+curl -sS "http://localhost:3473/?database=clickbench&enable_multi_query_requests=true" --data-binary @create.sql
 
 # Print statistics
 DATA_SIZE=$(du -bcs data/hits_*.parquet 2>/dev/null | grep total | awk '{print $1}')
