@@ -2,7 +2,7 @@
 
 # Install
 
-qdb_version="9.2.3"
+qdb_version="9.3.1"
 if [[ $(arch) == "aarch64" ]] || [[ $(arch) == "arm"* ]]; then
   # ARM uses no-JRE binary, so we need to install JDK
   wget --continue --progress=dot:giga https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-17.0.9/graalvm-community-jdk-17.0.9_linux-aarch64_bin.tar.gz
