@@ -8,6 +8,6 @@
     "column-oriented",
     "arrow-flight-sql",
     "duckdb",
-    "lukewarm-cold-run"
+    "cold-run"
   ]
 }
