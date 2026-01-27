@@ -1,6 +1,6 @@
 {
   "system": "GlareDB (Parquet, single)",
-  "proprietary": "yes",
+  "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
   "tags": [
