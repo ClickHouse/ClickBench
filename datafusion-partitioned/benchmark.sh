@@ -1,25 +1,22 @@
 #!/bin/bash
 
+echo "Install Rust"
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
+bash rust-init.sh -y
+export HOME=${HOME:=~}
+source ~/.cargo/env
+
 echo "Install Dependencies"
 sudo apt-get update -y
+sudo apt-get install -y gcc
 
-echo "Install Homebrew"
-# This requires password input for sudo, which is not set by default.
-# You may need to run the following command to set a password first:
-# ```
-# sudo su
-# passwd ubuntu
-# exit
-# ```
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-echo >> /home/ubuntu/.bashrc
-echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"' >> /home/ubuntu/.bashrc
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"
-
-echo "Install datafusion-cli"
-# or use `brew install datafusion@52` to install a specific version
-brew install datafusion
-datafusion-cli --version
+echo "Install DataFusion main branch"
+git clone https://github.com/apache/arrow-datafusion.git
+cd arrow-datafusion/
+git checkout 47.0.0
+CARGO_PROFILE_RELEASE_LTO=true RUSTFLAGS="-C codegen-units=1" cargo build --release --package datafusion-cli --bin datafusion-cli
+export PATH="`pwd`/target/release:$PATH"
+cd ..
 
 echo "Download benchmark target data, partitioned"
 mkdir -p partitioned
