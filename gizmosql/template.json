@@ -5,10 +5,6 @@
   "tuned": "no",
   "tags": [
     "C++",
-    "column-oriented",
-    "arrow-flight-sql",
-    "duckdb-backend",
-    "cold-run",
-    "tls-disabled"
+    "column-oriented"
   ]
 }
