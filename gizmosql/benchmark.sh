@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export HOME=/home/ubuntu
+
 # Install requirements
 sudo apt-get update -y
 sudo apt install openjdk-17-jre-headless unzip netcat-openbsd -y
