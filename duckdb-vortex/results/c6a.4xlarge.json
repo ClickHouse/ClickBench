@@ -7,12 +7,9 @@
     "hardware": "cpu",
     "tuned": "no",
     "comment": "",
-
-    "tags": ["Rust", "column-oriented", "embedded", "stateless", "lukewarm-cold-run"],
-
+    "tags": ["Rust", "column-oriented", "embedded", "stateless"],
     "load_time": 85.49,
     "data_size": 15973777724,
-
     "result": [
         [0.045,0.010,0.010],
         [0.059,0.017,0.017],
