@@ -11,7 +11,7 @@ trap stop_gizmosql EXIT
 
 echo "Clear Linux memory caches to ensure fair benchmark comparisons"
 sync
-echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+echo 3 | tee /proc/sys/vm/drop_caches > /dev/null
 
 # Read queries from file
 mapfile -t queries < queries.sql
