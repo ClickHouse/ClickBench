@@ -7,7 +7,6 @@
     "Rust",
     "column-oriented",
     "embedded",
-    "stateless",
-    "lukewarm-cold-run"
+    "stateless"
   ]
 }
