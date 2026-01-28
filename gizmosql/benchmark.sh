@@ -52,7 +52,6 @@ time gizmosqlline \
 stop_gizmosql
 
 # Run the queries
-#script --quiet --command="./run.sh" log.txt
 ./run.sh 2>&1 | tee log.txt
 
 # Remove carriage returns from the log
