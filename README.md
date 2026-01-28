@@ -154,9 +154,9 @@ We distinguish two cases:
 
 1. Hot runs. This is the second and third run of each query. As the previous first run is supposed to populate all database and operating system caches, the two hot runs are expected to be the fastest runs overall.
 
-2. Cold runs. There are two sub-cases.
+2. Cold runs. This is the first run of each query. There are two sub-cases.
 
-2.a) True cold runs. Before each first run of each query, all operating system caches (page cache) and database caches (e.g. buffer pools) are cleared. Some databases provide commands to clear internal caches. For fairness towards databases which do not offer such statements, it is _required_ to restart the database before the first run of each query. Databases (or actually: data processors) which do not persist as a background process, e.g. [clickhouse-local](https://clickhouse.com/docs/operations/utilities/clickhouse-local), fulfil this requirement implicitly. It is still needed to clear the page cache before each first query to qualify as a true cold run.
+2.a) True cold runs. Before each first run of each query, all operating system caches (page cache) and database caches (e.g. buffer pools) are cleared. Some databases provide commands to clear internal caches. For fairness towards databases which do not offer such statements, it is _required_ to restart the database before the first run of each query. Databases (or actually: data processors) which do not persist as a background process between queries, e.g. [clickhouse-local](https://clickhouse.com/docs/operations/utilities/clickhouse-local), fulfil this requirement implicitly. It is still needed to clear the page cache before each first query to qualify as a true cold run.
 
 2.b) Lukewarm cold runs. Compared to true cold runs, _only_ the operating system page cache is cleared before each first run of each query. This is what ClickBench historically considered as "cold run", benefiting databases with extensive internal caching. Submissions that do not restart the database _must_ have a label "lukewarm-cold-run" in their result file. We encourage contributors to migrate submissions from lukewarm to true cold runs.
 
