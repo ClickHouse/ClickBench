@@ -6,6 +6,6 @@
   "tags": [
     "column-oriented",
     "PostgreSQL compatible",
-    "lukewarm-cold-run"
+    "cold-run"
   ]
 }
