@@ -9,10 +9,6 @@ TEMP_SQL_FILE="/tmp/benchmark_queries_$$.sql"
 # Ensure server is stopped on script exit
 trap stop_gizmosql EXIT
 
-echo "Clear Linux memory caches to ensure fair benchmark comparisons"
-sync
-echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
-
 # Read queries from file
 mapfile -t queries < queries.sql
 
@@ -20,6 +16,10 @@ echo "Running benchmark with ${#queries[@]} queries, ${TRIES} tries each..."
 
 for query in "${queries[@]}"; do
     > "${TEMP_SQL_FILE}"
+
+    # Clear Linux memory caches to ensure fair benchmark comparisons
+    sync
+    echo 3 | tee /proc/sys/vm/drop_caches > /dev/null
 
     # Start the GizmoSQL server
     start_gizmosql
