@@ -5,6 +5,8 @@ TRIES=3
 cat queries.sql | while read -r query; do
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches
+    docker restart pgduck
+    sleep 5 # wait for restart
 
     echo "$query"
     (
