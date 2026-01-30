@@ -1,6 +1,7 @@
 {
   "system": "Opteryx",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "stateless",

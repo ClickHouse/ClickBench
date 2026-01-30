@@ -1,6 +1,7 @@
 {
   "system": "TimescaleDB (no columnstore)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C",

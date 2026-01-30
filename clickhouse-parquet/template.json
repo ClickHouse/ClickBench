@@ -1,6 +1,7 @@
 {
   "system": "ClickHouse (Parquet, single)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

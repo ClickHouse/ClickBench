@@ -1,0 +1,11 @@
+{
+  "system": "Sirius",
+  "proprietary": "no",
+  "hardware": "gpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "embedded"
+  ]
+}

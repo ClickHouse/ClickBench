@@ -109,7 +109,11 @@ elif [[ $1 == 'test' ]]; then
 	if [[ $2 != 'no_dl' ]]; then sudo -iu gpadmin wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'; fi
 	if [[ $2 != 'no_dl' ]]; then sudo -iu gpadmin gzip -d -f hits.tsv.gz; fi
 	sudo -iu gpadmin chmod 777 ~ hits.tsv
-	sudo -iu gpadmin psql -d postgres -f /home/gpadmin/create.sql
+	sudo -iu gpadmin psql -d postgres -f /home/gpadmin/create.sql 2>&1 | tee load_out.txt
+	if grep 'ERROR' load_out.txt
+	then
+	    exit 1
+	fi
 	sudo -iu gpadmin nohup gpfdist &
 	if [[ $2 != 'no_dl' ]]; then echo -n "Load time: "
                                command time -f '%e' sudo -iu gpadmin psql -d postgres -t -c "insert into hits select * from hits_ext;"; fi
@@ -117,6 +121,6 @@ elif [[ $1 == 'test' ]]; then
                                command time -f '%e' sudo -iu gpadmin psql -d postgres -t -c "ANALYZE hits;"; fi
 	du -sh /data0*
 	sudo -iu gpadmin /home/gpadmin/run.sh 2>&1 | tee log.txt
-	cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+	cat log.txt | grep -oP 'Time: \d+\.\d+ ms|psql: error' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/; s/^.*psql: error.*$/null/' |awk '{ if (i % 3 == 0) { printf "[" }; if ($1 == "null") { printf $1 } else { printf $1 / 1000 }; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 
 fi

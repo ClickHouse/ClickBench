@@ -1,0 +1,10 @@
+{
+  "system": "pg_ducklake",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "column-oriented",
+    "PostgreSQL compatible"
+  ]
+}

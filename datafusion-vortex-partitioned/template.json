@@ -1,6 +1,7 @@
 {
   "system": "DataFusion (Vortex, partitioned)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Rust",

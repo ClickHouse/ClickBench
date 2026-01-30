@@ -4,7 +4,7 @@
 
 set -e
 
-VERSION=3.4.2-ubuntu-$(dpkg --print-architecture)
+VERSION=4.0.2-ubuntu-$(dpkg --print-architecture)
 # Install
 wget --continue --progress=dot:giga https://releases.starrocks.io/starrocks/StarRocks-$VERSION.tar.gz -O StarRocks-$VERSION.tar.gz
 tar zxvf StarRocks-${VERSION}.tar.gz
@@ -23,11 +23,11 @@ export STARROCKS_HOME=`pwd`
 mkdir -p meta storage
 
 # Start Frontend
-echo "meta_dir = ${STARROCKS_HOME}/meta " >> fe/conf/fe.conf
+printf "\nmeta_dir = ${STARROCKS_HOME}/meta \n" >> fe/conf/fe.conf
 fe/bin/start_fe.sh --daemon
 
 # Start Backend
-echo "storage_root_path = ${STARROCKS_HOME}/storage" >> be/conf/be.conf
+printf "\nstorage_root_path = ${STARROCKS_HOME}/storage\n" >> be/conf/be.conf
 be/bin/start_be.sh --daemon
 
 # Setup cluster
@@ -54,6 +54,7 @@ curl --location-trusted \
     -u root: \
     -T "hits.tsv" \
     -H "label:hits_tsv_${START}" \
+    -H "timeout:1000" \ # see https://github.com/ClickHouse/ClickBench/pull/740
     -H "columns: WatchID,JavaEnable,Title,GoodEvent,EventTime,EventDate,CounterID,ClientIP,RegionID,UserID,CounterClass,OS,UserAgent,URL,Referer,IsRefresh,RefererCategoryID,RefererRegionID,URLCategoryID,URLRegionID,ResolutionWidth,ResolutionHeight,ResolutionDepth,FlashMajor,FlashMinor,FlashMinor2,NetMajor,NetMinor,UserAgentMajor,UserAgentMinor,CookieEnable,JavascriptEnable,IsMobile,MobilePhone,MobilePhoneModel,Params,IPNetworkID,TraficSourceID,SearchEngineID,SearchPhrase,AdvEngineID,IsArtifical,WindowClientWidth,WindowClientHeight,ClientTimeZone,ClientEventTime,SilverlightVersion1,SilverlightVersion2,SilverlightVersion3,SilverlightVersion4,PageCharset,CodeVersion,IsLink,IsDownload,IsNotBounce,FUniqID,OriginalURL,HID,IsOldCounter,IsEvent,IsParameter,DontCountHits,WithHash,HitColor,LocalEventTime,Age,Sex,Income,Interests,Robotness,RemoteIP,WindowName,OpenerName,HistoryLength,BrowserLanguage,BrowserCountry,SocialNetwork,SocialAction,HTTPError,SendTiming,DNSTiming,ConnectTiming,ResponseStartTiming,ResponseEndTiming,FetchTiming,SocialSourceNetworkID,SocialSourcePage,ParamPrice,ParamOrderID,ParamCurrency,ParamCurrencyID,OpenstatServiceName,OpenstatCampaignID,OpenstatAdID,OpenstatSourceID,UTMSource,UTMMedium,UTMCampaign,UTMContent,UTMTerm,FromTag,HasGCLID,RefererHash,URLHash,CLID" \
     http://localhost:8030/api/hits/hits/_stream_load
 END=$(date +%s)

@@ -38,7 +38,11 @@ fi
 echo ""
 echo "Creating database..."
 export PGPASSWORD='postgres'
-psql -h localhost -U postgres -p 5432 -t < create.sql
+psql -h localhost -U postgres -p 5432 -t < create.sql 2>&1 | tee load_out.txt
+if grep 'ERROR' load_out.txt
+then
+    exit 1
+fi
 
 # load_time is zero, since the data is directly read from the Parquet file(s)
 # Time: 0000000.000 ms (00:00.000)
@@ -55,5 +59,5 @@ echo "Load time: 0"
 
 echo ""
 echo "Parsing results..."
-cat log.txt | grep -oP 'Time: \d+\.\d+ ms' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
-  awk '{ if (i % 3 == 0) { printf "[" }; printf $1 / 1000; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+cat log.txt | grep -oP 'Time: \d+\.\d+ ms|psql: error' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/; s/^.*psql: error.*$/null/' |
+  awk '{ if (i % 3 == 0) { printf "[" }; if ($1 == "null") { printf $1 } else { printf $1 / 1000 }; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'

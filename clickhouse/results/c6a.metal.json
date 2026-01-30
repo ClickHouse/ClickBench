@@ -1,9 +1,10 @@
 {
     "system": "ClickHouse",
-    "date": "2025-11-03",
+    "date": "2025-12-19",
     "machine": "c6a.metal",
     "cluster_size": 1,
     "proprietary": "no",
+    "hardware": "cpu",
     "tuned": "no",
     "tags": ["C++","column-oriented","ClickHouse derivative","lukewarm-cold-run"],
     "load_time": 157,

@@ -1,6 +1,7 @@
 {
   "system": "CockroachDB",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Go",

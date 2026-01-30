@@ -4,6 +4,7 @@
 	"machine": "Motherduck: standard",
 	"cluster_size": 1,
 	"proprietary": "yes",
+    "hardware": "cpu",
 	"tuned": "no",
 	"tags": ["C++", "column-oriented", "serverless", "managed"],
 	"load_time": 181.192,

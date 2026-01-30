@@ -4,6 +4,7 @@
     "machine": "t3a.small",
     "cluster_size": 1,
     "proprietary":   "no",
+    "hardware": "cpu",
     "tuned":   "no",
     "tags":   ["Go","stateless", "lukewarm-cold-run"],
     "load_time": 0,

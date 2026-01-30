@@ -1,6 +1,7 @@
 {
   "system": "Pinot",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",

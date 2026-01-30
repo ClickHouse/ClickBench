@@ -5,6 +5,7 @@
     "machine": "CHYT: 12 vCPU 48GB",
     "cluster_size": 2,
     "proprietary": "no",
+    "hardware": "cpu",
     "tuned": "no",
     "comment": "",
 

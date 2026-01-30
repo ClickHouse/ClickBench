@@ -18,6 +18,7 @@ do
     "machine": "ClickHouse ☁️: '$MEMORY'GiB",
     "cluster_size": '$REPLICAS',
     "proprietary": "yes",
+    "hardware": "cpu",
     "tuned": "no",
     "comment": "",
 

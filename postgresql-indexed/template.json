@@ -1,6 +1,7 @@
 {
   "system": "PostgreSQL (with indexes)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "yes",
   "tags": [
     "C",

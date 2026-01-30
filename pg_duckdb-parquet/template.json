@@ -1,0 +1,11 @@
+{
+  "system": "pg_duckdb (Parquet)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "column-oriented",
+    "PostgreSQL compatible",
+    "lukewarm-cold-run"
+  ]
+}

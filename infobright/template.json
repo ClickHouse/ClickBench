@@ -1,6 +1,7 @@
 {
   "system": "Infobright",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

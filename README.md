@@ -149,13 +149,16 @@ If a system is of a "multidimensional OLAP" kind, and so is always or implicitly
 
 ### Caching
 
-We distinguish three cases:
+Each of the 43 queries is run three times.
+We distinguish two cases:
 
-1. Hot runs. The database starts and then runs all queries sequentially, with three runs per query.
+1. Hot runs. This is the second and third run of each query. As the previous first run is supposed to populate all database and operating system caches, the two hot runs are expected to be the fastest runs overall.
 
-2. Cold runs. Before each of the three runs per query, all caches are cleared. This means a) clearing the operating system page cache and b) all caches within the database, including buffer pools. Many databases provide commands to clear internal caches. However, for fairness towards systems which don't offer such statements, it is required to _restart_ the database.
+2. Cold runs. This is the first run of each query. There are two sub-cases.
 
-3. Lukewarm runs. Similar to cold runs but _only_ the operating system page cache is cleared before each query. This is what ClickBench historically considered as "cold run", benefiting databases with aggressive internal caching. The benchmark is migrating from lukewarm runs to true cold runs (previous case 2.). Submissions that do not properly restart the database-under-test have a tag "lukewarm-cold-run". Please change the script to a true cold run, remove the label, and send a PR against the repository - thanks.
+2.a) True cold runs. Before each first run of each query, all operating system caches (page cache) and database caches (e.g. buffer pools) are cleared. Some databases provide commands to clear internal caches. For fairness towards databases which do not offer such statements, it is _required_ to restart the database before the first run of each query. Databases (or actually: data processors) which do not persist as a background process between queries, e.g. [clickhouse-local](https://clickhouse.com/docs/operations/utilities/clickhouse-local), fulfil this requirement implicitly. It is still needed to clear the page cache before each first query to qualify as a true cold run.
+
+2.b) Lukewarm cold runs. Compared to true cold runs, _only_ the operating system page cache is cleared before each first run of each query. This is what ClickBench historically considered as "cold run", benefiting databases with extensive internal caching. Submissions that do not restart the database _must_ have a label "lukewarm-cold-run" in their result file. We encourage contributors to migrate submissions from lukewarm to true cold runs.
 
 General rules regarding caching:
 - Query result caches should be disabled.
@@ -167,6 +170,17 @@ General rules regarding caching:
 
 Many systems cannot run the full benchmark suite successfully due to OOMs, crashes, or unsupported queries.
 Partial results should be included nevertheless - simply place `null` for the missing numbers.
+
+### Output Suppression
+
+As an end-to-end benchmark, ClickBench submissions should measure back-to-back runtimes, i.e. the combined time
+
+1. to send a query from the client (e.g. a native client tool, HTTP, etc.),
+2. process the query on the server, and
+3. send the query results back to the client.
+
+Some databases provide means to format the query result as a very compact result, e.g. ClickHouse's `Null` output format ([documentation](https://clickhouse.com/docs/interfaces/formats/Null)).
+This would effectively make step 3. free and is therefore disallowed.
 
 ### If The Results Cannot Be Published
 

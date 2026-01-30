@@ -4,6 +4,7 @@
     "machine": "c7a.metal-48xl",
     "cluster_size": 1,
     "proprietary": "no",
+    "hardware": "cpu",
     "tuned": "no",
     "tags": ["column-oriented"],
     "load_time": 0,

@@ -1,6 +1,7 @@
 {
   "system": "Sail (Parquet)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "column-oriented"

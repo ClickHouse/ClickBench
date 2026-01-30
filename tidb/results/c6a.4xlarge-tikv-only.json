@@ -5,6 +5,7 @@
     "cluster_size": 1,
     "comment": "v8.5.1",
     "proprietary": "no",
+    "hardware": "cpu",
     "tuned": "no",
     "tags": ["Rust", "row-oriented", "MySQL compatible", "lukewarm-cold-run"],
     "load_time": 4069,

@@ -4,6 +4,7 @@
   "machine": "Redshift: ra3.16xlarge",
   "cluster_size": 4,
   "proprietary": "yes",
+    "hardware": "cpu",
   "tuned": "no",
   "comment": "",
 

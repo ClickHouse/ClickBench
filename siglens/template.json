@@ -1,6 +1,7 @@
 {
   "system": "SigLens",
   "proprietary": "yes",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Go",

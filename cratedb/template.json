@@ -1,6 +1,7 @@
 {
   "system": "CrateDB",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Java",

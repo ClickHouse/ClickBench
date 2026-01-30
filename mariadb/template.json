@@ -1,6 +1,7 @@
 {
   "system": "MariaDB",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

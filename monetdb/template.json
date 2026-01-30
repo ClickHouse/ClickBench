@@ -1,6 +1,7 @@
 {
   "system": "MonetDB",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C",

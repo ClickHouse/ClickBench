@@ -38,7 +38,11 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 gzip -d -f /tmp/hits.tsv.gz
 chmod 444 /tmp/hits.tsv
 
-psql -U crate -h localhost --no-password -t < $CREATE_FILE
+psql -U crate -h localhost --no-password -t < $CREATE_FILE 2>&1 | tee load_out.txt
+if grep 'ERROR' load_out.txt
+then
+    exit 1
+fi
 
 START=$(date +%s)
 command time -f '%e' psql -U crate -h localhost --no-password -q -t -c "

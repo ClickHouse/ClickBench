@@ -1,5 +1,6 @@
 *.bak
 .idea
+.DS_Store
 .clickbench
 *.parquet
 hits.csv

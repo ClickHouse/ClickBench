@@ -4,6 +4,7 @@
     "machine": "c6a.2xlarge",
     "cluster_size": 1,
     "proprietary": "yes",
+    "hardware": "cpu",
     "tuned": "no",
     "tags": ["C++","column-oriented"],
     "load_time": 0,

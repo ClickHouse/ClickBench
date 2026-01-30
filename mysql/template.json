@@ -1,6 +1,7 @@
 {
   "system": "MySQL",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "C++",

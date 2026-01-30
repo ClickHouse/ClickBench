@@ -1,6 +1,7 @@
 {
   "system": "pg_duckdb (with indexes)",
   "proprietary": "no",
+  "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "column-oriented",

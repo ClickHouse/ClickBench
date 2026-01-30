@@ -10,5 +10,5 @@ cat queries.sql | while read -r query; do
     (
         echo '\timing'
         yes "$query" | head -n $TRIES
-    ) | psql -h localhost -p 5432 -U postgres -d test -t | grep 'Time'
+    ) | psql -h localhost -p 5432 -U postgres -d test -t 2>&1 | grep -P 'Time|psql: error' | tail -n1
 done
