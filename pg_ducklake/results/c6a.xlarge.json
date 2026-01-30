@@ -6,7 +6,7 @@
     "proprietary":   "no",
     "hardware": "cpu",
     "tuned":   "no",
-    "tags":   ["column-oriented", "PostgreSQL compatible", "cold-run"],
+    "tags":   ["column-oriented", "PostgreSQL compatible"],
     "load_time": 131.89,
     "data_size": 14403222390,
     "result": [

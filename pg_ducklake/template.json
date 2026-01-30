@@ -5,7 +5,6 @@
   "tuned": "no",
   "tags": [
     "column-oriented",
-    "PostgreSQL compatible",
-    "cold-run"
+    "PostgreSQL compatible"
   ]
 }
