@@ -1,6 +1,6 @@
 {
     "system": "Arc",
-    "date": "2026-02-01",
+    "date": "2026-02-02",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",
