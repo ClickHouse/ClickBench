@@ -94,9 +94,12 @@ run() {
         cat queries.sql | while read query; do
                 echo -n "["
                 for i in $(seq 1 $TRIES); do
-                        RES=$(yt clickhouse execute "$query" --alias *clickbench@0 --proxy $YT_PROXY --format JSON |  jq .statistics.elapsed 2>&1)
-                        [[ "$?" == "0" ]] && echo -n "${RES}" || echo -n "null"
+                        OUT=$(yt clickhouse execute "$query" --alias *clickbench@0 --proxy $YT_PROXY --format JSON |  jq .statistics.elapsed 2>&1)
+                        CH_EXIT=$?
+                        RES=$(printf '%s\n' "$OUT" | tail -n1)
+                        [[ "$CH_EXIT" == "0" ]] && echo -n "${RES}" || echo -n "null"
                         [[ "$i" != $TRIES ]] && echo -n ", "
+                        [[ "$CH_EXIT" == "139" ]] && echo "SEGFAULT: q=${QUERY_NUM} try=${i} ${RES}" >&2
                 done
                 if [[ $QUERY_NUM == $TOTAL_LINES ]]
                         then echo "]"
