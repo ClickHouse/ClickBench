@@ -4,6 +4,7 @@ import pandas as pd
 import timeit
 import datetime
 import json
+import subprocess
 import chdb
 
 start = timeit.default_timer()
@@ -35,6 +36,10 @@ with open("queries.sql") as f:
 # conn = chdb.connect("./tmp?verbose&log-level=test")
 conn = chdb.connect("./tmp")
 for q in queries:
+    # Flush OS page cache before first run of each query
+    subprocess.run(['sync'], check=True)
+    subprocess.run(['sudo', 'tee', '/proc/sys/vm/drop_caches'], input=b'3', check=True, stdout=subprocess.DEVNULL)
+
     times = []
     for _ in range(3):
         start = timeit.default_timer()
