@@ -71,8 +71,16 @@ then
     exit 1
 fi
 
-echo -n "Load time: "
-command time -f '%e' ./load.sh
+sync
+start=$(date +%s.%N)
+
+./load.sh
+sync
+
+end=$(date +%s.%N)
+elapsed=$(echo "$end - $start" | bc)
+
+echo "Load time: $elapsed s"
 
 psql $CONNECTION -c "ALTER DATABASE postgres SET duckdb.force_execution = true;"
 ./run.sh 2>&1 | tee log.txt
