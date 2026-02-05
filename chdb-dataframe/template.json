@@ -3,5 +3,5 @@
     "proprietary": "no",
   "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless","Python","dataframe","lukewarm-cold-run"]
+    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless","Python","dataframe"]
 }
