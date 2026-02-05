@@ -47,5 +47,14 @@ mkdir -p /var/lib/clickhouse/user_files
 sudo mv hits_*.parquet /var/lib/clickhouse/user_files/
 sudo chown clickhouse:clickhouse /var/lib/clickhouse/user_files/hits_*.parquet
 
-echo -n "Load time: "
-clickhouse-client --time --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" --max-insert-threads $(( $(nproc) / 4 ))
+sync
+
+start=$(date +%s.%N)
+
+clickhouse-client --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" --max-insert-threads $(( $(nproc) / 4 ))
+sync
+
+end=$(date +%s.%N)
+elapsed=$(echo "$end - $start" | bc)
+
+echo "Load time: $elapsed s"
