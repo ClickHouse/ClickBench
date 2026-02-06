@@ -8,11 +8,15 @@ cat queries.sql | while read -r query; do
 
     echo -n "["
     for i in $(seq 1 $TRIES); do
-        RES=$(./clickhouse local --time --format Null --query="$(cat create.sql); $query" 2>&1 | tail -n1) # (*)
-        [[ "$?" == "0" ]] && echo -n "${RES}" || echo -n "null"
-        [[ "$i" != $TRIES ]] && echo -n ", "
+        OUT=$(./clickhouse local --time --format Null --query="$(cat create.sql); $query" 2>&1)
+        CH_EXIT=$?
+        RES=$(printf '%s\n' "$OUT" | tail -n1) # (*)
 
-        echo "${QUERY_NUM},${i},${RES}" >> result.csv
+        [[ "$CH_EXIT" == "0" ]] && echo -n "${RES}" || echo -n "null"
+        [[ "$i" != $TRIES ]] && echo -n ", "
+        [[ "$CH_EXIT" == "139" ]] && echo "SEGFAULT: q=${QUERY_NUM} try=${i} ${RES}" >&2
+
+        echo "${QUERY_NUM},${i},${RES},${CH_EXIT}" >> result.csv
     done
     echo "],"
 
