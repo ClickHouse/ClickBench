@@ -45,11 +45,8 @@ echo "Install Python packages"
 python3 -m venv myenv
 source myenv/bin/activate
 pip install --upgrade setuptools wheel
-pip install --no-cache-dir "pysail>=0.4.2,<0.5.0"
-pip install "pyspark-client==4.0.0" \
-  "protobuf==5.28.3" \
-  "grpcio==1.71.2" \
-  "grpcio-status==1.71.2" \
+pip install --no-cache-dir "pysail>=0.4.6,<0.6.0"
+pip install "pyspark-client==4.1.1" \
   pandas \
   psutil
 
