@@ -15,7 +15,7 @@ select
     r['UserAgent'] AS UserAgent,
     r['URL']::text AS URL,
     r['Referer']::text AS Referer,
-    r['IsRefresh'] AS IsRefresh,
+    r['Refresh'] AS Refresh,
     r['RefererCategoryID'] AS RefererCategoryID,
     r['RefererRegionID'] AS RefererRegionID,
     r['URLCategoryID'] AS URLCategoryID,

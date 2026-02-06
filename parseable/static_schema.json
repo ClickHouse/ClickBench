@@ -160,7 +160,7 @@
 		"data_type": "int"
 	},
 	{
-		"name": "IsRefresh",
+		"name": "Refresh",
 		"data_type": "int"
 	},
 	{

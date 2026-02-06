@@ -320,35 +320,35 @@ queries = [
     ),
     (
         "Q30",
-        "SELECT SearchEngineID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, ClientIP ORDER BY c DESC LIMIT 10;",
+        "SELECT SearchEngineID, ClientIP, COUNT(*) AS c, SUM(Refresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, ClientIP ORDER BY c DESC LIMIT 10;",
         lambda x: x[x["SearchPhrase"] != ""]
         .groupby(["SearchEngineID", "ClientIP"])
         .agg(
             c=("SearchEngineID", "size"),
-            IsRefreshSum=("IsRefresh", "sum"),
+            RefreshSum=("Refresh", "sum"),
             AvgResolutionWidth=("ResolutionWidth", "mean"),
         )
         .nlargest(10, "c"),
     ),
     (
         "Q31",
-        "SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;",
+        "SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(Refresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;",
         lambda x: x[x["SearchPhrase"] != ""]
         .groupby(["WatchID", "ClientIP"])
         .agg(
             c=("WatchID", "size"),
-            IsRefreshSum=("IsRefresh", "sum"),
+            RefreshSum=("Refresh", "sum"),
             AvgResolutionWidth=("ResolutionWidth", "mean"),
         )
         .nlargest(10, "c"),
     ),
     (
         "Q32",
-        "SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;",
+        "SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(Refresh), AVG(ResolutionWidth) FROM hits GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;",
         lambda x: x.groupby(["WatchID", "ClientIP"])
         .agg(
             c=("WatchID", "size"),
-            IsRefreshSum=("IsRefresh", "sum"),
+            RefreshSum=("Refresh", "sum"),
             AvgResolutionWidth=("ResolutionWidth", "mean"),
         )
         .nlargest(10, "c"),
@@ -378,13 +378,13 @@ queries = [
     ),
     (
         "Q36",
-        "SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND URL <> '' GROUP BY URL ORDER BY PageViews DESC LIMIT 10;",
+        "SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND Refresh = 0 AND URL <> '' GROUP BY URL ORDER BY PageViews DESC LIMIT 10;",
         lambda x: x[
             (x["CounterID"] == 62)
             & (x["EventDate"] >= "2013-07-01")
             & (x["EventDate"] <= "2013-07-31")
             & (x["DontCountHits"] == 0)
-            & (x["IsRefresh"] == 0)
+            & (x["Refresh"] == 0)
             & (x["URL"] != "")
         ]
         .groupby("URL")
@@ -393,13 +393,13 @@ queries = [
     ),
     (
         "Q37",
-        "SELECT Title, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND Title <> '' GROUP BY Title ORDER BY PageViews DESC LIMIT 10;",
+        "SELECT Title, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND Refresh = 0 AND Title <> '' GROUP BY Title ORDER BY PageViews DESC LIMIT 10;",
         lambda x: x[
             (x["CounterID"] == 62)
             & (x["EventDate"] >= "2013-07-01")
             & (x["EventDate"] <= "2013-07-31")
             & (x["DontCountHits"] == 0)
-            & (x["IsRefresh"] == 0)
+            & (x["Refresh"] == 0)
             & (x["Title"] != "")
         ]
         .groupby("Title")
@@ -408,12 +408,12 @@ queries = [
     ),
     (
         "Q38",
-        "SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND IsLink <> 0 AND IsDownload = 0 GROUP BY URL ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;",
+        "SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND Refresh = 0 AND IsLink <> 0 AND IsDownload = 0 GROUP BY URL ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;",
         lambda x: x[
             (x["CounterID"] == 62)
             & (x["EventDate"] >= "2013-07-01")
             & (x["EventDate"] <= "2013-07-31")
-            & (x["IsRefresh"] == 0)
+            & (x["Refresh"] == 0)
             & (x["IsLink"] != 0)
             & (x["IsDownload"] == 0)
         ]
@@ -425,12 +425,12 @@ queries = [
     ),
     (
         "Q39",
-        "SELECT TraficSourceID, SearchEngineID, AdvEngineID, CASE WHEN (SearchEngineID = 0 AND AdvEngineID = 0) THEN Referer ELSE '' END AS Src, URL AS Dst, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 GROUP BY TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;",
+        "SELECT TraficSourceID, SearchEngineID, AdvEngineID, CASE WHEN (SearchEngineID = 0 AND AdvEngineID = 0) THEN Referer ELSE '' END AS Src, URL AS Dst, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND Refresh = 0 GROUP BY TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;",
         lambda x: x[
             (x["CounterID"] == 62)
             & (x["EventDate"] >= "2013-07-01")
             & (x["EventDate"] <= "2013-07-31")
-            & (x["IsRefresh"] == 0)
+            & (x["Refresh"] == 0)
         ]
         .groupby(["TraficSourceID", "SearchEngineID", "AdvEngineID", "Referer", "URL"])
         .size()
@@ -440,12 +440,12 @@ queries = [
     ),
     (
         "Q40",
-        "SELECT URLHash, EventDate, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND TraficSourceID IN (-1, 6) AND RefererHash = 3594120000172545465 GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 10 OFFSET 100;",
+        "SELECT URLHash, EventDate, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND Refresh = 0 AND TraficSourceID IN (-1, 6) AND RefererHash = 3594120000172545465 GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 10 OFFSET 100;",
         lambda x: x[
             (x["CounterID"] == 62)
             & (x["EventDate"] >= "2013-07-01")
             & (x["EventDate"] <= "2013-07-31")
-            & (x["IsRefresh"] == 0)
+            & (x["Refresh"] == 0)
             & (x["TraficSourceID"].isin([-1, 6]))
             & (x["RefererHash"] == 3594120000172545465)
         ]
@@ -457,12 +457,12 @@ queries = [
     ),
     (
         "Q41",
-        "SELECT WindowClientWidth, WindowClientHeight, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND DontCountHits = 0 AND URLHash = 2868770270353813622 GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10 OFFSET 10000;",
+        "SELECT WindowClientWidth, WindowClientHeight, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND Refresh = 0 AND DontCountHits = 0 AND URLHash = 2868770270353813622 GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10 OFFSET 10000;",
         lambda x: x[
             (x["CounterID"] == 62)
             & (x["EventDate"] >= "2013-07-01")
             & (x["EventDate"] <= "2013-07-31")
-            & (x["IsRefresh"] == 0)
+            & (x["Refresh"] == 0)
             & (x["DontCountHits"] == 0)
             & (x["URLHash"] == 2868770270353813622)
         ]
@@ -474,12 +474,12 @@ queries = [
     ),
     (
         "Q42",
-        "SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;",
+        "SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND Refresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;",
         lambda x: x[
             (x["CounterID"] == 62)
             & (x["EventDate"] >= "2013-07-14")
             & (x["EventDate"] <= "2013-07-15")
-            & (x["IsRefresh"] == 0)
+            & (x["Refresh"] == 0)
             & (x["DontCountHits"] == 0)
         ]
         .groupby(pd.Grouper(key="EventTime", freq="T"))

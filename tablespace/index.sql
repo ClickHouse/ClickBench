@@ -1,7 +1,7 @@
 ALTER TABLE hits ADD CONSTRAINT hits_pkey PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID);
 Create index hits_col_idx on hits using columnstore(
     WatchID, AdvEngineID,  ResolutionWidth,  UserID,  SearchPhrase,  EventDate,  RegionID,  MobilePhoneModel,  MobilePhone,
-    SearchEngineID,  EventTime, URL,  Title,  CounterID,  Referer,  ClientIP,  DontCountHits,  IsRefresh,  IsLink,  IsDownload,
+    SearchEngineID,  EventTime, URL,  Title,  CounterID,  Referer,  ClientIP,  DontCountHits,  Refresh,  IsLink,  IsDownload,
     TraficSourceID,  URLHash,  RefererHash,  WindowClientWidth, WindowClientHeight
 )
     WITH (

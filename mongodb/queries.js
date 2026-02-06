@@ -411,7 +411,7 @@ queries.push([
 ]);
 
 // Q30
-// SELECT SearchEngineID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, ClientIP ORDER BY c DESC LIMIT 10;
+// SELECT SearchEngineID, ClientIP, COUNT(*) AS c, SUM(Refresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, ClientIP ORDER BY c DESC LIMIT 10;
 queries.push([
   { $match: { SearchPhrase: { $ne: "" } } },
   {
@@ -426,7 +426,7 @@ queries.push([
       SearchEngineID: { $first: "$SearchEngineID" },
       ClientIP: { $first: "$ClientIP" },
       avg_ResolutionWidth: { $avg: "$ResolutionWidth" },
-      sum_IsRefresh: { $sum: "$IsRefresh" },
+      sum_Refresh: { $sum: "$Refresh" },
       c: { $sum: 1 },
     },
   },
@@ -435,7 +435,7 @@ queries.push([
 ]);
 
 // Q31
-// SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;
+// SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(Refresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;
 queries.push([
   { $match: { SearchPhrase: { $ne: "" } } },
   {
@@ -450,7 +450,7 @@ queries.push([
       WatchID: { $first: "$WatchID" },
       ClientIP: { $first: "$ClientIP" },
       avg_ResolutionWidth: { $avg: "$ResolutionWidth" },
-      sum_IsRefresh: { $sum: "$IsRefresh" },
+      sum_Refresh: { $sum: "$Refresh" },
       c: { $sum: 1 },
     },
   },
@@ -459,7 +459,7 @@ queries.push([
 ]);
 
 // Q32
-// SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;
+// SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(Refresh), AVG(ResolutionWidth) FROM hits GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;
 queries.push([
   {
     $group: {
@@ -473,7 +473,7 @@ queries.push([
       WatchID: { $first: "$WatchID" },
       ClientIP: { $first: "$ClientIP" },
       avg_ResolutionWidth: { $avg: "$ResolutionWidth" },
-      sum_IsRefresh: { $sum: "$IsRefresh" },
+      sum_Refresh: { $sum: "$Refresh" },
       c: { $sum: 1 },
     },
   },
@@ -520,14 +520,14 @@ queries.push([
 ]);
 
 // Q36
-// SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND URL <> '' GROUP BY URL ORDER BY PageViews DESC LIMIT 10;
+// SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND Refresh = 0 AND URL <> '' GROUP BY URL ORDER BY PageViews DESC LIMIT 10;
 queries.push([
   {
     $match: {
       CounterID: 62,
       EventDate: { $gte: ISODate("2013-07-01"), $lte: ISODate("2013-07-31") },
       DontCountHits: 0,
-      IsRefresh: 0,
+      Refresh: 0,
       URL: { $ne: "" },
     },
   },
@@ -542,14 +542,14 @@ queries.push([
 ]);
 
 // Q37
-// SELECT Title, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND Title <> '' GROUP BY Title ORDER BY PageViews DESC LIMIT 10;
+// SELECT Title, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND Refresh = 0 AND Title <> '' GROUP BY Title ORDER BY PageViews DESC LIMIT 10;
 queries.push([
   {
     $match: {
       CounterID: 62,
       EventDate: { $gte: ISODate("2013-07-01"), $lte: ISODate("2013-07-31") },
       DontCountHits: 0,
-      IsRefresh: 0,
+      Refresh: 0,
       URL: { $ne: "" },
     },
   },
@@ -564,13 +564,13 @@ queries.push([
 ]);
 
 // Q38
-// SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND IsLink <> 0 AND IsDownload = 0 GROUP BY URL ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;
+// SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND Refresh = 0 AND IsLink <> 0 AND IsDownload = 0 GROUP BY URL ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;
 queries.push([
   {
     $match: {
       CounterID: 62,
       EventDate: { $gte: ISODate("2013-07-01"), $lte: ISODate("2013-07-31") },
-      IsRefresh: 0,
+      Refresh: 0,
       IsLink: { $ne: 0 },
       IsDownload: 0,
       URL: { $ne: "" },
@@ -588,13 +588,13 @@ queries.push([
 ]);
 
 // Q39
-// SELECT TraficSourceID, SearchEngineID, AdvEngineID, CASE WHEN (SearchEngineID = 0 AND AdvEngineID = 0) THEN Referer ELSE '' END AS Src, URL AS Dst, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 GROUP BY TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;
+// SELECT TraficSourceID, SearchEngineID, AdvEngineID, CASE WHEN (SearchEngineID = 0 AND AdvEngineID = 0) THEN Referer ELSE '' END AS Src, URL AS Dst, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND Refresh = 0 GROUP BY TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;
 queries.push([
   {
     $match: {
       CounterID: 62,
       EventDate: { $gte: ISODate("2013-07-01"), $lte: ISODate("2013-07-31") },
-      IsRefresh: 0,
+      Refresh: 0,
     },
   },
   {
@@ -632,13 +632,13 @@ queries.push([
 ]);
 
 // Q40
-// SELECT URLHash, EventDate, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND TraficSourceID IN (-1, 6) AND RefererHash = 3594120000172545465 GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 10 OFFSET 100;
+// SELECT URLHash, EventDate, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND Refresh = 0 AND TraficSourceID IN (-1, 6) AND RefererHash = 3594120000172545465 GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 10 OFFSET 100;
 queries.push([
   {
     $match: {
       CounterID: 62,
       EventDate: { $gte: ISODate("2013-07-01"), $lte: ISODate("2013-07-31") },
-      IsRefresh: 0,
+      Refresh: 0,
       TraficSourceID: { $in: [-1, 6] },
       RefererHash: NumberLong("3594120000172545465"),
     },
@@ -658,13 +658,13 @@ queries.push([
 ]);
 
 // Q41
-// SELECT WindowClientWidth, WindowClientHeight, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND DontCountHits = 0 AND URLHash = 2868770270353813622 GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10 OFFSET 10000;
+// SELECT WindowClientWidth, WindowClientHeight, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND Refresh = 0 AND DontCountHits = 0 AND URLHash = 2868770270353813622 GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10 OFFSET 10000;
 queries.push([
   {
     $match: {
       CounterID: 62,
       EventDate: { $gte: ISODate("2013-07-01"), $lte: ISODate("2013-07-31") },
-      IsRefresh: 0,
+      Refresh: 0,
       DontCountHits: 0,
       URLHash: NumberLong("2868770270353813622"),
     },
@@ -684,13 +684,13 @@ queries.push([
 ]);
 
 // Q42
-// SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;
+// SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND Refresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;
 queries.push([
   {
     $match: {
       CounterID: 62,
       EventDate: { $gte: ISODate("2013-07-14"), $lte: ISODate("2013-07-15") },
-      IsRefresh: 0,
+      Refresh: 0,
       DontCountHits: 0,
     },
   },

@@ -130,7 +130,7 @@
         "IsParameter" : {
           "type" : "short"
         },
-        "IsRefresh" : {
+        "Refresh" : {
           "type" : "short"
         },
         "JavaEnable" : {

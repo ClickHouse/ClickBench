@@ -4,7 +4,7 @@ CREATE INDEX cid on hits (CounterID);
 CREATE INDEX eventtime on hits (EventTime);
 CREATE INDEX eventdate on hits (EventDate);
 CREATE INDEX mobile on hits (MobilePhoneModel);
-CREATE INDEX refresh on hits (IsRefresh, DontCountHits);
+CREATE INDEX refresh on hits (Refresh, DontCountHits);
 CREATE INDEX resolutionwidth on hits (ResolutionWidth);
 CREATE INDEX search on hits (SearchPhrase);
 CREATE INDEX UserID on hits (UserID);

@@ -13,7 +13,7 @@
     "dataType": "LONG"
   },
   {
-    "name": "IsRefresh",
+    "name": "Refresh",
     "dataType": "LONG"
   },
   {

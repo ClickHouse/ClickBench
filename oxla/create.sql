@@ -15,7 +15,7 @@ CREATE TABLE hits
     UserAgent INT NOT NULL,
     URL TEXT NOT NULL,
     Referer TEXT NOT NULL,
-    IsRefresh INT NOT NULL,
+    Refresh INT NOT NULL,
     RefererCategoryID INT NOT NULL,
     RefererRegionID INTEGER NOT NULL,
     URLCategoryID INT NOT NULL,

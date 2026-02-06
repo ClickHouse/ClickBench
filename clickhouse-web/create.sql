@@ -15,7 +15,7 @@ ATTACH TABLE hits UUID 'c449dfbf-ba06-4d13-abec-8396559eb955'
     UserAgent SMALLINT NOT NULL,
     URL TEXT NOT NULL,
     Referer TEXT NOT NULL,
-    IsRefresh SMALLINT NOT NULL,
+    Refresh SMALLINT NOT NULL,
     RefererCategoryID SMALLINT NOT NULL,
     RefererRegionID INTEGER NOT NULL,
     URLCategoryID SMALLINT NOT NULL,

@@ -15,7 +15,7 @@ CREATE TABLE hits2
     UserAgent SMALLINT NOT NULL,
     URL TEXT NOT NULL,
     Referer TEXT NOT NULL,
-    IsRefresh SMALLINT NOT NULL,
+    Refresh SMALLINT NOT NULL,
     RefererCategoryID SMALLINT NOT NULL,
     RefererRegionID INTEGER NOT NULL,
     URLCategoryID SMALLINT NOT NULL,

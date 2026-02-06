@@ -21,7 +21,7 @@ CREATE OR REPLACE VIEW hits as SELECT
   UserAgent,
   URL,
   Referer,
-  IsRefresh,
+  Refresh,
   RefererCategoryID,
   RefererRegionID,
   URLCategoryID,

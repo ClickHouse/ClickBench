@@ -27,7 +27,7 @@
           "UserAgent",
           "URL",
           "Referer",
-          "IsRefresh",
+          "Refresh",
           "RefererCategoryID",
           "RefererRegionID",
           "URLCategoryID",
@@ -202,7 +202,7 @@
             "type": "string"
           },
           {
-            "name": "IsRefresh",
+            "name": "Refresh",
             "type": "long"
           },
           {

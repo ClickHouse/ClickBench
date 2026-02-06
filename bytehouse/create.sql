@@ -15,7 +15,7 @@ CREATE TABLE test.hits
     `UserAgent` Int16,
     `URL` String,
     `Referer` String,
-    `IsRefresh` Int16,
+    `Refresh` Int16,
     `RefererCategoryID` Int16,
     `RefererRegionID` Int32,
     `URLCategoryID` Int16,

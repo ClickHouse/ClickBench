@@ -267,13 +267,13 @@ queries = [
     ),
     (
         "Q30",
-        "SELECT SearchEngineID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, ClientIP ORDER BY c DESC LIMIT 10;",
+        "SELECT SearchEngineID, ClientIP, COUNT(*) AS c, SUM(Refresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, ClientIP ORDER BY c DESC LIMIT 10;",
         lambda x: x.filter(pl.col("SearchPhrase") != "")
         .group_by(["SearchEngineID", "ClientIP"])
         .agg(
             [
                 pl.len().alias("c"),
-                pl.sum("IsRefresh").alias("IsRefreshSum"),
+                pl.sum("Refresh").alias("RefreshSum"),
                 pl.mean("ResolutionWidth").alias("AvgResolutionWidth"),
             ]
         )
@@ -282,13 +282,13 @@ queries = [
     ),
     (
         "Q31",
-        "SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;",
+        "SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(Refresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;",
         lambda x: x.filter(pl.col("SearchPhrase") != "")
         .group_by(["WatchID", "ClientIP"])
         .agg(
             [
                 pl.len().alias("c"),
-                pl.sum("IsRefresh").alias("IsRefreshSum"),
+                pl.sum("Refresh").alias("RefreshSum"),
                 pl.mean("ResolutionWidth").alias("AvgResolutionWidth"),
             ]
         )
@@ -297,12 +297,12 @@ queries = [
     ),
     (
         "Q32",
-        "SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;",
+        "SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(Refresh), AVG(ResolutionWidth) FROM hits GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;",
         lambda x: x.group_by(["WatchID", "ClientIP"])
         .agg(
             [
                 pl.len().alias("c"),
-                pl.sum("IsRefresh").alias("IsRefreshSum"),
+                pl.sum("Refresh").alias("RefreshSum"),
                 pl.mean("ResolutionWidth").alias("AvgResolutionWidth"),
             ]
         )
@@ -341,13 +341,13 @@ queries = [
     ),
     (
         "Q36",
-        "SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND URL <> '' GROUP BY URL ORDER BY PageViews DESC LIMIT 10;",
+        "SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND Refresh = 0 AND URL <> '' GROUP BY URL ORDER BY PageViews DESC LIMIT 10;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
             & (pl.col("EventDate") >= date(2013, 7, 1))
             & (pl.col("EventDate") <= date(2013, 7, 31))
             & (pl.col("DontCountHits") == 0)
-            & (pl.col("IsRefresh") == 0)
+            & (pl.col("Refresh") == 0)
             & (pl.col("URL") != "")
         )
         .group_by("URL")
@@ -357,13 +357,13 @@ queries = [
     ),
     (
         "Q37",
-        "SELECT Title, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND Title <> '' GROUP BY Title ORDER BY PageViews DESC LIMIT 10;",
+        "SELECT Title, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND Refresh = 0 AND Title <> '' GROUP BY Title ORDER BY PageViews DESC LIMIT 10;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
             & (pl.col("EventDate") >= date(2013, 7, 1))
             & (pl.col("EventDate") <= date(2013, 7, 31))
             & (pl.col("DontCountHits") == 0)
-            & (pl.col("IsRefresh") == 0)
+            & (pl.col("Refresh") == 0)
             & (pl.col("Title") != "")
         )
         .group_by("Title")
@@ -373,12 +373,12 @@ queries = [
     ),
     (
         "Q38",
-        "SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND IsLink <> 0 AND IsDownload = 0 GROUP BY URL ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;",
+        "SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND Refresh = 0 AND IsLink <> 0 AND IsDownload = 0 GROUP BY URL ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
             & (pl.col("EventDate") >= date(2013, 7, 1))
             & (pl.col("EventDate") <= date(2013, 7, 31))
-            & (pl.col("IsRefresh") == 0)
+            & (pl.col("Refresh") == 0)
             & (pl.col("IsLink") != 0)
             & (pl.col("IsDownload") == 0)
         )
@@ -389,12 +389,12 @@ queries = [
     ),
     (
         "Q39",
-        "SELECT TraficSourceID, SearchEngineID, AdvEngineID, CASE WHEN (SearchEngineID = 0 AND AdvEngineID = 0) THEN Referer ELSE '' END AS Src, URL AS Dst, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 GROUP BY TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;",
+        "SELECT TraficSourceID, SearchEngineID, AdvEngineID, CASE WHEN (SearchEngineID = 0 AND AdvEngineID = 0) THEN Referer ELSE '' END AS Src, URL AS Dst, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND Refresh = 0 GROUP BY TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
             & (pl.col("EventDate") >= date(2013, 7, 1))
             & (pl.col("EventDate") <= date(2013, 7, 31))
-            & (pl.col("IsRefresh") == 0)
+            & (pl.col("Refresh") == 0)
         )
         .with_columns(
             pl.when(pl.col("SearchEngineID").eq(0) & pl.col("AdvEngineID").eq(0))
@@ -417,12 +417,12 @@ queries = [
     ),
     (
         "Q40",
-        "SELECT URLHash, EventDate, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND TraficSourceID IN (-1, 6) AND RefererHash = 3594120000172545465 GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 10 OFFSET 100;",
+        "SELECT URLHash, EventDate, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND Refresh = 0 AND TraficSourceID IN (-1, 6) AND RefererHash = 3594120000172545465 GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 10 OFFSET 100;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
             & (pl.col("EventDate") >= date(2013, 7, 1))
             & (pl.col("EventDate") <= date(2013, 7, 31))
-            & (pl.col("IsRefresh") == 0)
+            & (pl.col("Refresh") == 0)
             & (pl.col("TraficSourceID").is_in([-1, 6]))
             & (pl.col("RefererHash") == 3594120000172545465)
         )
@@ -433,12 +433,12 @@ queries = [
     ),
     (
         "Q41",
-        "SELECT WindowClientWidth, WindowClientHeight, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND DontCountHits = 0 AND URLHash = 2868770270353813622 GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10 OFFSET 10000;",
+        "SELECT WindowClientWidth, WindowClientHeight, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND Refresh = 0 AND DontCountHits = 0 AND URLHash = 2868770270353813622 GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10 OFFSET 10000;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
             & (pl.col("EventDate") >= date(2013, 7, 1))
             & (pl.col("EventDate") <= date(2013, 7, 31))
-            & (pl.col("IsRefresh") == 0)
+            & (pl.col("Refresh") == 0)
             & (pl.col("DontCountHits") == 0)
             & (pl.col("URLHash") == 2868770270353813622)
         )
@@ -449,12 +449,12 @@ queries = [
     ),
     (
         "Q42",
-        "SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;",
+        "SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND Refresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;",
         lambda x: x.filter(
             (pl.col("CounterID") == 62)
             & (pl.col("EventDate") >= date(2013, 7, 14))
             & (pl.col("EventDate") <= date(2013, 7, 15))
-            & (pl.col("IsRefresh") == 0)
+            & (pl.col("Refresh") == 0)
             & (pl.col("DontCountHits") == 0)
         )
         .group_by(pl.col("EventTime").dt.truncate("1m").alias("M"))

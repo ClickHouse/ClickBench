@@ -16,7 +16,7 @@ CREATE TABLE hits (
     UserAgent SMALLINT,
     URL TEXT,
     Referer TEXT,
-    IsRefresh SMALLINT,
+    Refresh SMALLINT,
     RefererCategoryID SMALLINT,
     RefererRegionID INTEGER,
     URLCategoryID SMALLINT,

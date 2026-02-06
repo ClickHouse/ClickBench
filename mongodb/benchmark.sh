@@ -59,11 +59,11 @@ time mongosh --quiet --eval 'db.hits.createIndex({"SearchPhrase": 1, "URL": 1, "
 # Q38, Q39
 time mongosh --quiet --eval 'db.hits.createIndex({"CounterID": 1, "EventDate": 1, "URL": 1});'
 # Q36, Q37, Q42
-time mongosh --quiet --eval 'db.hits.createIndex({"CounterID": 1, "IsRefresh": 1, "EventDate": 1});'
+time mongosh --quiet --eval 'db.hits.createIndex({"CounterID": 1, "Refresh": 1, "EventDate": 1});'
 # Q20, Q23, Q27, Q33, Q34
 time mongosh --quiet --eval 'db.hits.createIndex({"URL": 1, "CounterID": 1 });'
 # Q29, Q32, Q35
-time mongosh --quiet --eval 'db.hits.createIndex({"ClientIP": 1, "WatchID": 1, "ResolutionWidth": 1, "IsRefresh": 1});'
+time mongosh --quiet --eval 'db.hits.createIndex({"ClientIP": 1, "WatchID": 1, "ResolutionWidth": 1, "Refresh": 1});'
 
 
 #################################

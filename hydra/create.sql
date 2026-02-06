@@ -21,7 +21,7 @@ SELECT
   r['UserAgent'] UserAgent,
   r['URL'] URL,
   r['Referer'] Referer,
-  r['IsRefresh'] IsRefresh,
+  r['Refresh'] Refresh,
   r['RefererCategoryID'] RefererCategoryID,
   r['RefererRegionID'] RefererRegionID,
   r['URLCategoryID'] URLCategoryID,

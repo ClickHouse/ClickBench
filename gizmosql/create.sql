@@ -15,7 +15,7 @@ CREATE OR REPLACE TABLE hits
     UserAgent SMALLINT NOT NULL,
     URL TEXT,
     Referer TEXT,
-    IsRefresh SMALLINT NOT NULL,
+    Refresh SMALLINT NOT NULL,
     RefererCategoryID SMALLINT NOT NULL,
     RefererRegionID INTEGER NOT NULL,
     URLCategoryID SMALLINT NOT NULL,

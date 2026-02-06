@@ -36,7 +36,7 @@ CREATE TABLE hits
     CounterClass SMALLINT NOT NULL,
     OS SMALLINT NOT NULL,
     UserAgent SMALLINT NOT NULL,
-    IsRefresh SMALLINT NOT NULL,
+    Refresh SMALLINT NOT NULL,
     RefererCategoryID SMALLINT NOT NULL,
     URLCategoryID SMALLINT NOT NULL,
     ResolutionWidth SMALLINT NOT NULL,

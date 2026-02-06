@@ -14,7 +14,7 @@ CREATE TABLE hits (
     UserAgent SMALLINT NOT NULL,
     URL STRING NOT NULL,
     Referer STRING NOT NULL,
-    IsRefresh SMALLINT NOT NULL,
+    Refresh SMALLINT NOT NULL,
     RefererCategoryID SMALLINT NOT NULL,
     RefererRegionID INT NOT NULL,
     URLCategoryID SMALLINT NOT NULL,

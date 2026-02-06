@@ -63,7 +63,7 @@ for idx, sql in enumerate(sql_list):
         elif idx == 42:
             query_entry["lambda"] = lambda: (
                 hits.with_column("M", col("EventTime").dt.truncate("1 minute"))
-                    .where("CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0")
+                    .where("CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND Refresh = 0 AND DontCountHits = 0")
                     .groupby("M")
                     .agg(daft.sql_expr("COUNT(1)").alias("PageViews"))
                     .sort("M", desc=False)

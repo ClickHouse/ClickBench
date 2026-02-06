@@ -15,7 +15,7 @@ CREATE TABLE test.hits
     UserAgent SMALLINT NOT NULL,
     URL String NOT NULL,
     Referer String NOT NULL,
-    IsRefresh SMALLINT NOT NULL,
+    Refresh SMALLINT NOT NULL,
     RefererCategoryID SMALLINT NOT NULL,
     RefererRegionID INTEGER NOT NULL,
     URLCategoryID SMALLINT NOT NULL,

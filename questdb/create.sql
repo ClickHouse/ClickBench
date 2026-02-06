@@ -15,7 +15,7 @@ CREATE TABLE hits
     UserAgent short,
     URL varchar,
     Referer varchar,
-    IsRefresh byte,
+    Refresh byte,
     RefererCategoryID short,
     RefererRegionID int,
     URLCategoryID short,

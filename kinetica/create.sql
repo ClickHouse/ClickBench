@@ -15,7 +15,7 @@ CREATE TABLE "ki_home"."hits"
     "UserAgent" SMALLINT NOT NULL,
     "URL" VARCHAR NOT NULL,
     "Referer" VARCHAR NOT NULL,
-    "IsRefresh" TINYINT NOT NULL,
+    "Refresh" TINYINT NOT NULL,
     "RefererCategoryID" SMALLINT NOT NULL,
     "RefererRegionID" INTEGER (dict) NOT NULL,
     "URLCategoryID" SMALLINT NOT NULL,
