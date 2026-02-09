@@ -4,6 +4,7 @@ import polars as pl
 import timeit
 from datetime import date
 import json
+import subprocess
 import os
 
 # The streaming engine will be the default soon
@@ -467,6 +468,10 @@ queries = [
 
 def run_timings(lf: pl.LazyFrame) -> None:
     for q in queries:
+        # Flush OS page cache before first run of each query
+        subprocess.run(['sync'], check=True)
+        subprocess.run(['sudo', 'tee', '/proc/sys/vm/drop_caches'], input=b'3', check=True, stdout=subprocess.DEVNULL)
+
         times = []
         for _ in range(3):
             start = timeit.default_timer()

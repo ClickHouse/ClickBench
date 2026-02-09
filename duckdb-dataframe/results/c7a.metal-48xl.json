@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","embedded","Python","dataframe","lukewarm-cold-run"],
+    "tags": ["C++","column-oriented","embedded","Python","dataframe"],
     "load_time": 98,
     "data_size": 141127221248,
     "result": [

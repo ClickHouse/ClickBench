@@ -5,7 +5,6 @@
   "tuned": "no",
   "tags": [
     "column-oriented",
-    "dataframe",
-    "lukewarm-cold-run"
+    "dataframe"
   ]
 }

@@ -8,7 +8,6 @@
     "column-oriented",
     "embedded",
     "stateless",
-    "ClickHouse derivative",
-    "lukewarm-cold-run"
+    "ClickHouse derivative"
   ]
 }

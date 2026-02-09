@@ -8,7 +8,6 @@
     "column-oriented",
     "embedded",
     "Python",
-    "dataframe",
-    "lukewarm-cold-run"
+    "dataframe"
   ]
 }
