@@ -1,13 +1,13 @@
 {
     "system": "pg_clickhouse",
-    "date": "2026-01-24",
+    "date": "2026-02-10",
     "machine": "c7a.metal-48xl",
     "cluster_size": 1,
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
     "tags": ["C","column-oriented","PostgreSQL compatible","lukewarm-cold-run"],
-    "load_time": 6,
+    "load_time": 215,
     "data_size": 15276101214,
     "result": [
         [0.045, 0.002, 0.002],
