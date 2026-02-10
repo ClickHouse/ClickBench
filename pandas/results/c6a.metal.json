@@ -7,7 +7,7 @@
     "hardware": "cpu",
     "tuned": "no",
     "comment": "",
-    "tags": ["C++", "column-oriented", "embedded", "stateless", "serverless", "dataframe"],
+    "tags": ["C++", "column-oriented", "embedded", "stateless", "serverless", "dataframe", "lukewarm-cold-run"],
     "load_time": 0,
     "data_size": 46998823718,
     "result": [
