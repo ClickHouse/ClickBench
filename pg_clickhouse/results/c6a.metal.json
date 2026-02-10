@@ -1,6 +1,6 @@
 {
     "system": "pg_clickhouse",
-    "date": "2026-01-24",
+    "date": "2026-02-10",
     "machine": "c6a.metal",
     "cluster_size": 1,
     "proprietary": "no",

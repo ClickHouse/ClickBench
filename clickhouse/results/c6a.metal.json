@@ -1,6 +1,6 @@
 {
     "system": "ClickHouse",
-    "date": "2025-12-19",
+    "date": "2026-02-10",
     "machine": "c6a.metal",
     "cluster_size": 1,
     "proprietary": "no",
