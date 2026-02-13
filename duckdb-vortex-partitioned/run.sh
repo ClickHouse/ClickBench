@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -Eeuo pipefail
+
 TRIES=3
 
 cat queries.sql | while read -r query; do
@@ -8,6 +10,8 @@ cat queries.sql | while read -r query; do
 
     echo "$query";
     cli_params=()
+    cli_params+=("-c")
+    cli_params+=("LOAD vortex;")
     cli_params+=("-c")
     cli_params+=(".timer on")
     for i in $(seq 1 $TRIES); do
