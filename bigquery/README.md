@@ -1,13 +1,4 @@
-As of 2025, Google Bigquery allow publishing benchmark results, which was not the case earlier.
-
-It's very difficult to find, how to create a database.
-Databases are named "datasets". You need to press on `⋮` near project.
-
-Create dataset `test`.
-Go to the query editor and paste the contents of `create.sql`.
-It will take two seconds to create a table.
-
-Download Google Cloud CLI:
+Download Google Cloud CLI and configure your project settings. You can skip this step if you are using [Cloud shell](https://docs.cloud.google.com/shell/docs/launching-cloud-shell):
 ```
 wget --continue --progress=dot:giga https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
 tar -xf google-cloud-cli-linux-x86_64.tar.gz
@@ -16,7 +7,12 @@ source .bashrc
 ./google-cloud-sdk/bin/gcloud init
 ```
 
-Load the data:
+Create the dataset and table in BigQuery:
+```
+./create.sh
+```
+
+Load the data in the table:
 ```
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
 gzip -d -f hits.csv.gz
@@ -26,13 +22,7 @@ command time -f '%e' bq load --source_format CSV --allow_quoted_newlines=1 test.
 ```
 
 Run the benchmark:
-
 ```
-./run.sh 2>&1 | tee log.txt
-
-cat log.txt |
-  grep -P '^real|^Error' |
-  sed -r -e 's/^Error.*$/null/; s/^real\s*([0-9.]+)m([0-9.]+)s$/\1 \2/' |
-  awk '{ if ($2 != "") { print $1 * 60 + $2 } else { print $1 } }' |
-  awk '{ if ($1 == "null") { skip = 1 } else { if (i % 3 == 0) { printf "[" }; printf skip ? "null" : $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; skip = 0; } }'
+pip install google-cloud-bigquery
+python3 run_queries.py > results.txt 2> log.txt
 ```
