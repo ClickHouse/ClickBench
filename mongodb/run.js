@@ -6,6 +6,9 @@ let col = db.getCollection(collectionName);
 
 load("./queries.js");
 
+// If someone knows how to clear the OS page cache from javascript,
+// please do (this is technically required by the benchmark rules)
+
 for (let i = 0; i < queries.length; i++) {
   for (let j = 0; j < iterations; ++j) {
     start = new Date();

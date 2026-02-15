@@ -5,6 +5,7 @@ QUERY_NUM=1
 
 ./clickhouse local --path . --query="$(cat create.sql)"
 cat queries.sql | while read -r query; do
+    sync && echo 3 | sudo tee /proc/sys/vm/drop_caches
 
     echo -n "["
     for i in $(seq 1 $TRIES); do
