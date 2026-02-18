@@ -8,12 +8,6 @@ python3 -m venv myenv
 source myenv/bin/activate
 pip install pandas duckdb pyarrow
 
-# On small machines it can only work with swap
-sudo fallocate -l 200G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-
 # Download the data
 wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
 
