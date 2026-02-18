@@ -17,14 +17,12 @@ else
 fi
 
 # Download Parseable v2.5.11 binary
-wget --continue --progress=dot:giga https://github.com/parseablehq/parseable/releases/download/v2.5.11/Parseable_OSS_x86_64-unknown-linux-gnu
+wget --continue --progress=dot:giga https://github.com/parseablehq/parseable/releases/download/v2.5.12/Parseable_OSS_x86_64-unknown-linux-gnu
 mv Parseable_OSS_x86_64-unknown-linux-gnu parseable
 chmod +x parseable
 
 # Run Parseable
 export RUST_LOG=warn
-export P_CPU_THRESHOLD=100
-export P_MEMORY_THRESHOLD=100
 
 ./parseable local-store > parseable.log 2>&1 & PARSEABLE_PID=$!
 # Verify Parseable is running
