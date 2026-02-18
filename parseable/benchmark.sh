@@ -16,7 +16,7 @@ else
     echo "Using default P_EXECUTION_BATCH_SIZE=1000000 for default configuration"
 fi
 
-# Download Parseable v2.5.11 binary
+# Download Parseable v2.5.12 binary
 wget --continue --progress=dot:giga https://github.com/parseablehq/parseable/releases/download/v2.5.12/Parseable_OSS_x86_64-unknown-linux-gnu
 mv Parseable_OSS_x86_64-unknown-linux-gnu parseable
 chmod +x parseable
