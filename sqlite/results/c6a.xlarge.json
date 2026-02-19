@@ -6,7 +6,7 @@
     "proprietary":   "no",
     "hardware": "cpu",
     "tuned":   "no",
-    "tags":   ["C","embedded","row-oriented", "lukewarm-cold-run"],
+    "tags":   ["C","embedded","row-oriented"],
     "load_time": 3496,
     "data_size": 75776589824,
     "result": [

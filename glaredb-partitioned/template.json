@@ -5,7 +5,6 @@
   "tuned": "no",
   "tags": [
     "Rust",
-    "serverless",
-    "lukewarm-cold-run"
+    "serverless"
   ]
 }

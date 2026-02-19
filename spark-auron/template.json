@@ -7,7 +7,6 @@
       "Java",
       "Rust",
       "column-oriented",
-      "Spark derivative",
-      "lukewarm-cold-run"
+      "Spark derivative"
     ]
 }

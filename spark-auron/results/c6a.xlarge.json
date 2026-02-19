@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["Java","Rust","column-oriented","Spark derivative", "lukewarm-cold-run"],
+    "tags": ["Java","Rust","column-oriented","Spark derivative"],
     "load_time": 0,
     "data_size": 14779976446,
     "result": [
