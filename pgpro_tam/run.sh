@@ -4,7 +4,7 @@ TRIES=3
 
 cat queries.sql | while read -r query; do
     sync
-    sudo sysctl vm.drop_caches=3
+    echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
 
     echo "$query"
     (

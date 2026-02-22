@@ -4,7 +4,7 @@ TRIES=3
 
 cat queries.sql | while read -r query; do
     sync
-    echo 3 | sudo tee /proc/sys/vm/drop_caches
+    echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
 
     for i in $(seq 1 $TRIES); do
         # Apparently, cockroach sql only writes the elapsed time of a statement to file descriptors that refer to a terminal (cf. isatty()).

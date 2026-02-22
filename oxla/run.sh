@@ -4,7 +4,7 @@ TRIES=3
 rm result.txt 2>/dev/null
 cat queries.sql | while read -r query; do
     sync
-    echo 3 | sudo tee /proc/sys/vm/drop_caches
+    echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
 
     # Oxla seems to cache major parts of the dataset without a documented way to clear the cache between the runs.
     # It seems fairer to restart the database between the runs.
