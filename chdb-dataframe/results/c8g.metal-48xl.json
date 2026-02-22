@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless","Python","dataframe","in-memory"],
+    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless","serverless","Python","dataframe","in-memory","lukewarm-cold-run"],
     "load_time": 78,
     "data_size": 150402093056,
     "result": [
