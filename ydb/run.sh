@@ -9,7 +9,7 @@ cert_dir=$(find ydb-ansible-examples/TLS/CA/certs -maxdepth 1 -type d -not -path
 
 # YDB uses raw block devices, that means there is not need to drop filesystem caches
 # sync
-# echo 3 | sudo tee /proc/sys/vm/drop_caches
+# echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
 
 cat queries.sql | while read -r query; do
     echo -n "["
