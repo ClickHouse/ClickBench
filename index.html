@@ -945,7 +945,7 @@ function render() {
         filtered_data = filtered_data.filter(elem => elem.load_time >= 5);
     }
     if (selectors.metric == 'cold' || selectors.metric == 'combined' || selectors.metric == 'load') {
-        filtered_data = filtered_data.filter(elem => !elem.system.match(/memory|dataframe/i));
+        filtered_data = filtered_data.filter(elem => !elem.tags.includes('in-memory'));
     }
 
     let nothing_selected_elem = document.getElementById('nothing-selected');
