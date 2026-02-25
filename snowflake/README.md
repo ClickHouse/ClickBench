@@ -7,16 +7,28 @@ https://www.snowflake.com/legal/acceptable-use-policy/
 Account setup took only 3 seconds.
 
 Data -> Databases -> + Database
-Database 'test' created.
-Press on "public" schema.
+Database 'test' created
+Press on "public" schema
 
-Create table "standard".
-Paste "create.sql".
-Press on "create table" again.
+***
 
-Press on "admin", "warehouses", + Warehouse
-The choice of a warehouse size is unclear. Let's choose X-Large by default.
-It is using "credits" for pricing.
+### To create a standard table
+Press Create -> Table -> Standard then click "Create Table"
+
+Press Compute -> Warehouses -> + Warehouse
+
+Choose a name for the warehouse and choose the type and size warehouse you wish to test then click "Create warehouse"
+
+### To create an interactive table
+Press Create -> Table -> Standard
+
+Paste the "create_interactive.sql" then click "Create Table"
+
+Click "Attach to warehouse" then click "Create new warehouse"
+
+Give the warehouse a name and choose X-Small then click "Attach"
+
+***
 
 Set up SnowSQL.
 
