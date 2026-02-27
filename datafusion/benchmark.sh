@@ -6,6 +6,21 @@ bash rust-init.sh -y
 export HOME=${HOME:=~}
 source ~/.cargo/env
 
+if [ $(free -g | awk '/^Mem:/{print $2}') -lt 12 ]; then
+  echo "LOW MEMORY MODE"
+  # Enable swap if not already enabled. This is needed both for rustc and until we have a better
+  # solution for low memory machines, see
+  # https://github.com/apache/datafusion/issues/18473
+  if [ "$(swapon --noheadings --show | wc -l)" -eq 0 ]; then
+    echo "Enabling 8G swap"
+    sudo fallocate -l 8G /swapfile
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile
+    sudo swapon /swapfile
+  fi
+fi
+
+
 echo "Install Dependencies"
 sudo apt-get update -y
 sudo apt-get install -y gcc
