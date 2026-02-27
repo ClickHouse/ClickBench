@@ -23,4 +23,4 @@ annotation in the partitioned files. See [Issue#7](https://github.com/ClickHouse
 seq 0 99 | xargs -P100 -I{} bash -c 'wget --directory-prefix partitioned --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 ```
 
-3. Run the queries: `datafusion-cli -f create.sql -f queries.sql` or `PATH="$(pwd)/datafusion/target/release:$PATH" ./run.sh`.
+3. Run the queries: `datafusion-cli -f create.sql -f queries.sql` or `PATH="$(pwd)/arrow-datafusion/target/release:$PATH" ./run.sh`.

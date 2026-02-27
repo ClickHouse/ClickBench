@@ -60,5 +60,5 @@ datafusion-cli -f create.sql -f queries.sql
 
 Or use the runner script:
 ```
-PATH="$(pwd)/datafusion/target/release:$PATH" ./run.sh
+PATH="$(pwd)/arrow-datafusion/target/release:$PATH" ./run.sh
 ```

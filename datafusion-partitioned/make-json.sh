@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# This scripts converts the raw results.csv data from `benchmark.sh` into a the
+# This script converts the raw `result.csv` data from `benchmark.sh` into the
 # final json format used by the benchmark dashboard.
 #
-# usage : ./save-result.sh <machine>
+# usage : ./make-json.sh <machine>
 #
 # example (save results/c6a.4xlarge.json)
-#         ./save-result.sh c6a.4xlarge
+#         ./make-json.sh c6a.4xlarge
 
 MACHINE=$1
 OUTPUT_FILE="results/${MACHINE}.json"
