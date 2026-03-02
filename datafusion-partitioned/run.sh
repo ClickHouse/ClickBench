@@ -15,7 +15,7 @@ cat queries.sql | while read -r query; do
         # 2. each query contains a "Query took xxx seconds", we just grep these 2 lines
         # 3. use sed to take the second line
         # 4. use awk to take the number we want
-        RES=$(datafusion-cli -f create.sql /tmp/query.sql 2>&1 | grep "Elapsed" |sed -n 2p | awk '{ print $2 }')
+        RES=$(datafusion-cli -f create.sql /tmp/query.sql 2>&1 | grep "Elapsed" |tail -1| awk '{ print $2 }')
         [[ $RES != "" ]] && \
             echo -n "$RES" || \
             echo -n "null"
