@@ -1,13 +1,13 @@
 {
     "system":  "Ursa",
-    "date": "2025-08-30",
+    "date": "2026-02-10",
     "machine": "c7a.metal-48xl",
     "cluster_size": 1,
     "proprietary":  "yes",
     "hardware": "cpu",
     "tuned":  "no",
     "tags":  ["C++","column-oriented","ClickHouse derivative", "lukewarm-cold-run"],
-    "load_time": 7,
+    "load_time": 183,
     "data_size": 15467764900,
     "result": [
         [0.002, 0.001, 0.001],

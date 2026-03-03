@@ -1,8 +1,11 @@
 #!/bin/bash
 
+# needed by DuckDB
+export HOME=/home/ubuntu
+
 # Install requirements
-sudo apt-get update -y
-sudo apt install openjdk-17-jre-headless unzip netcat-openbsd -y
+apt-get update -y
+apt install openjdk-17-jre-headless unzip netcat-openbsd -y
 
 # Detect architecture (maps x86_64->amd64, aarch64->arm64)
 ARCH=$(uname -m)
@@ -15,13 +18,13 @@ fi
 # Server setup Install
 curl -L -o gizmosql.zip "https://github.com/gizmodata/gizmosql/releases/latest/download/gizmosql_cli_linux_${ARCH}.zip"
 unzip gizmosql.zip
-sudo mv gizmosql_server gizmosql_client /usr/local/bin/
+mv gizmosql_server gizmosql_client /usr/local/bin/
 
 # Install Java and the GizmoSQLLine CLI client
 pushd /tmp
 curl -L -o gizmosqlline https://github.com/gizmodata/gizmosqlline/releases/latest/download/gizmosqlline
 chmod +x gizmosqlline
-sudo mv gizmosqlline /usr/local/bin/
+mv gizmosqlline /usr/local/bin/
 popd
 
 # Source our env vars and utility functions for starting/stopping gizmosql server
@@ -50,7 +53,7 @@ time gizmosqlline \
 stop_gizmosql
 
 # Run the queries
-script --quiet --command="./run.sh" log.txt
+./run.sh 2>&1 | tee log.txt
 
 # Remove carriage returns from the log
 sed -i 's/\r$//' log.txt

@@ -472,7 +472,7 @@ let selectors = {
     "machine": {},
     "cluster_size": {},
     "opensource": {"yes": true, "no": true},
-    "hardware": {"cpu": true, "gpu": true},
+    "hardware": {"cpu": true, "gpu": false},
     "tuned": {"no": true, "yes": false},
     "metric": "combined",
     "queries": [],
@@ -937,12 +937,15 @@ function render() {
         ((selectors.hardware.cpu && elem.hardware === "cpu") || (selectors.hardware.gpu && elem.hardware === "gpu"))
         );
 
+    /// Filter out unreasonable entries
     if (selectors.metric == 'size') {
         filtered_data = filtered_data.filter(elem => elem.data_size);
-    } else if (selectors.metric == 'load') {
+    }
+    if (selectors.metric == 'load') {
         filtered_data = filtered_data.filter(elem => elem.load_time >= 5);
-    } else if (selectors.metric == 'cold' || selectors.metric == 'combined') {
-        filtered_data = filtered_data.filter(elem => !elem.system.match(/memory|dataframe/i));
+    }
+    if (selectors.metric == 'cold' || selectors.metric == 'combined' || selectors.metric == 'load') {
+        filtered_data = filtered_data.filter(elem => !elem.tags.includes('in-memory'));
     }
 
     let nothing_selected_elem = document.getElementById('nothing-selected');

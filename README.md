@@ -79,7 +79,7 @@ To add a new entry, copy-paste one of the existing directories and edit the file
 - `README.md`: contains comments and observations if needed. For managed databases, it can describe the setup procedure to be used instead of a shell script.
 - `create.sql`: a CREATE TABLE statement. If it's a NoSQL system, another file like `wtf.json` can be used instead.
 - `queries.sql`: contains 43 ClickBench queries to run;
-- `run.sh`: a loop that running the queries; every query is run three times; if it's a database with local on-disk storage, the first query should be run after dropping the page cache (see section "Caching" below).
+- `run.sh`: a loop that running the queries; every query is run three times, see section "Caching" below for details.
 - `results/`: put the .json files with the results for every hardware configuration into this directory. Please double-check that each file is valid JSON (e.g., no comma errors).
 
 To introduce a new result for an existing system for a different hardware configuration, add a new file to `results`.
@@ -149,13 +149,16 @@ If a system is of a "multidimensional OLAP" kind, and so is always or implicitly
 
 ### Caching
 
-We distinguish three cases:
+Each of the 43 queries is run three times.
+We distinguish two cases:
 
-1. Hot runs. The database starts and then runs all queries sequentially, with three runs per query.
+1. Hot runs. This is the second and third run of each query. As the previous first run is supposed to populate all database and operating system caches, the two hot runs are expected to be the fastest runs overall.
 
-2. Cold runs. Before each of the three runs per query, all caches are cleared. This means a) clearing the operating system page cache and b) all caches within the database, including buffer pools. Many databases provide commands to clear internal caches. However, for fairness towards systems which don't offer such statements, it is required to _restart_ the database.
+2. Cold runs. This is the first run of each query. There are two sub-cases.
 
-3. Lukewarm runs. Similar to cold runs but _only_ the operating system page cache is cleared before each query. This is what ClickBench historically considered as "cold run", benefiting databases with aggressive internal caching. The benchmark is migrating from lukewarm runs to true cold runs (previous case 2.). Submissions that do not properly restart the database-under-test have a tag "lukewarm-cold-run". Please change the script to a true cold run, remove the label, and send a PR against the repository - thanks.
+2.a) True cold runs. Before each first run of each query, all operating system caches (page cache) and database caches (e.g. buffer pools) are cleared. Some databases provide commands to clear internal caches. For fairness towards databases which do not offer such statements, it is _required_ to restart the database before the first run of each query. Databases which do not stick around as a background process between queries, e.g. [clickhouse-local](https://clickhouse.com/docs/operations/utilities/clickhouse-local), satisfy this requirement implicitly. It is still needed to clear the page cache before each first query to qualify as a true cold run.
+
+2.b) Lukewarm cold runs. Compared to true cold runs, _only_ the operating system page cache is cleared before each first run of each query. This is what was historically considered as "cold run" in ClickBench, benefiting databases with extensive internal caching. Submissions that do not restart the database _must_ set tag "lukewarm-cold-run" in their result file. We encourage contributors to migrate submissions from lukewarm to true cold runs.
 
 General rules regarding caching:
 - Query result caches should be disabled.

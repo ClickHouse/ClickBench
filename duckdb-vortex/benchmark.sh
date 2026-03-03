@@ -1,31 +1,24 @@
 #!/bin/bash
 
+set -Eeuo pipefail
+
 # Install
-sudo apt-get update -y
-sudo apt-get install -y ninja-build cmake build-essential make ccache pip clang pkg-config
+export HOME=${HOME:=~}
+curl https://install.duckdb.org | sh
+export PATH=$HOME'/.duckdb/cli/latest':$PATH
 
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --no-modify-path
-
-export CC=clang
-export CXX=clang++
-git clone https://github.com/vortex-data/vortex --recursive
-cd vortex
-git fetch --tags
-git checkout 0.35.0
-cd duckdb-vortex
-GEN=ninja NATIVE_ARCH=1 LTO=thin make
-export PATH="`pwd`/build/release/:$PATH"
-cd ../..
+duckdb -c "INSTALL vortex;"
 
 # Load the data
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
 
-# Convert parquet files to vortex partitioned
+# Convert parquet files to Vortex
 echo -n "Load time: "
-command time -f '%e' duckdb -c "COPY 'hits.parquet' TO hits.vortex (FORMAT vortex)"
+command time -f '%e' duckdb -c "LOAD vortex; COPY 'hits.parquet' TO 'hits.vortex' (FORMAT vortex);"
 
+# Create view and macro
 echo -n "Load time: "
-command time -f '%e' duckdb hits-single.db -c "CREATE VIEW hits AS SELECT * FROM read_vortex('hits.vortex')";
+command time -f '%e' duckdb hits-single.db -f create.sql
 
 echo 'single'
 

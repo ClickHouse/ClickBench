@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["Rust","stateless","serverless","embedded", "lukewarm-cold-run"],
+    "tags": ["Rust","stateless","serverless","embedded"],
     "load_time": 0,
     "data_size": 14779976446,
     "result": [

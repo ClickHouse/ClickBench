@@ -4,7 +4,7 @@ TRIES=3
 
 cat queries.sql | while read -r query; do
     sync
-    echo 3 | sudo tee /proc/sys/vm/drop_caches
+    echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
 
     sudo docker exec memsql-ciab memsql -vvv -p"${ROOT_PASSWORD}" --database=test -e "USE test; ${query}"
 
