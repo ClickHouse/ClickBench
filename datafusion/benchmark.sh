@@ -6,6 +6,8 @@ bash rust-init.sh -y
 export HOME=${HOME:=~}
 source ~/.cargo/env
 
+WITH_SWAP=false
+
 if [ $(free -g | awk '/^Mem:/{print $2}') -lt 12 ]; then
   echo "LOW MEMORY MODE"
   # Enable swap if not already enabled. This is needed both for rustc and until we have a better
@@ -17,6 +19,7 @@ if [ $(free -g | awk '/^Mem:/{print $2}') -lt 12 ]; then
     sudo chmod 600 /swapfile
     sudo mkswap /swapfile
     sudo swapon /swapfile
+    WITH_SWAP=true
   fi
 fi
 
@@ -41,3 +44,9 @@ echo "Run benchmarks"
 
 echo "Load time: 0"
 echo "Data size: $(du -bcs hits.parquet)"
+
+if [ "$WITH_SWAP" = true ]; then
+    echo "Disable swap"
+    sudo swapoff /swapfile
+    sudo rm /swapfile
+fi
