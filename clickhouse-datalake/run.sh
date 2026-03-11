@@ -9,7 +9,7 @@ cat queries.sql | while read -r query; do
 
     echo -n "["
     for i in $(seq 1 $TRIES); do
-        RES=$(./clickhouse local --path . --time --format Null --query="$query" 2>&1) # (*)
+        RES=$(./clickhouse local --path . --time --format Null --filesystem_cache_name cache --query="$query" 2>&1) # (*)
         [[ "$?" == "0" ]] && echo -n "${RES}" || echo -n "null"
         [[ "$i" != $TRIES ]] && echo -n ", "
 
