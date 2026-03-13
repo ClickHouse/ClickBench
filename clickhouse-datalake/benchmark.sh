@@ -7,10 +7,7 @@ curl https://clickhouse.com/ | sh
 # Configure
 
 > clickhouse-local.yaml echo "
-filesystem_caches:
-    cache:
-        path: '/dev/shm/clickhouse/'
-        max_size_ratio_to_total_space: 0.9
+page_cache_size: auto
 "
 
 # Run the queries
