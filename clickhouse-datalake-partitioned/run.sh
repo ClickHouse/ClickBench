@@ -5,19 +5,15 @@ QUERY_NUM=1
 
 ./clickhouse local --path . --query="$(cat create.sql)"
 cat queries.sql | while read -r query; do
-    sync && echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
-
     echo -n "["
-    for i in $(seq 1 $TRIES); do
-        RES=$(./clickhouse local --path . --time --format Null --use_page_cache_for_object_storage 1 --query="$query" 2>&1) # (*)
-        [[ "$?" == "0" ]] && echo -n "${RES}" || echo -n "null"
-        [[ "$i" != $TRIES ]] && echo -n ", "
-
-        echo "${QUERY_NUM},${i},${RES}" >> result.csv
-    done
+    i=0
+    while read -r RES; do
+        [[ "$i" -gt 0 ]] && echo -n ", "
+        [[ "$RES" =~ ^[0-9] ]] && echo -n "${RES}" || echo -n "null"
+        echo "${QUERY_NUM},$((i+1)),${RES}" >> result.csv
+        i=$((i+1))
+    done <<< "$(./clickhouse local --path . --time --format Null --use_page_cache_for_object_storage 1 --query "$query; $query; $query" 2>&1)"
     echo "],"
-
-    # (*) --format=Null is client-side formatting. The query result is still sent back to the client.
 
     QUERY_NUM=$((QUERY_NUM + 1))
 done
