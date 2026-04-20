@@ -2,20 +2,35 @@
 
 TRIES=3
 QUERY_NUM=1
+SETUP_STATEMENTS=$(grep -o ';' create.sql | wc -l | tr -d '[:space:]')
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "${TMP_DIR}"' EXIT
+
 echo $1
-cat queries.sql | while read -r query; do
+while IFS= read -r query || [ -n "$query" ]; do
+    [ -z "$query" ] && continue
+
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
-    echo "$query" > /tmp/query.sql
+    QUERY_FILE="${TMP_DIR}/query-${QUERY_NUM}.sql"
+    cp create.sql "${QUERY_FILE}"
+    printf '\n' >> "${QUERY_FILE}"
+    for i in $(seq 1 $TRIES); do
+        printf '%s\n\n' "$query" >> "${QUERY_FILE}"
+    done
+
+    ALL_ELAPSED_VALUES=()
+    while IFS= read -r res; do
+        ALL_ELAPSED_VALUES[${#ALL_ELAPSED_VALUES[@]}]="$res"
+    done < <(
+        datafusion-cli -f "${QUERY_FILE}" 2>&1 |
+        awk '/Elapsed/ { print $2 }'
+    )
 
     echo -n "["
     for i in $(seq 1 $TRIES); do
-        # 1. there will be two query result, one for creating table another for executing the select statement
-        # 2. each query contains a "Query took xxx seconds", we just grep these 2 lines
-        # 3. use sed to take the second line
-        # 4. use awk to take the number we want
-        RES=$(datafusion-cli -f create.sql /tmp/query.sql 2>&1 | grep "Elapsed" |tail -1| awk '{ print $2 }')
+        RES="${ALL_ELAPSED_VALUES[$((SETUP_STATEMENTS + i - 1))]}"
         [[ $RES != "" ]] && \
             echo -n "$RES" || \
             echo -n "null"
@@ -25,4 +40,4 @@ cat queries.sql | while read -r query; do
     echo "],"
 
     QUERY_NUM=$((QUERY_NUM + 1))
-done
+done < queries.sql
