@@ -1,0 +1,10 @@
+{
+    "system": "ParticleDB",
+    "date": "2026-03-29",
+    "machine": "c8g.metal-48xl",
+    "cluster_size": 1,
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "no",
+    "tags": ["Rust", "column-oriented", "HTAP", "Arrow"]
+}
