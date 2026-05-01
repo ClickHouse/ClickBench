@@ -1,47 +1,34 @@
 #!/bin/bash
 
+set -Eeuo pipefail
+
 # Install
-sudo apt-get update -y
-sudo apt-get install -y ninja-build cmake build-essential make ccache pip clang pkg-config
+export HOME=${HOME:=~}
+curl https://install.duckdb.org | sh
+export PATH=$HOME'/.duckdb/cli/latest':$PATH
 
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --no-modify-path
-
-export CC=clang
-export CXX=clang++
-git clone https://github.com/vortex-data/duckdb-vortex --recursive
-cd duckdb-vortex
-git fetch --tags
-git checkout v0.44.0
-git submodule update --init --recursive
-GEN=ninja NATIVE_ARCH=1 LTO=thin make
-export PATH="`pwd`/build/release/:$PATH"
-cd ..
+duckdb -c "INSTALL vortex;"
 
 # Load the data
 seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
 
-# Convert parquet files to vortex partitioned
+# Convert parquet files to Vortex
 echo -n "Load time: "
 seq 0 99 | command time -f '%e' xargs -P"$(nproc)" -I{} bash -c '
-  if [ ! -f "hits_{}.vortex" ]; then
-    duckdb -c "
-      COPY (
-        SELECT *
-        REPLACE (
-          make_date(EventDate) AS EventDate,
-          epoch_ms(EventTime * 1000) as EventTime
-        )
-        FROM read_parquet('"'"'hits_{}.parquet'"'"', binary_as_string=True)
-      )
-      TO '"'"'hits_{}.vortex'"'"' (FORMAT VORTEX)
-    "
-  fi
+  duckdb -c "
+    LOAD vortex;
+    COPY (
+      SELECT *
+      FROM read_parquet('"'"'hits_{}.parquet'"'"', binary_as_string=True)
+    )
+    TO '"'"'hits_{}.vortex'"'"' (FORMAT vortex);
+  "
 '
 
+# Create view and macro
 echo -n "Load time: "
-command time -f '%e' duckdb hits-partitioned.db -c "CREATE VIEW hits AS SELECT * FROM read_vortex('hits_*.vortex')";
+command time -f '%e' duckdb hits-partitioned.db -f create.sql
 
-# Run the queries
 echo 'partitioned'
 
 ./run.sh 'hits-partitioned.db' 2>&1 | tee log-p.txt
