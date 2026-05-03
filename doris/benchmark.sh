@@ -235,6 +235,10 @@ echo "$LOADTIME" > loadtime
 du -bs "$DORIS_HOME"/be/storage/ | cut -f1 | tee storage_size
 echo "Data size: $(cat storage_size)"
 
+# Drop the downloaded source files so the per-query sync below
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f "$BE_DATA_DIR/user_files_secure"/hits_*.parquet
+
 mysql -h 127.0.0.1 -P9030 -uroot hits -e "set global enable_sql_cache = false"
 # Dataset contains 99997497 rows, storage size is about 13319588503 bytes
 mysql -h 127.0.0.1 -P9030 -uroot hits -e "SELECT count(*) FROM hits"

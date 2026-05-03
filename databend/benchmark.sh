@@ -73,4 +73,8 @@ du -bcs _data | grep total
 # curl 'http://default@localhost:8124/' --data-binary "select humanize_size(bytes_compressed)  from fuse_snapshot('default', 'hits') order by timestamp desc limit 1"
 # 18.48 GiB
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.tsv
+
 ./run.sh 2>&1 | tee log.txt

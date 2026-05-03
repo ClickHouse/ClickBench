@@ -56,6 +56,10 @@ for file in hits_part_*; do
     PGUSER=$PG_USER PGPASSWORD=$PG_PASSWORD command time -f '%e' psql -h $HOST_NAME -p $PORT -d $DATABASE -t -c "\\copy hits FROM '$file'"
 done
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.tsv hits_part_*
+
 # run clickbench test with queries
 echo "Starting to run queries..."
 

@@ -48,6 +48,10 @@ command time -f '%e' /opt/heavyai/bin/heavysql -q -t -p HyperInteractive <<< "CO
 
 # Loaded: 99997497 recs, Rejected: 0 recs in 572.633 secs
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.csv
+
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "

@@ -22,6 +22,10 @@ command time -f '%e' duckdb hits-single.db -f create.sql
 
 echo 'single'
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.parquet
+
 ./run.sh 'hits-single.db' 2>&1 | tee log-s.txt
 cat log-s.txt |
   grep -P '^\d|Killed|Segmentation|^Run Time \(s\): real' |

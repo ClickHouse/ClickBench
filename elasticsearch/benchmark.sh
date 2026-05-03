@@ -76,5 +76,9 @@ echo "Data size: $(jq -r '._all.total.store.total_data_set_size_in_bytes' stats.
 END=$(date +%s)
 echo "Load time: $(echo "$END - $START" | bc)"
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.json.gz
+
 ######  Run the queries
 ./run.sh

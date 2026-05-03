@@ -24,6 +24,10 @@ sudo mariadb test < create.sql
 echo -n "Load time: "
 command time -f '%e' split -l 10000 --filter="sudo mariadb test -e \"SET sql_log_bin = 0; LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE hits;\"" hits.tsv
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.tsv
+
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "

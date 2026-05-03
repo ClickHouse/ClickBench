@@ -60,6 +60,10 @@ else
     command time -f '%e' psql -h 127.0.0.1 -U postgres -t -c "COPY hits FROM '/tmp/hits.tsv'"
 fi
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+sudo docker exec pgpro_tam rm -f /tmp/hits.tsv
+
 #run benchmark
 ./run.sh 2>&1 | tee log.txt
 

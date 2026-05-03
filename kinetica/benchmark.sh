@@ -31,5 +31,9 @@ LOADTIME=$(echo "$END - $START" | bc)
 echo "Load time: $LOADTIME"
 echo "Data size: $(du -bcs ./kinetica-persist/gpudb | grep total)"
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+sudo rm -f ./kinetica-persist/hits.tsv.gz
+
 # run the queries
 ./run.sh

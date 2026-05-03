@@ -34,6 +34,10 @@ then
 fi
 echo "Load time: $(( (end - start) / 1000 ))"
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f data/hits.tsv
+
 ./run.sh 2>&1 | tee log.txt
 
 # Calculate persistence size

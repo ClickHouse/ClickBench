@@ -48,6 +48,10 @@ clickhouse-client --query "SYSTEM SYNC FILE CACHE"
 end=$(date +%s.%N)
 echo "$end - $start" | bc
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+sudo rm -f /var/lib/clickhouse/user_files/hits_*.parquet
+
 # Run the queries
 
 ./run.sh "$1"
