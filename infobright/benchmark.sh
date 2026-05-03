@@ -32,6 +32,10 @@ sudo docker exec mysql_ib du -bcs /mnt/mysql_data/ /usr/local/infobright-4.0.7-x
 
 # 13 760 341 294
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.tsv hits90m.tsv
+
 ./run.sh 2>&1 | tee log.txt
 
 cat log.txt |

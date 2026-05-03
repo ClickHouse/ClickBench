@@ -11,6 +11,10 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 echo -n "Load time: "
 command time -f '%e' duckdb hits.db -storage_version latest -f create.sql -f load.sql
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.parquet
+
 # Run the queries
 
 ./run.sh 2>&1 | tee log.txt

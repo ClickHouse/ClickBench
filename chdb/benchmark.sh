@@ -16,6 +16,10 @@ pigz -d -f hits.csv.gz
 echo -n "Load time: "
 command time -f '%e' ./load.py
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.csv
+
 # Run the queries
 ./run.sh 2>&1 | tee log.txt
 

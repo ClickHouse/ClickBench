@@ -32,6 +32,10 @@ command time -f '%e' mysql --password="${PASSWORD}" --host 127.0.0.1 clickbench 
 
 # 41m47.856s
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.tsv
+
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "

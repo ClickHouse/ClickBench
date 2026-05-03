@@ -38,6 +38,10 @@ command time -f '%e' ./apache-pinot-$PINOT_VERSION-bin/bin/pinot-admin.sh Launch
 
 # After upload it shows 94465149 rows instead of 99997497 in the dataset
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.tsv parts*.tsv
+
 # Run the queries
 ./run.sh
 

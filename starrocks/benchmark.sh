@@ -69,6 +69,10 @@ du -bcs StarRocks-${VERSION}/storage/ | grep total
 # Dataset contains 99997497 rows
 mysql -h 127.0.0.1 -P9030 -uroot hits -e "SELECT count(*) FROM hits"
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.tsv
+
 ./run.sh 2>&1 | tee -a log.txt
 
 cat log.txt |

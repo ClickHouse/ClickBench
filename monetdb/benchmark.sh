@@ -33,6 +33,10 @@ command time -f '%e' ./query.expect "COPY INTO hits FROM '$(pwd)/hits.tsv' USING
 # 99997497 affected rows
 # clk: 15:39 min
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.tsv
+
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "

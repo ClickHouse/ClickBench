@@ -44,6 +44,10 @@ sudo chown clickhouse:clickhouse /var/lib/clickhouse/user_files/hits_*.parquet
 echo -n "Load time: "
 clickhouse-client --time --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" --max-insert-threads $(( $(nproc) / 4 ))
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+sudo rm -f /var/lib/clickhouse/user_files/hits_*.parquet
+
 # Run the queries
 
 ./run.sh "$1"

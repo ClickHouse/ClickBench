@@ -26,6 +26,10 @@ command time -f '%e' psql -U postgres -h localhost -d postgres test -q -t -c "\\
 # COPY 99997497
 # Time: 1579203.482 ms (26:19.203)
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.tsv
+
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "

@@ -120,6 +120,9 @@ elif [[ $1 == 'test' ]]; then
 	if [[ $2 != 'no_dl' ]]; then echo -n "Load time: "
                                command time -f '%e' sudo -iu gpadmin psql -d postgres -t -c "ANALYZE hits;"; fi
 	du -sh /data0*
+	# Drop the downloaded source files so the sync at the top of run.sh
+	# doesn't flush their pages and inflate cold-run prep time.
+	sudo -u gpadmin rm -f ~gpadmin/hits.tsv ~gpadmin/hits.tsv.gz
 	sudo -iu gpadmin /home/gpadmin/run.sh 2>&1 | tee log.txt
 	cat log.txt | grep -oP 'Time: \d+\.\d+ ms|psql: error' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/; s/^.*psql: error.*$/null/' |awk '{ if (i % 3 == 0) { printf "[" }; if ($1 == "null") { printf $1 } else { printf $1 / 1000 }; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 

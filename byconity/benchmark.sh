@@ -36,6 +36,10 @@ byconity --database bench --query "INSERT INTO hits FORMAT TSV" < hits.tsv
 END=$(date +%s)
 echo "Load time: $(echo "$END - $START" | bc)"
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.tsv hits.tsv.gz
+
 # NOTE: sometimes may hung due to docker-compose, using docker directly may help
 ./run.sh
 

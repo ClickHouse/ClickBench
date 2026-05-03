@@ -68,6 +68,10 @@ if [[ $MODE == "tuned" ]]; then
   psql -U crate -h localhost --no-password -t -c "REFRESH TABLE hits; OPTIMIZE TABLE hits;"
 fi;
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+sudo rm -f /tmp/hits.tsv
+
 # Some queries don't fit into the available heap space and raise an CircuitBreakingException
 ./run.sh "$MODE" 2>&1 | tee log.txt
 

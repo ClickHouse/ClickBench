@@ -33,6 +33,10 @@ cockroach sql --insecure --host=localhost --database=test --execute="IMPORT INTO
 END=$(date +%s)
 echo "Load time: $(echo "$END - $START" | bc)"
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+sudo rm -f /tmp/hits.csv.gz $CRDBDATADIR/extern/hits.csv
+
 ./run.sh 2>&1 | tee log.txt
 
 echo -n "Data size: "

@@ -38,6 +38,10 @@ PGPASSWORD=oxla command time -f '%e' psql -h localhost -U oxla -q -t -c "COPY hi
 echo -n "Data size: "
 PGPASSWORD=oxla psql -h localhost -U oxla -q -t -c "SELECT pg_total_relation_size('hits');"
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+sudo rm -f data/hits.csv
+
 # run benchmark
 echo "running benchmark..."
 ./run.sh

@@ -36,6 +36,10 @@ command time -f '%e' ./apache-druid-${VERSION}/bin/post-index-task --file ingest
 # The command above will fail due to timeout but still continue to run in background.
 # The loading time should be checked from the logs.
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f hits.tsv
+
 # Run the queries
 ./run.sh
 

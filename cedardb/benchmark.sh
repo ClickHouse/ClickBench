@@ -37,6 +37,10 @@ PGPASSWORD=test command time -f '%e' psql -h localhost -U postgres -q -t -c "COP
 echo -n "Data size: "
 PGPASSWORD=test psql -h localhost -U postgres -q -t -c "SELECT pg_total_relation_size('hits');"
 
+# Drop the downloaded source files so the sync at the top of run.sh
+# doesn't flush their pages and inflate cold-run prep time.
+rm -f data/hits.tsv
+
 # run benchmark
 echo "running benchmark..."
 ./run.sh 2>&1 | tee log.txt
