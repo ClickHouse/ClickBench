@@ -3,8 +3,17 @@
 TRIES=3
 
 cat queries.sql | while read -r query; do
+    # Restart the container so the columnstore blob cache and plan cache do
+    # not survive into the next "cold" run. SingleStore keeps decoded segment
+    # data in a process-internal blob cache that drop_caches cannot clear and
+    # exposes no public flush API.
+    sudo docker restart memsql-ciab
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+
+    until sudo docker exec memsql-ciab memsql -p"${ROOT_PASSWORD}" --database=test -e 'select 1' >/dev/null 2>&1; do
+        sleep 1
+    done
 
     sudo docker exec memsql-ciab memsql -vvv -p"${ROOT_PASSWORD}" --database=test -e "USE test; ${query}"
 

@@ -7,7 +7,7 @@
     "schemaName": "hitsSchema",
     "replication": "1"
   },
-  "tableIndexConfig":{},
+  "tableIndexConfig":{"loadMode": "MMAP"},
   "metadata":{},
   "tenants":
   {
