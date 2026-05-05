@@ -7,6 +7,7 @@ cur = con.cursor()
 
 cur.execute(open("create.sql").read())
 cur.execute(open("insert.sql").read())
+cur.execute("SYSTEM SYNC FILE CACHE")
 
 cur.close()
 con.close()
