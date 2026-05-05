@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
 
-# Stateless system — confirm datafusion-cli (the playground's query
-# driver) is on PATH.
-command -v datafusion-cli >/dev/null
+DF=vortex-datafusion-cli/target/release/vortex-datafusion-cli
+"$DF" -q -c "SELECT 1" >/dev/null
