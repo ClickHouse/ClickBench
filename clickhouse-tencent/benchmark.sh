@@ -22,8 +22,11 @@ sudo mv hits_*.parquet /var/lib/clickhouse/user_files/
 sudo chown clickhouse:clickhouse /var/lib/clickhouse/user_files/hits_*.parquet
 
 echo -n "Load time: "
-clickhouse-client --time --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" --max-insert-threads $(( $(nproc) / 4 ))
+start=$(date +%s.%N)
+clickhouse-client --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" --max-insert-threads $(( $(nproc) / 4 ))
 clickhouse-client --query "SYSTEM SYNC FILE CACHE"
+end=$(date +%s.%N)
+echo "$end - $start" | bc
 
 # Run the queries
 
