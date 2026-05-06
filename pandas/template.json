@@ -1,7 +1,0 @@
-{
-    "system": "pandas",
-    "proprietary": "no",
-  "hardware": "cpu",
-    "tuned": "no",
-    "tags": ["Python","dataframe","row-oriented", "lukewarm-cold-run"]
-}
