@@ -13,7 +13,7 @@
         "MPP",
         "MySQL compatible"
     ],
-    "comment": "Tested on the new ClickBench-100 query set",
+    "comment": "Tested on the new ClickBench-100 query set (Q57 LOG/1 error replaced with LN/1)",
     "result": [
         [
             0.29,
@@ -296,9 +296,9 @@
             0.57
         ],
         [
-            null,
-            null,
-            null
+            1.6,
+            0.57,
+            0.57
         ],
         [
             1.62,
