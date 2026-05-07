@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+sudo apt-get update -y
+sudo apt-get install -y software-properties-common
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt-get update -y
+sudo apt-get install -y python3.11 python3.11-venv git wget build-essential python3.11-dev
+
+if [ ! -d "$HOME/opteryx_venv" ]; then
+    python3.11 -m venv "$HOME/opteryx_venv"
+fi
+
+"$HOME/opteryx_venv/bin/python" -m pip install --upgrade pip
+"$HOME/opteryx_venv/bin/python" -m pip install --upgrade opteryx==0.26.1

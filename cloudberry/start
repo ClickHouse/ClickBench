@@ -1,0 +1,6 @@
+#!/bin/bash
+set -eu
+
+# Cloudberry start: ensure the gpadmin user can launch and the coordinator
+# is running. gpstart is a no-op if the cluster is already up.
+sudo -iu gpadmin bash -lc 'gpstart -a' || true

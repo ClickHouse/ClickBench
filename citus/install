@@ -1,0 +1,26 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-citus}
+CITUS_VERSION=${CITUS_VERSION:-11.0}
+PGPASSWORD=${PGPASSWORD:-mypass}
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client
+
+sudo docker pull "citusdata/citus:$CITUS_VERSION"
+
+# (Re)create container so install is idempotent.
+if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    sudo docker rm -f "$CONTAINER_NAME" >/dev/null
+fi
+
+sudo docker run -d \
+    --name "$CONTAINER_NAME" \
+    -p 5432:5432 \
+    -e POSTGRES_PASSWORD="$PGPASSWORD" \
+    "citusdata/citus:$CITUS_VERSION"
+
+# Persist the password for psql clients invoked from this directory.
+echo "*:*:*:*:$PGPASSWORD" > .pgpass
+chmod 600 .pgpass

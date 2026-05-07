@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+/opt/heavyai/bin/heavysql -p HyperInteractive -q -t <<< 'SELECT 1' >/dev/null 2>&1

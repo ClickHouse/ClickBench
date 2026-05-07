@@ -1,0 +1,28 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via octosql against hits.parquet.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (from `time`).
+set -e
+
+query=$(cat)
+# octosql wants the file path inline, not a table name.
+query=${query//hits/hits.parquet}
+
+# Cap RSS to ~90% of host memory like the original benchmark.
+max_rss=$(( $(grep MemTotal /proc/meminfo | grep -o -P '\d+') * 900 ))
+
+TIMEFORMAT='%R'
+{ time prlimit --data="${max_rss}" ./octosql "$query" 1>/tmp/octosql.out.$$ 2>/tmp/octosql.err.$$; } 2>/tmp/octosql.time.$$ || status=$?
+status=${status:-0}
+
+cat /tmp/octosql.out.$$
+if [ "$status" -ne 0 ]; then
+    cat /tmp/octosql.err.$$ >&2
+    rm -f /tmp/octosql.out.$$ /tmp/octosql.err.$$ /tmp/octosql.time.$$
+    exit "$status"
+fi
+
+cat /tmp/octosql.err.$$ >&2
+cat /tmp/octosql.time.$$ >&2
+
+rm -f /tmp/octosql.out.$$ /tmp/octosql.err.$$ /tmp/octosql.time.$$

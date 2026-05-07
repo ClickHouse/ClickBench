@@ -1,0 +1,12 @@
+#!/bin/bash
+set -eu
+
+mkdir -p data
+mv hits.tsv data/
+chmod -R 777 data
+
+# create.sql for umbra both creates the table and ingests via COPY.
+PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -f create.sql
+
+rm -f data/hits.tsv
+sync

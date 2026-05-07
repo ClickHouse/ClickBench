@@ -1,0 +1,90 @@
+#!/bin/bash
+# Install Greenplum DB. Requires Ubuntu 18.04 — newer releases lack
+# greenplum packages. The original benchmark relies on running parts as the
+# gpadmin user; this script encapsulates the steps.
+#
+# Phases (controlled by the first argument):
+#   <none>     System config; afterwards reboot before running ./install init.
+#   init       Initialize the cluster (must be run as gpadmin).
+set -eu
+
+PHASE=${1:-prereqs}
+
+if [ "$PHASE" = "prereqs" ]; then
+    sudo apt-get update -y
+    sudo apt-get install -y software-properties-common
+    sudo add-apt-repository -y ppa:greenplum/db
+    sudo apt-get update -y
+    sudo apt-get install -y greenplum-db-6
+    sudo rm -rf /gpmaster /gpdata*
+
+    if [ ! -f "$HOME/.ssh/id_rsa" ]; then
+        ssh-keygen -t rsa -b 4096 -N '' -f "$HOME/.ssh/id_rsa"
+    fi
+    touch "$HOME/.ssh/authorized_keys"
+    chmod 600 "$HOME/.ssh/authorized_keys"
+    cat "$HOME/.ssh/id_rsa.pub" >> "$HOME/.ssh/authorized_keys"
+
+    sudo tee -a /etc/sysctl.conf <<EOF
+kernel.shmall = 197951838
+kernel.shmmax = 810810728448
+kernel.shmmni = 4096
+vm.overcommit_memory = 2
+vm.overcommit_ratio = 95
+
+net.ipv4.ip_local_port_range = 10000 65535
+kernel.sem = 500 2048000 200 4096
+kernel.sysrq = 1
+kernel.core_uses_pid = 1
+kernel.msgmnb = 65536
+kernel.msgmax = 65536
+kernel.msgmni = 2048
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.default.accept_source_route = 0
+net.ipv4.tcp_max_syn_backlog = 4096
+net.ipv4.conf.all.arp_filter = 1
+net.core.netdev_max_backlog = 10000
+net.core.rmem_max = 2097152
+net.core.wmem_max = 2097152
+vm.swappiness = 10
+vm.zone_reclaim_mode = 0
+vm.dirty_expire_centisecs = 500
+vm.dirty_writeback_centisecs = 100
+vm.dirty_background_ratio = 0
+vm.dirty_ratio = 0
+vm.dirty_background_bytes = 1610612736
+vm.dirty_bytes = 4294967296
+EOF
+    sudo sysctl -p
+
+    sudo tee -a /etc/security/limits.conf <<EOF
+* soft nofile 524288
+* hard nofile 524288
+* soft nproc 131072
+* hard nproc 131072
+EOF
+    echo "RemoveIPC=no" | sudo tee -a /etc/systemd/logind.conf
+
+    echo "Prereqs installed. Reboot, then re-run as gpadmin: ./install init"
+    exit 0
+fi
+
+if [ "$PHASE" = "init" ]; then
+    # shellcheck disable=SC1091
+    source /opt/greenplum-db-*/greenplum_path.sh
+    cp -f "$GPHOME/docs/cli_help/gpconfigs/gpinitsystem_singlenode" .
+    echo localhost > ./hostlist_singlenode
+    sed -i "s/MASTER_HOSTNAME=[a-z_]*/MASTER_HOSTNAME=$(hostname)/" gpinitsystem_singlenode
+    sed -i "s@declare -a DATA_DIRECTORY=(/gpdata1 /gpdata2)@declare -a DATA_DIRECTORY=(/gpdata1 /gpdata2 /gpdata3 /gpdata4 /gpdata5 /gpdata6 /gpdata7 /gpdata8 /gpdata9 /gpdata10 /gpdata11 /gpdata12 /gpdata13 /gpdata14)@" gpinitsystem_singlenode
+
+    sudo mkdir -p /gpmaster /gpdata1 /gpdata2 /gpdata3 /gpdata4 /gpdata5 /gpdata6 \
+        /gpdata7 /gpdata8 /gpdata9 /gpdata10 /gpdata11 /gpdata12 /gpdata13 /gpdata14
+    sudo chmod 777 /gpmaster /gpdata1 /gpdata2 /gpdata3 /gpdata4 /gpdata5 /gpdata6 \
+        /gpdata7 /gpdata8 /gpdata9 /gpdata10 /gpdata11 /gpdata12 /gpdata13 /gpdata14
+
+    gpinitsystem -ac gpinitsystem_singlenode
+    exit 0
+fi
+
+echo "Unknown phase: $PHASE" >&2
+exit 1

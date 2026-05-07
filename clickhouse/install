@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+if [ ! -x /usr/bin/clickhouse ]; then
+    curl https://clickhouse.com/ | sh
+    sudo ./clickhouse install --noninteractive
+fi

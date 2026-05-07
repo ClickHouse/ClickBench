@@ -1,0 +1,126 @@
+#!/bin/bash
+# Install Cloudberry DB. The full flow needs to be split across one or more
+# reboots and password setup; this script encodes the original steps.
+#
+# Phases (controlled by the first argument; default is all-prereqs):
+#   <none>     System config; afterwards the host must be rebooted before
+#              running ./install db-install.
+#   db-install Build/install Cloudberry from source under user gpadmin.
+#
+# The original benchmark.sh ran phases interactively; we mirror that here.
+set -eu
+
+PHASE=${1:-prereqs}
+
+if [ "$PHASE" = "prereqs" ]; then
+    echo "SELINUX=disabled" | sudo tee /etc/selinux/config
+
+    SHMALL=$(expr $(getconf _PHYS_PAGES) / 2)
+    SHMAX=$(expr $(getconf _PHYS_PAGES) / 2 \* $(getconf PAGE_SIZE))
+
+    sudo tee -a /etc/sysctl.conf <<EOF
+kernel.shmall = $SHMALL
+kernel.shmmax = $SHMAX
+kernel.shmmni = 4096
+vm.overcommit_memory = 2
+vm.overcommit_ratio = 95
+net.ipv4.ip_local_port_range = 10000 65535
+kernel.sem = 250 2048000 200 8192
+kernel.sysrq = 1
+kernel.core_uses_pid = 1
+kernel.msgmnb = 65536
+kernel.msgmax = 65536
+kernel.msgmni = 2048
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.default.accept_source_route = 0
+net.ipv4.tcp_max_syn_backlog = 4096
+net.ipv4.conf.all.arp_filter = 1
+net.ipv4.ipfrag_high_thresh = 41943040
+net.ipv4.ipfrag_low_thresh = 31457280
+net.ipv4.ipfrag_time = 60
+net.core.netdev_max_backlog = 10000
+net.core.rmem_max = 2097152
+net.core.wmem_max = 2097152
+vm.swappiness = 10
+vm.zone_reclaim_mode = 0
+vm.dirty_expire_centisecs = 500
+vm.dirty_writeback_centisecs = 100
+vm.dirty_background_ratio = 0
+vm.dirty_ratio = 0
+vm.dirty_background_bytes = 1610612736
+vm.dirty_bytes = 4294967296
+EOF
+    sudo sysctl -p
+
+    sudo tee /etc/security/limits.conf <<EOF
+* soft nofile 524288
+* hard nofile 524288
+* soft nproc 131072
+* hard nproc 131072
+EOF
+    sudo tee /etc/systemd/logind.conf <<EOF
+RemoveIPC=no
+EOF
+
+    sudo groupadd -f gpadmin
+    if ! id -u gpadmin >/dev/null 2>&1; then
+        sudo useradd gpadmin -r -m -g gpadmin
+        sudo -u gpadmin ssh-keygen -t rsa -b 4096 -N '' -f /home/gpadmin/.ssh/id_rsa
+    fi
+    sudo usermod -aG wheel gpadmin || true
+    echo "%wheel        ALL=(ALL)       NOPASSWD: ALL" | sudo tee -a /etc/sudoers
+    sudo grubby --update-kernel=ALL --args="transparent_hugepage=never" || true
+
+    echo "Prereqs installed. Reboot, then re-run: ./install db-install"
+    exit 0
+fi
+
+if [ "$PHASE" = "db-install" ]; then
+    SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+    sudo yum install -y go
+    export GOPROXY=https://goproxy.io,direct
+    sudo yum -y install R apr apr-devel apr-util automake autoconf bash bison \
+        bison-devel bzip2 bzip2-devel flex flex-devel gcc gcc-c++ git gdb iproute \
+        krb5-devel less libevent libevent-devel libxml2 libxml2-devel libyaml \
+        libzstd-devel libzstd make openldap openssh openssh-clients openssh-server \
+        openssl openssl-devel openssl-libs perl python3-devel readline readline-devel \
+        rsync sed sudo tar vim wget which zip zlib python3-pip python3-venv \
+        python3-psycopg2 postgresql15 libpq-devel psutils
+    sudo yum install -y curl libcurl-devel --allowerasing
+
+    python3 -m venv /tmp/cloudberry-venv
+    # shellcheck disable=SC1091
+    source /tmp/cloudberry-venv/bin/activate
+    pip install PygreSQL psutil
+
+    if [ ! -f 1.5.3.tar.gz ]; then
+        wget --continue --progress=dot:giga https://github.com/cloudberrydb/cloudberrydb/archive/refs/tags/1.5.3.tar.gz
+    fi
+    tar -xzf 1.5.3.tar.gz
+    cd cloudberrydb-1.5.3/
+    echo -e "/usr/local/lib \n/usr/local/lib64" | sudo tee -a /etc/ld.so.conf
+    sudo ldconfig
+    ./configure --prefix=/usr/local/cloudberrydb
+    make -j$(nproc)
+    sudo make -j$(nproc) install
+    sudo chown -R gpadmin:gpadmin /usr/local
+    echo "source /usr/local/cloudberrydb/greenplum_path.sh" | sudo tee -a /home/gpadmin/.bashrc
+
+    echo "PasswordAuthentication yes" | sudo tee -a /etc/ssh/sshd_config
+    sudo systemctl restart sshd
+    sudo -iu gpadmin ssh-copy-id -o StrictHostKeyChecking=no localhost || true
+
+    sudo mkdir -p /data0/primary /data0/mirror /data0/coordinator
+    sudo chown -R gpadmin:gpadmin /data0
+    echo "export COORDINATOR_DATA_DIRECTORY=/data0/coordinator/gpseg-1" | sudo tee -a /home/gpadmin/.bashrc
+
+    echo "localhost" | sudo tee /home/gpadmin/hosts >/dev/null
+    sudo cp "$SCRIPT_DIR/gpinitsystem_config" /home/gpadmin/
+    sudo chown gpadmin:gpadmin /home/gpadmin/hosts /home/gpadmin/gpinitsystem_config
+
+    sudo -iu gpadmin gpinitsystem -c gpinitsystem_config -h hosts
+    exit 0
+fi
+
+echo "Unknown phase: $PHASE" >&2
+exit 1

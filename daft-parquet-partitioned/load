@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# Server reads hits.parquet from CWD into memory. Daft is lazy; reading just
+# builds the plan and types — actual data is loaded on first query.
+elapsed=$(curl -sS -X POST http://127.0.0.1:8000/load | python3 -c 'import json,sys; print(json.load(sys.stdin)["elapsed"])')
+echo "Load (server-reported): ${elapsed}s"
+
+sync

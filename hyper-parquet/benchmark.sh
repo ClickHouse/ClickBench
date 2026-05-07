@@ -1,15 +1,5 @@
 #!/bin/bash
-
-sudo apt-get update -y
-sudo apt-get install -y python3-pip python3-venv
-python3 -m venv myenv
-source myenv/bin/activate
-pip install tableauhyperapi
-
-../download-hits-parquet-partitioned
-
-./run.sh | tee log.txt
-echo "Data size: $(du -bcs hits*.parquet | grep total)"
-echo "Load time: 0"
-
-cat log.txt | awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
+# Thin shim — actual flow is in lib/benchmark-common.sh.
+export BENCH_DOWNLOAD_SCRIPT="download-hits-parquet-partitioned"
+export BENCH_RESTARTABLE=no
+exec ../lib/benchmark-common.sh

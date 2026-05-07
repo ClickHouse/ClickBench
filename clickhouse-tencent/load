@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+clickhouse-client < create.sql
+
+sudo mv hits_*.parquet /var/lib/clickhouse/user_files/
+sudo chown clickhouse:clickhouse /var/lib/clickhouse/user_files/hits_*.parquet
+
+clickhouse-client --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" --max-insert-threads "$(( $(nproc) / 4 ))"
+
+sudo rm -f /var/lib/clickhouse/user_files/hits_*.parquet
+sync

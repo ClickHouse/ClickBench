@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+du -bcs ~/.questdb/db/hits* | grep total | awk '{print $1}'

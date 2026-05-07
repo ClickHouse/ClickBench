@@ -1,0 +1,8 @@
+#!/bin/bash
+set -eu
+
+# Source greenplum env and start the cluster (idempotent).
+# shellcheck disable=SC1091
+source /opt/greenplum-db-*/greenplum_path.sh
+export MASTER_DATA_DIRECTORY=${MASTER_DATA_DIRECTORY:-/gpmaster/gpsne-1/}
+gpstart -a || true

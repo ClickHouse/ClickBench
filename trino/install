@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+# Install Docker (idempotent).
+if ! command -v docker >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y docker.io
+fi
+
+# Pull image (idempotent — Docker caches).
+sudo docker pull trinodb/trino

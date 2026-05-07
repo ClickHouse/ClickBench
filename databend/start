@@ -1,0 +1,13 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: if HTTP API is already up, do nothing.
+if curl -sSf 'http://default@localhost:8124/' --data-binary 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+# databend has two daemons: meta service + query service.
+nohup ./bin/databend-meta --single > meta.log 2>&1 &
+disown
+nohup ./bin/databend-query -c config.toml > query.log 2>&1 &
+disown

@@ -1,17 +1,5 @@
 #!/bin/bash
-
-# Install
-
-curl https://clickhouse.com/ | sh
-
-../download-hits-parquet-partitioned
-
-# Run the queries
-
-./run.sh
-
-echo "Load time: 0"
-echo "Data size: $(du -bcs hits*.parquet | grep total)"
-
-# Use for ClickHouse (Parquet, single)
-# du -b hits.parquet
+# Thin shim — actual flow is in lib/benchmark-common.sh.
+export BENCH_DOWNLOAD_SCRIPT="download-hits-parquet-partitioned"
+export BENCH_RESTARTABLE=no
+exec ../lib/benchmark-common.sh

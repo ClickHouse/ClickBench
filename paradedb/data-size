@@ -1,0 +1,6 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-paradedb}
+# Data is the parquet file inside the container.
+sudo docker exec -i "$CONTAINER_NAME" sh -c "du -bcs /tmp/hits.parquet 2>/dev/null | tail -n1 | awk '{print \$1}'"

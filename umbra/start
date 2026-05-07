@@ -1,0 +1,23 @@
+#!/bin/bash
+set -eu
+
+if PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -c 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+sudo docker stop umbradb >/dev/null 2>&1 || true
+sudo docker rm umbradb >/dev/null 2>&1 || true
+
+sudo docker run -d --name umbradb \
+    -v "$(pwd)/db:/var/db" \
+    -v "$(pwd)/data:/data" \
+    -p 5432:5432 \
+    --ulimit nofile=1048576:1048576 \
+    --ulimit memlock=8388608:8388608 \
+    umbradb/umbra:latest >/dev/null
+
+# Container needs a moment before psql can connect.
+for _ in $(seq 1 60); do
+    PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -c 'SELECT 1' >/dev/null 2>&1 && exit 0
+    sleep 1
+done

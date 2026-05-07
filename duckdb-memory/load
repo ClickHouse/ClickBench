@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+# State doesn't persist across `query` invocations (the table lives in
+# :memory:), so the load is performed inside each query script. Here we just
+# verify the source parquet is in place and measure peak memory once via
+# memory.py — that becomes our `data-size` answer.
+if [ ! -f hits.parquet ]; then
+    echo "load: hits.parquet missing in $(pwd)" >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# Run memory.py under `time -v` to capture the peak RSS, save it to
+# data-size.txt for use by ./data-size.
+/usr/bin/time -v python3 memory.py 2> memory.log
+grep -F 'Maximum resident set size' memory.log \
+    | grep -o -P '\d+$' \
+    | awk '{ print $1 * 1024 }' > data-size.txt
+
+sync

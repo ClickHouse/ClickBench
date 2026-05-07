@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+DF=arrow-datafusion/target/release/datafusion-cli
+"$DF" -c "SELECT 1" >/dev/null

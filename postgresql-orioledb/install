@@ -1,0 +1,47 @@
+#!/bin/bash
+set -eu
+
+VERSION=${VERSION:-beta12-pg17}
+CONTAINER_NAME=${CONTAINER_NAME:-orioledb-clickbench}
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io pigz postgresql-client
+
+# Pull image up front so subsequent ./start is fast and idempotent.
+sudo docker pull "orioledb/orioledb:$VERSION"
+
+mkdir -p /tmp/data
+
+# (Re)create container with our config. Remove any existing one first.
+if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    sudo docker rm -f "$CONTAINER_NAME" >/dev/null
+fi
+
+MEM_SIZE=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+SHM_SIZE=$(echo "$MEM_SIZE/2/1024" | bc)
+
+sudo docker run --name "$CONTAINER_NAME" \
+    -v /tmp/data:/tmp/data \
+    --shm-size="${SHM_SIZE}m" \
+    -p 5432:5432 \
+    -e POSTGRES_HOST_AUTH_METHOD=trust \
+    -d "orioledb/orioledb:$VERSION"
+
+THREADS=$(nproc)
+CPUS=$(($THREADS / 2))
+MAIN_BUFFERS=$(($MEM_SIZE / 4))
+EFFECTIVE_CACHE_SIZE=$(($MEM_SIZE - ($MEM_SIZE / 4)))
+MAX_WORKER_PROCESSES=$(($THREADS + 15))
+
+cat <<EOF | sudo docker exec -i "$CONTAINER_NAME" sh -c 'tee -a /etc/postgresql/postgresql.conf'
+orioledb.main_buffers=${MAIN_BUFFERS}kB
+max_worker_processes=${MAX_WORKER_PROCESSES}
+max_parallel_workers=${THREADS}
+max_parallel_maintenance_workers=${CPUS}
+max_parallel_workers_per_gather=${CPUS}
+max_wal_size=32GB
+work_mem=64MB
+effective_cache_size=${EFFECTIVE_CACHE_SIZE}kB
+EOF
+
+sudo docker restart "$CONTAINER_NAME"

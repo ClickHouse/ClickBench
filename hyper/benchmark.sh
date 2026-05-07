@@ -1,20 +1,5 @@
 #!/bin/bash
-
-sudo apt-get update -y
-sudo apt-get install -y python3-pip python3-venv
-python3 -m venv myenv
-source myenv/bin/activate
-pip install tableauhyperapi
-
-../download-hits-csv
-
-echo -n "Load time: "
-command time -f '%e' ./load.py
-
-./run.sh | tee log.txt
-
-cat log.txt |
-    awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
-
-echo -n "Data size: "
-du -b hits.hyper
+# Thin shim — actual flow is in lib/benchmark-common.sh.
+export BENCH_DOWNLOAD_SCRIPT="download-hits-csv"
+export BENCH_RESTARTABLE=no
+exec ../lib/benchmark-common.sh

@@ -1,0 +1,9 @@
+#!/bin/bash
+# datafusion queries the parquet files via an external table at LOCATION
+# 'partitioned' (see create.sql). The shared bench_download fetches the
+# parquet files into CWD; move them into the expected subdir.
+set -e
+
+mkdir -p partitioned
+mv hits_*.parquet partitioned/ 2>/dev/null || true
+sync

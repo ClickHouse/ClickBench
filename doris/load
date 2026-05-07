@@ -1,0 +1,142 @@
+#!/bin/bash
+set -e
+
+ROOT=$(pwd)
+DORIS_HOME=$(cat .doris_home)
+export DORIS_HOME
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-$(dpkg --print-architecture)/"
+export PATH=$JAVA_HOME/bin:$PATH
+
+# Idempotent: drop+create database.
+mysql -h127.0.0.1 -P9030 -uroot -e "DROP DATABASE IF EXISTS hits"
+mysql -h127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits"
+sleep 5
+mysql -h127.0.0.1 -P9030 -uroot hits < "$ROOT/create.sql"
+
+BE_DATA_DIR="$DORIS_HOME/be/"
+"$ROOT/../download-hits-parquet-partitioned" "$BE_DATA_DIR/user_files_secure"
+
+BE_ID=$(mysql -h127.0.0.1 -P9030 -uroot -N -e 'show backends' | awk '{print $1}' | head -1)
+CORES=$(nproc)
+PARALLEL_NUM=$((CORES / 4))
+[ "$PARALLEL_NUM" -lt 1 ] && PARALLEL_NUM=1
+
+mysql -h127.0.0.1 -P9030 -uroot hits -e "SET parallel_pipeline_task_num = $PARALLEL_NUM;\
+INSERT INTO hits SELECT
+    CounterID,
+    DATE_ADD('1970-01-01', INTERVAL EventDate DAY) AS EventDate,
+    UserID,
+    FROM_UNIXTIME(EventTime) AS EventTime,
+    WatchID,
+    JavaEnable,
+    Title,
+    GoodEvent,
+    ClientIP,
+    RegionID,
+    CounterClass,
+    OS,
+    UserAgent,
+    URL,
+    Referer,
+    IsRefresh,
+    RefererCategoryID,
+    RefererRegionID,
+    URLCategoryID,
+    URLRegionID,
+    ResolutionWidth,
+    ResolutionHeight,
+    ResolutionDepth,
+    FlashMajor,
+    FlashMinor,
+    FlashMinor2,
+    NetMajor,
+    NetMinor,
+    UserAgentMajor,
+    UserAgentMinor,
+    CookieEnable,
+    JavascriptEnable,
+    IsMobile,
+    MobilePhone,
+    MobilePhoneModel,
+    Params,
+    IPNetworkID,
+    TraficSourceID,
+    SearchEngineID,
+    SearchPhrase,
+    AdvEngineID,
+    IsArtifical,
+    WindowClientWidth,
+    WindowClientHeight,
+    ClientTimeZone,
+    FROM_UNIXTIME(ClientEventTime) AS ClientEventTime,
+    SilverlightVersion1,
+    SilverlightVersion2,
+    SilverlightVersion3,
+    SilverlightVersion4,
+    PageCharset,
+    CodeVersion,
+    IsLink,
+    IsDownload,
+    IsNotBounce,
+    FUniqID,
+    OriginalURL,
+    HID,
+    IsOldCounter,
+    IsEvent,
+    IsParameter,
+    DontCountHits,
+    WithHash,
+    HitColor,
+    FROM_UNIXTIME(LocalEventTime) AS LocalEventTime,
+    Age,
+    Sex,
+    Income,
+    Interests,
+    Robotness,
+    RemoteIP,
+    WindowName,
+    OpenerName,
+    HistoryLength,
+    BrowserLanguage,
+    BrowserCountry,
+    SocialNetwork,
+    SocialAction,
+    HTTPError,
+    SendTiming,
+    DNSTiming,
+    ConnectTiming,
+    ResponseStartTiming,
+    ResponseEndTiming,
+    FetchTiming,
+    SocialSourceNetworkID,
+    SocialSourcePage,
+    ParamPrice,
+    ParamOrderID,
+    ParamCurrency,
+    ParamCurrencyID,
+    OpenstatServiceName,
+    OpenstatCampaignID,
+    OpenstatAdID,
+    OpenstatSourceID,
+    UTMSource,
+    UTMMedium,
+    UTMCampaign,
+    UTMContent,
+    UTMTerm,
+    FromTag,
+    HasGCLID,
+    RefererHash,
+    URLHash,
+    CLID
+FROM local(
+    \"file_path\" = \"user_files_secure/hits_*.parquet\",
+    \"backend_id\" = \"$BE_ID\",
+    \"format\" = \"parquet\"
+)
+"
+
+mysql -h127.0.0.1 -P9030 -uroot hits -e "set global enable_sql_cache = false"
+
+# Clean up downloaded parquet inputs.
+rm -f "$BE_DATA_DIR"/user_files_secure/hits_*.parquet
+sync

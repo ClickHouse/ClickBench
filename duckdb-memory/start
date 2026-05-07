@@ -1,0 +1,3 @@
+#!/bin/bash
+# Embedded Python — no daemon to start.
+exit 0

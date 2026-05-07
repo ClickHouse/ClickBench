@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+if [ ! -x ./clickhouse ]; then
+    curl https://clickhouse.com/ | sh
+fi
+
+# Filesystem cache used by clickhouse-local for S3 reads.
+cat > clickhouse-local.yaml <<'YAML'
+filesystem_caches:
+    cache:
+        path: '/dev/shm/clickhouse/'
+        max_size_ratio_to_total_space: 0.9
+YAML

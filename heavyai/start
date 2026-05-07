@@ -1,0 +1,8 @@
+#!/bin/bash
+set -eu
+
+if /opt/heavyai/bin/heavysql -p HyperInteractive -q -t <<< 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+sudo systemctl start heavydb

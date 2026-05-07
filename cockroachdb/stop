@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# cockroach has no clean single-node stop; killall is the documented approach.
+sudo killall cockroach 2>/dev/null || true

@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+if ! command -v duckdb >/dev/null 2>&1; then
+    export HOME=${HOME:=~}
+    curl https://install.duckdb.org | sh
+fi
+
+# Make duckdb available on PATH for sibling scripts in this directory.
+ln -sf "$HOME/.duckdb/cli/latest/duckdb" "$HOME/.local/bin/duckdb" 2>/dev/null || true

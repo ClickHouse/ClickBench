@@ -1,0 +1,23 @@
+#!/bin/bash
+set -eu
+
+. ./util.sh
+
+# Idempotent: blow away any prior database.
+rm -f clickbench.db
+
+# Server must be up to receive create + load via gizmosqlline.
+gizmosqlline \
+    -u "$GIZMOSQL_SERVER_URI" \
+    -n "$GIZMOSQL_USERNAME" \
+    -p "$GIZMOSQL_PASSWORD" \
+    -f create.sql
+
+gizmosqlline \
+    -u "$GIZMOSQL_SERVER_URI" \
+    -n "$GIZMOSQL_USERNAME" \
+    -p "$GIZMOSQL_PASSWORD" \
+    -f load.sql
+
+rm -f hits.parquet
+sync

@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+# Idempotent: if running, do nothing. If exists but stopped, start it. Else run.
+if sudo docker ps --format '{{.Names}}' | grep -qx trino; then
+    exit 0
+fi
+if sudo docker ps -a --format '{{.Names}}' | grep -qx trino; then
+    sudo docker start trino
+    exit 0
+fi
+sudo docker run -d --network host --name trino trinodb/trino

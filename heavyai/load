@@ -1,0 +1,10 @@
+#!/bin/bash
+set -eu
+
+chmod 777 ~ hits.csv
+
+/opt/heavyai/bin/heavysql -t -p HyperInteractive < create.sql
+/opt/heavyai/bin/heavysql -q -t -p HyperInteractive <<< "COPY hits FROM '$(pwd)/hits.csv' WITH (HEADER = 'false');"
+
+rm -f hits.csv
+sync

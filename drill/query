@@ -1,0 +1,23 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via Apache Drill (in a one-shot
+# docker container) against hits.parquet (mounted as /hits.parquet).
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+set -e
+
+query=$(cat)
+# Drill needs the full dfs path, not a bare table name.
+query=${query//hits/dfs.\`/hits.parquet\`}
+
+out=$(printf '%s\r' "$query" | sudo docker run -i --rm \
+    -v "$(pwd)/hits.parquet:/hits.parquet" apache/drill 2>&1) && status=0 || status=$?
+
+if [ "$status" -ne 0 ]; then
+    printf '%s\n' "$out" >&2
+    exit "$status"
+fi
+
+# Drill output ends each query with `(X.YYY seconds)`.
+printf '%s\n' "$out" | grep -v -E '\([0-9.]+ seconds\)' || true
+
+printf '%s\n' "$out" | grep -oE '\([0-9.]+ seconds\)' | grep -oE '[0-9.]+' | tail -n1 >&2

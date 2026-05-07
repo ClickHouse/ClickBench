@@ -1,51 +1,5 @@
 #!/bin/bash
-
-echo "Install Rust"
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
-bash rust-init.sh -y
-export HOME=${HOME:=~}
-source ~/.cargo/env
-
-WITH_SWAP=false
-
-if [ $(free -g | awk '/^Mem:/{print $2}') -lt 12 ]; then
-  echo "LOW MEMORY MODE"
-  # Enable swap if not already enabled. This is needed both for rustc and until we have a better
-  # solution for low memory machines, see
-  # https://github.com/apache/datafusion/issues/18473
-  if [ "$(swapon --noheadings --show | wc -l)" -eq 0 ]; then
-    echo "Enabling 8G swap"
-    sudo fallocate -l 8G /swapfile
-    sudo chmod 600 /swapfile
-    sudo mkswap /swapfile
-    sudo swapon /swapfile
-    WITH_SWAP=true
-  fi
-fi
-
-echo "Install Dependencies"
-sudo apt-get update -y
-sudo apt-get install -y gcc
-
-echo "Install DataFusion main branch"
-git clone https://github.com/apache/arrow-datafusion.git
-cd arrow-datafusion/
-git checkout 53.1.0
-CARGO_PROFILE_RELEASE_LTO=true RUSTFLAGS="-C codegen-units=1" cargo build --release --package datafusion-cli --bin datafusion-cli
-export PATH="`pwd`/target/release:$PATH"
-cd ..
-
-echo "Download benchmark target data, partitioned"
-../download-hits-parquet-partitioned partitioned
-
-echo "Run benchmarks for partitioned"
-./run.sh
-
-echo "Load time: 0"
-echo "Data size: $(du -bcs partitioned | grep total)"
-
-if [ "$WITH_SWAP" = true ]; then
-    echo "Disable swap"
-    sudo swapoff /swapfile
-    sudo rm /swapfile
-fi
+# Thin shim — actual flow is in lib/benchmark-common.sh.
+export BENCH_DOWNLOAD_SCRIPT="download-hits-parquet-partitioned"
+export BENCH_RESTARTABLE=no
+exec ../lib/benchmark-common.sh

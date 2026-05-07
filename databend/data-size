@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+du -bcs _data | grep total | awk '{print $1}'

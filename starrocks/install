@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+VERSION="4.0.2-ubuntu-$(dpkg --print-architecture)"
+SR_DIR="StarRocks-$VERSION"
+
+if [ ! -d "$SR_DIR" ]; then
+    if [ ! -f "$SR_DIR.tar.gz" ]; then
+        wget --continue --progress=dot:giga \
+            "https://releases.starrocks.io/starrocks/$SR_DIR.tar.gz" \
+            -O "$SR_DIR.tar.gz"
+    fi
+    tar zxf "$SR_DIR.tar.gz"
+
+    # Configure FE/BE.
+    mkdir -p "$SR_DIR/meta" "$SR_DIR/storage"
+    printf "\nmeta_dir = $PWD/$SR_DIR/meta \n"        >> "$SR_DIR/fe/conf/fe.conf"
+    printf "\nstorage_root_path = $PWD/$SR_DIR/storage\n" >> "$SR_DIR/be/conf/be.conf"
+    # Disable internal caches so the cold run is actually cold.
+    printf "\ndisable_storage_page_cache = true\n"  >> "$SR_DIR/be/conf/be.conf"
+    printf "\ndatacache_enable = false\n"           >> "$SR_DIR/be/conf/be.conf"
+fi
+
+sudo apt-get update -y
+sudo apt-get install -y openjdk-17-jre mariadb-client bc
+
+echo "$SR_DIR" > .sr_dir

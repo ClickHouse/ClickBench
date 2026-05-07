@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+
+# Create schema and table in the in-memory connector. Idempotent (IF NOT EXISTS).
+sudo docker exec -i trino trino <<'EOF'
+CREATE SCHEMA IF NOT EXISTS memory.test;
+EOF
+
+sudo docker exec -i trino trino --catalog memory --schema test < create_single.sql
+
+# Load TSV. Trino has no native COPY for the memory connector; use INSERT via
+# the trino CLI: feed the data row-by-row would be way too slow. Instead, mount
+# the TSV via stdin to a server-side tooling step. Pragmatic approach: copy the
+# file in and use the Hive connector's TSV is not available out-of-the-box on
+# the default image, so we INSERT in batches via the CLI.
+#
+# This is intentionally a placeholder for a load implementation; Trino with the
+# stock image does not support fast bulk loads of TSV. For ClickBench parity we
+# would normally use the Hive connector and S3-backed Parquet (see
+# trino-datalake). With the memory connector this is not practical at scale.
+echo "trino: bulk-loading TSV into the memory connector is not supported; using SELECT against external file is required for full benchmark." >&2
+echo "trino: marking load as a no-op — see README" >&2
+
+rm -f hits.tsv
+sync

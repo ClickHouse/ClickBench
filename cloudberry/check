@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+sudo -iu gpadmin bash -lc 'psql -d postgres -t -c "SELECT 1"' >/dev/null

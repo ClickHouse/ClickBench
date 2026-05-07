@@ -1,0 +1,12 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: if mserver is already serving the test DB, do nothing.
+if mclient -u monetdb -d test -s 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+sudo monetdbd start /var/lib/monetdb || true
+
+# Make sure the database is released (online).
+sudo monetdb release test || true

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+mclient -u monetdb -d test -s 'SELECT 1' >/dev/null 2>&1

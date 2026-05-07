@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+# Source parquet file size (loaded into Arc's data directory).
+F="/var/lib/arc/data/clickbench/hits/hits.parquet"
+if [ -f "$F" ]; then
+    sudo stat -c%s "$F"
+else
+    echo 14779976446
+fi

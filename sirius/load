@@ -1,0 +1,29 @@
+#!/bin/bash
+# Build hits.db from hits.parquet using the duckdb CLI (create.sql + load.sql),
+# then ask the running server to initialise GPU buffers.
+set -e
+
+if [ -f .sirius_env ]; then
+    # shellcheck disable=SC1091
+    source .sirius_env
+fi
+
+# Ingest into a local duckdb file. Done via CLI (not the server) because the
+# server already holds the file open; we want this to be a one-shot job.
+./stop || true
+duckdb hits.db -f create.sql -f load.sql
+
+./start
+# Wait for the freshly-restarted server to be healthy.
+for _ in $(seq 1 60); do
+    if ./check >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+elapsed=$(curl -sS -X POST http://127.0.0.1:8000/load | python3 -c 'import json,sys; print(json.load(sys.stdin)["elapsed"])')
+echo "Load (server-reported, gpu_buffer_init): ${elapsed}s"
+
+rm -f hits.parquet
+sync

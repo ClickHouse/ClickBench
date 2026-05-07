@@ -1,0 +1,48 @@
+#!/bin/bash
+set -e
+
+ulimit -n 65536
+
+export DEBIAN_FRONTEND=noninteractive
+
+export TZ=Etc/UTC
+sudo ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
+echo $TZ | sudo tee /etc/timezone >/dev/null
+
+if ! command -v cargo >/dev/null 2>&1; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
+    bash rust-init.sh -y
+fi
+export HOME=${HOME:=~}
+# shellcheck disable=SC1091
+source "$HOME/.cargo/env"
+
+sudo apt-get update -y
+sudo apt-get install -y software-properties-common
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt-get update -y
+sudo apt-get install -y \
+    gcc protobuf-compiler \
+    libprotobuf-dev \
+    pkg-config \
+    libssl-dev \
+    python3.11 \
+    python3.11-dev \
+    python3.11-venv \
+    python3.11-distutils
+
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 || true
+sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 || true
+if ! python3.11 -m pip --version >/dev/null 2>&1; then
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+fi
+
+if [ ! -d myenv ]; then
+    python3 -m venv myenv
+fi
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+pip install --upgrade setuptools wheel
+pip install --no-cache-dir "pysail==0.5.2"
+pip install "pyspark-client==4.1.1" pandas psutil

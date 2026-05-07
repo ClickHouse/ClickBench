@@ -1,0 +1,34 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via chdb against the .clickbench dir.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+python3 - <<'PY'
+import sys
+import timeit
+from chdb import dbapi
+
+query = sys.stdin.read()
+
+con = dbapi.connect(path=".clickbench")
+cur = con.cursor()
+
+start = timeit.default_timer()
+try:
+    cur._cursor.execute(query)
+    end = timeit.default_timer()
+    rows = cur.fetchall() if cur.description else []
+    for row in rows:
+        print(row)
+finally:
+    cur.close()
+    con.close()
+
+# Last line of stderr: fractional seconds.
+print(f"{end - start:.3f}", file=sys.stderr)
+PY

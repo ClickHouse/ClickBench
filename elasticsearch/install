@@ -1,0 +1,39 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y apt-transport-https ca-certificates wget gpg time jq bc python3 python3-pip
+
+# Elastic signing key + repo (idempotent if already present).
+if [ ! -f /usr/share/keyrings/elasticsearch-keyring.gpg ]; then
+    wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch \
+        | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
+fi
+
+if [ ! -f /etc/apt/sources.list.d/elastic-9.x.list ]; then
+    echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/9.x/apt stable main" \
+        | sudo tee /etc/apt/sources.list.d/elastic-9.x.list
+    sudo apt-get update -y
+fi
+
+sudo apt-get install -y elasticsearch
+
+# load.py uses requests.
+pip3 install --quiet --break-system-packages requests || pip3 install --quiet requests
+
+# Disable security; bind on all interfaces (matches original config).
+cat <<EOF | sudo tee /etc/elasticsearch/elasticsearch.yml >/dev/null
+path.data: /var/lib/elasticsearch
+path.logs: /var/log/elasticsearch
+
+xpack.security.enabled: false
+xpack.security.http.ssl.enabled: false
+xpack.security.transport.ssl.enabled: false
+
+cluster.initial_master_nodes: ["clickbench"]
+http.host: 0.0.0.0
+EOF
+
+sudo /bin/systemctl daemon-reload
+sudo systemctl enable elasticsearch.service
+sudo systemctl restart elasticsearch.service

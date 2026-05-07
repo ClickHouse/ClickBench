@@ -1,0 +1,28 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via tableau hyperapi against
+# hits.hyper.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+python3 - <<'PY'
+import sys
+import timeit
+from tableauhyperapi import HyperProcess, Telemetry, Connection, CreateMode
+
+query = sys.stdin.read()
+
+with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU) as hyper:
+    with Connection(hyper.endpoint, 'hits.hyper', CreateMode.NONE) as connection:
+        start = timeit.default_timer()
+        rows = connection.execute_list_query(query)
+        end = timeit.default_timer()
+
+for r in rows:
+    print(r)
+
+print(f"{end - start:.3f}", file=sys.stderr)
+PY

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Kill all Druid processes (the launcher and child JVMs).
+pkill -f 'start-single-server-medium' 2>/dev/null || true
+pkill -f 'druid' 2>/dev/null || true
+# Small grace period so subsequent ./start binds cleanly.
+sleep 2
+exit 0

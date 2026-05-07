@@ -1,0 +1,8 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-pg_mooncake}
+
+if [ "$(sudo docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null || echo false)" != "true" ]; then
+    sudo docker start "$CONTAINER_NAME"
+fi

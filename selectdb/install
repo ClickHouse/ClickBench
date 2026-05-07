@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+# This benchmark runs on Ubuntu 20.04+
+ROOT=$(pwd)
+URL='https://qa-build.oss-cn-beijing.aliyuncs.com/enterprise-doris-release-output/selectdb-doris-2.1.7-rc01-bin-x64.tar.gz'
+
+file_name="$(basename "$URL")"
+dir_name="${file_name/.tar.gz/}"
+DORIS_HOME="$ROOT/$dir_name/selectdb-doris-2.1.7-rc01-bin-x64"
+
+if [ ! -d "$DORIS_HOME" ]; then
+    if [ ! -f "$file_name" ]; then
+        wget --continue --progress=dot:giga "$URL"
+    fi
+    mkdir -p "$dir_name"
+    tar zxf "$file_name" -C "$dir_name"
+fi
+
+sudo apt-get update -y
+sudo apt-get install -y openjdk-17-jdk mysql-client bc
+
+set +e
+sudo systemctl disable unattended-upgrades 2>/dev/null
+sudo systemctl stop unattended-upgrades 2>/dev/null
+sudo systemctl stop mysql-server 2>/dev/null
+set -e
+
+sudo sysctl -w vm.max_map_count=2000000
+
+echo "$DORIS_HOME" > .doris_home

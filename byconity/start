@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+# Bring the byconity stack up. Idempotent: if the server already responds,
+# do nothing.
+if docker compose exec -T server clickhouse-client --port 52145 \
+        --query "SELECT 1" >/dev/null 2>&1; then
+    exit 0
+fi
+
+docker compose up -d
+sleep 5
+
+# HDFS user setup is required for ingestion.
+hdfs/create_users.sh

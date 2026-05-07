@@ -1,0 +1,13 @@
+#!/bin/bash
+set -eu
+
+mkdir -p data
+mv hits.tsv data/
+chmod -R 777 data
+
+PGPASSWORD=test psql -h localhost -U postgres -t < create.sql
+
+PGPASSWORD=test psql -h localhost -U postgres -q -t -c "COPY hits FROM '/data/hits.tsv';"
+
+rm -f data/hits.tsv
+sync

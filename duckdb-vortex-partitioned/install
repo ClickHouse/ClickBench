@@ -1,0 +1,32 @@
+#!/bin/bash
+set -e
+
+# Build duckdb-vortex from source. Idempotent.
+if [ -x duckdb-vortex/build/release/duckdb ]; then
+    exit 0
+fi
+
+sudo apt-get update -y
+sudo apt-get install -y ninja-build cmake build-essential make ccache pip clang pkg-config
+
+if ! command -v cargo >/dev/null 2>&1; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+        | sh -s -- -y --default-toolchain stable --no-modify-path
+fi
+# shellcheck disable=SC1091
+[ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
+
+export CC=clang
+export CXX=clang++
+
+if [ ! -d duckdb-vortex ]; then
+    git clone https://github.com/vortex-data/duckdb-vortex --recursive
+fi
+
+(
+    cd duckdb-vortex
+    git fetch --tags
+    git checkout v0.44.0
+    git submodule update --init --recursive
+    GEN=ninja NATIVE_ARCH=1 LTO=thin make
+)

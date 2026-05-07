@@ -1,0 +1,21 @@
+#!/bin/bash
+set -eu
+
+# setup-dev-ubuntu.sh installs docker, java (for kisql), and ripgrep.
+./setup-dev-ubuntu.sh
+
+if [ ! -x ./kinetica ]; then
+    curl https://files.kinetica.com/install/kinetica.sh -o kinetica
+    chmod u+x kinetica
+fi
+
+# Bring Kinetica up via the install/start script (idempotent inside).
+export KINETICA_ADMIN_PASSWORD=admin
+sudo -E ./kinetica start
+
+# Fetch the SQL CLI.
+if [ ! -x ./kisql ]; then
+    wget --continue --progress=dot:giga \
+        https://github.com/kineticadb/kisql/releases/download/v7.1.7.2/kisql
+    chmod u+x ./kisql
+fi

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sudo -iu gpadmin bash -lc 'gpstop -a' 2>/dev/null || true

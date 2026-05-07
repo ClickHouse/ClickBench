@@ -1,0 +1,34 @@
+#!/bin/bash
+set -e
+
+# This benchmark runs on Ubuntu 20.04+
+ROOT=$(pwd)
+URL='https://apache-doris-releases.oss-accelerate.aliyuncs.com/apache-doris-4.1.0-rc01-bin-x64.tar.gz'
+
+file_name="$(basename "$URL")"
+dir_name="${file_name/.tar.gz/}"
+DORIS_HOME="$ROOT/$dir_name/$dir_name"
+
+# Idempotent: skip if already extracted.
+if [ ! -d "$DORIS_HOME" ]; then
+    if [ ! -f "$file_name" ]; then
+        wget --continue --progress=dot:giga "$URL"
+    fi
+    mkdir -p "$dir_name"
+    tar zxf "$file_name" -C "$dir_name"
+
+    # Disable internal caches so cold runs are actually cold.
+    printf "\ndisable_storage_page_cache = true\n"  >> "$DORIS_HOME"/be/conf/be.conf
+    printf "\nsegment_cache_capacity = 0\n"         >> "$DORIS_HOME"/be/conf/be.conf
+fi
+
+# Install dependencies (idempotent — apt-get is fine to re-run).
+sudo apt-get update -y
+sudo apt-get install -y openjdk-17-jdk mysql-client bc
+
+sudo systemctl disable unattended-upgrades 2>/dev/null || true
+sudo systemctl stop unattended-upgrades 2>/dev/null || true
+
+sudo sysctl -w vm.max_map_count=2000000
+
+echo "$DORIS_HOME" > .doris_home

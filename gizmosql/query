@@ -1,0 +1,36 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via gizmosqlline.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# gizmosqlline's "N rows selected (X seconds)" footer).
+# Exit non-zero on error.
+set -e
+
+. ./util.sh
+query=$(cat)
+
+raw=$(printf '%s\n' "$query" | gizmosqlline \
+    -u "$GIZMOSQL_SERVER_URI" \
+    -n "$GIZMOSQL_USERNAME" \
+    -p "$GIZMOSQL_PASSWORD" 2>&1) && exit_code=0 || exit_code=$?
+
+# Strip carriage returns from gizmosqlline output.
+clean=$(printf '%s\n' "$raw" | tr -d '\r')
+
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$clean" | grep -qiE 'error|exception|Killed|Segmentation'; then
+    printf '%s\n' "$clean" >&2
+    exit 1
+fi
+
+printf '%s\n' "$clean"
+
+secs=$(printf '%s\n' "$clean" \
+    | grep -oP '[0-9.]+(?= seconds\))' \
+    | tail -n1)
+
+if [ -z "$secs" ]; then
+    echo "no timing in gizmosqlline output" >&2
+    exit 1
+fi
+
+awk -v s="$secs" 'BEGIN { printf "%.3f\n", s }' >&2

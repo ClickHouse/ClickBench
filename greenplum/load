@@ -1,0 +1,19 @@
+#!/bin/bash
+set -eu
+
+# shellcheck disable=SC1091
+source /opt/greenplum-db-*/greenplum_path.sh
+export MASTER_DATA_DIRECTORY=${MASTER_DATA_DIRECTORY:-/gpmaster/gpsne-1/}
+
+sudo chmod 777 ~ hits.tsv
+
+psql -d postgres -v ON_ERROR_STOP=1 -f create.sql
+
+# gpfdist serves hits.tsv to the external table referenced from create.sql.
+pgrep gpfdist || nohup gpfdist >/tmp/gpfdist.log 2>&1 &
+
+psql -d postgres -v ON_ERROR_STOP=1 -t -c "INSERT INTO hits SELECT * FROM hits_ext;"
+psql -d postgres -v ON_ERROR_STOP=1 -t -c "ANALYZE hits;"
+
+rm -f hits.tsv
+sync

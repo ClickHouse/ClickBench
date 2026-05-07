@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+curl -sSf -u admin:admin 'http://localhost:8000/api/v1/about' >/dev/null

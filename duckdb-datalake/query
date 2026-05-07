@@ -1,0 +1,20 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via duckdb against hits.db (a VIEW
+# over a remote S3 parquet).
+# Stdout: query result. Stderr: runtime in fractional seconds on the last
+# line. Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+out=$(duckdb hits.db -c "SET parquet_metadata_cache=true" -c ".timer on" -c "$query" 2>/tmp/duckdb.err.$$) && status=0 || status=$?
+
+if [ "$status" -ne 0 ]; then
+    cat /tmp/duckdb.err.$$ >&2
+    rm -f /tmp/duckdb.err.$$
+    exit "$status"
+fi
+rm -f /tmp/duckdb.err.$$
+
+printf '%s\n' "$out" | grep -v '^Run Time '
+printf '%s\n' "$out" | awk '/^Run Time/ { print $5 }' | tail -n1 >&2

@@ -1,0 +1,8 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via clickhouse-local with the table
+# definition from create.sql prepended. Stdout: query result. Stderr: query
+# runtime in fractional seconds on the last line. Exit non-zero on error.
+set -e
+
+query=$(cat)
+./clickhouse local --time --query="$(cat create.sql); ${query}"

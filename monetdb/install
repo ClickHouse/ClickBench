@@ -1,0 +1,23 @@
+#!/bin/bash
+set -eu
+
+echo "deb https://dev.monetdb.org/downloads/deb/ $(lsb_release -cs) monetdb" \
+    | sudo tee /etc/apt/sources.list.d/monetdb.list
+
+sudo wget --output-document=/etc/apt/trusted.gpg.d/monetdb.gpg \
+    https://www.monetdb.org/downloads/MonetDB-GPG-KEY.gpg
+
+sudo apt-get update -y
+sudo apt-get install -y monetdb5-sql monetdb-client dos2unix net-tools expect
+
+if [ ! -d /var/lib/monetdb ]; then
+    sudo monetdbd create /var/lib/monetdb
+fi
+sudo usermod -a -G monetdb "$USER"
+
+# monetdbd takes a moment to come up; retry creating the test DB.
+for _ in {1..300}; do
+    if sudo monetdb create test 2>/dev/null; then break; fi
+    sleep 1
+done
+sudo monetdb release test || true

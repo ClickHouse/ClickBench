@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+
+byconity() {
+    docker compose exec -T server clickhouse-client --port 52145 "$@"
+}
+
+# Schema (creates database `bench` and table `bench.hits`).
+byconity --multiquery < create.sql
+
+# Ingest from the downloaded TSV.
+pigz -fkd hits.tsv.gz
+byconity --database bench --query "INSERT INTO hits FORMAT TSV" < hits.tsv
+
+rm -f hits.tsv hits.tsv.gz
+sync

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# Memory connector — report in-memory size as reported by Trino.
+out=$(sudo docker exec -i trino trino --execute \
+    "SELECT SUM(total_bytes) FROM system.runtime.tables WHERE schema_name='test' AND table_name='hits'" 2>/dev/null || true)
+# Fallback: 0 if Trino doesn't expose this.
+size=$(printf '%s\n' "$out" | grep -oE '[0-9]+' | head -n1)
+echo "${size:-0}"

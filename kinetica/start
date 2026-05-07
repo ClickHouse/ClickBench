@@ -1,0 +1,12 @@
+#!/bin/bash
+set -eu
+
+export KINETICA_ADMIN_PASSWORD=admin
+export KI_PWD=admin
+
+# Idempotent: if kisql can already speak SELECT 1, do nothing.
+if ./kisql --host localhost --user admin --sql 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+sudo -E ./kinetica start

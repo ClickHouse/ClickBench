@@ -1,0 +1,23 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-paradedb}
+PARADEDB_VERSION=${PARADEDB_VERSION:-0.10.0}
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client
+
+sudo docker pull "paradedb/paradedb:$PARADEDB_VERSION"
+
+if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    sudo docker rm -f "$CONTAINER_NAME" >/dev/null
+fi
+
+sudo docker run -d \
+    --name "$CONTAINER_NAME" \
+    -e POSTGRESQL_USERNAME=myuser \
+    -e POSTGRESQL_PASSWORD=mypassword \
+    -e POSTGRESQL_DATABASE=mydb \
+    -e POSTGRES_PASSWORD=postgres \
+    -p 5432:5432 \
+    "paradedb/paradedb:$PARADEDB_VERSION"

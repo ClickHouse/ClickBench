@@ -1,0 +1,24 @@
+#!/bin/bash
+# Reads a SQL query from stdin, dispatches to the running polars server.
+# Stdout: server response JSON (small).
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+# Capture HTTP status and body separately to detect errors cleanly.
+tmp=$(mktemp)
+status=$(curl -sS -o "$tmp" -w '%{http_code}' \
+    -X POST --data-binary @- http://127.0.0.1:8000/query <<<"$query")
+
+body=$(cat "$tmp")
+rm -f "$tmp"
+
+if [ "$status" != "200" ]; then
+    echo "query failed: HTTP $status: $body" >&2
+    exit 1
+fi
+
+echo "$body"
+echo "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["elapsed"])' >&2

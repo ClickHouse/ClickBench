@@ -1,0 +1,27 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via the trino CLI in the running
+# container.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+TIMEFORMAT='%R'
+{ time sudo docker exec -i trino trino --catalog memory --schema test \
+    --execute "$query" 1>/tmp/trino.out.$$ 2>/tmp/trino.err.$$; } \
+    2>/tmp/trino.time.$$ || status=$?
+status=${status:-0}
+
+cat /tmp/trino.out.$$
+if [ "$status" -ne 0 ]; then
+    cat /tmp/trino.err.$$ >&2
+    rm -f /tmp/trino.out.$$ /tmp/trino.err.$$ /tmp/trino.time.$$
+    exit "$status"
+fi
+
+cat /tmp/trino.err.$$ >&2
+cat /tmp/trino.time.$$ >&2
+
+rm -f /tmp/trino.out.$$ /tmp/trino.err.$$ /tmp/trino.time.$$

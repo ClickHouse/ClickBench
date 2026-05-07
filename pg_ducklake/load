@@ -1,0 +1,13 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-pgduck}
+
+# Move parquet file into the container at /tmp/hits.parquet (path used by create.sql).
+sudo docker cp hits.parquet "$CONTAINER_NAME":/tmp/hits.parquet
+
+psql postgres://postgres:duckdb@localhost:5432/postgres -v ON_ERROR_STOP=1 -t -c "DROP TABLE IF EXISTS hits;" || true
+psql postgres://postgres:duckdb@localhost:5432/postgres -v ON_ERROR_STOP=1 -f create.sql
+
+rm -f hits.parquet
+sync

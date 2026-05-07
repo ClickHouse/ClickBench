@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+sudo du -bcs /data0 2>/dev/null | grep total | awk '{print $1}'

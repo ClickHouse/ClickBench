@@ -1,0 +1,21 @@
+#!/bin/bash
+set -eu
+
+# Make hits.tsv readable by gpadmin and gpfdist.
+sudo cp -f hits.tsv /home/gpadmin/hits.tsv
+sudo chown gpadmin:gpadmin /home/gpadmin/hits.tsv
+sudo chmod 644 /home/gpadmin/hits.tsv
+
+sudo cp -f create.sql /home/gpadmin/create.sql
+sudo chown gpadmin:gpadmin /home/gpadmin/create.sql
+
+sudo -iu gpadmin bash -lc 'psql -d postgres -v ON_ERROR_STOP=1 -f /home/gpadmin/create.sql'
+
+# Run gpfdist for the foreign-table-driven external load.
+sudo -iu gpadmin bash -lc 'pgrep -u gpadmin gpfdist || nohup gpfdist >/tmp/gpfdist.log 2>&1 &'
+
+sudo -iu gpadmin bash -lc 'psql -d postgres -v ON_ERROR_STOP=1 -t -c "INSERT INTO hits SELECT * FROM hits_ext;"'
+sudo -iu gpadmin bash -lc 'psql -d postgres -v ON_ERROR_STOP=1 -t -c "ANALYZE hits;"'
+
+sudo rm -f /home/gpadmin/hits.tsv hits.tsv
+sync

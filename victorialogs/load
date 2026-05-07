@@ -1,0 +1,22 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: blow away any prior data.
+./stop
+rm -rf victoria-logs-data
+./start
+# Wait for it to come up.
+for _ in {1..300}; do
+    ./check >/dev/null 2>&1 && break
+    sleep 1
+done
+
+wget --continue --progress=dot:giga \
+    'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+gunzip -f hits.json.gz
+
+# Bulk insert via 8 parallel jsonline streams.
+cat hits.json | split -n r/8 -d --filter="curl -sS -T - -X POST 'http://localhost:9428/insert/jsonline?_time_field=EventTime&_stream_fields=AdvEngineID,CounterID'"
+
+rm -f hits.json
+sync

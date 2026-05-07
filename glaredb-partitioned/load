@@ -1,0 +1,8 @@
+#!/bin/bash
+# glaredb-partitioned's create.sql references ./data/hits_*.parquet, so move
+# the partitioned files into the expected subdir.
+set -e
+
+mkdir -p data
+mv hits_*.parquet data/ 2>/dev/null || true
+sync
