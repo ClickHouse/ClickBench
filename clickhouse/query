@@ -5,5 +5,4 @@
 # Exit non-zero on error.
 set -e
 
-query=$(cat)
-clickhouse-client --time --query="$query"
+clickhouse-client --time
