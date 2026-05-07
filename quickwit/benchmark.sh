@@ -3,20 +3,18 @@ set -e
 
 # Install prerequisites
 sudo apt-get update -y
-sudo apt-get install -y wget curl jq bc python3 python3-pip time
-
-pip3 install --user requests
+sudo apt-get install -y wget curl jq bc python3 python3-requests
 
 # Download Quickwit
 QW_VERSION="0.8.2"
 ARCH=$(uname -m)
+QW_DIR="quickwit-v${QW_VERSION}"
 wget --continue --progress=dot:giga \
-    "https://github.com/quickwit-oss/quickwit/releases/download/v${QW_VERSION}/quickwit-v${QW_VERSION}-${ARCH}-unknown-linux-gnu.tar.gz"
-tar xzf "quickwit-v${QW_VERSION}-${ARCH}-unknown-linux-gnu.tar.gz"
-ln -sfn "quickwit-v${QW_VERSION}" quickwit
+    "https://github.com/quickwit-oss/quickwit/releases/download/v${QW_VERSION}/${QW_DIR}-${ARCH}-unknown-linux-gnu.tar.gz"
+tar xzf "${QW_DIR}-${ARCH}-unknown-linux-gnu.tar.gz"
 
 # Start the server in the background. Quickwit defaults: REST on 7280, gRPC on 7281.
-pushd quickwit >/dev/null
+pushd "$QW_DIR" >/dev/null
 nohup ./quickwit run > ../quickwit.log 2>&1 &
 QW_PID=$!
 popd >/dev/null
@@ -57,7 +55,7 @@ echo "Load time: $((END - START))"
 
 # Data size on disk (single-node uses qwdata/ inside the install dir).
 echo -n "Data size: "
-du -sb quickwit/qwdata 2>/dev/null | awk '{print $1}'
+du -sb "$QW_DIR/qwdata" 2>/dev/null | awk '{print $1}'
 
 # Run queries
 chmod +x run.sh
