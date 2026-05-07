@@ -17,6 +17,10 @@ wget --continue --quiet -O presto-cli.jar \
 chmod +x presto-cli.jar
 
 mkdir -p data/meta etc/catalog shim
+# The trino container used to compile the shim runs as uid 1000. Make
+# sure that uid can write here even when benchmark.sh runs as root
+# (cloud-init).
+sudo chown 1000:1000 shim
 
 cat > shim/S3AnonymousProvider.java <<'EOF'
 import com.amazonaws.auth.AWSCredentials;

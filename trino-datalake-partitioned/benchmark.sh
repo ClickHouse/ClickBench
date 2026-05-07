@@ -14,9 +14,10 @@ sudo apt-get install -y docker.io bc
 
 mkdir -p data/meta etc/catalog shim
 # The Trino container runs as uid 1000 ("trino") and writes the file
-# metastore into data/meta. Make sure that uid can write here even when
-# benchmark.sh runs as root (cloud-init).
-sudo chown 1000:1000 data/meta
+# metastore into data/meta and the compiled credentials shim into shim.
+# Make sure that uid can write here even when benchmark.sh runs as root
+# (cloud-init).
+sudo chown 1000:1000 data/meta shim
 
 cat > shim/S3AnonymousProvider.java <<'EOF'
 import com.amazonaws.auth.AWSCredentials;
