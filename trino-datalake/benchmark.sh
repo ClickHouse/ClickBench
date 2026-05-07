@@ -29,6 +29,13 @@ s3fs clickhouse-public-datasets data/bucket \
     -o ro \
     -o use_cache=/tmp/s3fs-cache
 
+# apt-get installed docker.io and started docker.service before we
+# mounted s3fs, so the daemon's mount namespace doesn't include the FUSE
+# mount and bind-mounting data/bucket into the container produces an
+# empty directory. Restart the daemon so its namespace picks up the
+# current host mounts.
+sudo systemctl restart docker
+
 mkdir -p etc/catalog
 cat > etc/catalog/hive.properties <<'EOF'
 connector.name=hive
@@ -52,6 +59,22 @@ until sudo docker logs trino 2>&1 | grep -q "SERVER STARTED"; do
     sleep 3
 done
 sleep 3
+
+# Verify the s3fs-mounted parquet is visible inside the container before
+# running CREATE TABLE. Without this, if the FUSE mount didn't propagate
+# into docker's mount namespace (or s3fs hasn't primed its metadata cache
+# yet), Trino observes the external_location as missing and tries to
+# mkdir on the read-only mount, which fails with
+# "Failed to create directory: local:///bucket/hits_compatible/athena".
+# The listing also serves to warm s3fs's metadata cache.
+if ! sudo docker exec trino sh -c 'ls /data/bucket/hits_compatible/athena/hits.parquet' >/dev/null 2>&1; then
+    echo "FATAL: hits.parquet is not visible inside the trino container." >&2
+    echo "Container view of /data/bucket:" >&2
+    sudo docker exec trino ls -la /data/bucket 2>&1 | head >&2 || true
+    echo "Host view:" >&2
+    ls -la data/bucket/hits_compatible/athena/ 2>&1 | head >&2 || true
+    exit 1
+fi
 
 LOAD_START=$(date +%s)
 sudo docker cp create.sql trino:/tmp/create.sql
