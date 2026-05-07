@@ -19,10 +19,14 @@ for query in "${queries[@]}"; do
 
     # Clear Linux memory caches to ensure fair benchmark comparisons
     sync
-    echo 3 | tee /proc/sys/vm/drop_caches > /dev/null
+    echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
 
     # Start the GizmoSQL server
     start_gizmosql
+
+    # Enable timer and discard result rows (we only care about Run Time)
+    echo ".timer on" >> "${TEMP_SQL_FILE}"
+    echo ".mode trash" >> "${TEMP_SQL_FILE}"
 
     # Add a comment to identify the query in the output
     echo "-- Query: ${query}" >> "${TEMP_SQL_FILE}"
@@ -32,12 +36,8 @@ for query in "${queries[@]}"; do
         echo "${query}" >> "${TEMP_SQL_FILE}"
     done
 
-    # Execute the query script
-    gizmosqlline \
-        -u ${GIZMOSQL_SERVER_URI} \
-        -n ${GIZMOSQL_USERNAME} \
-        -p ${GIZMOSQL_PASSWORD} \
-        -f "${TEMP_SQL_FILE}"
+    # Execute the query script (timer output goes to stderr; merge to stdout)
+    gizmosql_client --file "${TEMP_SQL_FILE}" 2>&1
 
     # Stop the server before next query
     stop_gizmosql
