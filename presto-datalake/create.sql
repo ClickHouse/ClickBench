@@ -108,7 +108,7 @@ CREATE TABLE hive.clickbench.hits_raw (
     CLID integer
 )
 WITH (
-    external_location = 'file:///data/bucket/hits_compatible/athena',
+    external_location = 's3://clickhouse-public-datasets/hits_compatible/athena',
     format = 'PARQUET'
 );
 

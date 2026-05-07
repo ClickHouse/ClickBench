@@ -4,57 +4,67 @@ set -e
 
 PRESTO_VERSION=0.297
 
-# Presto's S3 driver requires AWS credentials and signs every request, so
-# it cannot read directly from the anonymous public bucket. Mount the
-# bucket via s3fs-fuse and let Presto read it as a local filesystem.
+# Presto's S3 client uses the AWS default credentials chain, which fails on
+# anonymous public buckets. To read the public bucket we drop a tiny shim
+# that returns AnonymousAWSCredentials into the hive-hadoop2 plugin and
+# point presto.s3.credentials-provider at it.
 
 sudo apt-get update -y
-sudo apt-get install -y docker.io s3fs openjdk-21-jre-headless bc wget
+sudo apt-get install -y docker.io openjdk-21-jre-headless bc wget
 
 wget --continue --quiet -O presto-cli.jar \
     "https://github.com/prestodb/presto/releases/download/${PRESTO_VERSION}/presto-cli-${PRESTO_VERSION}-executable.jar"
 chmod +x presto-cli.jar
 
-# s3fs needs user_allow_other so the docker daemon (running as root) can
-# traverse the FUSE mount owned by the calling user.
-grep -q '^user_allow_other' /etc/fuse.conf || \
-    echo user_allow_other | sudo tee -a /etc/fuse.conf >/dev/null
+mkdir -p data/meta etc/catalog shim
 
-mkdir -p data/bucket data/meta
-fusermount -u data/bucket 2>/dev/null || true
-# uid/gid 1000 so files inside the FUSE mount appear owned by a normal
-# user — without this, when benchmark.sh runs as root (cloud-init), files
-# appear root-owned with mode 0750 and a non-root container user cannot
-# traverse the bucket subdirectories.
-# The cache dir must also be writable as that uid.
-sudo mkdir -p /tmp/s3fs-cache
-sudo chown 1000:1000 /tmp/s3fs-cache
-# Unmount on exit so cloud-init's "du -b --max-depth=2" doesn't hang
-# walking the FUSE mount after we're done.
-trap 'fusermount -u data/bucket 2>/dev/null || true' EXIT
-s3fs clickhouse-public-datasets data/bucket \
-    -o public_bucket=1 \
-    -o url=https://s3.eu-central-1.amazonaws.com \
-    -o allow_other \
-    -o uid=1000 \
-    -o gid=1000 \
-    -o ro \
-    -o use_cache=/tmp/s3fs-cache
+cat > shim/S3AnonymousProvider.java <<'EOF'
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AnonymousAWSCredentials;
+import org.apache.hadoop.conf.Configuration;
+import java.net.URI;
 
-# apt-get installed docker.io and started docker.service before we
-# mounted s3fs, so the daemon's mount namespace doesn't include the FUSE
-# mount and bind-mounting data/bucket into the container produces an
-# empty directory. Restart the daemon so its namespace picks up the
-# current host mounts.
-sudo systemctl restart docker
+public class S3AnonymousProvider implements AWSCredentialsProvider {
+    public S3AnonymousProvider(URI uri, Configuration conf) {}
+    public AWSCredentials getCredentials() { return new AnonymousAWSCredentials(); }
+    public void refresh() {}
+}
+EOF
 
-mkdir -p etc/catalog
+# Compile the shim against AWS SDK + Hadoop jars bundled in the presto
+# image. The presto image ships with a JRE only, so use the trino image
+# for the JDK and target Java 11 bytecode for compatibility.
+sudo docker run --rm \
+    -v "$PWD/shim:/shim" \
+    --entrypoint sh trinodb/trino:latest -c '
+        set -e
+        cd /shim
+        CP="/usr/lib/trino/plugin/hive/hdfs/com.amazonaws_aws-java-sdk-core-1.12.797.jar:/usr/lib/trino/plugin/hive/hdfs/io.trino.hadoop_hadoop-apache-3.3.5-3.jar"
+        javac --release 11 -cp "$CP" S3AnonymousProvider.java
+        jar cf S3AnonymousProvider.jar S3AnonymousProvider.class
+    '
+
 cat > etc/catalog/hive.properties <<'EOF'
 connector.name=hive-hadoop2
 hive.metastore=file
 hive.metastore.catalog.dir=file:///data/meta
-hive.allow-drop-table=true
+hive.config.resources=/etc/presto/core-site.xml
 hive.non-managed-table-writes-enabled=true
+EOF
+
+cat > etc/core-site.xml <<'EOF'
+<?xml version="1.0"?>
+<configuration>
+    <property>
+        <name>presto.s3.credentials-provider</name>
+        <value>S3AnonymousProvider</value>
+    </property>
+    <property>
+        <name>presto.s3.endpoint</name>
+        <value>https://s3.eu-central-1.amazonaws.com</value>
+    </property>
+</configuration>
 EOF
 
 cat > etc/jvm.config <<'EOF'
@@ -107,33 +117,18 @@ EOF
 sudo docker rm -f presto 2>/dev/null || true
 sudo docker run -d --name presto \
     -p 8081:8080 \
-    --device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor:unconfined \
     -v "$PWD/etc/catalog/hive.properties:/opt/presto-server/etc/catalog/hive.properties:ro" \
     -v "$PWD/etc/jvm.config:/opt/presto-server/etc/jvm.config:ro" \
     -v "$PWD/etc/config.properties:/opt/presto-server/etc/config.properties:ro" \
+    -v "$PWD/etc/core-site.xml:/etc/presto/core-site.xml:ro" \
     -v "$PWD/data/meta:/data/meta" \
-    -v "$PWD/data/bucket:/data/bucket:ro" \
+    -v "$PWD/shim/S3AnonymousProvider.jar:/opt/presto-server/plugin/hive-hadoop2/S3AnonymousProvider.jar:ro" \
     prestodb/presto:${PRESTO_VERSION}
 
 until sudo docker logs presto 2>&1 | grep -q "SERVER STARTED"; do
     sleep 3
 done
 sleep 3
-
-# Verify the s3fs-mounted parquet directory is visible inside the
-# container before running CREATE TABLE. Without this, if the FUSE mount
-# didn't propagate into docker's mount namespace (or s3fs hasn't primed
-# its metadata cache yet), Presto observes the external_location as
-# missing and tries to mkdir on the read-only mount, which fails. The
-# listing also serves to warm s3fs's metadata cache.
-if ! sudo docker exec presto sh -c 'ls /data/bucket/hits_compatible/athena_partitioned/' >/dev/null 2>&1; then
-    echo "FATAL: athena_partitioned/ is not visible inside the presto container." >&2
-    echo "Container view of /data/bucket:" >&2
-    sudo docker exec presto ls -la /data/bucket 2>&1 | head >&2 || true
-    echo "Host view:" >&2
-    ls -la data/bucket/hits_compatible/athena_partitioned/ 2>&1 | head >&2 || true
-    exit 1
-fi
 
 LOAD_START=$(date +%s)
 java -jar presto-cli.jar --server http://localhost:8081 --file create.sql
