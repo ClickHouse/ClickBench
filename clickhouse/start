@@ -1,8 +1,4 @@
 #!/bin/bash
 set -e
 
-# Idempotent: if already up, do nothing.
-if clickhouse-client --query "SELECT 1" >/dev/null 2>&1; then
-    exit 0
-fi
 sudo clickhouse start
