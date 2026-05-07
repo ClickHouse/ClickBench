@@ -96,10 +96,8 @@ mysql -h 127.0.0.1 -P9030 -uroot hits <"$ROOT"/create.sql
 
 # Download data
 BE_DATA_DIR="$DORIS_HOME/be/"
-mkdir -p "$BE_DATA_DIR/user_files_secure"
 
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
-mv *.parquet "$BE_DATA_DIR/user_files_secure" 
+"$ROOT"/../download-hits-parquet-partitioned "$BE_DATA_DIR/user_files_secure"
 
 BE_ID=$(mysql -h127.0.0.1 -P9030 -uroot -N -e 'show backends' | awk '{print $1}' | head -1)
 

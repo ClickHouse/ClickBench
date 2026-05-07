@@ -19,7 +19,7 @@ sudo docker run \
 
 echo "Downloading ClickBench dataset..."
 if [ ! -e /tmp/hits.parquet ]; then
-  wget --continue --progress=dot:giga -O /tmp/hits.parquet https://datasets.clickhouse.com/hits_compatible/hits.parquet
+  ../download-hits-parquet-single /tmp
 fi
 if ! sudo docker exec paradedb sh -c '[ -f /tmp/hits.parquet ]'; then
   sudo docker cp /tmp/hits.parquet paradedb:/tmp/hits.parquet

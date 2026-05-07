@@ -1,0 +1,13 @@
+#!/bin/bash
+# Usage: download-hits-csv [destination-dir]
+# Downloads hits.csv.gz and decompresses it. Files end up in the current
+# directory unless a destination directory is given as the first argument.
+set -e
+
+dir="${1:-.}"
+mkdir -p "$dir"
+cd "$dir"
+
+sudo apt-get install -y pigz
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+pigz -d -f hits.csv.gz

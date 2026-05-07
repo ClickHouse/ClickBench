@@ -19,9 +19,7 @@ FILENAME="hits.tsv"
 # Check if the file exists
 if [ ! -f "$FILENAME" ]; then
     echo "The file $FILENAME does not exist. Starting to download..."
-    sudo apt-get install -y pigz
-    wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-    pigz -d -f hits.tsv.gz
+    ../download-hits-tsv
     chmod 777 ~ hits.tsv
     if [ $? -eq 0 ]; then
         echo "File download completed!"

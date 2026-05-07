@@ -5,7 +5,7 @@ set -e
 sudo apt-get update -y
 sudo apt-get install -y docker.io postgresql-client
 
-wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
+../download-hits-parquet-single
 sudo docker run -d --name pgduck -p 5432:5432 -e POSTGRES_PASSWORD=duckdb -v ./hits.parquet:/tmp/hits.parquet pgduckdb/pgduckdb:17-v1.0.0 -c duckdb.max_memory=10GB
 
 for _ in {1..300}

@@ -46,9 +46,7 @@ sleep 30
 
 # Prepare Data
 cd ../
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+../download-hits-tsv
 
 # Create Table
 mysql -h 127.0.0.1 -P9030 -uroot -e "CREATE DATABASE hits"

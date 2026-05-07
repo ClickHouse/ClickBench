@@ -1,0 +1,12 @@
+#!/bin/bash
+# Usage: download-hits-parquet-single [destination-dir]
+# Downloads hits.parquet (Athena-compatible variant). Files end up in the
+# current directory unless a destination directory is given as the first
+# argument.
+set -e
+
+dir="${1:-.}"
+mkdir -p "$dir"
+cd "$dir"
+
+wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet'

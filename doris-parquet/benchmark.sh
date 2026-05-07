@@ -77,9 +77,7 @@ do
 done
 
 # Download Parquet files
-cd "$DORIS_HOME/be"
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
-cd -
+../download-hits-parquet-partitioned "$DORIS_HOME/be"
 
 # Run the queries
 mysql -h127.1 -P9030 -uroot -vvv < create.sql

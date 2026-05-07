@@ -1,0 +1,12 @@
+{
+  "system": "Trino (Parquet, partitioned)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "column-oriented",
+    "stateless",
+    "lukewarm-cold-run"
+  ]
+}

@@ -35,7 +35,7 @@ set +e
 # ---------------------------------------------------------------------------
 # 2. Load data
 # ---------------------------------------------------------------------------
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+../download-hits-parquet-single
 
 echo -n "Load time: "
 command time -f '%e' duckdb hits.db -f create.sql -f load.sql

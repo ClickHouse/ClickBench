@@ -21,7 +21,7 @@ pip install pyspark==3.5.2 psutil
 
 # Load the data
 
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+../download-hits-parquet-single
 
 # Install Gluten
 

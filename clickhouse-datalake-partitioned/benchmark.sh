@@ -6,11 +6,9 @@ curl https://clickhouse.com/ | sh
 
 # Configure
 
+RAM=$(awk '/MemTotal/ {print int($2 * 0.8 * 1024)}' /proc/meminfo)
 > clickhouse-local.yaml echo "
-filesystem_caches:
-    cache:
-        path: '/dev/shm/clickhouse/'
-        max_size_ratio_to_total_space: 0.9
+page_cache_max_size: ${RAM}
 "
 
 # Run the queries

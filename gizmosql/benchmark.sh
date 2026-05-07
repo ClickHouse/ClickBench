@@ -41,7 +41,7 @@ gizmosqlline \
   -f create.sql
 
 # Load the data
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+../download-hits-parquet-single
 
 echo -n "Load time: "
 time gizmosqlline \

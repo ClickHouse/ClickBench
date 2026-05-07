@@ -1,0 +1,11 @@
+#!/bin/bash
+# Usage: download-hits-parquet-partitioned [destination-dir]
+# Downloads hits_0.parquet … hits_99.parquet. Files end up in the current
+# directory unless a destination directory is given as the first argument.
+set -e
+
+dir="${1:-.}"
+mkdir -p "$dir"
+cd "$dir"
+
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'

@@ -3,8 +3,7 @@
 # Download the partitioned hits parquet files
 echo "Downloading dataset..."
 rm -rf data
-mkdir -p data
-seq 0 99 | xargs -P100 -I{} bash -c 'wget -P data --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+../download-hits-parquet-partitioned data
 
 # Start the container
 sudo apt-get install -y docker.io jq

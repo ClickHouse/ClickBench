@@ -300,7 +300,6 @@ Please help us add more systems and run the benchmarks on more types of VMs:
 - [ ] CockroachDB Serverless
 - [ ] DolphinDB
 - [ ] Dremio (without publishing)
-- [ ] DuckDB operating like "Athena" on remote Parquet files
 - [ ] EventQL
 - [ ] Exasol
 - [ ] Hive
@@ -312,15 +311,12 @@ Please help us add more systems and run the benchmarks on more types of VMs:
 - [ ] MS SQL Server with Column Store Index (without publishing)
 - [ ] OceanBase
 - [ ] Planetscale (without publishing)
-- [ ] Presto
 - [ ] Quickwit
 - [ ] Redshift Spectrum
-- [ ] Rockset
 - [ ] Seafowl
 - [ ] ShitholeDB
 - [ ] Sneller
 - [ ] Starburst Galaxy
-- [ ] Trino
 - [ ] TDEngine
 
 The list above _may_ include systems that cannot run ClickBench for various limitations.

@@ -16,9 +16,7 @@ sudo systemctl restart postgresql
 sudo -u postgres psql -c "CREATE DATABASE nocolumnstore"
 sudo -u postgres psql nocolumnstore -c "CREATE EXTENSION timescaledb WITH VERSION '2.17.2';"
 
-sudo apt-get install -y pigz
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-pigz -d -f hits.tsv.gz
+../download-hits-tsv
 sudo chmod og+rX ~
 chmod 777 hits.tsv
 

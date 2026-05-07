@@ -5,7 +5,7 @@ set -e
 sudo apt-get update -y
 sudo apt-get install -y docker.io postgresql-client
 
-wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
+../download-hits-parquet-single
 docker run -d --name pgduck -p 5432:5432 -e POSTGRES_PASSWORD=duckdb -v ./hits.parquet:/tmp/hits.parquet pgducklake/pgducklake:18-main
 
 sleep 5 # wait for pgducklake start up

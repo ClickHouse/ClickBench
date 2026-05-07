@@ -28,8 +28,7 @@ sudo docker run \
 echo ""
 echo "Downloading ClickBench dataset..."
 if [ ! -e /tmp/partitioned/ ]; then
-  mkdir -p /tmp/partitioned
-  seq 0 99 | xargs -P100 -I{} bash -c 'wget --directory-prefix /tmp/partitioned --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+  ../download-hits-parquet-partitioned /tmp/partitioned
 fi
 if ! sudo docker exec paradedb sh -c '[ -f /tmp/partitioned ]'; then
   sudo docker cp /tmp/partitioned paradedb:tmp

@@ -37,7 +37,7 @@ export PATH="`pwd`/target/release:$PATH"
 cd ..
 
 echo "Download benchmark target data, single file"
-wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/hits.parquet
+../download-hits-parquet-single
 
 echo "Run benchmarks"
 ./run.sh

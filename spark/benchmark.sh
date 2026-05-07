@@ -16,7 +16,7 @@ pip install pyspark==4.0.0 psutil
 
 # Load the data
 
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+../download-hits-parquet-single
 
 # Run the queries
 

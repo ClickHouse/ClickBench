@@ -18,8 +18,7 @@ source ~/opteryx_venv/bin/activate
 ~/opteryx_venv/bin/python -m pip install --upgrade opteryx==0.26.1
 
 # Download benchmark target data, partitioned
-mkdir -p hits
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --directory-prefix hits --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+../download-hits-parquet-partitioned hits
 
 # Run a simple query to check the installation
 ~/opteryx_venv/bin/python -m opteryx "SELECT version()" 2>&1

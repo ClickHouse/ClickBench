@@ -10,7 +10,7 @@ export PATH=$HOME'/.duckdb/cli/latest':$PATH
 duckdb -c "INSTALL vortex;"
 
 # Load the data
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+../download-hits-parquet-single
 
 # Convert parquet files to Vortex
 echo -n "Load time: "

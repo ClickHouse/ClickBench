@@ -53,7 +53,7 @@ pip install "pyspark-client==4.1.1" \
 # Load the data
 
 echo "Download benchmark target data, single file"
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+../download-hits-parquet-single
 
 # Run the queries
 

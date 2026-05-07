@@ -4,7 +4,7 @@
 
 curl https://clickhouse.com/ | sh
 
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+../download-hits-parquet-single
 
 # Run the queries
 

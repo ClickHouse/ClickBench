@@ -6,7 +6,7 @@ curl https://install.duckdb.org | sh
 export PATH=$HOME'/.duckdb/cli/latest':$PATH
 
 # Load the data
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+../download-hits-parquet-single
 
 echo -n "Load time: "
 command time -f '%e' duckdb hits.db -storage_version latest -f create.sql -f load.sql

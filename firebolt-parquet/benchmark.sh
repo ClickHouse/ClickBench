@@ -3,8 +3,7 @@
 # Download the hits.parquet file
 echo "Downloading dataset..."
 rm -rf data
-mkdir -p data
-wget -P data --continue --progress=dot:giga "https://datasets.clickhouse.com/hits_compatible/hits.parquet"
+../download-hits-parquet-single data
 
 # Start the container
 sudo apt-get install -y docker.io jq

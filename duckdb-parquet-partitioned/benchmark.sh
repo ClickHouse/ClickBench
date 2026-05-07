@@ -6,7 +6,7 @@ curl https://install.duckdb.org | sh
 export PATH=$HOME'/.duckdb/cli/latest':$PATH
 
 # Load the data
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+../download-hits-parquet-partitioned
 
 echo -n "Load time: "
 command time -f '%e' duckdb hits.db -f create.sql
