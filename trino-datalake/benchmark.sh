@@ -22,10 +22,22 @@ mkdir -p data/bucket data/meta
 # benchmark.sh runs as root (cloud-init).
 sudo chown 1000:1000 data/meta
 fusermount -u data/bucket 2>/dev/null || true
+# uid/gid 1000 so files inside the FUSE mount appear owned by the trino
+# container's user (uid 1000) — without this, when benchmark.sh runs as
+# root (cloud-init), files appear root-owned with mode 0750 and the
+# trino user cannot traverse the bucket subdirectories.
+# The cache dir must also be writable as that uid.
+sudo mkdir -p /tmp/s3fs-cache
+sudo chown 1000:1000 /tmp/s3fs-cache
+# Unmount on exit so cloud-init's "du -b --max-depth=2" doesn't hang
+# walking the FUSE mount after we're done.
+trap 'fusermount -u data/bucket 2>/dev/null || true' EXIT
 s3fs clickhouse-public-datasets data/bucket \
     -o public_bucket=1 \
     -o url=https://s3.eu-central-1.amazonaws.com \
     -o allow_other \
+    -o uid=1000 \
+    -o gid=1000 \
     -o ro \
     -o use_cache=/tmp/s3fs-cache
 
