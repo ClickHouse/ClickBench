@@ -7,15 +7,10 @@ cat queries.sql | while read -r query; do
     echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
     docker restart $(docker ps -a -q)
 
-    retry_count=0
-    while [ $retry_count -lt 120 ]; do
-        if PGPASSWORD=test psql -h localhost -U postgres -c "SELECT 'Ok';"; then
-            break
-        fi
-
-        retry_count=$((retry_count+1))
-        sleep 1
-    done
+    # wait for the server quietly so retry-loop messages don't pollute log.txt
+    # (the awk filter in benchmark.sh treats any `psql: error` line as a failed query)
+    until pg_isready -h localhost --dbname postgres -U postgres > /dev/null 2>&1; do sleep 1; done
+    until PGPASSWORD=test psql -h localhost -U postgres -c "SELECT 'Ok';" > /dev/null 2>&1; do sleep 1; done
 
     echo "$query";
     for i in $(seq 1 $TRIES); do
