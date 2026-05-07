@@ -16,6 +16,10 @@ grep -q '^user_allow_other' /etc/fuse.conf || \
     echo user_allow_other | sudo tee -a /etc/fuse.conf >/dev/null
 
 mkdir -p data/bucket data/meta
+# The Trino container runs as uid 1000 ("trino") and writes the file
+# metastore into data/meta. Make sure that uid can write here even when
+# benchmark.sh runs as root (cloud-init).
+sudo chown 1000:1000 data/meta
 fusermount -u data/bucket 2>/dev/null || true
 s3fs clickhouse-public-datasets data/bucket \
     -o public_bucket=1 \
