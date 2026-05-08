@@ -1,5 +1,5 @@
 {
-    "system": "MemSQL",
+    "system": "SingleStore",
     "date": "2015-04-05",
     "machine": "Yandex bare metal (10M rows)",
     "cluster_size": 1,
