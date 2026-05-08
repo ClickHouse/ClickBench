@@ -311,7 +311,7 @@ Please help us add more systems and run the benchmarks on more types of VMs:
 - [ ] MS SQL Server with Column Store Index (without publishing)
 - [ ] OceanBase
 - [ ] Planetscale (without publishing)
-- [ ] Quickwit
+- [x] Quickwit
 - [ ] Redshift Spectrum
 - [ ] Seafowl
 - [ ] ShitholeDB
