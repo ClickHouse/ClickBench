@@ -1,7 +1,9 @@
 #!/bin/bash -e
 
 # Results live under <system>/results/YYYYMMDD/<basename>.json.
-# For the website we keep only the latest dated copy per (system, basename).
+# For the website we keep only the latest dated copy per (system, basename),
+# and we skip entries tagged "historical" — those are kept in the repo
+# as archival data but are not displayed on the dashboard.
 
 echo "const data = [" > data.generated.js.new
 FIRST=1
@@ -16,13 +18,16 @@ LANG="" ls -1 */results/*/*.json \
     | sort \
     | while read -r file
 do
-    if entry=$(jq --compact-output ". += {\"source\": \"${file}\"}" "${file}"); then
-        [ "${FIRST}" = "0" ] && echo -n ','
-        printf '%s\n' "$entry"
-        FIRST=0
-    else
+    if ! entry=$(jq --compact-output --arg src "$file" \
+        'select((.tags // []) | index("historical") | not) | . + {"source": $src}' \
+        "$file"); then
         echo "Error in $file — skipping" >&2
+        continue
     fi
+    [ -z "$entry" ] && continue
+    [ "${FIRST}" = "0" ] && echo -n ','
+    printf '%s\n' "$entry"
+    FIRST=0
 done >> data.generated.js.new
 echo '];' >> data.generated.js.new
 
