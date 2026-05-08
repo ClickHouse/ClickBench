@@ -1,7 +1,7 @@
 {
   "system": "Tablespace",
   "date": "2024-02-25",
-  "machine": "L1 - 16CPU 32GB",
+  "machine": "L1 - 16CPU 32GiB",
   "cluster_size": 1,
   "proprietary": "yes",
     "hardware": "cpu",

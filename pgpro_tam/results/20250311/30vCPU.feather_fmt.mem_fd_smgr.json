@@ -1,7 +1,7 @@
 {
     "system": "pgpro_tam (feather, local + cache)",
     "date": "2025-03-11",
-    "machine": "30 vCPU 480GB",
+    "machine": "480GiB",
     "cluster_size": 1,
     "comment": "",
     "tags": [

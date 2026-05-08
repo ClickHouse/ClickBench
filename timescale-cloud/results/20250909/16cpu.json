@@ -1,6 +1,6 @@
 {
     "system": "Timescale ☁️",
-    "machine": "16 vCPU 64GB",
+    "machine": "64GiB",
     "cluster_size": 1,
     "proprietary": "yes",
     "hardware": "cpu",
