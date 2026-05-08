@@ -50,6 +50,14 @@ start_server() {
     return 1
 }
 
+restart_server() {
+    # SIGTERM forces the WAL to drain into Parquet and the in-memory write
+    # buffers to flush; the next start comes up with no WAL to replay.
+    kill -TERM "${INFLUXDB_PID}" 2>/dev/null || true
+    wait "${INFLUXDB_PID}" 2>/dev/null || true
+    start_server
+}
+
 start_server
 
 "${INFLUXDB3}" create database hits
@@ -57,18 +65,32 @@ start_server
 # Download the dataset and load it via line protocol.
 ../download-hits-tsv
 
-echo -n "Load time: "
-command time -f '%e' python3 load.py
+# Load in chunks, restarting the server between each chunk so the WAL drains
+# into Parquet. With one monolithic load, every Parquet file ends up covering
+# the same broad time range (16 parallel writers interleave timestamps across
+# the whole dataset), and InfluxDB 3.9.2's regroup_files optimizer hits an
+# internal "overlapping ranges within same file" assertion at query time.
+# Chunking keeps each Parquet file's [min_time, max_time] bounded to a
+# disjoint slice, so subsequent queries can plan successfully.
+TOTAL_ROWS=99997497
+CHUNKS=10
+CHUNK_ROWS=$(( (TOTAL_ROWS + CHUNKS - 1) / CHUNKS ))
 
-# Restart the server before running queries: this drains the WAL into
-# Parquet, releases the in-memory write buffers, and gives query execution
-# a clean budget. Without it, the post-load process is still juggling
-# ingest state and DataFusion's memory pool can OOM on heavier queries
-# (Q29's REGEXP_REPLACE in particular). InfluxDB 3.9.2 has DiskManager
-# hardcoded disabled so there is no spill-to-disk fallback.
-kill -TERM "${INFLUXDB_PID}" 2>/dev/null || true
-wait "${INFLUXDB_PID}" 2>/dev/null || true
-start_server
+load_t0=$(date +%s)
+for i in $(seq 0 $((CHUNKS - 1))); do
+    chunk_start=$((i * CHUNK_ROWS))
+    chunk_end=$(( (i + 1) * CHUNK_ROWS ))
+    if [ "$chunk_end" -gt "$TOTAL_ROWS" ]; then chunk_end=$TOTAL_ROWS; fi
+    echo "Chunk $((i + 1))/${CHUNKS}: rows ${chunk_start}..${chunk_end}"
+    python3 load.py --start-row "$chunk_start" --end-row "$chunk_end"
+    # Drain WAL so this chunk lands in its own Parquet files before the
+    # next chunk starts mixing more timestamps into the in-memory buffer.
+    restart_server
+done
+echo "Load time: $(($(date +%s) - load_t0))"
+
+# Server is already freshly restarted from the last chunk's drain, so no
+# additional restart is needed before the query phase.
 
 # Run queries.
 ./run.sh | tee log.txt

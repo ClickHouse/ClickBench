@@ -8,12 +8,21 @@ derived from the row index so that every point is unique.
 Batches are encoded and uploaded by a thread pool: encoding happens under
 the GIL, but the HTTP upload releases the GIL while waiting on the socket
 and on the InfluxDB server, so several uploads can be in flight at once.
+
+Optionally accepts --start-row / --end-row so the load can be split into
+chunks across multiple invocations. The wrapper script restarts InfluxDB
+between chunks to drain the WAL into Parquet, which keeps the per-Parquet
+``[min_time, max_time]`` ranges disjoint across chunks. That layout is what
+keeps InfluxDB 3's ``regroup_files`` optimizer from tripping its
+"overlapping ranges within same file" assertion at query time.
 """
 
+import argparse
 import csv
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
+from itertools import islice
 
 import requests
 
@@ -193,8 +202,16 @@ def encode_and_upload(rows, ts_start):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--start-row", type=int, default=0)
+    parser.add_argument("--end-row", type=int, default=TOTAL_ROWS)
+    args = parser.parse_args()
+    start_row = args.start_row
+    end_row = args.end_row
+    chunk_rows = end_row - start_row
+
     total = 0
-    next_ts = TS_BASE
+    next_ts = TS_BASE + start_row
     last_log = time.monotonic()
     pending = []
 
@@ -203,16 +220,21 @@ def main():
             reader = csv.reader(
                 f, delimiter="\t", quoting=csv.QUOTE_NONE, escapechar=None
             )
-            batch = []
-            for row in reader:
-                batch.append(row)
-                if len(batch) < BATCH_ROWS:
-                    continue
+            # Skip rows before our chunk. csv.QUOTE_NONE means each record is
+            # exactly one line, so islice over the reader is safe.
+            if start_row:
+                for _ in islice(reader, start_row):
+                    pass
+
+            while total < chunk_rows:
+                take = min(BATCH_ROWS, chunk_rows - total)
+                batch = list(islice(reader, take))
+                if not batch:
+                    break
 
                 pending.append(executor.submit(encode_and_upload, batch, next_ts))
                 next_ts += len(batch)
                 total += len(batch)
-                batch = []
 
                 # Drain oldest futures so memory stays bounded and any error
                 # surfaces promptly.
@@ -221,18 +243,18 @@ def main():
 
                 now = time.monotonic()
                 if now - last_log > PROGRESS_INTERVAL_SECONDS:
-                    pct = 100.0 * total / TOTAL_ROWS
-                    print(f"  {pct:5.2f}%  ({total}/{TOTAL_ROWS})", flush=True)
+                    pct = 100.0 * total / chunk_rows
+                    print(
+                        f"  {pct:5.2f}%  ({total}/{chunk_rows})"
+                        f"  rows {start_row}..{start_row + total}",
+                        flush=True,
+                    )
                     last_log = now
-
-            if batch:
-                pending.append(executor.submit(encode_and_upload, batch, next_ts))
-                total += len(batch)
 
         for fut in pending:
             fut.result()
 
-    print(f"Total rows written: {total}")
+    print(f"Total rows written: {total} (chunk {start_row}..{start_row + total})")
 
 
 if __name__ == "__main__":
