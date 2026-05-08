@@ -2,7 +2,7 @@
     "system": "ClickHouse ☁️ (gcp)",
     "date": "2025-01-23",
     "machine": "ClickHouse ☁️: 128GiB",
-    "cluster_size": "2",
+    "cluster_size": 2,
     "comment": "",
     "tags": [
         "C++",
