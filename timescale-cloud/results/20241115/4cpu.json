@@ -1,6 +1,6 @@
 {
     "system": "Timescale ☁️",
-    "machine": "Timescale ☁️: 4 vCPU 16GB",
+    "machine": "16GiB",
     "proprietary": "yes",
     "hardware": "cpu",
     "tuned": "no",

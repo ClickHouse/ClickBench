@@ -1,7 +1,7 @@
 {
     "system": "CHYT",
     "date": "2024-09-16",
-    "machine": "720GB",
+    "machine": "720GiB",
     "cluster_size": "serverless",
     "comment": "",
     "tags": [

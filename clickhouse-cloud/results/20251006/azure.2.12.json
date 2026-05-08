@@ -1,7 +1,7 @@
 {
     "system": "ClickHouse ☁️ (azure)",
     "date": "2025-10-06",
-    "machine": "ClickHouse ☁️: 12GiB",
+    "machine": "12GiB",
     "cluster_size": 2,
     "proprietary": "yes",
     "hardware": "cpu",

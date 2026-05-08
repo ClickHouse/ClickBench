@@ -1,7 +1,7 @@
 {
     "system": "Databricks",
     "date": "2025-11-06",
-    "machine": "Databricks: X-Large",
+    "machine": "XL",
     "cluster_size": 32,
     "proprietary": "yes",
     "hardware": "cpu",

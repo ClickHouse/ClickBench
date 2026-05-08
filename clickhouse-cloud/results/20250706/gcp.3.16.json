@@ -1,7 +1,7 @@
 {
     "system": "ClickHouse ☁️ (gcp)",
     "date": "2025-07-06",
-    "machine": "ClickHouse ☁️: 16GiB",
+    "machine": "16GiB",
     "cluster_size": 3,
     "proprietary": "yes",
     "hardware": "cpu",
