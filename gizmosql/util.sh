@@ -1,17 +1,16 @@
 #!/bin/bash
 
-# Variables
-GIZMOSQL_SERVER_URI="jdbc:arrow-flight-sql://localhost:31337?useEncryption=false"
-GIZMOSQL_USERNAME=clickbench
-GIZMOSQL_PASSWORD=clickbench
+# Variables (env var names match what gizmosql_client recognizes natively)
+export GIZMOSQL_HOST=localhost
+export GIZMOSQL_PORT=31337
+export GIZMOSQL_USER=clickbench
+export GIZMOSQL_PASSWORD=clickbench
 PID_FILE="/tmp/gizmosql_server_$$.pid"
 
 # Function to start the GizmoSQL server
 start_gizmosql() {
-    export GIZMOSQL_PASSWORD="${GIZMOSQL_PASSWORD}"
-
     nohup gizmosql_server \
-        --username ${GIZMOSQL_USERNAME} \
+        --username ${GIZMOSQL_USER} \
         --database-filename clickbench.db \
         --print-queries >> gizmosql_server.log 2>&1 &
 
@@ -19,7 +18,7 @@ start_gizmosql() {
 
     # Wait for server to be ready
     echo "Waiting for gizmosql_server to start..."
-    while ! nc -z localhost 31337 2>/dev/null; do
+    while ! nc -z ${GIZMOSQL_HOST} ${GIZMOSQL_PORT} 2>/dev/null; do
         sleep 1
     done
     echo "gizmosql_server is ready (PID: $(cat ${PID_FILE}))"
