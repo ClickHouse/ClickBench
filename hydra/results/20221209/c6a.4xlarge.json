@@ -6,8 +6,7 @@
     "comment": "",
     "tags": [
         "PostgreSQL compatible",
-        "column-oriented",
-        "historical"
+        "column-oriented"
     ],
     "load_time": 1320,
     "data_size": 18979994590,
