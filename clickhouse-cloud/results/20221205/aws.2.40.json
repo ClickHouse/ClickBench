@@ -1,8 +1,8 @@
 {
     "system": "ClickHouse ☁️ (aws)",
     "date": "2022-12-05",
-    "machine": "20 threads",
-    "cluster_size": 3,
+    "machine": "ClickHouse ☁️: 40GiB",
+    "cluster_size": 2,
     "comment": "",
     "tags": [
         "C++",
