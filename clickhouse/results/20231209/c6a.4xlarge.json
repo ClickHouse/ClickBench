@@ -1,7 +1,7 @@
 {
     "system": "ClickHouse 23.11",
     "date": "2023-12-09",
-    "machine": "c6a.4xlarge, 500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "comment": "",
     "tags": [

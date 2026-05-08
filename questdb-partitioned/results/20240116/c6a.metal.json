@@ -1,7 +1,7 @@
 {
     "system": "QuestDB (partitioned)",
     "date": "2024-01-16",
-    "machine": "c6a.metal, 500gb gp2",
+    "machine": "c6a.metal",
     "cluster_size": 1,
     "comment": "Data load for partitioned tables is multi-threaded and thus more efficient.",
     "tags": [

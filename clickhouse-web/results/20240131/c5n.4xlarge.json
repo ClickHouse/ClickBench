@@ -1,7 +1,7 @@
 {
     "system": "ClickHouse (web)",
     "date": "2024-01-31",
-    "machine": "c5n.4xlarge, 500gb gp2",
+    "machine": "c5n.4xlarge",
     "cluster_size": 1,
     "comment": "",
     "tags": [

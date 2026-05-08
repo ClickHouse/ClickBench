@@ -1,7 +1,7 @@
 {
     "system": "ParadeDB",
     "date": "2024-02-02",
-    "machine": "c6a.4xlarge, 1500gb gp2",
+    "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "comment": "The results for (c6a.4xlarge, 500gb gp2) are also submitted here for easy comparison with Elasticsearch",
     "tags": [
