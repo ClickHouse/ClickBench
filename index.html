@@ -728,15 +728,18 @@ function relativeQueryTime(num_queries, baseline_data, elem, metric) {
 
     for (let i = 0; i < num_queries; ++i) {
         if (no_queries_selected || selectors.queries[i]) {
-            const curr_timing = selectRun(elem.result[i], metric) ?? fallback_timing;
             const baseline_timing = selectRun(baseline_data[i], metric);
+            /// Skip queries that fail on every filtered system - otherwise the
+            /// geometric mean collapses to 0 and no bars render.
+            if (baseline_timing === null || !isFinite(baseline_timing)) continue;
+            const curr_timing = selectRun(elem.result[i], metric) ?? fallback_timing;
             const ratio = (constant_time_add + curr_timing) / (constant_time_add + baseline_timing);
             accumulator += Math.log(ratio);
             ++used_queries;
         }
     }
 
-    return Math.exp(accumulator / used_queries);
+    return used_queries > 0 ? Math.exp(accumulator / used_queries) : null;
 }
 
 function addNote(text) {
