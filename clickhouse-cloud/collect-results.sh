@@ -3,6 +3,10 @@
 # This is needed on Mac OS. Do `brew install coreutils`.
 [ -n "$HOMEBREW_PREFIX" ] && PATH="${HOMEBREW_PREFIX}/opt/coreutils/libexec/gnubin:${PATH}"
 
+DATE=$(date -u +%F)
+YYYYMMDD=${DATE//-/}
+mkdir -p "results/$YYYYMMDD"
+
 for f in */result
 do
     echo $f
@@ -14,7 +18,7 @@ do
     echo '
 {
     "system": "ClickHouse ☁️ ('$PROVIDER')",
-    "date": "'$(date +%F)'",
+    "date": "'$DATE'",
     "machine": "ClickHouse ☁️: '$MEMORY'GiB",
     "cluster_size": '$REPLICAS',
     "proprietary": "yes",
@@ -31,5 +35,5 @@ do
 '$(grep -F "[" "$f" | head -c-2)'
 ]
 }
-' > "results/${PROVIDER}.${REPLICAS}.${MEMORY}.json"
+' > "results/$YYYYMMDD/${PROVIDER}.${REPLICAS}.${MEMORY}.json"
 done

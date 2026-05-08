@@ -1,0 +1,10 @@
+{
+    "system": "Sail (Parquet, partitioned)",
+    "machine": "c6a.2xlarge",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "no",
+    "tags": [
+        "column-oriented"
+    ]
+}

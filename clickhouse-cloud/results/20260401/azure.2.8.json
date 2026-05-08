@@ -1,0 +1,21 @@
+
+{
+    "system": "ClickHouse ☁️ (azure)",
+    "date": "2026-04-01",
+    "machine": "ClickHouse ☁️: 8GiB",
+    "cluster_size": 2,
+    "proprietary": "yes",
+    "hardware": "cpu",
+    "tuned": "no",
+    "comment": "",
+
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],
+
+    "load_time": 686.608,
+    "data_size": ),
+
+    "result": [
+Code: 1000. DB::Exception: Received from go5fvaia2t.westus3.azure.clickhouse.cloud:9440. DB::Exception: Received from c-brassazr-cl-93-server-rg3npc8-0.c-brassazr-cl-93-server-headless.ns-brassazr-cl-93.svc.cluster.local:9000. DB::Exception: Net Exception: Network is unreachable: [2606:4700:3108::ac42:28f9]:443. (POCO_EXCEPTION
+]
+}
+

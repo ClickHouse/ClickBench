@@ -1,0 +1,21 @@
+
+{
+    "system": "ClickHouse ☁️ (aws)",
+    "date": "2025-12-18",
+    "machine": "ClickHouse ☁️: 32GiB",
+    "cluster_size": 2,
+    "proprietary": "yes",
+    "hardware": "cpu",
+    "tuned": "no",
+    "comment": "",
+
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "aws"],
+
+    "load_time": 213.285,
+    "data_size": ),
+
+    "result": [
+std::exception. Code: 1001, type: parquet::ParquetStatusException, e.what() = IOError: Poco::Exception. Code: 1000, e.code() = 101, Net Exception: Network is unreachable: [2606:4700:3108::ac42:2b07]:443 (version 25.10.1.6953 (official build)) (version 25.10.1.6953 (official build))
+]
+}
+

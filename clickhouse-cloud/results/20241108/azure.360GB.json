@@ -1,0 +1,18 @@
+
+{
+    "system": "ClickHouse Cloud (azure)",
+    "date": "2024-11-08",
+    "machine": "360GB",
+    "cluster_size": "serverless",
+    "comment": "",
+
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],
+
+    "load_time": Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:49752). (NETWORK_ERROR),
+    "data_size": 0,
+
+    "result": [
+[0.007, 0.003, 0.004], [0.003, 0.003, 0.003], [0.003, 0.003, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:36170). (NETWORK_ERROR)], [0.003, 0.003, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:41232). (NETWORK_ERROR)], [0.002, 0.002, 0.002], [0.002, 0.002, 0.002], [0.003, 0.004, 0.003], [0.003, 0.004, 0.005], [0.005, 0.003, 0.003], [0.003, 0.004, 0.003], [0.003, 0.004, 0.006], [0.003, 0.005, 0.003], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:33592). (NETWORK_ERROR), 0.003, 0.004], [0.003, 0.004, 0.003], [0.004, 0.004, 0.004], [0.003, 0.003, 0.004], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:40068). (NETWORK_ERROR), 0.003, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:37886). (NETWORK_ERROR)], [0.003, 0.002, 0.004], [0.003, 0.003, 0.003], [0.002, 0.002, 0.002], [0.003, 0.003, 0.002], [0.004, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:55546). (NETWORK_ERROR), 0.004], [0.004, 0.004, 0.004], [0.007, 0.005, 0.005], [0.004, 0.002, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:46428). (NETWORK_ERROR)], [0.001, 0.002, 0.001], [0.002, 0.002, 0.002], [0.004, 0.004, 0.004], [0.022, 0.005, 0.003], [0.015, 0.015, 0.014], [0.004, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:44044). (NETWORK_ERROR), 0.003], [0.003, 0.004, Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:52006). (NETWORK_ERROR)], [0.004, 0.004, 0.003], [0.003, 0.003, 0.002], [0.002, 0.003, 0.003], [0.003, 0.003, 0.004], [Code: 210. DB::NetException: Net Exception: Connection reset by peer (avivajisgk.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.253:50026). (NETWORK_ERROR), 0.005, 0.004], [0.004, 0.004, 0.004], [0.004, 0.004, 0.004], [0.006, 0.005, 0.005], [0.004, 0.004, 0.004], [0.004, 0.003, 0.003], [0.005, 0.004, 0.003]
+]
+}
+

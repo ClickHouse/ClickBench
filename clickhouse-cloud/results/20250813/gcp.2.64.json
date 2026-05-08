@@ -1,0 +1,20 @@
+
+{
+    "system": "ClickHouse ☁️ (gcp)",
+    "date": "2025-08-13",
+    "machine": "64GiB",
+    "cluster_size": 2,
+    "proprietary": "yes",
+    "tuned": "no",
+    "comment": "",
+
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "gcp"],
+
+    "load_time": Code: 209. DB::NetException: Timeout: connect timed out: 34.36.105.62:9440 (fcuutneuqy.us-east1.gcp.clickhouse.cloud:9440, connection timeout 10000 ms). (SOCKET_TIMEOUT),
+    "data_size": ,
+
+    "result": [
+
+]
+}
+

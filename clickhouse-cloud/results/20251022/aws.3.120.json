@@ -1,0 +1,20 @@
+
+{
+    "system": "ClickHouse ☁️ (aws)",
+    "date": "2025-10-22",
+    "machine": "ClickHouse ☁️: 120GiB",
+    "cluster_size": 3,
+    "proprietary": "yes",
+    "tuned": "no",
+    "comment": "",
+
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "aws"],
+
+    "load_time": 272.876,
+    "data_size": ),
+
+    "result": [
+
+]
+}
+

@@ -1,0 +1,18 @@
+
+{
+    "system": "ClickHouse Cloud (azure)",
+    "date": "2024-11-05",
+    "machine": "24GB",
+    "cluster_size": "serverless",
+    "comment": "",
+
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],
+
+    "load_time": Code: 210. DB::NetException: Net Exception: Connection reset by peer (t6cvd91dql.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.63:36500). (NETWORK_ERROR),
+    "data_size": (query: SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;)],,
+
+    "result": [
+[0.014 [Code: 210. DB::NetException: Net Exception: Connection reset by peer (t6cvd91dql.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.63:51034). (NETWORK_ERROR), 0.013 [0.014 [0.014 [0.015 [0.013 [0.014 [0.014 [0.013 [0.013 [0.013 [0.014 [0.017 [Code: 210. DB::NetException: Net Exception: Connection reset by peer (t6cvd91dql.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.63:41940). (NETWORK_ERROR), 0.013 [Code: 210. DB::NetException: Net Exception: Connection reset by peer (t6cvd91dql.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.63:48712). (NETWORK_ERROR), 0.014 [0.014 [0.016 [0.014 [Code: 210. DB::NetException: Net Exception: Connection reset by peer (t6cvd91dql.eastus2.azure.clickhouse.cloud:9440, 4.152.12.124, local address: 10.1.0.63:47970). (NETWORK_ERROR), 0.013 [0.013 [0.014 [0.013 [0.014 [0.014 [0.013 [0.013 [0.013 [0.013 [0.015 Code: 60. DB::Exception: Received from t6cvd91dql.eastus2.azure.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;), 0.014 Code: 60. DB::Exception: Received from t6cvd91dql.eastus2.azure.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;), 0.016 Code: 60. DB::Exception: Received from t6cvd91dql.eastus2.azure.clickhouse.cloud:9440. DB::Exception: Unknown table expression identifier 'hits' in scope SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer != '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25. (UNKNOWN_TABLE) (query: SELECT REGEXP_REPLACE(Referer, '^https?://(?:www.)?([^/]+)/.*$', '1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;)], [0.014 [0.013 [0.015 [0.013 [0.013 [0.013 [0.014 [0.014 [0.013 [0.013 [0.014 [0.015 [0.013 [0.01
+]
+}
+

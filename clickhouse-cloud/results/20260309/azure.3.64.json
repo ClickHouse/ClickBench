@@ -1,0 +1,21 @@
+
+{
+    "system": "ClickHouse ☁️ (azure)",
+    "date": "2026-03-09",
+    "machine": "ClickHouse ☁️: 64GiB",
+    "cluster_size": 3,
+    "proprietary": "yes",
+    "hardware": "cpu",
+    "tuned": "no",
+    "comment": "",
+
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],
+
+    "load_time": Received exception from server (version 25.12.1):,
+    "data_size": );),
+
+    "result": [
+
+]
+}
+

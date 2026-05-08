@@ -1,0 +1,20 @@
+
+{
+    "system": "ClickHouse ☁️ (gcp)",
+    "date": "2025-09-02",
+    "machine": "8GiB",
+    "cluster_size": 2,
+    "proprietary": "yes",
+    "tuned": "no",
+    "comment": "",
+
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "gcp"],
+
+    "load_time": Error on processing query: Code: 32. DB::Exception: Attempt to read after eof: while receiving packet from ml0uiaomlx.us-east1.gcp.clickhouse.cloud:9440, 34.36.105.62, local address: 10.1.0.63:54016. (ATTEMPT_TO_READ_AFTER_EOF) (version 25.9.1.679 (official build)),
+    "data_size": ),
+
+    "result": [
+
+]
+}
+

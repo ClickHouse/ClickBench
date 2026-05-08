@@ -1,0 +1,21 @@
+
+{
+    "system": "ClickHouse ☁️ (aws)",
+    "date": "2026-03-03",
+    "machine": "ClickHouse ☁️: 8GiB",
+    "cluster_size": 1,
+    "proprietary": "yes",
+    "hardware": "cpu",
+    "tuned": "no",
+    "comment": "",
+
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "aws"],
+
+    "load_time": 243.861,
+    "data_size": ),
+
+    "result": [
+Poco::Exception. Code: 1000, e.code() = 101, Net Exception: Network is unreachable: [2606:4700:3108::ac42:28f9]:443 (version 25.12.1.1401 (official build))
+]
+}
+

@@ -1,0 +1,21 @@
+
+{
+    "system": "ClickHouse ☁️ (gcp)",
+    "date": "2026-03-21",
+    "machine": "ClickHouse ☁️: 8GiB",
+    "cluster_size": 2,
+    "proprietary": "yes",
+    "hardware": "cpu",
+    "tuned": "no",
+    "comment": "",
+
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "gcp"],
+
+    "load_time": 304.747,
+    "data_size": ),
+
+    "result": [
+
+]
+}
+

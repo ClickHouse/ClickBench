@@ -1,0 +1,21 @@
+
+{
+    "system": "ClickHouse ☁️ (azure)",
+    "date": "2026-04-01",
+    "machine": "ClickHouse ☁️: 12GiB",
+    "cluster_size": 2,
+    "proprietary": "yes",
+    "hardware": "cpu",
+    "tuned": "no",
+    "comment": "",
+
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "azure"],
+
+    "load_time": 575.209,
+    "data_size": ),
+
+    "result": [
+Code: 1000. DB::Exception: Received from eakms86zt4.westus3.azure.clickhouse.cloud:9440. DB::Exception: Received from c-avocadoazr-dh-49-server-ldzve87-0.c-avocadoazr-dh-49-server-headless.ns-avocadoazr-dh-49.svc.cluster.local:9000. DB::Exception: Net Exception: Network is unreachable: [2606:4700:3108::ac42:2b07]:443. (POCO_EXCEPTION
+]
+}
+
