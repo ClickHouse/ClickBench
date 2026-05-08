@@ -1,58 +1,53 @@
 #!/bin/bash -e
 
-# Hyrise is a research in-memory column-oriented database from HPI.
+# Hyrise: research in-memory column-oriented DBMS from HPI.
 # https://github.com/hyrise/hyrise
 #
-# Hyrise has no pre-built binary distribution; it must be compiled from source.
-# Hyrise's install_dependencies.sh requires Ubuntu 25.04 or newer (for gcc-15
-# and clang-20). On older Ubuntu releases the build will fail.
+# Hyrise has no upstream binary distribution and the build requires a recent
+# toolchain (gcc-15 / clang-20). We build it inside Docker on top of Ubuntu
+# 25.04, then ship just the binary and its runtime libs in a slim image.
 
-# Install Hyrise dependencies (this may pull in many packages and a fresh
-# compiler toolchain).
 sudo apt-get update -y
-sudo apt-get install -y git cmake ninja-build postgresql-client
+sudo apt-get install -y docker.io postgresql-client gzip
 
-git clone --recursive https://github.com/hyrise/hyrise.git hyrise-src
-cd hyrise-src
-HYRISE_HEADLESS_SETUP=1 ./install_dependencies.sh
+# Build the Hyrise server image.
+sudo docker build -t clickbench-hyrise .
 
-# Build only the server binary in Release mode.
-mkdir -p cmake-build-release
-cd cmake-build-release
-cmake -GNinja -DCMAKE_BUILD_TYPE=Release ..
-ninja hyriseServer
-cd ../..
+# Download the dataset (RFC-4180 CSV produced by ClickHouse).
+rm -rf data
+mkdir data
+../download-hits-csv data
+# hits.csv.json next to hits.csv tells Hyrise's CSV parser the column types.
+cp hits.csv.json data/hits.csv.json
+chmod -R 777 data
 
-# Download the dataset (CSV format, RFC-4180 compliant).
-../download-hits-csv
-
-# Start the server in the background. Hyrise listens on the PostgreSQL wire
-# protocol; no authentication is required.
-./hyrise-src/cmake-build-release/hyriseServer 5432 > server.log 2>&1 &
-SERVER_PID=$!
+# Start the server. Hyrise is in-memory only, so no persistent volume is
+# needed; the dataset is mounted read-only.
+sudo docker run -d --name hyrise --rm -p 5432:5432 \
+    -v "$(pwd)/data:/data:ro" \
+    --ulimit nofile=1048576:1048576 \
+    clickbench-hyrise
 
 # Wait for the server to accept connections.
-for _ in $(seq 1 60); do
+for _ in $(seq 1 120); do
     if psql -h 127.0.0.1 -p 5432 -U postgres -c 'SELECT 1' > /dev/null 2>&1; then
         break
     fi
     sleep 1
 done
 
-# Create the table.
-psql -h 127.0.0.1 -p 5432 -U postgres -f create.sql
-
-# Load the data and measure load time. The COPY statement uses Hyrise's CSV
-# parser, which expects RFC-4180 formatted input (the format produced by
-# download-hits-csv).
+# Load the data. The COPY statement creates the `hits` table from the column
+# definitions in hits.csv.json next to the data file.
 echo -n "Load time: "
-command time -f '%e' psql -h 127.0.0.1 -p 5432 -U postgres -c "COPY hits FROM '$(pwd)/hits.csv' WITH (FORMAT CSV);"
+command time -f '%e' \
+    psql -h 127.0.0.1 -p 5432 -U postgres -q \
+        -c "COPY hits FROM '/data/hits.csv' WITH (FORMAT CSV);"
 
-# Hyrise is in-memory only, so report the estimated total segment size of the
-# hits table as the data size.
+# Hyrise has no on-disk persistence; report the total in-memory segment size
+# of the hits table from the meta_segments meta table.
 echo -n "Data size: "
-psql -h 127.0.0.1 -p 5432 -U postgres -t -A -c \
-    "SELECT SUM(estimated_size_in_bytes) FROM meta_segments WHERE table_name = 'hits';"
+psql -h 127.0.0.1 -p 5432 -U postgres -t -A \
+    -c "SELECT SUM(estimated_size_in_bytes) FROM meta_segments WHERE table_name = 'hits';"
 
 # Run the benchmark.
 ./run.sh 2>&1 | tee log.txt
@@ -63,5 +58,5 @@ cat log.txt | grep -oP 'Time: \d+\.\d+ ms|psql: error' |
     awk '{ if (i % 3 == 0) { printf "[" }; if ($1 == "null") { printf $1 } else { printf $1 / 1000 }; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
 
 # Cleanup.
-kill ${SERVER_PID} || true
-wait ${SERVER_PID} 2>/dev/null || true
+sudo docker stop hyrise > /dev/null 2>&1 || true
+rm -rf data
