@@ -3,14 +3,14 @@
     "date": "2025-04-10",
     "machine": "c6a.metal",
     "cluster_size": 1,
+    "proprietary": "no",
+    "hardware": "cpu",
     "tuned": "no",
-    "comment": "",
     "tags": [
         "Rust",
         "stateless",
         "serverless",
-        "embedded",
-        "open-source"
+        "embedded"
     ],
     "load_time": 0,
     "data_size": 14779976446,

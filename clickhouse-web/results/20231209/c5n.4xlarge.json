@@ -1,8 +1,9 @@
 {
-    "system": "ClickHouse 23.11 (web)",
+    "system": "ClickHouse (web)",
     "date": "2023-12-09",
     "machine": "c5n.4xlarge",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "",
     "tags": [
         "C++",

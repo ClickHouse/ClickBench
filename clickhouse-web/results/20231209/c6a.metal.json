@@ -1,15 +1,18 @@
 {
-    "system": "ClickHouse 23.11 (web)",
+    "system": "ClickHouse (web)",
     "date": "2023-12-09",
     "machine": "c6a.metal",
     "cluster_size": 1,
-    "comment": "",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "no",
     "tags": [
         "C++",
         "column-oriented",
         "ClickHouse derivative",
         "serverless",
-        "stateless"
+        "stateless",
+        "lukewarm-cold-run"
     ],
     "load_time": 0,
     "data_size": 14557009492,

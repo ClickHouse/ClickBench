@@ -3,7 +3,9 @@
     "date": "2024-01-31",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "comment": "",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "no",
     "tags": [
         "C++",
         "column-oriented",

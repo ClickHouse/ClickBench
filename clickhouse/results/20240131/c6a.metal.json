@@ -3,11 +3,14 @@
     "date": "2024-01-31",
     "machine": "c6a.metal",
     "cluster_size": 1,
-    "comment": "",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "no",
     "tags": [
         "C++",
         "column-oriented",
-        "ClickHouse derivative"
+        "ClickHouse derivative",
+        "lukewarm-cold-run"
     ],
     "load_time": 134,
     "data_size": 14466417276,

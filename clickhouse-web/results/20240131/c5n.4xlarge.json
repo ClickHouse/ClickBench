@@ -3,6 +3,7 @@
     "date": "2024-01-31",
     "machine": "c5n.4xlarge",
     "cluster_size": 1,
+    "tuned": "no",
     "comment": "",
     "tags": [
         "C++",
