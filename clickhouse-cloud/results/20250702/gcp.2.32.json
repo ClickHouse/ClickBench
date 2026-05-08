@@ -2,7 +2,7 @@
     "system": "ClickHouse ☁️ (gcp)",
     "date": "2025-07-02",
     "machine": "ClickHouse ☁️: 32GiB",
-    "cluster_size": "2",
+    "cluster_size": 2,
     "proprietary": "yes",
     "hardware": "cpu",
     "tuned": "no",
