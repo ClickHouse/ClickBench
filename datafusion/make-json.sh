@@ -5,13 +5,15 @@
 #
 # usage : ./make-json.sh <machine>
 #
-# example ./make-json.sh c6a.4xlarge # saves results/c6a.4xlarge.json
+# example ./make-json.sh c6a.4xlarge # saves results/<YYYYMMDD>/c6a.4xlarge.json
 #
 
 MACHINE=$1
-OUTPUT_FILE="results/${MACHINE}.json"
+DATE=$(date -u +%Y-%m-%d)
+YYYYMMDD=${DATE//-/}
+mkdir -p "results/${YYYYMMDD}"
+OUTPUT_FILE="results/${YYYYMMDD}/${MACHINE}.json"
 SYSTEM_NAME="DataFusion (Parquet, single)"
-DATE=$(date +%Y-%m-%d)
 
 
 # Read the CSV and build the result array using sed
