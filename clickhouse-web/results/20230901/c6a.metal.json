@@ -14,7 +14,7 @@
         "stateless",
         "lukewarm-cold-run"
     ],
-    "load_time": 0.33,
+    "load_time": 0,
     "data_size": 14557009492,
     "result": [
         [

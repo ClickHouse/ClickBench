@@ -13,7 +13,7 @@
         "in-memory",
         "lukewarm-cold-run"
     ],
-    "load_time": 15.244,
+    "load_time": 15,
     "data_size": 109925945344,
     "result": [
         [

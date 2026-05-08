@@ -11,7 +11,7 @@
         "column-oriented",
         "lukewarm-cold-run"
     ],
-    "load_time": 2.375920505999602,
+    "load_time": 2,
     "data_size": 470000128,
     "result": [
         [

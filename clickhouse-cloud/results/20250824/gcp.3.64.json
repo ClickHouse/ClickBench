@@ -14,7 +14,7 @@
         "managed",
         "gcp"
     ],
-    "load_time": 80.0,
+    "load_time": 80,
     "data_size": 9948572745,
     "result": [
         [

@@ -12,7 +12,7 @@
         "ClickHouse derivative",
         "lukewarm-cold-run"
     ],
-    "load_time": 501.085,
+    "load_time": 501,
     "data_size": 15572828006,
     "result": [
         [
