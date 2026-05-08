@@ -13,7 +13,13 @@ tursodb mydb < create.sql
 ../download-hits-csv
 
 echo -n "Load time: "
-command time -f '%e' tursodb mydb '.import --csv hits.csv hits'
+command time -f '%e' tursodb mydb <<'EOF'
+PRAGMA synchronous = OFF;
+BEGIN;
+.import --csv hits.csv hits
+COMMIT;
+EOF
+tursodb mydb 'PRAGMA wal_checkpoint(TRUNCATE);' > /dev/null
 echo -n "Data size: "
 wc -c mydb
 
