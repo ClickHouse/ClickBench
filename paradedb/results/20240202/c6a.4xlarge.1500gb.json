@@ -1,5 +1,5 @@
 {
-    "system": "ParadeDB",
+    "system": "ParadeDB (Parquet, single)",
     "date": "2024-02-02",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,

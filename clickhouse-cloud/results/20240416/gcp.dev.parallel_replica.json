@@ -1,5 +1,5 @@
 {
-    "system": "ClickHouse Cloud (gcp) Parallel Replicas ON",
+    "system": "ClickHouse ☁️ (gcp)",
     "date": "2024-04-16",
     "machine": "dev",
     "cluster_size": "serverless",

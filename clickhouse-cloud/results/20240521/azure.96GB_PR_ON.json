@@ -1,7 +1,7 @@
 {
-    "system": "ClickHouse Cloud (Azure) Parallel Replica ON",
+    "system": "ClickHouse ☁️ (azure)",
     "date": "2024-05-21",
-    "machine": "96GB",
+    "machine": "ClickHouse ☁️: 96GiB",
     "cluster_size": "serverless",
     "comment": "",
     "tags": [

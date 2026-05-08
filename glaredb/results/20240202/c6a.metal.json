@@ -1,5 +1,5 @@
 {
-    "system": "GlareDB",
+    "system": "GlareDB (Parquet, single)",
     "date": "2024-02-02",
     "machine": "c6a.metal",
     "cluster_size": 1,

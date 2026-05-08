@@ -1,5 +1,5 @@
 {
-    "system": "ClickHouse Cloud (aws)",
+    "system": "ClickHouse ☁️ (aws)",
     "date": "2024-12-10",
     "machine": "dev",
     "cluster_size": "serverless",

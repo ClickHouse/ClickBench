@@ -1,7 +1,7 @@
 {
-    "system": "ClickHouse Cloud (azure)",
+    "system": "ClickHouse ☁️ (azure)",
     "date": "2025-01-20",
-    "machine": "24GB",
+    "machine": "ClickHouse ☁️: 24GiB",
     "cluster_size": "serverless",
     "comment": "",
     "tags": [

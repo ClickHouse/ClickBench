@@ -1,5 +1,5 @@
 {
-    "system": "ClickHouse Cloud (aws) Parallel Replicas ON",
+    "system": "ClickHouse ☁️ (aws)",
     "date": "2024-04-16",
     "machine": "dev",
     "cluster_size": "serverless",

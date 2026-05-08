@@ -1,5 +1,5 @@
 {
-    "system": "ClickHouse Cloud (gcp)",
+    "system": "ClickHouse ☁️ (gcp)",
     "date": "2024-11-25",
     "machine": "dev",
     "cluster_size": "serverless",

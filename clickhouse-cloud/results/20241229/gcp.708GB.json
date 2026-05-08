@@ -1,7 +1,7 @@
 {
-    "system": "ClickHouse Cloud (gcp)",
+    "system": "ClickHouse ☁️ (gcp)",
     "date": "2024-12-29",
-    "machine": "708GB",
+    "machine": "ClickHouse ☁️: 708GiB",
     "cluster_size": "serverless",
     "comment": "",
     "tags": [
