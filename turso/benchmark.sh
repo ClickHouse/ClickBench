@@ -13,7 +13,7 @@ tursodb mydb < create.sql
 ../download-hits-csv
 
 echo -n "Load time: "
-command time -f '%e' tursodb mydb <<'EOF'
+command time -f '%e' tursodb mydb <<'EOF' 2>&1 | grep -v '^Inserting batch of'
 PRAGMA synchronous = OFF;
 BEGIN;
 .import --csv hits.csv hits
