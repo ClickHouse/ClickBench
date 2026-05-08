@@ -3,22 +3,24 @@ set -e
 
 # Install prerequisites
 sudo apt-get update -y
-sudo apt-get install -y wget curl jq bc python3 python3-requests
+sudo apt-get install -y wget curl jq bc docker.io
+sudo systemctl start docker
 
-# Download Quickwit
-QW_VERSION="0.8.2"
-ARCH=$(uname -m)
-QW_DIR="quickwit-v${QW_VERSION}"
-wget --continue --progress=dot:giga \
-    "https://github.com/quickwit-oss/quickwit/releases/download/v${QW_VERSION}/${QW_DIR}-${ARCH}-unknown-linux-gnu.tar.gz"
-tar xzf "${QW_DIR}-${ARCH}-unknown-linux-gnu.tar.gz"
+# We use the Quickwit v0.9 release candidate. Stable v0.8.2 is missing
+# `cardinality`, `wildcard`, and several other features the benchmark relies
+# on; only the v0.9 line (still unreleased as of writing) provides them.
+QW_IMAGE="quickwit/quickwit:v0.9.0-rc"
+sudo docker pull "$QW_IMAGE"
+
+# Quickwit's data directory (shared between the server and the local-ingest
+# container).
+QW_DATA="$(pwd)/qwdata"
+sudo rm -rf "$QW_DATA"
+mkdir -p "$QW_DATA"
 
 # Start the server in the background. Quickwit defaults: REST on 7280, gRPC on 7281.
-pushd "$QW_DIR" >/dev/null
-nohup ./quickwit run > ../quickwit.log 2>&1 &
-QW_PID=$!
-popd >/dev/null
-echo "Quickwit started (PID $QW_PID)"
+sudo docker run -d --name qw --network host -v "$QW_DATA":/quickwit/qwdata "$QW_IMAGE" run
+echo "Quickwit container started"
 
 # Wait for the server to come up.
 for i in $(seq 1 60); do
@@ -39,12 +41,18 @@ wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compat
 
 START=$(date +%s)
 
-# Stream JSON directly into Quickwit via the Elasticsearch-compatible bulk API.
-python3 load.py
+# Use `quickwit tool local-ingest` instead of the Elasticsearch-compatible
+# bulk endpoint. v0.9's sharded ingest-v2 API caps single-node throughput
+# to a few MB/s and gets stuck waiting for shards to scale, while
+# `local-ingest` builds splits directly and writes them to the index
+# storage. The running server picks up new splits on its next metastore
+# poll (default 30s).
+zcat hits.json.gz | sudo docker run --rm -i --network host \
+    -v "$QW_DATA":/quickwit/qwdata \
+    "$QW_IMAGE" tool local-ingest --index hits -y
 
-# Force any in-flight commits and wait for the data to become searchable.
-# The default commit timeout in index_config.yaml is 30s, so wait a bit longer.
-sleep 60
+# Wait long enough for the server to refresh its metastore view.
+sleep 35
 
 # Show stats.
 curl -sS "http://localhost:7280/api/v1/indexes/hits/describe" | tee stats.json
@@ -53,13 +61,13 @@ echo
 END=$(date +%s)
 echo "Load time: $((END - START))"
 
-# Data size on disk (single-node uses qwdata/ inside the install dir).
+# Data size on disk.
 echo -n "Data size: "
-du -sb "$QW_DIR/qwdata" 2>/dev/null | awk '{print $1}'
+sudo du -sb "$QW_DATA" | awk '{print $1}'
 
 # Run queries
 chmod +x run.sh
 ./run.sh
 
-# Stop Quickwit
-kill "$QW_PID" 2>/dev/null || true
+sudo docker stop qw 2>/dev/null || true
+sudo docker rm qw 2>/dev/null || true
