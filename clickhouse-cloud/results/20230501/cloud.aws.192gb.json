@@ -2,7 +2,7 @@
     "system": "ClickHouse ☁️ (aws)",
     "date": "2023-05-01",
     "machine": "ClickHouse ☁️: 192GiB",
-    "cluster_size": "serverless",
+    "cluster_size": 3,
     "comment": "",
     "tags": [
         "C++",

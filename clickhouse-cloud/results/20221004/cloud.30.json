@@ -1,8 +1,8 @@
 {
-    "system": "ClickHouse Cloud",
+    "system": "ClickHouse ☁️",
     "date": "2022-10-04",
     "machine": "30 threads",
-    "cluster_size": "serverless",
+    "cluster_size": 3,
     "comment": "",
     "tags": [
         "C++",
