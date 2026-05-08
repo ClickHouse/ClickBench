@@ -1,13 +1,12 @@
 {
     "system": "MotherDuck",
     "date": "2024-10-29",
-    "machine": "cloud",
+    "machine": "Motherduck: standard",
     "cluster_size": 1,
     "tags": [
         "C++",
         "column-oriented",
-        "serverless",
-        "historical"
+        "serverless"
     ],
     "load_time": 57,
     "data_size": 23620000000,
