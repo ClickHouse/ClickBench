@@ -1,8 +1,17 @@
 version: 0.8
 
-# Bump the per-request and leaf-search timeouts well above the 30s default —
-# a few of the high-cardinality aggregations on the full 100M-row ClickBench
-# dataset (e.g. WatchID + ClientIP nested terms) take longer than that.
 searcher:
+  # Bump the per-request and leaf-search timeouts well above the 30s default —
+  # a few of the high-cardinality aggregations on the full 100M-row ClickBench
+  # dataset (e.g. WatchID + ClientIP nested terms) take longer than that.
   request_timeout_secs: 600
   leaf_request_timeout_secs: 600
+
+  # Disable the per-split partial result cache so warm runs don't replay a
+  # memoized answer. The other in-memory caches (fast_field_cache,
+  # split_footer_cache, predicate_cache) are data-level caches (analogous to
+  # ClickHouse's query condition cache) and are kept at their defaults;
+  # run.sh restarts the container before each query so they also start cold
+  # for the first run.
+  partial_request_cache:
+    capacity: 0
