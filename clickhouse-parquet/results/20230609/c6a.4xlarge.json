@@ -1,9 +1,11 @@
 {
-    "system": "clickhouse-local (single)",
+    "system": "ClickHouse (Parquet, single)",
     "date": "2023-06-09",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
-    "comment": "",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "no",
     "tags": [
         "C++",
         "column-oriented",
