@@ -28,22 +28,29 @@ INFLUXDB3="${PWD}/influxdb3-core-${INFLUX_VERSION}/influxdb3"
 # load and let more write requests accumulate in memory before being
 # rejected with back-pressure.
 mkdir -p ./influxdb3-data
-nohup "${INFLUXDB3}" serve \
-    --node-id node0 \
-    --object-store file \
-    --data-dir "${PWD}/influxdb3-data" \
-    --http-bind 127.0.0.1:8181 \
-    --without-auth \
-    --wal-max-write-buffer-size 1000000 \
-    --max-http-request-size 67108864 \
-    > influxdb3.log 2>&1 &
-INFLUXDB_PID=$!
-echo "InfluxDB PID: ${INFLUXDB_PID}"
+start_server() {
+    nohup "${INFLUXDB3}" serve \
+        --node-id node0 \
+        --object-store file \
+        --data-dir "${PWD}/influxdb3-data" \
+        --http-bind 127.0.0.1:8181 \
+        --without-auth \
+        --wal-max-write-buffer-size 1000000 \
+        --max-http-request-size 67108864 \
+        --exec-mem-pool-bytes 80% \
+        > influxdb3.log 2>&1 &
+    INFLUXDB_PID=$!
+    echo "InfluxDB PID: ${INFLUXDB_PID}"
 
-for _ in $(seq 1 300); do
-    curl -sf http://localhost:8181/health > /dev/null && break
-    sleep 1
-done
+    for _ in $(seq 1 300); do
+        curl -sf http://localhost:8181/health > /dev/null && return
+        sleep 1
+    done
+    echo "Timed out waiting for InfluxDB to start" >&2
+    return 1
+}
+
+start_server
 
 "${INFLUXDB3}" create database hits
 
@@ -53,8 +60,18 @@ done
 echo -n "Load time: "
 command time -f '%e' python3 load.py
 
+# Restart the server before running queries: this drains the WAL into
+# Parquet, releases the in-memory write buffers, and gives query execution
+# a clean budget. Without it, the post-load process is still juggling
+# ingest state and DataFusion's memory pool can OOM on heavier queries
+# (Q29's REGEXP_REPLACE in particular). InfluxDB 3.9.2 has DiskManager
+# hardcoded disabled so there is no spill-to-disk fallback.
+kill -TERM "${INFLUXDB_PID}" 2>/dev/null || true
+wait "${INFLUXDB_PID}" 2>/dev/null || true
+start_server
+
 # Run queries.
-./run.sh 2>&1 | tee log.txt
+./run.sh | tee log.txt
 
 echo -n "Data size: "
 du -bcs ./influxdb3-data | grep total | awk '{print $1}'

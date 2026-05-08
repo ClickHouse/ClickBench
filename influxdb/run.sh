@@ -14,8 +14,12 @@ while IFS= read -r query; do
     echo -n "["
     for i in $(seq 1 $TRIES); do
         t1=$(date +%s%N)
-        curl -sS --fail --max-time 600 -H 'Content-Type: application/json' \
-            -X POST "$URL" -d "$body" > /dev/null
+        # `-s` (silent) without `-S` so transient curl errors like the
+        # "transfer closed" message that DataFusion emits when a query OOMs
+        # don't pollute the captured benchmark log; the non-zero exit code
+        # is enough for us to record a `null` below.
+        curl -s --fail --max-time 600 -H 'Content-Type: application/json' \
+            -X POST "$URL" -d "$body" > /dev/null 2>&1
         rc=$?
         t2=$(date +%s%N)
         if [ "$rc" = "0" ]; then
