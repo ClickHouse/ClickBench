@@ -2,7 +2,7 @@
 set -eu
 
 sudo apt-get update -y
-sudo apt-get install -y openjdk-17-jre-headless unzip netcat-openbsd curl
+sudo apt-get install -y unzip netcat-openbsd curl
 
 ARCH=$(uname -m)
 if [ "$ARCH" = "x86_64" ]; then
@@ -12,17 +12,10 @@ elif [ "$ARCH" = "aarch64" ]; then
 fi
 
 if ! command -v gizmosql_server >/dev/null 2>&1; then
+    mkdir -p ./bin
     curl -L -o gizmosql.zip \
         "https://github.com/gizmodata/gizmosql/releases/latest/download/gizmosql_cli_linux_${ARCH}.zip"
-    unzip -o gizmosql.zip
-    sudo mv gizmosql_server gizmosql_client /usr/local/bin/
-fi
-
-if ! command -v gizmosqlline >/dev/null 2>&1; then
-    pushd /tmp >/dev/null
-    curl -L -o gizmosqlline \
-        https://github.com/gizmodata/gizmosqlline/releases/latest/download/gizmosqlline
-    chmod +x gizmosqlline
-    sudo mv gizmosqlline /usr/local/bin/
-    popd >/dev/null
+    unzip -o gizmosql.zip -d ./bin
+    chmod +x ./bin/gizmosql_server ./bin/gizmosql_client
+    sudo install -m 0755 ./bin/gizmosql_server ./bin/gizmosql_client /usr/local/bin/
 fi

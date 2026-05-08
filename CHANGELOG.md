@@ -2,6 +2,9 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-05-08
+Refactored directory structure to keep every historical result - they are organized in directories `system/results/YYYYMMDD/*.json` for each date. Compared to using git history, this unifies the format and structure of the results, making them ready for analysis. You can analyze it with clickhouse-local: `ch "SELECT * FROM '*/results/*/*.json'"` or export the data: `ch "SELECT * FROM '*/results/*/*.json' ORDER BY _path INTO OUTFILE 'results.parquet'"` (Alexey Milovidov).
+
 ### 2025-12-10
 Added the first GPU database to the benchmark, Sirius (Yifei Yang). Added a new selector, which allows to choose CPU or GPU databases in the report (Robert Schulze).
 
