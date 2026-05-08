@@ -1,7 +1,7 @@
 {
     "system": "ClickHouse ☁️ (aws)",
     "date": "2025-04-24",
-    "machine": "ClickHouse ☁️: 8GiB",
+    "machine": "8GiB",
     "cluster_size": 1,
     "proprietary": "yes",
     "hardware": "cpu",

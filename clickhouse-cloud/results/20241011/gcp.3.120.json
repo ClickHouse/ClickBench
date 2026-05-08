@@ -1,7 +1,7 @@
 {
     "system": "ClickHouse ☁️ (gcp)",
     "date": "2024-10-11",
-    "machine": "ClickHouse ☁️: 120GiB",
+    "machine": "120GiB",
     "cluster_size": 3,
     "comment": "",
     "tags": [

@@ -1,7 +1,7 @@
 {
     "system": "ClickHouse ☁️ (azure)",
     "date": "2024-12-25",
-    "machine": "ClickHouse ☁️: 120GiB",
+    "machine": "120GiB",
     "cluster_size": 3,
     "comment": "",
     "tags": [

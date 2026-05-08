@@ -1,7 +1,7 @@
 {
     "system": "Snowflake",
     "date": "2022-07-01",
-    "machine": "Snowflake: 2XL",
+    "machine": "2XL",
     "cluster_size": 32,
     "proprietary": "yes",
     "hardware": "cpu",
