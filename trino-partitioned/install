@@ -8,11 +8,8 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 sudo apt-get install -y bc
 
-# Pull image (idempotent — Docker caches).
 sudo docker pull trinodb/trino:latest
 
-# Trino catalog configuration: Hive connector backed by a file metastore
-# stored on the local filesystem, no Hadoop or external metastore required.
 mkdir -p etc/catalog
 cat > etc/catalog/hive.properties <<'EOF'
 connector.name=hive
@@ -23,8 +20,5 @@ fs.native-local.enabled=true
 hive.non-managed-table-writes-enabled=true
 EOF
 
-# The Trino container runs as uid 1000 ("trino") and writes the file
-# metastore into this directory. Make sure that uid can write here even
-# when scripts run as root (cloud-init).
 mkdir -p data/hits
 sudo chown -R 1000:1000 data

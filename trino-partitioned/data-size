@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Sum the 100 partitioned Parquet file sizes.
+du -bcs data/hits/hits_*.parquet | tail -n1 | cut -f1
