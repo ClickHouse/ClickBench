@@ -8,7 +8,7 @@
         "C++",
         "column-oriented",
         "MySQL compatible",
-        "ClickHouse derivative"
+        "historical"
     ],
     "load_time": 484,
     "data_size": 17746587454,

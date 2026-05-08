@@ -8,9 +8,7 @@
     "tuned": "no",
     "comment": "version 3.2, column store; historical result imported from https://presentations.clickhouse.com/original_website/benchmark.html",
     "tags": [
-        "C++",
         "column-oriented",
-        "MPP",
         "MySQL compatible",
         "historical"
     ],

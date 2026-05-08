@@ -8,8 +8,8 @@
     "tags": [
         "Rust",
         "column-oriented",
-        "MySQL compatible",
-        "ClickHouse derivative"
+        "ClickHouse derivative",
+        "historical"
     ],
     "load_time": 368,
     "data_size": 20922561953,

@@ -6,9 +6,9 @@
     "proprietary": "no",
     "tuned": "no",
     "tags": [
-        "Python",
         "column-oriented",
-        "time-series"
+        "time-series",
+        "historical"
     ],
     "load_time": 0,
     "data_size": 14779976446,

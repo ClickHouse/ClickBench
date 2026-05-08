@@ -7,7 +7,8 @@
     "tags": [
         "C++",
         "column-oriented",
-        "ClickHouse derivative"
+        "ClickHouse derivative",
+        "historical"
     ],
     "load_time": 487,
     "data_size": 14575651542,

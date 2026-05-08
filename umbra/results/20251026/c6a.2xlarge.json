@@ -6,7 +6,7 @@
     "proprietary": "yes",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","PostgreSQL compatible"],
+    "tags": ["C++", "column-oriented", "PostgreSQL compatible", "historical"],
     "load_time": 209,
     "data_size": 13789269075,
     "result": [

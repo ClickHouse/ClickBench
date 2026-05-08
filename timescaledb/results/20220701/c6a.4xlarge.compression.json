@@ -8,7 +8,8 @@
         "C",
         "PostgreSQL compatible",
         "column-oriented",
-        "time-series"
+        "time-series",
+        "historical"
     ],
     "load_time": 4605,
     "data_size": 20333747165,

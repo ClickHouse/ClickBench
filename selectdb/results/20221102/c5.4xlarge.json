@@ -7,7 +7,8 @@
     "tags": [
         "C++",
         "column-oriented",
-        "MySQL compatible"
+        "MySQL compatible",
+        "historical"
     ],
     "load_time": 526,
     "data_size": 17122903966,

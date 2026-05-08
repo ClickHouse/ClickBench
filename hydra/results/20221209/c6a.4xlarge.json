@@ -5,9 +5,9 @@
     "cluster_size": 1,
     "comment": "",
     "tags": [
-        "C",
         "PostgreSQL compatible",
-        "column-oriented"
+        "column-oriented",
+        "historical"
     ],
     "load_time": 1320,
     "data_size": 18979994590,

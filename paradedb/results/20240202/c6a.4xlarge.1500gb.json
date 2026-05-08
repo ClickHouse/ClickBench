@@ -6,10 +6,10 @@
     "comment": "The results for (c6a.4xlarge, 500gb gp2) are also submitted here for easy comparison with Elasticsearch",
     "tags": [
         "Rust",
-        "row-oriented",
         "column-oriented",
         "search",
-        "PostgreSQL compatible"
+        "PostgreSQL compatible",
+        "historical"
     ],
     "load_time": 1294,
     "data_size": 15415061091,
