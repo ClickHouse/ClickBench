@@ -48,13 +48,15 @@ MACHINE="${1:-c6a.4xlarge}"  # Use first argument as machine name, default to c6
 COMET_VERSION=$(echo $COMET_JAR_URL | grep -Po ".{5}(?=.jar)")
 SPARK_VERSION=$(pip freeze | grep '^pyspark==' | cut -d '=' -f3)
 
-mkdir -p results
+DATE=$(date -u +%Y-%m-%d)
+YYYYMMDD=${DATE//-/}
+mkdir -p "results/${YYYYMMDD}"
 
 (
 cat << EOF
 {
     "system": "Spark (Comet)",
-    "date": "$(date +%Y-%m-%d)",
+    "date": "${DATE}",
     "machine": "${MACHINE}",
     "cluster_size": 1,
     "proprietary": "no",
@@ -85,6 +87,6 @@ cat << EOF
     ]
 }
 EOF
-) > "results/${MACHINE}.json"
+) > "results/${YYYYMMDD}/${MACHINE}.json"
 
-echo "Results have been saved to results/${MACHINE}.json"
+echo "Results have been saved to results/${YYYYMMDD}/${MACHINE}.json"
