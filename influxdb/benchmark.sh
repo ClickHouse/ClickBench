@@ -2,13 +2,13 @@
 
 set -eu
 
+export DEBIAN_FRONTEND=noninteractive
+
 # Install dependencies and the InfluxDB 3 Core binary directly. We bypass the
 # upstream install_influxdb3.sh installer because it is interactive and not
 # suited for unattended runs.
-
-sudo apt-get update -y
-sudo apt-get install -y python3 python3-pip curl jq time
-pip3 install --break-system-packages requests
+sudo apt-get update -qq >/dev/null
+sudo apt-get install -y -qq python3 python3-requests curl jq time >/dev/null
 
 INFLUX_VERSION=3.9.2
 case "$(uname -m)" in
@@ -18,13 +18,15 @@ case "$(uname -m)" in
 esac
 
 INFLUX_TGZ="influxdb3-core-${INFLUX_VERSION}_${INFLUX_ARTIFACT}.tar.gz"
-wget --continue --progress=dot:giga \
-    "https://dl.influxdata.com/influxdb/releases/${INFLUX_TGZ}"
+wget --continue -q "https://dl.influxdata.com/influxdb/releases/${INFLUX_TGZ}"
 rm -rf "influxdb3-core-${INFLUX_VERSION}"
 tar -xzf "${INFLUX_TGZ}"
 INFLUXDB3="${PWD}/influxdb3-core-${INFLUX_VERSION}/influxdb3"
 
 # Start the server with local-file storage and authentication disabled.
+# The --wal-* tunings reduce per-second fsync churn during the multi-hour
+# load and let more write requests accumulate in memory before being
+# rejected with back-pressure.
 mkdir -p ./influxdb3-data
 nohup "${INFLUXDB3}" serve \
     --node-id node0 \
@@ -32,6 +34,8 @@ nohup "${INFLUXDB3}" serve \
     --data-dir "${PWD}/influxdb3-data" \
     --http-bind 127.0.0.1:8181 \
     --without-auth \
+    --wal-max-write-buffer-size 1000000 \
+    --max-http-request-size 67108864 \
     > influxdb3.log 2>&1 &
 INFLUXDB_PID=$!
 echo "InfluxDB PID: ${INFLUXDB_PID}"
