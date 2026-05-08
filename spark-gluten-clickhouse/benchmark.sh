@@ -19,18 +19,19 @@ SPARK_PROFILE=spark-3.5
 # Install build prerequisites:
 #  - Java 8 to build Gluten via Maven (Gluten's pom requires JDK 8)
 #  - Java 17 to run Spark (auto-selected via JAVA_HOME below)
-#  - Clang 18, cmake, ninja, etc. to build libch.so
+#  - Clang 19, cmake, ninja, etc. to build libch.so
 sudo apt-get update -y
 sudo apt-get install -y python3-pip python3-venv \
     openjdk-8-jdk-headless openjdk-17-jdk-headless \
     maven git cmake ccache ninja-build nasm yasm gawk \
     lsb-release wget software-properties-common gnupg
 
-# Install Clang 18 (required by libch.so build).
-wget -O - https://apt.llvm.org/llvm.sh | sudo bash -s -- 18
+# Install Clang 19 (required by libch.so build — the pinned Kyligence/ClickHouse
+# fork's cmake/tools.cmake rejects Clang < 19).
+wget -O - https://apt.llvm.org/llvm.sh | sudo bash -s -- 19
 
-export CC=clang-18
-export CXX=clang++-18
+export CC=clang-19
+export CXX=clang++-19
 
 # pyspark venv
 python3 -m venv myenv
