@@ -9,7 +9,8 @@
         "column-oriented",
         "ClickHouse derivative",
         "managed",
-        "YT"
+        "YT",
+        "historical"
     ],
     "load_time": 0,
     "data_size": 11991598975,

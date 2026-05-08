@@ -5,7 +5,6 @@
     "cluster_size": 1,
     "comment": "",
     "tags": [
-        "C",
         "PostgreSQL compatible",
         "column-oriented"
     ],

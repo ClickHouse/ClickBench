@@ -6,7 +6,8 @@
     "tags": [
         "C++",
         "column-oriented",
-        "serverless"
+        "serverless",
+        "historical"
     ],
     "load_time": 69,
     "data_size": 23620000000,

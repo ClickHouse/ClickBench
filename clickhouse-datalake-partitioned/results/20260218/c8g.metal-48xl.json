@@ -1,6 +1,6 @@
 {
     "system": "ClickHouse (data lake, partitioned)",
-    "date": "2027-02-18",
+    "date": "2026-02-18",
     "machine": "c8g.metal-48xl",
     "cluster_size": 1,
     "proprietary": "no",

@@ -10,7 +10,8 @@
         "Java",
         "column-oriented",
         "stateless",
-        "lukewarm-cold-run"
+        "lukewarm-cold-run",
+        "historical"
     ],
     "load_time": 0,
     "data_size": 14737666736,

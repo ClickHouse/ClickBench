@@ -12,7 +12,7 @@
         "column-oriented",
         "PostgreSQL compatible",
         "managed",
-        "analytical"
+        "historical"
     ],
     "load_time": 13711,
     "data_size": 135469176422,

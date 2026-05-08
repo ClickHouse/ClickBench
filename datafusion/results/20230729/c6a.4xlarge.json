@@ -1,6 +1,6 @@
 {
     "system": "DataFusion (Parquet, single)",
-    "date": "2023-11-29",
+    "date": "2023-07-29",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "tuned": "no",
@@ -9,8 +9,7 @@
         "Rust",
         "column-oriented",
         "embedded",
-        "stateless",
-        "open-source"
+        "stateless"
     ],
     "load_time": 0,
     "data_size": 14779976446,

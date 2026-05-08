@@ -7,7 +7,8 @@
     "tags": [
         "C",
         "column-oriented",
-        "PostgreSQL compatible"
+        "PostgreSQL compatible",
+        "historical"
     ],
     "load_time": 883,
     "data_size": 9690683705,

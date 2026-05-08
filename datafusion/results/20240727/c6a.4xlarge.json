@@ -9,8 +9,7 @@
         "Rust",
         "column-oriented",
         "embedded",
-        "stateless",
-        "open-source"
+        "stateless"
     ],
     "load_time": 0,
     "data_size": 14779976446,
