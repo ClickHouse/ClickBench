@@ -1,11 +1,11 @@
 version: 0.8
 
 searcher:
-  # Bump the per-request and leaf-search timeouts well above the 30s default —
+  # Bump the per-request and leaf-search timeouts above the 30s default —
   # a few of the high-cardinality aggregations on the full 100M-row ClickBench
   # dataset (e.g. WatchID + ClientIP nested terms) take longer than that.
-  request_timeout_secs: 600
-  leaf_request_timeout_secs: 600
+  request_timeout_secs: 60
+  leaf_request_timeout_secs: 60
 
   # Disable the per-split partial result cache so warm runs don't replay a
   # memoized answer. The other in-memory caches (fast_field_cache,
