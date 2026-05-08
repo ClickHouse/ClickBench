@@ -1,0 +1,10 @@
+{
+  "system": "Quickwit",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "search"
+  ]
+}
