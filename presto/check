@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Presto's coordinator emits "SERVER STARTED" when ready.
+sudo docker logs presto 2>&1 | grep -q "SERVER STARTED"
