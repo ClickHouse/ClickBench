@@ -8,12 +8,19 @@ set -e
 # shellcheck disable=SC1091
 source myenv/bin/activate
 
-python3 - <<'PY'
+# Stage stdin into a temp file: `python3 - <<'PY'` already consumes stdin to
+# read the program, so sys.stdin.read() inside the heredoc returns "".
+query_file=$(mktemp)
+trap 'rm -f "$query_file"' EXIT
+cat > "$query_file"
+
+python3 - "$query_file" <<'PY'
 import sys
 import timeit
 from chdb import dbapi
 
-query = sys.stdin.read()
+with open(sys.argv[1]) as f:
+    query = f.read()
 
 con = dbapi.connect(path=".clickbench")
 cur = con.cursor()
@@ -21,13 +28,14 @@ cur = con.cursor()
 start = timeit.default_timer()
 try:
     cur._cursor.execute(query)
-    end = timeit.default_timer()
     rows = cur.fetchall() if cur.description else []
-    for row in rows:
-        print(row)
+    end = timeit.default_timer()
 finally:
     cur.close()
     con.close()
+
+for row in rows:
+    print(row)
 
 # Last line of stderr: fractional seconds.
 print(f"{end - start:.3f}", file=sys.stderr)
