@@ -1,1 +1,0 @@
-../starrocks/queries.sql
