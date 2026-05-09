@@ -12,7 +12,10 @@ export HOME=${HOME:=~}
 source ~/.cargo/env
 
 sudo apt-get update -y
-sudo apt-get install -y gcc jq build-essential git
+# vortex-duckdb's build.rs runs bindgen, which needs libclang plus the
+# clang freestanding headers (stdbool.h etc.); without libclang-dev the
+# build fails with `'stdbool.h' file not found`.
+sudo apt-get install -y gcc jq build-essential git clang libclang-dev
 
 if [ ! -d vortex ]; then
     git clone https://github.com/spiraldb/vortex.git

@@ -1,7 +1,13 @@
 #!/bin/bash
 set -e
 
-VORTEX_VERSION=0.34.0
+# 0.34.0 referenced two private spiraldb-owned submodules
+# (spiraldb/duckdb and spiraldb/duckdb-rs) under duckdb-vortex/, which
+# now 404 on GitHub. From 0.41.0 onward the duckdb dep moved to the
+# upstream duckdb/duckdb repo, and 0.42.0+ ship without a .gitmodules
+# file at all (vendored / Cargo registry deps). 0.44.0 matches what
+# datafusion-vortex-partitioned uses.
+VORTEX_VERSION=0.44.0
 
 if ! command -v cargo >/dev/null 2>&1; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
@@ -12,7 +18,10 @@ export HOME=${HOME:=~}
 source ~/.cargo/env
 
 sudo apt-get update -y
-sudo apt-get install -y gcc jq build-essential git
+# vortex-duckdb's build.rs runs bindgen, which needs libclang plus the
+# clang freestanding headers (stdbool.h etc.); without libclang-dev the
+# build fails with `'stdbool.h' file not found`.
+sudo apt-get install -y gcc jq build-essential git clang libclang-dev
 
 if [ ! -d vortex ]; then
     git clone https://github.com/spiraldb/vortex.git
