@@ -13,9 +13,9 @@ hdfs/create_users.sh
 # Schema (creates database `bench` and table `bench.hits`).
 byconity --multiquery < create.sql
 
-# Ingest from the downloaded TSV.
-pigz -fkd hits.tsv.gz
+# Ingest from the downloaded TSV. lib/download-hits-tsv already
+# decompresses .gz to hits.tsv, so no pigz step here.
 byconity --database bench --query "INSERT INTO hits FORMAT TSV" < hits.tsv
 
-rm -f hits.tsv hits.tsv.gz
+rm -f hits.tsv
 sync
