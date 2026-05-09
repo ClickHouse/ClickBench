@@ -2,20 +2,14 @@
 set -eu
 
 sudo apt-get update -y
-sudo apt-get install -y unzip netcat-openbsd curl
+sudo apt-get install -y curl unzip netcat-openbsd
 
-ARCH=$(uname -m)
-if [ "$ARCH" = "x86_64" ]; then
-    ARCH="amd64"
-elif [ "$ARCH" = "aarch64" ]; then
-    ARCH="arm64"
-fi
-
+# Install gizmosql_server + gizmosql_client via the official one-line
+# installer (https://install.gizmosql.com). It handles arch/OS detection
+# and installs to ~/.local/bin.
 if ! command -v gizmosql_server >/dev/null 2>&1; then
-    mkdir -p ./bin
-    curl -L -o gizmosql.zip \
-        "https://github.com/gizmodata/gizmosql/releases/latest/download/gizmosql_cli_linux_${ARCH}.zip"
-    unzip -o gizmosql.zip -d ./bin
-    chmod +x ./bin/gizmosql_server ./bin/gizmosql_client
-    sudo install -m 0755 ./bin/gizmosql_server ./bin/gizmosql_client /usr/local/bin/
+    curl -fsSL https://install.gizmosql.com/install.sh | sh
+    if [ -d "$HOME/.local/bin" ]; then
+        sudo install -m 0755 "$HOME/.local/bin/gizmosql_server" "$HOME/.local/bin/gizmosql_client" /usr/local/bin/
+    fi
 fi
