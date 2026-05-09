@@ -1,7 +1,9 @@
 #!/bin/bash
 set -e
 
-VERSION=33.0.0
+# 33.0.0 was retired from the dlcdn.apache.org mirror; bump to a
+# currently-published Druid release.
+VERSION=37.0.0
 DRUID_DIR="apache-druid-${VERSION}"
 
 if [ ! -d "$DRUID_DIR" ]; then
