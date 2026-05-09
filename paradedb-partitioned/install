@@ -1,28 +1,14 @@
 #!/bin/bash
-set -eu
-
-CONTAINER_NAME=${CONTAINER_NAME:-paradedb}
-# Pin to a Postgres-version-specific tag instead of the multi-pg `latest`
-# manifest; ParadeDB ships separate images per major Postgres release.
-# NOTE: paradedb dropped pg_lakehouse / parquet_fdw after 0.10.x —
-# create.sql still references parquet_fdw_handler and will need to be
-# reworked for a recent image to actually run queries.
-PARADEDB_VERSION=${PARADEDB_VERSION:-latest-pg17}
-
-sudo apt-get update -y
-sudo apt-get install -y docker.io postgresql-client
-
-sudo docker pull "paradedb/paradedb:$PARADEDB_VERSION"
-
-if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-    sudo docker rm -f "$CONTAINER_NAME" >/dev/null
-fi
-
-sudo docker run -d \
-    --name "$CONTAINER_NAME" \
-    -e POSTGRESQL_USERNAME=myuser \
-    -e POSTGRESQL_PASSWORD=mypassword \
-    -e POSTGRESQL_DATABASE=mydb \
-    -e POSTGRES_PASSWORD=postgres \
-    -p 5432:5432 \
-    "paradedb/paradedb:$PARADEDB_VERSION"
+# ParadeDB's pg_lakehouse extension — which gave the partitioned-parquet
+# variant its meaning — was discontinued upstream after the 0.10.x line.
+# No current ParadeDB image ships parquet_fdw_handler, so this benchmark
+# can no longer reproduce. The single-table paradedb/ directory was
+# reworked to use pg_search; the "partitioned" variant has no analogous
+# replacement, so it's preserved as a historical entry only.
+#
+# Refuse to run rather than silently produce broken or non-comparable
+# numbers under the same system name as past entries.
+echo "paradedb-partitioned: this benchmark is historical (pg_lakehouse" >&2
+echo "was removed from ParadeDB after 0.10.x). See paradedb/ for the" >&2
+echo "current pg_search-based variant." >&2
+exit 1
