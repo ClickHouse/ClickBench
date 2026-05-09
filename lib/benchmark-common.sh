@@ -38,14 +38,18 @@ LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$LIB_DIR/.." && pwd)"
 
 bench_check_loop() {
-    local i
+    local i last_err
     for i in $(seq 1 "$BENCH_CHECK_TIMEOUT"); do
-        if ./check >/dev/null 2>&1; then
+        if last_err=$(./check 2>&1 >/dev/null); then
             return 0
         fi
         sleep 1
     done
     echo "bench: ./check did not succeed within ${BENCH_CHECK_TIMEOUT}s" >&2
+    if [ -n "$last_err" ]; then
+        echo "bench: last ./check stderr was:" >&2
+        printf '%s\n' "$last_err" | sed 's/^/    /' >&2
+    fi
     return 1
 }
 
