@@ -28,6 +28,13 @@ fe/bin/start_fe.sh --daemon
 
 # Start Backend
 printf "\nstorage_root_path = ${STARROCKS_HOME}/storage\n" >> be/conf/be.conf
+# Disable internal caches so that the cold run (1st of 3 tries) is actually cold.
+# Without this, the BE process keeps decoded data in its own in-memory page cache
+# (`storage_page_cache`, default ~20% of RAM) which `drop_caches` does not clear,
+# so first-run timings reflect a warm cache and underreport cold-run latency.
+# `datacache_enable=false` covers the unified Data Cache (page + block) path in v3.3+.
+printf "\ndisable_storage_page_cache = true\n" >> be/conf/be.conf
+printf "\ndatacache_enable = false\n" >> be/conf/be.conf
 be/bin/start_be.sh --daemon
 
 # Setup cluster
@@ -48,11 +55,12 @@ mysql -h 127.0.0.1 -P9030 -uroot hits < create.sql
 # Load Data
 START=$(date +%s)
 echo "Start to load data..."
+# `timeout:1000` header: see https://github.com/ClickHouse/ClickBench/pull/740
 curl --location-trusted \
     -u root: \
     -T "hits.tsv" \
     -H "label:hits_tsv_${START}" \
-    -H "timeout:1000" \ # see https://github.com/ClickHouse/ClickBench/pull/740
+    -H "timeout:1000" \
     -H "columns: WatchID,JavaEnable,Title,GoodEvent,EventTime,EventDate,CounterID,ClientIP,RegionID,UserID,CounterClass,OS,UserAgent,URL,Referer,IsRefresh,RefererCategoryID,RefererRegionID,URLCategoryID,URLRegionID,ResolutionWidth,ResolutionHeight,ResolutionDepth,FlashMajor,FlashMinor,FlashMinor2,NetMajor,NetMinor,UserAgentMajor,UserAgentMinor,CookieEnable,JavascriptEnable,IsMobile,MobilePhone,MobilePhoneModel,Params,IPNetworkID,TraficSourceID,SearchEngineID,SearchPhrase,AdvEngineID,IsArtifical,WindowClientWidth,WindowClientHeight,ClientTimeZone,ClientEventTime,SilverlightVersion1,SilverlightVersion2,SilverlightVersion3,SilverlightVersion4,PageCharset,CodeVersion,IsLink,IsDownload,IsNotBounce,FUniqID,OriginalURL,HID,IsOldCounter,IsEvent,IsParameter,DontCountHits,WithHash,HitColor,LocalEventTime,Age,Sex,Income,Interests,Robotness,RemoteIP,WindowName,OpenerName,HistoryLength,BrowserLanguage,BrowserCountry,SocialNetwork,SocialAction,HTTPError,SendTiming,DNSTiming,ConnectTiming,ResponseStartTiming,ResponseEndTiming,FetchTiming,SocialSourceNetworkID,SocialSourcePage,ParamPrice,ParamOrderID,ParamCurrency,ParamCurrencyID,OpenstatServiceName,OpenstatCampaignID,OpenstatAdID,OpenstatSourceID,UTMSource,UTMMedium,UTMCampaign,UTMContent,UTMTerm,FromTag,HasGCLID,RefererHash,URLHash,CLID" \
     http://localhost:8030/api/hits/hits/_stream_load
 END=$(date +%s)
