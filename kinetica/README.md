@@ -17,11 +17,15 @@ All the queries will be executed on behalf of the user `admin` with the password
 > WARNING: Invalid_Argument: quoted field must end with quote (ColumnIndex:100)(ColumnName:UTMTerm)(ColumnType:char256)(Value:"tatuirovarki_redmond 70            0       -296158784638538920     -8631670417943857411    0)
 > WARNING: Skipped: 1, inserted : 99997496 records, updated : 0 records.
 
-## Dead (May 2026)
+## Sourcing kisql (May 2026)
 
-The benchmark drives Kinetica via `kisql`. The pinned binary
+The previously-pinned `kisql` binary at
 
     https://github.com/kineticadb/kisql/releases/download/v7.1.7.2/kisql
 
-is gone — the GitHub release was deleted upstream and newer source tags ship no compiled artifacts. Kinetica itself still installs and exposes a Postgres-wire endpoint on port 5434, but the benchmark's load uses Kinetica-specific SQL (`LOAD INTO ... FROM FILE PATHS ...`) that isn't accepted there. The directory and historical results are kept; nothing here runs anymore.
+is gone — that GitHub release was deleted upstream and newer release pages ship no compiled artifacts. The same binary is committed directly to the repo root as a self-extracting bash+jar launcher, so `install` now fetches it from
+
+    https://raw.githubusercontent.com/kineticadb/kisql/<KISQL_TAG>/kisql
+
+(default `KISQL_TAG=v7.2.3.17`, matches the 7.2.x server we install).
 

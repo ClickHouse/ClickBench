@@ -13,9 +13,13 @@ fi
 export KINETICA_ADMIN_PASSWORD=admin
 sudo -E ./kinetica start
 
-# Fetch the SQL CLI.
+# Fetch the SQL CLI. The v7.1.7.2 GitHub release was deleted upstream
+# and newer source tags ship no compiled artifacts, but the kisql binary
+# is committed directly to the repo root as a self-extracting bash+jar
+# launcher — fetch it via raw.githubusercontent.com instead.
+KISQL_TAG=${KISQL_TAG:-v7.2.3.17}
 if [ ! -x ./kisql ]; then
-    wget --continue --progress=dot:giga \
-        https://github.com/kineticadb/kisql/releases/download/v7.1.7.2/kisql
+    wget --continue --progress=dot:giga -O kisql \
+        "https://raw.githubusercontent.com/kineticadb/kisql/$KISQL_TAG/kisql"
     chmod u+x ./kisql
 fi
