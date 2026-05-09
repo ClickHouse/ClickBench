@@ -1,0 +1,9 @@
+#!/bin/bash
+set -eu
+
+# No data ingest — the view in create.sql just defines a
+# read_parquet('/tmp/hits.parquet', ...) shape over the bind-mounted
+# parquet file.
+PGPASSWORD=duckdb psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -f create.sql
+
+sync

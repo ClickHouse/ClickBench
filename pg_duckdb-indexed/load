@@ -1,0 +1,28 @@
+#!/bin/bash
+set -eu
+
+export PGUSER=postgres
+export PGPASSWORD=duckdb
+CONNECTION=postgres://postgres:duckdb@127.0.0.1:5432/postgres
+
+threads=$(nproc)
+cpus=$(( threads / 2 ))
+
+psql "$CONNECTION" -v ON_ERROR_STOP=1 -t < create.sql
+
+# Parallel COPY in $cpus shards via `split -n r/N --filter=...` so the load
+# isn't single-threaded. Explicit column list keeps the COPY ordering
+# stable across shards (the file is not header-prefixed).
+COLUMNS='WatchID, JavaEnable, Title, GoodEvent, EventTime, EventDate, CounterID, ClientIP, RegionID, UserID, CounterClass, OS, UserAgent, URL, Referer, IsRefresh, RefererCategoryID, RefererRegionID, URLCategoryID, URLRegionID, ResolutionWidth, ResolutionHeight, ResolutionDepth, FlashMajor, FlashMinor, FlashMinor2, NetMajor, NetMinor, UserAgentMajor, UserAgentMinor, CookieEnable, JavascriptEnable, IsMobile, MobilePhone, MobilePhoneModel, Params, IPNetworkID, TraficSourceID, SearchEngineID, SearchPhrase, AdvEngineID, IsArtifical, WindowClientWidth, WindowClientHeight, ClientTimeZone, ClientEventTime, SilverlightVersion1, SilverlightVersion2, SilverlightVersion3, SilverlightVersion4, PageCharset, CodeVersion, IsLink, IsDownload, IsNotBounce, FUniqID, OriginalURL, HID, IsOldCounter, IsEvent, IsParameter, DontCountHits, WithHash, HitColor, LocalEventTime, Age, Sex, Income, Interests, Robotness, RemoteIP, WindowName, OpenerName, HistoryLength, BrowserLanguage, BrowserCountry, SocialNetwork, SocialAction, HTTPError, SendTiming, DNSTiming, ConnectTiming, ResponseStartTiming, ResponseEndTiming, FetchTiming, SocialSourceNetworkID, SocialSourcePage, ParamPrice, ParamOrderID, ParamCurrency, ParamCurrencyID, OpenstatServiceName, OpenstatCampaignID, OpenstatAdID, OpenstatSourceID, UTMSource, UTMMedium, UTMCampaign, UTMContent, UTMTerm, FromTag, HasGCLID, RefererHash, URLHash, CLID'
+
+split hits.tsv -n r/$cpus --filter='psql '"$CONNECTION"' -v ON_ERROR_STOP=1 -t -c "\\copy hits ('"$COLUMNS"') FROM STDIN"'
+
+psql "$CONNECTION" -v ON_ERROR_STOP=1 -q -t -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;'
+psql "$CONNECTION" -v ON_ERROR_STOP=1 -q -t < index.sql
+psql "$CONNECTION" -v ON_ERROR_STOP=1 -q -t -c 'VACUUM ANALYZE hits'
+
+# Indexed variant explicitly does NOT force the duckdb engine — the
+# point of this entry is to measure pg_duckdb's index-aware planner
+# fallback to vanilla Postgres execution where indexes help.
+rm -f hits.tsv
+sync
