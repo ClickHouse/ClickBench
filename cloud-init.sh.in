@@ -14,6 +14,20 @@ export HOME="${HOME:-/root}"
 # becomes empty when no relevant vars are exported.
 @runtime_env@
 
+# c6a.4xlarge has 32 GB RAM with no swap. Loading the 75 GB hits.tsv into
+# row-oriented databases (mysql, mariadb, postgres, mongodb, cratedb) and
+# in-process Python servers (pandas/polars/duckdb-dataframe) fills RAM
+# during ingest, and earlyoom (or the kernel OOM killer) then takes the
+# DB out and the run dies with `Lost connection during query`. A 16 GB
+# swapfile gives those loads the headroom they need without affecting
+# query-time numbers (queries don't touch swap once the data is hot).
+if [ ! -f /swapfile ]; then
+    fallocate -l 16G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile >/dev/null
+    swapon /swapfile
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y wget curl git jq earlyoom
