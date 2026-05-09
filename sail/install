@@ -36,7 +36,11 @@ sudo apt-get install -y \
 sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 || true
 sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 || true
 if ! python3.11 -m pip --version >/dev/null 2>&1; then
-    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+    # get-pip.py installs pip + setuptools + wheel; wheel pulls in
+    # packaging>=24.0, but Ubuntu 24.04's apt-shipped `packaging 24.0`
+    # has no RECORD file so the uninstall step blows up. `--ignore-
+    # installed` skips the uninstall and lays the new copy on top.
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 - --ignore-installed
 fi
 
 if [ ! -d myenv ]; then
