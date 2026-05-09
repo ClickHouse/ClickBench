@@ -69,23 +69,6 @@ Note these limitations:
 
 Tl;dr: *All Benchmarks Are ~~Bastards~~ Liars*.
 
-## Discontinued or Inaccessible Systems
-
-A few directories in this repository can no longer be reproduced end-to-end as of May 2026 — the upstream binaries, images, or package repositories have been taken down, made private, or otherwise become inaccessible.
-The directories are kept so historical results stay visible on the website, but new submissions from these systems aren't expected without a fresh install path being found.
-
-- **`vertica/`** — `docker pull vertica/vertica-ce` returns `pull access denied for vertica/vertica-ce, repository does not exist or may require 'docker login'`. The Community Edition image was withdrawn or made private, and no public replacement has surfaced.
-
-- **`oxla/`** — Oxla was acquired by Redpanda in October 2025. The image at `public.ecr.aws/oxla/release` (e.g. `1.53.0-beta`) now returns `not found`, and no replacement public registry has been announced.
-
-- **`kinetica/`** — The `kisql` SQL CLI's v7.1.7.2 GitHub release was deleted upstream and newer source tags ship no compiled artifacts, so `wget https://github.com/kineticadb/kisql/releases/download/...` 404s. Kinetica itself still installs via the `kinetica.sh` installer, but the benchmark needs `kisql` to drive it.
-
-- **`heavyai/`** — `https://releases.heavy.ai/GPG-KEY-heavyai` returns `403 AccessDenied` and the project's apt repo (`releases.heavy.ai/os/apt/`) is no longer reachable; `heavyai/core-os-cpu` is not on Docker Hub either. HEAVY.AI's public distribution channels appear to have gone away.
-
-- **`infobright/`** — Infobright the company has been defunct since 2017. The benchmark uses the community `flolas/infobright` Docker image, which is unmaintained and currently hangs silently mid-`LOAD DATA`. Without a maintained image or a working binary path, this isn't reproducible.
-
-If you know of a working install path for any of these (a current public mirror, a maintained fork, a registry that's still serving the image), please open a PR.
-
 ## Rules and Contribution
 
 ### How To Add a New Result
