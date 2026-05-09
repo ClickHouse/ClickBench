@@ -60,6 +60,23 @@ bench_check_loop() {
     return 1
 }
 
+# Wait for ./check to start failing — i.e. the system is actually down,
+# not merely told to stop. Engines that mmap their data files (Umbra,
+# Hyper, etc.) keep the OS pagecache pinned until the process is gone,
+# so we have to wait before drop_caches has any effect. Times out after
+# 60s and proceeds anyway.
+bench_wait_stopped() {
+    local i
+    for i in $(seq 1 60); do
+        if ! ./check >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 1
+    done
+    echo "bench: system did not stop within 60s; proceeding anyway" >&2
+    return 0
+}
+
 bench_flush_caches() {
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
@@ -142,11 +159,23 @@ bench_run_query() {
     local i raw_stderr exit_code timing
     local results=()
 
-    bench_flush_caches
     if [ "$BENCH_RESTARTABLE" = "yes" ]; then
+        # Order matters: stop, wait until really stopped, then flush
+        # caches, then start. The naive order (flush, then stop) leaves
+        # mmap-backed engines (Umbra, DuckDB, Hyper, CedarDB) with their
+        # data files pinned by the still-running process, so drop_caches
+        # can't evict the pages — the new instance then re-mmaps those
+        # same files and the "cold" run reads from a warm page cache.
+        # Waiting for ./check to fail before flushing makes the cold run
+        # actually cold even when ./stop returns before the process is
+        # fully gone.
         ./stop >/dev/null 2>&1 || true
+        bench_wait_stopped
+        bench_flush_caches
         ./start >/dev/null 2>&1 || true
         bench_check_loop
+    else
+        bench_flush_caches
     fi
 
     for i in $(seq 1 "$BENCH_TRIES"); do
