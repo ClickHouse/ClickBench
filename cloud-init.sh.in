@@ -8,6 +8,12 @@
 # `Can't find the home directory at ''` or `HOME: parameter not set`. Set it
 # once here so every per-system install/start/load/query inherits it.
 export HOME="${HOME:-/root}"
+
+# Optional runtime env vars forwarded from the operator's shell by
+# run-benchmark.sh (e.g. YT_PROXY / YT_TOKEN for chyt). The placeholder
+# becomes empty when no relevant vars are exported.
+@runtime_env@
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y wget curl git jq earlyoom
