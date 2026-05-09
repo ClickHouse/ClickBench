@@ -3,11 +3,15 @@ set -e
 
 # This benchmark runs on Ubuntu 20.04+
 ROOT=$(pwd)
-URL='https://qa-build.oss-cn-beijing.aliyuncs.com/enterprise-doris-release-output/selectdb-doris-2.1.7-rc01-bin-x64.tar.gz'
+# SelectDB no longer publishes free standalone tarballs; the company that
+# now stewards SelectDB (VeloDB) hosts Apache Doris release binaries at
+# download.velodb.io. Track the latest stable Apache Doris release —
+# functionally what SelectDB ships now — so this benchmark keeps running.
+URL='https://download.velodb.io/apache-doris-4.0.5-bin-x64.tar.gz'
 
 file_name="$(basename "$URL")"
 dir_name="${file_name/.tar.gz/}"
-DORIS_HOME="$ROOT/$dir_name/selectdb-doris-2.1.7-rc01-bin-x64"
+DORIS_HOME="$ROOT/$dir_name/$dir_name"
 
 if [ ! -d "$DORIS_HOME" ]; then
     if [ ! -f "$file_name" ]; then
