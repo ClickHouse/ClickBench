@@ -11,7 +11,9 @@ TOTAL_RECORDS = 99997497
 
 # Precompute action metadata line once
 ACTION_META_BYTES = (json.dumps({"index": {"_index": INDEX}}) + "\n").encode("utf-8")
-REQUEST_TIMEOUT = 30  # seconds
+# 30 s wasn't enough — bulk inserts hit `requests.exceptions.ReadTimeout`
+# once the index grew large and ES had to flush + merge mid-batch.
+REQUEST_TIMEOUT = 300  # seconds
 
 
 def bulk_stream(docs):
