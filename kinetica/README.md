@@ -17,13 +17,11 @@ All the queries will be executed on behalf of the user `admin` with the password
 > WARNING: Invalid_Argument: quoted field must end with quote (ColumnIndex:100)(ColumnName:UTMTerm)(ColumnType:char256)(Value:"tatuirovarki_redmond 70            0       -296158784638538920     -8631670417943857411    0)
 > WARNING: Skipped: 1, inserted : 99997496 records, updated : 0 records.
 
-## Status (as of May 2026): unreproducible
+## Dead (May 2026)
 
-The benchmark drives Kinetica via the `kisql` CLI. The previously-pinned binary download
+The benchmark drives Kinetica via `kisql`. The pinned binary
 
     https://github.com/kineticadb/kisql/releases/download/v7.1.7.2/kisql
 
-now returns 404 — that GitHub release was deleted upstream. Newer source tags exist (v7.2.3.x) but the project no longer attaches compiled artifacts to releases, so there's no drop-in binary to fetch.
-
-Kinetica itself still installs via `https://files.kinetica.com/install/kinetica.sh` and the Postgres-wire endpoint on port 5434 is reachable; switching the bench to drive it through `psql` over that wire would be a path forward, but most Kinetica-specific SQL (e.g. `LOAD INTO ... FROM FILE PATHS`) isn't accepted there. The directory and historical results are kept for reference.
+is gone — the GitHub release was deleted upstream and newer source tags ship no compiled artifacts. Kinetica itself still installs and exposes a Postgres-wire endpoint on port 5434, but the benchmark's load uses Kinetica-specific SQL (`LOAD INTO ... FROM FILE PATHS ...`) that isn't accepted there. The directory and historical results are kept; nothing here runs anymore.
 

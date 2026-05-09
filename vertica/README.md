@@ -4,10 +4,10 @@ Although Vertica EULA does not prevent doing benchmarks, it restricts from discl
 
 https://www.vertica.com/end-user-license-agreement-ce-version/
 
-## Status (as of May 2026): unreproducible
+## Dead (May 2026)
 
 `docker pull vertica/vertica-ce` returns
 
     Error response from daemon: pull access denied for vertica/vertica-ce, repository does not exist or may require 'docker login'
 
-The Community Edition image was withdrawn or made private and no public replacement has surfaced. The directory and historical results are kept for reference; new submissions aren't expected without a working install path.
+The Community Edition image is gone and there is no public replacement. The directory and historical results are kept; nothing here runs anymore.
