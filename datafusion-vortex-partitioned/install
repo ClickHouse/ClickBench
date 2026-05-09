@@ -21,6 +21,9 @@ fi
     cd vortex
     git fetch --tags
     git checkout "$VORTEX_VERSION"
-    git submodule update --init
+    # See datafusion-vortex/install — submodule update isn't idempotent
+    # without sync + --force when a previous run left a partial clone.
+    git submodule sync --recursive
+    git submodule update --init --recursive --force
     cargo build --release --bin query_bench --package bench-vortex
 )

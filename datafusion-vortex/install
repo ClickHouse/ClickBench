@@ -21,6 +21,13 @@ fi
     cd vortex
     git fetch --tags
     git checkout "$VORTEX_VERSION"
-    git submodule update --init
+    # `git submodule update --init` fails with
+    # "fatal: destination path 'duckdb-vortex/duckdb' exists and is not an
+    # empty directory" once the submodule has been cloned but isn't fully
+    # registered (a partial state previous runs leave behind). `sync`
+    # refreshes the configured URLs and `--force` re-checkouts cleanly,
+    # which is what we want for an idempotent setup.
+    git submodule sync --recursive
+    git submodule update --init --recursive --force
     cargo build --release --bin clickbench --package bench-vortex
 )
