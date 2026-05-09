@@ -6,6 +6,12 @@ if [ -x duckdb-vortex/build/release/duckdb ]; then
     exit 0
 fi
 
+# vcpkg fails the build with `unable to read $HOME` when cloud-init runs
+# this script with HOME unset. cloud-init.sh.in already exports it, but
+# stamp HOME locally too so the build works regardless of which
+# cloud-init template generated the wrapper.
+export HOME="${HOME:-/root}"
+
 sudo apt-get update -y
 sudo apt-get install -y ninja-build cmake build-essential make ccache pip clang pkg-config
 

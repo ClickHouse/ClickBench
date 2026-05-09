@@ -1,8 +1,16 @@
 #!/bin/bash
 set -e
 
+# duckdb writes its extension cache under $HOME/.duckdb/extensions. With
+# HOME unset (cloud-init occasionally runs scripts that way) the
+# `INSTALL vortex` below ends up writing to /.duckdb and later sibling
+# scripts (load/query) can't find the extension. The previous
+# `export HOME=${HOME:=~}` was inside the install-duckdb branch, so
+# re-runs with duckdb already on PATH still hit the bug. Pin HOME
+# unconditionally at the top.
+export HOME="${HOME:-/root}"
+
 if ! command -v duckdb >/dev/null 2>&1; then
-    export HOME=${HOME:=~}
     curl https://install.duckdb.org | sh
     sudo ln -sf "$HOME/.duckdb/cli/latest/duckdb" /usr/local/bin/duckdb
 fi

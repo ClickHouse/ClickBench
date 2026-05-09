@@ -25,6 +25,14 @@
 
 set -e
 
+# Defensive HOME export: cloud-init.sh.in stamps it too, but if an
+# operator's local checkout predates that fix, the install/load/query
+# scripts inherit an empty HOME and tools that follow XDG conventions
+# (vcpkg, duckdb extension cache, go mod cache, gizmosql installer)
+# fail in confusing ways. Pin to /root so every per-system step has a
+# real home directory regardless.
+export HOME="${HOME:-/root}"
+
 # BENCH_DOWNLOAD_SCRIPT must be set (possibly to empty for "no download").
 : "${BENCH_DOWNLOAD_SCRIPT?BENCH_DOWNLOAD_SCRIPT is required (set empty to skip)}"
 : "${BENCH_RESTARTABLE:=yes}"
