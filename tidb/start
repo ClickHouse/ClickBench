@@ -36,3 +36,19 @@ done
 # Disable non-prepared plan cache (matches original benchmark behavior).
 mysql --host 127.0.0.1 --port 4000 -u root \
     -e "SET GLOBAL tidb_enable_non_prepared_plan_cache = OFF;"
+
+# `TiDB Playground Cluster is started` fires when tidb itself is up, but
+# tiflash registers later. ./load then runs `ALTER TABLE ... SET TIFLASH
+# REPLICA 1` immediately, and that fails with
+#   the tiflash replica count: 1 should be less than the total tiflash server count: 0
+# if no tiflash store has joined yet. Wait until the system catalog shows
+# a tiflash store before declaring start done.
+if [[ "$TIDB_MODE" != "tikv" ]]; then
+    for _ in $(seq 1 60); do
+        cnt=$(mysql --host 127.0.0.1 --port 4000 -u root -B -N -e \
+            "SELECT COUNT(*) FROM information_schema.tikv_store_status WHERE store_type = 'tiflash';" \
+            2>/dev/null || echo 0)
+        [ "$cnt" -ge 1 ] && break
+        sleep 5
+    done
+fi
