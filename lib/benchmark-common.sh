@@ -124,11 +124,15 @@ bench_run_query() {
         raw_stderr=$(printf '%s\n' "$query" | ./query 2>&1 >/dev/null) && exit_code=0 || exit_code=$?
 
         if [ "$exit_code" -eq 0 ]; then
-            timing=$(printf '%s\n' "$raw_stderr" | tail -n1)
-            # Sanity-check it's a number (allow integers and decimals).
-            if ! [[ "$timing" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-                timing="null"
-            fi
+            # The query script's contract is "fractional seconds on the
+            # last line", but several systems (pyspark, JVM-based ones,
+            # anything that prints SparkSession shutdown lines after the
+            # measurement) emit additional log noise after the timing,
+            # so plain `tail -n1` was reading "Stopping SparkContext" or
+            # similar and producing all-null result rows. Pull the LAST
+            # numeric-looking line instead.
+            timing=$(printf '%s\n' "$raw_stderr" | grep -E '^[0-9]+(\.[0-9]+)?$' | tail -n1)
+            [ -z "$timing" ] && timing="null"
         else
             timing="null"
             printf '%s\n' "$raw_stderr" >&2
