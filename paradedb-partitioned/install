@@ -2,7 +2,12 @@
 set -eu
 
 CONTAINER_NAME=${CONTAINER_NAME:-paradedb}
-PARADEDB_VERSION=${PARADEDB_VERSION:-latest}
+# Pin to a Postgres-version-specific tag instead of the multi-pg `latest`
+# manifest; ParadeDB ships separate images per major Postgres release.
+# NOTE: paradedb dropped pg_lakehouse / parquet_fdw after 0.10.x —
+# create.sql still references parquet_fdw_handler and will need to be
+# reworked for a recent image to actually run queries.
+PARADEDB_VERSION=${PARADEDB_VERSION:-latest-pg17}
 
 sudo apt-get update -y
 sudo apt-get install -y docker.io postgresql-client
