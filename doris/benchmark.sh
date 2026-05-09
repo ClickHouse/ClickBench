@@ -49,6 +49,13 @@ sudo systemctl stop unattended-upgrades
 # Start Backend
 sudo sysctl -w vm.max_map_count=2000000
 ulimit -n 65535
+# Disable internal caches so that the cold run (1st of 3 tries) is actually cold.
+# Without this, the BE process keeps decoded data in its own in-memory page cache
+# (`storage_page_cache`, default ~20% of RAM) and segment cache, which `drop_caches`
+# does not clear, so first-run timings reflect a warm cache and underreport
+# cold-run latency.
+printf "\ndisable_storage_page_cache = true\n" >> "$DORIS_HOME"/be/conf/be.conf
+printf "\nsegment_cache_capacity = 0\n" >> "$DORIS_HOME"/be/conf/be.conf
 "$DORIS_HOME"/be/bin/start_be.sh --daemon
 
 # Wait for Frontend ready
