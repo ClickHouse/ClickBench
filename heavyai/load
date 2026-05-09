@@ -5,13 +5,13 @@ CONTAINER_NAME=${CONTAINER_NAME:-heavyai}
 
 # Schema is fed from the host over stdin.
 sudo docker exec -i "$CONTAINER_NAME" /omnisci/bin/omnisql \
-    -t -p HyperInteractive omnisci < create.sql
+    -t -p HyperInteractive < create.sql
 
 # Move the CSV into the container so server-side COPY can read it without
 # round-tripping over Thrift.
 sudo docker cp hits.csv "$CONTAINER_NAME":/tmp/hits.csv
 sudo docker exec -i "$CONTAINER_NAME" /omnisci/bin/omnisql \
-    -q -t -p HyperInteractive omnisci \
+    -q -t -p HyperInteractive \
     <<< "COPY hits FROM '/tmp/hits.csv' WITH (HEADER = 'false');"
 
 sudo docker exec "$CONTAINER_NAME" rm -f /tmp/hits.csv

@@ -11,7 +11,7 @@ CONTAINER_NAME=${CONTAINER_NAME:-heavyai}
 query=$(cat)
 
 raw=$(sudo docker exec -i "$CONTAINER_NAME" /omnisci/bin/omnisql \
-    -t -p HyperInteractive omnisci <<< "$query" 2>&1) && exit_code=0 || exit_code=$?
+    -t -p HyperInteractive <<< "$query" 2>&1) && exit_code=0 || exit_code=$?
 
 if [ "$exit_code" -ne 0 ] || printf '%s\n' "$raw" | grep -qiE '^Exception|^Error'; then
     printf '%s\n' "$raw" >&2
