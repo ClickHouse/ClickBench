@@ -1,15 +1,17 @@
 #!/bin/bash
 # Reads a SQL query from stdin, runs it via psql against the postgres DB
-# as gpadmin (so the Greenplum/Cloudberry env is loaded).
+# inside the clickbench-cloudberry container as gpadmin.
 # Stdout: query result.
 # Stderr: query runtime in fractional seconds on the last line.
 # Exit non-zero on error.
 set -e
 
+NAME=clickbench-cloudberry
 query=$(cat)
 
-# Pipe '\timing' + query through psql under gpadmin's shell.
-out=$(printf '\\timing\n%s\n' "$query" | sudo -iu gpadmin bash -lc 'psql -d postgres -t' 2>&1)
+# Pipe '\timing' + query through psql inside the container under gpadmin.
+out=$(printf '\\timing\n%s\n' "$query" | \
+    sudo docker exec -i "$NAME" sudo -iu gpadmin bash -lc 'psql -d postgres -t' 2>&1)
 status=$?
 
 if printf '%s\n' "$out" | grep -q '^ERROR\|psql: error'; then
