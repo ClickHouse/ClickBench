@@ -1,4 +1,7 @@
 #!/bin/bash
 set -eu
 
-sudo du -bcs /var/monetdb5/ | grep total | awk '{print $1}'
+# install creates the dbfarm under /var/lib/monetdb (the package's
+# default), not the older /var/monetdb5/ path the original benchmark
+# assumed.
+sudo du -bcs /var/lib/monetdb/ | grep total | awk '{print $1}'

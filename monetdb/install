@@ -11,15 +11,24 @@ sudo apt-get update -y
 sudo apt-get install -y monetdb5-sql monetdb-client dos2unix net-tools expect
 
 # `monetdb5-sql` already creates /var/lib/monetdb (as the monetdb user's
-# home dir), so the dir-exists guard used to skip `monetdbd create` and
-# leave the dbfarm uninitialized — `mclient` then fails with
-# `cannot connect: control socket does not exist`. Probe the actual dbfarm
-# marker file instead, then start the daemon explicitly (idempotent).
-if [ ! -f /var/lib/monetdb/.merovingian_properties ]; then
-    sudo monetdbd create /var/lib/monetdb
-fi
-sudo monetdbd start /var/lib/monetdb || true
+# home dir), so the previous dir-exists guard used to skip `monetdbd
+# create` and leave the dbfarm uninitialized. The dbfarm marker file
+# isn't reliable across MonetDB versions either, so just try create
+# and start unconditionally — both error harmlessly when already done.
+sudo monetdbd create /var/lib/monetdb 2>/dev/null || true
+sudo monetdbd start /var/lib/monetdb 2>/dev/null || true
 sudo usermod -a -G monetdb "$USER"
+
+# `mclient` looks for credentials in ~/.monetdb (user= / password=).
+# Without it the default `monetdb` user gets an interactive password
+# prompt, which times out the check loop. Stamp the config now so
+# every later mclient call (check, data-size if it uses mclient) just
+# works.
+sudo install -m 0600 /dev/null /root/.monetdb
+sudo tee /root/.monetdb >/dev/null <<'EOF'
+user=monetdb
+password=monetdb
+EOF
 
 # monetdbd takes a moment to come up; retry creating the test DB.
 for _ in {1..300}; do
