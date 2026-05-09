@@ -1,17 +1,15 @@
 # HeavyDB / Heavy.AI
 
-## Dead (May 2026)
+## Sourcing the binary (May 2026)
 
-The benchmark installs HEAVY.AI from the project's apt repo:
+HEAVY.AI's apt repo and tarball CDN both started returning S3 `AccessDenied`:
 
-    curl https://releases.heavy.ai/GPG-KEY-heavyai | apt-key add -
-    echo "deb https://releases.heavy.ai/os/apt/ stable cpu" > /etc/apt/sources.list.d/heavyai.list
-    apt-get install heavyai
+    https://releases.heavy.ai/GPG-KEY-heavyai      -> 403
+    https://releases.heavy.ai/os/apt/dists/...     -> 403
+    https://releases.heavy.ai/os/tar/...           -> 403
 
-Both URLs now return S3 `AccessDenied`:
+The source repo at `github.com/heavyai/heavydb` is alive (v9.0.0 released 2025-10-20, not archived) but its GitHub releases ship no compiled artifacts, and a full C++ build is too heavy to run inside cloud-init.
 
-    HTTP/2 403
-    <?xml version="1.0" encoding="UTF-8"?>
-    <Error><Code>AccessDenied</Code><Message>Access Denied</Message>...
+`omnisci/core-os-cpu:v5.10.2` is the last public Docker image (Feb 2022) — it is OmniSciDB, the immediate predecessor of HeavyDB before the v6.0.0 rename. The benchmark schema and queries are vanilla enough to run unchanged against it. `install` now pulls that image, bind-mounts a `heavyai-storage/` directory, and the rest of the scripts (start / check / load / query / data-size) drive the container via `omnisql` instead of the systemd-managed native install.
 
-There is no `heavyai/core-os-cpu` image on Docker Hub either. HEAVY.AI's public distribution channels are gone. The directory and historical results are kept; nothing here runs anymore.
+Override `HEAVYAI_VERSION` if you want a different OmniSci tag; the available ones are listed at <https://hub.docker.com/r/omnisci/core-os-cpu/tags>.

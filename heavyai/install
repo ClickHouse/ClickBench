@@ -1,45 +1,31 @@
 #!/bin/bash
+# HEAVY.AI's apt repo and tarball CDN (releases.heavy.ai/...) both
+# started returning S3 AccessDenied. The source repo at
+# github.com/heavyai/heavydb is alive but its GitHub releases ship no
+# binaries, and a full C++ build is too heavy to run inside cloud-init.
+#
+# omnisci/core-os-cpu:v5.10.2 (Feb 2022) is the last public Docker
+# image — OmniSciDB, the immediate predecessor of HeavyDB before the
+# v6.0.0 rename. The schema and queries the benchmark uses are vanilla
+# enough to run unchanged.
 set -eu
 
+CONTAINER_NAME=${CONTAINER_NAME:-heavyai}
+HEAVYAI_VERSION=${HEAVYAI_VERSION:-v5.10.2}
+
 sudo apt-get update -y
-sudo apt-get install -y default-jre-headless apt-transport-https docker.io
+sudo apt-get install -y docker.io
 
-# heavyai links against libtinfo.so.5 (not in modern Ubuntu); copy from 18.04.
-if [ ! -e /usr/lib/x86_64-linux-gnu/libtinfo.so.5 ]; then
-    sudo docker run --rm -v "$(pwd):/host" ubuntu:18.04 cp /lib/x86_64-linux-gnu/libtinfo.so.5 /host/
-    sudo cp libtinfo.so.5 /usr/lib/x86_64-linux-gnu/
+sudo docker pull "omnisci/core-os-cpu:$HEAVYAI_VERSION"
+
+if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    sudo docker rm -f "$CONTAINER_NAME" >/dev/null
 fi
 
-if ! id heavyai >/dev/null 2>&1; then
-    sudo useradd -U -m heavyai
-fi
-
-if [ ! -d /opt/heavyai ]; then
-    sudo curl https://releases.heavy.ai/GPG-KEY-heavyai | sudo apt-key add -
-    echo "deb https://releases.heavy.ai/os/apt/ stable cpu" \
-        | sudo tee /etc/apt/sources.list.d/heavyai.list
-    sudo apt-get update -y
-    sudo apt-get install heavyai -y
-
-    export HEAVYAI_USER=heavyai
-    export HEAVYAI_GROUP=heavyai
-    export HEAVYAI_STORAGE=/var/lib/heavyai
-    export HEAVYAI_PATH=/opt/heavyai
-    export HEAVYAI_LOG=/var/lib/heavyai/data/mapd_log
-
-    pushd "$HEAVYAI_PATH/systemd" >/dev/null
-    ./install_heavy_systemd.sh
-    popd >/dev/null
-
-    sudo systemctl enable heavydb
-fi
-
-# Allow loading data from this directory.
-if [ -f /var/lib/heavyai/heavy.conf ] && \
-   ! sudo grep -q "allowed-import-paths.*$(pwd)" /var/lib/heavyai/heavy.conf; then
-    sudo bash -c "echo 'allowed-import-paths = [\"$(pwd)\"]' > /var/lib/heavyai/heavy.conf_"
-    sudo bash -c "cat /var/lib/heavyai/heavy.conf >> /var/lib/heavyai/heavy.conf_"
-    sudo bash -c "mv /var/lib/heavyai/heavy.conf_ /var/lib/heavyai/heavy.conf && chown heavyai /var/lib/heavyai/heavy.conf"
-fi
-
-sudo systemctl restart heavydb
+mkdir -p heavyai-storage
+sudo docker run -d \
+    --name "$CONTAINER_NAME" \
+    -p 6274:6274 \
+    -p 6273:6273 \
+    -v "$(pwd)/heavyai-storage:/omnisci-storage" \
+    "omnisci/core-os-cpu:$HEAVYAI_VERSION"

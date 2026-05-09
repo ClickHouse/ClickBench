@@ -1,4 +1,5 @@
 #!/bin/bash
 set -eu
 
-du -bcs /var/lib/heavyai/ | grep total | awk '{print $1}'
+# heavyai's storage is bind-mounted from heavyai-storage/.
+sudo du -bcs heavyai-storage/ | grep total | awk '{print $1}'

@@ -1,4 +1,6 @@
 #!/bin/bash
 set -e
 
-/opt/heavyai/bin/heavysql -p HyperInteractive -q -t <<< 'SELECT 1' >/dev/null 2>&1
+CONTAINER_NAME=${CONTAINER_NAME:-heavyai}
+sudo docker exec -i "$CONTAINER_NAME" /omnisci/bin/omnisql \
+    -p HyperInteractive -q -t omnisci <<< 'SELECT 1' >/dev/null 2>&1

@@ -1,8 +1,9 @@
 #!/bin/bash
 set -eu
 
-if /opt/heavyai/bin/heavysql -p HyperInteractive -q -t <<< 'SELECT 1' >/dev/null 2>&1; then
-    exit 0
-fi
+CONTAINER_NAME=${CONTAINER_NAME:-heavyai}
 
-sudo systemctl start heavydb
+# Idempotent: if already running, leave it alone.
+if [ "$(sudo docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null || echo false)" != "true" ]; then
+    sudo docker start "$CONTAINER_NAME" >/dev/null
+fi
