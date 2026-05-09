@@ -5,7 +5,17 @@ export GIZMOSQL_HOST=localhost
 export GIZMOSQL_PORT=31337
 export GIZMOSQL_USER=clickbench
 export GIZMOSQL_PASSWORD=clickbench
-PID_FILE="/tmp/gizmosql_server_$$.pid"
+# Fixed PID-file path so start/stop/load/query all resolve to the same file
+# even though each one sources util.sh in its own subshell.
+PID_FILE="${PWD}/gizmosql_server.pid"
+
+# Wait for the server to become reachable. Used by stop after kill, and by
+# load before reusing the database.
+wait_for_gizmosql() {
+    while ! nc -z "${GIZMOSQL_HOST}" "${GIZMOSQL_PORT}" 2>/dev/null; do
+        sleep 1
+    done
+}
 
 # Function to start the GizmoSQL server
 start_gizmosql() {
