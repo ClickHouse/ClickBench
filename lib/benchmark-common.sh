@@ -62,12 +62,17 @@ bench_start() {
     # Tolerate non-zero exit from ./start: many engines' start commands return
     # non-zero when the server is already up but leave the system in the
     # desired state. The check loop is the authoritative readiness signal.
-    ./start || true
+    #
+    # Silence ./start: many daemons (clickhouse-server, postgres, ...) print
+    # progress lines to stdout/stderr that would otherwise interleave with
+    # the parseable [t1,t2,t3]/Load time/Data size lines in the benchmark log.
+    ./start >/dev/null 2>&1 || true
     bench_check_loop
 }
 
 bench_stop() {
-    ./stop
+    # Silence ./stop for the same reason as ./start.
+    ./stop >/dev/null 2>&1
 }
 
 bench_download() {
@@ -97,8 +102,8 @@ bench_run_query() {
 
     bench_flush_caches
     if [ "$BENCH_RESTARTABLE" = "yes" ]; then
-        ./stop || true
-        ./start || true
+        ./stop >/dev/null 2>&1 || true
+        ./start >/dev/null 2>&1 || true
         bench_check_loop
     fi
 
