@@ -101,6 +101,36 @@ bench_load() {
     # Print "Load time: <secs>" matching the existing log shape that
     # play.clickhouse.com expects.
     awk -v s="$start_t" -v e="$end_t" 'BEGIN { printf "Load time: %.3f\n", e - s }'
+
+    # Defense against silent partial loads. Several DBs (umbra, mysql,
+    # postgres, mongodb, cratedb) survive an earlyoom / kernel-OOM kill
+    # mid-COPY by restarting and exposing a half-empty table; queries
+    # then run in microseconds against a near-empty result set and the
+    # run looks green. Catch this here, before we fire 43 meaningless
+    # query iterations:
+    #
+    #   1. Re-run ./check — confirms the server is still up.
+    #   2. Run ./data-size — confirms enough bytes actually landed on
+    #      disk. ClickBench's hits dataset compresses to >5 GB on every
+    #      system in the catalog, so anything smaller is partial.
+    #
+    # Cache the size in a sibling file so bench_main doesn't have to
+    # walk the data dir a second time.
+    if ! ./check >/dev/null 2>&1; then
+        echo "bench: ./check failed after ./load — server crashed mid-load?" >&2
+        return 1
+    fi
+
+    local size
+    size=$(./data-size 2>/dev/null || echo 0)
+    if ! [[ "$size" =~ ^[0-9]+$ ]] || [ "$size" -lt 5000000000 ]; then
+        echo "bench: data-size after load is '${size}' (<5 GB)" >&2
+        echo "bench: ClickBench's hits dataset doesn't fit in <5 GB on any" >&2
+        echo "bench: system in the catalog; treating this as a partial load" >&2
+        echo "bench: (likely an OOM kill mid-COPY)." >&2
+        return 1
+    fi
+    echo "$size" > .bench_data_size
 }
 
 # Run a single query script and emit a single JSON-array `[t1,t2,t3],` line.
@@ -171,9 +201,15 @@ bench_main() {
     done < "$BENCH_QUERIES_FILE"
 
     # data-size may need the server up (e.g. ClickHouse queries system.tables,
-    # pandas hits the HTTP server), so report it before stopping.
-    echo -n "Data size: "
-    ./data-size
+    # pandas hits the HTTP server), so report it before stopping. We
+    # already ran ./data-size in bench_load to validate the load and
+    # cached the value in .bench_data_size — reuse it.
+    if [ -s .bench_data_size ]; then
+        echo "Data size: $(cat .bench_data_size)"
+    else
+        echo -n "Data size: "
+        ./data-size
+    fi
 
     bench_stop || true
 }
