@@ -14,7 +14,7 @@ sleep 5
 mysql -h127.0.0.1 -P9030 -uroot hits < "$ROOT/create.sql"
 
 BE_DATA_DIR="$DORIS_HOME/be/"
-"$ROOT/../download-hits-parquet-partitioned" "$BE_DATA_DIR/user_files_secure"
+"$ROOT/../lib/download-hits-parquet-partitioned" "$BE_DATA_DIR/user_files_secure"
 
 BE_ID=$(mysql -h127.0.0.1 -P9030 -uroot -N -e 'show backends' | awk '{print $1}' | head -1)
 CORES=$(nproc)

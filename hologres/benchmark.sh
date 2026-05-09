@@ -47,7 +47,7 @@ FILENAME="hits.tsv"
 # Check if the file exists
 if [ ! -f "$FILENAME" ]; then
     echo "The file $FILENAME does not exist. Starting to download..."
-    ../download-hits-tsv
+    ../lib/download-hits-tsv
     chmod 777 ~ hits.tsv
     if [ $? -eq 0 ]; then
         echo "File download completed!"

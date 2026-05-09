@@ -21,7 +21,7 @@ mysql --password="${PASSWORD}" --host 127.0.0.1 clickbench < create.sql
 
 # Load the data
 
-../download-hits-tsv
+../lib/download-hits-tsv
 
 echo -n "Load time: "
 command time -f '%e' mysql --password="${PASSWORD}" --host 127.0.0.1 clickbench -e "SET sql_log_bin = 0;

@@ -5,7 +5,7 @@ set -eu
 sudo apt-get update -y
 sudo apt-get install -y docker.io postgresql-client
 
-../download-hits-tsv
+../lib/download-hits-tsv
 
 memory=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
 threads=$(nproc)

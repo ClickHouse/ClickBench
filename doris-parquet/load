@@ -7,7 +7,7 @@ export DORIS_HOME
 
 # The dataset must be visible to the BE process (TVF reads local files
 # relative to the BE working dir).
-"$ROOT/../download-hits-parquet-partitioned" "$DORIS_HOME/be"
+"$ROOT/../lib/download-hits-parquet-partitioned" "$DORIS_HOME/be"
 
 # Create the view that wraps a local() TVF over the parquet files. Idempotent
 # (CREATE OR REPLACE / IF NOT EXISTS).

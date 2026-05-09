@@ -3,7 +3,7 @@
 # Download the hits.parquet file
 echo "Downloading dataset..."
 rm -rf data
-../download-hits-parquet-single data
+../lib/download-hits-parquet-single data
 
 # Start the container
 sudo apt-get install -y docker.io jq

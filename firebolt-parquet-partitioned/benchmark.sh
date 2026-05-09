@@ -3,7 +3,7 @@
 # Download the partitioned hits parquet files
 echo "Downloading dataset..."
 rm -rf data
-../download-hits-parquet-partitioned data
+../lib/download-hits-parquet-partitioned data
 
 # Start the container
 sudo apt-get install -y docker.io jq

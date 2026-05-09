@@ -32,10 +32,9 @@ set -e
 : "${BENCH_QUERIES_FILE:=queries.sql}"
 : "${BENCH_CHECK_TIMEOUT:=300}"
 
-# Resolve the directory containing this script so we can find sibling helpers
-# (download scripts) and the system dir we were invoked from (CWD).
+# Resolve the directory containing this script so we can find sibling
+# helpers (download-hits-*).
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$LIB_DIR/.." && pwd)"
 
 bench_check_loop() {
     local i last_err
@@ -83,7 +82,7 @@ bench_download() {
     if [ -z "$BENCH_DOWNLOAD_SCRIPT" ]; then
         return 0
     fi
-    "$ROOT_DIR/$BENCH_DOWNLOAD_SCRIPT"
+    "$LIB_DIR/$BENCH_DOWNLOAD_SCRIPT"
 }
 
 bench_load() {

@@ -17,7 +17,7 @@ done
 
 ./ursa client < create.sql
 
-../download-hits-parquet-partitioned
+../lib/download-hits-parquet-partitioned
 sudo mv hits_*.parquet user_files/
 sudo chown clickhouse:clickhouse user_files/hits_*.parquet
 

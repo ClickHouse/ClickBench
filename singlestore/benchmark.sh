@@ -21,7 +21,7 @@ sudo docker exec -i memsql-ciab memsql -p"${ROOT_PASSWORD}"
 
 # Load the data
 
-../download-hits-tsv
+../lib/download-hits-tsv
 sudo docker cp hits.tsv memsql-ciab:/
 
 sudo docker exec -i memsql-ciab memsql -p"${ROOT_PASSWORD}" -e "CREATE DATABASE test"

@@ -19,7 +19,7 @@ mv ./yugabyte-$YDBVERSION ./yugabyte
 
 ./yugabyte/bin/yugabyted start --advertise_address 127.0.0.1 --ui false --background true
 
-../download-hits-tsv
+../lib/download-hits-tsv
 
 ./yugabyte/bin/ysqlsh -U yugabyte -c "CREATE DATABASE test;"
 ./yugabyte/bin/ysqlsh -U yugabyte -c "ALTER DATABASE test SET temp_file_limit=-1;"
