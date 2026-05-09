@@ -2,11 +2,11 @@
 set -eu
 
 CONTAINER_NAME=${CONTAINER_NAME:-paradedb}
-# `0.10.0` (the prior pin) was rotated out of Docker Hub. Track the same
-# tag paradedb-partitioned uses; operators can override via the env var.
-# NOTE: paradedb dropped its pg_lakehouse / parquet_fdw extension after
-# 0.10.x — create.sql still references parquet_fdw_handler and will need
-# to be reworked for a recent image to actually run queries.
+# Track ParadeDB's current Postgres-17 build. The 0.10.0 pin (when this
+# benchmark exercised pg_lakehouse / parquet_fdw) was rotated out of
+# Docker Hub, and pg_lakehouse itself was dropped from ParadeDB after
+# the 0.10.x line. The benchmark now uses pg_search instead — see
+# create.sql.
 PARADEDB_VERSION=${PARADEDB_VERSION:-latest-pg17}
 
 sudo apt-get update -y
