@@ -6,18 +6,51 @@
 set -e
 
 query=$(cat)
+
 # Drill needs the full dfs path, not a bare table name.
-query=${query//hits/dfs.\`/hits.parquet\`}
+HITS='dfs.`/hits.parquet`'
+query=${query//hits/$HITS}
 
-out=$(printf '%s\r' "$query" | sudo docker run -i --rm \
-    -v "$(pwd)/hits.parquet:/hits.parquet" apache/drill 2>&1) && status=0 || status=$?
+# Hand the query to drill-embedded via a mounted SQL file. The previous
+# approach piped the query to stdin terminated with \r, which sqlline
+# doesn't treat as a line terminator on a non-tty pipe — drill saw the
+# query as a single buffered line that was never finalized, hit EOF,
+# and exited with the prompt still showing the query. Result: every
+# query produced no `(... seconds)` line and the lib recorded null.
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+# Ensure the script ends with `;` followed by a newline.
+printf '%s\n' "${query%;};" > "$tmpdir/q.sql"
 
-if [ "$status" -ne 0 ]; then
+out=$(sudo docker run --rm \
+    -v "$(pwd)/hits.parquet:/hits.parquet:ro" \
+    -v "$tmpdir/q.sql:/q.sql:ro" \
+    --entrypoint /bin/sh apache/drill \
+    -c '$DRILL_HOME/bin/drill-embedded --run=/q.sql' 2>&1) && status=0 || status=$?
+
+# Sniff for failure even if docker run returned 0: sqlline emits
+# "Aborting command set", "Error", "No current connection", or a Java
+# stack trace on a failed query but doesn't always propagate to the
+# exit code.
+if [ "$status" -ne 0 ] || printf '%s\n' "$out" | \
+    grep -qE '^(Error|Aborting command set|No current connection|java\.|Could not initialize)'; then
     printf '%s\n' "$out" >&2
-    exit "$status"
+    exit 1
 fi
 
-# Drill output ends each query with `(X.YYY seconds)`.
-printf '%s\n' "$out" | grep -v -E '\([0-9.]+ seconds\)' || true
+# sqlline echoes "1/1     SELECT ..." (the script prelude) and
+# "(N rows in X.YYY seconds)" alongside the result rows; strip both
+# for the result body, then pull the last "(... seconds)" for the timing.
+printf '%s\n' "$out" \
+    | grep -vE '^[0-9]+/[0-9]+ |\([0-9]+ rows? in [0-9.]+ seconds?\)|^Apache Drill|^"' \
+    || true
 
-printf '%s\n' "$out" | grep -oE '\([0-9.]+ seconds\)' | grep -oE '[0-9.]+' | tail -n1 >&2
+secs=$(printf '%s\n' "$out" | grep -oE '\([0-9]+ rows? in [0-9.]+ seconds?\)' \
+    | grep -oE '[0-9.]+ seconds?' | grep -oE '[0-9.]+' | tail -n1)
+
+if [ -z "$secs" ]; then
+    echo "no '(N rows in X.YYY seconds)' marker in drill output" >&2
+    exit 1
+fi
+
+echo "$secs" >&2
