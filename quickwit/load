@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e
+
+QW_IMAGE="quickwit/quickwit:v0.9.0-rc"
+
+# Create the index from the YAML config.
+curl -sS -X POST http://localhost:7280/api/v1/indexes \
+    -H 'Content-Type: application/yaml' \
+    --data-binary @index_config.yaml | jq -r '.index_uid // .message'
+
+# No download-hits-json shared script; fetch directly. ~14 GB compressed.
+wget --continue -q 'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+
+# Use `quickwit tool local-ingest` instead of the Elasticsearch-compatible
+# bulk endpoint. v0.9's sharded ingest-v2 API caps single-node throughput
+# to a few MB/s; local-ingest builds splits directly and writes them to
+# the index storage. The running server picks up new splits on its next
+# metastore poll (default 30s).
+#
+# Throttle the per-second "Num docs ... Thrghput ... Time" progress lines
+# to once per ~30s so the captured log stays compact.
+zcat hits.json.gz | sudo docker run --rm -i --network host \
+    -v "$PWD/qwdata":/quickwit/qwdata \
+    "$QW_IMAGE" tool local-ingest --index hits -y 2>&1 \
+    | awk '/Num docs/ { n = systime(); if (n - last >= 30) { print; fflush(); last = n } next }
+           { print; fflush() }'
+
+# Wait long enough for the server to refresh its metastore view.
+sleep 35
+
+curl -sS "http://localhost:7280/api/v1/indexes/hits/describe" \
+    | jq '{num_published_docs, num_published_splits, size_published_splits}'
+
+rm -f hits.json.gz
+sync
