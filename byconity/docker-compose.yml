@@ -1,6 +1,6 @@
 ---
-version: "3"
-
+# `version: "3"` was removed — Compose v2 ignores it and warns.
+#
 # NOTE:
 # - you cannot use network_mode=host (to optimize out network overhead) because hadoop does not work without DNS.
 
@@ -60,7 +60,7 @@ services:
     image: byconity/byconity:0.1.0-GA
     environment:
       PATH: /usr/sbin:/usr/bin:/sbin:/bin:/opt/byconity/bin
-    command: bash -c "curl --retry 10 --retry-delay 5 --retry-connrefused --retry-max-time 120 --max-time 120 tso-0:18845 && clickhouse-server --config-file /config/server.yml"
+    command: bash -c "curl --retry 10 --retry-delay 5 --retry-connrefused --retry-max-time 600 --max-time 600 tso-0:18845 && clickhouse-server --config-file /config/server.yml"
     depends_on:
       - tso
       - hdfs
@@ -75,7 +75,7 @@ services:
     image: byconity/byconity:0.1.0-GA
     environment:
       PATH: /usr/sbin:/usr/bin:/sbin:/bin:/opt/byconity/bin
-    command: bash -c "curl --retry 10 --retry-delay 5 --retry-connrefused --retry-max-time 120 --max-time 120 server:21557 && clickhouse-server --config-file /config/worker.yml"
+    command: bash -c "curl --retry 10 --retry-delay 5 --retry-connrefused --retry-max-time 600 --max-time 600 server:21557 && clickhouse-server --config-file /config/worker.yml"
     depends_on:
       - server
     container_name: worker-write-0
@@ -86,7 +86,7 @@ services:
     image: byconity/byconity:0.1.0-GA
     environment:
       PATH: /usr/sbin:/usr/bin:/sbin:/bin:/opt/byconity/bin
-    command: bash -c "curl --retry 10 --retry-delay 5 --retry-connrefused --retry-max-time 120 --max-time 120 server:21557 && clickhouse-server --config-file /config/worker.yml"
+    command: bash -c "curl --retry 10 --retry-delay 5 --retry-connrefused --retry-max-time 600 --max-time 600 server:21557 && clickhouse-server --config-file /config/worker.yml"
     depends_on:
       - server
     container_name: worker-default-0
@@ -97,7 +97,7 @@ services:
     image: byconity/byconity:0.1.0-GA
     environment:
       PATH: /usr/sbin:/usr/bin:/sbin:/bin:/opt/byconity/bin
-    command: bash -c "curl --retry 10 --retry-delay 5 --retry-connrefused --retry-max-time 120 --max-time 120 server:21557 && daemon-manager --config-file ./config/daemon-manager.yml"
+    command: bash -c "curl --retry 10 --retry-delay 5 --retry-connrefused --retry-max-time 600 --max-time 600 server:21557 && daemon-manager --config-file ./config/daemon-manager.yml"
     depends_on:
       - server
     container_name: daemon-manager-0

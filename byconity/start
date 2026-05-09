@@ -9,7 +9,9 @@ if docker compose exec -T server clickhouse-client --port 52145 \
 fi
 
 docker compose up -d
-sleep 5
 
-# HDFS user setup is required for ingestion.
-hdfs/create_users.sh
+# HDFS user setup runs in load (after ./check confirms the stack is up
+# — hdfs-namenode is a dependency of server, so when SELECT 1 works,
+# namenode has been ready long enough to accept dfs commands too). Doing
+# it here racing the bring-up was failing on cold instances when sleep 5
+# wasn't long enough.
