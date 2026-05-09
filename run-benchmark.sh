@@ -9,23 +9,27 @@ arch=$(aws ec2 describe-instance-types --instance-types $machine --query 'Instan
 ami=$(aws ec2 describe-images --owners amazon --filters "Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04*" "Name=architecture,Values=${arch}" "Name=state,Values=available" --query 'sort_by(Images, &CreationDate) | [-1].[ImageId]' --output text)
 
 # Forward selected runtime env vars (e.g. YT_PROXY, YT_TOKEN, CHYT_ALIAS
-# needed by chyt's check/load/query; BENCHMARK_TIMEOUT to override the
-# global per-system timeout in cloud-init.sh) into the cloud-init script.
-# Anything unset on the operator side is simply omitted.
+# needed by chyt's check/load/query) into the cloud-init script. Anything
+# unset on the operator side is simply omitted.
 runtime_env=""
-for v in YT_PROXY YT_TOKEN CHYT_ALIAS BENCHMARK_TIMEOUT; do
+for v in YT_PROXY YT_TOKEN CHYT_ALIAS; do
     val="${!v-}"
     if [ -n "$val" ]; then
         runtime_env+="export ${v}=$(printf %q "$val")"$'\n'
     fi
 done
 
-awk -v sys="$system" -v repo="$repo" -v branch="$branch" -v env="$runtime_env" '
+# Global per-system benchmark timeout — substituted at render time.
+# Default keeps the 10h cap that worked for the slowest OLTP systems.
+timeout="${timeout:-36000}"
+
+awk -v sys="$system" -v repo="$repo" -v branch="$branch" -v env="$runtime_env" -v t="$timeout" '
 {
     gsub(/@system@/, sys)
     gsub(/@repo@/, repo)
     gsub(/@branch@/, branch)
     gsub(/@runtime_env@/, env)
+    gsub(/@timeout@/, t)
     print
 }' cloud-init.sh.in > cloud-init.sh
 
