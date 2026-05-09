@@ -114,8 +114,10 @@ bench_load() {
     #      disk. ClickBench's hits dataset compresses to >5 GB on every
     #      system in the catalog, so anything smaller is partial.
     #
-    # Cache the size in a sibling file so bench_main doesn't have to
-    # walk the data dir a second time.
+    # bench_main calls ./data-size again later to log the value; we
+    # don't cache the number here because some systems (those that
+    # accumulate background compaction or merge files post-load) report
+    # a meaningfully different size by the time queries finish.
     if ! ./check >/dev/null 2>&1; then
         echo "bench: ./check failed after ./load — server crashed mid-load?" >&2
         return 1
@@ -130,7 +132,6 @@ bench_load() {
         echo "bench: (likely an OOM kill mid-COPY)." >&2
         return 1
     fi
-    echo "$size" > .bench_data_size
 }
 
 # Run a single query script and emit a single JSON-array `[t1,t2,t3],` line.
@@ -201,15 +202,9 @@ bench_main() {
     done < "$BENCH_QUERIES_FILE"
 
     # data-size may need the server up (e.g. ClickHouse queries system.tables,
-    # pandas hits the HTTP server), so report it before stopping. We
-    # already ran ./data-size in bench_load to validate the load and
-    # cached the value in .bench_data_size — reuse it.
-    if [ -s .bench_data_size ]; then
-        echo "Data size: $(cat .bench_data_size)"
-    else
-        echo -n "Data size: "
-        ./data-size
-    fi
+    # pandas hits the HTTP server), so report it before stopping.
+    echo -n "Data size: "
+    ./data-size
 
     bench_stop || true
 }
