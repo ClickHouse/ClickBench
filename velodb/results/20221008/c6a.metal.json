@@ -1,18 +1,19 @@
 {
-    "system": "SelectDB",
+    "system": "VeloDB",
     "date": "2022-10-08",
     "machine": "c6a.metal",
     "cluster_size": 1,
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "comment": "",
+    "comment": "Historical: collected under the previous brand SelectDB; the entry was renamed to VeloDB and the SelectDB Cloud SaaS was discontinued.",
     "tags": [
         "C++",
         "column-oriented",
         "MySQL compatible",
         "ClickHouse derivative",
-        "lukewarm-cold-run"
+        "lukewarm-cold-run",
+        "historical"
     ],
     "load_time": 369,
     "data_size": 17123069872,

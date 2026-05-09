@@ -1,5 +1,5 @@
 {
-  "system": "SelectDB",
+  "system": "VeloDB",
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",

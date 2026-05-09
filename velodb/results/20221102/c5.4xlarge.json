@@ -1,9 +1,9 @@
 {
-    "system": "SelectDB",
+    "system": "VeloDB",
     "date": "2022-11-02",
     "machine": "c5.4xlarge",
     "cluster_size": 1,
-    "comment": "",
+    "comment": "Historical: collected under the previous brand SelectDB; the entry was renamed to VeloDB and the SelectDB Cloud SaaS was discontinued.",
     "tags": [
         "C++",
         "column-oriented",

@@ -1,5 +1,5 @@
 {
-    "system": "SelectDB",
+    "system": "VeloDB",
     "date": "2022-10-06",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
@@ -11,7 +11,8 @@
         "column-oriented",
         "MySQL compatible",
         "ClickHouse derivative",
-        "lukewarm-cold-run"
+        "lukewarm-cold-run",
+        "historical"
     ],
     "load_time": 482,
     "data_size": 17122854938,
@@ -231,5 +232,6 @@
             0.03,
             0.03
         ]
-    ]
+    ],
+    "comment": "Historical: collected under the previous brand SelectDB; the entry was renamed to VeloDB and the SelectDB Cloud SaaS was discontinued."
 }
