@@ -10,6 +10,20 @@
 # The original benchmark.sh ran phases interactively; we mirror that here.
 set -eu
 
+# Cloudberry's upstream install assumes a RHEL-family host (yum, grubby,
+# SELinux, the wheel group, /data0 paths, etc.). Refuse to run on anything
+# else rather than silently half-completing — prior failure mode was a
+# 300s ./check timeout with no clue why.
+if ! command -v yum >/dev/null 2>&1; then
+    echo "cloudberry: install requires a RHEL-family host (yum not found)." >&2
+    if [ -r /etc/os-release ]; then
+        # shellcheck disable=SC1091
+        . /etc/os-release
+        echo "cloudberry: detected ${PRETTY_NAME:-$NAME}." >&2
+    fi
+    exit 1
+fi
+
 PHASE=${1:-prereqs}
 
 if [ "$PHASE" = "prereqs" ]; then
