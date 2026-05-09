@@ -41,12 +41,14 @@ mysql --host 127.0.0.1 --port 4000 -u root \
 # tiflash registers later. ./load then runs `ALTER TABLE ... SET TIFLASH
 # REPLICA 1` immediately, and that fails with
 #   the tiflash replica count: 1 should be less than the total tiflash server count: 0
-# if no tiflash store has joined yet. Wait until the system catalog shows
-# a tiflash store before declaring start done.
+# if no tiflash store has joined yet. Poll information_schema.cluster_info
+# (the canonical "what components does PD see" view) until at least one
+# tiflash store shows up. 5 minutes is enough for a fresh tiup playground
+# in practice.
 if [[ "$TIDB_MODE" != "tikv" ]]; then
     for _ in $(seq 1 60); do
         cnt=$(mysql --host 127.0.0.1 --port 4000 -u root -B -N -e \
-            "SELECT COUNT(*) FROM information_schema.tikv_store_status WHERE store_type = 'tiflash';" \
+            "SELECT COUNT(*) FROM information_schema.cluster_info WHERE type = 'tiflash';" \
             2>/dev/null || echo 0)
         [ "$cnt" -ge 1 ] && break
         sleep 5
