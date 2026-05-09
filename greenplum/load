@@ -1,19 +1,21 @@
 #!/bin/bash
 set -eu
 
-# shellcheck disable=SC1091
-source /opt/greenplum-db-*/greenplum_path.sh
-export MASTER_DATA_DIRECTORY=${MASTER_DATA_DIRECTORY:-/gpmaster/gpsne-1/}
+CONTAINER_NAME=${CONTAINER_NAME:-greenplum}
+export PGPASSWORD='gparray'
 
-sudo chmod 777 ~ hits.tsv
+# Schema is created from the host (psql via the mapped port).
+psql -h localhost -p 5432 -U gpadmin -d demo -v ON_ERROR_STOP=1 -f create.sql
 
-psql -d postgres -v ON_ERROR_STOP=1 -f create.sql
+# Move the source TSV into the container and load via COPY (the previous
+# gpfdist-based load relied on a native install layout that no longer
+# exists in the containerized cluster).
+sudo docker cp hits.tsv "$CONTAINER_NAME":/tmp/hits.tsv
+psql -h localhost -p 5432 -U gpadmin -d demo -v ON_ERROR_STOP=1 -t \
+    -c "COPY hits FROM '/tmp/hits.tsv' WITH (FORMAT text);"
+psql -h localhost -p 5432 -U gpadmin -d demo -v ON_ERROR_STOP=1 -t \
+    -c "ANALYZE hits;"
 
-# gpfdist serves hits.tsv to the external table referenced from create.sql.
-pgrep gpfdist || nohup gpfdist >/tmp/gpfdist.log 2>&1 &
-
-psql -d postgres -v ON_ERROR_STOP=1 -t -c "INSERT INTO hits SELECT * FROM hits_ext;"
-psql -d postgres -v ON_ERROR_STOP=1 -t -c "ANALYZE hits;"
-
+sudo docker exec "$CONTAINER_NAME" rm -f /tmp/hits.tsv
 rm -f hits.tsv
 sync

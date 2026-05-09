@@ -1,4 +1,5 @@
 #!/bin/bash
-set -eu
+set -e
 
-sudo du -bcs /gpdata* 2>/dev/null | grep total | awk '{print $1}'
+export PGPASSWORD='gparray'
+psql -h localhost -p 5432 -U gpadmin -d demo -t -A -c "SELECT pg_database_size('demo')"
