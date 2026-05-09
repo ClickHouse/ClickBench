@@ -1,5 +1,5 @@
 {
-    "system": "SelectDB",
+    "system": "VeloDB",
     "date": "2026-05-09",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
