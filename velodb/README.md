@@ -11,7 +11,6 @@ Doris release from there.
 - The hosted SaaS at `selectdb.cloud` was discontinued (the domain now
   returns `404 Route Not Found` for every path).
 - The company was renamed to **VeloDB** and the entry was renamed
-  accordingly. All result files in this directory have been re-tagged
-  with `"historical"` because they were collected under the old brand
-  using older selectdb-branded binaries; any future submission will
-  reflect the current VeloDB-distributed Apache Doris build.
+  accordingly. Existing results are kept as-is under the new system
+  name — the engine itself is the same Apache Doris distribution, so
+  past numbers are still meaningful under the VeloDB brand.

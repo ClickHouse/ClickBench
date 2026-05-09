@@ -11,8 +11,7 @@
         "column-oriented",
         "MySQL compatible",
         "ClickHouse derivative",
-        "lukewarm-cold-run",
-        "historical"
+        "lukewarm-cold-run"
     ],
     "load_time": 716,
     "data_size": 16402424021,
@@ -233,5 +232,5 @@
             0.42
         ]
     ],
-    "comment": "Historical: collected under the previous brand SelectDB; the entry was renamed to VeloDB and the SelectDB Cloud SaaS was discontinued."
+    "comment": ""
 }

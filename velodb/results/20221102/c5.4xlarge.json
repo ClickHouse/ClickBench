@@ -3,12 +3,11 @@
     "date": "2022-11-02",
     "machine": "c5.4xlarge",
     "cluster_size": 1,
-    "comment": "Historical: collected under the previous brand SelectDB; the entry was renamed to VeloDB and the SelectDB Cloud SaaS was discontinued.",
+    "comment": "",
     "tags": [
         "C++",
         "column-oriented",
-        "MySQL compatible",
-        "historical"
+        "MySQL compatible"
     ],
     "load_time": 526,
     "data_size": 17122903966,
