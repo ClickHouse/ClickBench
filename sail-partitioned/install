@@ -43,6 +43,9 @@ fi
 # shellcheck disable=SC1091
 source myenv/bin/activate
 
-pip install --upgrade setuptools wheel
+# See sail/install — Ubuntu 24.04's apt-installed `packaging` has no
+# RECORD file, so `--upgrade` fails to uninstall it. `--ignore-installed`
+# avoids the uninstall and just lays a fresh copy in the venv.
+pip install --upgrade --ignore-installed setuptools wheel
 pip install --no-cache-dir "pysail==0.5.2"
 pip install "pyspark-client==4.1.1" pandas psutil

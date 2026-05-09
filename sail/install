@@ -45,6 +45,11 @@ fi
 # shellcheck disable=SC1091
 source myenv/bin/activate
 
-pip install --upgrade setuptools wheel
+# Ubuntu 24.04's apt-installed `packaging` lacks a RECORD file, so
+# `pip install --upgrade setuptools wheel` blows up trying to uninstall
+# it ("Cannot uninstall packaging 24.0 ... no RECORD file was found").
+# `--ignore-installed` skips the uninstall and just lays the new copy on
+# top, which is what we want inside this venv anyway.
+pip install --upgrade --ignore-installed setuptools wheel
 pip install --no-cache-dir "pysail==0.5.2"
 pip install "pyspark-client==4.1.1" pandas psutil
