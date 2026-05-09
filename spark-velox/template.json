@@ -1,0 +1,13 @@
+{
+  "system": "Spark (Velox)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "C++",
+    "column-oriented",
+    "Spark derivative",
+    "Velox"
+  ]
+}
