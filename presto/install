@@ -30,11 +30,20 @@ hive.allow-drop-table=true
 hive.non-managed-table-writes-enabled=true
 EOF
 
-# Presto's default 1 GB heap is too small for ClickBench. Bump it together
-# with the matching query-memory configuration.
-cat > etc/jvm.config <<'EOF'
+# Presto's default 1 GB heap is too small for ClickBench. Scale the heap
+# and matching query-memory caps to host RAM — the previous fixed
+# -Xmx48G + 24 GB query.max-memory crashed mid-query on c6a.4xlarge
+# (32 GiB RAM) with `unexpected end of stream` once the JVM tried to
+# allocate over physical RAM and earlyoom killed it.
+RAM_GB=$(awk '/MemTotal/{ printf "%d", $2 / 1024 / 1024 }' /proc/meminfo)
+HEAP_GB=$(( RAM_GB * 70 / 100 ))
+[ "$HEAP_GB" -lt 4 ] && HEAP_GB=4
+QUERY_GB=$(( HEAP_GB / 2 ))
+HEADROOM_GB=$(( HEAP_GB / 8 + 1 ))
+
+cat > etc/jvm.config <<EOF
 -server
--Xmx48G
+-Xmx${HEAP_GB}G
 -XX:+UseG1GC
 -XX:G1HeapRegionSize=32M
 -XX:+UseGCOverheadLimit
@@ -67,16 +76,16 @@ cat > etc/jvm.config <<'EOF'
 --add-opens=java.sql/java.sql=ALL-UNNAMED
 EOF
 
-cat > etc/config.properties <<'EOF'
+cat > etc/config.properties <<EOF
 coordinator=true
 node-scheduler.include-coordinator=true
 http-server.http.port=8080
 discovery-server.enabled=true
 discovery.uri=http://localhost:8080
-query.max-memory=24GB
-query.max-memory-per-node=16GB
-query.max-total-memory-per-node=24GB
-memory.heap-headroom-per-node=8GB
+query.max-memory=${QUERY_GB}GB
+query.max-memory-per-node=$(( QUERY_GB * 2 / 3 ))GB
+query.max-total-memory-per-node=${QUERY_GB}GB
+memory.heap-headroom-per-node=${HEADROOM_GB}GB
 EOF
 
 mkdir -p data/hits
