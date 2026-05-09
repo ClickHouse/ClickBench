@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Verify the clickbench binary is on PATH.
+[ -x vortex/target/release/clickbench ]
