@@ -2,6 +2,12 @@
 
 # This is the script for cloud-init, to run on a VM in unattended fashion. See run-benchmark.sh
 
+# Cloud-init runs scripts as root with no HOME exported. Tools that follow
+# XDG-ish conventions (DuckDB extensions in ~/.duckdb, the GizmoSQL one-line
+# installer that runs `sh -u`, etc.) then fall over with messages like
+# `Can't find the home directory at ''` or `HOME: parameter not set`. Set it
+# once here so every per-system install/start/load/query inherits it.
+export HOME="${HOME:-/root}"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y wget curl git jq earlyoom
