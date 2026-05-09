@@ -19,6 +19,17 @@ if [ ! -d "$DORIS_HOME" ]; then
     fi
     mkdir -p "$dir_name"
     tar zxf "$file_name" -C "$dir_name"
+
+    # Disable internal caches so warm runs are actually warm — without
+    # these, the second/third try of every query returned in 0.00-0.01 s
+    # because the BE's storage-page / segment cache was hot and the FE
+    # was returning a cached SQL result. Matches doris/install (which
+    # ships a different Apache Doris build with these defaults already
+    # off in newer releases).
+    printf "\ndisable_storage_page_cache = true\n"  >> "$DORIS_HOME"/be/conf/be.conf
+    printf "\nsegment_cache_capacity = 0\n"         >> "$DORIS_HOME"/be/conf/be.conf
+    printf "\ncache_enable_sql_mode = false\n"      >> "$DORIS_HOME"/fe/conf/fe.conf
+    printf "\ncache_enable_partition_mode = false\n" >> "$DORIS_HOME"/fe/conf/fe.conf
 fi
 
 sudo apt-get update -y

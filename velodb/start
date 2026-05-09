@@ -33,3 +33,13 @@ for _ in $(seq 1 300); do
     fi
     sleep 2
 done
+
+# Belt-and-suspenders against SelectDB's session-level result/SQL cache,
+# in case the FE config we wrote at install time isn't honored. Setting
+# these GLOBAL flips the default for any new connection (./query opens a
+# fresh one each invocation).
+mysql -h127.0.0.1 -P9030 -uroot -e "
+    SET GLOBAL enable_sql_cache = false;
+    SET GLOBAL enable_partition_cache = false;
+    SET GLOBAL enable_query_cache = false;
+" 2>/dev/null || true
