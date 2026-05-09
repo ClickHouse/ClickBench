@@ -51,7 +51,12 @@ jq -c -r '.tags' template.json | tee -a log
 echo -n 'Disk usage before: ' | tee -a log
 df -B1 / | tail -n1 | awk '{ print $3 }' | tee -a log
 
-timeout 20000 ./benchmark.sh 2>&1 | tee -a log
+# 20000s (~5.5h) wasn't enough for slow OLTP-style systems (mysql,
+# mariadb, postgresql{,-indexed,-orioledb}, mongodb, cratedb, sqlite,
+# turso, timescaledb-no-columnstore, mysql-myisam) — they hit the
+# timeout mid-load or a few queries in. 36000s (10h) clears the
+# observed worst case while still capping a runaway run.
+timeout 36000 ./benchmark.sh 2>&1 | tee -a log
 
 echo -n 'Disk usage after: ' | tee -a log
 df -B1 / | tail -n1 | awk '{ print $3 }' | tee -a log
