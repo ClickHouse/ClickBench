@@ -4,5 +4,5 @@
 # because the container needs the file bind-mounted at start time
 # (before lib's bench_download step runs).
 export BENCH_DOWNLOAD_SCRIPT=""
-export BENCH_RESTARTABLE=yes
+export BENCH_DURABLE=yes
 exec ../lib/benchmark-common.sh

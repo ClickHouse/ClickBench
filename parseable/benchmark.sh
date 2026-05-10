@@ -2,5 +2,5 @@
 # Thin shim — actual flow is in lib/benchmark-common.sh.
 # parseable ingests gzipped NDJSON; ./load fetches it directly.
 export BENCH_DOWNLOAD_SCRIPT=""
-export BENCH_RESTARTABLE=yes
+export BENCH_DURABLE=yes
 exec ../lib/benchmark-common.sh

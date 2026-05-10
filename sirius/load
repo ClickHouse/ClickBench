@@ -42,5 +42,4 @@ elapsed=$(printf '%s' "$body" | python3 -c \
 
 echo "Load (server-reported, gpu_buffer_init): ${elapsed}s"
 
-rm -f hits.parquet
 sync

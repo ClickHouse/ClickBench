@@ -22,5 +22,4 @@ elapsed=$(printf '%s' "$body" | python3 -c \
 
 echo "Load (server-reported): ${elapsed}s"
 
-rm -f hits.parquet
 sync

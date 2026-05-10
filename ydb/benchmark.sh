@@ -4,5 +4,5 @@
 export BENCH_DOWNLOAD_SCRIPT=""
 # YDB has no benefit from server restart — it's a multi-node distributed
 # cluster managed via ansible/systemd; stopping between queries is impractical.
-export BENCH_RESTARTABLE=no
+export BENCH_DURABLE=yes
 exec ../lib/benchmark-common.sh

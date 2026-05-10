@@ -13,11 +13,22 @@
 #                          from a remote source (S3 datalake, remote services).
 #
 # Optional env:
-#   BENCH_RESTARTABLE      "yes" (default) or "no". If "yes", the system is
-#                          stopped+started between every query to neutralize
-#                          warm-process effects. Set "no" for in-process /
-#                          single-binary tools where restart would dominate
-#                          query time (duckdb CLI, sqlite, dataframe wrappers).
+#   BENCH_DURABLE          "yes" (default) or "no". Tells the driver whether
+#                          the system's data survives a stop+start.
+#                            yes — data is on disk (daemons like clickhouse,
+#                                  or CLI tools like duckdb that operate on
+#                                  a .db file). Between queries we just
+#                                  restart for a cold process and rely on
+#                                  drop_caches for OS pagecache.
+#                            no  — data lives in process memory (in-process
+#                                  servers: pandas/polars/duckdb-dataframe/
+#                                  duckdb-memory/chdb-dataframe/daft/sirius).
+#                                  Between queries we restart AND re-run
+#                                  ./load, then roll the reload wall-clock
+#                                  into the first ("cold") try so the cold
+#                                  number genuinely measures load+query
+#                                  rather than a warm query against a
+#                                  freshly-loaded RAM dataset.
 #   BENCH_TRIES            Number of times each query is run. Default 3.
 #   BENCH_QUERIES_FILE     Path to a queries file, one query per line.
 #                          Default "queries.sql" (in the system dir).
@@ -35,7 +46,12 @@ export HOME="${HOME:-/root}"
 
 # BENCH_DOWNLOAD_SCRIPT must be set (possibly to empty for "no download").
 : "${BENCH_DOWNLOAD_SCRIPT?BENCH_DOWNLOAD_SCRIPT is required (set empty to skip)}"
-: "${BENCH_RESTARTABLE:=yes}"
+# Back-compat: accept the old BENCH_RESTARTABLE name as an alias for one
+# release cycle. Operators with stale env files / scripts still work.
+if [ -n "${BENCH_RESTARTABLE:-}" ] && [ -z "${BENCH_DURABLE:-}" ]; then
+    BENCH_DURABLE="$BENCH_RESTARTABLE"
+fi
+: "${BENCH_DURABLE:=yes}"
 : "${BENCH_TRIES:=3}"
 : "${BENCH_QUERIES_FILE:=queries.sql}"
 : "${BENCH_CHECK_TIMEOUT:=300}"
@@ -157,25 +173,36 @@ bench_run_query() {
     local query="$1"
     local query_num="$2"
     local i raw_stderr exit_code timing
+    local load_secs=0
     local results=()
 
-    if [ "$BENCH_RESTARTABLE" = "yes" ]; then
-        # Order matters: stop, wait until really stopped, then flush
-        # caches, then start. The naive order (flush, then stop) leaves
-        # mmap-backed engines (Umbra, DuckDB, Hyper, CedarDB) with their
-        # data files pinned by the still-running process, so drop_caches
-        # can't evict the pages — the new instance then re-mmaps those
-        # same files and the "cold" run reads from a warm page cache.
-        # Waiting for ./check to fail before flushing makes the cold run
-        # actually cold even when ./stop returns before the process is
-        # fully gone.
-        ./stop >/dev/null 2>&1 || true
-        bench_wait_stopped
-        bench_flush_caches
-        ./start >/dev/null 2>&1 || true
-        bench_check_loop
-    else
-        bench_flush_caches
+    # Cold-cycle: stop, wait until really stopped, drop_caches, start,
+    # check. Order matters: the naive order (flush, then stop) leaves
+    # mmap-backed engines (Umbra, DuckDB, Hyper, CedarDB) with their
+    # data files pinned by the still-running process, so drop_caches
+    # can't evict the pages — the new instance then re-mmaps those
+    # same files and the "cold" run reads from a warm page cache.
+    # Waiting for ./check to fail before flushing makes the cold run
+    # actually cold even when ./stop returns before the process is
+    # fully gone.
+    ./stop >/dev/null 2>&1 || true
+    bench_wait_stopped
+    bench_flush_caches
+    ./start >/dev/null 2>&1 || true
+    bench_check_loop
+
+    if [ "$BENCH_DURABLE" != "yes" ]; then
+        # In-process server: data lived in process memory and was wiped
+        # by the restart above. Re-run ./load so subsequent queries have
+        # something to hit, and roll its wall-clock into the first try
+        # below — without that, the cold number would be a warm query
+        # against a freshly-loaded RAM dataset and not reflect the real
+        # cold-from-source cost.
+        local load_start load_end
+        load_start=$(date +%s.%N)
+        ./load >/dev/null 2>&1
+        load_end=$(date +%s.%N)
+        load_secs=$(awk -v s="$load_start" -v e="$load_end" 'BEGIN{printf "%.6f", e - s}')
     fi
 
     for i in $(seq 1 "$BENCH_TRIES"); do
@@ -204,6 +231,11 @@ bench_run_query() {
         else
             timing="null"
             printf '%s\n' "$raw_stderr" >&2
+        fi
+        # Cold try (i=1) on a non-durable system: roll the ./load
+        # wall-clock into the recorded timing.
+        if [ "$i" -eq 1 ] && [ "$BENCH_DURABLE" != "yes" ] && [ "$timing" != "null" ]; then
+            timing=$(awk -v t="$timing" -v l="$load_secs" 'BEGIN{printf "%.3f", t + l}')
         fi
         results+=("$timing")
         echo "${query_num},${i},${timing}" >> result.csv
@@ -244,6 +276,15 @@ bench_main() {
     ./data-size
 
     bench_stop || true
+
+    # BENCH_DURABLE=no systems keep hits.parquet around between cold
+    # queries so each restart can re-./load it. Tidy up the source data
+    # here instead of in the per-system load scripts (which used to do
+    # rm -f hits.parquet right after the first load).
+    if [ "$BENCH_DURABLE" != "yes" ]; then
+        rm -f hits.parquet hits_*.parquet hits.tsv hits.tsv.gz hits.json.gz
+        sync
+    fi
 }
 
 # Only run the full flow when executed directly (or via `exec`). Sourcing the
