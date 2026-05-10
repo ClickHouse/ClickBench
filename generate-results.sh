@@ -4,6 +4,8 @@
 # For the website we keep only the latest dated copy per (system, basename),
 # and we skip entries tagged "historical" — those are kept in the repo
 # as archival data but are not displayed on the dashboard.
+# Entries of the form {"error": "..."} are also skipped: the latest run for a
+# (system, machine) failed, so the system is omitted from the report.
 
 echo "const data = [" > data.generated.js.new
 FIRST=1
@@ -19,7 +21,7 @@ LANG="" ls -1 */results/*/*.json \
     | while read -r file
 do
     if ! entry=$(jq --compact-output --arg src "$file" \
-        'select((.tags // []) | index("historical") | not) | . + {"source": $src}' \
+        'select(.error == null) | select((.tags // []) | index("historical") | not) | . + {"source": $src}' \
         "$file"); then
         echo "Error in $file — skipping" >&2
         continue
