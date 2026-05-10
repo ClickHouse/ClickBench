@@ -179,6 +179,7 @@
             white-space: nowrap;
             text-align: right;
             padding-right: 1rem;
+            position: relative;
         }
 
         .summary-bar-cell {
@@ -209,6 +210,24 @@
         .summary-row:hover, .summary-row-hilite {
             background: var(--highlight-color) !important;
             font-weight: bold;
+        }
+
+        .remove-system {
+            visibility: hidden;
+            cursor: pointer;
+            color: var(--link-color);
+            user-select: none;
+            position: absolute;
+            left: -1rem;
+            padding-right: 1.5rem;
+        }
+
+        .summary-row:hover .remove-system {
+            visibility: visible;
+        }
+
+        .remove-system:hover {
+            color: var(--link-hover-color);
         }
 
         #details {
@@ -906,6 +925,24 @@ function renderSummary(filtered_data) {
         td_name.className = 'summary-name';
 
         if (!elem.fake) {
+            let remove = document.createElement('span');
+            remove.className = 'remove-system';
+            remove.textContent = '✕';
+            remove.title = 'Remove this system from the selection';
+            remove.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectors.system[elem.system] = false;
+                for (const s of systems.childNodes) {
+                    if (s.tagName === 'A' && s.innerText === elem.system) {
+                        s.className = 'selector';
+                    }
+                }
+                render();
+                updateHistory();
+            });
+            td_name.appendChild(remove);
+
             let link = document.createElement('a');
             link.appendChild(document.createTextNode(`${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
             link.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + elem.source;
