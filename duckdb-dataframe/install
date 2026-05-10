@@ -9,4 +9,10 @@ if [ ! -d myenv ]; then
 fi
 # shellcheck disable=SC1091
 source myenv/bin/activate
-pip install --quiet pandas duckdb pyarrow fastapi uvicorn
+# pytz: DuckDB needs it when materialising tz-aware pandas timestamps
+# back to Python (e.g. when the parquet declares datetime64[ms, UTC]).
+# Not strictly required for the official Athena parquet (EventTime is
+# int64 there), but pulling it in defensively avoids a 500 on Q24
+# (SELECT * ... ORDER BY EventTime) if the source parquet ever changes
+# its EventTime representation.
+pip install --quiet pandas duckdb pyarrow fastapi uvicorn pytz
