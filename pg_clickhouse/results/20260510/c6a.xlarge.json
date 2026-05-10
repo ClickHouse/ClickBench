@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C","column-oriented","PostgreSQL compatible","lukewarm-cold-run"],
+    "tags": ["C","column-oriented","PostgreSQL compatible"],
     "load_time": 313,
     "data_size": 15272832315,
     "result": [

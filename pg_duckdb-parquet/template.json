@@ -5,7 +5,6 @@
   "tuned": "no",
   "tags": [
     "column-oriented",
-    "PostgreSQL compatible",
-    "lukewarm-cold-run"
+    "PostgreSQL compatible"
   ]
 }
