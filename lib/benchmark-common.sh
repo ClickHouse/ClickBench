@@ -191,7 +191,15 @@ bench_run_query() {
             # so plain `tail -n1` was reading "Stopping SparkContext" or
             # similar and producing all-null result rows. Pull the LAST
             # numeric-looking line instead.
-            timing=$(printf '%s\n' "$raw_stderr" | grep -E '^[0-9]+(\.[0-9]+)?$' | tail -n1)
+            #
+            # Spark also prints its console progress bar with carriage
+            # returns instead of newlines:
+            #     [Stage 1:>... (0 + 96) / 111]\r\r   spaces   \r{timing}\n
+            # so the timing ends up on the same logical line as the
+            # progress bar, and the strict ^number$ regex misses it.
+            # Translating \r to \n splits those updates into their own
+            # lines and the timing stands alone for matching.
+            timing=$(printf '%s\n' "$raw_stderr" | tr '\r' '\n' | grep -E '^[0-9]+(\.[0-9]+)?$' | tail -n1)
             [ -z "$timing" ] && timing="null"
         else
             timing="null"
