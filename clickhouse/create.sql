@@ -108,4 +108,13 @@ CREATE OR REPLACE TABLE hits
     PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID)
 )
 ENGINE = MergeTree
-SETTINGS fsync_after_insert = 1; -- https://github.com/ClickHouse/ClickBench/issues/678
+SETTINGS
+    fsync_after_insert = 1, -- https://github.com/ClickHouse/ClickBench/issues/678
+    -- Prewarm in-process caches at server startup so the first cold
+    -- query doesn't pay for mark + primary-index loading. Combined
+    -- with async_load_databases=false (set in install via
+    -- config.d/async_load_databases.yaml), this moves the previous
+    -- ~2 s wait out of the cold-query timer into bench_start.
+    prewarm_mark_cache = 1,
+    prewarm_primary_key_cache = 1,
+    min_bytes_to_prewarm_caches = 1;
