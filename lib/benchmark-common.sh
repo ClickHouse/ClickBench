@@ -130,6 +130,15 @@ bench_load() {
     local start_t end_t
     start_t=$(date +%s.%N)
     ./load
+    # Force a sync inside the measured window: ingest writers (postgres
+    # COPY, ClickHouse INSERT, DuckDB CTAS, etc.) hand back well before
+    # their pages have hit disk, and individual per-system load scripts
+    # were inconsistent about doing it themselves. Without this the first
+    # cold query then pays the writeback as if it were query work, which
+    # is unfair to the systems whose load script DID call sync. Doing it
+    # here once, for everyone, makes load_time the honest "data is on
+    # disk" wall-clock and removes the per-system inconsistency.
+    sync
     end_t=$(date +%s.%N)
     # Print "Load time: <secs>" matching the existing log shape that
     # play.clickhouse.com expects.
