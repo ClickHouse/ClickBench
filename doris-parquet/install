@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# See doris/install — Apache Doris only ships x64 tarballs.
+if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "amd64" ]; then
+    echo "doris-parquet: Apache Doris has no $(uname -m) release tarball; skipping" >&2
+    exit 1
+fi
+
 # This benchmark runs on Ubuntu 22.04+
 ROOT=$(pwd)
 URL='https://apache-doris-releases.oss-accelerate.aliyuncs.com/apache-doris-3.0.5-bin-x64.tar.gz'

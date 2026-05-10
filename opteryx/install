@@ -12,4 +12,9 @@ if [ ! -d "$HOME/opteryx_venv" ]; then
 fi
 
 "$HOME/opteryx_venv/bin/python" -m pip install --upgrade pip
-"$HOME/opteryx_venv/bin/python" -m pip install --upgrade opteryx==0.26.1
+# 0.26.1 only ships x86_64 wheels, so arm64 hosts (c8g.*) fell through
+# to sdist where the build failed at "opteryx/third_party/abseil/
+# containers.pyx doesn't match any files". 0.26.8 publishes
+# manylinux2014_aarch64 wheels for cp310-cp313, which fixes arm64
+# without changing anything for x86_64.
+"$HOME/opteryx_venv/bin/python" -m pip install --upgrade opteryx==0.26.8

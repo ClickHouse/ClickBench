@@ -1,6 +1,16 @@
 #!/bin/bash
 set -e
 
+# Apache Doris only ships x64 release tarballs (apache-doris-*-bin-x64).
+# No arm64 build exists on the public mirror, so c8g.* runs would
+# download the x64 tarball, the BE process would refuse to come up
+# ("No backend available"), and the bench would fail late after the
+# 14 GB download. Fail fast on arm64 instead.
+if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "amd64" ]; then
+    echo "doris: Apache Doris has no $(uname -m) release tarball; skipping" >&2
+    exit 1
+fi
+
 # This benchmark runs on Ubuntu 20.04+
 ROOT=$(pwd)
 URL='https://apache-doris-releases.oss-accelerate.aliyuncs.com/apache-doris-4.1.0-rc01-bin-x64.tar.gz'

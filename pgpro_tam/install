@@ -1,6 +1,15 @@
 #!/bin/bash
 set -eu
 
+# innerlife/pgpro_tam is amd64-only on Docker Hub. On arm64 docker
+# pulls the amd64 image, runs it under QEMU, and postgres never
+# finishes starting within the ./check timeout. Skip arm64 to keep
+# logs clean.
+if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "amd64" ]; then
+    echo "pgpro_tam: innerlife/pgpro_tam is amd64-only; skipping on $(uname -m)" >&2
+    exit 1
+fi
+
 CONTAINER_NAME=${CONTAINER_NAME:-pgpro_tam}
 PGPRO_TAM_IMAGE=${PGPRO_TAM_IMAGE:-innerlife/pgpro_tam:0.0.1}
 

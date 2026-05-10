@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# See hyper/install — tableauhyperapi has no Linux arm64 wheel.
+if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "amd64" ]; then
+    echo "hyper-parquet: tableauhyperapi has no Linux $(uname -m) wheel; skipping" >&2
+    exit 1
+fi
+
 sudo apt-get update -y
 sudo apt-get install -y python3-pip python3-venv
 
