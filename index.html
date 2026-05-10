@@ -29,7 +29,7 @@
 
             --summary-every-other-row-color: #F8F8F8;
             --highlight-color: #EEE;
-            --tag-hilite-color: #88FF88;
+            --tag-hilite-color: #FF8800;
 
             --bar-color1: oklch(calc(0.9 - 0.6) 0.1 calc(90 - 60));
             --bar-color2: oklch(calc(0.9 - 0.4) 0.1 calc(90 - 40));
@@ -62,7 +62,7 @@
 
             --summary-every-other-row-color: #042e41;
             --highlight-color: #064663;
-            --tag-hilite-color: #1B5E20;
+            --tag-hilite-color: #FF8800;
 
             --bar-color1: oklch(calc(0.4 + 0.6) 0.1 calc(250 - 180));
             --bar-color2: oklch(calc(0.4 + 0.4) 0.1 calc(250 - 120));
@@ -507,7 +507,8 @@ document.getElementById('toggle-dark').addEventListener('click', e => setTheme('
 
 let new_theme = window.localStorage.getItem('theme');
 if (new_theme && new_theme != theme) {
-    setTheme(new_theme);
+    theme = new_theme;
+    document.documentElement.setAttribute('data-theme', theme);
 }
 
 /// Generate selectors
