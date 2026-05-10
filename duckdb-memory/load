@@ -1,8 +1,31 @@
 #!/bin/bash
 set -e
 
-# Server reads hits.parquet from CWD into memory.
-elapsed=$(curl -sS -X POST http://127.0.0.1:8000/load | python3 -c 'import json,sys; print(json.load(sys.stdin)["elapsed"])')
+# Capture body and exit code separately so a curl-level failure (server
+# OOM-killed mid-ingest → connection reset) prints a real error instead
+# of `set -e`-exiting silently. The old script did
+#
+#     elapsed=$(curl -sS ... | python3 -c '...elapsed...')
+#
+# which gave the bench a 266 s "successful" run on c6a.4xlarge whenever
+# the DuckDB ingest OOM'd at ~99 %, then sink.parser rejected the row
+# for having no timings and the dashboard saw nothing.
+body=$(curl -sS -X POST http://127.0.0.1:8000/load 2>&1) || {
+    echo "load: curl to /load failed:" >&2
+    printf '%s\n' "$body" >&2
+    echo "load: server may have been OOM-killed during ingest" >&2
+    exit 1
+}
+
+# /load must return JSON with an "elapsed" field — without this the
+# bench would proceed to query a half-loaded database.
+elapsed=$(printf '%s' "$body" | python3 -c \
+    'import json,sys;print(json.load(sys.stdin)["elapsed"])' 2>&1) || {
+    echo "load: /load did not return valid {\"elapsed\": ...} JSON:" >&2
+    printf '%s\n' "$body" >&2
+    exit 1
+}
+
 echo "Load (server-reported): ${elapsed}s"
 
 rm -f hits.parquet

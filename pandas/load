@@ -1,8 +1,25 @@
 #!/bin/bash
 set -e
 
-# Server reads hits.parquet from CWD into memory.
-elapsed=$(curl -sS -X POST http://127.0.0.1:8000/load | python3 -c 'import json,sys; print(json.load(sys.stdin)["elapsed"])')
+# See duckdb-memory/load for the rationale — the old one-liner
+#     elapsed=$(curl -sS ... | python3 -c '...elapsed...')
+# masked curl/JSON failures with `set -e` and produced a successful-looking
+# zero-timing run when the server died mid-ingest. Capture body and
+# diagnose explicitly.
+body=$(curl -sS -X POST http://127.0.0.1:8000/load 2>&1) || {
+    echo "load: curl to /load failed:" >&2
+    printf '%s\n' "$body" >&2
+    echo "load: server may have been OOM-killed during ingest" >&2
+    exit 1
+}
+
+elapsed=$(printf '%s' "$body" | python3 -c \
+    'import json,sys;print(json.load(sys.stdin)["elapsed"])' 2>&1) || {
+    echo "load: /load did not return valid {\"elapsed\": ...} JSON:" >&2
+    printf '%s\n' "$body" >&2
+    exit 1
+}
+
 echo "Load (server-reported): ${elapsed}s"
 
 rm -f hits.parquet

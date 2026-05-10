@@ -22,7 +22,24 @@ for _ in $(seq 1 60); do
     sleep 1
 done
 
-elapsed=$(curl -sS -X POST http://127.0.0.1:8000/load | python3 -c 'import json,sys; print(json.load(sys.stdin)["elapsed"])')
+# See duckdb-memory/load for the rationale — the old one-liner masked
+# curl/JSON failures with `set -e` and produced a successful-looking
+# zero-timing run when the server died mid-ingest. Capture body and
+# diagnose explicitly.
+body=$(curl -sS -X POST http://127.0.0.1:8000/load 2>&1) || {
+    echo "load: curl to /load failed:" >&2
+    printf '%s\n' "$body" >&2
+    echo "load: server may have crashed during GPU-buffer init" >&2
+    exit 1
+}
+
+elapsed=$(printf '%s' "$body" | python3 -c \
+    'import json,sys;print(json.load(sys.stdin)["elapsed"])' 2>&1) || {
+    echo "load: /load did not return valid {\"elapsed\": ...} JSON:" >&2
+    printf '%s\n' "$body" >&2
+    exit 1
+}
+
 echo "Load (server-reported, gpu_buffer_init): ${elapsed}s"
 
 rm -f hits.parquet
