@@ -14,5 +14,5 @@ fi
 # passes on SELECT 1 before user-database parts are loaded, and the
 # first cold query stalls on the part loader.
 sudo mkdir -p /etc/clickhouse-server/config.d
-echo '<clickhouse><async_load_databases>false</async_load_databases></clickhouse>' \
-    | sudo tee /etc/clickhouse-server/config.d/async_load_databases.xml >/dev/null
+echo 'async_load_databases: false' \
+    | sudo tee /etc/clickhouse-server/config.d/async_load_databases.yaml >/dev/null

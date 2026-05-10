@@ -15,5 +15,5 @@ fi
 # on c6a.4xlarge (Q40 going 2.89 s -> 0.25 s here once parts are
 # already loaded when the cold timer starts).
 sudo mkdir -p /etc/clickhouse-server/config.d
-echo '<clickhouse><async_load_databases>false</async_load_databases></clickhouse>' \
-    | sudo tee /etc/clickhouse-server/config.d/async_load_databases.xml >/dev/null
+echo 'async_load_databases: false' \
+    | sudo tee /etc/clickhouse-server/config.d/async_load_databases.yaml >/dev/null
