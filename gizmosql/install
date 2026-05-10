@@ -1,6 +1,17 @@
 #!/bin/bash
 set -eu
 
+# The gizmosql one-line installer is `sh -u`, and its line 32 reads
+#     PREFIX="${HOME}/.local/bin"
+# unconditionally. cloud-init exports HOME for us, but operators
+# launching ./benchmark.sh by hand from a checkout that predates the
+# HOME fix end up with HOME unset and the run dies in 21 s with
+#     sh: 32: HOME: parameter not set
+# Pin a default and pass it into the piped sh explicitly so the
+# installer is insulated from whatever the parent env looked like.
+HOME="${HOME:-/root}"
+export HOME
+
 sudo apt-get update -y
 sudo apt-get install -y curl unzip netcat-openbsd
 
@@ -8,7 +19,7 @@ sudo apt-get install -y curl unzip netcat-openbsd
 # installer (https://install.gizmosql.com). It handles arch/OS detection
 # and installs to ~/.local/bin.
 if ! command -v gizmosql_server >/dev/null 2>&1; then
-    curl -fsSL https://install.gizmosql.com/install.sh | sh
+    curl -fsSL https://install.gizmosql.com/install.sh | HOME="$HOME" sh
     if [ -d "$HOME/.local/bin" ]; then
         sudo install -m 0755 "$HOME/.local/bin/gizmosql_server" "$HOME/.local/bin/gizmosql_client" /usr/local/bin/
     fi
