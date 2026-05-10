@@ -12,6 +12,7 @@ start_gizmosql() {
     nohup gizmosql_server \
         --username ${GIZMOSQL_USER} \
         --database-filename clickbench.db \
+        --storage-version latest \
         --print-queries >> gizmosql_server.log 2>&1 &
 
     echo $! > "${PID_FILE}"
