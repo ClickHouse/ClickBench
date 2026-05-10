@@ -8,8 +8,11 @@ wget --continue --progress=dot:giga \
 # Idempotent: drop existing index.
 curl -sS -X DELETE "http://localhost:9200/hits" >/dev/null 2>&1 || true
 
-# Create index with explicit field types (mirrors ClickHouse).
-curl -sS -X PUT "http://localhost:9200/hits?pretty" \
+# Create index with explicit field types (mirrors ClickHouse). Use -f so a
+# non-2xx (e.g. cluster red → 503) aborts the load instead of silently
+# proceeding to bulk-load against a missing index, which spams thousands
+# of "Sent batch N - Warning: HTTP 503" lines and a NULL result.
+curl -sSf -X PUT "http://localhost:9200/hits?pretty" \
     -H 'Content-Type: application/json' -d @mapping.json >/dev/null
 
 # Bulk load NDJSON (gzipped) via the ES Bulk API.

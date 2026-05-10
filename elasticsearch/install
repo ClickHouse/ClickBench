@@ -21,7 +21,20 @@ sudo apt-get install -y elasticsearch
 # load.py uses requests.
 pip3 install --quiet --break-system-packages requests || pip3 install --quiet requests
 
-# Disable security; bind on all interfaces (matches original config).
+# Disable security; bind on all interfaces; run as a single-node cluster.
+#
+# The original config set `cluster.initial_master_nodes: ["clickbench"]`
+# without a matching `node.name: clickbench`. ES 9.0–9.3 tolerated the
+# mismatch (the bootstrap check would still pick the first master-eligible
+# node). 9.4 (released 2026-05-05) tightened bootstrap so the listed
+# initial master must match an existing `node.name`; otherwise the
+# cluster never elects a master, status stays red, and bulk writes get
+# rejected with HTTP 503 forever (we saw 200+ batches of 503 followed
+# by ES exiting and "Connection refused").
+#
+# `discovery.type: single-node` is the documented way to skip cluster
+# bootstrap entirely for a single-process install — equivalent to what
+# we want and resilient to whatever node.name systemd gives the node.
 cat <<EOF | sudo tee /etc/elasticsearch/elasticsearch.yml >/dev/null
 path.data: /var/lib/elasticsearch
 path.logs: /var/log/elasticsearch
@@ -30,7 +43,7 @@ xpack.security.enabled: false
 xpack.security.http.ssl.enabled: false
 xpack.security.transport.ssl.enabled: false
 
-cluster.initial_master_nodes: ["clickbench"]
+discovery.type: single-node
 http.host: 0.0.0.0
 EOF
 
