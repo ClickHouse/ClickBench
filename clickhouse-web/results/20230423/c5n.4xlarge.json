@@ -9,7 +9,6 @@
         "C++",
         "column-oriented",
         "ClickHouse derivative",
-        "serverless",
         "stateless",
         "historical"
     ],
