@@ -108,9 +108,4 @@ CREATE OR REPLACE TABLE hits
     PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID)
 )
 ENGINE = MergeTree
-SETTINGS
-    fsync_after_insert = 1, -- https://github.com/ClickHouse/ClickBench/issues/678
-    -- See clickhouse/create.sql for the rationale.
-    prewarm_mark_cache = 1,
-    prewarm_primary_key_cache = 1,
-    min_bytes_to_prewarm_caches = 1;
+SETTINGS fsync_after_insert = 1; -- https://github.com/ClickHouse/ClickBench/issues/678
