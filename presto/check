@@ -1,5 +1,16 @@
 #!/bin/bash
 set -e
 
-# Presto's coordinator emits "SERVER STARTED" when ready.
-sudo docker logs presto 2>&1 | grep -q "SERVER STARTED"
+# Old check grepped `docker logs presto` for "SERVER STARTED", but Docker
+# keeps the log on `docker stop`, so the line stayed visible forever and
+# check would never report the server as down. bench_wait_stopped then
+# timed out at 60 s, the loop drop_caches'd while the container was
+# technically still stopped, and the next ./start hit a coordinator
+# mid-init — every query then failed with "java.io.IOException: unexpected
+# end of stream".
+#
+# Probe the coordinator HTTP endpoint instead. /v1/info returns 200 with
+# "starting":false once the coordinator is fully up; while the container
+# is stopped the connection refuses, so check fails as it should.
+out=$(curl -sf http://localhost:8081/v1/info)
+echo "$out" | grep -q '"starting":false'
