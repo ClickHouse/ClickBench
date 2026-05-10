@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented"],
+    "tags": ["C++","column-oriented","DuckDB derivative"],
     "load_time": 299,
     "data_size": 26719825920,
     "result": [

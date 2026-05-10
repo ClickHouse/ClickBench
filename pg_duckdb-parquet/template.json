@@ -5,6 +5,7 @@
   "tuned": "no",
   "tags": [
     "column-oriented",
+    "DuckDB derivative",
     "PostgreSQL compatible",
     "stateless"
   ]

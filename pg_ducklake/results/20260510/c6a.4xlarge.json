@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["column-oriented","PostgreSQL compatible"],
+    "tags": ["column-oriented","DuckDB derivative","PostgreSQL compatible"],
     "load_time": 940,
     "data_size": 16495743960,
     "result": [

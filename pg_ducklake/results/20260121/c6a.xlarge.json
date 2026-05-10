@@ -8,6 +8,7 @@
     "tuned": "no",
     "tags": [
         "column-oriented",
+        "DuckDB derivative",
         "PostgreSQL compatible"
     ],
     "load_time": 132,

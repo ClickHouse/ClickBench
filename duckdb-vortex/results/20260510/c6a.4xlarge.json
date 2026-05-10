@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["Rust","column-oriented","embedded","stateless"],
+    "tags": ["Rust","column-oriented","DuckDB derivative","embedded","stateless"],
     "load_time": 139,
     "data_size": 15731820628,
     "result": [

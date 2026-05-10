@@ -6,6 +6,7 @@
   "tags": [
     "Rust",
     "column-oriented",
+    "DuckDB derivative",
     "embedded",
     "stateless"
   ]
