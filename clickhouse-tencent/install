@@ -10,9 +10,14 @@ if [ ! -x /usr/bin/clickhouse ]; then
     sudo clickhouse-tencent/clickhouse-common-static-25.9.1.1/usr/bin/clickhouse install --noninteractive
 fi
 
-# See clickhouse/install for the rationale — without this, ./check
-# passes on SELECT 1 before user-database parts are loaded, and the
-# first cold query stalls on the part loader.
+# See clickhouse/install for the rationale — without these, ./check
+# passes on SELECT 1 before user-database parts are loaded, and even
+# after parts load the per-table primary key and column sizes are
+# populated lazily on the first query.
 sudo mkdir -p /etc/clickhouse-server/config.d
-echo 'async_load_databases: false' \
-    | sudo tee /etc/clickhouse-server/config.d/async_load_databases.yaml >/dev/null
+sudo tee /etc/clickhouse-server/config.d/eager_load.yaml >/dev/null <<'EOF'
+async_load_databases: false
+merge_tree:
+  primary_key_lazy_load: 0
+  columns_and_secondary_indices_sizes_lazy_calculation: 0
+EOF
