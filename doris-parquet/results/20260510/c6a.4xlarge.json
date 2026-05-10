@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","MySQL compatible","ClickHouse derivative"],
+    "tags": ["C++","column-oriented","MySQL compatible","ClickHouse derivative","stateless"],
     "load_time": 82,
     "data_size": 14737666736,
     "result": [

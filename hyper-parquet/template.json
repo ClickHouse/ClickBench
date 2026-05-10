@@ -5,6 +5,7 @@
   "tuned": "no",
   "tags": [
     "C++",
-    "column-oriented"
+    "column-oriented",
+    "stateless"
   ]
 }

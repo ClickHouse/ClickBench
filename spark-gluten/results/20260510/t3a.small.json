@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["Java","C++","column-oriented","Spark derivative"],
+    "tags": ["Java","C++","column-oriented","Spark derivative","stateless"],
     "load_time": 0,
     "data_size": 14779976446,
     "result": [

@@ -6,7 +6,7 @@
     "proprietary": "yes",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented"],
+    "tags": ["C++","column-oriented","stateless"],
     "load_time": 2,
     "data_size": 14737666736,
     "result": [
