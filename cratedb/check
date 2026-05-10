@@ -1,4 +1,29 @@
 #!/bin/bash
 set -e
 
-psql -U crate -h localhost --no-password -t -c 'SELECT 1' >/dev/null
+# Wire protocol must be up.
+psql -U crate -h localhost --no-password -t -A -c 'SELECT 1' >/dev/null
+
+# CrateDB is Elasticsearch-derived: after a restart the PostgreSQL port
+# accepts SELECT 1 well before the underlying shards finish recovery, so
+# `bench_check_loop` declared the system "ready" while shards 0..N were
+# still in RECOVERING. The first few cold queries then failed with
+#
+#     ERROR: CurrentState[RECOVERING] operations only allowed when
+#            shard state is one of [POST_RECOVERY, STARTED]
+#
+# or
+#
+#     ERROR: [crate.hits] shard 3 is not available
+#
+# until recovery caught up — which is why the cratedb result on
+# c6a.metal had Q1..Q4 mostly NULL, then partial values, then real
+# numbers.
+#
+# Require every shard on the node to be in a queryable state before
+# saying "ready". Pre-load there are only system shards (which come up
+# in milliseconds); post-load the user table's shards must finish
+# recovery from disk before we let the bench timer start.
+not_ready=$(psql -U crate -h localhost --no-password -t -A -c \
+    "SELECT count(*) FROM sys.shards WHERE state NOT IN ('STARTED', 'POST_RECOVERY')")
+[ "$not_ready" = "0" ]
