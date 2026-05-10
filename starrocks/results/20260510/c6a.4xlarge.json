@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","MySQL compatible","lukewarm-cold-run"],
+    "tags": ["C++","column-oriented","MySQL compatible"],
     "load_time": 600,
     "data_size": 19946686919,
     "result": [

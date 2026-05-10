@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["Go","column-oriented","lukewarm-cold-run"],
+    "tags": ["Go","column-oriented"],
     "load_time": 1505,
     "data_size": 17206235024,
     "result": [

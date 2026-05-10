@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["Java","time-series","lukewarm-cold-run"],
+    "tags": ["Java","time-series"],
     "load_time": 360,
     "data_size": 72886999444,
     "result": [
