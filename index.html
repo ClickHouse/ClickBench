@@ -184,6 +184,22 @@
 
         .summary-bar-cell {
             width: 100%;
+            position: relative;
+        }
+
+        .summary-date {
+            position: absolute;
+            right: 0.5rem;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            font-size: 80%;
+            text-stroke: 2px var(--background-color);
+            -webkit-text-stroke: 2px var(--background-color);
+            paint-order: stroke fill;
+            pointer-events: none;
+            font-family: monospace;
         }
 
         .summary-bar {
@@ -986,6 +1002,13 @@ function renderSummary(filtered_data) {
             transparent 100%)`;
 
         td_bar.appendChild(bar);
+
+        if (elem.date) {
+            let date_span = document.createElement('span');
+            date_span.className = 'summary-date';
+            date_span.textContent = elem.date;
+            td_bar.appendChild(date_span);
+        }
 
         tr.appendChild(td_name);
         tr.appendChild(td_bar);
