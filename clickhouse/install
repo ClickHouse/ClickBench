@@ -5,3 +5,15 @@ if [ ! -x /usr/bin/clickhouse ]; then
     curl https://clickhouse.com/ | sh
     sudo ./clickhouse install --noninteractive
 fi
+
+# Force synchronous database load on startup. With the default
+# async_load_databases=1, the server binds its listen port and answers
+# SELECT 1 before user-database parts have finished loading — so the
+# lib's ./check passes, drop_caches+restart looks "ready", and the
+# first real query (e.g. Q40) then stalls 2–3 s waiting for the part
+# loader to finish. That manifested as a ~2 s floor on every cold run
+# on c6a.4xlarge (Q40 going 2.89 s -> 0.25 s here once parts are
+# already loaded when the cold timer starts).
+sudo mkdir -p /etc/clickhouse-server/config.d
+echo '<clickhouse><async_load_databases>false</async_load_databases></clickhouse>' \
+    | sudo tee /etc/clickhouse-server/config.d/async_load_databases.xml >/dev/null

@@ -9,3 +9,10 @@ if [ ! -x /usr/bin/clickhouse ]; then
     mkdir -p clickhouse-tencent && tar -xzf clickhouse-tencent.tgz -C clickhouse-tencent
     sudo clickhouse-tencent/clickhouse-common-static-25.9.1.1/usr/bin/clickhouse install --noninteractive
 fi
+
+# See clickhouse/install for the rationale — without this, ./check
+# passes on SELECT 1 before user-database parts are loaded, and the
+# first cold query stalls on the part loader.
+sudo mkdir -p /etc/clickhouse-server/config.d
+echo '<clickhouse><async_load_databases>false</async_load_databases></clickhouse>' \
+    | sudo tee /etc/clickhouse-server/config.d/async_load_databases.xml >/dev/null
