@@ -7,8 +7,7 @@
     "hardware": "cpu",
     "tuned": "no",
     "tags": [
-        "Rust",
-        "serverless"
+        "Rust"
     ],
     "load_time": 0,
     "data_size": 14779976446,
