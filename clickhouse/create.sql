@@ -108,4 +108,5 @@ CREATE OR REPLACE TABLE hits
     PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID)
 )
 ENGINE = MergeTree
-SETTINGS fsync_after_insert = 1; -- https://github.com/ClickHouse/ClickBench/issues/678
+SETTINGS fsync_after_insert = 1, -- https://github.com/ClickHouse/ClickBench/issues/678
+    auto_statistics_types = ''; -- per-column uniqState blobs grow with cardinality (~140 KB for high-card columns × ~30 such columns ≈ 4 MB per part of statistics.packed). Cold queries pay the load cost before cached_estimator is populated by the bg refresh task. Disabling stops the auto-stats files from being created on merge.
