@@ -6,7 +6,7 @@
     "proprietary": "yes",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["Go","search"],
+    "tags": ["Go","search","lukewarm-cold-run"],
     "load_time": 6520,
     "data_size": 28908278954,
     "result": [

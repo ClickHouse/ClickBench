@@ -6,7 +6,7 @@
     "proprietary": "yes",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","ClickHouse derivative"],
+    "tags": ["C++","column-oriented","ClickHouse derivative","lukewarm-cold-run"],
     "load_time": 275,
     "data_size": 15446501670,
     "result": [

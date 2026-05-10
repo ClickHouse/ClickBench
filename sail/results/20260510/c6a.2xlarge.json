@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["column-oriented","stateless"],
+    "tags": ["column-oriented"],
     "load_time": 4,
     "data_size": 14779976446,
     "result": [
