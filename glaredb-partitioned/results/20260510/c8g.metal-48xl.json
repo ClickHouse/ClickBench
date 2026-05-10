@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["Rust"],
+    "tags": ["Rust","stateless"],
     "load_time": 64,
     "data_size": 14737666736,
     "result": [

@@ -5,7 +5,8 @@
     "cluster_size": 1,
     "comment": "",
     "tags": [
-        "Rust"
+        "Rust",
+        "stateless"
     ],
     "load_time": 0,
     "data_size": 14779976446,

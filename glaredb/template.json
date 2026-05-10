@@ -4,6 +4,7 @@
   "hardware": "cpu",
   "tuned": "no",
   "tags": [
-    "Rust"
+    "Rust",
+    "stateless"
   ]
 }
