@@ -1,33 +1,23 @@
 #!/bin/bash
-# Reads a SQL query from stdin, runs it via the DuckDB Python module against
-# an in-memory hits table loaded fresh from hits.parquet for each invocation.
-# Stdout: query result (Python repr). Stderr: query runtime in fractional
-# seconds on the last line. Exit non-zero on error.
+# Reads a SQL query from stdin, dispatches to the running duckdb server.
+# Stdout: server response JSON (small).
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
 set -e
-
-# shellcheck disable=SC1091
-source myenv/bin/activate
 
 query=$(cat)
 
-python3 - "$query" <<'PY'
-import duckdb, sys, timeit
-query = sys.argv[1]
+tmp=$(mktemp)
+status=$(curl -sS -o "$tmp" -w '%{http_code}' \
+    -X POST --data-binary @- http://127.0.0.1:8000/query <<<"$query")
 
-con = duckdb.connect(':memory:')
-con.execute("PRAGMA enable_progress_bar;")
-con.execute("SET preserve_insertion_order = false;")
-con.execute(open("create.sql").read())
-con.execute(open("load.sql").read())
+body=$(cat "$tmp")
+rm -f "$tmp"
 
-start = timeit.default_timer()
-result = con.sql(query).fetchall()
-elapsed = timeit.default_timer() - start
+if [ "$status" != "200" ]; then
+    echo "query failed: HTTP $status: $body" >&2
+    exit 1
+fi
 
-# Result on stdout.
-for row in result:
-    print(row)
-
-# Timing on stderr — last line, fractional seconds.
-print(f"{elapsed:.4f}", file=sys.stderr)
-PY
+echo "$body"
+echo "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["elapsed"])' >&2
