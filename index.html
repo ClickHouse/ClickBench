@@ -29,7 +29,7 @@
 
             --summary-every-other-row-color: #F8F8F8;
             --highlight-color: #EEE;
-            --tag-hilite-color: #FF8800;
+            --tag-hilite-color: #FF88AA;
 
             --bar-color1: oklch(calc(0.9 - 0.6) 0.1 calc(90 - 60));
             --bar-color2: oklch(calc(0.9 - 0.4) 0.1 calc(90 - 40));
@@ -62,7 +62,7 @@
 
             --summary-every-other-row-color: #042e41;
             --highlight-color: #064663;
-            --tag-hilite-color: #FF8800;
+            --tag-hilite-color: #CC6600;
 
             --bar-color1: oklch(calc(0.4 + 0.6) 0.1 calc(250 - 180));
             --bar-color2: oklch(calc(0.4 + 0.4) 0.1 calc(250 - 120));
@@ -581,6 +581,14 @@ unique_systems.map(elem => {
     });
 });
 
+const tag_to_systems = {};
+data.forEach(d => {
+    (d.tags || []).forEach(t => {
+        if (!tag_to_systems[t]) tag_to_systems[t] = new Set();
+        tag_to_systems[t].add(d.system);
+    });
+});
+
 [... new Set(data.map(elem => elem.tags).flat())].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())).map(elem => {
     let selector = document.createElement('a');
     selector.className = 'selector selector-active';
@@ -588,6 +596,19 @@ unique_systems.map(elem => {
     types.appendChild(selector);
     selectors.type[elem] = true;
     selector.addEventListener('click', e => toggle(e, elem, selectors.type));
+
+    /// Highlighting summary rows and detail columns on hovering over a tag.
+    selector.addEventListener('mouseover', () => {
+        const tagged = tag_to_systems[elem] || new Set();
+        [...document.querySelectorAll('.summary-row')].map(row => {
+            row.className = tagged.has(row.dataset.system) ? 'summary-row summary-row-hilite' : 'summary-row' });
+        [...document.querySelectorAll('.th-entry')].map(th => {
+            th.className = tagged.has(th.dataset.system) ? 'th-entry th-entry-hilite' : 'th-entry' });
+    });
+    selector.addEventListener('mouseout', () => {
+        [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
+        [...document.querySelectorAll('.th-entry')].map(th => { th.className = 'th-entry' });
+    });
 });
 
 [... new Set(data.map(elem => elem.machine))].sort((a, b) => {
@@ -1010,7 +1031,7 @@ function render() {
         filtered_data = filtered_data.filter(elem => elem.data_size);
     }
     if (selectors.metric == 'load') {
-        filtered_data = filtered_data.filter(elem => elem.load_time >= 5);
+        filtered_data = filtered_data.filter(elem => elem.load_time >= 5 && !elem.tags.includes('stateless'));
     }
     if (selectors.metric == 'cold' || selectors.metric == 'combined' || selectors.metric == 'load') {
         filtered_data = filtered_data.filter(elem => !elem.tags.includes('in-memory'));
