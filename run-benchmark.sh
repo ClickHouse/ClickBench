@@ -21,11 +21,21 @@ awk -v sys="$system" -v repo="$repo" -v branch="$branch" -v t="$timeout" '
     print
 }' cloud-init.sh.in > cloud-init.sh
 
-# Retry on InsufficientInstanceCapacity. AWS returns this when the AZ
-# has no spare instances of the requested type — common for the larger
-# Graviton/AMD metal sizes during peak hours. Real config errors (bad
-# AMI id, missing IAM perms, malformed user-data, ...) still fail
-# immediately; only capacity errors get the retry.
+# Retry on transient capacity / quota errors:
+#   InsufficientInstanceCapacity — AZ has no spare of the requested type;
+#                                  common for bigger Graviton/AMD metal
+#                                  sizes during peak hours.
+#   VcpuLimitExceeded            — on-demand vCPU service quota hit
+#                                  (per-region cap, frees as other
+#                                  benchmarks finish).
+#   InstanceLimitExceeded        — older AWS error code for the same.
+#   MaxSpotInstanceCountExceeded — spot quota hit.
+#
+# All four resolve on their own once existing instances drain, so a
+# 60 s polling loop is the right shape. Real config errors (bad AMI id,
+# missing IAM perms, malformed user-data, ...) still fail immediately
+# so a fundamentally broken invocation doesn't loop forever.
+RETRY_RE='InsufficientInstanceCapacity|VcpuLimitExceeded|InstanceLimitExceeded|MaxSpotInstanceCountExceeded'
 while :; do
     out=$(AWS_PAGER='' aws ec2 run-instances --image-id $ami --instance-type $machine \
         --block-device-mappings 'DeviceName=/dev/sda1,Ebs={DeleteOnTermination=true,VolumeSize=500,VolumeType=gp2}' \
@@ -38,8 +48,9 @@ while :; do
         break
     fi
 
-    if printf '%s' "$out" | grep -q 'InsufficientInstanceCapacity'; then
-        printf 'run-instances: %s capacity unavailable, retrying in 60s...\n' "$machine" >&2
+    reason=$(printf '%s' "$out" | grep -oE "$RETRY_RE" | head -n1)
+    if [ -n "$reason" ]; then
+        printf 'run-instances: %s for %s, retrying in 60s...\n' "$reason" "$machine" >&2
         sleep 60
         continue
     fi
