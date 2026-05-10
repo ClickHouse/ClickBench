@@ -20,8 +20,12 @@ LANG="" ls -1 */results/*/*.json \
     | sort \
     | while read -r file
 do
-    if ! entry=$(jq --compact-output --arg src "$file" \
-        'select(.error == null) | select((.tags // []) | index("historical") | not) | . + {"source": $src}' \
+    # Derive the date from the YYYYMMDD directory name (3rd path segment) so we
+    # can fall back to it when the JSON itself omits .date.
+    date_dir=$(echo "$file" | awk -F/ '{print $3}')
+    date_iso="${date_dir:0:4}-${date_dir:4:2}-${date_dir:6:2}"
+    if ! entry=$(jq --compact-output --arg src "$file" --arg date "$date_iso" \
+        'select(.error == null) | select((.tags // []) | index("historical") | not) | (if (.date // "") == "" then .date = $date else . end) | . + {"source": $src}' \
         "$file"); then
         echo "Error in $file — skipping" >&2
         continue
