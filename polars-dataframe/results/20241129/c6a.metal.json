@@ -6,7 +6,8 @@
     "tuned": "no",
     "comment": "",
     "tags": [
-        "column-oriented"
+        "column-oriented",
+        "in-memory"
     ],
     "load_time": 2,
     "data_size": 14779976446,

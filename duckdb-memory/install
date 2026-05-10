@@ -1,14 +1,12 @@
 #!/bin/bash
 set -e
 
-# duckdb-memory uses the DuckDB Python module to fully materialize the dataset
-# in memory. We install it inside a venv so we don't pollute the system Python.
+sudo apt-get update -y
 sudo apt-get install -y python3-pip python3-venv
 
-if [ ! -x myenv/bin/python ]; then
+if [ ! -d myenv ]; then
     python3 -m venv myenv
 fi
 # shellcheck disable=SC1091
 source myenv/bin/activate
-pip install --upgrade pip
-pip install duckdb psutil
+pip install --quiet duckdb psutil fastapi uvicorn

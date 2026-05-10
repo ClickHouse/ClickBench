@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+./ursa client < create.sql
+
+# The download script puts hits_*.parquet in the cwd; move them to the
+# server's user_files dir so the file() table function can read them.
+sudo mv hits_*.parquet user_files/
+
+./ursa client \
+    --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" \
+    --max-insert-threads "$(( $(nproc) / 4 ))"
+
+sudo rm -f user_files/hits_*.parquet
+sync

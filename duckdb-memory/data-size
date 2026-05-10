@@ -1,14 +1,4 @@
 #!/bin/bash
 set -e
 
-if [ -f data-size.txt ]; then
-    cat data-size.txt
-else
-    # Fallback: measure now if `load` wasn't run.
-    # shellcheck disable=SC1091
-    source myenv/bin/activate
-    /usr/bin/time -v python3 memory.py 2> /tmp/memory.log
-    grep -F 'Maximum resident set size' /tmp/memory.log \
-        | grep -o -P '\d+$' \
-        | awk '{ print $1 * 1024 }'
-fi
+curl -sS http://127.0.0.1:8000/data-size | python3 -c 'import json,sys; print(json.load(sys.stdin)["bytes"])'

@@ -10,7 +10,8 @@
         "Rust",
         "stateless",
         "serverless",
-        "embedded"
+        "embedded",
+        "in-memory"
     ],
     "load_time": 0,
     "data_size": 14737666736,

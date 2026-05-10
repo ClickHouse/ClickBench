@@ -6,6 +6,7 @@
   "tags": [
     "C++",
     "column-oriented",
-    "embedded"
+    "embedded",
+    "in-memory"
   ]
 }
