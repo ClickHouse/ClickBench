@@ -12,6 +12,7 @@
 
   "load_time": 1829,
   "data_size": 26330791936,
+  "cost_per_hour": 52.16,
 
   "result": [
     [0.077,0.024,0.023],

@@ -9,6 +9,7 @@
     "tags": ["managed", "PostgreSQL compatible", "column-oriented", "managed"],
     "load_time": 321,
     "data_size": 19923251230,
+    "cost_per_hour": 23.3075,
     "result": [
         [0.200,0.065,0.018],
         [0.091,0.021,0.018],

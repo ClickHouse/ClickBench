@@ -10,6 +10,7 @@
     "tags": ["column-oriented","DuckDB derivative", "PostgreSQL compatible", "managed"],
     "load_time": 0,
     "data_size": 14779976446,
+    "cost_per_hour": 5.74,
 
 "result": [
 [0.062,0.072,0.069],
