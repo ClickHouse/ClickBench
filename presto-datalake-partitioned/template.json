@@ -1,0 +1,11 @@
+{
+  "system": "Presto (data lake, partitioned)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "column-oriented",
+    "stateless"
+  ]
+}

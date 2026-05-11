@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+
+if ! command -v tursodb >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y curl
+    curl --proto '=https' --tlsv1.2 -LsSf \
+        https://github.com/tursodatabase/turso/releases/download/v0.1.2-pre.4/turso_cli-installer.sh | sh
+fi
+
+export HOME=${HOME:=~}
+# shellcheck disable=SC1091
+source "$HOME/.turso/env"

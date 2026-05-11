@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+VERSION=33.0.0
+DRUID_DIR="apache-druid-${VERSION}"
+
+du -bcs "./${DRUID_DIR}/var" | awk '/total$/ {print $1}'

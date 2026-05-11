@@ -1,21 +1,6 @@
 #!/bin/bash
-
-# Install
-
-curl https://clickhouse.com/ | sh
-
-# Configure
-
-> clickhouse-local.yaml echo "
-filesystem_caches:
-    cache:
-        path: '/dev/shm/clickhouse/'
-        max_size_ratio_to_total_space: 0.9
-"
-
-# Run the queries
-
-./run.sh
-
-echo "Load time: 0"
-echo "Data size: 14737666736"
+# Thin shim — actual flow is in lib/benchmark-common.sh.
+# Data is read directly from S3, no local download.
+export BENCH_DOWNLOAD_SCRIPT=""
+export BENCH_DURABLE=yes
+exec ../lib/benchmark-common.sh

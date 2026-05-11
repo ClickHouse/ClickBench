@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+PINOT_VERSION=1.3.0
+PINOT_DIR="apache-pinot-$PINOT_VERSION-bin"
+
+"./${PINOT_DIR}/bin/pinot-admin.sh" AddTable \
+    -tableConfigFile offline_table.json \
+    -schemaFile schema.json -exec || true
+
+# Pinot was unable to load data as a single file without errors. Split.
+split -d --additional-suffix .tsv -n l/100 hits.tsv parts
+
+# Pinot can't load value '"tatuirovarki_redmond' so we need to fix this row.
+sed parts93.tsv -e 's/"tatuirovarki_redmond/tatuirovarki_redmond/g' -i
+
+# Fix path in YAML to local directory (idempotent — only replace placeholder).
+sed splitted.yaml -e "s|PWD_DIR_PLACEHOLDER|$PWD|g" -i
+sed local.yaml    -e "s|PWD_DIR_PLACEHOLDER|$PWD|g" -i
+
+"./${PINOT_DIR}/bin/pinot-admin.sh" LaunchDataIngestionJob -jobSpecFile splitted.yaml
+
+rm -f hits.tsv parts*.tsv
+sync

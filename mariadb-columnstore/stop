@@ -1,0 +1,2 @@
+#!/bin/bash
+sudo docker stop mcs1 >/dev/null 2>&1 || true

@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+# Note: this benchmark expects to run in eu-central-1 (Frankfurt) on an
+# n-class network-optimized machine (e.g. c5n.4xlarge), since data is fetched
+# over HTTP from a public ClickHouse-hosted dataset.
+
+if [ ! -x /usr/bin/clickhouse ]; then
+    curl https://clickhouse.com/ | sh
+    sudo ./clickhouse install --noninteractive
+fi
+
+# Cache directory used by the web disk.
+sudo mkdir -p /dev/shm/clickhouse
+sudo chown clickhouse:clickhouse /dev/shm/clickhouse

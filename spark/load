@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# Spark reads hits.parquet directly — nothing to "load". The parquet was
+# downloaded by the shared driver. Just sync.
+sync

@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+sudo systemctl start mongod
+
+# Enable the planner option used by ClickBench (covered whole-index scans).
+# This is a runtime parameter that resets on restart, so we re-apply on every
+# start. Wait briefly for the server to accept connections first.
+for _ in $(seq 1 60); do
+    if mongosh --quiet --eval "db.runCommand('ping').ok" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+mongosh --quiet --eval 'db.adminCommand({setParameter: 1, internalQueryPlannerGenerateCoveredWholeIndexScans: true});' >/dev/null

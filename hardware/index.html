@@ -17,17 +17,23 @@
 
             --link-color: #08F;
             --link-hover-color: #F40;
+            --hashed-link-lightness: 0.5;
 
             --selector-text-color: black;
             --selector-active-text-color: black;
             --selector-background-color: #EEE;
             --selector-active-background-color: #FFCB80;
+            --selector-passive-background-color: #EEDDCC;
             --selector-hover-text-color: black;
             --selector-hover-background-color: #FDB;
 
             --summary-every-other-row-color: #F8F8F8;
             --highlight-color: #EEE;
-            --bar-color: #FFCB80;
+
+            --bar-color1: oklch(calc(0.9 - 0.6) 0.1 calc(90 - 60));
+            --bar-color2: oklch(calc(0.9 - 0.4) 0.1 calc(90 - 40));
+            --bar-color3: oklch(calc(0.9 - 0.1) 0.1 calc(90 - 20));
+            --bar-color4: oklch(0.9 0.1 90);
 
             --tooltip-text-color: white;
             --tooltip-background-color: black;
@@ -43,17 +49,23 @@
 
             --link-color: #8CF;
             --link-hover-color: #FFF;
+            --hashed-link-lightness: 0.82;
 
             --selector-text-color: white;
             --selector-background-color: #444;
             --selector-active-text-color: white;
             --selector-active-background-color: #088;
+            --selector-passive-background-color: #566;
             --selector-hover-text-color: black;
             --selector-hover-background-color: white;
 
             --summary-every-other-row-color: #042e41;
             --highlight-color: #064663;
-            --bar-color: #088;
+
+            --bar-color1: oklch(calc(0.4 + 0.6) 0.1 calc(250 - 180));
+            --bar-color2: oklch(calc(0.4 + 0.4) 0.1 calc(250 - 120));
+            --bar-color3: oklch(calc(0.4 + 0.2) 0.1 calc(250 - 60));
+            --bar-color4: oklch(0.4 0.1 250);
 
             --tooltip-text-color: white;
             --tooltip-background-color: #444;
@@ -118,6 +130,11 @@
             background: var(--selector-active-background-color);
         }
 
+        .selector-passive {
+            color: var(--selector-active-text-color);
+            background: var(--selector-passive-background-color);
+        }
+
         a, a:visited {
             text-decoration: none;
             color: var(--link-color);
@@ -133,7 +150,7 @@
             background: var(--selector-background-color);
         }
 
-        .selector-active:hover {
+        .selector-active:hover, .selector-passive:hover {
             background: var(--selector-hover-background-color);
         }
 
@@ -153,8 +170,7 @@
 
         .summary-bar {
             height: 1rem;
-            background: var(--bar-color);
-            border-radius: 0 0.2rem 0.2rem 0;
+            width: 100%;
         }
 
         .summary-number {
@@ -237,7 +253,7 @@
             margin-left: -3rem;
         }
 
-        .note:hover .tooltip {
+        .note:hover .tooltip, .note:active .tooltip {
             visibility: visible;
         }
 
@@ -283,6 +299,12 @@
 
         .comments {
             font-size: 90%;
+        }
+
+        #scale_hint {
+            font-weight: normal;
+            font-size: 80%;
+            filter: contrast(10%);
         }
     </style>
     <script type="text/javascript">
@@ -552,7 +574,8 @@ const data = [
                 Machine
             </th>
             <th colspan="2">
-                Relative time (lower is better)
+                Relative time (lower is better).<br/>
+                <span id="scale_hint"></span>
             </th>
         </tr>
     </thead>
@@ -682,7 +705,7 @@ if (new_theme && new_theme != theme) {
 let machines = document.getElementById('selectors_machine');
 let types = document.getElementById('selectors_type');
 
-let unique_machines = [... new Set(data.map(elem => elem.machine))].sort();
+let unique_machines = [... new Set(data.map(elem => elem.machine))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
 
 function toggle(e, elem, selectors_map) {
     selectors_map[elem] = !selectors_map[elem];
@@ -722,7 +745,7 @@ unique_machines.map(elem => {
     });
 });
 
-[... new Set(data.map(elem => elem.tags).flat())].map(elem => {
+[... new Set(data.map(elem => elem.tags).flat())].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())).map(elem => {
     let selector = document.createElement('a');
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
@@ -753,6 +776,23 @@ function updateSelectors() {
     [...document.querySelectorAll('.query-checkbox')].map((elem, i) => { elem.checked = selectors.queries[i] });
 }
 
+function findPassiveSelectors(filtered_data) {
+    function process(name, container) {
+        const filtered = new Set(filtered_data.map(elem => elem[name]).flat().map(x => String(x)));
+        for (let elem of container.childNodes) {
+            if (elem.tagName == 'A') {
+                if (elem.classList.contains('selector-active') && !filtered.has(elem.innerText)) {
+                    elem.className = 'selector selector-passive';
+                } else if (elem.classList.contains('selector-passive') && filtered.has(elem.innerText)) {
+                    elem.className = 'selector selector-active';
+                }
+            }
+        }
+    }
+    process('machine', machines);
+    process('tags', types);
+}
+
 function clearElement(elem)
 {
     while (elem.firstChild) {
@@ -775,6 +815,17 @@ function addNote(text) {
 
     note.appendChild(tooltip);
     return note;
+}
+
+function nameToColor(str) {
+    let x = 0;
+    for (let i = 0; i < str.length; i++) {
+        x += str.charCodeAt(i);
+        x *= 0xff51afd7;
+        x ^= x >> 17;
+    }
+
+    return 60 + Math.abs(x % 240);
 }
 
 function renderSummary(filtered_data) {
@@ -818,7 +869,7 @@ function renderSummary(filtered_data) {
     });
 
     const sorted_indices = [...summaries.keys()].sort((a, b) => summaries[a] - summaries[b]);
-    const max_ratio = summaries[sorted_indices[sorted_indices.length - 1]];
+    const max_ratio = 10000;
 
     sorted_indices.map(idx => {
         const elem = filtered_data[idx];
@@ -835,6 +886,7 @@ function renderSummary(filtered_data) {
             let link = document.createElement('a');
             link.appendChild(document.createTextNode(`${elem.machine}`));
             link.href = "https://github.com/ClickHouse/ClickBench/blob/main/hardware/" + elem.source;
+            link.style.color = `oklch(var(--hashed-link-lightness) 0.2018 ${nameToColor(elem.machine.split(' ')[0])})`;
             td_name.appendChild(link);
         } else {
             td_name.appendChild(document.createTextNode(elem.machine));
@@ -844,7 +896,7 @@ function renderSummary(filtered_data) {
         td_name.appendChild(document.createTextNode(': '));
 
         const ratio = summaries[idx];
-        const percentage = summaries[idx] / max_ratio * 100;
+        const percentage = ratio / max_ratio * 100;
 
         let td_number = document.createElement('td');
         td_number.className = 'summary-number';
@@ -859,7 +911,17 @@ function renderSummary(filtered_data) {
         let bar = document.createElement('div');
 
         bar.className = `summary-bar`;
-        bar.style.width = `${percentage}%`;
+        bar.style.background = `linear-gradient(to right,
+            var(--bar-color1) 0%,
+            var(--bar-color1) ${Math.min(100, percentage)}%,
+            var(--bar-color2) ${Math.min(100, percentage)}%,
+            var(--bar-color2) ${Math.min(100, percentage * 10)}%,
+            var(--bar-color3) ${Math.min(100, percentage * 10)}%,
+            var(--bar-color3) ${Math.min(100, percentage * 100)}%,
+            var(--bar-color4) ${Math.min(100, percentage * 100)}%,
+            var(--bar-color4) ${Math.min(100, percentage * 1000)}%,
+            transparent ${Math.min(100, percentage * 1000)}%,
+            transparent 100%)`;
 
         td_bar.appendChild(bar);
 
@@ -1017,28 +1079,117 @@ function render() {
 
         details_body.appendChild(tr);
     }
+
+    findPassiveSelectors(filtered_data);
+
+    /// The small hint below column heading "Relative time (lower is better)"
+    document.getElementById("scale_hint").textContent = 'Different colors on the bar chart represent the same values shown at different scales (1x, 10x, 100x zoom)';
+}
+
+function isSubsequence(str, subseq) {
+    let i = 0, j = 0;
+    while (i < str.length && j < subseq.length) {
+        if (str[i] === subseq[j]) j++;
+        i++;
+    }
+    return j === subseq.length;
+}
+
+/// A greedy algorithm to find a unique subsequence of a string in a set. Does not necessarily the smallest one.
+function findUniqueSubsequence(target, others) {
+    const num_matches = others.filter(s => isSubsequence(s, target)).length;
+    let num_failures = 0;
+    for (let i = 0; i < 1000; ++i) {
+        /// We cut characters from pseudorandom places, this gives shorter subsequences than cutting prefix/suffix.
+        const cut_idx = (i + 123) * 67601 % target.length;
+        const cut = target.substring(0, cut_idx) + target.substring(cut_idx + 1, target.length);
+        if (others.filter(s => isSubsequence(s, cut)).length == num_matches) {
+            target = cut;
+            num_failures = 0;
+        } else {
+            ++num_failures;
+            if (num_failures == target.length) {
+                break;
+            }
+        }
+    }
+    return target;
+}
+
+function encodedStrings(strings) {
+    let res = {};
+    strings.forEach(s => { res[s] = findUniqueSubsequence(s, strings) });
+    return res;
+}
+
+let encoded_keys = {};
+function encodeState(selectors) {
+    return Object.keys(selectors).map(k => {
+        let encoded_str = k + '=';
+        if (typeof selectors[k] === 'string') {
+            return encoded_str + selectors[k];
+        }
+        if (!encoded_keys[k]) {
+            encoded_keys[k] = encodedStrings(Object.keys(selectors[k]));
+        }
+        const count_total = Object.values(selectors[k]).length;
+        const count_selected = Object.values(selectors[k]).filter(x => x).length;
+        if (count_selected * 2 <= count_total) {
+            encoded_str += '+' + Object.keys(selectors[k]).filter(x => selectors[k][x]).map(x => encoded_keys[k][x]).join('|');
+        } else {
+            encoded_str += '-' + Object.keys(selectors[k]).filter(x => !selectors[k][x]).map(x => encoded_keys[k][x]).join('|');
+        }
+        return encoded_str;
+    }).join('&');
+}
+
+function decodeState(state) {
+    let decoded = {};
+    state.split('&').forEach(kv => {
+        let [k, v] = kv.split('=');
+
+        if (typeof selectors[k] === 'string') {
+            decoded[k] = v;
+        } else if (typeof selectors[k] === 'object') {
+            decoded[k] = Array.isArray(selectors[k]) ? [] : {};
+
+            const filtered = v.substring(1, v.length).split('|').filter(s => s !== '')
+                .map(substr => Object.keys(selectors[k]).filter(x => isSubsequence(x, decodeURIComponent(substr))).reduce((a, b) => a.length <= b.length ? a : b));
+
+            if (v.startsWith('+')) {
+                Object.keys(selectors[k]).forEach(x => {
+                    decoded[k][x] = filtered.includes(x);
+                });
+            } else if (v.startsWith('-')) {
+                Object.keys(selectors[k]).forEach(x => {
+                    decoded[k][x] = !filtered.includes(x);
+                });
+            }
+        }
+    });
+    return decoded;
 }
 
 function updateHistory() {
     history.pushState(selectors, '',
-        window.location.pathname + (window.location.search || '') + '#' + btoa(JSON.stringify(selectors)));
+        window.location.pathname + (window.location.search || '') + '#' + encodeState(selectors));
 }
 
 window.onpopstate = function(event) {
     if (!event.state) { return; }
     selectors = event.state;
-    render();
     updateSelectors();
+    render();
 };
 
 if (window.location.hash) {
     try {
-        selectors = JSON.parse(atob(window.location.hash.substring(1)));
+        selectors = decodeState(decodeURIComponent(window.location.hash.substring(1)));
     } catch {}
 }
 
-render();
 updateSelectors();
+render();
 
 </script>
 </body>

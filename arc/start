@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e
+
+ARC_URL="${ARC_URL:-http://localhost:8000}"
+
+# Idempotent: if already up and we have a working token, do nothing.
+if [ -f arc_token.txt ]; then
+    TOKEN=$(cat arc_token.txt)
+    if curl -sf "$ARC_URL/health" -H "x-api-key: $TOKEN" >/dev/null 2>&1; then
+        exit 0
+    fi
+fi
+
+sudo systemctl start arc
+
+# Wait for the HTTP endpoint to come up before we try to read the token.
+for _ in $(seq 1 30); do
+    if curl -sf "$ARC_URL/health" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+# On first start, Arc prints its admin token to its journal; capture it.
+if [ ! -f arc_token.txt ] || \
+   ! curl -sf "$ARC_URL/health" -H "x-api-key: $(cat arc_token.txt)" >/dev/null 2>&1; then
+    TOKEN=$(sudo journalctl -u arc --no-pager \
+        | grep -oP '(?:Initial admin API token|Admin API token): \K[^\s]+' \
+        | head -1)
+    if [ -z "$TOKEN" ]; then
+        echo "Error: Could not extract Arc admin API token from journal" >&2
+        exit 1
+    fi
+    echo "$TOKEN" > arc_token.txt
+fi

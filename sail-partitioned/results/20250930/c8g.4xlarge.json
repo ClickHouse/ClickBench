@@ -1,0 +1,12 @@
+{
+    "system": "Sail (Parquet, partitioned)",
+    "date": "2025-09-30",
+    "machine": "c8g.4xlarge",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "no",
+    "tags": [
+        "column-oriented",
+        "stateless"
+    ]
+}

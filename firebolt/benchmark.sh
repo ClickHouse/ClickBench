@@ -3,8 +3,7 @@
 # Download the hits.parquet file
 echo "Downloading dataset..."
 rm -rf data
-mkdir -p data
-wget -P data --continue --progress=dot:giga "https://datasets.clickhouse.com/hits_compatible/hits.parquet"
+../lib/download-hits-parquet-single data
 
 # Start the container
 sudo apt-get install -y docker.io jq
@@ -16,10 +15,25 @@ sudo docker run -dit --name firebolt-core --rm \
     -v ./data/:/firebolt-core/clickbench \
     ghcr.io/firebolt-db/firebolt-core:preview-rc
 
-# Wait until Firebolt is ready
+# Wait until Firebolt is ready. The old loop just did
+#     curl -s ... > /dev/null && break
+# which treated any HTTP response as success, including the JSON error
+# body
+#     {"errors":[{"description":"Cluster not yet healthy: ..."}]}
+# that Firebolt returns at HTTP 200 while the container is still
+# warming up. The loop exited on the first reply, the next
+# CREATE TABLE / queries all hit the same "Cluster not yet healthy"
+# error, and every query got recorded as "elapsed":0.0 — sink.parser
+# then rejected the run for having no timing > 0.1 s, which is why
+# Firebolt stopped showing up in sink.results after 2026-02-21
+# despite the bench completing 43/43 each time.
 for _ in {1..600}
 do
-    curl -s "http://localhost:3473/" --data-binary "SELECT 'Firebolt is ready';" > /dev/null && break
+    if curl -sS "http://localhost:3473/" \
+            --data-binary "SELECT 'Firebolt is ready';" 2>/dev/null \
+            | grep -q "Firebolt is ready"; then
+        break
+    fi
     sleep 1
 done
 

@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+sudo apt-get update -y
+sudo apt-get install -y python3-pip python3-venv openjdk-17-jdk wget
+
+if [ ! -d myenv ]; then
+    python3 -m venv myenv
+fi
+# shellcheck disable=SC1091
+source myenv/bin/activate
+pip install -q pyspark==3.5.2 psutil
+
+GLUTEN_JAR_URL='https://github.com/apache/incubator-gluten/releases/download/v1.4.0/apache-gluten-1.4.0-incubating-bin-spark35.tar.gz'
+if [ ! -f gluten.jar ]; then
+    wget --continue --progress=dot:giga "$GLUTEN_JAR_URL" -O gluten.gz
+    tar -xzf gluten.gz
+    mv gluten-velox-bundle-spark3.5_2.12-linux_amd64-1.4.0.jar gluten.jar
+    rm -f gluten.gz
+fi

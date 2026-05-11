@@ -1,0 +1,5 @@
+#!/bin/bash
+# hyper-parquet queries the parquet files directly via a temp external table
+# defined in create.sql, recreated per query. No persistent DB to load.
+set -e
+sync

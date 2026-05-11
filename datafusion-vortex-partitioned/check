@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+[ -x vortex/target/release/query_bench ]

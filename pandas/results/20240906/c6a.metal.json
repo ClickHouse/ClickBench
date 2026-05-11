@@ -1,0 +1,22 @@
+{
+    "system": "Pandas (DataFrame)",
+    "date": "2024-09-06",
+    "machine": "c6a.metal",
+    "cluster_size": 1,
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "no",
+    "comment": "",
+    "tags": [
+        "C++",
+        "column-oriented",
+        "embedded",
+        "stateless",
+        "dataframe",
+        "in-memory",
+        "lukewarm-cold-run"
+    ],
+    "load_time": 0,
+    "data_size": 470000128,
+    "result": []
+}

@@ -1,0 +1,23 @@
+#!/bin/bash
+# YDB cluster lifecycle is managed by ansible/systemd on remote nodes.
+# After ./install the cluster is already running; we just verify connectivity.
+set -e
+
+source benchmark_variables.sh
+START_DIR=$(pwd)
+export YDB_PASSWORD=password
+
+cert_dir=$(find "$START_DIR/ydb-ansible-examples/TLS/CA/certs" -maxdepth 1 -type d -not -path "." -printf "%T@ %p\n" 2>/dev/null \
+    | sort -n | tail -n 1 | cut -d' ' -f2-)
+
+# Idempotent: if cluster responds, exit success.
+if echo "$YDB_PASSWORD" | "$START_DIR/ydb-ansible-examples/3-nodes-mirror-3-dc/files/ydb" \
+    -e "grpcs://$host1$host_suffix:2135" -d /Root/database \
+    --ca-file "$cert_dir/ca.crt" --user root yql -s 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Cluster is provisioned via ansible during install. Re-running the playbook
+# is the most reliable way to bring all nodes up.
+cd "$START_DIR/ydb-ansible-examples/3-nodes-mirror-3-dc/"
+ansible-playbook ydb_platform.ydb.initial_setup --skip-tags checks

@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eu
+
+wget --continue --progress=dot:giga \
+    'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+pigz -d -f hits.json.gz
+
+python3 send_datawithactionline.py
+
+rm -f hits.json
+sync

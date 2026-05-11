@@ -2,9 +2,32 @@
 
 # This is the script for cloud-init, to run on a VM in unattended fashion. See run-benchmark.sh
 
+# Cloud-init runs scripts as root with no HOME exported. Tools that follow
+# XDG-ish conventions (DuckDB extensions in ~/.duckdb, the GizmoSQL one-line
+# installer that runs `sh -u`, etc.) then fall over with messages like
+# `Can't find the home directory at ''` or `HOME: parameter not set`. Set it
+# once here so every per-system install/start/load/query inherits it.
+export HOME="${HOME:-/root}"
+
+# c6a.4xlarge has 32 GB RAM with no swap. Loading the 75 GB hits.tsv into
+# row-oriented databases (mysql, mariadb, postgres, mongodb, cratedb) and
+# in-process Python servers (pandas/polars/duckdb-dataframe) fills RAM
+# during ingest, and earlyoom (or the kernel OOM killer) then takes the
+# DB out and the run dies with `Lost connection during query`. A 16 GB
+# swapfile gives those loads the headroom they need without affecting
+# query-time numbers (queries don't touch swap once the data is hot).
+if [ ! -f /swapfile ]; then
+    fallocate -l 16G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile >/dev/null
+    swapon /swapfile
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y wget curl git jq
+apt-get install -y wget curl git jq earlyoom
+
+systemctl enable --now earlyoom
 
 git clone --depth 1 'https://github.com/@repo@.git' --branch '@branch@' ClickBench
 cd ClickBench/@system@
@@ -23,7 +46,14 @@ jq -c -r '.tags' template.json | tee -a log
 echo -n 'Disk usage before: ' | tee -a log
 df -B1 / | tail -n1 | awk '{ print $3 }' | tee -a log
 
-timeout 20000 ./benchmark.sh 2>&1 | tee -a log
+# 20000s (~5.5h) wasn't enough for slow OLTP-style systems (mysql,
+# mariadb, postgresql{,-indexed,-orioledb}, mongodb, cratedb, sqlite,
+# turso, timescaledb-no-columnstore, mysql-myisam) — they hit the
+# timeout mid-load or a few queries in. 36000s (10h) clears the
+# observed worst case while still capping a runaway run. Override at
+# render time on the operator side by exporting `timeout` before
+# run-benchmark.sh.
+timeout @timeout@ ./benchmark.sh 2>&1 | tee -a log
 
 echo -n 'Disk usage after: ' | tee -a log
 df -B1 / | tail -n1 | awk '{ print $3 }' | tee -a log

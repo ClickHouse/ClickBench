@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# A search-API hit is sufficient — `/api/health` may not exist on this version.
+curl -sSf -o /dev/null --max-time 5 'http://localhost:5122/' \
+    || curl -sSf -o /dev/null --max-time 5 'http://localhost:8081/'

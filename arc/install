@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+# Install Arc from a .deb release. Idempotent.
+if dpkg -l arc 2>/dev/null | grep -q '^ii '; then
+    exit 0
+fi
+
+ARC_VERSION=$(curl -s https://api.github.com/repos/Basekick-Labs/arc/releases/latest \
+    | grep -oP '"tag_name": "v\K[^"]+')
+if [ -z "$ARC_VERSION" ]; then
+    echo "Error: Could not fetch latest Arc version from GitHub" >&2
+    exit 1
+fi
+
+ARCH=$(uname -m)
+if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+    DEB_FILE="arc_${ARC_VERSION}_arm64.deb"
+else
+    DEB_FILE="arc_${ARC_VERSION}_amd64.deb"
+fi
+DEB_URL="https://github.com/Basekick-Labs/arc/releases/download/v${ARC_VERSION}/${DEB_FILE}"
+
+if [ ! -f "$DEB_FILE" ]; then
+    wget -q "$DEB_URL" -O "$DEB_FILE"
+fi
+
+sudo dpkg -i "$DEB_FILE" || sudo apt-get install -f -y

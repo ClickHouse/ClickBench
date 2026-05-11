@@ -1,0 +1,154 @@
+version: 0.8
+
+index_id: hits
+
+doc_mapping:
+  mode: strict
+  timestamp_field: EventTime
+  # Q37-Q43 all filter `CounterID = 62`. Tagging CounterID writes its
+  # per-split value set into the metastore so the searcher can prune whole
+  # splits before opening them — the closest analogue to Elasticsearch's
+  # `index.sort` early-termination for these queries.
+  tag_fields: [CounterID]
+  field_mappings:
+    - {name: WatchID, type: i64, indexed: true, fast: true}
+    - {name: JavaEnable, type: i64, indexed: true, fast: true}
+    - {name: Title, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: GoodEvent, type: i64, indexed: true, fast: true}
+    - name: EventTime
+      type: datetime
+      input_formats: ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", unix_timestamp, rfc3339]
+      output_format: unix_timestamp_secs
+      indexed: true
+      fast: true
+      fast_precision: seconds
+    - name: EventDate
+      type: datetime
+      input_formats: ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", unix_timestamp, rfc3339]
+      output_format: unix_timestamp_secs
+      indexed: true
+      fast: true
+      fast_precision: seconds
+    - {name: CounterID, type: i64, indexed: true, fast: true}
+    - {name: ClientIP, type: i64, indexed: true, fast: true}
+    - {name: RegionID, type: i64, indexed: true, fast: true}
+    - {name: UserID, type: i64, indexed: true, fast: true}
+    - {name: CounterClass, type: i64, indexed: true, fast: true}
+    - {name: OS, type: i64, indexed: true, fast: true}
+    - {name: UserAgent, type: i64, indexed: true, fast: true}
+    - {name: URL, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: Referer, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: IsRefresh, type: i64, indexed: true, fast: true}
+    - {name: RefererCategoryID, type: i64, indexed: true, fast: true}
+    - {name: RefererRegionID, type: i64, indexed: true, fast: true}
+    - {name: URLCategoryID, type: i64, indexed: true, fast: true}
+    - {name: URLRegionID, type: i64, indexed: true, fast: true}
+    - {name: ResolutionWidth, type: i64, indexed: true, fast: true}
+    - {name: ResolutionHeight, type: i64, indexed: true, fast: true}
+    - {name: ResolutionDepth, type: i64, indexed: true, fast: true}
+    - {name: FlashMajor, type: i64, indexed: true, fast: true}
+    - {name: FlashMinor, type: i64, indexed: true, fast: true}
+    - {name: FlashMinor2, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: NetMajor, type: i64, indexed: true, fast: true}
+    - {name: NetMinor, type: i64, indexed: true, fast: true}
+    - {name: UserAgentMajor, type: i64, indexed: true, fast: true}
+    - {name: UserAgentMinor, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: CookieEnable, type: i64, indexed: true, fast: true}
+    - {name: JavascriptEnable, type: i64, indexed: true, fast: true}
+    - {name: IsMobile, type: i64, indexed: true, fast: true}
+    - {name: MobilePhone, type: i64, indexed: true, fast: true}
+    - {name: MobilePhoneModel, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: Params, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: IPNetworkID, type: i64, indexed: true, fast: true}
+    - {name: TraficSourceID, type: i64, indexed: true, fast: true}
+    - {name: SearchEngineID, type: i64, indexed: true, fast: true}
+    - {name: SearchPhrase, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: AdvEngineID, type: i64, indexed: true, fast: true}
+    - {name: IsArtifical, type: i64, indexed: true, fast: true}
+    - {name: WindowClientWidth, type: i64, indexed: true, fast: true}
+    - {name: WindowClientHeight, type: i64, indexed: true, fast: true}
+    - {name: ClientTimeZone, type: i64, indexed: true, fast: true}
+    - name: ClientEventTime
+      type: datetime
+      input_formats: ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", unix_timestamp, rfc3339]
+      output_format: unix_timestamp_secs
+      indexed: true
+      fast: true
+      fast_precision: seconds
+    - {name: SilverlightVersion1, type: i64, indexed: true, fast: true}
+    - {name: SilverlightVersion2, type: i64, indexed: true, fast: true}
+    - {name: SilverlightVersion3, type: i64, indexed: true, fast: true}
+    - {name: SilverlightVersion4, type: i64, indexed: true, fast: true}
+    - {name: PageCharset, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: CodeVersion, type: i64, indexed: true, fast: true}
+    - {name: IsLink, type: i64, indexed: true, fast: true}
+    - {name: IsDownload, type: i64, indexed: true, fast: true}
+    - {name: IsNotBounce, type: i64, indexed: true, fast: true}
+    - {name: FUniqID, type: i64, indexed: true, fast: true}
+    - {name: OriginalURL, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: HID, type: i64, indexed: true, fast: true}
+    - {name: IsOldCounter, type: i64, indexed: true, fast: true}
+    - {name: IsEvent, type: i64, indexed: true, fast: true}
+    - {name: IsParameter, type: i64, indexed: true, fast: true}
+    - {name: DontCountHits, type: i64, indexed: true, fast: true}
+    - {name: WithHash, type: i64, indexed: true, fast: true}
+    - {name: HitColor, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - name: LocalEventTime
+      type: datetime
+      input_formats: ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", unix_timestamp, rfc3339]
+      output_format: unix_timestamp_secs
+      indexed: true
+      fast: true
+      fast_precision: seconds
+    - {name: Age, type: i64, indexed: true, fast: true}
+    - {name: Sex, type: i64, indexed: true, fast: true}
+    - {name: Income, type: i64, indexed: true, fast: true}
+    - {name: Interests, type: i64, indexed: true, fast: true}
+    - {name: Robotness, type: i64, indexed: true, fast: true}
+    - {name: RemoteIP, type: i64, indexed: true, fast: true}
+    - {name: WindowName, type: i64, indexed: true, fast: true}
+    - {name: OpenerName, type: i64, indexed: true, fast: true}
+    - {name: HistoryLength, type: i64, indexed: true, fast: true}
+    - {name: BrowserLanguage, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: BrowserCountry, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: SocialNetwork, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: SocialAction, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: HTTPError, type: i64, indexed: true, fast: true}
+    - {name: SendTiming, type: i64, indexed: true, fast: true}
+    - {name: DNSTiming, type: i64, indexed: true, fast: true}
+    - {name: ConnectTiming, type: i64, indexed: true, fast: true}
+    - {name: ResponseStartTiming, type: i64, indexed: true, fast: true}
+    - {name: ResponseEndTiming, type: i64, indexed: true, fast: true}
+    - {name: FetchTiming, type: i64, indexed: true, fast: true}
+    - {name: SocialSourceNetworkID, type: i64, indexed: true, fast: true}
+    - {name: SocialSourcePage, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: ParamPrice, type: i64, indexed: true, fast: true}
+    - {name: ParamOrderID, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: ParamCurrency, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: ParamCurrencyID, type: i64, indexed: true, fast: true}
+    - {name: OpenstatServiceName, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: OpenstatCampaignID, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: OpenstatAdID, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: OpenstatSourceID, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: UTMSource, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: UTMMedium, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: UTMCampaign, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: UTMContent, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: UTMTerm, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: FromTag, type: text, tokenizer: raw, record: basic, fast: {normalizer: raw}}
+    - {name: HasGCLID, type: i64, indexed: true, fast: true}
+    - {name: RefererHash, type: i64, indexed: true, fast: true}
+    - {name: URLHash, type: i64, indexed: true, fast: true}
+    - {name: CLID, type: i64, indexed: true, fast: true}
+
+  store_source: false
+
+indexing_settings:
+  commit_timeout_secs: 30
+  merge_policy:
+    type: stable_log
+    merge_factor: 10
+    max_merge_factor: 12
+
+search_settings:
+  default_search_fields: []

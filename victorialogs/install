@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eu
+
+RELEASE_VERSION=${VICTORIALOGS_VERSION:-v1.10.1-victorialogs}
+
+if [ ! -x ./victoria-logs-prod ]; then
+    arch=$(dpkg --print-architecture)
+    wget --continue --progress=dot:giga \
+        "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${RELEASE_VERSION}/victoria-logs-linux-${arch}-${RELEASE_VERSION}.tar.gz"
+    tar xzf "victoria-logs-linux-${arch}-${RELEASE_VERSION}.tar.gz"
+fi

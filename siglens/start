@@ -1,0 +1,12 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: ports 5122 (search API) and 8081 (ingest API) are siglens'.
+if curl -sSf 'http://localhost:5122/api/health' >/dev/null 2>&1 \
+   || curl -sSf 'http://localhost:8081' >/dev/null 2>&1; then
+    exit 0
+fi
+
+cd siglens
+nohup ./siglens > siglens.out 2>&1 &
+disown

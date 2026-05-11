@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+curl -sS -f http://localhost:7280/api/v1/version >/dev/null

@@ -3,8 +3,7 @@
 # Download the hits.parquet file
 echo "Downloading dataset..."
 rm -rf data
-mkdir -p data
-wget -P data --continue --progress=dot:giga "https://datasets.clickhouse.com/hits_compatible/hits.parquet"
+../lib/download-hits-parquet-single data
 
 # Start the container
 sudo apt-get install -y docker.io jq
@@ -16,10 +15,15 @@ sudo docker run -dit --name firebolt-core --rm \
     -v ./data/:/firebolt-core/clickbench \
     ghcr.io/firebolt-db/firebolt-core:preview-rc
 
-# Wait until Firebolt is ready
+# See firebolt/benchmark.sh — the old curl-and-break pattern accepted the
+# "Cluster not yet healthy" JSON error body as success.
 for _ in {1..600}
 do
-    curl -sS "http://localhost:3473/" --data-binary "SELECT 'Firebolt is ready';" > /dev/null && break
+    if curl -sS "http://localhost:3473/" \
+            --data-binary "SELECT 'Firebolt is ready';" 2>/dev/null \
+            | grep -q "Firebolt is ready"; then
+        break
+    fi
     sleep 1
 done
 

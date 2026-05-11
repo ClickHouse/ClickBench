@@ -1,0 +1,4 @@
+#!/bin/bash
+# octosql queries hits.parquet directly. No persistent DB to load.
+set -e
+sync

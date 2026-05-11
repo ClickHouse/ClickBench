@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+
+VERSION=33.0.0
+DRUID_DIR="apache-druid-${VERSION}"
+
+# Idempotent: if router is responsive, do nothing.
+if curl -sf -o /dev/null http://localhost:8888/status 2>/dev/null; then
+    exit 0
+fi
+
+# Druid launcher does not start Druid as a daemon. Run it in background, with
+# its own session so the start script can exit and leave Druid running.
+nohup "./${DRUID_DIR}/bin/start-single-server-medium" \
+    >> druid.log 2>&1 < /dev/null &
+disown

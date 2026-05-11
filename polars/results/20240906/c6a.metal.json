@@ -1,0 +1,59 @@
+{
+    "system": "Polars (Parquet)",
+    "date": "2024-09-06",
+    "machine": "c6a.metal",
+    "cluster_size": 1,
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "no",
+    "comment": "",
+    "tags": [
+        "column-oriented",
+        "lukewarm-cold-run",
+        "stateless"
+    ],
+    "load_time": 2,
+    "data_size": 470000128,
+    "result": [
+        [
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.016,
+            0.003,
+            0.002
+        ],
+        [
+            0.003,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.011,
+            0.008,
+            0.008
+        ],
+        [
+            0.02,
+            0.021,
+            0.02
+        ],
+        [
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            null,
+            null,
+            null
+        ]
+    ]
+}

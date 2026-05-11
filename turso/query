@@ -1,0 +1,27 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via tursodb against mydb.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (from `time`).
+set -e
+
+export HOME=${HOME:=~}
+# shellcheck disable=SC1091
+source "$HOME/.turso/env"
+
+query=$(cat)
+
+TIMEFORMAT='%R'
+{ time tursodb mydb <<< "$query" 1>/tmp/turso.out.$$ 2>/tmp/turso.err.$$; } 2>/tmp/turso.time.$$ || status=$?
+status=${status:-0}
+
+cat /tmp/turso.out.$$
+if [ "$status" -ne 0 ]; then
+    cat /tmp/turso.err.$$ >&2
+    rm -f /tmp/turso.out.$$ /tmp/turso.err.$$ /tmp/turso.time.$$
+    exit "$status"
+fi
+
+cat /tmp/turso.err.$$ >&2
+cat /tmp/turso.time.$$ >&2
+
+rm -f /tmp/turso.out.$$ /tmp/turso.err.$$ /tmp/turso.time.$$

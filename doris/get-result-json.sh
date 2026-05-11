@@ -1,12 +1,15 @@
 #!/bin/bash
 
 # set -x
-if [[ ! -d results ]]; then mkdir results; fi
+DATE=$(date -u +%Y-%m-%d)
+YYYYMMDD=${DATE//-/}
+MACHINE=$(sudo dmidecode -s system-product-name)
+mkdir -p "results/${YYYYMMDD}"
 
 echo -e "{
     \"system\": \"Apache Doris\",
-    \"date\": \"$(date '+%Y-%m-%d')\",
-    \"machine\": \"$(sudo dmidecode -s system-product-name)\",
+    \"date\": \"${DATE}\",
+    \"machine\": \"${MACHINE}\",
     \"cluster_size\": 1,
     \"comment\": \"\",
     \"tags\": [\"C++\", \"column-oriented\", \"MySQL compatible\", \"ClickHouse derivative\"],
@@ -19,4 +22,4 @@ $(
 )
     ]
 }
-" | tee results/"$(sudo dmidecode -s system-product-name).json"
+" | tee "results/${YYYYMMDD}/${MACHINE}.json"

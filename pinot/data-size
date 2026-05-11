@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+du -bcs ./batch | awk '/total$/ {print $1}'

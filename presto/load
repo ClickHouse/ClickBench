@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+# Place the parquet file inside the Hive external_location directory.
+ln -f hits.parquet data/hits/hits.parquet
+
+java -jar presto-cli.jar --server http://localhost:8081 --file create.sql
+
+rm -f hits.parquet
+sync

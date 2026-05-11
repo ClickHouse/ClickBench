@@ -6,7 +6,6 @@
   "tags": [
     "column-oriented",
     "dataframe",
-    "in-memory",
-    "lukewarm-cold-run"
+    "in-memory"
   ]
 }

@@ -28,7 +28,7 @@ All with no EBS optimization and no instance store.
 5. `vi benchmark.sh` and modify the following line to target the DataFusion version
 
     ```bash
-    git checkout 47.0.0
+    git checkout 53.1.0
     ```
 
 6. `bash benchmark.sh`

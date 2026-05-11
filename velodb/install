@@ -1,0 +1,46 @@
+#!/bin/bash
+set -e
+
+# This benchmark runs on Ubuntu 20.04+
+ROOT=$(pwd)
+# SelectDB no longer publishes free standalone tarballs; the company that
+# now stewards SelectDB (VeloDB) hosts Apache Doris release binaries at
+# download.velodb.io. Track the latest stable Apache Doris release —
+# functionally what SelectDB ships now — so this benchmark keeps running.
+URL='https://download.velodb.io/apache-doris-4.0.5-bin-x64.tar.gz'
+
+file_name="$(basename "$URL")"
+dir_name="${file_name/.tar.gz/}"
+DORIS_HOME="$ROOT/$dir_name/$dir_name"
+
+if [ ! -d "$DORIS_HOME" ]; then
+    if [ ! -f "$file_name" ]; then
+        wget --continue --progress=dot:giga "$URL"
+    fi
+    mkdir -p "$dir_name"
+    tar zxf "$file_name" -C "$dir_name"
+
+    # Disable internal caches so warm runs are actually warm — without
+    # these, the second/third try of every query returned in 0.00-0.01 s
+    # because the BE's storage-page / segment cache was hot and the FE
+    # was returning a cached SQL result. Matches doris/install (which
+    # ships a different Apache Doris build with these defaults already
+    # off in newer releases).
+    printf "\ndisable_storage_page_cache = true\n"  >> "$DORIS_HOME"/be/conf/be.conf
+    printf "\nsegment_cache_capacity = 0\n"         >> "$DORIS_HOME"/be/conf/be.conf
+    printf "\ncache_enable_sql_mode = false\n"      >> "$DORIS_HOME"/fe/conf/fe.conf
+    printf "\ncache_enable_partition_mode = false\n" >> "$DORIS_HOME"/fe/conf/fe.conf
+fi
+
+sudo apt-get update -y
+sudo apt-get install -y openjdk-17-jdk mysql-client bc
+
+set +e
+sudo systemctl disable unattended-upgrades 2>/dev/null
+sudo systemctl stop unattended-upgrades 2>/dev/null
+sudo systemctl stop mysql-server 2>/dev/null
+set -e
+
+sudo sysctl -w vm.max_map_count=2000000
+
+echo "$DORIS_HOME" > .doris_home

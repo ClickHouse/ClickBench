@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Data is read from S3 on demand; report the published single-file size.
+echo 14779976446

@@ -1,0 +1,17 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via the presto CLI.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+start=$(date +%s.%N)
+java -jar presto-cli.jar --server http://localhost:8081 \
+    --catalog hive --schema clickbench \
+    --session offset_clause_enabled=true \
+    --output-format=NULL --execute "$query"
+end=$(date +%s.%N)
+
+awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2

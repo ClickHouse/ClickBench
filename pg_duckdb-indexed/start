@@ -1,0 +1,43 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: postgres responding on :5432 means we're done.
+if PGPASSWORD=duckdb psql -h 127.0.0.1 -U postgres -c 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+# pgduckdb's image is plain postgres + the duckdb extension. Pass tuning
+# parameters via `postgres -c k=v` so the running cluster picks them up
+# without a second restart.
+memory=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+threads=$(nproc)
+cpus=$(( threads / 2 ))
+shared_buffers=$(( memory / 4 ))
+effective_cache_size=$(( memory - memory / 4 ))
+max_worker_processes=$(( threads + 15 ))
+duckdb_memory=$(( memory / 4 ))
+
+if ! sudo docker ps -a --format '{{.Names}}' | grep -qx pgduck; then
+    sudo docker run -d --name pgduck -p 5432:5432 \
+        -e POSTGRES_PASSWORD=duckdb \
+        pgduckdb/pgduckdb:17-v1.0.0 \
+        -c shared_buffers="${shared_buffers}kB" \
+        -c max_worker_processes="$max_worker_processes" \
+        -c max_parallel_workers="$threads" \
+        -c max_parallel_maintenance_workers="$cpus" \
+        -c max_parallel_workers_per_gather="$cpus" \
+        -c duckdb.max_workers_per_postgres_scan="$cpus" \
+        -c max_wal_size=32GB \
+        -c work_mem=64MB \
+        -c effective_cache_size="${effective_cache_size}kB" \
+        -c duckdb.max_memory="${duckdb_memory}kB" >/dev/null
+else
+    sudo docker start pgduck >/dev/null
+fi
+
+# Wait for postgres protocol to come up (the lib's check loop polls
+# ./check too, but bench_start expects a quick ready signal).
+for _ in $(seq 1 60); do
+    PGPASSWORD=duckdb psql -h 127.0.0.1 -U postgres -c 'SELECT 1' >/dev/null 2>&1 && exit 0
+    sleep 1
+done

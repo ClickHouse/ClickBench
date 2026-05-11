@@ -1,0 +1,36 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via the expect wrapper around mclient.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# mclient `\t clock` output: "clk: <ms> ms" or "clk: <s> s").
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+raw=$(./query.expect "$query" 2>&1) && exit_code=0 || exit_code=$?
+
+# mclient may print errors but exit 0 via expect; sniff for them.
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$raw" | grep -qE '^!|sql:.*error'; then
+    printf '%s\n' "$raw" >&2
+    exit 1
+fi
+
+# Strip CR (mclient is in expect/PTY mode), pass result to stdout.
+clean=$(printf '%s\n' "$raw" | dos2unix -f 2>/dev/null || printf '%s\n' "$raw")
+printf '%s\n' "$clean"
+
+# Parse the LAST `clk:` line into seconds.
+timing=$(printf '%s\n' "$clean" | grep -E '^clk:' | tail -n1)
+if [ -z "$timing" ]; then
+    echo "no clk timing in monetdb output" >&2
+    exit 1
+fi
+
+awk -v s="$timing" 'BEGIN {
+    n = split(s, a, " ")
+    val = a[2]; unit = a[3]
+    if (unit ~ /ms/) { printf "%.3f\n", val / 1000 }
+    else if (unit ~ /s/) { printf "%.3f\n", val }
+    else { printf "%.3f\n", val }
+}' >&2

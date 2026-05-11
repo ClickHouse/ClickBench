@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+sudo apt-get update -y
+sudo apt-get install -y python3-pip python3-venv openjdk-17-jdk wget
+
+if [ ! -d myenv ]; then
+    python3 -m venv myenv
+fi
+# shellcheck disable=SC1091
+source myenv/bin/activate
+pip install -q pyspark==3.5.6 psutil
+
+COMET_JAR_URL='https://repo1.maven.org/maven2/org/apache/datafusion/comet-spark-spark3.5_2.12/0.9.0/comet-spark-spark3.5_2.12-0.9.0.jar'
+if [ ! -f comet.jar ]; then
+    wget --continue --progress=dot:giga "$COMET_JAR_URL" -O comet.jar
+fi

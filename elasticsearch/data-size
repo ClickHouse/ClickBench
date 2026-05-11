@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+curl -sS -X GET 'http://localhost:9200/hits/_stats' \
+    | jq -r '._all.total.store.total_data_set_size_in_bytes'

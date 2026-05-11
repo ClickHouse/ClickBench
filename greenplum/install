@@ -1,0 +1,25 @@
+#!/bin/bash
+# Open-source Greenplum's apt PPA was removed and the upstream
+# greenplum-db/gpdb repo was archived in 2024, so the previous native
+# install (add-apt-repository ppa:greenplum/db) no longer works on any
+# host. Use the community-maintained woblerr/greenplum Docker image
+# instead — it bundles a working single-node Greenplum 7 cluster.
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-greenplum}
+GREENPLUM_VERSION=${GREENPLUM_VERSION:-7.1.0-ubuntu22.04}
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client
+
+sudo docker pull "woblerr/greenplum:$GREENPLUM_VERSION"
+
+if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    sudo docker rm -f "$CONTAINER_NAME" >/dev/null
+fi
+
+sudo docker run -d \
+    --name "$CONTAINER_NAME" \
+    -e GREENPLUM_PASSWORD=gparray \
+    -p 5432:5432 \
+    "woblerr/greenplum:$GREENPLUM_VERSION"
