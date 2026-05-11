@@ -1,0 +1,22 @@
+#!/bin/bash
+# Reads a MongoDB aggregation pipeline (Extended JSON, single line) from
+# stdin and runs it against the `hits` collection in the `test` DB.
+# Stdout: query result (as printed by mongosh).
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+#
+# This system uses MongoDB aggregation pipelines instead of SQL. The
+# canonical pipelines (one per line) live in queries.txt; the shared driver
+# is configured to read that file via BENCH_QUERIES_FILE.
+set -e
+
+pipeline=$(cat)
+
+PIPELINE_JSON="$pipeline" mongosh --quiet test --eval '
+const start = new Date();
+const pipeline = EJSON.parse(process.env.PIPELINE_JSON);
+const result = db.hits.aggregate(pipeline, {allowDiskUse: true}).toArray();
+const elapsed = (new Date() - start) / 1000;
+print(EJSON.stringify(result));
+console.error(elapsed.toFixed(3));
+'

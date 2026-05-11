@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+# No ingestion — reported size is the parquet file itself.
+stat -c%s data/hits.parquet

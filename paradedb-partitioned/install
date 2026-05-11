@@ -1,0 +1,14 @@
+#!/bin/bash
+# ParadeDB's pg_lakehouse extension — which gave the partitioned-parquet
+# variant its meaning — was discontinued upstream after the 0.10.x line.
+# No current ParadeDB image ships parquet_fdw_handler, so this benchmark
+# can no longer reproduce. The single-table paradedb/ directory was
+# reworked to use pg_search; the "partitioned" variant has no analogous
+# replacement, so it's preserved as a historical entry only.
+#
+# Refuse to run rather than silently produce broken or non-comparable
+# numbers under the same system name as past entries.
+echo "paradedb-partitioned: this benchmark is historical (pg_lakehouse" >&2
+echo "was removed from ParadeDB after 0.10.x). See paradedb/ for the" >&2
+echo "current pg_search-based variant." >&2
+exit 1

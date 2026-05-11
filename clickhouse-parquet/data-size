@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+du -bcs hits.parquet | awk 'END { print $1 }'

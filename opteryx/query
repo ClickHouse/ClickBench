@@ -1,0 +1,29 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via opteryx (Python in-process)
+# against the partitioned parquet under ./hits/.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+set -e
+
+query=$(cat)
+
+"$HOME/opteryx_venv/bin/python" - "$query" <<'PY'
+import sys
+import timeit
+import opteryx
+
+query = sys.argv[1]
+
+start = timeit.default_timer()
+try:
+    res = opteryx.query(query)
+    rows = list(res)
+    end = timeit.default_timer()
+finally:
+    pass
+
+for r in rows:
+    print(r)
+
+print(f"{end - start:.3f}", file=sys.stderr)
+PY

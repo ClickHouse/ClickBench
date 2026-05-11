@@ -1,0 +1,19 @@
+#!/bin/bash
+set -eu
+
+PGVERSION=${PGVERSION:-17}
+
+export DEBIAN_FRONTEND=noninteractive
+
+# PGDG repo for matching PG version + timescale repo for the extension.
+sudo apt-get update -y
+sudo apt-get install -y gnupg postgresql-common apt-transport-https lsb-release wget
+sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+sudo bash -c 'echo "deb https://packagecloud.io/timescale/timescaledb/ubuntu/ $(lsb_release -c -s) main" > /etc/apt/sources.list.d/timescaledb.list'
+wget --quiet -O - https://packagecloud.io/timescale/timescaledb/gpgkey | sudo apt-key add -
+
+sudo apt-get update -y
+sudo apt-get install -y timescaledb-2-postgresql-$PGVERSION postgresql-client-$PGVERSION
+sudo timescaledb-tune -yes
+
+sudo systemctl restart postgresql@$PGVERSION-main

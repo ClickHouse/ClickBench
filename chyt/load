@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+: "${YT_PROXY:?YT_PROXY is required}"
+: "${CHYT_ALIAS:=*ch_public}"
+
+# Create the table on the remote cluster.
+yt clickhouse execute "$(cat create.sql)" --alias "$CHYT_ALIAS" --proxy "$YT_PROXY"
+
+# Fill the table from a public dataset URL (see fill_data.sql).
+yt clickhouse execute "$(cat fill_data.sql)" --alias "$CHYT_ALIAS" --proxy "$YT_PROXY"
+
+# Sort the resulting table to give CHYT useful primary-key ordering.
+yt sort --src //home/hits --dst //home/hits \
+    --sort-by CounterID --sort-by EventDate --sort-by UserID \
+    --sort-by EventTime --sort-by WatchID \
+    --proxy "$YT_PROXY"
+
+sync

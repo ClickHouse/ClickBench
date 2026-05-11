@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+DUCKDB="$(pwd)/duckdb-vortex/build/release/duckdb"
+"$DUCKDB" -c "SELECT 1" >/dev/null

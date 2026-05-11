@@ -1,0 +1,2 @@
+#!/bin/bash
+sudo docker stop pgduck >/dev/null 2>&1 || true

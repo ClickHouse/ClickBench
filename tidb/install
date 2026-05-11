@@ -1,0 +1,32 @@
+#!/bin/bash
+set -eu
+
+# Defaults match the original benchmark.sh; override via env if needed.
+TIDB_MODE=${TIDB_MODE:-tiflash}
+TIDBVERSION=${TIDBVERSION:-8.5.1}
+
+if [[ ! $TIDB_MODE =~ ^(tikv|tikv-tiflash|tiflash)$ ]]; then
+    echo "Unknown TIDB_MODE: '$TIDB_MODE'. Expected 'tikv', 'tikv-tiflash', or 'tiflash'." >&2
+    exit 1
+fi
+
+sudo apt-get update -y
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl mysql-client wget
+# tzdata install (2-107 = America/New_York) is required for TiFlash.
+printf "2\n107\n" | sudo DEBIAN_FRONTEND=noninteractive apt-get install --reinstall tzdata
+
+TIUP_HOME=$(pwd)
+export TIUP_HOME
+
+if [ ! -x "$TIUP_HOME/bin/tiup" ]; then
+    wget --https-only --secure-protocol=TLSv1_2 --quiet --continue --progress=dot:giga \
+        https://tiup-mirrors.pingcap.com/install.sh
+    chmod +x ./install.sh
+    ./install.sh
+fi
+
+PATH="$TIUP_HOME/bin/:$PATH"
+export PATH
+
+tiup update --self
+tiup update cluster

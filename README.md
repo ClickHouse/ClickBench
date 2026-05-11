@@ -80,11 +80,11 @@ To add a new entry, copy-paste one of the existing directories and edit the file
 - `create.sql`: a CREATE TABLE statement. If it's a NoSQL system, another file like `wtf.json` can be used instead.
 - `queries.sql`: contains 43 ClickBench queries to run;
 - `run.sh`: a loop that running the queries; every query is run three times, see section "Caching" below for details.
-- `results/`: put the .json files with the results for every hardware configuration into this directory. Please double-check that each file is valid JSON (e.g., no comma errors).
+- `results/`: put the .json files with the results for every hardware configuration into this directory, under a subdirectory named with the UTC date of the run (`results/YYYYMMDD/<machine>.json`). Each new run for an existing machine goes into a new dated subdirectory; older runs are kept for history. The website displays the latest dated copy of each `<system>/<machine>` pair. Please double-check that each file is valid JSON (e.g., no comma errors).
 
-To introduce a new result for an existing system for a different hardware configuration, add a new file to `results`.
+To introduce a new result for an existing system for a different hardware configuration, add a new file to `results/<YYYYMMDD>/`.
 
-To introduce a new result for an existing system with a different usage scenario, either copy the whole directory and name it differently (e.g. `timescaledb`, `timescaledb-compression`) or add a new file to the `results` directory.
+To introduce a new result for an existing system with a different usage scenario, either copy the whole directory and name it differently (e.g. `timescaledb`, `timescaledb-compression`) or add a new file under `results/<YYYYMMDD>/`.
 
 `index.html` can be re-generated using `./generate-results.sh`.
 The CI (GitHub Actions) does this automatically, this step is optional.
@@ -311,7 +311,7 @@ Please help us add more systems and run the benchmarks on more types of VMs:
 - [ ] MS SQL Server with Column Store Index (without publishing)
 - [ ] OceanBase
 - [ ] Planetscale (without publishing)
-- [ ] Quickwit
+- [x] Quickwit
 - [ ] Redshift Spectrum
 - [ ] Seafowl
 - [ ] ShitholeDB

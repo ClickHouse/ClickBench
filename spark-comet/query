@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+query=$(cat)
+printf '%s' "$query" | python3 query.py

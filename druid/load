@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+VERSION=33.0.0
+DRUID_DIR="apache-druid-${VERSION}"
+
+# post-index-task posts the spec; ingestion runs asynchronously and the
+# command may exit non-zero on its own polling timeout while the task keeps
+# running. We treat that as success-with-warning; check the logs for the
+# actual completion. Idempotent: re-running is safe (Druid replaces the
+# datasource).
+"./${DRUID_DIR}/bin/post-index-task" --file ingest.json --url http://localhost:8081 || true
+
+# Wait until the hits datasource is queryable.
+for _ in $(seq 1 600); do
+    cnt=$(curl -sf -XPOST -H'Content-Type: application/json' \
+        http://localhost:8888/druid/v2/sql/ \
+        -d '{"query": "SELECT COUNT(*) FROM hits"}' 2>/dev/null \
+        | grep -oE '[0-9]+' | head -n1) || cnt=""
+    if [ -n "$cnt" ] && [ "$cnt" -gt 0 ]; then
+        break
+    fi
+    sleep 5
+done
+
+rm -f hits.tsv
+sync

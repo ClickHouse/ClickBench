@@ -5,3 +5,24 @@
 *.parquet
 hits.csv
 hits.tsv
+
+# Per-system runtime artifacts produced by benchmark.sh
+result.csv
+log.txt
+load_out.txt
+server.log
+server.pid
+arc_token.txt
+data-size.txt
+.doris_home
+.sirius_env
+
+# Per-system data files
+hits.db
+mydb
+hits.hyper
+hits.vortex
+*.vortex
+
+# Python venvs created by install scripts
+myenv/

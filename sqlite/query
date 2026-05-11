@@ -1,0 +1,28 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via sqlite3 against mydb.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (from `time`).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+# Use bash builtin `time` with TIMEFORMAT to get a single fractional-seconds
+# value on stderr. Capture sqlite3 output separately.
+TIMEFORMAT='%R'
+{ time sqlite3 mydb "$query" 1>/tmp/sqlite.out.$$ 2>/tmp/sqlite.err.$$; } 2>/tmp/sqlite.time.$$ || status=$?
+status=${status:-0}
+
+cat /tmp/sqlite.out.$$
+if [ "$status" -ne 0 ]; then
+    cat /tmp/sqlite.err.$$ >&2
+    rm -f /tmp/sqlite.out.$$ /tmp/sqlite.err.$$ /tmp/sqlite.time.$$
+    exit "$status"
+fi
+
+# Even on success sqlite3 may have warnings on stderr; pass them through but
+# end with the timing as the last line.
+cat /tmp/sqlite.err.$$ >&2
+cat /tmp/sqlite.time.$$ >&2
+
+rm -f /tmp/sqlite.out.$$ /tmp/sqlite.err.$$ /tmp/sqlite.time.$$

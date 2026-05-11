@@ -1,0 +1,42 @@
+#!/bin/bash
+set -e
+
+# 0.34.0 referenced two private spiraldb-owned submodules
+# (spiraldb/duckdb and spiraldb/duckdb-rs) under duckdb-vortex/, which
+# now 404 on GitHub. From 0.41.0 onward the duckdb dep moved to the
+# upstream duckdb/duckdb repo, and 0.42.0+ ship without a .gitmodules
+# file at all (vendored / Cargo registry deps). 0.44.0 matches what
+# datafusion-vortex-partitioned uses.
+VORTEX_VERSION=0.44.0
+
+if ! command -v cargo >/dev/null 2>&1; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
+    bash rust-init.sh -y
+fi
+export HOME=${HOME:=~}
+# shellcheck disable=SC1091
+source ~/.cargo/env
+
+sudo apt-get update -y
+# vortex-duckdb's build.rs runs bindgen, which needs libclang plus the
+# clang freestanding headers (stdbool.h etc.); without libclang-dev the
+# build fails with `'stdbool.h' file not found`.
+sudo apt-get install -y gcc jq build-essential git clang libclang-dev
+
+if [ ! -d vortex ]; then
+    git clone https://github.com/spiraldb/vortex.git
+fi
+(
+    cd vortex
+    git fetch --tags
+    git checkout "$VORTEX_VERSION"
+    # `git submodule update --init` fails with
+    # "fatal: destination path 'duckdb-vortex/duckdb' exists and is not an
+    # empty directory" once the submodule has been cloned but isn't fully
+    # registered (a partial state previous runs leave behind). `sync`
+    # refreshes the configured URLs and `--force` re-checkouts cleanly,
+    # which is what we want for an idempotent setup.
+    git submodule sync --recursive
+    git submodule update --init --recursive --force
+    cargo build --release --bin clickbench --package bench-vortex
+)

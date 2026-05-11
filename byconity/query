@@ -1,0 +1,11 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via clickhouse-client inside the
+# byconity server container.
+# Stdout: query result (default format).
+# Stderr: query runtime in fractional seconds on the last line (from --time).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+docker compose exec -T server clickhouse-client --port 52145 \
+    --database bench --time --query="$query"

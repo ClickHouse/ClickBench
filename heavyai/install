@@ -1,0 +1,31 @@
+#!/bin/bash
+# HEAVY.AI's apt repo and tarball CDN (releases.heavy.ai/...) both
+# started returning S3 AccessDenied. The source repo at
+# github.com/heavyai/heavydb is alive but its GitHub releases ship no
+# binaries, and a full C++ build is too heavy to run inside cloud-init.
+#
+# omnisci/core-os-cpu:v5.10.2 (Feb 2022) is the last public Docker
+# image — OmniSciDB, the immediate predecessor of HeavyDB before the
+# v6.0.0 rename. The schema and queries the benchmark uses are vanilla
+# enough to run unchanged.
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-heavyai}
+HEAVYAI_VERSION=${HEAVYAI_VERSION:-v5.10.2}
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io
+
+sudo docker pull "omnisci/core-os-cpu:$HEAVYAI_VERSION"
+
+if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    sudo docker rm -f "$CONTAINER_NAME" >/dev/null
+fi
+
+mkdir -p heavyai-storage
+sudo docker run -d \
+    --name "$CONTAINER_NAME" \
+    -p 6274:6274 \
+    -p 6273:6273 \
+    -v "$(pwd)/heavyai-storage:/omnisci-storage" \
+    "omnisci/core-os-cpu:$HEAVYAI_VERSION"

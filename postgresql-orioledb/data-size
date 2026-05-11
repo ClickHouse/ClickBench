@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-orioledb-clickbench}
+sudo docker exec -i "$CONTAINER_NAME" du -bcs /var/lib/postgresql/data/orioledb_data | grep total | awk '{print $1}'

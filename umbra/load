@@ -1,0 +1,29 @@
+#!/bin/bash
+set -eu
+
+mkdir -p data
+mv hits.tsv data/
+chmod -R 777 data
+
+# create.sql for umbra both creates the table and ingests via COPY. Use
+# ON_ERROR_STOP=1 so a mid-COPY failure (e.g. the box runs out of memory
+# and Umbra survives but the COPY transaction errored) bubbles up
+# instead of leaving a half-loaded table.
+PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres \
+    -v ON_ERROR_STOP=1 -f create.sql
+
+# Belt-and-braces row-count check. Umbra has been observed to leave a
+# partial table on memory-constrained hosts (16 GB c6a.4xlarge can't
+# hold the full mmap working set), letting the benchmark proceed and
+# producing implausibly fast warm timings on the surviving subset.
+# ClickBench's hits dataset is 99,997,497 rows; allow a small margin.
+expected=99997497
+got=$(PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -tAq \
+    -c 'SELECT count(*) FROM hits')
+if [ "$got" -lt $((expected - 100)) ]; then
+    echo "umbra/load: hits has $got rows, expected ~$expected — partial load" >&2
+    exit 1
+fi
+
+rm -f data/hits.tsv
+sync

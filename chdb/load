@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# Idempotent: blow away any prior data dir.
+rm -rf .clickbench
+
+python3 - <<'PY'
+from chdb import dbapi
+
+con = dbapi.connect(path=".clickbench")
+cur = con.cursor()
+
+cur.execute(open("create.sql").read())
+cur.execute(open("insert.sql").read())
+
+cur.close()
+con.close()
+PY
+
+rm -f hits.csv
+sync

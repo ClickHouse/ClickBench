@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+psql -U crate -h localhost --no-password -q -t -A \
+    -c "SELECT SUM(size) FROM sys.shards WHERE table_name = 'hits' AND primary = TRUE;"

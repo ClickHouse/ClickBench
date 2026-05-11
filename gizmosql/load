@@ -1,0 +1,16 @@
+#!/bin/bash
+set -eu
+
+. ./util.sh
+
+# Idempotent: blow away any prior database; the server has it open, so
+# stop it first to release the file lock.
+stop_gizmosql || true
+rm -f clickbench.db
+start_gizmosql
+
+gizmosql_client --file create.sql
+gizmosql_client --file load.sql
+
+rm -f hits.parquet
+sync

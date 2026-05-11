@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+curl -sSf --get \
+    --data-urlencode 'query=_time:2100-01-01Z' \
+    'http://localhost:9428/select/logsql/query' >/dev/null

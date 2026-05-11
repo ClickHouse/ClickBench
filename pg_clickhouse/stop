@@ -1,0 +1,5 @@
+#!/bin/bash
+
+PGVERSION=${PGVERSION:-17}
+sudo systemctl stop postgresql@$PGVERSION-main || true
+sudo clickhouse stop || true

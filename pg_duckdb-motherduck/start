@@ -1,0 +1,23 @@
+#!/bin/bash
+set -eu
+
+: "${MOTHERDUCK_TOKEN:?MOTHERDUCK_TOKEN is required}"
+
+if PGPASSWORD=duckdb psql -h 127.0.0.1 -U postgres -c 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+if ! sudo docker ps -a --format '{{.Names}}' | grep -qx pgduck; then
+    sudo docker run -d --name pgduck --network=host \
+        -e POSTGRES_PASSWORD=duckdb \
+        -e MOTHERDUCK_TOKEN="$MOTHERDUCK_TOKEN" \
+        pgduckdb/pgduckdb:17-v1.0.0 \
+        -c duckdb.motherduck_enabled=true >/dev/null
+else
+    sudo docker start pgduck >/dev/null
+fi
+
+for _ in $(seq 1 60); do
+    PGPASSWORD=duckdb psql -h 127.0.0.1 -U postgres -c 'SELECT 1' >/dev/null 2>&1 && exit 0
+    sleep 1
+done

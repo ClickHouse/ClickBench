@@ -1,41 +1,5 @@
 #!/bin/bash
-
-# Update package lists
-sudo apt-get update -y
-sudo apt-get install -y software-properties-common
-sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt-get update -y
-
-# Install required packages
-sudo apt-get install -y python3.11 python3.11-venv git wget build-essential python3.11-dev
-
-# Create and activate a virtual environment using Python 3.11
-python3.11 -m venv ~/opteryx_venv
-source ~/opteryx_venv/bin/activate
-
-# Upgrade pip in the virtual environment
-~/opteryx_venv/bin/python -m pip install --upgrade pip
-~/opteryx_venv/bin/python -m pip install --upgrade opteryx==0.26.1
-
-# Download benchmark target data, partitioned
-../download-hits-parquet-partitioned hits
-
-# Run a simple query to check the installation
-~/opteryx_venv/bin/python -m opteryx "SELECT version()" 2>&1
-
-# Run benchmarks for partitioned data using queries from queries.sql
-if [[ -f ./queries.sql ]]; then
-    while read -r query; do
-        sudo sync && echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
-
-        (~/opteryx_venv/bin/python -m opteryx "$query" --cycles 3 2>&1 | grep -v -P '^3$') || echo '[null,null,null]'
-    done < ./queries.sql
-else
-    echo "queries.sql not found."
-fi
-
-# Deactivate the virtual environment
-deactivate
-
-echo "Data size: $(du -bcs hits | grep total)"
-echo "Load time: 0"
+# Thin shim — actual flow is in lib/benchmark-common.sh.
+export BENCH_DOWNLOAD_SCRIPT="download-hits-parquet-partitioned"
+export BENCH_DURABLE=yes
+exec ../lib/benchmark-common.sh

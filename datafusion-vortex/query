@@ -1,0 +1,33 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via the vortex `clickbench` driver.
+# Stdout: JSON result emitted by clickbench (gh-json display format).
+# Stderr: query runtime in fractional seconds on the last line, derived
+#         from .value (nanoseconds) in the JSON.
+# Exit non-zero on error.
+set -e
+
+export PATH="$PWD/vortex/target/release:$PATH"
+
+# clickbench addresses queries by index in a queries-file. Stage the input
+# query as the only entry in a temp file and pass -q 0.
+tmp=$(mktemp --suffix=.sql)
+trap 'rm -f "$tmp"' EXIT
+cat > "$tmp"
+
+raw=$(RUST_LOG=off clickbench -i 1 \
+    --targets datafusion:vortex \
+    --display-format gh-json \
+    --queries-file "$tmp" \
+    --flavor single \
+    --hide-progress-bar \
+    -q 0)
+
+ns=$(printf '%s' "$raw" | jq -r '.value // empty')
+if [ -z "$ns" ]; then
+    printf '%s\n' "$raw" >&2
+    exit 1
+fi
+
+printf '%s\n' "$raw"
+
+awk -v n="$ns" 'BEGIN { printf "%.3f\n", n / 1e9 }' >&2

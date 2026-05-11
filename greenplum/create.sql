@@ -109,8 +109,4 @@ CREATE TABLE hits
 )
 with (appendoptimized=true,orientation=column,compresstype=zstd)
 DISTRIBUTED BY (UserID);
-CREATE INDEX hits_idx on hits using btree (CounterID, EventDate, UserID, EventTime, WatchID); 
-drop external table if exists hits_ext;
-CREATE EXTERNAL TABLE hits_ext (like hits)
-LOCATION ('gpfdist://localhost:8080/hits.tsv')
-FORMAT 'TEXT';
+CREATE INDEX hits_idx on hits using btree (CounterID, EventDate, UserID, EventTime, WatchID);

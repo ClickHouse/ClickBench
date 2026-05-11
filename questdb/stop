@@ -1,0 +1,3 @@
+#!/bin/bash
+
+questdb/bin/questdb.sh stop 2>/dev/null || true

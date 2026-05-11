@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+PGVERSION=${PGVERSION:-17}
+sudo du -bcs /var/lib/postgresql/$PGVERSION/main/ | grep total | awk '{print $1}'

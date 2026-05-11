@@ -1,0 +1,23 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: if already serving, do nothing.
+if PGPASSWORD=oxla psql -h localhost -U oxla -t -c 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Start (or restart) the container in the background.
+sudo docker stop oxlacontainer >/dev/null 2>&1 || true
+sudo docker rm oxlacontainer >/dev/null 2>&1 || true
+
+mkdir -p data
+sudo docker run -d --rm -p 5432:5432 \
+    -v "$(pwd)/data:/data" \
+    --name oxlacontainer \
+    public.ecr.aws/oxla/release:1.53.0-beta >/dev/null
+
+# Wait briefly for protocol port (the lib's check loop will keep waiting).
+for _ in $(seq 1 60); do
+    PGPASSWORD=oxla psql -h localhost -U oxla -t -c 'SELECT 1' >/dev/null 2>&1 && exit 0
+    sleep 1
+done

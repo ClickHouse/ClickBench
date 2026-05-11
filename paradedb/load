@@ -1,0 +1,31 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-paradedb}
+export PGPASSWORD='postgres'
+
+# Drop+recreate so re-runs are idempotent.
+psql -h localhost -U postgres -p 5432 -t -c "DROP INDEX IF EXISTS hits_bm25_idx;" || true
+psql -h localhost -U postgres -p 5432 -t -c "DROP TABLE IF EXISTS hits;" || true
+
+psql -h localhost -U postgres -p 5432 -v ON_ERROR_STOP=1 -t < create.sql
+
+# Move the TSV into the container so server-side COPY can read it
+# without round-tripping over the wire.
+sudo docker cp hits.tsv "$CONTAINER_NAME":/tmp/hits.tsv
+psql -h localhost -U postgres -p 5432 -v ON_ERROR_STOP=1 -t \
+    -c "COPY hits FROM '/tmp/hits.tsv' WITH (FORMAT text);"
+
+# BM25 index on the text-heavy columns. Built after bulk load (cheaper
+# than maintaining the index during COPY) and after VACUUM ANALYZE so
+# planner stats are fresh.
+psql -h localhost -U postgres -p 5432 -v ON_ERROR_STOP=1 -t \
+    -c "VACUUM ANALYZE hits;"
+psql -h localhost -U postgres -p 5432 -v ON_ERROR_STOP=1 -t \
+    -c "CREATE INDEX hits_bm25_idx ON hits
+        USING bm25 (WatchID, URL, Title, SearchPhrase, Referer)
+        WITH (key_field='WatchID');"
+
+sudo docker exec "$CONTAINER_NAME" rm -f /tmp/hits.tsv
+rm -f hits.tsv
+sync

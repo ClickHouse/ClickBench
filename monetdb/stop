@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sudo monetdbd stop /var/lib/monetdb 2>/dev/null || true

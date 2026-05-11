@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Hits dataset stored in S3 — fixed size (100 partitioned parquet files).
+echo 14737666736

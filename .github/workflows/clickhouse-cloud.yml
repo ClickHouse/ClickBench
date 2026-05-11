@@ -36,8 +36,8 @@ jobs:
         git config --global user.email "${{ env.CI_COMMIT_AUTHOR }}@users.noreply.github.com"
         
         git pull
-        git add results/*.json
-        if git status | grep -q modified
+        git add results/
+        if ! git diff --cached --quiet
         then
           git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
           git push

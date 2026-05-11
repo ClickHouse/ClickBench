@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eu
+
+# siglens stores ingested data under the data/ directory inside the repo.
+if [ -d siglens/data ]; then
+    du -bcs siglens/data | grep total | awk '{print $1}'
+elif [ -d siglens/ingestnodes ]; then
+    du -bcs siglens/ingestnodes siglens/querynodes 2>/dev/null | grep total | awk '{print $1}'
+else
+    du -bcs siglens | grep total | awk '{print $1}'
+fi

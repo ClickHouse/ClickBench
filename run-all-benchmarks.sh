@@ -10,14 +10,15 @@ if [[ -z "$dir" || ! -d "$dir" ]]; then
   exit 1
 fi
 
-for file in "$1"/results/*; do
-  [ -e "$file" ] || continue
-
-  filename="$(basename "$file")"
+# Results live under <dir>/results/<YYYYMMDD>/<machine>.json. Each machine that
+# has ever been benchmarked appears under at least one date subdir.
+LANG=C ls -1 "$dir"/results/*/*.json 2>/dev/null \
+  | awk -F/ '{ print $NF }' \
+  | sort -u \
+  | while read -r filename; do
   machine="${filename%.*}"
 
-
   echo '-----------------------------------------'
-  ./run-benchmark.sh "$machine" "$dir"
+  export system=$dir machine=$machine
+  ./run-benchmark.sh
 done
-

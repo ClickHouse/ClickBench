@@ -1,0 +1,25 @@
+#!/bin/bash
+set -eu
+
+# Drop+create the test DB so this is idempotent.
+sudo -u postgres psql -t -c "DROP DATABASE IF EXISTS test"
+sudo -u postgres psql -t -c "CREATE DATABASE test"
+
+sudo -u postgres psql -v ON_ERROR_STOP=1 test -t < create.sql
+
+# Load data: TRUNCATE and \copy FREEZE in a single transaction. Postgres
+# requires the table to be created or truncated in the current subtransaction
+# for COPY FREEZE to be allowed. ON_ERROR_STOP makes psql exit non-zero on
+# data errors so set -e in this script catches them.
+sudo -u postgres psql -v ON_ERROR_STOP=1 test <<'EOF'
+BEGIN;
+TRUNCATE TABLE hits;
+\copy hits FROM 'hits.tsv' with freeze;
+COMMIT;
+EOF
+
+sudo -u postgres psql -v ON_ERROR_STOP=1 test -t -c 'VACUUM ANALYZE hits'
+
+# Only remove inputs once load completes successfully.
+rm -f hits.tsv
+sync

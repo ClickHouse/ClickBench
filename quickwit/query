@@ -1,0 +1,30 @@
+#!/bin/bash
+# Reads one query line from stdin (an Elasticsearch-format JSON object, or
+# the literal "null" for queries not expressible in Quickwit).
+# Stdout: raw JSON response from /_elastic/hits/_search.
+# Stderr: query runtime in fractional seconds on the last line, parsed
+#         from .took (engine-internal latency, milliseconds).
+# Exit non-zero on error or when the query is "null".
+set -e
+
+query=$(cat)
+
+if [ "$query" = "null" ] || [ -z "$query" ]; then
+    echo "query not expressible in Quickwit" >&2
+    exit 1
+fi
+
+resp=$(curl -sS -X POST \
+    -H 'Content-Type: application/json' \
+    -d "$query" \
+    http://localhost:7280/api/v1/_elastic/hits/_search)
+
+took=$(printf '%s' "$resp" | jq -r 'if has("error") or has("status") then empty else (.took | tostring) end')
+if [ -z "$took" ]; then
+    printf '%s\n' "$resp" >&2
+    exit 1
+fi
+
+printf '%s\n' "$resp"
+
+awk -v ms="$took" 'BEGIN { printf "%.4f\n", ms / 1000 }' >&2
