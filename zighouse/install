@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+: "${ZIGHOUSE_VERSION:=v0.1.0-clickbench}"
+: "${ZIGHOUSE_SHA256:=7f01a896d16b035aaee73676323b993785bb997f11cc79d2384c93880bc1a9ba}"
+
+url="https://github.com/donge/zighouse/releases/download/${ZIGHOUSE_VERSION}/zighouse-linux-x86_64"
+curl -L --fail -o zighouse "$url"
+printf '%s  zighouse\n' "$ZIGHOUSE_SHA256" | sha256sum -c -
+chmod +x zighouse

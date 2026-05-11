@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+du -sb zighouse-store 2>/dev/null | awk '{ print $1 }' || du -sk zighouse-store | awk '{ print $1 * 1024 }'
