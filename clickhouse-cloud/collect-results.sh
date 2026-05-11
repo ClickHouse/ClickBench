@@ -15,9 +15,13 @@ do
     REPLICAS=$(echo "$f" | sed -r -e 's!'$REGEXP'!\3!')
     MEMORY=$(echo "$f" | sed -r -e 's!'$REGEXP'!\4!')
 
-    LOAD_TIME=$(head -n1 "$f" | tr -d "\n")
-    DATA_SIZE=$(tail -n1 "$f" | tr -d "\n")
-    RESULT_BODY=$(grep -F "[" "$f" | head -c-2)
+    # benchmark-common.sh emits "Load time:", "Data size:", "Concurrent QPS:"
+    # and "Concurrent error ratio:" lines, plus one "[t1,t2,t3]," per query.
+    LOAD_TIME=$(grep -E '^Load time:' "$f" | tail -n1 | awk '{print $3}')
+    DATA_SIZE=$(grep -E '^Data size:' "$f" | tail -n1 | awk '{print $3}')
+    CONCURRENT_QPS=$(grep -E '^Concurrent QPS:' "$f" | tail -n1 | awk '{print $3}')
+    CONCURRENT_ERROR_RATIO=$(grep -E '^Concurrent error ratio:' "$f" | tail -n1 | awk '{print $4}')
+    RESULT_BODY=$(grep -E '^\[' "$f" | head -c-2)
 
     # Skip when the raw result file is incomplete — load time / data size must
     # be plain numbers and the result body must be non-empty. Otherwise the
@@ -28,6 +32,11 @@ do
         echo "Skipping $f: malformed raw result (load_time='$LOAD_TIME', data_size='$DATA_SIZE', empty_body=$([ -z "$RESULT_BODY" ] && echo yes || echo no))" >&2
         continue
     fi
+
+    # QPS fields are optional — older runs predate them. When missing or
+    # null, emit JSON null so the website code can treat them uniformly.
+    [[ "$CONCURRENT_QPS" =~ ^[0-9]+(\.[0-9]+)?$ ]] || CONCURRENT_QPS=null
+    [[ "$CONCURRENT_ERROR_RATIO" =~ ^[0-9]+(\.[0-9]+)?$ ]] || CONCURRENT_ERROR_RATIO=null
 
     OUT="results/$YYYYMMDD/${PROVIDER}.${REPLICAS}.${MEMORY}.json"
     echo '
@@ -45,6 +54,8 @@ do
 
     "load_time": '$LOAD_TIME',
     "data_size": '$DATA_SIZE',
+    "concurrent_qps": '$CONCURRENT_QPS',
+    "concurrent_error_ratio": '$CONCURRENT_ERROR_RATIO',
 
     "result": [
 '"$RESULT_BODY"'

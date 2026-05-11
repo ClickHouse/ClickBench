@@ -1,0 +1,7 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it against the managed cloud service.
+# Stdout: query result. Stderr: query runtime in fractional seconds on the
+# last line (from --time). Exit non-zero on error.
+set -e
+
+clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --time --format Null

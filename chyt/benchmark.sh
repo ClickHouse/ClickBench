@@ -5,4 +5,5 @@ export YT_USE_HOSTS=0
 export CHYT_ALIAS="${CHYT_ALIAS:-*ch_public}"
 export BENCH_DOWNLOAD_SCRIPT=""
 export BENCH_DURABLE=yes
+export BENCH_MANAGED=yes
 exec ../lib/benchmark-common.sh

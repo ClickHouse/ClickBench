@@ -1,0 +1,6 @@
+#!/bin/bash
+# clickhouse-cloud runs against a managed remote service; there is nothing
+# to stop locally. The driver's cold-cycle stop/drop_caches/start is a
+# no-op for SaaS — only the local OS page cache flush would have any
+# effect, and the remote service's caches are not under our control.
+exit 0

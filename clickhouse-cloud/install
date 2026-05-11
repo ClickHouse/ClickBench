@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+# clickhouse-cloud runs against a managed remote service; only the
+# clickhouse-client binary is required locally. cloud-api.sh already
+# enforces this prerequisite before invoking benchmark.sh, so this is
+# usually a no-op — kept as a safety net for direct ./benchmark.sh runs.
+if [ ! -x /usr/bin/clickhouse ]; then
+    curl https://clickhouse.com/ | sh
+    sudo ./clickhouse install --noninteractive
+fi

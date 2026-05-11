@@ -1,0 +1,4 @@
+#!/bin/bash
+# clickhouse-cloud runs against a managed remote service provisioned by
+# cloud-api.sh; there is nothing to start locally.
+exit 0

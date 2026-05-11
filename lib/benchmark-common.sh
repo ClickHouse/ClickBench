@@ -44,6 +44,16 @@
 #                          (the per-connection permutation is derived
 #                          deterministically from this seed + the
 #                          connection index). Default "clickbench".
+#   BENCH_MANAGED          "yes" if the system under test is a SaaS / managed
+#                          remote service (chyt, clickhouse-cloud, ...).
+#                          When set, the cold cycle around each query (and
+#                          before the QPS window) skips ./stop, the
+#                          wait-for-stopped poll, drop_caches, and ./start
+#                          — none of those affect a remote service, and
+#                          waiting 60 s for `./check` to start failing
+#                          would add ~43 min of dead time per run. ./check
+#                          still runs so we still notice an outage.
+#                          Default "no".
 
 set -e
 
@@ -69,6 +79,7 @@ fi
 : "${BENCH_CONCURRENT_CONNECTIONS:=10}"
 : "${BENCH_CONCURRENT_DURATION:=600}"
 : "${BENCH_CONCURRENT_SEED:=clickbench}"
+: "${BENCH_MANAGED:=no}"
 
 # Resolve the directory containing this script so we can find sibling
 # helpers (download-hits-*).
@@ -110,6 +121,31 @@ bench_wait_stopped() {
 bench_flush_caches() {
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
+}
+
+# Cold cycle: stop, wait until really stopped, drop_caches, start, check.
+# For BENCH_MANAGED=yes (SaaS) we can't actually restart the engine and
+# the local OS page cache is irrelevant — collapse to just ./check so we
+# still notice the service going away mid-run, and skip the 60 s
+# wait-for-stopped poll that would otherwise dominate wall time.
+bench_cold_cycle() {
+    if [ "$BENCH_MANAGED" = "yes" ]; then
+        bench_check_loop
+        return
+    fi
+    # Order matters: the naive order (flush, then stop) leaves
+    # mmap-backed engines (Umbra, DuckDB, Hyper, CedarDB) with their
+    # data files pinned by the still-running process, so drop_caches
+    # can't evict the pages — the new instance then re-mmaps those
+    # same files and the "cold" run reads from a warm page cache.
+    # Waiting for ./check to fail before flushing makes the cold run
+    # actually cold even when ./stop returns before the process is
+    # fully gone.
+    ./stop >/dev/null 2>&1 || true
+    bench_wait_stopped
+    bench_flush_caches
+    ./start >/dev/null 2>&1 || true
+    bench_check_loop
 }
 
 bench_install() {
@@ -199,20 +235,7 @@ bench_run_query() {
     local load_secs=0
     local results=()
 
-    # Cold-cycle: stop, wait until really stopped, drop_caches, start,
-    # check. Order matters: the naive order (flush, then stop) leaves
-    # mmap-backed engines (Umbra, DuckDB, Hyper, CedarDB) with their
-    # data files pinned by the still-running process, so drop_caches
-    # can't evict the pages — the new instance then re-mmaps those
-    # same files and the "cold" run reads from a warm page cache.
-    # Waiting for ./check to fail before flushing makes the cold run
-    # actually cold even when ./stop returns before the process is
-    # fully gone.
-    ./stop >/dev/null 2>&1 || true
-    bench_wait_stopped
-    bench_flush_caches
-    ./start >/dev/null 2>&1 || true
-    bench_check_loop
+    bench_cold_cycle
 
     if [ "$BENCH_DURABLE" != "yes" ]; then
         # In-process server: data lived in process memory and was wiped
@@ -317,11 +340,7 @@ bench_concurrent_qps() {
     fi
 
     # Fresh restart before the throughput window starts.
-    ./stop >/dev/null 2>&1 || true
-    bench_wait_stopped
-    bench_flush_caches
-    ./start >/dev/null 2>&1 || true
-    bench_check_loop
+    bench_cold_cycle
     if [ "$BENCH_DURABLE" != "yes" ]; then
         ./load >/dev/null 2>&1 || true
     fi

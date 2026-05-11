@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "SELECT 1" >/dev/null
