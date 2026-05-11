@@ -1,0 +1,13 @@
+{
+  "system": "ZigHouse",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "yes",
+  "tags": [
+    "Zig",
+    "column-oriented",
+    "embedded",
+    "parquet",
+    "tuned"
+  ]
+}
