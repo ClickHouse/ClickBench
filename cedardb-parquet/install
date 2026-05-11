@@ -2,9 +2,17 @@
 set -eu
 
 sudo apt-get update -y
-sudo apt-get install -y docker.io postgresql-client
+sudo apt-get install -y postgresql-client
 
-sudo docker pull cedardb/cedardb:latest
+# Stop any running instance before reinstalling
+./stop || true
 
-mkdir -p data db
-chmod -R 777 data db
+# Delete potential previously created database
+rm -rf ./db
+
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+
+curl https://get.cedardb.com | bash -s -- -y \
+    --install-dir "$PWD" \
+    --db-dir "$PWD/db" \
+    --with-systemd=user

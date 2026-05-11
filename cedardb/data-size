@@ -1,4 +1,4 @@
 #!/bin/bash
 set -eu
 
-PGPASSWORD=test psql -h localhost -U postgres -q -t -A -c "SELECT pg_total_relation_size('hits');"
+psql -q -t -A -c "SELECT pg_total_relation_size('hits');"

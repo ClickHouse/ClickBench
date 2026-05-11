@@ -1,12 +1,8 @@
 #!/bin/bash
 set -eu
 
-# Stage parquet file under ./data so the docker container sees /data/hits.parquet.
-mkdir -p data
-mv hits.parquet data/
-chmod -R 777 data
-
-# create.sql defines a view over the parquet file — no ingestion needed.
-PGPASSWORD=test psql -h localhost -U postgres -t < create.sql
+# Substitute the absolute path so CedarDB can find the file regardless of
+# its working directory.
+sed "s|'hits\.parquet'|'$PWD/hits.parquet'|" create.sql | psql
 
 sync

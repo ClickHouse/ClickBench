@@ -105,4 +105,4 @@ SELECT
     "RefererHash"           AS RefererHash,
     "URLHash"               AS URLHash,
     "CLID"                  AS CLID
-FROM '/data/hits.parquet';
+FROM 'hits.parquet';

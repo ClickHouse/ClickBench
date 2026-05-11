@@ -1,3 +1,3 @@
 #!/bin/bash
 
-sudo docker stop cedardb >/dev/null 2>&1 || true
+systemctl --user stop cedardb.service || true
