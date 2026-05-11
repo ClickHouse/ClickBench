@@ -475,6 +475,7 @@ const additional_data_size_points = [
             <a class="selector" id="selector-metric-hot">Hot Run</a>
             <a class="selector" id="selector-metric-load">Load Time</a>
             <a class="selector" id="selector-metric-size">Storage Size</a>
+            <a class="selector" id="selector-metric-cost">Cost</a>
         </td>
     </tr>
 </table>
@@ -749,6 +750,7 @@ document.getElementById('selector-metric-cold').addEventListener('click', e => {
 document.getElementById('selector-metric-hot').addEventListener('click', e => { selectors.metric = 'hot'; render(); updateHistory(); });
 document.getElementById('selector-metric-load').addEventListener('click', e => { selectors.metric = 'load'; render(); updateHistory(); });
 document.getElementById('selector-metric-size').addEventListener('click', e => { selectors.metric = 'size'; render(); updateHistory(); });
+document.getElementById('selector-metric-cost').addEventListener('click', e => { selectors.metric = 'cost'; render(); updateHistory(); });
 
 selectors.queries = [...data[0].result.keys()].map(k => true);
 
@@ -834,6 +836,25 @@ function selectRun(timings, metric) {
         (hot_timing !== null && cold_timing !== null ? (hot_timing * combined_hot_share + cold_timing * combined_cold_share) / (combined_hot_share + combined_cold_share) : null);
 }
 
+/// Total wall-clock seconds the cluster spent on the benchmark: load time
+/// plus every individual query run (cold + both hot), with failed runs treated
+/// as zero.  Used by the Cost metric.
+function totalRunSeconds(elem) {
+    let total = elem.load_time || 0;
+    for (const timings of elem.result) {
+        if (!timings) continue;
+        for (const t of timings) {
+            if (t != null) total += t;
+        }
+    }
+    return total;
+}
+
+function runCost(elem) {
+    if (!elem.cost_per_hour) return null;
+    return elem.cost_per_hour * totalRunSeconds(elem) / 3600;
+}
+
 function relativeQueryTime(num_queries, baseline_data, elem, metric) {
     const fallback_timing = missing_result_penalty * Math.max(missing_result_time, ...elem.result.map(timings => selectRun(timings, metric)));
 
@@ -901,6 +922,7 @@ function renderSummary(filtered_data) {
 
     const min_load_time = Math.min(...filtered_data.map(elem => elem.load_time).filter(x => x && x > 5));
     const min_data_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x && x > 1e9));
+    const min_cost = Math.min(...filtered_data.map(runCost).filter(x => x && x > 0));
 
     let summaries;
     if (selectors.metric == 'load') {
@@ -909,6 +931,12 @@ function renderSummary(filtered_data) {
     } else if (selectors.metric == 'size') {
         summaries = filtered_data.map(elem => elem.data_size / min_data_size);
         document.getElementById('time-or-size').innerText = 'size';
+    } else if (selectors.metric == 'cost') {
+        summaries = filtered_data.map(elem => {
+            const cost = runCost(elem);
+            return cost ? cost / min_cost : null;
+        });
+        document.getElementById('time-or-size').innerText = 'cost';
     } else if (selectors.metric == 'hot' || selectors.metric == 'cold') {
         summaries = filtered_data.map(elem => relativeQueryTime(num_queries, baseline_data, elem, selectors.metric));
         document.getElementById('time-or-size').innerText = 'time';
@@ -929,6 +957,7 @@ function renderSummary(filtered_data) {
 
         if (selectors.metric == 'size' && elem.data_size === null) { return; }
         if (selectors.metric == 'load' && (!elem.load_time || elem.load_time < 5)) { return; }
+        if (selectors.metric == 'cost' && !elem.cost_per_hour) { return; }
 
         let tr = document.createElement('tr');
         tr.className = 'summary-row';
@@ -979,6 +1008,7 @@ function renderSummary(filtered_data) {
 
         const text = selectors.metric == 'load' ? (elem.load_time ? `${Math.round(elem.load_time)}s (×${ratio.toFixed(2)})` : 'stateless')
             :  selectors.metric == 'size' ? `${(elem.data_size / 1024 / 1024 / 1024).toFixed(2)} GiB (×${ratio.toFixed(2)})`
+            :  selectors.metric == 'cost' ? `$${runCost(elem).toFixed(4)} (×${ratio.toFixed(2)})`
             : `×${ratio.toFixed(2)}`;
 
         td_number.appendChild(document.createTextNode(text));
@@ -1092,6 +1122,9 @@ function render() {
     }
     if (selectors.metric == 'load') {
         filtered_data = filtered_data.filter(elem => elem.load_time >= 5 && !elem.tags.includes('stateless'));
+    }
+    if (selectors.metric == 'cost') {
+        filtered_data = filtered_data.filter(elem => elem.cost_per_hour);
     }
     if (selectors.metric == 'cold' || selectors.metric == 'combined' || selectors.metric == 'load') {
         filtered_data = filtered_data.filter(elem => !elem.tags.includes('in-memory'));
