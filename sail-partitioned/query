@@ -1,0 +1,53 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via pysail (Spark Connect server)
+# against ./partitioned/*.parquet.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+set -e
+
+ulimit -n 65536
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# Stage stdin into a temp file: `python3 - <<'PY'` already consumes stdin to
+# read the program, so sys.stdin.read() inside the heredoc returns "".
+query_file=$(mktemp)
+trap 'rm -f "$query_file"' EXIT
+cat > "$query_file"
+
+python3 - "$query_file" <<'PY'
+import os
+import re
+import sys
+import timeit
+
+os.environ["SAIL_PARQUET__BINARY_AS_STRING"] = "true"
+os.environ["SAIL_PARQUET__REORDER_FILTERS"] = "true"
+os.environ["SAIL_OPTIMIZER__ENABLE_JOIN_REORDER"] = "true"
+
+from pysail.spark import SparkConnectServer
+from pyspark.sql import SparkSession
+
+with open(sys.argv[1]) as f:
+    query = f.read()
+query = re.sub(r"""(REGEXP_REPLACE\(.*?,\s*('[^']*')\s*,\s*)('1')""", r"\1'$1'", query)
+
+server = SparkConnectServer()
+server.start()
+_, port = server.listening_address
+spark = SparkSession.builder.remote(f"sc://localhost:{port}").getOrCreate()
+
+df = spark.read.parquet("partitioned")
+df.createOrReplaceTempView("hits")
+
+start = timeit.default_timer()
+res = spark.sql(query).toPandas()
+end = timeit.default_timer()
+
+print(res)
+
+spark.stop()
+
+print(f"{end - start:.3f}", file=sys.stderr)
+PY

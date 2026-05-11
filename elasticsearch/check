@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+curl -sSf 'http://localhost:9200' >/dev/null

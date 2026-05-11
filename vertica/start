@@ -1,0 +1,10 @@
+#!/bin/bash
+set -eu
+
+if sudo docker inspect -f '{{.State.Running}}' vertica_ce 2>/dev/null | grep -q true; then
+    if sudo docker exec vertica_ce /opt/vertica/bin/vsql -U dbadmin -c 'SELECT 1' >/dev/null 2>&1; then
+        exit 0
+    fi
+fi
+
+sudo docker start vertica_ce

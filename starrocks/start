@@ -1,0 +1,21 @@
+#!/bin/bash
+set -e
+
+SR_DIR=$(cat .sr_dir)
+export STARROCKS_HOME="$PWD/$SR_DIR"
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-$(dpkg --print-architecture)
+export PATH=$JAVA_HOME/bin:$PATH
+
+if mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+IPADDR=$(hostname -i)
+
+"$STARROCKS_HOME/fe/bin/start_fe.sh" --daemon
+"$STARROCKS_HOME/be/bin/start_be.sh" --daemon
+
+sleep 30
+mysql -h127.0.0.1 -P9030 -uroot \
+    -e "ALTER SYSTEM ADD BACKEND '${IPADDR}:9050'" 2>/dev/null || true
+sleep 30

@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e
+
+if [ ! -x /usr/bin/clickhouse ]; then
+    curl https://clickhouse.com/ | sh
+    sudo ./clickhouse install --noninteractive
+fi
+
+# Force synchronous startup loading so the cold timer doesn't catch
+# work that should have been amortized into ./start.
+#
+# Two independent layers of laziness contribute to the cold-query floor:
+#
+# 1. async_load_databases (server-level): with the default 1, the server
+#    binds its listen port and answers SELECT 1 before user databases
+#    have finished loading. ./check passes, then the first query stalls
+#    waiting for the part loader.
+#
+# 2. primary_key_lazy_load and columns_and_secondary_indices_sizes_lazy_calculation
+#    (MergeTree-level): even after parts are loaded, the in-memory
+#    primary key and the per-column .size streams are populated lazily
+#    on first query. With ~25 parts × ~80 columns × multiple metadata
+#    files per column that's >1.8k file opens on the first query path,
+#    contributing several hundred ms even on local NVMe.
+#
+# Both are eager-load toggles, not caching shortcuts: the same I/O
+# happens either way, just before query timing instead of during it.
+# Together they brought Q40 cold from ~3 s to ~1.5 s on c6a.4xlarge.
+sudo mkdir -p /etc/clickhouse-server/config.d
+sudo tee /etc/clickhouse-server/config.d/eager_load.yaml >/dev/null <<'EOF'
+async_load_databases: false
+merge_tree:
+  primary_key_lazy_load: 0
+  columns_and_secondary_indices_sizes_lazy_calculation: 0
+EOF

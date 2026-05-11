@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-pg_mooncake}
+PG_MOONCAKE_IMAGE=${PG_MOONCAKE_IMAGE:-mooncakelabs/pg_mooncake:17-v0.1.0}
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client
+
+sudo docker pull "$PG_MOONCAKE_IMAGE"
+
+if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    sudo docker rm -f "$CONTAINER_NAME" >/dev/null
+fi
+
+sudo docker run -d \
+    --name "$CONTAINER_NAME" \
+    -p 5432:5432 \
+    -e POSTGRES_HOST_AUTH_METHOD=trust \
+    "$PG_MOONCAKE_IMAGE"

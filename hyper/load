@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# Idempotent: blow away any prior DB.
+rm -f hits.hyper
+
+python3 - <<'PY'
+from tableauhyperapi import HyperProcess, Telemetry, Connection, CreateMode
+
+with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU) as hyper:
+    with Connection(hyper.endpoint, 'hits.hyper', CreateMode.CREATE_AND_REPLACE) as connection:
+        connection.execute_command(open("create.sql").read())
+        connection.execute_command("copy hits from 'hits.csv' with (format csv)")
+PY
+
+rm -f hits.csv
+sync

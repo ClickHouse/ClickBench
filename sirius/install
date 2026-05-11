@@ -1,0 +1,41 @@
+#!/bin/bash
+# Install Sirius (GPU-accelerated DuckDB extension) and the Python deps for
+# this benchmark wrapper.
+set -e
+
+# 1. System deps + pixi (CUDA/cuDF toolchain manager).
+sudo apt-get update -y
+sudo apt-get install -y git wget curl build-essential time python3-pip python3-venv
+
+if ! command -v pixi &>/dev/null; then
+    curl -fsSL https://pixi.sh/install.sh | sudo PIXI_BIN_DIR=/usr/local/bin PIXI_NO_PATH_UPDATE=1 bash
+fi
+
+# 2. Build Sirius.
+if [ ! -d sirius ]; then
+    git clone --recurse-submodules https://github.com/sirius-db/sirius.git
+fi
+
+(
+    cd sirius
+    pixi install
+    export LIBCUDF_ENV_PREFIX="$(pwd)/.pixi/envs/default"
+    pixi run make -j"$(nproc)"
+)
+
+# 3. Python venv for the FastAPI wrapper.
+if [ ! -d myenv ]; then
+    python3 -m venv myenv
+fi
+# shellcheck disable=SC1091
+source myenv/bin/activate
+pip install --quiet fastapi uvicorn
+
+# 4. Pre-baked env file used by start to put the duckdb+sirius binary on PATH
+#    and pull in the pixi shell-hook variables.
+cat > .sirius_env <<'EOF'
+SIRIUS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"; pwd)/sirius"
+eval "$(cd "$SIRIUS_DIR" && pixi shell-hook)"
+export PATH="$SIRIUS_DIR/build/release:$PATH"
+export LIBCUDF_ENV_PREFIX="$SIRIUS_DIR/.pixi/envs/default"
+EOF

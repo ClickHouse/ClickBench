@@ -1,0 +1,7 @@
+#!/bin/bash
+
+. ./util.sh
+stop_gizmosql || true
+
+# Belt-and-braces: kill any leftover gizmosql_server process.
+pkill -x gizmosql_server 2>/dev/null || true

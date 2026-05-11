@@ -1,0 +1,41 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via cockroach sql.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# the "Time:" footer; cockroach prints either "Ns" or "Nms").
+# Exit non-zero on error.
+#
+# Note: cockroach sql only emits the elapsed-time footer when stdout is a TTY.
+# We use `unbuffer` to fool isatty().
+set -e
+
+query=$(cat)
+
+raw=$(unbuffer cockroach sql --insecure --host=localhost --database=test \
+    --execute="$query" 2>&1) && exit_code=0 || exit_code=$?
+
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$raw" | grep -qiE '^ERROR:|^pq:'; then
+    printf '%s\n' "$raw" >&2
+    exit 1
+fi
+
+printf '%s\n' "$raw"
+
+# Pull the LAST "Time: <num><unit>" line. CockroachDB uses s, ms, µs.
+# Magnitude examples: "Time: 1.23s", "Time: 45ms", "Time: 678µs".
+t_line=$(printf '%s\n' "$raw" | grep -oP 'Time:\s*\K[0-9.]+(s|ms|µs|us)' | tail -n1)
+
+if [ -z "$t_line" ]; then
+    echo "no Time: footer in cockroach output" >&2
+    exit 1
+fi
+
+awk -v t="$t_line" 'BEGIN {
+    if (match(t, /[0-9.]+/)) {
+        v = substr(t, RSTART, RLENGTH)
+        u = substr(t, RSTART+RLENGTH)
+        if (u == "ms")        { printf "%.3f\n", v / 1000 }
+        else if (u == "µs" || u == "us") { printf "%.6f\n", v / 1000000 }
+        else                  { printf "%.3f\n", v }
+    }
+}' >&2

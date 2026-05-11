@@ -1,0 +1,16 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via the trino CLI in the running
+# container.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+start=$(date +%s.%N)
+sudo docker exec -i trino trino --catalog hive --schema clickbench \
+    --output-format=NULL --execute "$query"
+end=$(date +%s.%N)
+
+awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2

@@ -7,7 +7,7 @@
     "hardware": "cpu",
     "tuned": "no",
     "comment":"",
-    "tags": ["column-oriented", "PostgreSQL compatible", "managed"],
+    "tags": ["column-oriented","DuckDB derivative", "PostgreSQL compatible", "managed"],
     "load_time": 0,
     "data_size": 14779976446,
 

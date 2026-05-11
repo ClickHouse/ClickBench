@@ -1,0 +1,5 @@
+#!/bin/bash
+# chdb-parquet-partitioned queries the parquet files directly via file().
+# Nothing to load; the dataset is already in CWD as hits_*.parquet.
+set -e
+sync

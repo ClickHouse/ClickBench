@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+# Arc loads the parquet file into its data directory and indexes it on startup.
+ARC_DATA_DIR="/var/lib/arc/data"
+TARGET_DIR="$ARC_DATA_DIR/clickbench/hits"
+TARGET_FILE="$TARGET_DIR/hits.parquet"
+
+sudo mkdir -p "$TARGET_DIR"
+
+if [ -f "$TARGET_FILE" ] && \
+   [ "$(stat -c%s hits.parquet)" -eq "$(stat -c%s "$TARGET_FILE")" ]; then
+    : # already loaded
+else
+    sudo cp hits.parquet "$TARGET_FILE"
+fi
+
+# Free up local space.
+rm -f hits.parquet
+sync

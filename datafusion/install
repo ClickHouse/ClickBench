@@ -1,0 +1,37 @@
+#!/bin/bash
+set -e
+
+# Build datafusion-cli from source. Idempotent: only build if the binary
+# isn't already in arrow-datafusion/target/release/datafusion-cli.
+
+if [ ! -x arrow-datafusion/target/release/datafusion-cli ]; then
+    # Rust toolchain.
+    if ! command -v cargo >/dev/null 2>&1; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
+        bash rust-init.sh -y
+    fi
+    export HOME=${HOME:=~}
+    # shellcheck disable=SC1091
+    source "$HOME/.cargo/env"
+
+    # Low-memory hosts need swap to compile datafusion-cli.
+    if [ "$(free -g | awk '/^Mem:/{print $2}')" -lt 12 ]; then
+        if [ "$(swapon --noheadings --show | wc -l)" -eq 0 ]; then
+            sudo fallocate -l 8G /swapfile
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile
+            sudo swapon /swapfile
+        fi
+    fi
+
+    sudo apt-get update -y
+    sudo apt-get install -y gcc git
+
+    if [ ! -d arrow-datafusion ]; then
+        git clone https://github.com/apache/arrow-datafusion.git
+    fi
+    cd arrow-datafusion
+    git checkout 53.1.0
+    CARGO_PROFILE_RELEASE_LTO=true RUSTFLAGS="-C codegen-units=1" \
+        cargo build --release --package datafusion-cli --bin datafusion-cli
+fi

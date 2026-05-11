@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+if ! command -v duckdb >/dev/null 2>&1; then
+    export HOME=${HOME:=~}
+    curl https://install.duckdb.org | sh
+    # The DuckDB installer drops the binary into ~/.duckdb/cli/latest/duckdb
+    # and only suggests adding it to PATH. Symlink into /usr/local/bin so
+    # sibling scripts (check, load, query) find it unconditionally.
+    sudo ln -sf "$HOME/.duckdb/cli/latest/duckdb" /usr/local/bin/duckdb
+fi

@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+export HOME=${HOME:=~}
+# shellcheck disable=SC1091
+source "$HOME/.turso/env"
+
+# Idempotent: blow away any prior DB.
+rm -f mydb
+
+tursodb mydb < create.sql
+tursodb mydb '.import --csv hits.csv hits'
+
+rm -f hits.csv
+sync

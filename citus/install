@@ -1,0 +1,38 @@
+#!/bin/bash
+set -eu
+
+# citusdata/citus publishes amd64-only images for every tag (verified
+# via Docker Hub manifest). On arm64 (c8g.*) docker silently pulls the
+# amd64 image and runs it under QEMU emulation — the warning shows up
+# as "linux/amd64 does not match host platform linux/arm64/v8" and the
+# emulated postgres never finishes accepting connections within the
+# 300 s ./check timeout. Even if it did, query timings would be
+# dominated by emulation overhead and not be comparable. Fail fast.
+if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "amd64" ]; then
+    echo "citus: citusdata/citus is amd64-only; skipping on $(uname -m)" >&2
+    exit 1
+fi
+
+CONTAINER_NAME=${CONTAINER_NAME:-citus}
+CITUS_VERSION=${CITUS_VERSION:-11.0}
+PGPASSWORD=${PGPASSWORD:-mypass}
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client
+
+sudo docker pull "citusdata/citus:$CITUS_VERSION"
+
+# (Re)create container so install is idempotent.
+if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    sudo docker rm -f "$CONTAINER_NAME" >/dev/null
+fi
+
+sudo docker run -d \
+    --name "$CONTAINER_NAME" \
+    -p 5432:5432 \
+    -e POSTGRES_PASSWORD="$PGPASSWORD" \
+    "citusdata/citus:$CITUS_VERSION"
+
+# Persist the password for psql clients invoked from this directory.
+echo "*:*:*:*:$PGPASSWORD" > .pgpass
+chmod 600 .pgpass

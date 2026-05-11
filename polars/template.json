@@ -5,6 +5,6 @@
   "tuned": "no",
   "tags": [
     "column-oriented",
-    "lukewarm-cold-run"
+    "stateless"
   ]
 }

@@ -1,0 +1,12 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y parallel pigz pv
+
+if [ ! -x ./parseable ]; then
+    wget --continue --progress=dot:giga \
+        https://github.com/parseablehq/parseable/releases/download/v2.5.12/Parseable_OSS_x86_64-unknown-linux-gnu
+    mv Parseable_OSS_x86_64-unknown-linux-gnu parseable
+    chmod +x parseable
+fi

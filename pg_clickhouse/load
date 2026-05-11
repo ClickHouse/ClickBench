@@ -1,0 +1,26 @@
+#!/bin/bash
+set -eu
+
+# Create the ClickHouse table.
+clickhouse-client < create.sql
+
+# Move the downloaded partitioned parquet files into ClickHouse's user_files
+# directory and ingest them.
+sudo mkdir -p /var/lib/clickhouse/user_files
+sudo mv hits_*.parquet /var/lib/clickhouse/user_files/
+sudo chown clickhouse:clickhouse /var/lib/clickhouse/user_files/hits_*.parquet
+sync
+
+clickhouse-client --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" \
+    --max-insert-threads $(( $(nproc) / 4 ))
+sync
+
+# Cleanup parquet inputs from the user_files directory.
+sudo rm -f /var/lib/clickhouse/user_files/hits_*.parquet
+
+# Now (re)create the postgres-side foreign-table mapping.
+sudo -u postgres psql -t -c "DROP DATABASE IF EXISTS test"
+sudo -u postgres psql -t -c "CREATE DATABASE test"
+sudo -u postgres psql -v ON_ERROR_STOP=1 test -f create-postgres.sql
+
+sync

@@ -1,19 +1,8 @@
 #!/bin/bash
-
-# Install
-
-sudo apt-get update -y
-sudo apt-get install -y python3-pip python3-venv
-python3 -m venv myenv
-source myenv/bin/activate
-pip install polars
-
-# Download the data
-../download-hits-parquet-single
-
-# Run the queries
-
-/usr/bin/time -f "Memory usage: %M KB" ./query.py 2>&1 | tee log.txt
-
-echo -n "Data size: "
-grep -F "Memory usage" log.txt | grep -o -P '\d+ KB' | sed 's/KB/*1024/' | bc -l
+# Thin shim — actual flow is in lib/benchmark-common.sh.
+export BENCH_DOWNLOAD_SCRIPT="download-hits-parquet-single"
+export BENCH_DURABLE=no
+# polars runs Python expressions directly (server eval()s them); queries.sql
+# is kept for cross-system reference but the actual workload is in queries.py.
+export BENCH_QUERIES_FILE=queries.py
+exec ../lib/benchmark-common.sh

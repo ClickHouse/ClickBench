@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# Match the pre-refactor heavysql incantation: no positional db arg, the
+# default `omnisci` is implicit. Some 5.10.2 builds of omnisql treat the
+# trailing positional arg as a script path rather than a db name.
+CONTAINER_NAME=${CONTAINER_NAME:-heavyai}
+sudo docker exec -i "$CONTAINER_NAME" /omnisci/bin/omnisql \
+    -p HyperInteractive -q -t <<< 'SELECT 1' >/dev/null 2>&1

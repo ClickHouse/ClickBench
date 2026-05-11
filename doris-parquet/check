@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null

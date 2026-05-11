@@ -1,0 +1,31 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via parseable's HTTP /api/v1/query.
+# Stdout: query result (JSON).
+# Stderr: query runtime in fractional seconds on the last line (wall-clock).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+CURRENT_DATE=$(date +%Y-%m-%d)
+START_TIME="${CURRENT_DATE}T00:00:00.000Z"
+END_TIME="${CURRENT_DATE}T23:59:00.000Z"
+
+# JSON-escape quotes inside the query.
+escaped=$(printf '%s' "$query" | sed 's/"/\\"/g')
+JSON=$(printf '{"query":"%s","startTime":"%s","endTime":"%s"}' "$escaped" "$START_TIME" "$END_TIME")
+
+t1=$(date +%s.%N)
+out=$(curl -sS -H "Content-Type: application/json" -k -XPOST \
+    -u "admin:admin" 'http://localhost:8000/api/v1/query' \
+    --data "$JSON") && exit_code=0 || exit_code=$?
+t2=$(date +%s.%N)
+
+if [ "$exit_code" -ne 0 ]; then
+    printf '%s\n' "$out" >&2
+    exit "$exit_code"
+fi
+
+printf '%s\n' "$out"
+
+awk -v a="$t1" -v b="$t2" 'BEGIN { printf "%.6f\n", b - a }' >&2

@@ -1,0 +1,41 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via mariadb client.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed
+#         from the "N rows in set (X.YYY sec)" footer).
+# Exit non-zero on error.
+set -e
+
+PASSWORD=${MCS_PASSWORD:-tsFgm457%3cj}
+query=$(cat)
+
+# -vvv makes mariadb echo "N rows in set (T sec)" for every statement.
+raw=$(mariadb --skip-ssl --password="$PASSWORD" --host 127.0.0.1 -vvv \
+    clickbench -e "$query" 2>&1) && exit_code=0 || exit_code=$?
+
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$raw" | grep -qE '^ERROR\b'; then
+    printf '%s\n' "$raw" >&2
+    exit 1
+fi
+
+# Stdout: drop the timing/footer lines, keep the actual result body.
+printf '%s\n' "$raw" | grep -vE '^[0-9]+ rows? in set|^Empty set|^Bye$|^Reading table information'
+
+# "N rows in set (M min S sec)" — convert to seconds.
+secs=$(printf '%s\n' "$raw" \
+    | grep -oP '\(\K(?:[0-9.]+\s+min\s+)?[0-9.]+\s+sec\)' \
+    | tail -n1 | sed 's/)$//')
+if [ -z "$secs" ]; then
+    secs=$(printf '%s\n' "$raw" | grep -oP '^Empty set \(\K[0-9.]+\s+sec\)' | tail -n1 | sed 's/)$//')
+fi
+if [ -z "$secs" ]; then
+    echo "no timing in mariadb output" >&2
+    exit 1
+fi
+
+awk -v s="$secs" '
+BEGIN {
+    n = split(s, a, /\s+/)
+    if (n >= 4 && a[2] == "min") { printf "%.3f\n", a[1] * 60 + a[3] }
+    else if (n >= 2)             { printf "%.3f\n", a[1] }
+}' >&2

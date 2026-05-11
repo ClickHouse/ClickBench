@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eu
+
+sudo mysql -e "DROP DATABASE IF EXISTS test"
+sudo mysql -e "CREATE DATABASE test"
+sudo mysql test < create.sql
+
+sudo mysql test -e "SET sql_log_bin = 0; LOAD DATA LOCAL INFILE 'hits.tsv' INTO TABLE hits;"
+
+rm -f hits.tsv
+sync

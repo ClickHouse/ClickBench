@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# Both backends must respond.
+clickhouse-client --query "SELECT 1" >/dev/null
+sudo -u postgres psql -t -c 'SELECT 1' >/dev/null

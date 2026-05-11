@@ -8,6 +8,6 @@
     "column-oriented",
     "MySQL compatible",
     "ClickHouse derivative",
-    "lukewarm-cold-run"
+    "stateless"
   ]
 }

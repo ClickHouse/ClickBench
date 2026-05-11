@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+# Schema-only load: Parquet data is read directly from S3 on demand.
+java -jar presto-cli.jar --server http://localhost:8081 --file create.sql
+
+sync

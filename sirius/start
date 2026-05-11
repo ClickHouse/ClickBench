@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+
+# Idempotent: if already running, leave it alone.
+if [ -f server.pid ] && kill -0 "$(cat server.pid)" 2>/dev/null; then
+    exit 0
+fi
+
+# Source the env populated by ./install so the sirius-built duckdb binary is
+# on PATH and CUDA/cuDF libs resolve correctly.
+if [ -f .sirius_env ]; then
+    # shellcheck disable=SC1091
+    source .sirius_env
+fi
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+nohup python3 server.py >server.log 2>&1 &
+echo $! > server.pid

@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+# CHYT runs on a remote YT cluster — install the YT Python client locally to
+# drive it. Idempotent.
+if [ -d myenv ] && [ -x myenv/bin/yt ]; then
+    exit 0
+fi
+
+sudo apt-get install -y python3-pip python3-venv
+python3 -m venv myenv
+# shellcheck disable=SC1091
+source myenv/bin/activate
+pip install --upgrade pip
+pip install ytsaurus-client ytsaurus-yson

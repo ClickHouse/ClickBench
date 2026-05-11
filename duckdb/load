@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+# Idempotent: blow away any prior partial DB.
+rm -f hits.db
+
+# Build the database from the source parquet via inline create + load DDL.
+duckdb hits.db -storage_version latest <<'SQL'
+.read create.sql
+INSERT INTO hits
+SELECT * REPLACE (
+    make_date(EventDate) AS EventDate,
+    epoch_ms(EventTime * 1000) AS EventTime,
+    epoch_ms(ClientEventTime * 1000) AS ClientEventTime,
+    epoch_ms(LocalEventTime * 1000) AS LocalEventTime)
+FROM read_parquet('hits.parquet', binary_as_string=True);
+SQL
+
+rm -f hits.parquet
+sync

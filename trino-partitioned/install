@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+# Install Docker (Trino's official image bundles its own JRE) and bc.
+if ! command -v docker >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y docker.io
+fi
+sudo apt-get install -y bc
+
+sudo docker pull trinodb/trino:latest
+
+mkdir -p etc/catalog
+cat > etc/catalog/hive.properties <<'EOF'
+connector.name=hive
+hive.metastore=file
+hive.metastore.catalog.dir=local:///metastore
+local.location=/clickbench
+fs.native-local.enabled=true
+hive.non-managed-table-writes-enabled=true
+EOF
+
+mkdir -p data/hits
+sudo chown -R 1000:1000 data

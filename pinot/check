@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+# Pinot is responsive once both the controller and the broker accept queries.
+RES=$(curl -sf -o /dev/null -w '%{http_code}' \
+    -XPOST -H'Content-Type: application/json' \
+    http://localhost:8000/query/sql/ \
+    -d '{"sql":"SELECT 1"}')
+
+[ "$RES" = "200" ]
