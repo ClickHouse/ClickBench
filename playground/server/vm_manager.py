@@ -84,6 +84,19 @@ class VMManager:
         self.cfg = config
         self.systems = systems
         self.vms: dict[str, VM] = {}
+        # Bound the number of system-disk builds running concurrently. Each
+        # build copies up to ~88 GB of dataset (for tsv/csv systems) — doing
+        # 98 in parallel would thrash the host's NVMe. 6 is enough to keep
+        # the disk busy without hitting writeback stalls.
+        self._build_sem = asyncio.Semaphore(int(os.environ.get(
+            "PLAYGROUND_BUILD_CONCURRENCY", "6")))
+        # Cap on simultaneous in-flight provisions. Each one needs 4 vCPU +
+        # apt-get downloads from the public internet; running 98 concurrently
+        # gets rate-limited by Ubuntu mirrors and we have to retry. The host
+        # has plenty of headroom for 32, which still finishes the catalog
+        # in one pass.
+        self._provision_sem = asyncio.Semaphore(int(os.environ.get(
+            "PLAYGROUND_PROVISION_CONCURRENCY", "32")))
         # Stable slot allocation: sort systems alphabetically so each system
         # always gets the same slot id (and therefore the same TAP/IP).
         for i, name in enumerate(sorted(systems.keys()), start=1):
@@ -328,6 +341,17 @@ class VMManager:
             "is_root_device": False,
             "is_read_only": False,
         })
+        # Shared dataset disk, attached read-only to every VM (LABEL=cbdata
+        # mount in the guest fstab). Saves ~1-2 TB of host storage compared
+        # to embedding the dataset into each per-system disk.
+        datasets_img = self.cfg.datasets_image
+        if datasets_img.exists():
+            await fc.put(sock, "/drives/datasets", {
+                "drive_id": "datasets",
+                "path_on_host": str(datasets_img),
+                "is_root_device": False,
+                "is_read_only": True,
+            })
         await fc.put(sock, "/machine-config", {
             "vcpu_count": self.cfg.vm_vcpus,
             "mem_size_mib": self.cfg.vm_mem_mib,
@@ -356,6 +380,16 @@ class VMManager:
             # Try to resume so we can shut down cleanly; ignore failures.
             with contextlib.suppress(Exception):
                 await fc.patch(sock, "/vm", {"state": "Resumed"})
+
+        # Capture the *disk* state too. The memory snapshot is meaningless on
+        # its own: it has in-flight references to specific inodes / file
+        # positions / mmap'd ranges on the rootfs and system disks, and if
+        # those move under it the restored process malfunctions. We sparse-
+        # copy the disks into a parallel "golden" path; every subsequent
+        # restore boots off a fresh copy of the golden, so background work
+        # the daemon does after restore (clickhouse merges, log writes,
+        # /tmp churn) never persists into the next session.
+        await self._snapshot_disks(vm)
 
         # Compress the memory dump with parallel zstd. Firecracker writes the
         # *full* 16 GB of guest memory regardless of how much was actually
@@ -421,6 +455,12 @@ class VMManager:
 
     async def _restore_snapshot(self, vm: VM) -> None:
         log.info("[%s] restore from snapshot", vm.system.name)
+        # Always boot from a *fresh copy* of the golden disks captured at
+        # snapshot time. Restore #N inherits zero state from restore #N-1,
+        # which is what makes the playground safe to expose to arbitrary
+        # SQL: the worst a user query can do is dirty the working copy,
+        # which we throw away on the next /teardown.
+        await self._restore_disks(vm)
         # If we only have the zstd-compressed memory dump, expand it before
         # Firecracker tries to mmap it.
         await self._decompress_snapshot(vm)
@@ -429,6 +469,50 @@ class VMManager:
         await self._boot(vm, restore_snapshot=True)
         await self._wait_for_agent(vm, timeout=60)
         vm.state = "ready"
+
+    def _golden_paths(self, vm: VM) -> tuple[Path, Path, Path, Path]:
+        """(working rootfs, working sysdisk, golden rootfs, golden sysdisk)."""
+        sys_dir = self.cfg.systems_dir / vm.system.name
+        return (
+            sys_dir / "rootfs.ext4",
+            sys_dir / "system.ext4",
+            sys_dir / "rootfs.golden.ext4",
+            sys_dir / "system.golden.ext4",
+        )
+
+    async def _snapshot_disks(self, vm: VM) -> None:
+        rootfs, sysdisk, rootfs_gold, sysdisk_gold = self._golden_paths(vm)
+        # Atomically swap: rename the working images into the golden slot.
+        # Both disks were sync'd via /sync before /snapshot/create, so
+        # what's on disk is consistent with what's in the memory snapshot.
+        # We'll re-create the working images by cloning from the golden
+        # on every restore (see _restore_disks).
+        for src, dst in ((rootfs, rootfs_gold), (sysdisk, sysdisk_gold)):
+            if dst.exists():
+                dst.unlink()
+            os.replace(src, dst)
+        log.info("[%s] golden disks saved (%s, %s)", vm.system.name,
+                 _fmt_size(rootfs_gold.stat().st_size),
+                 _fmt_size(sysdisk_gold.stat().st_size))
+
+    async def _restore_disks(self, vm: VM) -> None:
+        rootfs, sysdisk, rootfs_gold, sysdisk_gold = self._golden_paths(vm)
+        if not rootfs_gold.exists() or not sysdisk_gold.exists():
+            raise RuntimeError(
+                f"[{vm.system.name}] missing golden disks; cannot restore")
+        # Clone the goldens into fresh working copies. `cp --sparse=always`
+        # only writes the non-zero blocks, so the cost is proportional to
+        # the actual data on each disk, not its apparent 200 GB.
+        for src, dst in ((rootfs_gold, rootfs), (sysdisk_gold, sysdisk)):
+            if dst.exists():
+                dst.unlink()
+            proc = await asyncio.create_subprocess_exec(
+                "cp", "--sparse=always", str(src), str(dst),
+            )
+            rc = await proc.wait()
+            if rc != 0:
+                raise RuntimeError(f"cp {src} -> {dst} failed rc={rc}")
+        log.info("[%s] working disks cloned from golden", vm.system.name)
 
     async def _shutdown(self, vm: VM) -> None:
         """Best-effort clean shutdown of the firecracker process.
@@ -470,6 +554,16 @@ class VMManager:
         if vm.snapshot_bin.exists() and zst.exists():
             with contextlib.suppress(FileNotFoundError):
                 vm.snapshot_bin.unlink()
+        # Discard the working disks. Any changes the daemon scribbled into
+        # them during this session (background merges, log writes, /tmp
+        # churn) die with them; the next restore will clone fresh copies
+        # from the golden disks, so user N+1 sees the same starting state
+        # as user N.
+        if _has_snapshot(vm):
+            rootfs, sysdisk, _, _ = self._golden_paths(vm)
+            for p in (rootfs, sysdisk):
+                with contextlib.suppress(FileNotFoundError):
+                    p.unlink()
 
     # ── agent helpers ────────────────────────────────────────────────────
 
@@ -521,7 +615,17 @@ class VMManager:
 
 
 def _has_snapshot(vm: VM) -> bool:
-    return vm.snapshot_bin.exists() or vm.snapshot_bin.with_suffix(".bin.zst").exists()
+    """A snapshot is complete only when *both* the memory image and the
+    golden disks have been captured. A half-built snapshot (memory present
+    but goldens missing, or vice versa) is treated as no snapshot at all
+    so the next ensure_ready_for_query re-provisions cleanly.
+    """
+    mem_ok = (vm.snapshot_bin.exists() or
+              vm.snapshot_bin.with_suffix(".bin.zst").exists())
+    sys_dir = vm.snapshot_bin.parent
+    disks_ok = ((sys_dir / "rootfs.golden.ext4").exists() and
+                (sys_dir / "system.golden.ext4").exists())
+    return mem_ok and disks_ok
 
 
 def _fmt_size(n: int) -> str:

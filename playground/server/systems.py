@@ -36,7 +36,7 @@ _EXTERNAL = {
     "gravitons", "heavyai", "hologres", "hydrolix", "kinetica",
     "motherduck", "oxla", "pgpro_tam", "redshift", "redshift-serverless",
     "s3select", "singlestore", "snowflake", "supabase",
-    "tembo-olap", "timescale-cloud", "tinybird", "ursa", "velodb",
+    "tembo-olap", "timescale-cloud", "tinybird", "velodb",
     "vertica", "ydb",
 }
 

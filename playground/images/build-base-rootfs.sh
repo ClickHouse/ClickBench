@@ -172,9 +172,10 @@ passwd -d root
 # systemd refuses to clear those entries on its own and drops to emergency
 # mode when label-based lookups fail. The kernel handles the root mount via
 # its `root=/dev/vda` cmdline; we only need fstab for the system disk.
-mkdir -p /opt/clickbench/system
+mkdir -p /opt/clickbench/system /opt/clickbench/datasets
 cat > /etc/fstab <<EOF
 LABEL=cbsystem  /opt/clickbench/system      ext4    rw,nofail,noatime              0 0
+LABEL=cbdata    /opt/clickbench/datasets    ext4    ro,nofail,noatime,nodev,nosuid 0 0
 EOF
 
 # Make sure the home dir exists; some installers (vcpkg, gizmosql) honor $HOME
