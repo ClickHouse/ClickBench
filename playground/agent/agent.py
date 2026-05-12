@@ -263,10 +263,53 @@ def _provision() -> tuple[int, bytes]:
             PROVISION_LOG.write_bytes(b"".join(log_lines))
             return r.returncode, b"".join(log_lines)
 
-        # Drop the page+dentry+inode cache. The page cache typically holds
-        # 3-5 GB of file data the system would re-read on demand anyway;
-        # those pages turn into zero-fill in the snapshot, which zstd
-        # compresses 50:1 vs random data.
+        # Pre-snapshot trim. The host /sync's the FS right before pausing
+        # the vcpus, so any on-disk data the daemon has already committed
+        # is durable. That means we're free to stop the daemon here:
+        # ClickHouse's MergeTree (and equivalent on-disk stores) never
+        # produce inconsistent on-disk state regardless of when the
+        # process exits — only an unflushed *filesystem* can. With the
+        # host-side /sync in place, we can shut the daemon down to evict
+        # its private heap (merge thread arenas, query cache, mark cache,
+        # uncompressed cache, parquet ingest buffers, …) and snapshot a
+        # mostly-zero RAM image. The agent's startup path
+        # (_kick_daemon_if_provisioned) brings it back up on every
+        # restore, so the first query in a restored VM pays a 1-2 s
+        # daemon-start cost instead of carrying 8-12 GB of memory in
+        # every snapshot.
+        #
+        # Skip for in-process / stateless tools where stop/start is a
+        # no-op AND the data lives in process memory; wiping it would
+        # defeat the point. Those systems can rely on drop_caches alone.
+        stop = SYSTEM_DIR / "stop"
+        start = SYSTEM_DIR / "start"
+        check = SYSTEM_DIR / "check"
+        has_daemon = (stop.exists() and start.exists() and
+                      check.exists() and os.access(stop, os.X_OK) and
+                      os.access(start, os.X_OK))
+        if has_daemon:
+            log_lines.append(b"\n=== pre-snapshot stop ===\n")
+            r = subprocess.run([str(stop)], cwd=str(SYSTEM_DIR),
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               timeout=120, check=False)
+            log_lines.append(b"stop: rc=" + str(r.returncode).encode() + b"\n")
+            log_lines.append(r.stdout or b"")
+            # Wait for the daemon to actually exit (./check failing means
+            # it's gone). Tolerant if it never fails — we still proceed.
+            for _ in range(120):
+                rc = subprocess.run([str(check)], cwd=str(SYSTEM_DIR),
+                                    stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL,
+                                    timeout=10, check=False).returncode
+                if rc != 0:
+                    break
+                time.sleep(0.5)
+            log_lines.append(b"=== pre-snapshot stop done ===\n")
+
+        # Drop the page+dentry+inode cache. With the daemon stopped, this
+        # frees both file cache AND its mmap'd buffers. The result is a
+        # snapshot whose memory is mostly zero-fill, which zstd compresses
+        # ~300:1.
         subprocess.run(["sync"], check=False)
         try:
             Path("/proc/sys/vm/drop_caches").write_text("3\n")
