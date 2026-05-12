@@ -178,21 +178,27 @@ passwd -d root
 #      hits.tsv, hits.csv, hits_partitioned/*.parquet — same bytes, one
 #      copy on the host, never duplicated per VM or per provision.
 #   2. The per-VM writable system disk (cbsystem) mounts at
-#      /opt/clickbench/system_upper. Holds the system's ClickBench
-#      scripts (install, start, query, ...).
-#   3. An overlayfs at /opt/clickbench/system merges both. The system's
-#      load script runs there with cwd=/opt/clickbench/system and sees a
+#      /opt/clickbench/sysdisk. We put both the overlay's upperdir AND
+#      its workdir inside this mount — overlayfs requires them on the
+#      same filesystem; nesting both as subdirs of one mount is the
+#      cleanest way.
+#         /opt/clickbench/sysdisk/upper/   ClickBench scripts go here
+#         /opt/clickbench/sysdisk/work/    overlay scratch (auto-cleared)
+#   3. An overlayfs at /opt/clickbench/system merges
+#         lowerdir = datasets_ro
+#         upperdir = sysdisk/upper
+#      The system's load runs at cwd=/opt/clickbench/system and sees a
 #      single tree containing scripts + dataset files. When the load
 #      does `mv hits.parquet target/` or `chown` on a dataset file,
 #      overlayfs copies that one file up from the lower into the upper
 #      lazily — only the bytes the script actually mutates land in the
 #      per-VM writable layer.
 mkdir -p /opt/clickbench/system /opt/clickbench/datasets_ro \
-         /opt/clickbench/system_upper /opt/clickbench/system_work
+         /opt/clickbench/sysdisk
 cat > /etc/fstab <<EOF
 LABEL=cbdata    /opt/clickbench/datasets_ro   ext4      ro,nofail,noatime,nodev,nosuid                                                            0 0
-LABEL=cbsystem  /opt/clickbench/system_upper  ext4      rw,nofail,noatime                                                                         0 0
-overlay         /opt/clickbench/system        overlay   nofail,lowerdir=/opt/clickbench/datasets_ro,upperdir=/opt/clickbench/system_upper,workdir=/opt/clickbench/system_work,x-systemd.requires-mounts-for=/opt/clickbench/system_upper,x-systemd.requires-mounts-for=/opt/clickbench/datasets_ro 0 0
+LABEL=cbsystem  /opt/clickbench/sysdisk       ext4      rw,nofail,noatime                                                                         0 0
+overlay         /opt/clickbench/system        overlay   nofail,lowerdir=/opt/clickbench/datasets_ro,upperdir=/opt/clickbench/sysdisk/upper,workdir=/opt/clickbench/sysdisk/work,x-systemd.requires-mounts-for=/opt/clickbench/sysdisk,x-systemd.requires-mounts-for=/opt/clickbench/datasets_ro 0 0
 EOF
 
 # Make sure the home dir exists; some installers (vcpkg, gizmosql) honor $HOME

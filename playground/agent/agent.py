@@ -84,35 +84,6 @@ def _read_body(handler: http.server.BaseHTTPRequestHandler) -> bytes:
     return handler.rfile.read(min(n, 1 << 20))
 
 
-def _stage_dataset_layout(fmt: str) -> None:
-    """Make the system's load script see hits.* in its cwd.
-
-    The base rootfs's /etc/fstab overlay-mounts /opt/clickbench/system from
-    lower=/opt/clickbench/datasets_ro (the shared dataset image) + upper=/
-    opt/clickbench/system_upper (this VM's writable scripts disk). Most
-    load scripts reference hits.parquet / hits.tsv / hits_*.parquet at
-    cwd, which is /opt/clickbench/system — the overlay already exposes
-    those files there, no copy needed.
-
-    Partitioned parquet lives in a `hits_partitioned/` subdirectory in the
-    lower; the clickhouse load globs `hits_*.parquet` in cwd. Create
-    symlinks (in the upper) pointing at the lower files so the glob
-    matches. Symlinks cost a few bytes per file — far cheaper than the
-    14 GB physical copy we used to do.
-    """
-    if fmt == "parquet-partitioned":
-        src_dir = DATASETS_DIR / "hits_partitioned"
-        if not src_dir.exists():
-            raise FileNotFoundError(f"partitioned dir missing: {src_dir}")
-        for f in sorted(src_dir.glob("hits_*.parquet")):
-            link = SYSTEM_DIR / f.name
-            if not link.exists():
-                link.symlink_to(f)
-    # parquet / tsv / csv already appear in cwd via the overlay lower
-    # (their files sit at /opt/clickbench/datasets_ro/hits.parquet etc.
-    # and the overlay merges that path's contents into the merged dir).
-
-
 def _system_script(name: str) -> Path:
     """Return path to a script in the system dir, or raise if missing/not executable."""
     p = SYSTEM_DIR / name
@@ -317,20 +288,12 @@ def _provision() -> tuple[int, bytes]:
             return 1, b"".join(log_lines)
         log_lines.append(b"\n=== check ok ===\n")
 
-        # Make sure hits.* are visible at cwd for the load script. For
-        # parquet / tsv / csv the overlay already does it (files appear
-        # in /opt/clickbench/system because the lower's hits.parquet etc.
-        # are in datasets_ro). For partitioned parquet we add symlinks in
-        # the upper because the source lives in datasets_ro/hits_partitioned/.
-        fmt_file = SYSTEM_DIR / ".data-format"
-        fmt = fmt_file.read_text().strip() if fmt_file.exists() else ""
-        log_lines.append(f"\n=== layout dataset (format={fmt}) ===\n".encode())
-        try:
-            _stage_dataset_layout(fmt)
-        except Exception as e:
-            log_lines.append(f"layout failed: {e!r}\n".encode())
-            PROVISION_LOG.write_bytes(b"".join(log_lines))
-            return 1, b"".join(log_lines)
+        # No explicit data staging — the system's load script sees
+        # hits.parquet / hits.tsv / hits.csv / hits_*.parquet at cwd
+        # already, because cwd is the overlay merged dir
+        # /opt/clickbench/system and the dataset disk's contents (the
+        # overlay's lower) sit at /opt/clickbench/datasets_ro at the
+        # filesystem root, matching the names the load scripts use.
 
         # Run load.
         t0 = time.monotonic()

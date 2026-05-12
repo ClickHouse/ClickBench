@@ -83,16 +83,21 @@ SYS_MNT="$(mktemp -d)"
 trap 'sudo umount "'"$SYS_MNT"'" 2>/dev/null || true; rmdir "'"$SYS_MNT"'" 2>/dev/null || true' EXIT
 sudo mount -o loop "$SYSDISK" "$SYS_MNT"
 
-# Scripts + sql + helpers.
+# The cbsystem disk is mounted at /opt/clickbench/sysdisk in the guest;
+# the overlay points its upperdir at sysdisk/upper and its workdir at
+# sysdisk/work. Pre-create that layout and drop the system's ClickBench
+# scripts into upper.
+sudo mkdir -p "$SYS_MNT/upper" "$SYS_MNT/work"
 sudo rsync -a --exclude 'results/' --exclude '*.json' --exclude 'README*' \
-    "$SRC"/ "$SYS_MNT"/
+    "$SRC"/ "$SYS_MNT/upper"/
 
 # Some systems' scripts use ../lib/... — make it visible.
-sudo mkdir -p "$SYS_MNT/_lib"
-sudo cp -a "$REPO_DIR/lib"/. "$SYS_MNT/_lib"/
+sudo mkdir -p "$SYS_MNT/upper/_lib"
+sudo cp -a "$REPO_DIR/lib"/. "$SYS_MNT/upper/_lib"/
 
-# Discover the data format from benchmark.sh and stamp it; the agent uses
-# this to decide which dataset files to stage from the RO mount.
+# Discover the data format from benchmark.sh and stamp it in the upper;
+# the agent uses this to decide which dataset symlinks to add for
+# partitioned formats.
 download_script="$(set +e; unset BENCH_DOWNLOAD_SCRIPT; \
     eval "$(grep -E '^[[:space:]]*(export[[:space:]]+)?BENCH_DOWNLOAD_SCRIPT=' "$SRC/benchmark.sh" | head -1)"; \
     printf '%s' "${BENCH_DOWNLOAD_SCRIPT:-}")"
@@ -104,11 +109,11 @@ case "$download_script" in
     "")                     format=none                ;;
     *)                      format=unknown             ;;
 esac
-echo "$format" | sudo tee "$SYS_MNT/.data-format" >/dev/null
+echo "$format" | sudo tee "$SYS_MNT/upper/.data-format" >/dev/null
 echo "[sys:$SYSTEM] format=$format"
 
-sudo chown -R 0:0 "$SYS_MNT"
-sudo chmod -R u+rwX,go+rX "$SYS_MNT"
+sudo chown -R 0:0 "$SYS_MNT/upper"
+sudo chmod -R u+rwX,go+rX "$SYS_MNT/upper"
 sudo sync
 sudo umount "$SYS_MNT"
 trap - EXIT
