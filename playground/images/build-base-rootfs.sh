@@ -92,10 +92,16 @@ trap '
     sudo losetup -d "'"$DST_LOOP"'" 2>/dev/null || true
 ' EXIT
 
-# Bind /dev /proc /sys for the chroot.
+# Bind /dev /proc /sys for the chroot. Use `--rbind` so submounts (devpts,
+# mqueue, hugepages, /sys/fs/cgroup, …) come along.  Critically, mark each
+# new mount `--make-rslave` immediately afterwards. Without that, a later
+# `umount -lR` on the chroot's `/dev` propagates back through the shared
+# mount group and tears down the *host's* `/dev/pts` — at which point sshd
+# can't allocate a PTY and the operator gets locked out.
 for d in dev proc sys; do
     sudo mkdir -p "$MNT/$d"
     sudo mount --rbind "/$d" "$MNT/$d"
+    sudo mount --make-rslave "$MNT/$d"
 done
 trap '
     for d in dev proc sys; do sudo umount -lR "'"$MNT"'/$d" 2>/dev/null || true; done
