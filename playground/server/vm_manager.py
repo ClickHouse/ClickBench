@@ -54,6 +54,14 @@ class VM:
     api_sock: Path
     log_sock: Path  # we just point this at /dev/null actually
     pid: Optional[int] = None
+    # Keep the asyncio.subprocess.Process handle for the running firecracker.
+    # Without holding it, Python eventually garbage-collects the wrapper and
+    # the underlying child sits as a <defunct> zombie until the host server
+    # exits — the kernel keeps the zombie's open TAP fd around with it, and a
+    # subsequent restore for the same slot then fails to open the TAP with
+    # "Resource busy". Holding the handle lets us `await proc.wait()` on
+    # shutdown and reap immediately.
+    proc: Optional[asyncio.subprocess.Process] = None
     state: str = "down"
     # Snapshot artifacts
     snapshot_bin: Path = dataclasses.field(default_factory=lambda: Path())
@@ -111,8 +119,8 @@ class VMManager:
                 # Process is gone or unresponsive. Treat as snapshotted.
                 vm.state = "snapshotted"
             if vm.state == "down":
-                if not vm.snapshot_bin.exists():
-                    # No snapshot yet — need a full provision.
+                if not _has_snapshot(vm):
+                    # No snapshot (raw or compressed) yet — full provision.
                     await self._initial_provision(vm)
                 else:
                     await self._restore_snapshot(vm)
@@ -177,6 +185,7 @@ class VMManager:
             "--id", vm.system.name,
             stdout=log_fh, stderr=log_fh, env=env, start_new_session=True,
         )
+        vm.proc = proc
         vm.pid = proc.pid
         # Wait for the API socket to exist
         for _ in range(80):
@@ -248,31 +257,43 @@ class VMManager:
         True, we load from the snapshot files; else we cold-boot from kernel +
         rootfs."""
         await self._spawn_firecracker(vm)
-        sock = str(vm.api_sock)
+        try:
+            await self._configure_boot(vm, restore_snapshot=restore_snapshot)
+        except Exception:
+            # If config fails partway, the firecracker process still owns the
+            # TAP fd; without reaping it, the next attempt sees "Resource
+            # busy" because the kernel hasn't released the TAP. Kill +
+            # wait() before propagating.
+            await self._shutdown(vm)
+            raise
 
-        # Network: must be configured *before* either boot path.
-        await fc.put(sock, f"/network-interfaces/eth0", {
-            "iface_id": "eth0",
-            "guest_mac": net.mac_for(vm.slot),
-            "host_dev_name": net.tap_name(vm.slot),
-        })
+    async def _configure_boot(self, vm: VM, *, restore_snapshot: bool) -> None:
+        sock = str(vm.api_sock)
 
         rootfs = self.cfg.systems_dir / vm.system.name / "rootfs.ext4"
         sysdisk = self.cfg.systems_dir / vm.system.name / "system.ext4"
 
         if restore_snapshot:
-            # Drives must match the layout that existed when the snapshot was
-            # taken, but Firecracker re-reads file paths on restore. We rebind
-            # them here in case the absolute paths changed (e.g. snapshot moved).
+            # Firecracker's rule: `PUT /snapshot/load` must be the *first*
+            # configuring action — no boot-source, no drives, no network
+            # interfaces, no machine-config beforehand. The snapshot itself
+            # encodes all of that. We just need the same TAP available on
+            # the host with the same name (host_ensure_tap below handles
+            # this).
             await fc.put(sock, "/snapshot/load", {
                 "snapshot_path": str(vm.snapshot_state),
                 "mem_backend": {"backend_type": "File", "backend_path": str(vm.snapshot_bin)},
                 "enable_diff_snapshots": False,
                 "resume_vm": True,
-            })
+            }, timeout=120.0)
             return
 
         # Cold boot.
+        await fc.put(sock, "/network-interfaces/eth0", {
+            "iface_id": "eth0",
+            "guest_mac": net.mac_for(vm.slot),
+            "host_dev_name": net.tap_name(vm.slot),
+        })
         await fc.put(sock, "/boot-source", {
             "kernel_image_path": str(self.cfg.kernel_path),
             "boot_args": self._kernel_cmdline(vm),
@@ -310,8 +331,73 @@ class VMManager:
             with contextlib.suppress(Exception):
                 await fc.patch(sock, "/vm", {"state": "Resumed"})
 
+        # Compress the memory dump with parallel zstd. Firecracker writes the
+        # *full* 16 GB of guest memory regardless of how much was actually
+        # used; zstd at -3 with -T0 turns that into ~10-12 GB in a few
+        # seconds (most of the savings come from the agent's drop_caches
+        # right before /snapshot — page cache zero-fills compress 50:1).
+        # snapshot.state stays as-is; it's tiny (~60 KB).
+        await self._compress_snapshot(vm)
+
+    async def _compress_snapshot(self, vm: VM) -> None:
+        bin_path = vm.snapshot_bin
+        zst_path = vm.snapshot_bin.with_suffix(".bin.zst")
+        if not bin_path.exists():
+            return
+        log.info("[%s] zstd -T0 -3 snapshot.bin (%s)",
+                 vm.system.name, _fmt_size(bin_path.stat().st_size))
+        t0 = time.monotonic()
+        # Stream from snapshot.bin to .zst, multi-threaded. `--long=27`
+        # widens the matching window to 128 MB which helps with repetitive
+        # zero-region patterns common in guest RAM.
+        proc = await asyncio.create_subprocess_exec(
+            "zstd", "-T0", "-3", "--long=27", "-q", "-f",
+            str(bin_path), "-o", str(zst_path),
+        )
+        rc = await proc.wait()
+        dt = time.monotonic() - t0
+        if rc != 0:
+            log.warning("[%s] zstd compression failed rc=%d; keeping raw .bin",
+                        vm.system.name, rc)
+            zst_path.unlink(missing_ok=True)
+            return
+        new = zst_path.stat().st_size
+        log.info("[%s] zstd done in %.1fs: %s -> %s (%.1fx)",
+                 vm.system.name, dt,
+                 _fmt_size(bin_path.stat().st_size), _fmt_size(new),
+                 bin_path.stat().st_size / max(1, new))
+        # The raw .bin can go; restore re-decompresses into a temp file.
+        bin_path.unlink(missing_ok=True)
+
+    async def _decompress_snapshot(self, vm: VM) -> None:
+        """If the snapshot lives as .bin.zst, decompress to .bin in place.
+        Idempotent: a no-op if .bin already exists.
+        """
+        bin_path = vm.snapshot_bin
+        zst_path = vm.snapshot_bin.with_suffix(".bin.zst")
+        if bin_path.exists():
+            return
+        if not zst_path.exists():
+            return
+        log.info("[%s] unzstd snapshot.bin.zst (%s)",
+                 vm.system.name, _fmt_size(zst_path.stat().st_size))
+        t0 = time.monotonic()
+        proc = await asyncio.create_subprocess_exec(
+            "zstd", "-T0", "-d", "-q", "-f", "--long=27",
+            str(zst_path), "-o", str(bin_path),
+        )
+        rc = await proc.wait()
+        dt = time.monotonic() - t0
+        if rc != 0:
+            raise RuntimeError(f"zstd decompress failed rc={rc}")
+        log.info("[%s] unzstd done in %.1fs -> %s",
+                 vm.system.name, dt, _fmt_size(bin_path.stat().st_size))
+
     async def _restore_snapshot(self, vm: VM) -> None:
         log.info("[%s] restore from snapshot", vm.system.name)
+        # If we only have the zstd-compressed memory dump, expand it before
+        # Firecracker tries to mmap it.
+        await self._decompress_snapshot(vm)
         await net.ensure_tap(vm.slot)
         # internet stays OFF post-snapshot
         await self._boot(vm, restore_snapshot=True)
@@ -319,19 +405,30 @@ class VMManager:
         vm.state = "ready"
 
     async def _shutdown(self, vm: VM) -> None:
-        """Best-effort clean shutdown of the firecracker process."""
-        if not vm.pid:
+        """Best-effort clean shutdown of the firecracker process.
+
+        Always reap the asyncio.subprocess.Process handle so the kernel
+        releases its open file descriptors (notably the TAP — without this
+        the next /restore for the same slot fails with `Resource busy`).
+        """
+        if not vm.pid and not vm.proc:
             return
         with contextlib.suppress(Exception):
             await fc.put(str(vm.api_sock), "/actions", {"action_type": "SendCtrlAltDel"})
-        # Wait briefly for graceful exit
+        # Wait briefly for graceful exit.
         for _ in range(50):
-            if not _pid_alive(vm.pid):
+            if vm.pid is None or not _pid_alive(vm.pid):
                 break
             await asyncio.sleep(0.1)
-        if _pid_alive(vm.pid):
+        if vm.pid is not None and _pid_alive(vm.pid):
             with contextlib.suppress(ProcessLookupError):
                 os.kill(vm.pid, signal.SIGKILL)
+        # Reap the process. asyncio.Process.wait() drains the exit status so
+        # the kernel can release the resources (TAP fd, memory mappings).
+        if vm.proc is not None:
+            with contextlib.suppress(Exception):
+                await asyncio.wait_for(vm.proc.wait(), timeout=5.0)
+        vm.proc = None
         vm.pid = None
         with contextlib.suppress(FileNotFoundError):
             vm.api_sock.unlink()
@@ -340,7 +437,13 @@ class VMManager:
         log.warning("[%s] teardown: %s", vm.system.name, reason)
         with contextlib.suppress(Exception):
             await self._shutdown(vm)
-        vm.state = "snapshotted" if vm.snapshot_bin.exists() else "down"
+        vm.state = "snapshotted" if _has_snapshot(vm) else "down"
+        # Drop the decompressed snapshot.bin if we still have the .zst — it's
+        # ~16 GB of redundancy on disk. Keep .zst as the canonical artifact.
+        zst = vm.snapshot_bin.with_suffix(".bin.zst")
+        if vm.snapshot_bin.exists() and zst.exists():
+            with contextlib.suppress(FileNotFoundError):
+                vm.snapshot_bin.unlink()
 
     # ── agent helpers ────────────────────────────────────────────────────
 
@@ -379,6 +482,18 @@ class VMManager:
                 if r.status >= 300:
                     raise RuntimeError(f"agent /provision failed: {r.status}: "
                                        f"{body[-2000:].decode(errors='replace')}")
+
+
+def _has_snapshot(vm: VM) -> bool:
+    return vm.snapshot_bin.exists() or vm.snapshot_bin.with_suffix(".bin.zst").exists()
+
+
+def _fmt_size(n: int) -> str:
+    for u in ("B", "KiB", "MiB", "GiB", "TiB"):
+        if n < 1024:
+            return f"{n:.1f}{u}"
+        n //= 1024
+    return f"{n}PiB"
 
 
 def _pid_alive(pid: int) -> bool:

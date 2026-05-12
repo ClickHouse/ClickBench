@@ -264,6 +264,55 @@ def _provision() -> tuple[int, bytes]:
             return r.returncode, b"".join(log_lines)
 
         subprocess.run(["sync"], check=False)
+
+        # Pre-snapshot trim:
+        #
+        # 1. Restart the daemon if the system is restartable. After ./load
+        #    finishes, most engines have hundreds of MB of fresh per-INSERT
+        #    state on the heap: ClickHouse's MergeTree merge thread arenas,
+        #    Postgres' aborted-batch buffers, etc. Stop/start sheds that
+        #    private memory back to zero. Wait for ./check to confirm the
+        #    server is ready again so the snapshot we take is on a quiesced
+        #    process whose first user query will be a cold *query*, not a
+        #    cold *startup*. Skip this for in-process engines (chdb, polars,
+        #    pandas, …) where stop/start is a no-op AND the data lives in
+        #    the process — wiping it would defeat the whole point.
+        restartable = (SYSTEM_DIR / "start").exists() and (SYSTEM_DIR / "stop").exists()
+        if restartable:
+            # Best effort: don't bail on errors. We try to stop, wait, start,
+            # check; if any step fails we proceed with whatever state we
+            # have. The host will see ./check fail and refuse to snapshot.
+            subprocess.run([str(SYSTEM_DIR / "stop")], cwd=str(SYSTEM_DIR),
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=120, check=False)
+            for _ in range(60):
+                rc = subprocess.run([str(SYSTEM_DIR / "check")], cwd=str(SYSTEM_DIR),
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                    timeout=10, check=False).returncode
+                if rc != 0:
+                    break
+                time.sleep(0.5)
+            subprocess.run([str(SYSTEM_DIR / "start")], cwd=str(SYSTEM_DIR),
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=300, check=False)
+            for _ in range(300):
+                rc = subprocess.run([str(SYSTEM_DIR / "check")], cwd=str(SYSTEM_DIR),
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                    timeout=10, check=False).returncode
+                if rc == 0:
+                    break
+                time.sleep(1)
+
+        # 2. Drop the kernel's page+dentry+inode cache. The page cache holds
+        #    3-5 GB of file data the system would re-read on demand anyway;
+        #    those pages become zero-fill in the snapshot, which zstd
+        #    compresses ~50:1 vs random data.
+        subprocess.run(["sync"], check=False)
+        try:
+            Path("/proc/sys/vm/drop_caches").write_text("3\n")
+        except Exception:
+            pass
+
         PROVISION_DONE.write_text(f"ok {time.time()}\n")
         PROVISION_LOG.write_bytes(b"".join(log_lines))
         return 0, b"".join(log_lines)
