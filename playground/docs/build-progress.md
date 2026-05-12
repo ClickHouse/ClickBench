@@ -1,110 +1,103 @@
-# Playground build progress — checkpoint 2026-05-12 ~19:58 UTC
+# Playground build progress — checkpoint 2026-05-12 ~21:30 UTC
 
-## What is built and committed
+## Status: ClickHouse end-to-end works
 
-- `playground/` directory scaffolded with subdirs `server/`, `agent/`,
-  `images/`, `web/`, `scripts/`, `docs/`.
-- Architecture notes in `playground/README.md` and
-  `playground/docs/architecture.md`.
-- Host-side API server (`playground/server/*.py`):
-  - `config.py` — env-driven config with sensible defaults
-  - `systems.py` — discovers 97 playground-eligible ClickBench systems
-  - `firecracker.py` — async unix-socket client for Firecracker API
-  - `net.py` — per-VM TAP + /24 + NAT toggle
-  - `vm_manager.py` — VM lifecycle (boot, provision, snapshot, restore)
-  - `monitor.py` — CPU/disk/host-memory watchdog (1 Hz)
-  - `logging_sink.py` — batched async logger → ClickHouse Cloud + JSONL fallback
-  - `main.py` — aiohttp routes + static SPA serving
-- In-VM agent (`playground/agent/agent.py`, stdlib-only) with endpoints
-  `/health`, `/stats`, `/provision`, `/query`, `/provision-log`.
-- systemd unit `playground/agent/clickbench-agent.service` installed in the
-  rootfs and enabled.
-- Vanilla JS SPA (`playground/web/`): system picker, query box, timing display,
-  truncation indicator. Talks to `/api/systems`, `/api/system/<name>`,
-  `/api/query?system=...`.
-- Build scripts:
-  - `images/build-base-rootfs.sh` — Ubuntu 22.04 cloud image → flat 8 GB
-    ext4 with agent + systemd unit pre-installed.
-  - `images/build-system-rootfs.sh` — per-system 200 GB sparse rootfs +
-    sized system disk (16/88 GB depending on data format) containing the
-    ClickBench scripts + the dataset files this system needs (no symlinks
-    into a RO mount, because many systems' load scripts `chown`).
-  - `scripts/install-firecracker.sh` — idempotent host setup.
-  - `scripts/download-datasets.sh` — eager dataset download into
-    `/opt/clickbench-playground/datasets/`.
-  - `scripts/smoke-boot.sh` — boots the base rootfs alone in a VM; confirms
-    kernel + rootfs + agent path before per-system testing.
-  - `scripts/agent-selftest.sh` — runs the agent on the host (no VM) and
-    exercises all endpoints with a fake "system" dir. PASSES.
+```
+$ printf 'SELECT COUNT(*) FROM hits' | curl -sS -X POST --data-binary @- \
+    'http://127.0.0.1:8000/api/query?system=clickhouse' -D -
+HTTP/1.1 200 OK
+X-Query-Wall-Time: 0.122721
+X-Output-Bytes: 9
+X-Output-Truncated: 0
+X-Query-Time: 0.003000
+X-Wall-Time: 10.112950
+Content-Length: 9
 
-## What is provisioned on disk (host)
+99997497
+```
+
+Cold path (snapshot restore + daemon start): ~10 s.
+Warm path (live VM): subsecond on COUNT / MIN-MAX, ~24 s on top-of-URL.
+Output truncation: 244 KB result correctly capped to 10 KB with
+`X-Output-Truncated: 1` set.
+
+## Snapshot footprint
+
+`snapshot.bin.zst` for ClickHouse: **35 MB** (down from 16 GB raw RAM dump,
+~470× compression). The combination that gets us there:
+
+  1. Agent stops the daemon at the end of /provision (clickhouse stop).
+  2. Agent drops the page+dentry+inode cache.
+  3. Guest kernel runs with `init_on_free=1` — every freed page is
+     zero-filled before going back on the free list, so the resulting
+     RAM is genuinely compressible (not just "freed-but-stale" stale
+     bytes that look random to zstd).
+  4. Host calls a /sync endpoint on the agent immediately before
+     /vm Paused, so ext4 writeback completes before KVM freezes the
+     vcpus — no half-flushed pages in the snapshot.
+  5. `zstd -T0 -3 --long=27` for parallel compression with a 128 MB
+     match window (helps with repetitive zero patterns).
+
+On restore the agent's first /query brings the daemon back up via
+`_ensure_daemon_started`. That's ~3-5 s of clickhouse startup amortized
+into the first cold query.
+
+## Components shipped
+
+- `playground/server/` — aiohttp API (UI + /api/{systems,system,query,
+  state,admin/provision,provision-log}), per-system Firecracker
+  lifecycle, monitor watchdog, batched ClickHouse-Cloud logging sink
+  with JSONL fallback.
+- `playground/agent/` — stdlib HTTP agent. Endpoints:
+  - GET /health, /stats, /provision-log
+  - POST /provision (install → start → check → load → stop → drop_caches)
+  - POST /sync (guest fsync just before host snapshot)
+  - POST /query (10 KB output cap, fractional-second timing in headers)
+- `playground/images/` — `build-base-rootfs.sh` (Ubuntu 22.04 → flat 8 GB
+  ext4 with agent pre-installed), `build-system-rootfs.sh` (per-system
+  200 GB sparse rootfs + sized system disk with pre-staged dataset).
+- `playground/web/` — vanilla-JS SPA with system picker, query box,
+  timing display, truncation indicator.
+
+## Host state
 
 ```
 /opt/clickbench-playground/
-├── bin/firecracker, bin/jailer       (firecracker v1.13.1)
-├── kernel/vmlinux                    (Linux 6.1.141, IP_PNP + virtio enabled)
-├── base-rootfs.ext4                  2.6 GB physical / 8 GB apparent
+├── bin/firecracker, bin/jailer        firecracker v1.13.1
+├── kernel/vmlinux                     Linux 6.1.141
+├── base-rootfs.ext4                   2.6 GB physical / 8 GB apparent
 ├── datasets/
-│   ├── hits.parquet                  14.7 GB (single)
-│   ├── hits_partitioned/             14 GB (100 partitioned files)
-│   ├── hits.tsv                      74 GB (decompressed)
-│   ├── hits.csv                      ~14 GB partial (kill-stopped)
-│   └── hits.csv.gz                   16 GB
+│   ├── hits.parquet                   14.7 GB
+│   ├── hits_partitioned/              14 GB (100 files)
+│   ├── hits.tsv                       74 GB
+│   ├── hits.csv                       partial (kill-stopped); .gz intact
 └── systems/clickhouse/
-    ├── rootfs.ext4                   8.2 MB physical / 200 GB sparse
-    └── system.ext4                   16 GB (parquet files staged)
+    ├── rootfs.ext4                    sparse 200 GB
+    ├── system.ext4                    16 GB (parquet + scripts)
+    ├── snapshot.bin.zst               35 MB
+    └── snapshot.state                 58 KB
 ```
-
-## What works
-
-- Python module imports clean (`python3 -m playground.server.main`).
-- API server serves 97 systems via `/api/systems`.
-- UI loads at `/ui/`.
-- Firecracker smoke-boot (base rootfs only): agent comes up in 2 s,
-  `/health` and `/stats` respond OK.
-- Agent self-test (no VM): all 4 endpoints behave correctly, output
-  truncation works (2 KB → 64 B with `X-Output-Truncated: 1`).
-- Provision started on ClickHouse VM at 19:51:59 UTC:
-  - VM booted, agent up, internet enabled via MASQUERADE on `ens33`
-  - Install ran (ClickHouse binary downloaded + apt deps)
-  - Load is in progress — `cpu_busy=0.8-1.0` sustained, `disk_used`
-    grew from 17 GB → 30 GB, indicating MergeTree INSERT.
-  - At 19:57:33 the agent stopped responding to /health (timeout).
-    Firecracker process is still running (PID 19230, 16 min of CPU).
-    Likely cause: agent's HTTP server starved by the load process,
-    or a fork race in stdlib `socketserver`. Needs investigation.
 
 ## What's left
 
-- Decide whether to add eager liveness pings or move agent to aiohttp
-  to avoid the stdlib threading server's quirks under heavy load.
-- Once provision completes: snapshot → restore → /query test path.
-- Build system disks for the other 96 systems (template is ready).
-- Wire up ClickHouse Cloud credentials for the logging sink (currently
+- Build system disks for the remaining 96 systems (template is ready;
+  each requires its own provision pass — most should "just work" with
+  the same flow).
+- Tighten the External-only exclusion list in `systems.py` once we've
+  validated which local-only systems actually run.
+- Wire ClickHouse Cloud credentials for the logging sink (currently
   falling back to JSONL under `/opt/clickbench-playground/logs/`).
+- Optional: jailer integration for tighter isolation if the host is
+  ever multi-tenant.
 
-## Known issues / things to revisit
+## Known sharp edges
 
-- TSV/CSV decompression contends with rootfs build for nvme writeback.
-  Workaround: pre-build the base rootfs before kicking off the heavy
-  decompressions, or rate-limit pigz.
-- The "External" exclusion list in `systems.py` is conservative; some
-  entries (umbra, hyper, cedardb) actually run locally and should be
-  added back when verified.
-- /etc/resolv.conf in the base rootfs is a static fallback (1.1.1.1 +
-  8.8.8.8). Once we cut internet post-snapshot, DNS doesn't matter, but
-  during provision it does — sanity check that NAT + resolv.conf actually
-  let `apt-get update` work.
-- KVM permissions were opened to mode 666 via a udev rule. Tighten to
-  the `kvm` group when the playground user is properly added.
-
-## Operator notes
-
-- The base rootfs ships with serial autologin as root on ttyS0 — good for
-  attaching the Firecracker console for debugging.
-- Firecracker logs land in `/opt/clickbench-playground/logs/firecracker-<system>.log`.
-- The host's `/dev/kvm` group/mode was changed: `chown root:kvm`, `chmod 666`,
-  with a persistent udev rule at `/etc/udev/rules.d/65-kvm.rules`.
-- `vm.dirty_writeback_centisecs` is set to 10 on the host (down from 500)
-  to reduce sfdisk hang during heavy concurrent writeback. Revert if it
-  causes other problems.
+- The `chroot` in `build-base-rootfs.sh` previously tore down the host's
+  `/dev/pts` via mount propagation, breaking sshd PTY allocation. Fixed
+  with `mount --make-rslave` (committed); if you see "PTY allocation
+  request failed on channel 0" after a rebuild, `sudo mount -t devpts
+  devpts /dev/pts -o gid=5,mode=620,ptmxmode=000` brings it back.
+- KVM permissions: a udev rule at `/etc/udev/rules.d/65-kvm.rules` keeps
+  `/dev/kvm` group=kvm mode=666 so the playground user can open it.
+- `vm.dirty_writeback_centisecs=10` on the host (down from 500); revert
+  if it causes problems elsewhere.
