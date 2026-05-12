@@ -38,7 +38,7 @@ import time
 from pathlib import Path
 
 SYSTEM_DIR = Path(os.environ.get("CLICKBENCH_SYSTEM_DIR", "/opt/clickbench/system"))
-DATASETS_DIR = Path(os.environ.get("CLICKBENCH_DATASETS_DIR", "/opt/clickbench/datasets"))
+DATASETS_DIR = Path(os.environ.get("CLICKBENCH_DATASETS_DIR", "/opt/clickbench/datasets_ro"))
 STATE_DIR = Path(os.environ.get("CLICKBENCH_AGENT_STATE", "/var/lib/clickbench-agent"))
 SYSTEM_NAME = (
     os.environ.get("CLICKBENCH_SYSTEM_NAME")
@@ -84,65 +84,33 @@ def _read_body(handler: http.server.BaseHTTPRequestHandler) -> bytes:
     return handler.rfile.read(min(n, 1 << 20))
 
 
-def _stage_dataset(fmt: str) -> list[Path]:
-    """Copy the dataset file(s) the system's load script needs from the
-    read-only shared mount into the per-system writable disk.
+def _stage_dataset_layout(fmt: str) -> None:
+    """Make the system's load script see hits.* in its cwd.
 
-    Returns the list of staged files. Empty list when there's nothing to
-    stage (datalake / in-memory engines whose ./load reads from external
-    sources). Raises if a required file is missing.
+    The base rootfs's /etc/fstab overlay-mounts /opt/clickbench/system from
+    lower=/opt/clickbench/datasets_ro (the shared dataset image) + upper=/
+    opt/clickbench/system_upper (this VM's writable scripts disk). Most
+    load scripts reference hits.parquet / hits.tsv / hits_*.parquet at
+    cwd, which is /opt/clickbench/system — the overlay already exposes
+    those files there, no copy needed.
+
+    Partitioned parquet lives in a `hits_partitioned/` subdirectory in the
+    lower; the clickhouse load globs `hits_*.parquet` in cwd. Create
+    symlinks (in the upper) pointing at the lower files so the glob
+    matches. Symlinks cost a few bytes per file — far cheaper than the
+    14 GB physical copy we used to do.
     """
-    staged: list[Path] = []
-    if fmt in ("", "none", "unknown"):
-        return staged
-    if not DATASETS_DIR.exists():
-        raise FileNotFoundError(f"datasets mount missing: {DATASETS_DIR}")
-
-    if fmt == "parquet":
-        srcs = [DATASETS_DIR / "hits.parquet"]
-    elif fmt == "parquet-partitioned":
-        srcs = sorted((DATASETS_DIR / "hits_partitioned").glob("hits_*.parquet"))
-    elif fmt == "tsv":
-        srcs = [DATASETS_DIR / "hits.tsv"]
-    elif fmt == "csv":
-        srcs = [DATASETS_DIR / "hits.csv"]
-    else:
-        srcs = []
-
-    for src in srcs:
-        if not src.exists():
-            raise FileNotFoundError(f"staged source missing: {src}")
-        dst = SYSTEM_DIR / src.name
-        # copy_file_range goes through the kernel without bouncing bytes
-        # through userspace — much faster than shutil.copyfile for the
-        # 14 GB / 75 GB files we deal with.
-        with src.open("rb") as fsrc, dst.open("wb") as fdst:
-            size = src.stat().st_size
-            try:
-                off = 0
-                while off < size:
-                    n = os.copy_file_range(
-                        fsrc.fileno(), fdst.fileno(),
-                        size - off,
-                    )
-                    if n == 0:
-                        break
-                    off += n
-            except (AttributeError, OSError):
-                # Fall back to read/write for kernels / filesystems that
-                # don't support copy_file_range across the underlying
-                # device pair (RO ext4 -> RW ext4 should be fine, but
-                # there are kernels that don't allow it).
-                fsrc.seek(0)
-                fdst.seek(0)
-                fdst.truncate(0)
-                while True:
-                    chunk = fsrc.read(8 * 1024 * 1024)
-                    if not chunk:
-                        break
-                    fdst.write(chunk)
-        staged.append(dst)
-    return staged
+    if fmt == "parquet-partitioned":
+        src_dir = DATASETS_DIR / "hits_partitioned"
+        if not src_dir.exists():
+            raise FileNotFoundError(f"partitioned dir missing: {src_dir}")
+        for f in sorted(src_dir.glob("hits_*.parquet")):
+            link = SYSTEM_DIR / f.name
+            if not link.exists():
+                link.symlink_to(f)
+    # parquet / tsv / csv already appear in cwd via the overlay lower
+    # (their files sit at /opt/clickbench/datasets_ro/hits.parquet etc.
+    # and the overlay merges that path's contents into the merged dir).
 
 
 def _system_script(name: str) -> Path:
@@ -349,27 +317,20 @@ def _provision() -> tuple[int, bytes]:
             return 1, b"".join(log_lines)
         log_lines.append(b"\n=== check ok ===\n")
 
-        # Stage the dataset files this system needs from the read-only
-        # shared mount into the writable system disk. We copy (rather than
-        # symlink/bind-mount) so the system's load script can mv/chown/rm
-        # them however it likes; the destination is a local file on the
-        # cbsystem disk. After load the script typically `rm`s them, so
-        # the copies are short-lived.
+        # Make sure hits.* are visible at cwd for the load script. For
+        # parquet / tsv / csv the overlay already does it (files appear
+        # in /opt/clickbench/system because the lower's hits.parquet etc.
+        # are in datasets_ro). For partitioned parquet we add symlinks in
+        # the upper because the source lives in datasets_ro/hits_partitioned/.
         fmt_file = SYSTEM_DIR / ".data-format"
         fmt = fmt_file.read_text().strip() if fmt_file.exists() else ""
-        stage_t0 = time.monotonic()
-        log_lines.append(f"\n=== staging dataset (format={fmt}) ===\n".encode())
+        log_lines.append(f"\n=== layout dataset (format={fmt}) ===\n".encode())
         try:
-            staged = _stage_dataset(fmt)
-            log_lines.append(f"staged {len(staged)} files: ".encode() +
-                             ", ".join(s.name for s in staged[:5]).encode() +
-                             (b" ..." if len(staged) > 5 else b"") + b"\n")
+            _stage_dataset_layout(fmt)
         except Exception as e:
-            log_lines.append(f"stage failed: {e!r}\n".encode())
+            log_lines.append(f"layout failed: {e!r}\n".encode())
             PROVISION_LOG.write_bytes(b"".join(log_lines))
             return 1, b"".join(log_lines)
-        stage_dt = time.monotonic() - stage_t0
-        log_lines.append(f"=== staging done in {stage_dt:.1f}s ===\n".encode())
 
         # Run load.
         t0 = time.monotonic()

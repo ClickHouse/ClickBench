@@ -172,10 +172,27 @@ passwd -d root
 # systemd refuses to clear those entries on its own and drops to emergency
 # mode when label-based lookups fail. The kernel handles the root mount via
 # its `root=/dev/vda` cmdline; we only need fstab for the system disk.
-mkdir -p /opt/clickbench/system /opt/clickbench/datasets
+# Three-layer mount plan:
+#   1. The shared read-only dataset disk (cbdata) is attached to every VM
+#      and mounted at /opt/clickbench/datasets_ro. Holds hits.parquet,
+#      hits.tsv, hits.csv, hits_partitioned/*.parquet — same bytes, one
+#      copy on the host, never duplicated per VM or per provision.
+#   2. The per-VM writable system disk (cbsystem) mounts at
+#      /opt/clickbench/system_upper. Holds the system's ClickBench
+#      scripts (install, start, query, ...).
+#   3. An overlayfs at /opt/clickbench/system merges both. The system's
+#      load script runs there with cwd=/opt/clickbench/system and sees a
+#      single tree containing scripts + dataset files. When the load
+#      does `mv hits.parquet target/` or `chown` on a dataset file,
+#      overlayfs copies that one file up from the lower into the upper
+#      lazily — only the bytes the script actually mutates land in the
+#      per-VM writable layer.
+mkdir -p /opt/clickbench/system /opt/clickbench/datasets_ro \
+         /opt/clickbench/system_upper /opt/clickbench/system_work
 cat > /etc/fstab <<EOF
-LABEL=cbsystem  /opt/clickbench/system      ext4    rw,nofail,noatime              0 0
-LABEL=cbdata    /opt/clickbench/datasets    ext4    ro,nofail,noatime,nodev,nosuid 0 0
+LABEL=cbdata    /opt/clickbench/datasets_ro   ext4      ro,nofail,noatime,nodev,nosuid                                                            0 0
+LABEL=cbsystem  /opt/clickbench/system_upper  ext4      rw,nofail,noatime                                                                         0 0
+overlay         /opt/clickbench/system        overlay   nofail,lowerdir=/opt/clickbench/datasets_ro,upperdir=/opt/clickbench/system_upper,workdir=/opt/clickbench/system_work,x-systemd.requires-mounts-for=/opt/clickbench/system_upper,x-systemd.requires-mounts-for=/opt/clickbench/datasets_ro 0 0
 EOF
 
 # Make sure the home dir exists; some installers (vcpkg, gizmosql) honor $HOME

@@ -27,8 +27,22 @@ size_mib=$(( (bytes + overhead + 1024*1024 - 1) / (1024*1024) ))
 
 echo "[datasets] payload=$bytes B  image=${size_mib} MiB"
 
-# A previous build may have an outdated image. Always rebuild from scratch
-# so the contents match the current $SRC.
+# Idempotency: skip the rebuild if a present image is at least as large as
+# the source and was modified after the most-recent source file. The image
+# never holds anything but the dataset, so a same-or-larger size + a
+# fresher mtime is sufficient evidence that the contents are current.
+# Force-rebuild with REBUILD=1 to override.
+if [ -f "$OUT" ] && [ "${REBUILD:-}" != "1" ]; then
+    out_size=$(stat -c%s "$OUT" 2>/dev/null || echo 0)
+    out_mtime=$(stat -c%Y "$OUT" 2>/dev/null || echo 0)
+    src_newest=$(find "$SRC" -type f -printf '%T@\n' | sort -rn | head -1 | cut -d. -f1)
+    if [ "$out_size" -ge "$bytes" ] && [ "$out_mtime" -gt "${src_newest:-0}" ]; then
+        echo "[datasets] cached ($(du -h "$OUT" | cut -f1)); set REBUILD=1 to force"
+        ls -lh "$OUT"
+        exit 0
+    fi
+fi
+
 rm -f "$OUT"
 truncate -s "${size_mib}M" "$OUT"
 # Disable the journal (-O ^has_journal) and reserve 0 blocks for root
