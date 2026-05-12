@@ -13,6 +13,23 @@
 #                          from a remote source (S3 datalake, remote services).
 #
 # Optional env:
+#   BENCH_RESTARTABLE      "yes" (default) or "no". Tells the driver whether
+#                          stop/start is meaningful for this system.
+#                            yes — system has a daemon (or in-process server
+#                                  wrapper) whose lifecycle matters. The
+#                                  cold cycle is stop -> wait_stopped ->
+#                                  drop_caches -> start -> check.
+#                            no  — system has no daemon: ./start, ./stop,
+#                                  and ./check are no-ops (embedded CLIs
+#                                  like clickhouse-local, duckdb,
+#                                  datafusion, sqlite, hyper, chdb,
+#                                  spark variants).
+#                                  Restarting would do nothing, and worse,
+#                                  bench_wait_stopped would spin until its
+#                                  60s timeout on every cold cycle because
+#                                  ./check keeps succeeding. We skip the
+#                                  stop/start/check dance entirely and
+#                                  just drop_caches between queries.
 #   BENCH_DURABLE          "yes" (default) or "no". Tells the driver whether
 #                          the system's data survives a stop+start.
 #                            yes — data is on disk (daemons like clickhouse,
@@ -57,11 +74,7 @@ export HOME="${HOME:-/root}"
 
 # BENCH_DOWNLOAD_SCRIPT must be set (possibly to empty for "no download").
 : "${BENCH_DOWNLOAD_SCRIPT?BENCH_DOWNLOAD_SCRIPT is required (set empty to skip)}"
-# Back-compat: accept the old BENCH_RESTARTABLE name as an alias for one
-# release cycle. Operators with stale env files / scripts still work.
-if [ -n "${BENCH_RESTARTABLE:-}" ] && [ -z "${BENCH_DURABLE:-}" ]; then
-    BENCH_DURABLE="$BENCH_RESTARTABLE"
-fi
+: "${BENCH_RESTARTABLE:=yes}"
 : "${BENCH_DURABLE:=yes}"
 : "${BENCH_TRIES:=3}"
 : "${BENCH_QUERIES_FILE:=queries.sql}"
@@ -208,11 +221,20 @@ bench_run_query() {
     # Waiting for ./check to fail before flushing makes the cold run
     # actually cold even when ./stop returns before the process is
     # fully gone.
-    ./stop >/dev/null 2>&1 || true
-    bench_wait_stopped
-    bench_flush_caches
-    ./start >/dev/null 2>&1 || true
-    bench_check_loop
+    #
+    # BENCH_RESTARTABLE=no skips the stop/wait/start/check dance: those
+    # scripts are no-ops for embedded-CLI systems and bench_wait_stopped
+    # would otherwise burn its full 60s timeout on every query (./check
+    # never starts failing because nothing was actually running).
+    if [ "$BENCH_RESTARTABLE" = "yes" ]; then
+        ./stop >/dev/null 2>&1 || true
+        bench_wait_stopped
+        bench_flush_caches
+        ./start >/dev/null 2>&1 || true
+        bench_check_loop
+    else
+        bench_flush_caches
+    fi
 
     if [ "$BENCH_DURABLE" != "yes" ]; then
         # In-process server: data lived in process memory and was wiped
@@ -316,12 +338,17 @@ bench_concurrent_qps() {
         return 0
     fi
 
-    # Fresh restart before the throughput window starts.
-    ./stop >/dev/null 2>&1 || true
-    bench_wait_stopped
-    bench_flush_caches
-    ./start >/dev/null 2>&1 || true
-    bench_check_loop
+    # Fresh restart before the throughput window starts. Mirrors the
+    # BENCH_RESTARTABLE handling in bench_run_query.
+    if [ "$BENCH_RESTARTABLE" = "yes" ]; then
+        ./stop >/dev/null 2>&1 || true
+        bench_wait_stopped
+        bench_flush_caches
+        ./start >/dev/null 2>&1 || true
+        bench_check_loop
+    else
+        bench_flush_caches
+    fi
     if [ "$BENCH_DURABLE" != "yes" ]; then
         ./load >/dev/null 2>&1 || true
     fi
