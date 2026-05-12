@@ -239,6 +239,15 @@ class VMManager:
         sys_dir = self.cfg.systems_dir / vm.system.name
         rootfs = sys_dir / "rootfs.ext4"
         sysdisk = sys_dir / "system.ext4"
+        # If we're (re-)provisioning a system whose rootfs already has
+        # /var/lib/clickbench-agent/provisioned set, drop just the rootfs so
+        # the agent reruns the full install/start/load flow on the next
+        # boot. The system.ext4 (scripts + ~14 GB of dataset) is preserved —
+        # rebuilding it copies 14 GB unnecessarily.
+        if rootfs.exists() and not _has_snapshot(vm):
+            log.info("[%s] rootfs exists but no snapshot — dropping it for "
+                     "a fresh agent state", vm.system.name)
+            rootfs.unlink()
         if rootfs.exists() and sysdisk.exists():
             return
         log.info("[%s] building rootfs + system disk", vm.system.name)

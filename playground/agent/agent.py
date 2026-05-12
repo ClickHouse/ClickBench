@@ -407,10 +407,44 @@ class ReusableServer(socketserver.ThreadingTCPServer):
     daemon_threads = True
 
 
+def _kick_daemon_if_provisioned() -> None:
+    """On every agent boot, if the system has been provisioned, make sure
+    the daemon is also running.
+
+    The rootfs is persistent across boots, so PROVISION_DONE survives a
+    cold restart of the VM. But the *process* doesn't — anything that was
+    in the snapshot's memory image goes away when the host takes a cold
+    boot (not a restore). Without this kick, a query would arrive at the
+    agent, the agent would see PROVISION_DONE and skip install/start,
+    and then ./query would hit a dead daemon and return "Connection
+    refused (localhost:9000)" forever.
+
+    Run start asynchronously: blocking the agent's listen until the
+    daemon is ready would defeat /health, which the host uses to gate
+    snapshot creation and restore-wait timeouts.
+    """
+    if not PROVISION_DONE.exists():
+        return
+    start = SYSTEM_DIR / "start"
+    if not start.exists() or not os.access(start, os.X_OK):
+        return
+
+    def _bg() -> None:
+        try:
+            subprocess.run([str(start)], cwd=str(SYSTEM_DIR),
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                           timeout=300, check=False)
+        except Exception as e:
+            sys.stderr.write(f"[agent] daemon-kick failed: {e}\n")
+
+    threading.Thread(target=_bg, daemon=True, name="daemon-kick").start()
+
+
 def main() -> None:
     addr = ("0.0.0.0", LISTEN_PORT)
     print(f"agent: system={SYSTEM_NAME} listen={addr[0]}:{addr[1]} "
           f"dir={SYSTEM_DIR} data={DATASETS_DIR}", flush=True)
+    _kick_daemon_if_provisioned()
     with ReusableServer(addr, Handler) as srv:
         srv.serve_forever()
 
