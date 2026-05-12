@@ -200,9 +200,18 @@ class VMManager:
         # console socket for debugging); reboot=k for clean halt-on-panic.
         # The kernel's built-in IP autoconfig statically assigns the VM's
         # /24 from its slot, sidestepping any DHCP/networkd in userland.
+        #
+        # init_on_free=1: makes the kernel zero every page as it goes back
+        # on the free list. Without it, freed pages keep whatever the last
+        # writer put there — and Firecracker's snapshot dumps *all* RAM,
+        # so 8-12 GB of stale-but-freed daemon heap end up in snapshot.bin
+        # looking random to zstd. With it on, the pre-snapshot daemon
+        # shutdown leaves the guest's free pool genuinely zero-filled, and
+        # zstd compresses the snapshot ~300:1. The cost is a small write
+        # overhead on every free (~negligible vs the snapshot size win).
         host_ip, vm_ip, _ = net.addr_for(vm.slot)
         return (
-            "console=ttyS0 reboot=k panic=1 pci=off "
+            "console=ttyS0 reboot=k panic=1 pci=off init_on_free=1 "
             f"ip={vm_ip}::{host_ip}:255.255.255.0::eth0:off "
             "root=/dev/vda rw "
             "init=/lib/systemd/systemd "

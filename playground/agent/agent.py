@@ -61,6 +61,12 @@ PROVISION_LOG = STATE_DIR / "provision.log"
 # scripts hitting the same socket/temp file concurrently would not be safe.
 _query_lock = threading.Lock()
 _provision_lock = threading.Lock()
+# Tracks whether we've successfully run ./start since this agent process
+# came up. After a snapshot restore the daemon doesn't exist in the
+# restored memory (we stop it pre-snapshot to keep snapshots small), so the
+# first /query has to bring it up.
+_daemon_started = threading.Event()
+_daemon_lock = threading.Lock()
 
 
 def _cap(b: bytes) -> tuple[bytes, bool]:
@@ -128,6 +134,45 @@ def _stats_snapshot() -> dict:
         pass
     out["provisioned"] = PROVISION_DONE.exists()
     return out
+
+
+def _ensure_daemon_started() -> None:
+    """Bring the system's daemon up if it isn't already.
+
+    Called at the top of every /query handler. The first call after a
+    snapshot restore is where the work happens — the snapshot was taken
+    with the daemon stopped (to keep the memory image compressible), so
+    nothing is listening on the daemon's port until we explicitly run
+    ./start. Subsequent calls are no-ops because _daemon_started is set.
+
+    Wrapping ./start in a thread lock means only one /query in flight
+    pays the start cost, even if several arrive concurrently.
+    """
+    if _daemon_started.is_set():
+        return
+    with _daemon_lock:
+        if _daemon_started.is_set():
+            return
+        start = SYSTEM_DIR / "start"
+        if not start.exists() or not os.access(start, os.X_OK):
+            # No daemon to start (in-process system like chdb/polars).
+            _daemon_started.set()
+            return
+        subprocess.run([str(start)], cwd=str(SYSTEM_DIR),
+                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                       timeout=300, check=False)
+        # Wait for ./check to confirm before unblocking the /query.
+        check = SYSTEM_DIR / "check"
+        if check.exists():
+            for _ in range(120):
+                rc = subprocess.run([str(check)], cwd=str(SYSTEM_DIR),
+                                    stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL,
+                                    timeout=10, check=False).returncode
+                if rc == 0:
+                    break
+                time.sleep(0.5)
+        _daemon_started.set()
 
 
 def _run_query(sql: bytes) -> tuple[int, bytes, bytes, float]:
@@ -306,10 +351,12 @@ def _provision() -> tuple[int, bytes]:
                 time.sleep(0.5)
             log_lines.append(b"=== pre-snapshot stop done ===\n")
 
-        # Drop the page+dentry+inode cache. With the daemon stopped, this
-        # frees both file cache AND its mmap'd buffers. The result is a
-        # snapshot whose memory is mostly zero-fill, which zstd compresses
-        # ~300:1.
+        # Drop the page+dentry+inode cache. With init_on_free=1 set in the
+        # guest kernel cmdline (see vm_manager._kernel_cmdline), every page
+        # the kernel frees gets zero-filled before going back on the free
+        # list. After clickhouse stop + drop_caches, the entire free pool
+        # is genuinely zero-filled, and the snapshot's RAM dump compresses
+        # ~300:1 instead of the ~3:1 we got without init_on_free.
         subprocess.run(["sync"], check=False)
         try:
             Path("/proc/sys/vm/drop_caches").write_text("3\n")
@@ -383,6 +430,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if not sql.strip():
                 self._send_json(400, {"error": "empty query"})
                 return
+            # First /query after a snapshot restore: start the daemon
+            # (it was stopped pre-snapshot to keep snapshots small).
+            # Subsequent calls are a near-instant no-op.
+            _ensure_daemon_started()
             with _query_lock:
                 rc, out, err, wall = _run_query(sql)
             script_t = _extract_script_timing(err)
