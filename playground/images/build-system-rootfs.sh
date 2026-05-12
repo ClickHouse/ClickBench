@@ -46,29 +46,29 @@ done
 
 mkdir -p "$OUT_DIR"
 
-# 1. Rootfs: sparse 200 GB.
-echo "[sys:$SYSTEM] rootfs.ext4 ${ROOTFS_SIZE_GB}G (sparse)"
+# 1. Rootfs: clone the base ext4 file block-level (sparse), then resize to
+# 200 GB. This is dramatically cheaper than mkfs+mount+rsync-of-base:
+# `cp --sparse=always` writes only the ~2 GB of non-zero blocks the base
+# actually uses, instead of traversing the mounted base and writing each
+# file individually. Going from cp-with-mount to block-clone takes the
+# per-system rootfs build from ~30 s to ~3 s on this NVMe.
+echo "[sys:$SYSTEM] rootfs.ext4 (clone+resize to ${ROOTFS_SIZE_GB}G)"
 rm -f "$ROOTFS"
+cp --sparse=always "$BASE" "$ROOTFS"
+# Grow the filesystem to fill 200 GB. The base ext4 superblock thinks the
+# disk is its original size; resize2fs notices the file is bigger and
+# extends the metadata to cover it.
 truncate -s "${ROOTFS_SIZE_GB}G" "$ROOTFS"
-mkfs.ext4 -F -L cbroot -E lazy_itable_init=1,lazy_journal_init=1 "$ROOTFS" >/dev/null
+sudo e2fsck -fy "$ROOTFS" >/dev/null 2>&1 || true
+sudo resize2fs "$ROOTFS" >/dev/null 2>&1
 
-BASE_MNT="$(mktemp -d)"
-DST_MNT="$(mktemp -d)"
-trap '
-    sudo umount "'"$BASE_MNT"'" 2>/dev/null || true
-    sudo umount "'"$DST_MNT"'" 2>/dev/null || true
-    rmdir "'"$BASE_MNT"'" "'"$DST_MNT"'" 2>/dev/null || true
-' EXIT
-# A prior smoke-boot may have left the base journal dirty; fsck before RO
-# mount, otherwise the loop mount refuses with "cannot mount read-only".
-sudo e2fsck -fy "$BASE" >/dev/null 2>&1 || true
-sudo mount -o loop,ro "$BASE" "$BASE_MNT"
-sudo mount -o loop "$ROOTFS" "$DST_MNT"
-sudo cp -a "$BASE_MNT"/. "$DST_MNT"/
-echo "$SYSTEM" | sudo tee "$DST_MNT/etc/clickbench-system" >/dev/null
+# Stamp the system name so the agent can identify itself.
+MNT="$(mktemp -d)"
+trap 'sudo umount "'"$MNT"'" 2>/dev/null || true; rmdir "'"$MNT"'" 2>/dev/null || true' EXIT
+sudo mount -o loop "$ROOTFS" "$MNT"
+echo "$SYSTEM" | sudo tee "$MNT/etc/clickbench-system" >/dev/null
 sudo sync
-sudo umount "$DST_MNT"
-sudo umount "$BASE_MNT"
+sudo umount "$MNT"
 trap - EXIT
 
 # 2. System disk: ClickBench scripts only. Sized at SYSDISK_SIZE_GB (2 GB

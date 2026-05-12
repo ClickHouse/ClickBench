@@ -236,18 +236,29 @@ class VMManager:
         if vm.state != "down":
             raise RuntimeError(f"unexpected state for initial provision: {vm.state}")
 
+        # Bound the heavy I/O phases:
+        #   _build_images_if_needed: each call does a `cp -a /base /rootfs`
+        #   that writes ~8 GB of base content. Running 98 in parallel
+        #   saturates the host's NVMe writeback.
+        #   _call_agent_provision: each spawn does `apt-get install`
+        #   against Ubuntu mirrors and pulls 100s of MB. 98 at once gets
+        #   rate-limited by the mirror.
+        # Use distinct semaphores so disk and network are bounded
+        # independently.
         log.info("[%s] initial provision begin", vm.system.name)
         vm.state = "provisioning"
         try:
-            await self._build_images_if_needed(vm)
-            await net.ensure_tap(vm.slot)
-            await net.enable_internet(vm.slot)
-            await self._boot(vm, restore_snapshot=False)
-            await self._wait_for_agent(vm, timeout=180)
-            await self._call_agent_provision(vm)
-            await self._snapshot(vm)
-            await self._shutdown(vm)
-            await net.disable_internet(vm.slot)
+            async with self._build_sem:
+                await self._build_images_if_needed(vm)
+            async with self._provision_sem:
+                await net.ensure_tap(vm.slot)
+                await net.enable_internet(vm.slot)
+                await self._boot(vm, restore_snapshot=False)
+                await self._wait_for_agent(vm, timeout=180)
+                await self._call_agent_provision(vm)
+                await self._snapshot(vm)
+                await self._shutdown(vm)
+                await net.disable_internet(vm.slot)
             vm.state = "snapshotted"
             vm.provisioned_at = time.time()
             log.info("[%s] initial provision complete", vm.system.name)
