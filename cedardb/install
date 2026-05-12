@@ -10,9 +10,7 @@ sudo apt-get install -y postgresql-client
 # Delete potential previously created database
 rm -rf ./db
 
-mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
-
 curl https://get.cedardb.com | bash -s -- -y \
     --install-dir "$PWD" \
     --db-dir "$PWD/db" \
-    --with-systemd=user
+    --with-systemd=system

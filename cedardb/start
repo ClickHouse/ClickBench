@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-systemctl --user start cedardb.service
+sudo systemctl start cedardb.service
 
 # On multi-NUMA systems stay within one node for better performance.
 numa_nodes=$(ls -d /sys/devices/system/node/node* 2>/dev/null | wc -l)

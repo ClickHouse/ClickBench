@@ -1,4 +1,4 @@
 #!/bin/bash
 set -eu
 
-systemctl --user start cedardb.service
+sudo systemctl start cedardb.service
