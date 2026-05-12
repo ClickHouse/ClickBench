@@ -263,63 +263,10 @@ def _provision() -> tuple[int, bytes]:
             PROVISION_LOG.write_bytes(b"".join(log_lines))
             return r.returncode, b"".join(log_lines)
 
-        subprocess.run(["sync"], check=False)
-
-        # Pre-snapshot trim:
-        #
-        # 1. Restart the daemon if the system is restartable. After ./load
-        #    finishes, most engines have hundreds of MB of fresh per-INSERT
-        #    state on the heap: ClickHouse's MergeTree merge thread arenas,
-        #    Postgres' aborted-batch buffers, etc. Stop/start sheds that
-        #    private memory back to zero. We capture stop/start output into
-        #    the provision log so a broken restart can be diagnosed, and
-        #    bail out of /provision if ./check doesn't recover — the host
-        #    must NOT snapshot a dead daemon, since post-restore /query
-        #    would then hit "Connection refused" until the user manually
-        #    kicks the VM. Skip the whole dance for in-process engines
-        #    (chdb, polars, pandas, …) where stop/start is a no-op AND the
-        #    data lives in the process; wiping it would defeat the point.
-        restartable = (SYSTEM_DIR / "start").exists() and (SYSTEM_DIR / "stop").exists()
-        if restartable:
-            log_lines.append(b"\n=== pre-snapshot restart ===\n")
-            r = subprocess.run([str(SYSTEM_DIR / "stop")], cwd=str(SYSTEM_DIR),
-                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                               timeout=120, check=False)
-            log_lines.append(b"stop: rc=" + str(r.returncode).encode() + b"\n")
-            log_lines.append(r.stdout or b"")
-            for _ in range(60):
-                rc = subprocess.run([str(SYSTEM_DIR / "check")], cwd=str(SYSTEM_DIR),
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                                    timeout=10, check=False).returncode
-                if rc != 0:
-                    break
-                time.sleep(0.5)
-            r = subprocess.run([str(SYSTEM_DIR / "start")], cwd=str(SYSTEM_DIR),
-                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                               timeout=300, check=False)
-            log_lines.append(b"start: rc=" + str(r.returncode).encode() + b"\n")
-            log_lines.append(r.stdout or b"")
-            restart_ok = False
-            for _ in range(300):
-                rc = subprocess.run([str(SYSTEM_DIR / "check")], cwd=str(SYSTEM_DIR),
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                                    timeout=10, check=False).returncode
-                if rc == 0:
-                    restart_ok = True
-                    break
-                time.sleep(1)
-            if not restart_ok:
-                log_lines.append(b"=== pre-snapshot restart FAILED ===\n")
-                PROVISION_LOG.write_bytes(b"".join(log_lines))
-                # Do NOT set PROVISION_DONE; force /provision to return 500
-                # so the host doesn't snapshot a dead daemon.
-                return 1, b"".join(log_lines)
-            log_lines.append(b"=== pre-snapshot restart ok ===\n")
-
-        # 2. Drop the kernel's page+dentry+inode cache. The page cache holds
-        #    3-5 GB of file data the system would re-read on demand anyway;
-        #    those pages become zero-fill in the snapshot, which zstd
-        #    compresses ~50:1 vs random data.
+        # Drop the page+dentry+inode cache. The page cache typically holds
+        # 3-5 GB of file data the system would re-read on demand anyway;
+        # those pages turn into zero-fill in the snapshot, which zstd
+        # compresses 50:1 vs random data.
         subprocess.run(["sync"], check=False)
         try:
             Path("/proc/sys/vm/drop_caches").write_text("3\n")
@@ -365,6 +312,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self._send_json(404, {"error": "not found", "path": self.path})
 
     def do_POST(self) -> None:
+        if self.path == "/sync":
+            # Flush all dirty pages to the virtio-blk devices. The host
+            # calls this immediately before /snapshot/create so the
+            # on-disk image captured in the snapshot is consistent with
+            # what the in-memory page cache thinks is there. Without
+            # this, a long-running daemon's writeback may still be in
+            # flight when KVM pauses the vcpus, the snapshot freezes a
+            # mid-flush state, and post-restore reads see torn or
+            # checksum-mismatched data.
+            t0 = time.monotonic()
+            subprocess.run(["sync"], check=False)
+            self._send(200, f"{time.monotonic() - t0:.3f}\n".encode(),
+                       {"Content-Type": "text/plain"})
+            return
         if self.path == "/provision":
             rc, log = _provision()
             self._send(200 if rc == 0 else 500, log[-OUTPUT_LIMIT:],

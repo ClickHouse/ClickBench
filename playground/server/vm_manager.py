@@ -327,6 +327,14 @@ class VMManager:
         await fc.put(sock, "/actions", {"action_type": "InstanceStart"})
 
     async def _snapshot(self, vm: VM) -> None:
+        # Flush the guest's dirty pages to the virtio-blk devices before we
+        # pause the vcpus. Without an explicit sync here, KVM can freeze
+        # the guest mid-flush — the snapshot then captures memory that
+        # references on-disk blocks that haven't actually landed yet, and
+        # the next read after restore sees a checksum mismatch / torn
+        # write on whatever was being written at the moment of pause.
+        await self._sync_guest(vm)
+
         sock = str(vm.api_sock)
         await fc.patch(sock, "/vm", {"state": "Paused"})
         try:
@@ -491,6 +499,16 @@ class VMManager:
                 if r.status >= 300:
                     raise RuntimeError(f"agent /provision failed: {r.status}: "
                                        f"{body[-2000:].decode(errors='replace')}")
+
+    async def _sync_guest(self, vm: VM) -> None:
+        url = self.agent_url(vm) + "/sync"
+        try:
+            async with aiohttp.ClientSession() as s:
+                async with s.post(url, timeout=aiohttp.ClientTimeout(total=300)) as r:
+                    body = (await r.read()).decode("utf-8", errors="replace").strip()
+                    log.info("[%s] guest sync: %s", vm.system.name, body)
+        except Exception as e:
+            log.warning("[%s] guest sync failed (%r); proceeding anyway", vm.system.name, e)
 
 
 def _has_snapshot(vm: VM) -> bool:
