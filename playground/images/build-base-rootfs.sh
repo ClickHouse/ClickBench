@@ -181,6 +181,16 @@ EOF
 # and break on empty.
 mkdir -p /root
 chmod 700 /root
+
+# /etc/hosts: ensure both "localhost" and the cloud-image hostname "ubuntu"
+# resolve locally. Without the second entry, every sudo invocation does a
+# reverse DNS lookup that times out (~2 s each) trying to find "ubuntu" on
+# the dropped-internet network, which adds up to a multi-second floor on
+# every /query. Pre-stamping the host name removes the round trip.
+cat > /etc/hosts <<EOF
+127.0.0.1   localhost ubuntu
+::1         localhost ip6-localhost ip6-loopback
+EOF
 CUSTOMIZE
 sudo chmod +x "$MNT/tmp/customize.sh"
 sudo chroot "$MNT" /tmp/customize.sh
