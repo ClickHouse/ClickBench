@@ -1,0 +1,199 @@
+#!/bin/bash
+# Build a base Ubuntu 22.04 rootfs for the Firecracker microVMs.
+#
+# Strategy: start from the official Ubuntu 22.04 cloud image (qcow2), convert
+# to raw, mount it, install python3 + sudo + curl + iproute2, drop the agent in
+# place, install a systemd unit that runs the agent on boot, and add a
+# /etc/fstab line that mounts the dataset disk read-only.
+#
+# The resulting image is /opt/clickbench-playground/base-rootfs.ext4. Per-system
+# images are produced by overlaying the system's ClickBench scripts onto a copy
+# of this base.
+#
+# Idempotent: re-running just re-builds the file from scratch.
+
+set -euo pipefail
+
+STATE_DIR="${PLAYGROUND_STATE_DIR:-/opt/clickbench-playground}"
+TMP="${STATE_DIR}/tmp/base-build"
+OUT="${STATE_DIR}/base-rootfs.ext4"
+SIZE_GB="${BASE_ROOTFS_SIZE_GB:-8}"
+CLOUDIMG_URL="${UBUNTU_CLOUDIMG_URL:-https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img}"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+AGENT_DIR="${REPO_DIR}/playground/agent"
+
+echo "[base] state=$STATE_DIR out=$OUT size=${SIZE_GB}G"
+
+mkdir -p "$TMP"
+mkdir -p "$STATE_DIR/cache"
+
+CLOUDIMG="$STATE_DIR/cache/jammy-cloudimg.img"
+if [ ! -f "$CLOUDIMG" ]; then
+    echo "[base] downloading cloud image"
+    curl -fsSL "$CLOUDIMG_URL" -o "${CLOUDIMG}.part"
+    mv "${CLOUDIMG}.part" "$CLOUDIMG"
+fi
+
+# Plan: rather than grow the cloud image's partition (which involves
+# sfdisk/growpart/resize2fs — all of which call `sync` and therefore stall
+# whenever the host is under unrelated writeback pressure), we work in two
+# fixed-size hops:
+#
+#   1. Loop-mount the cloud image's existing partition (2 GB) and use that
+#      as a read-only source.
+#   2. Create a fresh, no-partition-table ext4 image of SIZE_GB and mount it
+#      as the build root. Copy the cloud image's content into it. The new
+#      image is what Firecracker boots from (it expects a flat ext4, no
+#      partition table).
+#
+# No growpart, no resize2fs, no waiting on the kernel to flush GBs of
+# unrelated dirty pages just to update a partition table.
+
+RAW="$TMP/base.raw"
+echo "[base] converting cloud image to raw"
+qemu-img convert -O raw "$CLOUDIMG" "$RAW"
+
+SRC_LOOP="$(sudo losetup --find --show --partscan "$RAW")"
+trap 'sudo losetup -d "$SRC_LOOP" 2>/dev/null || true' EXIT
+for i in $(seq 1 20); do
+    if [ -b "${SRC_LOOP}p1" ]; then break; fi
+    sleep 0.5
+done
+
+SRC_MNT="$TMP/src"
+mkdir -p "$SRC_MNT"
+sudo mount -o ro "${SRC_LOOP}p1" "$SRC_MNT"
+
+# Now build the *target* image: a plain ext4 file of SIZE_GB with no partition
+# table. Firecracker boots root=/dev/vda directly off this.
+echo "[base] mkfs.ext4 -> ${SIZE_GB}G no-partition flat image"
+FLAT="$TMP/base.flat.ext4"
+fallocate -l "${SIZE_GB}G" "$FLAT"
+mkfs.ext4 -F -L cbroot -E lazy_itable_init=1,lazy_journal_init=1 "$FLAT" >/dev/null
+
+DST_LOOP="$(sudo losetup --find --show "$FLAT")"
+MNT="$TMP/mnt"
+mkdir -p "$MNT"
+sudo mount "$DST_LOOP" "$MNT"
+trap '
+    sudo umount "'"$SRC_MNT"'" 2>/dev/null || true
+    sudo umount "'"$MNT"'" 2>/dev/null || true
+    sudo losetup -d "'"$SRC_LOOP"'" 2>/dev/null || true
+    sudo losetup -d "'"$DST_LOOP"'" 2>/dev/null || true
+' EXIT
+
+# Stage the cloud image contents into the new rootfs.
+echo "[base] copying cloud image content into flat rootfs"
+sudo cp -a "$SRC_MNT"/. "$MNT"/
+sudo umount "$SRC_MNT"
+sudo losetup -d "$SRC_LOOP"
+trap '
+    sudo umount "'"$MNT"'" 2>/dev/null || true
+    sudo losetup -d "'"$DST_LOOP"'" 2>/dev/null || true
+' EXIT
+
+# Bind /dev /proc /sys for the chroot.
+for d in dev proc sys; do
+    sudo mkdir -p "$MNT/$d"
+    sudo mount --rbind "/$d" "$MNT/$d"
+done
+trap '
+    for d in dev proc sys; do sudo umount -lR "'"$MNT"'/$d" 2>/dev/null || true; done
+    sudo umount "'"$MNT"'" 2>/dev/null || true
+    sudo losetup -d "'"$DST_LOOP"'" 2>/dev/null || true
+' EXIT
+
+# Resolve DNS from host inside the chroot. The cloud image ships
+# /etc/resolv.conf as a symlink into /run/systemd/resolve/ which is empty
+# until systemd-resolved starts; we need a real file for the chroot's apt
+# to work.
+sudo rm -f "$MNT/etc/resolv.conf"
+sudo install -m 0644 /etc/resolv.conf "$MNT/etc/resolv.conf"
+
+# Run system customization inside the chroot.
+sudo tee "$MNT/tmp/customize.sh" >/dev/null <<'CUSTOMIZE'
+#!/bin/bash
+set -euxo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+# Disable cloud-init's network configuration so eth0 just comes up via
+# /etc/network/interfaces-style config we install below.
+echo 'network: {config: disabled}' > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+
+# Keep the image small: turn off heavy services that we don't need on a
+# query-serving microVM.
+systemctl disable snapd.service snapd.socket snapd.seeded.service 2>/dev/null || true
+systemctl mask snapd.service snapd.socket snapd.seeded.service 2>/dev/null || true
+systemctl disable unattended-upgrades.service apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+systemctl mask unattended-upgrades.service apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+
+apt-get update -qq
+apt-get install -y --no-install-recommends \
+    python3 python3-yaml ca-certificates curl wget gnupg sudo less vim-tiny \
+    iproute2 iputils-ping net-tools openssh-server lsb-release \
+    htop sysstat strace ncdu pigz unzip xz-utils zstd \
+    build-essential netbase
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+
+# Network: the host sets up the VM's IP via the kernel `ip=` cmdline so the
+# guest comes up with the right /24 for its slot. systemd-networkd in the
+# guest must NOT fight the kernel's static config — disable it and rely on
+# the kernel-supplied address. /etc/resolv.conf gets a static fallback so DNS
+# works in case any post-snapshot tooling still wants it (it shouldn't —
+# internet is dropped after the snapshot).
+systemctl disable systemd-networkd 2>/dev/null || true
+systemctl disable systemd-resolved 2>/dev/null || true
+rm -f /etc/resolv.conf
+cat > /etc/resolv.conf <<EOF
+nameserver 1.1.1.1
+nameserver 8.8.8.8
+EOF
+
+# Root has no password; serial console gets autologin. Useful for debugging
+# inside the microVM via the Firecracker console socket.
+mkdir -p /etc/systemd/system/serial-getty@ttyS0.service.d
+cat > /etc/systemd/system/serial-getty@ttyS0.service.d/override.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin root --keep-baud 115200,38400,9600 %I \$TERM
+EOF
+passwd -d root
+
+# Replace the entire fstab. The cloud image ships entries for
+# `LABEL=cloudimg-rootfs /` and `LABEL=UEFI /boot/efi` — both stale after we
+# repack into a fresh ext4 with a different label and no partition table.
+# systemd refuses to clear those entries on its own and drops to emergency
+# mode when label-based lookups fail. The kernel handles the root mount via
+# its `root=/dev/vda` cmdline; we only need fstab for the system disk.
+mkdir -p /opt/clickbench/system
+cat > /etc/fstab <<EOF
+LABEL=cbsystem  /opt/clickbench/system      ext4    rw,nofail,noatime              0 0
+EOF
+
+# Make sure the home dir exists; some installers (vcpkg, gizmosql) honor $HOME
+# and break on empty.
+mkdir -p /root
+chmod 700 /root
+CUSTOMIZE
+sudo chmod +x "$MNT/tmp/customize.sh"
+sudo chroot "$MNT" /tmp/customize.sh
+sudo rm -f "$MNT/tmp/customize.sh"
+
+# Install the agent payload + systemd unit.
+sudo mkdir -p "$MNT/opt/clickbench-agent"
+sudo cp "$AGENT_DIR/agent.py" "$MNT/opt/clickbench-agent/agent.py"
+sudo chmod +x "$MNT/opt/clickbench-agent/agent.py"
+sudo cp "$AGENT_DIR/clickbench-agent.service" "$MNT/etc/systemd/system/clickbench-agent.service"
+sudo chroot "$MNT" systemctl enable clickbench-agent.service
+
+# Unmount and detach. The flat ext4 in $FLAT IS the target; just move it to
+# $OUT and we're done. Skip the partitioned -> flat re-copy step.
+sudo umount -lR "$MNT/dev" "$MNT/proc" "$MNT/sys"
+sudo umount "$MNT"
+sudo losetup -d "$DST_LOOP"
+trap - EXIT
+
+mv "$FLAT" "$OUT"
+rm -rf "$TMP"
+echo "[base] done: $OUT ($(du -h "$OUT" | cut -f1) physical, $(du -h --apparent-size "$OUT" | cut -f1) apparent)"

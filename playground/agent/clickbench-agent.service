@@ -1,0 +1,23 @@
+[Unit]
+Description=ClickBench in-VM playground agent
+# The kernel's `ip=` cmdline sets the static IP before init, so network is
+# already up when we start. We deliberately don't depend on network-online.
+# target — that gate is fed by systemd-networkd-wait-online, which is
+# disabled. The system disk mount is similarly best-effort: the agent's
+# /provision and /query paths report 404/409 if /opt/clickbench/system isn't
+# populated, which is the correct behaviour and lets /health stay up so the
+# host can still talk to it during provisioning.
+After=local-fs.target
+
+[Service]
+Type=simple
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/root
+ExecStart=/usr/bin/python3 /opt/clickbench-agent/agent.py
+Restart=on-failure
+RestartSec=2
+KillMode=mixed
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

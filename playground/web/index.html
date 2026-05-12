@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClickBench Playground</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+    <h1>ClickBench <span class="muted">Playground</span></h1>
+    <p class="lead">
+        Run SQL against any of the database systems in
+        <a href="https://github.com/ClickHouse/ClickBench">ClickBench</a>,
+        each isolated in its own Firecracker microVM. The dataset is the
+        standard <code>hits</code> table — 100 M rows.
+    </p>
+</header>
+
+<main>
+    <section class="row">
+        <label for="system">System</label>
+        <select id="system"></select>
+        <button id="run">Run query</button>
+        <span id="state-pill" class="pill">…</span>
+    </section>
+
+    <section>
+        <label for="query">Query</label>
+        <textarea id="query" spellcheck="false" rows="10">SELECT COUNT(*) FROM hits;</textarea>
+    </section>
+
+    <section class="row stats">
+        <div><strong>Time</strong>: <span id="time">—</span></div>
+        <div><strong>Wall</strong>: <span id="wall">—</span></div>
+        <div><strong>Bytes</strong>: <span id="bytes">—</span></div>
+        <div><strong>Truncated</strong>: <span id="truncated">—</span></div>
+        <div><strong>Exit</strong>: <span id="exit">—</span></div>
+    </section>
+
+    <section>
+        <label for="output">Output</label>
+        <pre id="output"></pre>
+    </section>
+
+    <section>
+        <details>
+            <summary>System status</summary>
+            <pre id="state-blob">loading…</pre>
+        </details>
+    </section>
+</main>
+
+<footer>
+    <a href="https://github.com/ClickHouse/ClickBench">ClickBench</a> ·
+    output is capped at 10 KB · queries are bounded to 10 min · the host
+    keeps no per-user state.
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
