@@ -271,20 +271,22 @@ def _provision() -> tuple[int, bytes]:
         #    finishes, most engines have hundreds of MB of fresh per-INSERT
         #    state on the heap: ClickHouse's MergeTree merge thread arenas,
         #    Postgres' aborted-batch buffers, etc. Stop/start sheds that
-        #    private memory back to zero. Wait for ./check to confirm the
-        #    server is ready again so the snapshot we take is on a quiesced
-        #    process whose first user query will be a cold *query*, not a
-        #    cold *startup*. Skip this for in-process engines (chdb, polars,
-        #    pandas, …) where stop/start is a no-op AND the data lives in
-        #    the process — wiping it would defeat the whole point.
+        #    private memory back to zero. We capture stop/start output into
+        #    the provision log so a broken restart can be diagnosed, and
+        #    bail out of /provision if ./check doesn't recover — the host
+        #    must NOT snapshot a dead daemon, since post-restore /query
+        #    would then hit "Connection refused" until the user manually
+        #    kicks the VM. Skip the whole dance for in-process engines
+        #    (chdb, polars, pandas, …) where stop/start is a no-op AND the
+        #    data lives in the process; wiping it would defeat the point.
         restartable = (SYSTEM_DIR / "start").exists() and (SYSTEM_DIR / "stop").exists()
         if restartable:
-            # Best effort: don't bail on errors. We try to stop, wait, start,
-            # check; if any step fails we proceed with whatever state we
-            # have. The host will see ./check fail and refuse to snapshot.
-            subprocess.run([str(SYSTEM_DIR / "stop")], cwd=str(SYSTEM_DIR),
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                           timeout=120, check=False)
+            log_lines.append(b"\n=== pre-snapshot restart ===\n")
+            r = subprocess.run([str(SYSTEM_DIR / "stop")], cwd=str(SYSTEM_DIR),
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               timeout=120, check=False)
+            log_lines.append(b"stop: rc=" + str(r.returncode).encode() + b"\n")
+            log_lines.append(r.stdout or b"")
             for _ in range(60):
                 rc = subprocess.run([str(SYSTEM_DIR / "check")], cwd=str(SYSTEM_DIR),
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -292,16 +294,27 @@ def _provision() -> tuple[int, bytes]:
                 if rc != 0:
                     break
                 time.sleep(0.5)
-            subprocess.run([str(SYSTEM_DIR / "start")], cwd=str(SYSTEM_DIR),
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                           timeout=300, check=False)
+            r = subprocess.run([str(SYSTEM_DIR / "start")], cwd=str(SYSTEM_DIR),
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               timeout=300, check=False)
+            log_lines.append(b"start: rc=" + str(r.returncode).encode() + b"\n")
+            log_lines.append(r.stdout or b"")
+            restart_ok = False
             for _ in range(300):
                 rc = subprocess.run([str(SYSTEM_DIR / "check")], cwd=str(SYSTEM_DIR),
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                     timeout=10, check=False).returncode
                 if rc == 0:
+                    restart_ok = True
                     break
                 time.sleep(1)
+            if not restart_ok:
+                log_lines.append(b"=== pre-snapshot restart FAILED ===\n")
+                PROVISION_LOG.write_bytes(b"".join(log_lines))
+                # Do NOT set PROVISION_DONE; force /provision to return 500
+                # so the host doesn't snapshot a dead daemon.
+                return 1, b"".join(log_lines)
+            log_lines.append(b"=== pre-snapshot restart ok ===\n")
 
         # 2. Drop the kernel's page+dentry+inode cache. The page cache holds
         #    3-5 GB of file data the system would re-read on demand anyway;
