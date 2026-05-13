@@ -97,6 +97,14 @@ class VMManager:
         # in one pass.
         self._provision_sem = asyncio.Semaphore(int(os.environ.get(
             "PLAYGROUND_PROVISION_CONCURRENCY", "32")))
+        # Independently cap how many VMs are inside /snapshot/create at once.
+        # Each snapshot writes 16 GB of memory to disk; running 30 of them
+        # simultaneously serializes on the host NVMe and pushed individual
+        # snapshots past 30 min, causing host-side timeouts on VMs that had
+        # already finished install+load. 6 snapshots in parallel keeps each
+        # one's write window under ~5 minutes on a single fast SSD.
+        self._snapshot_sem = asyncio.Semaphore(int(os.environ.get(
+            "PLAYGROUND_SNAPSHOT_CONCURRENCY", "6")))
         # Stable slot allocation: sort systems alphabetically so each system
         # always gets the same slot id (and therefore the same TAP/IP).
         for i, name in enumerate(sorted(systems.keys()), start=1):
@@ -383,22 +391,21 @@ class VMManager:
         await self._sync_guest(vm)
 
         sock = str(vm.api_sock)
-        await fc.patch(sock, "/vm", {"state": "Paused"})
-        try:
-            # Allow up to 30 min for /snapshot/create. Under heavy parallel
-            # provisioning the host NVMe is contended and Firecracker's
-            # 16 GB memory dump can take many minutes; 10 min wasn't
-            # enough and we lost VMs that had finished install+load
-            # already, mid-snapshot.
-            await fc.put(sock, "/snapshot/create", {
-                "snapshot_type": "Full",
-                "snapshot_path": str(vm.snapshot_state),
-                "mem_file_path": str(vm.snapshot_bin),
-            }, timeout=1800.0)
-        finally:
-            # Try to resume so we can shut down cleanly; ignore failures.
-            with contextlib.suppress(Exception):
-                await fc.patch(sock, "/vm", {"state": "Resumed"})
+        # Bound concurrent snapshots. /snapshot/create writes ~16 GB of
+        # memory to disk and ~30 simultaneous ones serialize on a single
+        # NVMe long enough to time out individual VMs.
+        async with self._snapshot_sem:
+            await fc.patch(sock, "/vm", {"state": "Paused"})
+            try:
+                await fc.put(sock, "/snapshot/create", {
+                    "snapshot_type": "Full",
+                    "snapshot_path": str(vm.snapshot_state),
+                    "mem_file_path": str(vm.snapshot_bin),
+                }, timeout=1800.0)
+            finally:
+                # Try to resume so we can shut down cleanly; ignore failures.
+                with contextlib.suppress(Exception):
+                    await fc.patch(sock, "/vm", {"state": "Resumed"})
 
         # Capture the *disk* state too. The memory snapshot is meaningless on
         # its own: it has in-flight references to specific inodes / file
