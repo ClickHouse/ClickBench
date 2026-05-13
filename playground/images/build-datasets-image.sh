@@ -54,7 +54,6 @@ MNT="$(mktemp -d)"
 trap 'sudo umount "'"$MNT"'" 2>/dev/null || true; rmdir "'"$MNT"'" 2>/dev/null || true' EXIT
 sudo mount -o loop "$OUT" "$MNT"
 sudo rsync -a "$SRC"/. "$MNT"/
-sudo sync
 sudo umount "$MNT"
 trap - EXIT
 

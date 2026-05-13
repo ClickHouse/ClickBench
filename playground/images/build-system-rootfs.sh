@@ -67,11 +67,14 @@ rm -f "$ROOTFS"
 cp --sparse=always "$BASE" "$ROOTFS"
 
 # Stamp the system name so the agent can identify itself.
+# Note: no explicit `sync` — `umount` syncs the filesystem being unmounted.
+# A global `sync` here would block until every dirty page on the host's
+# disk is flushed, which under 98-way parallel builds means every build
+# waits for everyone else's writeback before its own umount returns.
 MNT="$(mktemp -d)"
 trap 'sudo umount "'"$MNT"'" 2>/dev/null || true; rmdir "'"$MNT"'" 2>/dev/null || true' EXIT
 sudo mount -o loop "$ROOTFS" "$MNT"
 echo "$SYSTEM" | sudo tee "$MNT/etc/clickbench-system" >/dev/null
-sudo sync
 sudo umount "$MNT"
 trap - EXIT
 
@@ -118,7 +121,6 @@ echo "[sys:$SYSTEM] format=$format"
 
 sudo chown -R 0:0 "$SYS_MNT/upper"
 sudo chmod -R u+rwX,go+rX "$SYS_MNT/upper"
-sudo sync
 sudo umount "$SYS_MNT"
 trap - EXIT
 
