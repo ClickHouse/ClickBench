@@ -131,6 +131,23 @@ class VMManager:
 
     # ── public API ───────────────────────────────────────────────────────
 
+    async def provision_now(self, system: str) -> None:
+        """Force a full initial provision. Only called by
+        /api/admin/provision; the /query path never lands here.
+        """
+        if system not in self.vms:
+            raise KeyError(system)
+        vm = self.vms[system]
+        async with vm.lock:
+            if vm.state == "provisioning":
+                raise RuntimeError(f"{system}: provisioning already in flight")
+            # Bring everything down so _initial_provision starts fresh.
+            with contextlib.suppress(Exception):
+                await self._teardown(vm, "admin-provision")
+            vm.state = "down"
+            vm.last_error = None
+            await self._initial_provision(vm)
+
     async def ensure_ready_for_query(self, system: str) -> VM:
         """Make sure system is up and responsive to /query. Boot/resume as needed.
 

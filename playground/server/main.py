@@ -129,7 +129,7 @@ class App:
 
     async def _provision_bg(self, name: str) -> None:
         try:
-            await self.vmm.ensure_ready_for_query(name)
+            await self.vmm.provision_now(name)
         except Exception as e:
             log.exception("background provision failed for %s", name)
             self.sink.write_event(system=name, kind="provision-failed", detail=repr(e))
