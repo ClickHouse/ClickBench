@@ -1,12 +1,15 @@
 :root {
-    --fg: #1f2328;
+    --fg: black;
     --muted: #6e7681;
-    --border: #d0d7de;
-    --bg: #ffffff;
-    --bg-alt: #f6f8fa;
-    --accent: #fb1f00;
-    --accent-fg: #ffffff;
-    --good: #1f883d;
+    --border: black;
+    --bg: #fff8f0;
+    --bg-alt: white;
+    --fg-output: lightgray;
+    --bg-output: black;
+    --bg-error: #f88;
+    --accent: yellow;
+    --accent-fg: black;
+    --good: black;
     --bad: #cf222e;
     --warn: #9a6700;
     --info: #0969da;
@@ -14,36 +17,35 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
-body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
-header, main, footer { max-width: 100%; margin: 0; padding: 0 8px; }
+body { font: 14px sans-serif; }
+header, main, footer { max-width: 100%; margin: 0; padding: 0 1em; }
 
-header { padding-top: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-header h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
-header .lead { margin: 0; color: var(--muted); }
+header { padding: 1em 1em; }
+header h1 { margin: 0; font-size: 22px; font-weight: 600; }
 .muted { color: var(--muted); font-weight: normal; }
 
-main { padding-top: 16px; padding-bottom: 32px; }
-main > section { margin: 12px 0; }
+section { margin: 12px 0; }
 
 label { display: block; font-weight: 600; font-size: 12px; text-transform: uppercase;
         letter-spacing: 0.04em; color: var(--muted); margin-bottom: 4px; }
 
 textarea, pre, input {
     font-family: monospace;
-    font-size: 13px;
+    font-size: 14px;
     border: 1px solid var(--border);
-    background: var(--bg);
+    background: var(--bg-alt);
     color: var(--fg);
     border-radius: 0;
 }
 
-textarea { width: 100%; padding: 10px; resize: vertical; }
+textarea { width: 100%; padding: 0.5em; resize: vertical; }
 
 pre#output {
     padding: 10px;
-    background: var(--bg-alt);
+    color: var(--fg-output);
+    background: var(--bg-output);
     margin: 0;
-    max-height: 360px;
+    max-height: 50vh;
     overflow: auto;
     white-space: pre;
     line-height: 1;
@@ -51,7 +53,7 @@ pre#output {
 
 pre#last-error {
     padding: 10px;
-    background: var(--bg-alt);
+    background: var(--bg-error);
     margin: 0;
     max-height: 360px;
     overflow: auto;
@@ -72,7 +74,7 @@ pre#state-blob {
 
 button {
     background: var(--accent); color: var(--accent-fg);
-    border: none; border-radius: 0; padding: 6px 16px;
+    border: 1px solid var(--border); border-radius: 0; padding: 6px 16px;
     font-weight: 600; cursor: pointer;
 }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -80,10 +82,9 @@ button:hover:not(:disabled) { filter: brightness(0.95); }
 
 .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .row label { margin: 0; }
-.stats { font-family: monospace;
-         font-size: 12px; color: var(--muted); padding: 8px 0;
-         border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.stats { font-family: monospace; }
 .stats span { color: var(--fg); }
+#time { font-weight: bold; }
 
 /* System slabs — horizontal flex-wrap row of chiclets like the main
    ClickBench results page. Each slab is a clickable button, background
@@ -91,7 +92,7 @@ button:hover:not(:disabled) { filter: brightness(0.95); }
 .system-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 2px;
+    gap: 0.3em;
 }
 .system-item {
     display: inline-block;
@@ -156,7 +157,7 @@ button:hover:not(:disabled) { filter: brightness(0.95); }
 .system-item.state-provisioning { background: #eaeef2; color: var(--muted); }
 .system-item.state-down        { background: #f6d1ce; color: var(--bad); }
 
-footer { color: var(--muted); padding-top: 16px; padding-bottom: 32px;
-         border-top: 1px solid var(--border); font-size: 12px; }
+select { padding: 0.5em; border-radius: 0; }
+
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }

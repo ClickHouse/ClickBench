@@ -8,18 +8,11 @@
 </head>
 <body>
 <header>
-    <h1>ClickBench <span class="muted">Playground</span></h1>
-    <p class="lead">
-        Run SQL against any of the database systems in
-        <a href="https://github.com/ClickHouse/ClickBench">ClickBench</a>,
-        each isolated in its own Firecracker microVM. The dataset is the
-        standard <code>hits</code> table &mdash; 100 M rows.
-    </p>
+    <h1>ClickBench Playground <span class="muted">&mdash; run SQL against 80+ databases</span></h1>
 </header>
 
 <main>
     <section>
-        <label>System</label>
         <div id="system-list" class="system-list"></div>
     </section>
 
@@ -27,11 +20,9 @@
         <button id="run">Run query</button>
         <label for="example" class="row-label">Example</label>
         <select id="example"></select>
-        <span id="selected-system" class="muted"></span>
     </section>
 
     <section id="ui-query">
-        <label for="query">Query</label>
         <textarea id="query" rows="10"
             spellcheck="false" autocomplete="off" autocorrect="off"
             autocapitalize="off"
@@ -40,7 +31,7 @@
     </section>
 
     <section class="row stats" id="ui-stats">
-        <div><strong>Time</strong>: <span id="time">&mdash;</span></div>
+        <div>Time: <span id="time">&mdash;</span></div>
     </section>
 
     <section id="ui-output">
@@ -60,12 +51,6 @@
         </details>
     </section>
 </main>
-
-<footer>
-    <a href="https://github.com/ClickHouse/ClickBench">ClickBench</a> &middot;
-    output is capped at 64 KB &middot; queries are bounded to 60 s &middot; the host
-    keeps no per-user state.
-</footer>
 
 <script src="app.js?v=20"></script>
 </body>

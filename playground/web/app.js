@@ -18,7 +18,6 @@ const API = location.protocol === "file:" ? "http://localhost:8000" : "";
 const listEl = $("#system-list");
 const queryEl = $("#query");
 const runBtn = $("#run");
-const selectedEl = $("#selected-system");
 const outEl = $("#output");
 const outLabelEl = $("#output-label");
 const timeEl = $("#time");
@@ -113,7 +112,6 @@ function onSlabClick(name) {
 function select(name) {
     selected = name;
     location.hash = name;
-    selectedEl.textContent = name;
     for (const row of listEl.children) {
         row.classList.toggle("selected", row.dataset.name === name);
     }
