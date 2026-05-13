@@ -36,6 +36,7 @@ textarea, pre, input {
     background: var(--bg-alt);
     color: var(--fg);
     border-radius: 0;
+    max-height: 50vh;
 }
 
 textarea { width: 100%; padding: 0.5em; resize: vertical; }
@@ -45,7 +46,6 @@ pre#output {
     color: var(--fg-output);
     background: var(--bg-output);
     margin: 0;
-    max-height: 50vh;
     overflow: auto;
     white-space: pre;
     line-height: 1;
@@ -55,7 +55,6 @@ pre#last-error {
     padding: 10px;
     background: var(--bg-error);
     margin: 0;
-    max-height: 360px;
     overflow: auto;
     white-space: pre-wrap;
     word-break: break-word;
@@ -66,7 +65,6 @@ pre#state-blob {
     padding: 10px;
     background: var(--bg-alt);
     margin: 0;
-    max-height: 360px;
     overflow: auto;
     white-space: pre-wrap;
     word-break: break-word;
