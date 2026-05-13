@@ -116,11 +116,19 @@ function select(name) {
         stateBlob.textContent = JSON.stringify(stateByName[name], null, 2);
     }
     showResult(resultsByName[name]);
-    // If the user has typed something, keep it across system switches —
-    // they're likely composing one query against multiple systems. Only
-    // when the textarea is empty does loadExamples populate Q1.
     loadExamples(name);
     refreshDownUI();
+    // Kick the restore in the background so the VM is hopefully ready
+    // by the time the user presses Run query. No-op if the system is
+    // already ready / provisioning / has no snapshot.
+    maybeWarmup(name);
+}
+
+function maybeWarmup(name) {
+    const s = stateByName[name];
+    if (!s || s.state !== "snapshotted") return;
+    fetch(`/api/warmup/${encodeURIComponent(name)}`, {method: "POST"})
+        .catch(() => {});  // fire-and-forget
 }
 
 async function loadExamples(name) {

@@ -134,6 +134,38 @@ class App:
             log.exception("background provision failed for %s", name)
             self.sink.write_event(system=name, kind="provision-failed", detail=repr(e))
 
+    async def handle_warmup(self, req: web.Request) -> web.Response:
+        """Trigger snapshot restore for a system without running a query.
+
+        The UI calls this on system-select so the restore (~30 s for
+        cold ones, near-zero with reflink+live-daemon) overlaps the
+        time the user is typing their query, and Run query lands on a
+        VM that's already serving. Refuses to initial-provision; if no
+        snapshot exists, returns 409 and the user has to /admin/provision.
+        """
+        name = req.match_info["name"]
+        if name not in self.systems:
+            raise web.HTTPNotFound()
+        vm = self.vmm.vms[name]
+        if vm.state == "ready":
+            return web.json_response({"already_ready": True, "system": name})
+        if vm.state == "provisioning":
+            return web.json_response({"in_flight": True, "system": name})
+        if not self.vmm.vms[name].snapshot_bin.exists() and \
+           not (self.cfg.systems_dir / name / "rootfs.golden.ext4").exists():
+            return web.json_response(
+                {"error": "no snapshot; POST /api/admin/provision first"},
+                status=409,
+            )
+        asyncio.create_task(self._warmup_bg(name))
+        return web.json_response({"started": True, "system": name})
+
+    async def _warmup_bg(self, name: str) -> None:
+        try:
+            await self.vmm.ensure_ready_for_query(name)
+        except Exception as e:
+            log.warning("warmup failed for %s: %r", name, e)
+
     async def handle_query(self, req: web.Request) -> web.StreamResponse:
         system_name = req.query.get("system", "")
         if system_name not in self.systems:
@@ -235,6 +267,7 @@ def build_app() -> web.Application:
     app.router.add_get("/api/queries/{name}", obj.handle_queries)
     app.router.add_get("/api/provision-log/{name}", obj.handle_provision_log)
     app.router.add_post("/api/admin/provision/{name}", obj.handle_admin_provision)
+    app.router.add_post("/api/warmup/{name}", obj.handle_warmup)
     app.router.add_post("/api/query", obj.handle_query)
 
     # Static UI
