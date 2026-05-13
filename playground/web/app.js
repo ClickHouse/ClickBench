@@ -131,6 +131,9 @@ async function loadExamples(name) {
         queriesByName[name] = qs;
     }
     if (selected !== name) return;  // user moved on
+    // Preserve the example index across system switches: if the user
+    // had Q5 selected for system A, switching to B keeps Q5.
+    const prevIndex = parseInt(exampleSel.value, 10);
     exampleSel.innerHTML = "";
     if (!qs.length) {
         const o = document.createElement("option");
@@ -141,16 +144,21 @@ async function loadExamples(name) {
         for (let i = 0; i < qs.length; i++) {
             const o = document.createElement("option");
             o.value = String(i);
-            // Single-line label: first 90 chars of the query.
             const label = qs[i].replace(/\s+/g, " ").slice(0, 90);
             o.textContent = `Q${i + 1}: ${label}`;
             exampleSel.appendChild(o);
         }
-    }
-    // Only populate the first example if the textarea is empty —
-    // anything the user has typed stays put when switching systems.
-    if (!queryEl.value.trim() && qs.length) {
-        queryEl.value = qs[0];
+        // Clamp prevIndex into range; default to 0.
+        let idx = 0;
+        if (!isNaN(prevIndex) && prevIndex >= 0 && prevIndex < qs.length) {
+            idx = prevIndex;
+        }
+        exampleSel.value = String(idx);
+        // Only populate the textarea if it's empty — anything the
+        // user has typed stays put when switching systems.
+        if (!queryEl.value.trim()) {
+            queryEl.value = qs[idx];
+        }
     }
 }
 
