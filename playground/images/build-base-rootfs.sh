@@ -162,17 +162,19 @@ sudo tee -a "$MNT/tmp/customize-modules.sh" >/dev/null <<'MODSCRIPT'
 #!/bin/bash
 set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
-# Install modules deb but skip the image (we boot it directly from host).
-# Skipping the image deb avoids the post-install update-initramfs that
-# fails inside the chroot.
-dpkg --unpack /tmp/linux-modules-7.0.0-15-generic_*.deb 2>&1 | tail -5
-# Configure but skip running update-initramfs.
-mkdir -p /etc/initramfs-tools/conf.d
-echo 'no-initramfs' > /etc/initramfs-tools/conf.d/disabled
-dpkg --configure linux-modules-7.0.0-15-generic 2>&1 | tail -5 || true
+# Extract files from the modules deb without registering it in dpkg.
+# `dpkg --unpack` half-installs the package, leaving apt thinking there's
+# an unconfigured package with unmet dependencies and refusing subsequent
+# `apt-get install`s with "Unmet dependencies. Try 'apt --fix-broken
+# install'". Bypass dpkg entirely: dpkg-deb -x just unrolls the data
+# tarball into the rootfs.
+dpkg-deb -x /tmp/linux-modules-7.0.0-15-generic_*.deb /
 # Run depmod so the kernel can find modules by name at runtime.
 depmod 7.0.0-15-generic 2>&1 | tail -2 || true
-# Pre-load critical modules so they're available even before service start.
+# Pre-load critical modules at boot — Docker needs overlay (storage),
+# veth + bridge (per-container netif), br_netfilter (iptables visibility
+# across the bridge), iptable_nat + ip_tables + nf_conntrack + nf_nat +
+# xt_MASQUERADE (the actual NAT chain for outbound container traffic).
 mkdir -p /etc/modules-load.d
 cat > /etc/modules-load.d/clickbench.conf <<EOF
 overlay
