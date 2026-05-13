@@ -146,12 +146,13 @@ apt-get install -y --no-install-recommends \
 apt-get clean
 rm -rf /var/lib/apt/lists/*
 
-# Network: the host sets up the VM's IP via the kernel `ip=` cmdline so the
-# guest comes up with the right /24 for its slot. systemd-networkd in the
-# guest must NOT fight the kernel's static config — disable it and rely on
-# the kernel-supplied address. /etc/resolv.conf gets a static fallback so DNS
-# works in case any post-snapshot tooling still wants it (it shouldn't —
-# internet is dropped after the snapshot).
+# Network: parse `ip=GUEST::GATEWAY:NETMASK:::eth0:off` from /proc/cmdline
+# at boot and apply it to eth0. Some kernels we run (Ubuntu's generic) lack
+# CONFIG_IP_PNP, which makes the kernel's `ip=` boot-arg a no-op and leaves
+# eth0 unconfigured at userspace start. Doing the assignment from a tiny
+# oneshot service makes us kernel-agnostic — works on the firecracker-ci
+# kernel (which does have IP_PNP, so this is just redundant there) and on
+# the Ubuntu generic kernel (which doesn't).
 systemctl disable systemd-networkd 2>/dev/null || true
 systemctl disable systemd-resolved 2>/dev/null || true
 rm -f /etc/resolv.conf
@@ -159,6 +160,39 @@ cat > /etc/resolv.conf <<EOF
 nameserver 1.1.1.1
 nameserver 8.8.8.8
 EOF
+
+cat > /usr/local/sbin/clickbench-net-up <<'NETUP'
+#!/bin/bash
+# Apply ip=<vm_ip>::<gw>:<netmask>::eth0:off from /proc/cmdline.
+set -e
+ip_arg=$(awk '{for(i=1;i<=NF;i++) if($i ~ /^ip=/) print $i}' /proc/cmdline | sed 's/^ip=//')
+[ -z "$ip_arg" ] && exit 0
+IFS=':' read -r vm_ip _peer gw mask _hostname iface _autoconf <<<"$ip_arg"
+iface="${iface:-eth0}"
+ip link set "$iface" up
+ip addr add "$vm_ip/$(python3 -c "import ipaddress; print(ipaddress.IPv4Network('0.0.0.0/$mask').prefixlen)" 2>/dev/null || echo 24)" dev "$iface"
+[ -n "$gw" ] && ip route add default via "$gw" || true
+NETUP
+chmod +x /usr/local/sbin/clickbench-net-up
+
+cat > /etc/systemd/system/clickbench-net.service <<EOF
+[Unit]
+Description=ClickBench in-VM static network from /proc/cmdline
+DefaultDependencies=no
+After=systemd-udev-settle.service
+Before=network.target shutdown.target
+Wants=systemd-udev-settle.service
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/clickbench-net-up
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl enable clickbench-net.service
 
 # Root has no password; serial console gets autologin. Useful for debugging
 # inside the microVM via the Firecracker console socket.
