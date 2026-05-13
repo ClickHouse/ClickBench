@@ -3,7 +3,8 @@ set -eu
 
 # Idempotent: if mserver is already serving the test DB, do nothing.
 # Pass `-P monetdb` so this works regardless of $HOME / .monetdb.
-if mclient -u monetdb -P monetdb -d test -s 'SELECT 1' >/dev/null 2>&1; then
+if echo 'SELECT 1;' | \
+    mclient -h 127.0.0.1 -u monetdb -P monetdb -d test >/dev/null 2>&1; then
     exit 0
 fi
 
@@ -33,13 +34,17 @@ sudo monetdb start   test 2>/dev/null || true
 last_err=""
 for _ in $(seq 1 120); do
     for host in 127.0.0.1 localhost; do
-        if mclient -h "$host" -u monetdb -P monetdb -d test \
-                -s 'SELECT 1' >/dev/null 2>&1; then
+        # Feed SQL via stdin — some mclient versions seem to print
+        # --help when -s ARG comes after -d. Stdin avoids the
+        # argument-parsing ambiguity entirely.
+        if echo 'SELECT 1;' | \
+            mclient -h "$host" -u monetdb -P monetdb -d test \
+            >/dev/null 2>&1; then
             exit 0
         fi
     done
-    last_err=$(mclient -h 127.0.0.1 -u monetdb -P monetdb -d test \
-        -s 'SELECT 1' 2>&1 || true)
+    last_err=$(echo 'SELECT 1;' | \
+        mclient -h 127.0.0.1 -u monetdb -P monetdb -d test 2>&1 || true)
     sleep 1
 done
 echo "monetdb start: mclient still failing after 120 s" >&2
