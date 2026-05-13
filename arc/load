@@ -8,13 +8,6 @@ TARGET_FILE="$TARGET_DIR/hits.parquet"
 
 sudo mkdir -p "$TARGET_DIR"
 
-if [ -f "$TARGET_FILE" ] && \
-   [ "$(stat -c%s hits.parquet)" -eq "$(stat -c%s "$TARGET_FILE")" ]; then
-    : # already loaded
-else
-    sudo cp hits.parquet "$TARGET_FILE"
-fi
-
-# Free up local space.
-rm -f hits.parquet
+# Symlink rather than copy — hits.parquet is 14 GB and we read it once.
+sudo ln -sfn "$PWD/hits.parquet" "$TARGET_FILE"
 sync

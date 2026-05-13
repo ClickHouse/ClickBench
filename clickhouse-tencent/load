@@ -3,8 +3,11 @@ set -e
 
 clickhouse-client < create.sql
 
-sudo mv hits_*.parquet /var/lib/clickhouse/user_files/
-sudo chown clickhouse:clickhouse /var/lib/clickhouse/user_files/hits_*.parquet
+# Symlink rather than copy — see comment in clickhouse/load.
+for f in hits_*.parquet; do
+    sudo ln -sf "$PWD/$f" /var/lib/clickhouse/user_files/"$f"
+done
+sudo chown -h clickhouse:clickhouse /var/lib/clickhouse/user_files/hits_*.parquet
 
 clickhouse-client --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" --max-insert-threads "$(( $(nproc) / 4 ))"
 

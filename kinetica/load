@@ -9,7 +9,8 @@ CLI="./kisql --host localhost --user admin"
 # decompressed TSV.
 wget --continue --progress=dot:giga \
     'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-sudo mv hits.tsv.gz ./kinetica-persist/
+# Symlink rather than copy: hits.tsv.gz is 16 GB and we only read it once.
+sudo ln -sf "$PWD/hits.tsv.gz" ./kinetica-persist/hits.tsv.gz
 
 $CLI --file create.sql
 $CLI --sql "ALTER TIER ram WITH OPTIONS ('capacity' = '27000000000');"

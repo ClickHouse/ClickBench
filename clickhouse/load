@@ -3,8 +3,16 @@ set -e
 
 clickhouse-client < create.sql
 
-sudo mv hits_*.parquet /var/lib/clickhouse/user_files/
-sudo chown clickhouse:clickhouse /var/lib/clickhouse/user_files/hits_*.parquet
+# Symlink the parquet files into ClickHouse's user_files dir rather than
+# moving them. mv on a 14 GB partitioned dataset wastes minutes copying
+# bytes the daemon will only read once and then we delete; ln -s is
+# instant. chown -h sets the symlink's owner (does not follow into the
+# target), which is enough — the underlying parquets are mode 644, so
+# the clickhouse user can read them through the symlinks regardless.
+for f in hits_*.parquet; do
+    sudo ln -sf "$PWD/$f" /var/lib/clickhouse/user_files/"$f"
+done
+sudo chown -h clickhouse:clickhouse /var/lib/clickhouse/user_files/hits_*.parquet
 
 clickhouse-client --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" --max-insert-threads "$(( $(nproc) / 4 ))"
 
