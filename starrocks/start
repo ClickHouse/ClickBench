@@ -17,7 +17,25 @@ if mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null 2>&1 \
     exit 0
 fi
 
-IPADDR=$(hostname -i)
+# Use 127.0.0.1 everywhere so the FE/BE rendezvous is stable across
+# snapshot+restore. `hostname -i` can return different addresses
+# depending on /etc/hosts vs DNS, and starrocks's FE persists the BE
+# address — on restore the new BE registers as 127.0.0.1 but FE
+# remembers something else, so SHOW BACKENDS reports
+#   "FE saved address not match backend address"
+# and the BE stays Alive=false forever.
+IPADDR=127.0.0.1
+
+# Pin the BE's externally-visible address as well, so it reports back
+# to FE as 127.0.0.1 too.
+BE_CONF="$STARROCKS_HOME/be/conf/be.conf"
+if ! grep -q '^priority_networks' "$BE_CONF"; then
+    echo "priority_networks = 127.0.0.1/32" >> "$BE_CONF"
+fi
+FE_CONF="$STARROCKS_HOME/fe/conf/fe.conf"
+if ! grep -q '^priority_networks' "$FE_CONF"; then
+    echo "priority_networks = 127.0.0.1/32" >> "$FE_CONF"
+fi
 
 "$STARROCKS_HOME/fe/bin/start_fe.sh" --daemon
 "$STARROCKS_HOME/be/bin/start_be.sh" --daemon
@@ -28,13 +46,16 @@ for _ in $(seq 1 60); do
     sleep 5
 done
 
-# Register BE — idempotent (errors on "already exists" but that's
-# fine). Then wait for it to become alive; without this gate the
-# very next CREATE TABLE step in ./load fails with
-# "Table replication num should be less than of equal to the number
-# of available BE nodes".
+# On restore, FE may have a stale BE entry pointing at the prior
+# address. Drop it so the re-registered BE wins. ALTER ... DROP
+# BACKEND is idempotent on "not found".
+mysql -h127.0.0.1 -P9030 -uroot \
+    -e "ALTER SYSTEM DROP BACKEND '${IPADDR}:9050'" 2>/dev/null || true
+
+# Register BE; idempotent on "already exists".
 mysql -h127.0.0.1 -P9030 -uroot \
     -e "ALTER SYSTEM ADD BACKEND '${IPADDR}:9050'" 2>/dev/null || true
+
 for _ in $(seq 1 60); do
     backend_alive && exit 0
     sleep 5
