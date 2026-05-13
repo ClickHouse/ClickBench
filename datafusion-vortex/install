@@ -40,3 +40,12 @@ fi
     git submodule update --init --recursive --force
     cargo build --release --bin clickbench --package bench-vortex
 )
+
+# Build datafusion-cli so ./query can return actual rows instead of
+# the bench driver's JSON timing blob. The benchmark binary above
+# emits gh-json stats only; for an interactive playground we want a
+# proper SQL client. datafusion-cli reads parquet directly — close
+# enough to "datafusion (parquet)" semantics for the playground.
+if ! command -v datafusion-cli >/dev/null 2>&1; then
+    cargo install --locked --version 49.0.2 datafusion-cli
+fi
