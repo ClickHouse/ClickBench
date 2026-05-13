@@ -64,5 +64,16 @@ fi
 sudo sysctl -w net.ipv4.ip_forward=1 >/dev/null
 echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-clickbench-playground.conf >/dev/null
 
+# Datalake-style systems run with restricted outbound: the playground
+# server hosts an SNI-allowlist proxy (playground/server/sni_proxy.py)
+# bound on 0.0.0.0:8443 / :8080, and iptables REDIRECTs the VM TAP's
+# 443/80 to those ports (see playground/server/net.enable_filtered_internet).
+# Make sure local Linux conntrack can route the REDIRECT and the
+# proxy's outbound connection back to the VM. Nothing else to install
+# — the proxy is pure Python, the kernel needs route_localnet so
+# REDIRECT can target a localhost listener from a non-local source.
+sudo sysctl -w net.ipv4.conf.all.route_localnet=1 >/dev/null
+echo "net.ipv4.conf.all.route_localnet=1" | sudo tee -a /etc/sysctl.d/99-clickbench-playground.conf >/dev/null
+
 echo "[install] done"
 "$STATE_DIR/bin/firecracker" --version

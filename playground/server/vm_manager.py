@@ -36,7 +36,7 @@ import aiohttp
 from . import firecracker as fc
 from . import net
 from .config import Config
-from .systems import System, TRUSTED_INTERNET
+from .systems import System, TRUSTED_INTERNET, DATALAKE_FILTERED
 
 log = logging.getLogger("vm_manager")
 
@@ -300,7 +300,9 @@ class VMManager:
                 await self._call_agent_provision(vm)
                 await self._snapshot(vm)
                 await self._shutdown(vm)
-                if vm.system.name not in TRUSTED_INTERNET:
+                if vm.system.name in DATALAKE_FILTERED:
+                    await net.enable_filtered_internet(vm.slot)
+                elif vm.system.name not in TRUSTED_INTERNET:
                     await net.disable_internet(vm.slot)
             vm.state = "snapshotted"
             vm.provisioned_at = time.time()
@@ -540,7 +542,9 @@ class VMManager:
         # Trusted systems (e.g. ClickHouse variants that read live S3 at
         # query time) keep outbound internet after restore. Everything
         # else stays offline.
-        if vm.system.name in TRUSTED_INTERNET:
+        if vm.system.name in DATALAKE_FILTERED:
+            await net.enable_filtered_internet(vm.slot)
+        elif vm.system.name in TRUSTED_INTERNET:
             await net.enable_internet(vm.slot)
         await self._boot(vm, restore_snapshot=True)
         await self._wait_for_agent(vm, timeout=60)

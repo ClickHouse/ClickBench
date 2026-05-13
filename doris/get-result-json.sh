@@ -7,7 +7,7 @@ MACHINE=$(sudo dmidecode -s system-product-name)
 mkdir -p "results/${YYYYMMDD}"
 
 echo -e "{
-    \"system\": \"Apache Doris\",
+    \"system\": \"Doris\",
     \"date\": \"${DATE}\",
     \"machine\": \"${MACHINE}\",
     \"cluster_size\": 1,

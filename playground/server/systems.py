@@ -63,14 +63,21 @@ _EXTERNAL = {
 # here (per request).
 TRUSTED_INTERNET: frozenset[str] = frozenset({
     "clickhouse",
-    "clickhouse-datalake",
-    "clickhouse-datalake-partitioned",
     "clickhouse-parquet",
     "clickhouse-parquet-partitioned",
     "chdb",
     "chdb-parquet",
     "chdb-parquet-partitioned",
-    # duckdb datalake variants read from S3 at query time.
+})
+
+# Systems that need outbound access only to s3.amazonaws.com (or
+# regional S3 hostnames). Their post-snapshot internet is routed
+# through an SNI-allowlist proxy on the host (see sni_proxy.py +
+# net.enable_filtered_internet). HTTPS works end-to-end; everything
+# else is dropped.
+DATALAKE_FILTERED: frozenset[str] = frozenset({
+    "clickhouse-datalake",
+    "clickhouse-datalake-partitioned",
     "duckdb-datalake",
     "duckdb-datalake-partitioned",
 })
