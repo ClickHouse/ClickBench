@@ -24,9 +24,11 @@ const timeEl = $("#time");
 const stateBlob = $("#state-blob");
 const lastErrorEl = $("#last-error");
 const exampleSel = $("#example");
-// #ui-output is toggled independently by showResult/runQuery — only
-// visible once there's a result for the selected system.
-const uiActive = ["#ui-active", "#ui-query", "#ui-stats"].map($);
+// #ui-stats and #ui-output are toggled independently by
+// showResult/runQuery — only visible once there's a result for the
+// selected system.
+const uiActive = ["#ui-active", "#ui-query"].map($);
+const uiStats = $("#ui-stats");
 const uiOutput = $("#ui-output");
 const uiDown = $("#ui-down");
 
@@ -195,7 +197,10 @@ function refreshDownUI() {
     for (const el of uiActive) {
         if (el) el.style.display = isDown ? "none" : "";
     }
-    if (isDown) uiOutput.style.display = "none";
+    if (isDown) {
+        uiOutput.style.display = "none";
+        uiStats.style.display = "none";
+    }
     uiDown.style.display = isDown ? "" : "none";
     if (isDown) {
         // Render the last error once per selection. If poll picks up a
@@ -221,12 +226,14 @@ function showResult(r) {
         timeEl.textContent = "—";
         outLabelEl.textContent = "Output";
         uiOutput.style.display = "none";
+        uiStats.style.display = "none";
         return;
     }
     outEl.textContent = r.output;
     timeEl.textContent = r.time;
     outLabelEl.textContent = r.truncated === "yes" ? "Output (truncated)" : "Output";
     uiOutput.style.display = "";
+    uiStats.style.display = "";
 }
 
 async function pollState() {
@@ -262,6 +269,7 @@ async function runQuery() {
     timeEl.textContent = "…";
     outLabelEl.textContent = "Output";
     uiOutput.style.display = "";
+    uiStats.style.display = "";
 
     const target = selected;  // capture in case the user switches mid-flight
     const t0 = performance.now();
