@@ -111,7 +111,7 @@ class VMManager:
             sys = systems[name]
             sys_state_dir = config.systems_dir / name
             sys_state_dir.mkdir(parents=True, exist_ok=True)
-            self.vms[name] = VM(
+            vm = VM(
                 system=sys,
                 slot=i,
                 api_sock=config.vms_dir / f"{name}.sock",
@@ -119,6 +119,12 @@ class VMManager:
                 snapshot_bin=sys_state_dir / "snapshot.bin",
                 snapshot_state=sys_state_dir / "snapshot.state",
             )
+            # If snapshot artifacts survived a previous server run, initialize
+            # to "snapshotted" so the provisioner doesn't redo install/load.
+            # /api/query restores lazily.
+            if _has_snapshot(vm):
+                vm.state = "snapshotted"
+            self.vms[name] = vm
 
     # ── public API ───────────────────────────────────────────────────────
 
