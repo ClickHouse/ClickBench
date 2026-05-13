@@ -145,6 +145,56 @@ apt-get install -y --no-install-recommends \
     build-essential netbase
 apt-get clean
 rm -rf /var/lib/apt/lists/*
+CUSTOMIZE
+sudo chmod +x "$MNT/tmp/customize.sh"
+sudo chroot "$MNT" /tmp/customize.sh
+sudo rm -f "$MNT/tmp/customize.sh"
+
+# Install Ubuntu's KVM-friendly kernel + its modules INTO the rootfs.
+# Firecracker doesn't use grub — we just need /lib/modules/<ver>/ populated
+# so the running kernel (Ubuntu generic, extracted from the same .deb) can
+# load overlay, veth, br_netfilter, iptable_nat etc. at runtime. Without
+# this, the in-VM mounts of /opt/clickbench/system (overlay) and Docker's
+# networking (iptables NAT, br_netfilter, veth) silently fail.
+sudo cp /var/cache/apt/archives/linux-modules-7.0.0-15-generic_*.deb "$MNT/tmp/"
+sudo cp /var/cache/apt/archives/linux-image-7.0.0-15-generic_*.deb "$MNT/tmp/"
+sudo tee -a "$MNT/tmp/customize-modules.sh" >/dev/null <<'MODSCRIPT'
+#!/bin/bash
+set -euxo pipefail
+export DEBIAN_FRONTEND=noninteractive
+# Install modules deb but skip the image (we boot it directly from host).
+# Skipping the image deb avoids the post-install update-initramfs that
+# fails inside the chroot.
+dpkg --unpack /tmp/linux-modules-7.0.0-15-generic_*.deb 2>&1 | tail -5
+# Configure but skip running update-initramfs.
+mkdir -p /etc/initramfs-tools/conf.d
+echo 'no-initramfs' > /etc/initramfs-tools/conf.d/disabled
+dpkg --configure linux-modules-7.0.0-15-generic 2>&1 | tail -5 || true
+# Run depmod so the kernel can find modules by name at runtime.
+depmod 7.0.0-15-generic 2>&1 | tail -2 || true
+# Pre-load critical modules so they're available even before service start.
+mkdir -p /etc/modules-load.d
+cat > /etc/modules-load.d/clickbench.conf <<EOF
+overlay
+br_netfilter
+veth
+iptable_nat
+ip_tables
+nf_conntrack
+nf_nat
+xt_MASQUERADE
+EOF
+rm -f /tmp/linux-modules-*.deb /tmp/linux-image-*.deb
+MODSCRIPT
+sudo chmod +x "$MNT/tmp/customize-modules.sh"
+sudo chroot "$MNT" /tmp/customize-modules.sh
+sudo rm -f "$MNT/tmp/customize-modules.sh"
+
+# Re-enter chroot for the rest of customization.
+sudo tee "$MNT/tmp/customize-rest.sh" >/dev/null <<'CUSTOMIZE'
+#!/bin/bash
+set -euxo pipefail
+export DEBIAN_FRONTEND=noninteractive
 
 # Network: parse `ip=GUEST::GATEWAY:NETMASK:::eth0:off` from /proc/cmdline
 # at boot and apply it to eth0. Some kernels we run (Ubuntu's generic) lack
@@ -289,9 +339,9 @@ cat > /etc/hosts <<EOF
 ::1         localhost ip6-localhost ip6-loopback
 EOF
 CUSTOMIZE
-sudo chmod +x "$MNT/tmp/customize.sh"
-sudo chroot "$MNT" /tmp/customize.sh
-sudo rm -f "$MNT/tmp/customize.sh"
+sudo chmod +x "$MNT/tmp/customize-rest.sh"
+sudo chroot "$MNT" /tmp/customize-rest.sh
+sudo rm -f "$MNT/tmp/customize-rest.sh"
 
 # Install the agent payload + systemd unit.
 sudo mkdir -p "$MNT/opt/clickbench-agent"
