@@ -98,9 +98,10 @@ sudo mkdir -p "$SYS_MNT/upper" "$SYS_MNT/work"
 sudo rsync -a --exclude 'results/' --exclude '*.json' --exclude 'README*' \
     "$SRC"/ "$SYS_MNT/upper"/
 
-# Some systems' scripts use ../lib/... — make it visible.
-sudo mkdir -p "$SYS_MNT/upper/_lib"
-sudo cp -a "$REPO_DIR/lib"/. "$SYS_MNT/upper/_lib"/
+# Systems whose load/install reference ../lib/download-hits-* pick those
+# up from /opt/clickbench/lib in the base rootfs — see build-base-rootfs.
+# Stubs there symlink from the shared RO dataset instead of wget'ing
+# from datasets.clickhouse.com.
 
 # Discover the data format from benchmark.sh and stamp it in the upper;
 # the agent uses this to decide which dataset symlinks to add for

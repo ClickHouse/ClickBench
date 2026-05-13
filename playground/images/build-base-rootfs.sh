@@ -198,7 +198,42 @@ passwd -d root
 #      lazily — only the bytes the script actually mutates land in the
 #      per-VM writable layer.
 mkdir -p /opt/clickbench/system /opt/clickbench/datasets_ro \
-         /opt/clickbench/sysdisk
+         /opt/clickbench/sysdisk /opt/clickbench/lib
+
+# Stub download-hits-* scripts. ClickBench's real download-hits-* fetch
+# the dataset from datasets.clickhouse.com; in the playground we already
+# have the data RO-mounted at /opt/clickbench/datasets_ro, so produce
+# symlinks instead. The interface (optional target-dir argument) matches
+# lib/download-hits-* so per-system scripts that do
+# `../lib/download-hits-... <somewhere>` work unchanged. Symlinks instead
+# of copies save 14-75 GB of in-VM writes per system.
+cat > /opt/clickbench/lib/download-hits-parquet-single <<'EOF'
+#!/bin/bash
+set -e
+dir="${1:-.}"; mkdir -p "$dir"; cd "$dir"
+ln -sf /opt/clickbench/datasets_ro/hits.parquet hits.parquet
+EOF
+cat > /opt/clickbench/lib/download-hits-parquet-partitioned <<'EOF'
+#!/bin/bash
+set -e
+dir="${1:-.}"; mkdir -p "$dir"; cd "$dir"
+for i in $(seq 0 99); do
+    ln -sf "/opt/clickbench/datasets_ro/hits_${i}.parquet" "hits_${i}.parquet"
+done
+EOF
+cat > /opt/clickbench/lib/download-hits-tsv <<'EOF'
+#!/bin/bash
+set -e
+dir="${1:-.}"; mkdir -p "$dir"; cd "$dir"
+ln -sf /opt/clickbench/datasets_ro/hits.tsv hits.tsv
+EOF
+cat > /opt/clickbench/lib/download-hits-csv <<'EOF'
+#!/bin/bash
+set -e
+dir="${1:-.}"; mkdir -p "$dir"; cd "$dir"
+ln -sf /opt/clickbench/datasets_ro/hits.csv hits.csv
+EOF
+chmod +x /opt/clickbench/lib/download-hits-*
 cat > /etc/fstab <<EOF
 LABEL=cbdata    /opt/clickbench/datasets_ro   ext4      ro,nofail,noatime,nodev,nosuid                                                            0 0
 LABEL=cbsystem  /opt/clickbench/sysdisk       ext4      rw,nofail,noatime                                                                         0 0
