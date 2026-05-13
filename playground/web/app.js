@@ -29,6 +29,10 @@ let selected = null;       // selected system name
 let pollTimer = null;
 let resultsByName = {};    // {name: {output, time, wall, bytes, truncated, exit}}
 let queriesByName = {};    // {name: [q1, q2, ...]}
+// The exact string we last auto-populated the textarea with (from an
+// example). If the current textarea still equals it, the user hasn't
+// edited it and we're free to swap in the next system's example.
+let pristineQuery = "";
 
 async function loadCatalog() {
     const r = await fetch("/api/systems");
@@ -154,10 +158,15 @@ async function loadExamples(name) {
             idx = prevIndex;
         }
         exampleSel.value = String(idx);
-        // Only populate the textarea if it's empty — anything the
-        // user has typed stays put when switching systems.
-        if (!queryEl.value.trim()) {
+        // Replace the textarea with this system's example at the same
+        // index, but only if the user hasn't edited the current text
+        // (i.e., it still matches whatever example we last set, or
+        // it's empty).
+        const isPristine = queryEl.value === pristineQuery
+            || !queryEl.value.trim();
+        if (isPristine) {
             queryEl.value = qs[idx];
+            pristineQuery = qs[idx];
         }
     }
 }
@@ -290,6 +299,7 @@ exampleSel.addEventListener("change", () => {
     const qs = queriesByName[selected];
     if (qs && !isNaN(i) && i >= 0 && i < qs.length) {
         queryEl.value = qs[i];
+        pristineQuery = qs[i];
     }
 });
 queryEl.addEventListener("keydown", (e) => {
@@ -297,6 +307,10 @@ queryEl.addEventListener("keydown", (e) => {
 });
 
 (async function init() {
+    // Treat the HTML default ("SELECT COUNT(*) FROM hits;") as pristine
+    // so first-system selection is free to swap it for the first
+    // example.
+    pristineQuery = queryEl.value;
     await loadCatalog();
     await pollState();
     pollTimer = setInterval(pollState, 2000);
