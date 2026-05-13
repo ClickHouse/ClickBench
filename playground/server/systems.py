@@ -39,14 +39,15 @@ _EXTERNAL = {
     "s3select", "singlestore", "snowflake", "supabase",
     "tembo-olap", "timescale-cloud", "tinybird", "velodb",
     "vertica", "ydb",
-    # DataFrame-style: load the full hits dataset into a single in-process
-    # DataFrame and run queries from RAM. Observed peak RSS for chdb-
-    # dataframe / duckdb-dataframe is ~80-100 GB on the partitioned
-    # parquet set; sustaining that for 98 concurrent VMs is infeasible
-    # even though KVM allocates lazily, so they don't fit the playground's
-    # model. Disabled — not "broken", just over-provisioned for shared use.
-    "chdb-dataframe", "duckdb-dataframe", "polars-dataframe",
-    "daft-parquet", "daft-parquet-partitioned",
+    # DataFrame / in-memory engines: load the full hits dataset into a
+    # single in-process structure and run queries from RAM. Observed
+    # peak RSS for chdb-dataframe / duckdb-dataframe / duckdb-memory is
+    # 16-100 GB on the partitioned parquet set; sustaining that for
+    # ~30-90 concurrent VMs is infeasible even though KVM allocates
+    # lazily, so they don't fit the playground's model. Disabled —
+    # not "broken", just over-provisioned for shared use.
+    "chdb-dataframe", "duckdb-dataframe", "duckdb-memory",
+    "polars-dataframe", "daft-parquet", "daft-parquet-partitioned",
 }
 
 
