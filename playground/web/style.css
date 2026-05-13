@@ -154,7 +154,11 @@ button:hover:not(:disabled) { filter: brightness(0.95); }
 
 .system-item.state-snapshotted { background: #c8f0d4; color: var(--good); }
 .system-item.state-ready       { background: #a4e6b6; color: var(--good); font-weight: 600; }
-.system-item.state-provisioning { background: #eaeef2; color: var(--muted); }
+.system-item.state-provisioning {
+    background: #eaeef2;
+    color: var(--muted);
+    cursor: not-allowed;
+}
 .system-item.state-down        { background: #f6d1ce; color: var(--bad); }
 
 select { padding: 0.5em; border-radius: 0; }

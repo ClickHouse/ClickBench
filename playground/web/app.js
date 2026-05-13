@@ -103,14 +103,14 @@ function formatDuration(secs) {
 }
 
 function onSlabClick(name) {
+    // Systems that are mid-install/load aren't queryable yet; ignore
+    // clicks so the user doesn't get a stranded selection.
+    const st = stateByName[name] && stateByName[name].state;
+    if (st === "provisioning") return;
     // Click on the already-selected system = shortcut to run the
     // current query, as long as that system is in a queryable state.
     if (name === selected) {
-        const s = stateByName[name];
-        const st = s && s.state;
-        if (st && st !== "down" && st !== "provisioning") {
-            runQuery();
-        }
+        if (st && st !== "down") runQuery();
         return;
     }
     select(name);
