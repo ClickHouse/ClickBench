@@ -58,23 +58,13 @@ done
 
 mkdir -p "$OUT_DIR"
 
-# 1. Rootfs: clone the base ext4 file block-level (sparse), then resize to
-# 200 GB. This is dramatically cheaper than mkfs+mount+rsync-of-base:
-# `cp --sparse=always` writes only the ~2 GB of non-zero blocks the base
-# actually uses, instead of traversing the mounted base and writing each
-# file individually. Going from cp-with-mount to block-clone takes the
-# per-system rootfs build from ~30 s to ~3 s on this NVMe.
-#
-# build-base-rootfs.sh leaves the base ext4 clean, so the clone is also
-# clean and resize2fs accepts it without a prior e2fsck pass. Skipping
-# e2fsck saves ~5 s per system × 98 systems = ~8 minutes off catalog
-# build time, and an e2fsck of a 200 GB sparse file is a *lot* of I/O
-# for a "filesystem we know is fine" operation.
-echo "[sys:$SYSTEM] rootfs.ext4 (clone+resize to ${ROOTFS_SIZE_GB}G)"
+# 1. Rootfs: clone the base ext4 file block-level (sparse). The base is
+# already sized at ROOTFS_SIZE_GB with mostly-empty ext4 metadata, so
+# `cp --sparse=always` produces a sparse 200 GB image of the right size
+# in seconds — no resize2fs, no e2fsck, no mount-and-rsync.
+echo "[sys:$SYSTEM] rootfs.ext4 (sparse clone of base)"
 rm -f "$ROOTFS"
 cp --sparse=always "$BASE" "$ROOTFS"
-truncate -s "${ROOTFS_SIZE_GB}G" "$ROOTFS"
-sudo resize2fs "$ROOTFS" >/dev/null 2>&1
 
 # Stamp the system name so the agent can identify itself.
 MNT="$(mktemp -d)"

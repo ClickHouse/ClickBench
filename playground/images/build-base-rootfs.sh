@@ -17,7 +17,11 @@ set -euo pipefail
 STATE_DIR="${PLAYGROUND_STATE_DIR:-/opt/clickbench-playground}"
 TMP="${STATE_DIR}/tmp/base-build"
 OUT="${STATE_DIR}/base-rootfs.ext4"
-SIZE_GB="${BASE_ROOTFS_SIZE_GB:-8}"
+# Match the per-system rootfs cap (200 GB) so build-system-rootfs.sh can
+# clone the base directly with `cp --sparse=always` and skip resize2fs.
+# The image is sparse: mkfs.ext4 with lazy_itable_init writes only the
+# superblocks (~50 MB) upfront, and clones inherit that sparseness.
+SIZE_GB="${BASE_ROOTFS_SIZE_GB:-200}"
 CLOUDIMG_URL="${UBUNTU_CLOUDIMG_URL:-https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 AGENT_DIR="${REPO_DIR}/playground/agent"
