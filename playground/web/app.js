@@ -168,6 +168,12 @@ async function loadExamples(name) {
             o.value = String(i);
             const label = qs[i].replace(/\s+/g, " ").slice(0, 90);
             o.textContent = `Q${i + 1}: ${label}`;
+            // change only fires when the value actually changes, so
+            // reselecting the same option from the dropdown is a
+            // no-op there. Listen on the option itself so a click
+            // re-applies the example even if the user picked it
+            // already (and has since edited the textarea).
+            o.addEventListener("click", () => applyExampleIdx(i));
             exampleSel.appendChild(o);
         }
         // Clamp prevIndex into range; default to 0.
@@ -322,13 +328,15 @@ function bytesToText(buf) {
 }
 
 runBtn.addEventListener("click", runQuery);
-exampleSel.addEventListener("change", () => {
-    const i = parseInt(exampleSel.value, 10);
+function applyExampleIdx(i) {
     const qs = queriesByName[selected];
-    if (qs && !isNaN(i) && i >= 0 && i < qs.length) {
-        queryEl.value = qs[i];
-        pristineQuery = qs[i];
-    }
+    if (!qs || isNaN(i) || i < 0 || i >= qs.length) return;
+    queryEl.value = qs[i];
+    pristineQuery = qs[i];
+}
+
+exampleSel.addEventListener("change", () => {
+    applyExampleIdx(parseInt(exampleSel.value, 10));
 });
 queryEl.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runQuery();
