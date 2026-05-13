@@ -109,6 +109,100 @@ async def enable_internet(slot: int) -> None:
             await _run("sudo", "iptables", "-A", "FORWARD", *rule)
 
 
+# Ports the SNI-filtering proxy listens on (see sni_proxy.py). Kept in
+# sync with the values in main.py.
+PROXY_HTTPS_PORT = 8443
+PROXY_HTTP_PORT = 8080
+
+
+async def enable_filtered_internet(slot: int) -> None:
+    """Allow the VM to reach the *allowlisted* outside world only.
+
+    Redirects all TCP 80/443 from the VM's TAP to the host's
+    SNI-filtering proxy (see sni_proxy.py). DNS (UDP+TCP 53) is
+    permitted untouched so the VM can still resolve hostnames; the
+    proxy itself uses the host's resolver to open the upstream socket.
+    Every other outbound port from the VM is DROPped.
+    """
+    # Clear any prior `enable_internet` ACCEPT — its blanket allow
+    # rule would otherwise take precedence over the DROP we'll add
+    # at the bottom of FORWARD and the VM would still have unrestricted
+    # access.
+    await disable_internet(slot)
+    tap = tap_name(slot)
+    iface = await _host_default_iface()
+    _, _, cidr = addr_for(slot)
+
+    # NAT redirects for the http/https ports.
+    for dport, to_port in ((443, PROXY_HTTPS_PORT), (80, PROXY_HTTP_PORT)):
+        match = ("-i", tap, "-p", "tcp", "--dport", str(dport),
+                 "-j", "REDIRECT", "--to-ports", str(to_port))
+        rc, _, _ = await _run("sudo", "iptables", "-t", "nat",
+                              "-C", "PREROUTING", *match, check=False)
+        if rc != 0:
+            await _run("sudo", "iptables", "-t", "nat",
+                       "-A", "PREROUTING", *match)
+
+    # FORWARD: allow DNS, allow established replies, drop everything else.
+    forward_rules = (
+        ("-i", tap, "-p", "udp", "--dport", "53", "-j", "ACCEPT"),
+        ("-i", tap, "-p", "tcp", "--dport", "53", "-j", "ACCEPT"),
+        ("-i", iface, "-o", tap, "-m", "state", "--state",
+         "RELATED,ESTABLISHED", "-j", "ACCEPT"),
+        # Catchall drop. Must come last.
+        ("-i", tap, "-j", "DROP"),
+    )
+    for rule in forward_rules:
+        rc, _, _ = await _run("sudo", "iptables", "-C", "FORWARD", *rule,
+                              check=False)
+        if rc != 0:
+            await _run("sudo", "iptables", "-A", "FORWARD", *rule)
+
+    # MASQUERADE so the DNS replies (and the host's outbound to the proxy
+    # target) get NAT'd properly back to the VM.
+    rc, out, _ = await _run("sudo", "iptables", "-t", "nat", "-S", "POSTROUTING")
+    if f"-s {cidr}" not in out.decode(errors="replace"):
+        await _run("sudo", "iptables", "-t", "nat", "-A", "POSTROUTING",
+                   "-s", cidr, "-o", iface, "-j", "MASQUERADE")
+
+
+async def disable_filtered_internet(slot: int) -> None:
+    """Drop the rules added by enable_filtered_internet. Idempotent."""
+    tap = tap_name(slot)
+    iface = await _host_default_iface()
+    _, _, cidr = addr_for(slot)
+
+    for dport, to_port in ((443, PROXY_HTTPS_PORT), (80, PROXY_HTTP_PORT)):
+        while True:
+            rc, _, _ = await _run("sudo", "iptables", "-t", "nat", "-D",
+                                  "PREROUTING", "-i", tap, "-p", "tcp",
+                                  "--dport", str(dport), "-j", "REDIRECT",
+                                  "--to-ports", str(to_port), check=False)
+            if rc != 0:
+                break
+
+    forward_rules = (
+        ("-i", tap, "-p", "udp", "--dport", "53", "-j", "ACCEPT"),
+        ("-i", tap, "-p", "tcp", "--dport", "53", "-j", "ACCEPT"),
+        ("-i", iface, "-o", tap, "-m", "state", "--state",
+         "RELATED,ESTABLISHED", "-j", "ACCEPT"),
+        ("-i", tap, "-j", "DROP"),
+    )
+    for rule in forward_rules:
+        while True:
+            rc, _, _ = await _run("sudo", "iptables", "-D", "FORWARD", *rule,
+                                  check=False)
+            if rc != 0:
+                break
+
+    while True:
+        rc, _, _ = await _run("sudo", "iptables", "-t", "nat", "-D",
+                              "POSTROUTING", "-s", cidr, "-o", iface,
+                              "-j", "MASQUERADE", check=False)
+        if rc != 0:
+            break
+
+
 async def disable_internet(slot: int) -> None:
     """Drop the masquerade + forward rules added by enable_internet."""
     iface = await _host_default_iface()

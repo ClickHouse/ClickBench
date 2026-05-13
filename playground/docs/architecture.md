@@ -93,6 +93,17 @@ assigned in `VMManager.__init__`.
 host  10.200.<slot>.1/24  ◀── TAP ─▶  10.200.<slot>.2/24  guest
 ```
 
+**Datalake systems** (`*-datalake`, `*-datalake-partitioned`) need
+outbound access to S3 to serve queries, but unrestricted internet is
+overkill. The playground server runs an SNI-allowlist proxy
+(`playground/server/sni_proxy.py`) on the host. For these systems,
+`net.enable_filtered_internet(slot)` REDIRECTs the TAP's TCP 80/443
+to the proxy and DROPs everything else (DNS is allowed). The proxy
+parses the TLS ClientHello's SNI (or the HTTP Host header), checks it
+against an allowlist (`*.s3.*.amazonaws.com` and friends), then
+splices bytes upstream — TLS terminates end-to-end between the VM
+and S3, so certs / pinning / ALPN all keep working untouched.
+
 During the provision phase only, iptables NAT/FORWARD rules are added so
 the guest can `apt-get` / `curl`. After the snapshot, those rules are
 deleted — outbound traffic is dropped, the host↔guest link remains.

@@ -20,6 +20,7 @@ snapshot and retries exactly once, matching the spec.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import signal
 import time
@@ -29,6 +30,7 @@ import aiohttp
 from aiohttp import web
 
 from . import config as config_mod
+from . import net
 from . import systems as systems_mod
 from .logging_sink import LoggingSink
 from .monitor import Monitor
@@ -48,10 +50,21 @@ class App:
     async def on_startup(self, _app: web.Application) -> None:
         await self.sink.start()
         await self.monitor.start()
+        # SNI-allowlist proxy that mediates outbound HTTP/HTTPS for
+        # *-datalake systems (see net.enable_filtered_internet).
+        from . import sni_proxy
+        self.sni_servers = await sni_proxy.start(
+            https_port=net.PROXY_HTTPS_PORT,
+            http_port=net.PROXY_HTTP_PORT,
+        )
 
     async def on_cleanup(self, _app: web.Application) -> None:
         await self.monitor.stop()
         await self.sink.stop()
+        for s in getattr(self, "sni_servers", []):
+            s.close()
+            with contextlib.suppress(Exception):
+                await s.wait_closed()
 
     # ── handlers ─────────────────────────────────────────────────────────
 
