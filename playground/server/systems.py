@@ -28,6 +28,7 @@ from pathlib import Path
 # even though some need a free-trial license at install time — those
 # scripts fetch the binary themselves and we don't second-guess them.
 _EXTERNAL = {
+    # Managed cloud services / require API keys / external infra.
     "alloydb", "athena", "athena-partitioned", "aurora-mysql",
     "aurora-postgresql", "bigquery", "brytlytdb", "bytehouse", "chyt",
     "clickhouse-cloud", "clickhouse-tencent", "clickhouse-web",
@@ -38,6 +39,14 @@ _EXTERNAL = {
     "s3select", "singlestore", "snowflake", "supabase",
     "tembo-olap", "timescale-cloud", "tinybird", "velodb",
     "vertica", "ydb",
+    # DataFrame-style: load the full hits dataset into a single in-process
+    # DataFrame and run queries from RAM. Observed peak RSS for chdb-
+    # dataframe / duckdb-dataframe is ~80-100 GB on the partitioned
+    # parquet set; sustaining that for 98 concurrent VMs is infeasible
+    # even though KVM allocates lazily, so they don't fit the playground's
+    # model. Disabled — not "broken", just over-provisioned for shared use.
+    "chdb-dataframe", "duckdb-dataframe", "polars-dataframe",
+    "daft-parquet", "daft-parquet-partitioned",
 }
 
 

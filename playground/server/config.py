@@ -82,13 +82,11 @@ def load() -> Config:
         listen_host=host or "0.0.0.0",
         listen_port=int(port or 8000),
         vm_vcpus=_env_int("VM_VCPUS", 4),
-        # 48 GB — duckdb/chdb DataFrame-style engines materialize the
-        # whole hits dataset in RAM (~32 GB anon-rss observed) plus
-        # working memory for the INSERT. 16 GB OOM'd; 32 GB OOM'd
-        # (chdb-dataframe / duckdb-dataframe). Memory is lazy-allocated
-        # by KVM and zeroed-on-free via init_on_free, so the host
-        # doesn't actually pay 98×48 GB upfront.
-        vm_mem_mib=_env_int("VM_MEM_MIB", 48 * 1024),
+        # 16 GB. DataFrame-style engines (chdb-dataframe, duckdb-dataframe,
+        # daft-*, polars-dataframe) would need >100 GB to load the full
+        # hits dataset and don't fit the playground's model; they're
+        # disabled in systems.py instead of bumping VM RAM for everyone.
+        vm_mem_mib=_env_int("VM_MEM_MIB", 16 * 1024),
         vm_rootfs_size_gb=_env_int("VM_ROOTFS_SIZE_GB", 200),
         output_limit_bytes=_env_bytes("PLAYGROUND_OUTPUT_LIMIT", 10 * 1024),
         max_warm_vms=_env_int("PLAYGROUND_MAX_VMS", 16),
