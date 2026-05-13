@@ -46,6 +46,8 @@ async function loadCatalog() {
     const hash = (location.hash || "").slice(1);
     if (hash && catalog.some(s => s.name === hash)) {
         select(hash);
+    } else if (catalog.some(s => s.name === "clickhouse")) {
+        select("clickhouse");
     } else if (catalog.length) {
         select(catalog[0].name);
     }
