@@ -91,6 +91,10 @@ async def _host_default_iface() -> str:
 
 async def enable_internet(slot: int) -> None:
     """Allow the VM to reach the outside world via MASQUERADE + FORWARD."""
+    # Any prior filtered_internet rules for this slot put a `-j DROP`
+    # catchall at the end of FORWARD that would take precedence over
+    # the ACCEPT we're about to add. Strip those first.
+    await disable_filtered_internet(slot)
     iface = await _host_default_iface()
     _, _, cidr = addr_for(slot)
     # MASQUERADE rule: add only if not already present.
