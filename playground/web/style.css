@@ -104,6 +104,28 @@ button:hover:not(:disabled) { filter: brightness(0.95); }
     color: var(--fg);
     line-height: 1.2;
     white-space: nowrap;
+    position: relative;
+}
+
+.system-item::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    color: #fff;
+    padding: 3px 6px;
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+    visibility: hidden;
+    z-index: 10;
+}
+
+.system-item:hover::after {
+    visibility: visible;
 }
 .system-item:hover { filter: brightness(0.95); }
 .system-item.selected {

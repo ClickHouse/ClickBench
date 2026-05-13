@@ -52,7 +52,7 @@ function renderList() {
         row.className = `system-item state-${st}` + (s.name === selected ? " selected" : "");
         row.dataset.name = s.name;
         row.textContent = s.display_name;
-        row.title = tooltipFor(sObj, st);
+        row.dataset.tooltip = tooltipFor(sObj, st);
         row.addEventListener("click", () => select(s.name));
         listEl.appendChild(row);
     }
@@ -192,7 +192,7 @@ async function pollState() {
             const st = (s && s.state) || "down";
             row.className = `system-item state-${st}` +
                 (row.dataset.name === selected ? " selected" : "");
-            row.title = tooltipFor(s, st);
+            row.dataset.tooltip = tooltipFor(s, st);
         }
         if (selected && stateByName[selected]) {
             stateBlob.textContent = JSON.stringify(stateByName[selected], null, 2);
