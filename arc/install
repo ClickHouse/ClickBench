@@ -48,13 +48,16 @@ if dpkg --compare-versions "$HAVE_GLIBC" lt 2.38; then
     fi
     if [ ! -f /usr/bin/arc.bin ]; then
         sudo mv /usr/bin/arc /usr/bin/arc.bin
+        # dpkg-deb -x preserves the package's internal paths under
+        # $NOBLE_DIR, i.e. NOBLE_DIR/usr/lib64/ld-linux-x86-64.so.2
+        # (NOT NOBLE_DIR/lib64/...).
         sudo tee /usr/bin/arc >/dev/null <<EOF
 #!/bin/bash
 # Launch arc.bin via noble's ld-linux + libc, leaving the rest of the
 # system unchanged. --library-path scopes the override to this
 # invocation only.
-exec ${NOBLE_DIR}/lib64/ld-linux-x86-64.so.2 \\
-    --library-path ${NOBLE_DIR}/lib/x86_64-linux-gnu:${NOBLE_DIR}/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu \\
+exec ${NOBLE_DIR}/usr/lib64/ld-linux-x86-64.so.2 \\
+    --library-path ${NOBLE_DIR}/usr/lib/x86_64-linux-gnu:${NOBLE_DIR}/usr/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu \\
     /usr/bin/arc.bin "\$@"
 EOF
         sudo chmod +x /usr/bin/arc
