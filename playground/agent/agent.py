@@ -509,6 +509,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self._send_json(200 if ready else 503,
                             {"ready": ready, "system": SYSTEM_NAME})
             return
+        if self.path == "/check":
+            # Run the system's ./check script. 200 = daemon responds,
+            # 503 = it does not. The host calls this after a failed
+            # /query to decide whether to teardown the VM.
+            check = SYSTEM_DIR / "check"
+            if not check.exists() or not os.access(check, os.X_OK):
+                # No check script (in-process systems like chdb/duckdb).
+                # Treat as healthy — there's no separate daemon to fail.
+                self._send_json(200, {"ok": True, "no_check": True})
+                return
+            rc = subprocess.run(
+                [str(check)], cwd=str(SYSTEM_DIR),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=10, check=False,
+            ).returncode
+            self._send_json(200 if rc == 0 else 503,
+                            {"ok": rc == 0, "rc": rc})
+            return
         if self.path == "/stats":
             self._send_json(200, _stats_snapshot())
             return
