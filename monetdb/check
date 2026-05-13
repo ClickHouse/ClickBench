@@ -5,4 +5,4 @@ set -e
 # when HOME isn't set (cloud-init runs without one) and mclient can't
 # find the dotfile. The default password for the bundled monetdb user
 # is "monetdb"; install/load/start use the same.
-mclient -u monetdb -P monetdb -d test -s 'SELECT 1' >/dev/null 2>&1
+mclient -h 127.0.0.1 -u monetdb -P monetdb -d test -s 'SELECT 1' >/dev/null 2>&1
