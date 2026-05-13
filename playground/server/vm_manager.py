@@ -385,11 +385,16 @@ class VMManager:
         sock = str(vm.api_sock)
         await fc.patch(sock, "/vm", {"state": "Paused"})
         try:
+            # Allow up to 30 min for /snapshot/create. Under heavy parallel
+            # provisioning the host NVMe is contended and Firecracker's
+            # 16 GB memory dump can take many minutes; 10 min wasn't
+            # enough and we lost VMs that had finished install+load
+            # already, mid-snapshot.
             await fc.put(sock, "/snapshot/create", {
                 "snapshot_type": "Full",
                 "snapshot_path": str(vm.snapshot_state),
                 "mem_file_path": str(vm.snapshot_bin),
-            }, timeout=600.0)
+            }, timeout=1800.0)
         finally:
             # Try to resume so we can shut down cleanly; ignore failures.
             with contextlib.suppress(Exception):
