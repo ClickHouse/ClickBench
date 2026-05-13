@@ -356,7 +356,7 @@ def _provision() -> tuple[int, bytes]:
         # Drop the page+dentry+inode cache. With init_on_free=1 set in the
         # guest kernel cmdline (see vm_manager._kernel_cmdline), every page
         # the kernel frees gets zero-filled before going back on the free
-        # list. After clickhouse stop + drop_caches, the entire free pool
+        # list. After daemon stop + drop_caches, the entire free pool
         # is genuinely zero-filled, and the snapshot's RAM dump compresses
         # ~300:1 instead of the ~3:1 we got without init_on_free.
         subprocess.run(["sync"], check=False)
@@ -364,6 +364,21 @@ def _provision() -> tuple[int, bytes]:
             Path("/proc/sys/vm/drop_caches").write_text("3\n")
         except Exception:
             pass
+
+        # fstrim the per-VM disks. Load scripts typically do `mv hits.parquet
+        # /var/lib/<engine>/user_files/` (which on overlay/cross-FS copies the
+        # 14-75 GB dataset into the writable per-VM disk) and then `rm` it
+        # after the INSERT. ext4 marks those blocks free but the underlying
+        # virtio-blk file still holds the bytes — the snapshot's golden disk
+        # then carries a full copy of the dataset that the load script
+        # already discarded. `fstrim` sends DISCARD for free blocks; the
+        # host loop driver responds by punching holes in the sparse backing
+        # file, so the golden ends up holding only the bytes the engine
+        # actually keeps (MergeTree parts, hits.db, etc.).
+        for mnt in ("/opt/clickbench/sysdisk", "/"):
+            subprocess.run(["fstrim", mnt],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=300, check=False)
 
         PROVISION_DONE.write_text(f"ok {time.time()}\n")
         PROVISION_LOG.write_bytes(b"".join(log_lines))
