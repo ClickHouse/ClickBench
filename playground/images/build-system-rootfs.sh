@@ -27,7 +27,19 @@ ROOTFS="$OUT_DIR/rootfs.ext4"
 SYSDISK="$OUT_DIR/system.ext4"
 
 ROOTFS_SIZE_GB="${VM_ROOTFS_SIZE_GB:-200}"
-SYSDISK_SIZE_GB="${VM_SYSDISK_SIZE_GB:-2}"
+# Apparent size of the cbsystem disk. Every byte the load script writes
+# (overlay copy-ups of the dataset, the database's own files —
+# MergeTree parts, duckdb's hits.db, etc.) lands here. Some systems are
+# heavy: tidb writes ~137 GB, postgres-indexed ~80 GB, druid ~50 GB.
+# Match the rootfs cap (200 GB) so any single system has room.
+#
+# This is a SPARSE file: `truncate` reserves the apparent size but
+# allocates no physical blocks. mkfs.ext4 only writes the small initial
+# metadata. Real disk usage tracks the bytes the VM actually writes,
+# and `cp --sparse=always` on the golden-disk path preserves that
+# sparseness through snapshot+restore — snapshots of light systems
+# stay light.
+SYSDISK_SIZE_GB="${VM_SYSDISK_SIZE_GB:-200}"
 
 if [ ! -f "$BASE" ]; then
     echo "base rootfs not found: $BASE — run build-base-rootfs.sh first" >&2
