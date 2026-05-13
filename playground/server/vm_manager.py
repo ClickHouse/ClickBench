@@ -403,11 +403,16 @@ class VMManager:
         async with self._snapshot_sem:
             await fc.patch(sock, "/vm", {"state": "Paused"})
             try:
+                # 60 min. Even with snapshot_sem bounding to 6 concurrent
+                # snapshots, the rest of the host's I/O (install/load
+                # writes from 30+ other VMs in the apt/pip phase) competes
+                # for the same NVMe and stretches /snapshot/create well
+                # past 30 min in the long tail.
                 await fc.put(sock, "/snapshot/create", {
                     "snapshot_type": "Full",
                     "snapshot_path": str(vm.snapshot_state),
                     "mem_file_path": str(vm.snapshot_bin),
-                }, timeout=1800.0)
+                }, timeout=3600.0)
             finally:
                 # Try to resume so we can shut down cleanly; ignore failures.
                 with contextlib.suppress(Exception):
