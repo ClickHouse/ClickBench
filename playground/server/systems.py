@@ -70,6 +70,9 @@ TRUSTED_INTERNET: frozenset[str] = frozenset({
     "chdb",
     "chdb-parquet",
     "chdb-parquet-partitioned",
+    # duckdb datalake variants read from S3 at query time.
+    "duckdb-datalake",
+    "duckdb-datalake-partitioned",
 })
 
 
