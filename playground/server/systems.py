@@ -48,7 +48,29 @@ _EXTERNAL = {
     # not "broken", just over-provisioned for shared use.
     "chdb-dataframe", "duckdb-dataframe", "duckdb-memory",
     "polars-dataframe", "daft-parquet", "daft-parquet-partitioned",
+    # Upstream is broken or asks for credentials we don't have.
+    # - paradedb-partitioned: install script aborts ("pg_lakehouse was
+    #   removed from ParadeDB after 0.10.x"); historical benchmark only.
+    # - pg_duckdb-motherduck: requires MOTHERDUCK_TOKEN (cloud creds).
+    "paradedb-partitioned", "pg_duckdb-motherduck",
 }
+
+# Systems we trust to keep outbound internet access *after* the snapshot,
+# i.e. at query time. Used by datalake-style benchmarks that read live S3
+# during the query; without internet they fail with a DNS error. Stays
+# tight on purpose — adding a system here means user queries from that
+# VM can reach the wider internet, so only put ClickHouse-family engines
+# here (per request).
+TRUSTED_INTERNET: frozenset[str] = frozenset({
+    "clickhouse",
+    "clickhouse-datalake",
+    "clickhouse-datalake-partitioned",
+    "clickhouse-parquet",
+    "clickhouse-parquet-partitioned",
+    "chdb",
+    "chdb-parquet",
+    "chdb-parquet-partitioned",
+})
 
 
 @dataclass(frozen=True)

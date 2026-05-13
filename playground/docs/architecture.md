@@ -58,16 +58,30 @@ on-disk snapshot.
 
 ## Snapshots
 
-Created the first time a system is requested. Two artifacts:
+Created the first time a system is requested. Three artifacts:
 
-- `<state>/systems/<name>/snapshot.state`  — Firecracker VM state metadata
-- `<state>/systems/<name>/snapshot.bin`    — guest memory dump (16 GB in
-  size as configured, but sparse)
+- `<state>/systems/<name>/snapshot.state`        — Firecracker VM metadata
+- `<state>/systems/<name>/snapshot.bin`          — guest memory dump
+  (mmap'd by Firecracker on restore — left uncompressed so restore is
+  O(1) host work; pages fault in lazily)
+- `<state>/systems/<name>/{rootfs,system}.golden.ext4` — frozen disk
+  state at snapshot time, reflink-cloned at restore
 
-The `rootfs.ext4` and `system.ext4` files persist across snapshots and are
-re-attached at restore time. Drive paths in the snapshot are remapped to
-their current host locations on restore so we don't have to re-snapshot if
-the playground gets moved or rebooted.
+The host filesystem at `<state>` **must support reflinks** (XFS, or
+ext4 with `shared_blocks`). `_snapshot_disks` and `_restore_disks` both
+use `cp --reflink=always` so cloning the golden into a working disk is
+a constant-time extent-list copy regardless of how much data the system
+actually wrote. Without reflinks the playground still works, but every
+restore pays a full sparse-cp of the working set.
+
+Snapshots are taken with the daemon **running** (`./start` is invoked
+after the pre-snapshot `./stop` + `fstrim` + `drop_caches`), so a
+restored VM resumes with the daemon already serving — no cold-start
+cost on the first query.
+
+Drive paths in the snapshot are remapped to their current host locations
+on restore so we don't have to re-snapshot if the playground gets moved
+or rebooted.
 
 ## Networking
 
@@ -88,7 +102,7 @@ deleted — outbound traffic is dropped, the host↔guest link remains.
 Truncation is applied **inside the agent**, before bytes leave the VM:
 
 - Stdout from the system's `./query` script is capped at
-  `CLICKBENCH_OUTPUT_LIMIT` bytes (default 10 KB).
+  `CLICKBENCH_OUTPUT_LIMIT` bytes (default 64 KB).
 - The agent's response sets `X-Output-Truncated: 1` and
   `X-Output-Bytes: <untruncated-size>` so the client can show "this is a
   partial result of N bytes."

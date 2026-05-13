@@ -3,11 +3,18 @@ set -eu
 
 NUM_CORES=$(nproc)
 
-wget --continue --progress=dot:giga \
-    'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+# In the playground, the gzipped JSON dataset is shipped read-only at
+# /opt/clickbench/datasets_ro/hits.json.gz; symlink it instead of wget'ing
+# 4.6 GB on every parseable provision.
+if [ -f /opt/clickbench/datasets_ro/hits.json.gz ]; then
+    ln -sf /opt/clickbench/datasets_ro/hits.json.gz hits.json.gz
+else
+    wget --continue --progress=dot:giga \
+        'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+fi
 
 # Decompress with progress.
-FILE_SIZE=$(stat -c %s hits.json.gz)
+FILE_SIZE=$(stat -L -c %s hits.json.gz)
 pv -s "$FILE_SIZE" hits.json.gz | pigz -d > hits.json
 
 # Split into chunks wrapped in [ ... , ... ] arrays for parseable's ingest API.

@@ -6,16 +6,16 @@
     --bg-alt: #f6f8fa;
     --accent: #fb1f00;
     --accent-fg: #ffffff;
-    --pill-bg: #e7eaef;
-    --pill-fg: #1f2328;
     --good: #1f883d;
     --bad: #cf222e;
+    --warn: #9a6700;
+    --info: #0969da;
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
 body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
-header, main, footer { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+header, main, footer { max-width: 100%; margin: 0; padding: 0 8px; }
 
 header { padding-top: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
 header h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
@@ -28,23 +28,51 @@ main > section { margin: 12px 0; }
 label { display: block; font-weight: 600; font-size: 12px; text-transform: uppercase;
         letter-spacing: 0.04em; color: var(--muted); margin-bottom: 4px; }
 
-select, textarea, pre, input {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+textarea, pre, input {
+    font-family: monospace;
     font-size: 13px;
     border: 1px solid var(--border);
     background: var(--bg);
     color: var(--fg);
-    border-radius: 6px;
+    border-radius: 0;
 }
 
-select { padding: 6px 8px; min-width: 280px; }
 textarea { width: 100%; padding: 10px; resize: vertical; }
-pre { padding: 10px; background: var(--bg-alt); margin: 0; max-height: 360px;
-      overflow: auto; white-space: pre-wrap; word-break: break-word; }
+
+pre#output {
+    padding: 10px;
+    background: var(--bg-alt);
+    margin: 0;
+    max-height: 360px;
+    overflow: auto;
+    white-space: pre;
+    line-height: 1;
+}
+
+pre#last-error {
+    padding: 10px;
+    background: var(--bg-alt);
+    margin: 0;
+    max-height: 360px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1;
+}
+
+pre#state-blob {
+    padding: 10px;
+    background: var(--bg-alt);
+    margin: 0;
+    max-height: 360px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
 
 button {
     background: var(--accent); color: var(--accent-fg);
-    border: none; border-radius: 6px; padding: 6px 16px;
+    border: none; border-radius: 0; padding: 6px 16px;
     font-weight: 600; cursor: pointer;
 }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -52,18 +80,41 @@ button:hover:not(:disabled) { filter: brightness(0.95); }
 
 .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .row label { margin: 0; }
-.stats { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+.stats { font-family: monospace;
          font-size: 12px; color: var(--muted); padding: 8px 0;
          border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .stats span { color: var(--fg); }
 
-.pill { display: inline-block; padding: 2px 8px; border-radius: 999px;
-        font-size: 11px; font-weight: 600; background: var(--pill-bg); color: var(--pill-fg);
-        text-transform: uppercase; letter-spacing: 0.04em; }
-.pill.ready { background: #ddf4e4; color: var(--good); }
-.pill.snapshotted { background: #fff4d1; color: #9a6700; }
-.pill.provisioning { background: #ddf0ff; color: #0969da; }
-.pill.down { background: #ffd7d6; color: var(--bad); }
+/* System slabs — horizontal flex-wrap row of chiclets like the main
+   ClickBench results page. Each slab is a clickable button, background
+   colored by current state. */
+.system-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+}
+.system-item {
+    display: inline-block;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+    color: var(--fg);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+.system-item:hover { filter: brightness(0.95); }
+.system-item.selected {
+    outline: 2px solid #000;
+    outline-offset: -2px;
+}
+
+.system-item.state-snapshotted { background: #c8f0d4; color: var(--good); }
+.system-item.state-ready       { background: #a4e6b6; color: var(--good); font-weight: 600; }
+.system-item.state-provisioning { background: #eaeef2; color: var(--muted); }
+.system-item.state-down        { background: #f6d1ce; color: var(--bad); }
 
 footer { color: var(--muted); padding-top: 16px; padding-bottom: 32px;
          border-top: 1px solid var(--border); font-size: 12px; }

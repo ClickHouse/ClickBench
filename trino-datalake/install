@@ -41,7 +41,12 @@ if [ ! -f shim/S3AnonymousProvider.jar ]; then
         --entrypoint sh trinodb/trino:latest -c '
             set -e
             cd /shim
-            CP="/usr/lib/trino/plugin/hive/hdfs/com.amazonaws_aws-java-sdk-core-1.12.797.jar:/usr/lib/trino/plugin/hive/hdfs/io.trino.hadoop_hadoop-apache-3.3.5-3.jar"
+            CP=$(find /usr/lib/trino \( -name "*aws-java-sdk*.jar" -o -name "*hadoop-apache*.jar" \) 2>/dev/null | tr "\n" ":")
+            if [ -z "$CP" ]; then
+                # Last resort: every jar under trino. Order matters for classpath
+                # only in case of duplicate classes, which we do not have here.
+                CP=$(find /usr/lib/trino -name "*.jar" 2>/dev/null | tr "\n" ":")
+            fi
             javac --release 11 -cp "$CP" S3AnonymousProvider.java
             jar cf S3AnonymousProvider.jar S3AnonymousProvider.class
         '

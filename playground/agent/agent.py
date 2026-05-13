@@ -53,11 +53,15 @@ SYSTEM_NAME = (
 # any well-known ephemeral range too. 50080 keeps a vague "HTTP-ish" feel.
 LISTEN_PORT = int(os.environ.get("CLICKBENCH_AGENT_PORT", "50080"))
 # 10 KB cap, matching the spec. Configurable for testing.
-OUTPUT_LIMIT = int(os.environ.get("CLICKBENCH_OUTPUT_LIMIT", "10240"))
+OUTPUT_LIMIT = int(os.environ.get("CLICKBENCH_OUTPUT_LIMIT", "65536"))
 # Per-query wall-clock cap so a runaway query can't tie up a VM forever.
-QUERY_TIMEOUT = int(os.environ.get("CLICKBENCH_QUERY_TIMEOUT", "600"))
+QUERY_TIMEOUT = int(os.environ.get("CLICKBENCH_QUERY_TIMEOUT", "60"))
 # Provision (install/start/load) can legitimately take an hour for some systems.
-PROVISION_TIMEOUT = int(os.environ.get("CLICKBENCH_PROVISION_TIMEOUT", "7200"))
+# Per-step timeout for install/start/load. Some real-world systems load
+# 100 M rows over many hours (postgres + indexes, cratedb, cockroachdb,
+# yugabyte, etc.). 7 days covers anything reasonable without being
+# unbounded.
+PROVISION_TIMEOUT = int(os.environ.get("CLICKBENCH_PROVISION_TIMEOUT", str(7 * 86400)))
 
 STATE_DIR.mkdir(parents=True, exist_ok=True)
 PROVISION_DONE = STATE_DIR / "provisioned"
@@ -188,9 +192,21 @@ def _run_query(sql: bytes) -> tuple[int, bytes, bytes, float]:
       stdout: result (whatever format the system uses)
       stderr: timing in fractional seconds on the LAST numeric line
       exit code: 0 on success
+
+    Stops reading stdout once we've buffered OUTPUT_LIMIT+1 bytes (one
+    extra so _cap can detect the overflow) and kills the process group —
+    "SELECT * FROM hits" generates ~14 GB of output and we don't want
+    the agent to spin buffering it. Stderr is read on a background
+    thread so a chatty stderr can't deadlock the stdout pipe.
     """
+    import select
+    import threading
     script = _system_script("query")
     t0 = time.monotonic()
+    deadline = t0 + QUERY_TIMEOUT
+    cap = OUTPUT_LIMIT + 1  # +1 byte so _cap() can detect overflow
+    stdout_buf = bytearray()
+    stderr_buf = bytearray()
     try:
         p = subprocess.Popen(
             [str(script)],
@@ -200,18 +216,59 @@ def _run_query(sql: bytes) -> tuple[int, bytes, bytes, float]:
             cwd=str(SYSTEM_DIR),
             preexec_fn=os.setsid,
         )
-        try:
-            stdout, stderr = p.communicate(input=sql, timeout=QUERY_TIMEOUT)
-            rc = p.returncode
-        except subprocess.TimeoutExpired:
-            # The system might still be inside its query; kill the whole group.
-            with contextlib.suppress(ProcessLookupError):
-                os.killpg(p.pid, signal.SIGKILL)
-            stdout, stderr = p.communicate()
-            rc = -9
     except Exception as e:
         return 255, b"", f"agent: failed to invoke ./query: {e}\n".encode(), 0.0
-    return rc, stdout, stderr, time.monotonic() - t0
+
+    def _drain_stderr() -> None:
+        for chunk in iter(lambda: p.stderr.read(8192), b""):
+            stderr_buf.extend(chunk)
+    err_thread = threading.Thread(target=_drain_stderr, daemon=True)
+    err_thread.start()
+
+    try:
+        if sql:
+            p.stdin.write(sql)
+        p.stdin.close()
+    except BrokenPipeError:
+        pass
+
+    killed_for = ""  # "timeout", "cap", or ""
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            killed_for = "timeout"
+            break
+        if len(stdout_buf) >= cap:
+            killed_for = "cap"
+            break
+        r, _, _ = select.select([p.stdout], [], [], min(remaining, 0.5))
+        if r:
+            chunk = p.stdout.read1(min(8192, cap - len(stdout_buf)))
+            if not chunk:
+                break  # EOF
+            stdout_buf.extend(chunk)
+        elif p.poll() is not None:
+            break
+
+    if killed_for:
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(p.pid, signal.SIGKILL)
+
+    try:
+        rc = p.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(p.pid, signal.SIGKILL)
+        rc = -9
+
+    if killed_for == "timeout":
+        rc = -9
+    err_thread.join(timeout=2)
+    with contextlib.suppress(Exception):
+        p.stdout.close()
+    with contextlib.suppress(Exception):
+        p.stderr.close()
+    return rc, bytes(stdout_buf), bytes(stderr_buf), time.monotonic() - t0
 
 
 def _extract_script_timing(stderr: bytes) -> float | None:
@@ -320,24 +377,22 @@ def _provision() -> tuple[int, bytes]:
             PROVISION_LOG.write_bytes(b"".join(log_lines))
             return r.returncode, b"".join(log_lines)
 
-        # Pre-snapshot trim. The host /sync's the FS right before pausing
-        # the vcpus, so any on-disk data the daemon has already committed
-        # is durable. That means we're free to stop the daemon here:
-        # ClickHouse's MergeTree (and equivalent on-disk stores) never
-        # produce inconsistent on-disk state regardless of when the
-        # process exits — only an unflushed *filesystem* can. With the
-        # host-side /sync in place, we can shut the daemon down to evict
-        # its private heap (merge thread arenas, query cache, mark cache,
-        # uncompressed cache, parquet ingest buffers, …) and snapshot a
-        # mostly-zero RAM image. The agent's startup path
-        # (_kick_daemon_if_provisioned) brings it back up on every
-        # restore, so the first query in a restored VM pays a 1-2 s
-        # daemon-start cost instead of carrying 8-12 GB of memory in
-        # every snapshot.
-        #
-        # Skip for in-process / stateless tools where stop/start is a
-        # no-op AND the data lives in process memory; wiping it would
-        # defeat the point. Those systems can rely on drop_caches alone.
+        # Pre-snapshot housekeeping. Order:
+        #   1) ./stop  — drop the daemon's heap (merge arenas, query cache,
+        #      mark cache, parquet ingest buffers, ...) so we can fstrim
+        #      and drop_caches against a quiet system.
+        #   2) sync + drop_caches — flush dirty pages, evict the page
+        #      cache, so init_on_free=1 zeroes everything that was
+        #      cache. Snapshot then sees a mostly-zero free pool.
+        #   3) fstrim — DISCARD free blocks on the per-VM disks so the
+        #      sparse backing file punches holes for bytes the load
+        #      script `mv`'d in and `rm`'d (14-75 GB of dataset).
+        #   4) ./start + ./check — bring the daemon back up *into* the
+        #      snapshot. Restore then resumes a daemon that's already
+        #      serving, paying zero cold-start cost.
+        # Skip stop/start for systems without a real daemon (chdb,
+        # polars, duckdb): they're in-process tools with no separate
+        # process to manage.
         stop = SYSTEM_DIR / "stop"
         start = SYSTEM_DIR / "start"
         check = SYSTEM_DIR / "check"
@@ -363,32 +418,58 @@ def _provision() -> tuple[int, bytes]:
                 time.sleep(0.5)
             log_lines.append(b"=== pre-snapshot stop done ===\n")
 
-        # Drop the page+dentry+inode cache. With init_on_free=1 set in the
-        # guest kernel cmdline (see vm_manager._kernel_cmdline), every page
-        # the kernel frees gets zero-filled before going back on the free
-        # list. After daemon stop + drop_caches, the entire free pool
-        # is genuinely zero-filled, and the snapshot's RAM dump compresses
-        # ~300:1 instead of the ~3:1 we got without init_on_free.
+        # Drop the page+dentry+inode cache. With init_on_free=1 set in
+        # the guest kernel cmdline (see vm_manager._kernel_cmdline), every
+        # page the kernel frees gets zero-filled before going back on the
+        # free list, so what we snapshot is mostly-zero.
         subprocess.run(["sync"], check=False)
         try:
             Path("/proc/sys/vm/drop_caches").write_text("3\n")
         except Exception:
             pass
 
-        # fstrim the per-VM disks. Load scripts typically do `mv hits.parquet
-        # /var/lib/<engine>/user_files/` (which on overlay/cross-FS copies the
-        # 14-75 GB dataset into the writable per-VM disk) and then `rm` it
-        # after the INSERT. ext4 marks those blocks free but the underlying
-        # virtio-blk file still holds the bytes — the snapshot's golden disk
-        # then carries a full copy of the dataset that the load script
-        # already discarded. `fstrim` sends DISCARD for free blocks; the
-        # host loop driver responds by punching holes in the sparse backing
-        # file, so the golden ends up holding only the bytes the engine
-        # actually keeps (MergeTree parts, hits.db, etc.).
+        # fstrim the per-VM disks so transient dataset bytes from
+        # `mv hits.parquet ... ; rm` don't end up in the golden disk.
         for mnt in ("/opt/clickbench/sysdisk", "/"):
             subprocess.run(["fstrim", mnt],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                            timeout=300, check=False)
+
+        # Restart the daemon so the snapshot captures it *running*. The
+        # restored VM then doesn't pay any cold-start cost; the daemon's
+        # process state, JIT/class-cache, connection pools, etc. all
+        # come back live.
+        if has_daemon:
+            log_lines.append(b"\n=== pre-snapshot start ===\n")
+            r = subprocess.run([str(start)], cwd=str(SYSTEM_DIR),
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               timeout=PROVISION_TIMEOUT, check=False)
+            log_lines.append(r.stdout or b"")
+            log_lines.append(b"start: rc=" + str(r.returncode).encode() + b"\n")
+            # Wait for ./check before snapshotting — we want the daemon
+            # actually accepting queries when the memory image is captured.
+            ok = False
+            t0 = time.monotonic()
+            while time.monotonic() - t0 < 900:
+                rc = subprocess.run([str(check)], cwd=str(SYSTEM_DIR),
+                                    stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL,
+                                    timeout=10, check=False).returncode
+                if rc == 0:
+                    ok = True
+                    break
+                time.sleep(0.5)
+            if ok:
+                log_lines.append(b"=== pre-snapshot start ok ===\n")
+                _daemon_started.set()  # the snapshot ships a running daemon
+            else:
+                log_lines.append(b"=== pre-snapshot start: check did not "
+                                 b"succeed in 900 s; snapshot will need a "
+                                 b"cold start on restore ===\n")
+            # Sync once more so any data the just-started daemon wrote
+            # (lock files, sockets, recovery markers) is on disk before
+            # the host snapshots the rootfs/sysdisk.
+            subprocess.run(["sync"], check=False)
 
         PROVISION_DONE.write_text(f"ok {time.time()}\n")
         PROVISION_LOG.write_bytes(b"".join(log_lines))
@@ -418,6 +499,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.path == "/health":
             self._send_json(200, {"ok": True, "system": SYSTEM_NAME,
                                   "provisioned": PROVISION_DONE.exists()})
+            return
+        if self.path == "/ready":
+            # True when the system's daemon is fully accepting queries.
+            # The host uses this at restore time to gate VM-state="ready"
+            # for slow daemons (Doris, Druid, Trino, etc.); without it
+            # the first user query arrives mid-start and times out.
+            ready = _daemon_started.is_set()
+            self._send_json(200 if ready else 503,
+                            {"ready": ready, "system": SYSTEM_NAME})
             return
         if self.path == "/stats":
             self._send_json(200, _stats_snapshot())
@@ -489,6 +579,40 @@ class ReusableServer(socketserver.ThreadingTCPServer):
     daemon_threads = True
 
 
+def _reconcile_docker_after_restore() -> None:
+    """Restart dockerd if it's active, to recover from snapshot-restore
+    skew.
+
+    Why: after a Firecracker memory snapshot+restore, dockerd is resumed
+    in userspace but the (also-restored) kernel-side networking and cgroup
+    state is in flux. Symptom: `docker run` either fails or starts a
+    container that's unreachable on its mapped port (cedardb, byconity,
+    trino, etc.). `systemctl restart docker` reconciles the daemon to the
+    current kernel state. No-op on systems that don't use docker, and a
+    cheap ~2 s on initial provision (docker was just started anyway).
+    """
+    rc = subprocess.run(
+        ["systemctl", "is-active", "--quiet", "docker"],
+        check=False,
+    ).returncode
+    if rc != 0:
+        return  # docker isn't installed / not active
+    try:
+        subprocess.run(["sudo", "systemctl", "restart", "docker"],
+                       check=False, timeout=60)
+        # Wait for the daemon to come back.
+        for _ in range(30):
+            r = subprocess.run(["sudo", "docker", "info"],
+                               stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL,
+                               check=False, timeout=5).returncode
+            if r == 0:
+                return
+            time.sleep(1)
+    except Exception as e:
+        sys.stderr.write(f"[agent] docker reconcile failed: {e}\n")
+
+
 def _kick_daemon_if_provisioned() -> None:
     """On every agent boot, if the system has been provisioned, make sure
     the daemon is also running.
@@ -513,11 +637,33 @@ def _kick_daemon_if_provisioned() -> None:
 
     def _bg() -> None:
         try:
+            # Slow daemons (Doris, Druid, Trino) can take >5 min to come
+            # up. The host's /ready poll has its own deadline; here we
+            # only need a generous upper bound to prevent an infinite
+            # hang.
             subprocess.run([str(start)], cwd=str(SYSTEM_DIR),
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                           timeout=300, check=False)
+                           timeout=900, check=False)
+            check = SYSTEM_DIR / "check"
+            if check.exists():
+                # Poll ./check until it succeeds — that's the daemon's
+                # own definition of "ready", and the host probes /ready
+                # for this flag.
+                for _ in range(240):
+                    rc = subprocess.run([str(check)], cwd=str(SYSTEM_DIR),
+                                        stdout=subprocess.DEVNULL,
+                                        stderr=subprocess.DEVNULL,
+                                        timeout=10, check=False).returncode
+                    if rc == 0:
+                        break
+                    time.sleep(0.5)
+            _daemon_started.set()
         except Exception as e:
             sys.stderr.write(f"[agent] daemon-kick failed: {e}\n")
+            # Still mark started so /query is unblocked even if the
+            # daemon never comes up — the query will fail with a real
+            # error rather than hang waiting for /ready forever.
+            _daemon_started.set()
 
     threading.Thread(target=_bg, daemon=True, name="daemon-kick").start()
 
@@ -526,6 +672,7 @@ def main() -> None:
     addr = ("0.0.0.0", LISTEN_PORT)
     print(f"agent: system={SYSTEM_NAME} listen={addr[0]}:{addr[1]} "
           f"dir={SYSTEM_DIR} data={DATASETS_DIR}", flush=True)
+    _reconcile_docker_after_restore()
     _kick_daemon_if_provisioned()
     with ReusableServer(addr, Handler) as srv:
         srv.serve_forever()

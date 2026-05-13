@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ClickBench Playground</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 <header>
@@ -13,50 +13,60 @@
         Run SQL against any of the database systems in
         <a href="https://github.com/ClickHouse/ClickBench">ClickBench</a>,
         each isolated in its own Firecracker microVM. The dataset is the
-        standard <code>hits</code> table — 100 M rows.
+        standard <code>hits</code> table &mdash; 100 M rows.
     </p>
 </header>
 
 <main>
-    <section class="row">
-        <label for="system">System</label>
-        <select id="system"></select>
+    <section>
+        <label>System</label>
+        <div id="system-list" class="system-list"></div>
+    </section>
+
+    <section class="row" id="ui-active">
         <button id="run">Run query</button>
-        <span id="state-pill" class="pill">…</span>
+        <label for="example" class="row-label">Example</label>
+        <select id="example"></select>
+        <span id="selected-system" class="muted"></span>
     </section>
 
-    <section>
+    <section id="ui-query">
         <label for="query">Query</label>
-        <textarea id="query" spellcheck="false" rows="10">SELECT COUNT(*) FROM hits;</textarea>
+        <textarea id="query" rows="10"
+            spellcheck="false" autocomplete="off" autocorrect="off"
+            autocapitalize="off"
+            data-gramm="false" data-gramm_editor="false"
+            data-enable-grammarly="false">SELECT COUNT(*) FROM hits;</textarea>
     </section>
 
-    <section class="row stats">
-        <div><strong>Time</strong>: <span id="time">—</span></div>
-        <div><strong>Wall</strong>: <span id="wall">—</span></div>
-        <div><strong>Bytes</strong>: <span id="bytes">—</span></div>
-        <div><strong>Truncated</strong>: <span id="truncated">—</span></div>
-        <div><strong>Exit</strong>: <span id="exit">—</span></div>
+    <section class="row stats" id="ui-stats">
+        <div><strong>Time</strong>: <span id="time">&mdash;</span></div>
     </section>
 
-    <section>
-        <label for="output">Output</label>
+    <section id="ui-output">
+        <label for="output" id="output-label">Output</label>
         <pre id="output"></pre>
+    </section>
+
+    <section id="ui-down" style="display:none">
+        <label>Last error</label>
+        <pre id="last-error"></pre>
     </section>
 
     <section>
         <details>
             <summary>System status</summary>
-            <pre id="state-blob">loading…</pre>
+            <pre id="state-blob">loading&hellip;</pre>
         </details>
     </section>
 </main>
 
 <footer>
-    <a href="https://github.com/ClickHouse/ClickBench">ClickBench</a> ·
-    output is capped at 10 KB · queries are bounded to 10 min · the host
+    <a href="https://github.com/ClickHouse/ClickBench">ClickBench</a> &middot;
+    output is capped at 64 KB &middot; queries are bounded to 60 s &middot; the host
     keeps no per-user state.
 </footer>
 
-<script src="app.js"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

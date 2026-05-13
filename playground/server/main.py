@@ -76,6 +76,34 @@ class App:
             "agent_url": self.vmm.agent_url(vm),
         })
 
+    async def handle_queries(self, req: web.Request) -> web.Response:
+        """Return example queries for a system from its queries.sql.
+
+        Splits on `;\n` so multi-line queries stay together. Truncates to
+        a sane upper bound — ClickBench has 43 per system, no need to
+        cap, but if a fork ships thousands we don't want to ship them
+        all to the browser.
+        """
+        name = req.match_info["name"]
+        if name not in self.systems:
+            raise web.HTTPNotFound()
+        path = self.cfg.repo_dir / name / "queries.sql"
+        if not path.exists():
+            return web.json_response([])
+        text = path.read_text(errors="replace")
+        # Split on `;\n` then trim. Drop empties.
+        out = []
+        for chunk in text.split(";\n"):
+            q = chunk.strip()
+            if not q:
+                continue
+            if not q.endswith(";"):
+                q += ";"
+            out.append(q)
+            if len(out) >= 200:
+                break
+        return web.json_response(out)
+
     async def handle_provision_log(self, req: web.Request) -> web.Response:
         name = req.match_info["name"]
         if name not in self.systems:
@@ -175,7 +203,7 @@ class App:
             try:
                 async with aiohttp.ClientSession() as s:
                     async with s.post(url, data=sql,
-                                      timeout=aiohttp.ClientTimeout(total=600)) as r:
+                                      timeout=aiohttp.ClientTimeout(total=60)) as r:
                         body = await r.read()
                         headers = {k: r.headers[k] for k in r.headers if k.startswith("X-")}
                         headers.setdefault("X-Output-Bytes", str(len(body)))
@@ -203,6 +231,7 @@ def build_app() -> web.Application:
     app.router.add_get("/api/systems", obj.handle_systems)
     app.router.add_get("/api/state", obj.handle_state)
     app.router.add_get("/api/system/{name}", obj.handle_system)
+    app.router.add_get("/api/queries/{name}", obj.handle_queries)
     app.router.add_get("/api/provision-log/{name}", obj.handle_provision_log)
     app.router.add_post("/api/admin/provision/{name}", obj.handle_admin_provision)
     app.router.add_post("/api/query", obj.handle_query)
@@ -214,8 +243,18 @@ def build_app() -> web.Application:
         raise web.HTTPFound("/ui/")
 
     async def ui_index(_r: web.Request) -> web.FileResponse:
-        return web.FileResponse(web_dir / "index.html")
+        resp = web.FileResponse(web_dir / "index.html")
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
 
+    @web.middleware
+    async def no_cache_static(request: web.Request, handler):
+        resp = await handler(request)
+        if request.path.startswith("/ui/"):
+            resp.headers["Cache-Control"] = "no-store"
+        return resp
+
+    app.middlewares.append(no_cache_static)
     app.router.add_get("/", root_redirect)
     app.router.add_get("/ui/", ui_index)
     app.router.add_get("/ui", ui_index)

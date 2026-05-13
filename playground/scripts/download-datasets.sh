@@ -60,5 +60,16 @@ else
     step "  cached"
 fi
 
+step "json.gz"
+# Used by parseable. The full hits.json.gz is ~4.6 GB on
+# datasets.clickhouse.com.
+if [ ! -f "$DATASETS/hits.json.gz" ] || [ "$(stat -c%s "$DATASETS/hits.json.gz" 2>/dev/null || echo 0)" -lt 3500000000 ]; then
+    wget --continue --progress=dot:giga \
+        -O "$DATASETS/hits.json.gz" \
+        'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+else
+    step "  cached"
+fi
+
 step "done"
 du -sh "$DATASETS"/*

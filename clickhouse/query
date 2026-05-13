@@ -5,4 +5,4 @@
 # Exit non-zero on error.
 set -e
 
-clickhouse-client --time
+clickhouse-client --time --format=Pretty

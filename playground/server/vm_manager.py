@@ -36,7 +36,7 @@ import aiohttp
 from . import firecracker as fc
 from . import net
 from .config import Config
-from .systems import System
+from .systems import System, TRUSTED_INTERNET
 
 log = logging.getLogger("vm_manager")
 
@@ -69,6 +69,9 @@ class VM:
     # Provision metadata
     provisioned_at: Optional[float] = None
     last_used: float = 0.0
+    # Set when state transitions to "ready" (after restore or initial
+    # provision). Reset on teardown. Used by the UI to show uptime.
+    ready_since: Optional[float] = None
     last_error: Optional[str] = None
     lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
     # Runtime stats refreshed by the monitor
@@ -147,10 +150,14 @@ class VMManager:
                 vm.state = "snapshotted"
             if vm.state == "down":
                 if not _has_snapshot(vm):
-                    # No snapshot (raw or compressed) yet — full provision.
-                    await self._initial_provision(vm)
-                else:
-                    await self._restore_snapshot(vm)
+                    # No snapshot yet, and /query is not a provisioning
+                    # trigger — the operator has to /api/admin/provision
+                    # explicitly. Refuse here so a stray query doesn't
+                    # spin up a 30-min initial install.
+                    raise RuntimeError(
+                        f"{system}: no snapshot — POST /api/admin/provision"
+                        f"/{system} to build one")
+                await self._restore_snapshot(vm)
             elif vm.state == "snapshotted":
                 await self._restore_snapshot(vm)
             elif vm.state == "provisioning":
@@ -275,7 +282,8 @@ class VMManager:
                 await self._call_agent_provision(vm)
                 await self._snapshot(vm)
                 await self._shutdown(vm)
-                await net.disable_internet(vm.slot)
+                if vm.system.name not in TRUSTED_INTERNET:
+                    await net.disable_internet(vm.slot)
             vm.state = "snapshotted"
             vm.provisioned_at = time.time()
             log.info("[%s] initial provision complete", vm.system.name)
@@ -413,28 +421,28 @@ class VMManager:
                     "snapshot_path": str(vm.snapshot_state),
                     "mem_file_path": str(vm.snapshot_bin),
                 }, timeout=3600.0)
+                # Capture the *disk* state while the VM is still paused —
+                # the memory snapshot has in-flight references to specific
+                # inodes / file positions / mmap'd ranges on the rootfs and
+                # system disks, and any post-pause writes (journal commits,
+                # atime updates, etc.) by Firecracker on resume torn the
+                # golden disk relative to the memory image and surface as
+                # ext4 EBADMSG on restore for whichever file's metadata
+                # got dirtied. Reflink-clone keeps the working disks live
+                # for the clean shutdown that follows.
+                await self._snapshot_disks(vm)
             finally:
                 # Try to resume so we can shut down cleanly; ignore failures.
                 with contextlib.suppress(Exception):
                     await fc.patch(sock, "/vm", {"state": "Resumed"})
 
-        # Capture the *disk* state too. The memory snapshot is meaningless on
-        # its own: it has in-flight references to specific inodes / file
-        # positions / mmap'd ranges on the rootfs and system disks, and if
-        # those move under it the restored process malfunctions. We sparse-
-        # copy the disks into a parallel "golden" path; every subsequent
-        # restore boots off a fresh copy of the golden, so background work
-        # the daemon does after restore (clickhouse merges, log writes,
-        # /tmp churn) never persists into the next session.
-        await self._snapshot_disks(vm)
-
-        # Compress the memory dump with parallel zstd. Firecracker writes the
-        # *full* 16 GB of guest memory regardless of how much was actually
-        # used; zstd at -3 with -T0 turns that into ~10-12 GB in a few
-        # seconds (most of the savings come from the agent's drop_caches
-        # right before /snapshot — page cache zero-fills compress 50:1).
-        # snapshot.state stays as-is; it's tiny (~60 KB).
-        await self._compress_snapshot(vm)
+        # We no longer compress the memory dump. Firecracker mmaps
+        # snapshot.bin on restore, so leaving it uncompressed means a
+        # restore is O(1) for memory (the kernel page-faults pages in
+        # lazily). The cost is disk: ~16 GB nominal per system. Sparse-
+        # write + init_on_free=1 + pre-snapshot drop_caches+fstrim keep
+        # the actual on-disk size to ~5-10% of the apparent size for
+        # most systems. snapshot.state stays as-is; it's tiny (~60 KB).
 
     async def _compress_snapshot(self, vm: VM) -> None:
         bin_path = vm.snapshot_bin
@@ -492,6 +500,15 @@ class VMManager:
 
     async def _restore_snapshot(self, vm: VM) -> None:
         log.info("[%s] restore from snapshot", vm.system.name)
+        # Restore is the only auto-recovery path from a user /query. If
+        # the on-disk snapshot is gone (manual wipe, half-built artifact,
+        # ...) we fail loudly here; the operator has to kick a fresh
+        # provision via /api/admin/provision/<name>.
+        if not _has_snapshot(vm):
+            vm.state = "down"
+            raise RuntimeError(
+                f"[{vm.system.name}] snapshot on disk is missing; "
+                f"POST /api/admin/provision/{vm.system.name} to rebuild")
         # Always boot from a *fresh copy* of the golden disks captured at
         # snapshot time. Restore #N inherits zero state from restore #N-1,
         # which is what makes the playground safe to expose to arbitrary
@@ -502,9 +519,17 @@ class VMManager:
         # Firecracker tries to mmap it.
         await self._decompress_snapshot(vm)
         await net.ensure_tap(vm.slot)
-        # internet stays OFF post-snapshot
+        # Trusted systems (e.g. ClickHouse variants that read live S3 at
+        # query time) keep outbound internet after restore. Everything
+        # else stays offline.
+        if vm.system.name in TRUSTED_INTERNET:
+            await net.enable_internet(vm.slot)
         await self._boot(vm, restore_snapshot=True)
         await self._wait_for_agent(vm, timeout=60)
+        # Block here until the system's daemon reports ready, so the
+        # first user query doesn't time out mid-startup. Big upper bound
+        # for slow JVMs (Doris/Druid/Trino).
+        await self._wait_for_daemon_ready(vm, timeout=600)
         vm.state = "ready"
 
     def _golden_paths(self, vm: VM) -> tuple[Path, Path, Path, Path]:
@@ -519,15 +544,31 @@ class VMManager:
 
     async def _snapshot_disks(self, vm: VM) -> None:
         rootfs, sysdisk, rootfs_gold, sysdisk_gold = self._golden_paths(vm)
-        # Atomically swap: rename the working images into the golden slot.
-        # Both disks were sync'd via /sync before /snapshot/create, so
-        # what's on disk is consistent with what's in the memory snapshot.
-        # We'll re-create the working images by cloning from the golden
-        # on every restore (see _restore_disks).
-        for src, dst in ((rootfs, rootfs_gold), (sysdisk, sysdisk_gold)):
+        # Reflink-clone the working images into the golden slot. We can't
+        # rename: the working file stays bound to Firecracker's open
+        # virtio-blk fd through the post-snapshot resume + shutdown, and
+        # any writes during that window would leak into the golden (we
+        # observed restored systems hitting ext4 EBADMSG on small files
+        # like duckdb's hits.db.wal and a venv activate script). With
+        # reflink the snapshot is near-instant; the working file's
+        # post-snapshot writes diverge into its own extents and don't
+        # touch the golden.
+        async def _clone(src: Path, dst: Path) -> None:
             if dst.exists():
                 dst.unlink()
-            os.replace(src, dst)
+            proc = await asyncio.create_subprocess_exec(
+                "cp", "--reflink=always", str(src), str(dst),
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, err = await proc.communicate()
+            if proc.returncode != 0:
+                raise RuntimeError(
+                    f"reflink snapshot cp {src} -> {dst} failed: "
+                    f"{err.decode(errors='replace')[-400:]}")
+        await asyncio.gather(
+            _clone(rootfs, rootfs_gold),
+            _clone(sysdisk, sysdisk_gold),
+        )
         log.info("[%s] golden disks saved (%s, %s)", vm.system.name,
                  _fmt_size(rootfs_gold.stat().st_size),
                  _fmt_size(sysdisk_gold.stat().st_size))
@@ -537,19 +578,32 @@ class VMManager:
         if not rootfs_gold.exists() or not sysdisk_gold.exists():
             raise RuntimeError(
                 f"[{vm.system.name}] missing golden disks; cannot restore")
-        # Clone the goldens into fresh working copies. `cp --sparse=always`
-        # only writes the non-zero blocks, so the cost is proportional to
-        # the actual data on each disk, not its apparent 200 GB.
-        for src, dst in ((rootfs_gold, rootfs), (sysdisk_gold, sysdisk)):
+        # Reflink-clone the goldens into fresh working copies. The host
+        # filesystem must be ext4 with the `reflink` feature enabled (or
+        # XFS / btrfs / any other CoW-capable fs) — see
+        # playground/scripts/install-firecracker.sh. Clones are O(1)
+        # extent-list copies; the real cost is paid lazily on first
+        # write to a shared block. With reflink, a restore goes from
+        # 5-30 s (full sparse-cp) to a few ms.
+        # Both clones can run concurrently; they touch disjoint files.
+        async def _clone(src: Path, dst: Path) -> None:
             if dst.exists():
                 dst.unlink()
             proc = await asyncio.create_subprocess_exec(
-                "cp", "--sparse=always", str(src), str(dst),
+                "cp", "--reflink=always", str(src), str(dst),
+                stderr=asyncio.subprocess.PIPE,
             )
-            rc = await proc.wait()
-            if rc != 0:
-                raise RuntimeError(f"cp {src} -> {dst} failed rc={rc}")
-        log.info("[%s] working disks cloned from golden", vm.system.name)
+            _, err = await proc.communicate()
+            if proc.returncode != 0:
+                raise RuntimeError(
+                    f"reflink cp {src} -> {dst} failed: "
+                    f"{err.decode(errors='replace')[-400:]}")
+        await asyncio.gather(
+            _clone(rootfs_gold, rootfs),
+            _clone(sysdisk_gold, sysdisk),
+        )
+        log.info("[%s] working disks reflink-cloned from golden",
+                 vm.system.name)
 
     async def _shutdown(self, vm: VM) -> None:
         """Best-effort clean shutdown of the firecracker process.
@@ -630,11 +684,43 @@ class VMManager:
                 await asyncio.sleep(0.5)
         raise RuntimeError(f"agent unreachable after {timeout}s: {last_err!r}")
 
+    async def _wait_for_daemon_ready(self, vm: VM, *, timeout: float) -> None:
+        """Wait for the system's daemon to start serving (post-restore).
+
+        Slow JVM daemons (Doris, Druid, Trino) can take several minutes to
+        come up after a snapshot restore. The agent's daemon-kick thread
+        runs ./start + ./check in the background; /ready flips to 200 once
+        that completes. Without this gate, the first user query lands
+        mid-start and times out at the host's 60 s query budget.
+        """
+        url = self.agent_url(vm) + "/ready"
+        t0 = time.monotonic()
+        async with aiohttp.ClientSession() as s:
+            while time.monotonic() - t0 < timeout:
+                try:
+                    async with s.get(url, timeout=aiohttp.ClientTimeout(total=2)) as r:
+                        if r.status == 200:
+                            return
+                except Exception:
+                    pass
+                await asyncio.sleep(1.0)
+        log.warning("[%s] daemon not ready after %s s; serving queries anyway",
+                    vm.system.name, timeout)
+
     async def _call_agent_provision(self, vm: VM) -> None:
         url = self.agent_url(vm) + "/provision"
+        # No fast idle check — /provision is a single POST that returns
+        # only when install+load is fully done. The TCP connection sits
+        # idle (no body streaming) for the entire run. Some systems take
+        # many hours to load 100 M rows; we just set a generous total
+        # deadline so a genuinely stuck call eventually breaks.
         async with aiohttp.ClientSession() as s:
-            # Provision can take a very long time (apt-get install jdk, etc.)
-            async with s.post(url, timeout=aiohttp.ClientTimeout(total=7200)) as r:
+            async with s.post(
+                url,
+                timeout=aiohttp.ClientTimeout(
+                    total=7 * 86400, sock_connect=30,
+                ),
+            ) as r:
                 body = await r.read()
                 if r.status >= 300:
                     raise RuntimeError(f"agent /provision failed: {r.status}: "
