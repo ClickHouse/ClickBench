@@ -82,7 +82,11 @@ def load() -> Config:
         listen_host=host or "0.0.0.0",
         listen_port=int(port or 8000),
         vm_vcpus=_env_int("VM_VCPUS", 4),
-        vm_mem_mib=_env_int("VM_MEM_MIB", 16 * 1024),
+        # 32 GB — duckdb/chdb-class engines use the full guest RAM at load
+        # time, and 16 GB led to OOM kills mid-INSERT on the partitioned
+        # parquet dataset. Memory is only lazily allocated by KVM, so the
+        # host doesn't actually pay 98×32 GB up front.
+        vm_mem_mib=_env_int("VM_MEM_MIB", 32 * 1024),
         vm_rootfs_size_gb=_env_int("VM_ROOTFS_SIZE_GB", 200),
         output_limit_bytes=_env_bytes("PLAYGROUND_OUTPUT_LIMIT", 10 * 1024),
         max_warm_vms=_env_int("PLAYGROUND_MAX_VMS", 16),

@@ -192,10 +192,13 @@ class VMManager:
         # Append to the existing log so prior runs are kept for postmortems.
         log_fh = open(log_path, "ab", buffering=0)
 
+        # Firecracker's --id accepts only [A-Za-z0-9-]; pg_* systems
+        # crash with `Invalid instance ID: InvalidChar('_')` otherwise.
+        fc_id = vm.system.name.replace("_", "-")
         proc = await asyncio.create_subprocess_exec(
             str(self.cfg.firecracker_bin),
             "--api-sock", str(vm.api_sock),
-            "--id", vm.system.name,
+            "--id", fc_id,
             stdout=log_fh, stderr=log_fh, env=env, start_new_session=True,
         )
         vm.proc = proc
