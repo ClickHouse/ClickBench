@@ -174,7 +174,7 @@ class VMManager:
 
     def agent_url(self, vm: VM) -> str:
         _, vm_ip, _ = net.addr_for(vm.slot)
-        return f"http://{vm_ip}:8080"
+        return f"http://{vm_ip}:50080"
 
     # ── boot / shutdown ──────────────────────────────────────────────────
 

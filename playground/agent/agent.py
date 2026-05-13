@@ -16,7 +16,9 @@ The system's ClickBench scripts (install/start/load/query/check/stop/...) are
 mounted at /opt/clickbench/system, with the system name in /etc/clickbench-
 system. The dataset is mounted read-only at /opt/clickbench/datasets.
 
-Listens on 0.0.0.0:8080 by default.
+Listens on 0.0.0.0:50080 by default (deliberately not 8080 — that port
+is claimed by cockroach, spark UI, trino, presto, druid, and a long
+tail of other JVM web consoles in the catalog).
 
 Stdlib-only — the rootfs ships python3 from the Ubuntu base; no pip needed.
 """
@@ -45,7 +47,11 @@ SYSTEM_NAME = (
     or (Path("/etc/clickbench-system").read_text().strip()
         if Path("/etc/clickbench-system").exists() else SYSTEM_DIR.name)
 )
-LISTEN_PORT = int(os.environ.get("CLICKBENCH_AGENT_PORT", "8080"))
+# Port 8080 is wildly oversubscribed in this catalog (cockroach, spark UI,
+# trino, presto, hive, druid, ...). Pick a port nothing realistic is going
+# to want — IANA's user range tops out at 49151, and we want to stay above
+# any well-known ephemeral range too. 50080 keeps a vague "HTTP-ish" feel.
+LISTEN_PORT = int(os.environ.get("CLICKBENCH_AGENT_PORT", "50080"))
 # 10 KB cap, matching the spec. Configurable for testing.
 OUTPUT_LIMIT = int(os.environ.get("CLICKBENCH_OUTPUT_LIMIT", "10240"))
 # Per-query wall-clock cap so a runaway query can't tie up a VM forever.

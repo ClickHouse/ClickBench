@@ -77,10 +77,10 @@ api PUT /machine-config '{"vcpu_count": 2, "mem_size_mib": 2048, "smt": false}'
 api PUT /actions '{"action_type": "InstanceStart"}'
 
 # Poll the agent for liveness
-echo "[smoke] waiting for agent at http://${GUEST_IP}:8080/health"
+echo "[smoke] waiting for agent at http://${GUEST_IP}:50080/health"
 ok=0
 for i in $(seq 1 120); do
-    if curl -fsS "http://${GUEST_IP}:8080/health" >/dev/null 2>&1; then
+    if curl -fsS "http://${GUEST_IP}:50080/health" >/dev/null 2>&1; then
         ok=1
         break
     fi
@@ -89,9 +89,9 @@ done
 
 if [ "$ok" = "1" ]; then
     echo "[smoke] OK — agent responded after ${i}s"
-    curl -fsS "http://${GUEST_IP}:8080/health" | head -c 200; echo
+    curl -fsS "http://${GUEST_IP}:50080/health" | head -c 200; echo
     echo "[smoke] /stats:"
-    curl -fsS "http://${GUEST_IP}:8080/stats" | head -c 400; echo
+    curl -fsS "http://${GUEST_IP}:50080/stats" | head -c 400; echo
 else
     echo "[smoke] FAIL — agent never responded; firecracker log tail:"
     tail -30 "$LOG"
