@@ -23,22 +23,34 @@ trap 'rm -rf "$tmpdir"' EXIT
 printf '%s\n' "${query%;};" > "$tmpdir/q.sql"
 
 # Drill's Arrow/Netty RootAllocator hits ExceptionInInitializerError
-# on JDK 17+ unless java.base/java.nio + neighbours are open to
-# ALL-UNNAMED. The apache/drill image's default DRILL_JAVA_OPTS misses
-# some of these; pass them through explicitly here so every embedded
-# JVM start has the right flags.
-DRILL_JAVA_OPTS="--add-opens=java.base/java.nio=ALL-UNNAMED"
-DRILL_JAVA_OPTS+=" --add-opens=java.base/java.lang=ALL-UNNAMED"
-DRILL_JAVA_OPTS+=" --add-opens=java.base/java.lang.invoke=ALL-UNNAMED"
-DRILL_JAVA_OPTS+=" --add-opens=java.base/java.util=ALL-UNNAMED"
-DRILL_JAVA_OPTS+=" --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
-DRILL_JAVA_OPTS+=" -Dio.netty.tryReflectionSetAccessible=true"
-DRILL_JAVA_OPTS+=" -Dorg.apache.drill.exec.memory.debug.allocator=false"
+# on JDK 17+ unless java.base/java.nio + neighbours are opened to
+# ALL-UNNAMED. drill-embedded launches sqlline, which reads JAVA_OPTS
+# (not DRILL_JAVA_OPTS — that one is only consumed by drillbit.sh).
+# Pass via both so the right one wins regardless of which entry path
+# the image's launcher uses.
+DRILL_OPENS=(
+    --add-opens=java.base/java.nio=ALL-UNNAMED
+    --add-opens=java.base/java.lang=ALL-UNNAMED
+    --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+    --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+    --add-opens=java.base/java.util=ALL-UNNAMED
+    --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+    --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
+    -Dio.netty.tryReflectionSetAccessible=true
+    -Darrow.memory.debug.allocator=false
+    -Dorg.apache.drill.exec.memory.debug.allocator=false
+)
+OPENS="${DRILL_OPENS[*]}"
 
 out=$(sudo docker run --rm \
     -v "$(pwd)/hits.parquet:/hits.parquet:ro" \
     -v "$tmpdir/q.sql:/q.sql:ro" \
-    -e DRILL_JAVA_OPTS="$DRILL_JAVA_OPTS" \
+    -e DRILL_JAVA_OPTS="$OPENS" \
+    -e DRILL_SHELL_JAVA_OPTS="$OPENS" \
+    -e JAVA_OPTS="$OPENS" \
+    -e _JAVA_OPTIONS="$OPENS" \
     --entrypoint /bin/sh apache/drill \
     -c '$DRILL_HOME/bin/drill-embedded --run=/q.sql' 2>&1) && status=0 || status=$?
 
