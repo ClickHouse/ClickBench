@@ -102,7 +102,7 @@ deleted — outbound traffic is dropped, the host↔guest link remains.
 Truncation is applied **inside the agent**, before bytes leave the VM:
 
 - Stdout from the system's `./query` script is capped at
-  `CLICKBENCH_OUTPUT_LIMIT` bytes (default 64 KB).
+  `CLICKBENCH_OUTPUT_LIMIT` bytes (default 256 KB).
 - The agent's response sets `X-Output-Truncated: 1` and
   `X-Output-Bytes: <untruncated-size>` so the client can show "this is a
   partial result of N bytes."

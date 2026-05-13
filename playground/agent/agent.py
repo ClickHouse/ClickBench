@@ -53,7 +53,7 @@ SYSTEM_NAME = (
 # any well-known ephemeral range too. 50080 keeps a vague "HTTP-ish" feel.
 LISTEN_PORT = int(os.environ.get("CLICKBENCH_AGENT_PORT", "50080"))
 # 10 KB cap, matching the spec. Configurable for testing.
-OUTPUT_LIMIT = int(os.environ.get("CLICKBENCH_OUTPUT_LIMIT", "65536"))
+OUTPUT_LIMIT = int(os.environ.get("CLICKBENCH_OUTPUT_LIMIT", str(256 * 1024)))
 # Per-query wall-clock cap so a runaway query can't tie up a VM forever.
 QUERY_TIMEOUT = int(os.environ.get("CLICKBENCH_QUERY_TIMEOUT", "60"))
 # Provision (install/start/load) can legitimately take an hour for some systems.
