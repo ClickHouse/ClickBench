@@ -53,7 +53,7 @@ function renderList() {
         row.dataset.name = s.name;
         row.textContent = s.display_name;
         row.dataset.tooltip = tooltipFor(sObj, st);
-        row.addEventListener("click", () => select(s.name));
+        row.addEventListener("click", () => onSlabClick(s.name));
         listEl.appendChild(row);
     }
 }
@@ -85,6 +85,20 @@ function formatDuration(secs) {
     }
     const d = Math.floor(secs / 86400);
     return `${d} day${d === 1 ? "" : "s"}`;
+}
+
+function onSlabClick(name) {
+    // Click on the already-selected system = shortcut to run the
+    // current query, as long as that system is in a queryable state.
+    if (name === selected) {
+        const s = stateByName[name];
+        const st = s && s.state;
+        if (st && st !== "down" && st !== "provisioning") {
+            runQuery();
+        }
+        return;
+    }
+    select(name);
 }
 
 function select(name) {

@@ -105,6 +105,8 @@ button:hover:not(:disabled) { filter: brightness(0.95); }
     line-height: 1.2;
     white-space: nowrap;
     position: relative;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .system-item::after {
