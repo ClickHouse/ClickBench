@@ -7,7 +7,33 @@ if mclient -u monetdb -P monetdb -d test -s 'SELECT 1' >/dev/null 2>&1; then
     exit 0
 fi
 
+# After a Firecracker snapshot+restore monetdbd's pid file
+# (.merovingian.lock + .gdk_lock) is preserved on disk but the actual
+# process is gone. `monetdbd start` then exits with "another monetdbd
+# is already running" and doesn't relaunch, so `mclient` never gets a
+# server to talk to and ./check spins for 15 minutes. Force a clean
+# slate: kill any leftover mserver/monetdbd, clear lock files, then
+# (re)start.
+if ! pgrep -x monetdbd >/dev/null; then
+    sudo rm -f /var/lib/monetdb/.merovingian.lock /var/lib/monetdb/.gdk_lock
+    sudo pkill -KILL -x mserver5 2>/dev/null || true
+fi
+
 sudo monetdbd start /var/lib/monetdb || true
 
-# Make sure the database is released (online).
-sudo monetdb release test || true
+# After daemon-side restart the test DB lands "stopped"; release +
+# start to bring it back online. (release alone is not enough — it
+# only un-marks maintenance; start actually starts mserver5 for it.)
+sudo monetdb release test 2>/dev/null || true
+sudo monetdb start   test 2>/dev/null || true
+
+# Wait for connections to actually go through.
+for _ in $(seq 1 60); do
+    if mclient -u monetdb -P monetdb -d test -s 'SELECT 1' >/dev/null 2>&1; then
+        exit 0
+    fi
+    sleep 1
+done
+echo "monetdb start: mclient still failing after 60 s" >&2
+sudo monetdb status 2>&1 | tail -20 >&2 || true
+exit 1
