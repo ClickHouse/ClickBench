@@ -72,6 +72,7 @@ class App:
             "has_snapshot": vm.snapshot_bin.exists(),
             "provisioned_at": vm.provisioned_at,
             "last_used": vm.last_used,
+            "ready_since": vm.ready_since,
             "last_error": vm.last_error,
             "agent_url": self.vmm.agent_url(vm),
         })

@@ -184,6 +184,7 @@ class VMManager:
                 "agent_url": self.agent_url(vm),
                 "provisioned_at": vm.provisioned_at,
                 "last_used": vm.last_used,
+                "ready_since": vm.ready_since,
                 "tags": list(vm.system.tags),
                 "data_format": vm.system.data_format,
                 "last_error": vm.last_error,
@@ -531,6 +532,7 @@ class VMManager:
         # for slow JVMs (Doris/Druid/Trino).
         await self._wait_for_daemon_ready(vm, timeout=600)
         vm.state = "ready"
+        vm.ready_since = time.time()
 
     def _golden_paths(self, vm: VM) -> tuple[Path, Path, Path, Path]:
         """(working rootfs, working sysdisk, golden rootfs, golden sysdisk)."""
@@ -639,6 +641,7 @@ class VMManager:
         with contextlib.suppress(Exception):
             await self._shutdown(vm)
         vm.state = "snapshotted" if _has_snapshot(vm) else "down"
+        vm.ready_since = None
         # Drop the decompressed snapshot.bin if we still have the .zst — it's
         # ~16 GB of redundancy on disk. Keep .zst as the canonical artifact.
         zst = vm.snapshot_bin.with_suffix(".bin.zst")

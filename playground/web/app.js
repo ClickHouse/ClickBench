@@ -46,14 +46,45 @@ async function loadCatalog() {
 function renderList() {
     listEl.innerHTML = "";
     for (const s of catalog) {
-        const st = (stateByName[s.name] && stateByName[s.name].state) || "down";
+        const sObj = stateByName[s.name];
+        const st = (sObj && sObj.state) || "down";
         const row = document.createElement("div");
         row.className = `system-item state-${st}` + (s.name === selected ? " selected" : "");
         row.dataset.name = s.name;
         row.textContent = s.display_name;
+        row.title = tooltipFor(sObj, st);
         row.addEventListener("click", () => select(s.name));
         listEl.appendChild(row);
     }
+}
+
+function tooltipFor(sObj, st) {
+    if (st === "ready") {
+        const since = sObj && sObj.ready_since;
+        if (since) {
+            const ago = Math.max(0, Math.floor(Date.now() / 1000 - since));
+            return "up " + formatDuration(ago);
+        }
+        return "up";
+    }
+    if (st === "snapshotted") return "ready";
+    if (st === "provisioning") return "provisioning";
+    if (st === "down") return "failed";
+    return st;
+}
+
+function formatDuration(secs) {
+    if (secs < 60) return `${secs} second${secs === 1 ? "" : "s"}`;
+    if (secs < 3600) {
+        const m = Math.floor(secs / 60);
+        return `${m} minute${m === 1 ? "" : "s"}`;
+    }
+    if (secs < 86400) {
+        const h = Math.floor(secs / 3600);
+        return `${h} hour${h === 1 ? "" : "s"}`;
+    }
+    const d = Math.floor(secs / 86400);
+    return `${d} day${d === 1 ? "" : "s"}`;
 }
 
 function select(name) {
@@ -161,6 +192,7 @@ async function pollState() {
             const st = (s && s.state) || "down";
             row.className = `system-item state-${st}` +
                 (row.dataset.name === selected ? " selected" : "");
+            row.title = tooltipFor(s, st);
         }
         if (selected && stateByName[selected]) {
             stateBlob.textContent = JSON.stringify(stateByName[selected], null, 2);
