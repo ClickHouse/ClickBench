@@ -9,6 +9,11 @@
 //      /api/query?system=<name> and render output as plain text in a <pre>.
 
 const $ = (sel) => document.querySelector(sel);
+// When the page is served by the playground over HTTP, relative URLs
+// work. When it's opened from disk (file://), relative fetches resolve
+// against file:// and fail; rewrite to an absolute localhost URL.
+// CORS is handled by the server's middleware (Access-Control-Allow-Origin: *).
+const API = location.protocol === "file:" ? "http://localhost:8000" : "";
 
 const listEl = $("#system-list");
 const queryEl = $("#query");
@@ -35,7 +40,7 @@ let queriesByName = {};    // {name: [q1, q2, ...]}
 let pristineQuery = "";
 
 async function loadCatalog() {
-    const r = await fetch("/api/systems");
+    const r = await fetch(API + "/api/systems");
     catalog = await r.json();
     catalog.sort((a, b) => a.display_name.localeCompare(b.display_name));
     renderList();
@@ -127,7 +132,7 @@ function select(name) {
 function maybeWarmup(name) {
     const s = stateByName[name];
     if (!s || s.state !== "snapshotted") return;
-    fetch(`/api/warmup/${encodeURIComponent(name)}`, {method: "POST"})
+    fetch(`${API}/api/warmup/${encodeURIComponent(name)}`, {method: "POST"})
         .catch(() => {});  // fire-and-forget
 }
 
@@ -135,7 +140,7 @@ async function loadExamples(name) {
     let qs = queriesByName[name];
     if (!qs) {
         try {
-            const r = await fetch(`/api/queries/${encodeURIComponent(name)}`);
+            const r = await fetch(`${API}/api/queries/${encodeURIComponent(name)}`);
             qs = r.ok ? await r.json() : [];
         } catch (e) {
             qs = [];
@@ -220,7 +225,7 @@ function showResult(r) {
 
 async function pollState() {
     try {
-        const r = await fetch("/api/state");
+        const r = await fetch(API + "/api/state");
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const arr = await r.json();
         stateByName = {};
@@ -255,7 +260,7 @@ async function runQuery() {
     const t0 = performance.now();
     let payload = null;
     try {
-        const r = await fetch(`/api/query?system=${encodeURIComponent(target)}`, {
+        const r = await fetch(`${API}/api/query?system=${encodeURIComponent(target)}`, {
             method: "POST",
             body: sql,
             headers: {"Content-Type": "application/octet-stream"},

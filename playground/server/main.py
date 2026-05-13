@@ -288,7 +288,33 @@ def build_app() -> web.Application:
             resp.headers["Cache-Control"] = "no-store"
         return resp
 
+    @web.middleware
+    async def cors(request: web.Request, handler):
+        # Permit the index.html opened from file:// (or any other origin)
+        # to call /api/* directly. The browser sends Origin: null in that
+        # case and refuses the response without ACAO. Reflecting the
+        # request's Origin keeps credentials-less CORS working in every
+        # browser. Preflight OPTIONS gets a synthetic 204 here.
+        origin = request.headers.get("Origin", "*")
+        if request.method == "OPTIONS":
+            return web.Response(status=204, headers={
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers":
+                    request.headers.get("Access-Control-Request-Headers", "*"),
+                "Access-Control-Max-Age": "86400",
+            })
+        resp = await handler(request)
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Access-Control-Expose-Headers"] = (
+            "X-Query-Time, X-Wall-Time, X-Query-Wall-Time, "
+            "X-Output-Bytes, X-Output-Truncated, X-Exit-Code, "
+            "X-System, X-Error"
+        )
+        return resp
+
     app.middlewares.append(no_cache_static)
+    app.middlewares.append(cors)
     app.router.add_get("/", root_redirect)
     app.router.add_get("/ui/", ui_index)
     app.router.add_get("/ui", ui_index)
