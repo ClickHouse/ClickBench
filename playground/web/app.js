@@ -335,9 +335,17 @@ function applyExampleIdx(i) {
     pristineQuery = qs[i];
 }
 
-exampleSel.addEventListener("change", () => {
+function applyCurrentExample() {
     applyExampleIdx(parseInt(exampleSel.value, 10));
-});
+}
+
+// `change` fires only when the value actually changes, so re-picking
+// the same option does nothing there. `input` is identical on
+// <select>. To re-apply on re-select, watch `blur` (the native
+// dropdown closes and the select loses focus) and the per-option
+// click handler in loadExamples.
+exampleSel.addEventListener("change", applyCurrentExample);
+exampleSel.addEventListener("blur", applyCurrentExample);
 queryEl.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runQuery();
 });
