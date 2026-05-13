@@ -258,7 +258,7 @@ async function runQuery() {
         }
         payload = {
             output,
-            time: qt ? `${parseFloat(qt).toFixed(3)} s (script)` : "—",
+            time: qt ? `${parseFloat(qt).toFixed(3)} s` : "—",
             wall: wt ? `${parseFloat(wt).toFixed(3)} s` : `${((performance.now() - t0) / 1000).toFixed(3)} s`,
             bytes: h("X-Output-Bytes") || String(body.byteLength),
             truncated: h("X-Output-Truncated") === "1" ? "yes" : "no",
