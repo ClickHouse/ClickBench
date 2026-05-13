@@ -236,4 +236,12 @@ trap - EXIT
 
 mv "$FLAT" "$OUT"
 rm -rf "$TMP"
+
+# Final fsck: every per-system rootfs is cloned from this file and then
+# resize2fs'd, which requires the source filesystem to be clean. Doing
+# the fsck once here, while build-base-rootfs.sh has full I/O headroom,
+# is much cheaper than doing it 98 times during the parallel system
+# build phase.
+sudo e2fsck -fy "$OUT" >/dev/null 2>&1 || true
+
 echo "[base] done: $OUT ($(du -h "$OUT" | cut -f1) physical, $(du -h --apparent-size "$OUT" | cut -f1) apparent)"
