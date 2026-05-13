@@ -38,7 +38,9 @@ fi
     # which is what we want for an idempotent setup.
     git submodule sync --recursive
     git submodule update --init --recursive --force
-    cargo build --release --bin clickbench --package bench-vortex
+    # Upstream renamed the `clickbench` bin to `query_bench` — match
+    # the partitioned variant's install.
+    cargo build --release --bin query_bench --package bench-vortex
 )
 
 # Build datafusion-cli so ./query can return actual rows instead of
