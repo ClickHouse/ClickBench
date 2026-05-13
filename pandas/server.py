@@ -13,9 +13,9 @@ Routes:
     GET  /data-size  -> bytes the DataFrame currently occupies (memory_usage)
 
 The /query endpoint takes a Python expression directly rather than an SQL
-string mapped to a hardcoded lambda — keeps queries.py (the line-by-line
-expression file) and the server independent. SQL equivalents are kept in
-queries.sql for cross-system reference.
+string mapped to a hardcoded lambda. The workload lives in queries.sql,
+one Python expression per line (the filename matches the cross-system
+convention; the contents are not SQL).
 """
 
 import os

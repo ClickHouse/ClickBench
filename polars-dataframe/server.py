@@ -13,8 +13,9 @@ Routes:
     GET  /data-size  -> bytes the DataFrame currently occupies (estimated_size)
 
 The /query endpoint takes a Python expression directly rather than an SQL
-string mapped to a hardcoded lambda. Workload lives in queries.py
-(line-by-line expressions). queries.sql is kept for cross-system reference.
+string mapped to a hardcoded lambda. The workload lives in queries.sql,
+one Python expression per line (the filename matches the cross-system
+convention; the contents are not SQL).
 """
 
 import os
