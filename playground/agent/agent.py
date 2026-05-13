@@ -277,7 +277,11 @@ def _provision() -> tuple[int, bytes]:
         ok = False
         t0 = time.monotonic()
         last_check: subprocess.CompletedProcess | None = None
-        while time.monotonic() - t0 < 300:
+        # Druid / Pinot / similar JVM-stack engines need 5-10 min to come
+        # up from a cold start, between Zookeeper / Coordinator / Broker /
+        # Historical processes booting in sequence. 300 s was too tight
+        # for those; 900 s covers the slowest observed cases.
+        while time.monotonic() - t0 < 900:
             last_check = subprocess.run(
                 [str(check)], cwd=str(SYSTEM_DIR),
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -287,7 +291,7 @@ def _provision() -> tuple[int, bytes]:
                 break
             time.sleep(1)
         if not ok:
-            log_lines.append(b"\n=== check did not succeed within 300s ===\n")
+            log_lines.append(b"\n=== check did not succeed within 900s ===\n")
             if last_check is not None:
                 log_lines.append(last_check.stderr or b"")
             PROVISION_LOG.write_bytes(b"".join(log_lines))
