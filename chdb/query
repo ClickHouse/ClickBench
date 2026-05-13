@@ -17,26 +17,26 @@ cat > "$query_file"
 python3 - "$query_file" <<'PY'
 import sys
 import timeit
-from chdb import dbapi
+import chdb
 
 with open(sys.argv[1]) as f:
     query = f.read()
 
-con = dbapi.connect(path=".clickbench")
-cur = con.cursor()
-
+# The hits table is created inside the `clickbench` database (see
+# create.sql + load), but the session defaults to `default`. Prepend
+# USE so a bare `SELECT * FROM hits` resolves regardless.
+sess = chdb.session.Session(".clickbench")
 start = timeit.default_timer()
 try:
-    cur._cursor.execute(query)
-    rows = cur.fetchall() if cur.description else []
+    res = sess.query(f"USE clickbench; {query}", "Pretty")
+    out = str(res)
     end = timeit.default_timer()
+    if out:
+        sys.stdout.write(out)
+        if not out.endswith("\n"):
+            sys.stdout.write("\n")
 finally:
-    cur.close()
-    con.close()
+    sess.close()
 
-for row in rows:
-    print(row)
-
-# Last line of stderr: fractional seconds.
 print(f"{end - start:.3f}", file=sys.stderr)
 PY
