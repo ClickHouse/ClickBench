@@ -99,6 +99,11 @@ NEEDS_SWAP: frozenset[str] = frozenset({
     "daft-parquet",
     "daft-parquet-partitioned",
     "pandas",
+    # Umbra OOMs during load on the 16 GB cap (`psql:create.sql:109:
+    # ERROR: unable to allocate memory` after ~70M rows of COPY).
+    # The docker container has no memory.swap.max set, so the guest
+    # kernel will swap it the same as any process.
+    "umbra",
 })
 
 # Sparse size of the swap.raw block device handed to NEEDS_SWAP systems.
