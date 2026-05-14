@@ -95,7 +95,12 @@ sudo mount -o loop "$SYSDISK" "$SYS_MNT"
 # sysdisk/work. Pre-create that layout and drop the system's ClickBench
 # scripts into upper.
 sudo mkdir -p "$SYS_MNT/upper" "$SYS_MNT/work"
-sudo rsync -a --exclude 'results/' --exclude '*.json' --exclude 'README*' \
+# Only `template.json` is playground-frontend metadata; everything
+# else (mapping.json, schema.json, ingest.json, queries.json, ...) is
+# a runtime artifact the load/query scripts read with -d@/--config.
+# An over-broad `*.json` exclude broke elasticsearch, pinot, druid,
+# parseable, quickwit.
+sudo rsync -a --exclude 'results/' --exclude 'template.json' --exclude 'README*' \
     "$SRC"/ "$SYS_MNT/upper"/
 
 # Systems whose load/install reference ../lib/download-hits-* pick those
