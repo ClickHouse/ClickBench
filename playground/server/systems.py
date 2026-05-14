@@ -49,6 +49,11 @@ _EXTERNAL = {
     # (~35 min from source) but ./check times out because the daemon
     # can't initialize a CUDA context. Disabled — we'd need GPU passthrough.
     "sirius",
+    # oxla's only public docker image, public.ecr.aws/oxla/release,
+    # was de-listed (the ECR public gallery no longer surfaces the
+    # repository at all). No replacement on Docker Hub or GitHub
+    # Releases. Drop until upstream publishes a new image source.
+    "oxla",
     # Upstream is broken, asks for credentials we don't have, or
     # the engine can't survive a 16 GB cap.
     # - paradedb-partitioned: install script aborts ("pg_lakehouse was
