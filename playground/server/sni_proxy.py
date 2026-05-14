@@ -115,10 +115,13 @@ def _parse_http_host(data: bytes) -> str | None:
 
 async def _read_preamble(reader: asyncio.StreamReader,
                           want: int = 4096,
-                          timeout: float = 5.0) -> bytes:
+                          timeout: float = 5.0,
+                          early_match=None) -> bytes:
     """Read up to `want` bytes of the connection start — enough to
     cover a TLS ClientHello or the start of an HTTP request line +
-    headers."""
+    headers. Returns as soon as `early_match(buf)` finds the marker
+    we're looking for (SNI or HTTP host), so we don't block waiting
+    for bytes that may never arrive."""
     buf = bytearray()
     deadline = asyncio.get_event_loop().time() + timeout
     while len(buf) < want:
@@ -135,17 +138,42 @@ async def _read_preamble(reader: asyncio.StreamReader,
         if not chunk:
             break
         buf.extend(chunk)
-        # For HTTP we can stop early once we see the end of headers.
+        # For HTTP, stop at the end of headers.
         if b"\r\n\r\n" in buf:
             break
+        # For HTTPS / generic, early-out once the caller's matcher
+        # finds what it needs.
+        if early_match is not None and early_match(bytes(buf)) is not None:
+            break
     return bytes(buf)
+
+
+# DNS cache so the proxy doesn't synchronously resolve the same S3
+# hostname for every connection. Each S3 client makes dozens of
+# requests; without this, getaddrinfo runs in the default threadpool
+# (8 threads) and serializes under the partitioned-parquet workload.
+# TTL is short so we still pick up upstream changes promptly.
+_DNS_CACHE: dict[str, tuple[float, list]] = {}
+_DNS_TTL_SECONDS = 300.0
+
+
+async def _resolve_cached(host: str, port: int) -> list:
+    import socket
+    now = asyncio.get_event_loop().time()
+    cached = _DNS_CACHE.get(host)
+    if cached and now - cached[0] < _DNS_TTL_SECONDS:
+        return cached[1]
+    loop = asyncio.get_event_loop()
+    infos = await loop.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    _DNS_CACHE[host] = (now, infos)
+    return infos
 
 
 async def _pipe(reader: asyncio.StreamReader,
                   writer: asyncio.StreamWriter) -> None:
     try:
         while True:
-            data = await reader.read(16384)
+            data = await reader.read(65536)
             if not data:
                 break
             writer.write(data)
@@ -159,21 +187,49 @@ async def _pipe(reader: asyncio.StreamReader,
             writer.close()
 
 
+async def _open_upstream(host: str, port: int) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+    """Open a connection to (host, port) using the DNS cache.
+
+    Falls back to asyncio.open_connection if resolution returns nothing
+    useful. Tries each resolved address in order — first success wins.
+    """
+    import socket
+    infos = await _resolve_cached(host, port)
+    last_exc: Exception | None = None
+    for family, socktype, proto, _canon, sockaddr in infos:
+        try:
+            sock = socket.socket(family, socktype, proto)
+            sock.setblocking(False)
+            loop = asyncio.get_event_loop()
+            await loop.sock_connect(sock, sockaddr)
+            return await asyncio.open_connection(sock=sock)
+        except Exception as e:
+            last_exc = e
+            with contextlib.suppress(Exception):
+                sock.close()
+            continue
+    if last_exc is not None:
+        raise last_exc
+    return await asyncio.open_connection(host, port)
+
+
 async def _handle(reader: asyncio.StreamReader,
                     writer: asyncio.StreamWriter,
                     *, https: bool, allow: tuple[str, ...] | list[str],
                     upstream_port: int) -> None:
     peer = writer.get_extra_info("peername")
     try:
-        first = await _read_preamble(reader, want=4096, timeout=5.0)
-        host = _parse_sni(first) if https else _parse_http_host(first)
+        matcher = _parse_sni if https else _parse_http_host
+        first = await _read_preamble(reader, want=4096, timeout=5.0,
+                                      early_match=matcher)
+        host = matcher(first)
         if not host or not _allowed(host, allow):
             log.info("blocked %s -> %r", peer, host)
             writer.close()
             return
         try:
             upr, upw = await asyncio.wait_for(
-                asyncio.open_connection(host, upstream_port),
+                _open_upstream(host, upstream_port),
                 timeout=10.0,
             )
         except Exception as e:
