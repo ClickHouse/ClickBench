@@ -44,6 +44,11 @@ _EXTERNAL = {
     # reasonable here; duckdb has an on-disk fallback that we use via
     # the regular `duckdb` entry, so disable the memory variant.
     "duckdb-memory",
+    # sirius is a GPU-accelerated DuckDB extension that links against
+    # CUDA at runtime. Our microVMs have no GPU; install compiles fine
+    # (~35 min from source) but ./check times out because the daemon
+    # can't initialize a CUDA context. Disabled — we'd need GPU passthrough.
+    "sirius",
     # Upstream is broken, asks for credentials we don't have, or
     # the engine can't survive a 16 GB cap.
     # - paradedb-partitioned: install script aborts ("pg_lakehouse was
