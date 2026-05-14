@@ -128,6 +128,13 @@ class VMManager:
             # /api/query restores lazily.
             if _has_snapshot(vm):
                 vm.state = "snapshotted"
+            # Restore the last persisted error so /api/state shows the
+            # real failure reason even after a server restart instead
+            # of an empty `last_error`.
+            err_path = sys_state_dir / "last_error.txt"
+            if err_path.exists():
+                with contextlib.suppress(Exception):
+                    vm.last_error = err_path.read_text(errors="replace").strip() or None
             self.vms[name] = vm
 
     # ── public API ───────────────────────────────────────────────────────
@@ -146,7 +153,7 @@ class VMManager:
             with contextlib.suppress(Exception):
                 await self._teardown(vm, "admin-provision")
             vm.state = "down"
-            vm.last_error = None
+            self._set_last_error(vm, None)
             await self._initial_provision(vm)
 
     async def ensure_ready_for_query(self, system: str) -> VM:
@@ -211,6 +218,17 @@ class VMManager:
                 "has_snapshot": vm.snapshot_bin.exists(),
             })
         return out
+
+    def _set_last_error(self, vm: VM, err: Optional[str]) -> None:
+        """Update vm.last_error AND persist to disk so /api/state shows
+        the real reason even after a server restart."""
+        vm.last_error = err
+        path = self.cfg.systems_dir / vm.system.name / "last_error.txt"
+        with contextlib.suppress(Exception):
+            if err is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.write_text(err)
 
     def agent_url(self, vm: VM) -> str:
         _, vm_ip, _ = net.addr_for(vm.slot)
@@ -309,7 +327,7 @@ class VMManager:
             vm.provisioned_at = time.time()
             log.info("[%s] initial provision complete", vm.system.name)
         except Exception as e:
-            vm.last_error = f"provision: {e!r}"
+            self._set_last_error(vm, f"provision: {e!r}")
             log.exception("[%s] provision failed", vm.system.name)
             await self._teardown(vm, "provision-failed")
             raise
