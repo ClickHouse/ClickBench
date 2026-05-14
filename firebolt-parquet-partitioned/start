@@ -7,19 +7,30 @@ if curl -sS --max-time 5 'http://localhost:3473/' \
     exit 0
 fi
 
-mkdir -p data
+mkdir -p data fb-volume
 
-# `firebolt-core` is the public self-hosted image. Container needs
-# memlock 8 GiB and seccomp unconfined per upstream's run docs. The
-# data dir maps to /firebolt-core/clickbench inside the container so
-# create.sql's FROM PATTERN can read the parquet files.
-sudo docker run -dit --name firebolt-core --rm \
-    --ulimit memlock=8589934592:8589934592 \
-    --security-opt seccomp=unconfined \
-    -p 127.0.0.1:3473:3473 \
-    -v /firebolt-core/volume \
-    -v "$(pwd)/data:/firebolt-core/clickbench" \
-    ghcr.io/firebolt-db/firebolt-core:preview-rc >/dev/null
+# If the container exists (stopped from a prior agent pre-snapshot
+# cycle), just start it back — the data lives on the bind-mounted
+# fb-volume below, so the previously-created `clickbench` database
+# is still there. Otherwise create the container fresh.
+if sudo docker ps -a --format '{{.Names}}' | grep -qx firebolt-core; then
+    sudo docker start firebolt-core >/dev/null
+else
+    # `firebolt-core` is the public self-hosted image. Container needs
+    # memlock 8 GiB and seccomp unconfined per upstream's run docs.
+    # /firebolt-core/clickbench: parquet source (read at load time).
+    # /firebolt-core/volume:     engine data directory (must persist
+    #                            across the agent's pre-snapshot
+    #                            stop+start cycle or the snapshot
+    #                            ships an empty DB).
+    sudo docker run -dit --name firebolt-core \
+        --ulimit memlock=8589934592:8589934592 \
+        --security-opt seccomp=unconfined \
+        -p 127.0.0.1:3473:3473 \
+        -v "$(pwd)/fb-volume:/firebolt-core/volume" \
+        -v "$(pwd)/data:/firebolt-core/clickbench" \
+        ghcr.io/firebolt-db/firebolt-core:preview-rc >/dev/null
+fi
 
 # Wait for the cluster to be "actually" ready. firebolt-core's HTTP
 # port comes up immediately but returns

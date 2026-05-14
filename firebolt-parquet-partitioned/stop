@@ -1,5 +1,8 @@
 #!/bin/bash
 set -e
 
-# firebolt-core was started with --rm; stop is enough to clean up.
+# Plain stop — leave the container in place so its bind-mounted
+# fb-volume keeps the loaded database for the next ./start. The
+# container is removed and the volume re-initialised only on
+# explicit re-provision.
 sudo docker container stop firebolt-core >/dev/null 2>&1 || true
