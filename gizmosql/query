@@ -11,8 +11,11 @@ set -e
 query=$(cat)
 
 # .timer on: emit "Run Time: <secs>s" per statement.
-# .mode trash: discard result rows so timing parsing isn't polluted.
-script=$(printf '.timer on\n.mode trash\n%s\n' "$query")
+# `.mode box` keeps the result readable in the playground UI; the
+# original ClickBench runner used `.mode trash` to discard rows
+# for clean timing, but the user wants to see output here. The
+# Run Time line still parses fine.
+script=$(printf '.timer on\n.mode box\n%s\n' "$query")
 
 raw=$(printf '%s' "$script" | gizmosql_client 2>&1) && exit_code=0 || exit_code=$?
 
