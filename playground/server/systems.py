@@ -39,19 +39,11 @@ _EXTERNAL = {
     "s3select", "singlestore", "snowflake", "supabase",
     "tembo-olap", "timescale-cloud", "tinybird", "velodb",
     "vertica", "ydb",
-    # DataFrame / in-memory engines: load the full hits dataset into a
-    # single in-process structure and run queries from RAM. Observed
-    # peak RSS for chdb-dataframe / duckdb-dataframe / duckdb-memory is
-    # 16-100 GB on the partitioned parquet set; sustaining that for
-    # ~30-90 concurrent VMs is infeasible even though KVM allocates
-    # lazily, so they don't fit the playground's model. Disabled —
-    # not "broken", just over-provisioned for shared use.
-    "chdb-dataframe", "duckdb-dataframe", "duckdb-memory",
-    "polars-dataframe", "daft-parquet", "daft-parquet-partitioned",
-    # pandas loads the full 100M-row hits.parquet into a Python
-    # process; even with PyArrow-backed dtypes peak RSS is 30+ GB,
-    # overflowing the playground's 16 GB VMs. Out of scope.
-    "pandas",
+    # duckdb-memory runs duckdb with the database in :memory:. Even with
+    # a generous swap drive, the 100M-row hits set blows past anything
+    # reasonable here; duckdb has an on-disk fallback that we use via
+    # the regular `duckdb` entry, so disable the memory variant.
+    "duckdb-memory",
     # Upstream is broken, asks for credentials we don't have, or
     # the engine can't survive a 16 GB cap.
     # - paradedb-partitioned: install script aborts ("pg_lakehouse was
@@ -88,6 +80,26 @@ DATALAKE_FILTERED: frozenset[str] = frozenset({
     "duckdb-datalake",
     "duckdb-datalake-partitioned",
 })
+
+# DataFrame / in-process engines load the full 100M-row hits set into a
+# single in-process structure. Observed working set can reach 250 GB,
+# well past the playground's 16 GB VM RAM cap. Give each of these a
+# dedicated raw swap block device (mkswap + swapon at agent startup);
+# the swap disk is reflink-snapshotted alongside rootfs/sysdisk so a
+# restored VM resumes with the same swap pages it had at snapshot time.
+NEEDS_SWAP: frozenset[str] = frozenset({
+    "chdb-dataframe",
+    "duckdb-dataframe",
+    "polars-dataframe",
+    "daft-parquet",
+    "daft-parquet-partitioned",
+    "pandas",
+})
+
+# Sparse size of the swap.raw block device handed to NEEDS_SWAP systems.
+# 256 GiB matches the upper bound we've seen these engines hit on the
+# partitioned-parquet set.
+SWAP_SIZE_GB: int = 256
 
 
 @dataclass(frozen=True)

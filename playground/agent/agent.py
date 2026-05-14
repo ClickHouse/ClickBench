@@ -687,10 +687,53 @@ def _kick_daemon_if_provisioned() -> None:
     threading.Thread(target=_bg, daemon=True, name="daemon-kick").start()
 
 
+def _activate_swap() -> None:
+    """If the host attached a dedicated swap block device (per
+    `NEEDS_SWAP` in playground/server/systems.py), mkswap (idempotent)
+    and swapon it before serving requests so the load script can rely
+    on it. The swap disk is the last virtio-blk device, sized in the
+    hundreds of GB, and ships with no filesystem header on first boot.
+
+    Idempotent: a device that already has `TYPE=swap` (i.e. survived a
+    snapshot/restore cycle) is just swapon'd again.
+    """
+    candidates: list[tuple[str, int, str]] = []
+    for entry in sorted(Path("/sys/block").glob("vd*")):
+        name = entry.name
+        try:
+            sectors = int((entry / "size").read_text().strip())
+        except Exception:
+            continue
+        size_bytes = sectors * 512
+        # Below ~100 GB it isn't the playground's swap drive.
+        if size_bytes < 100 * (1 << 30):
+            continue
+        dev = f"/dev/{name}"
+        r = subprocess.run(
+            ["blkid", "-s", "TYPE", "-o", "value", dev],
+            capture_output=True, text=True,
+        )
+        fstype = r.stdout.strip()
+        candidates.append((dev, size_bytes, fstype))
+    # Prefer an already-mkswap'd device; otherwise pick the first empty one.
+    target = next((d for d, _, t in candidates if t == "swap"), None)
+    if target is None:
+        target = next((d for d, _, t in candidates if t == ""), None)
+        if target is None:
+            return
+        rc = subprocess.run(["mkswap", "-L", "cbswap", target]).returncode
+        if rc != 0:
+            print(f"agent: mkswap {target} rc={rc}", flush=True)
+            return
+    rc = subprocess.run(["swapon", target]).returncode
+    print(f"agent: swapon {target} rc={rc}", flush=True)
+
+
 def main() -> None:
     addr = ("0.0.0.0", LISTEN_PORT)
     print(f"agent: system={SYSTEM_NAME} listen={addr[0]}:{addr[1]} "
           f"dir={SYSTEM_DIR} data={DATASETS_DIR}", flush=True)
+    _activate_swap()
     _reconcile_docker_after_restore()
     _kick_daemon_if_provisioned()
     with ReusableServer(addr, Handler) as srv:

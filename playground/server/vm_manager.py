@@ -35,6 +35,7 @@ import aiohttp
 
 from . import firecracker as fc
 from . import net
+from .systems import NEEDS_SWAP, SWAP_SIZE_GB
 from .config import Config
 from .systems import System, TRUSTED_INTERNET, DATALAKE_FILTERED
 
@@ -317,6 +318,7 @@ class VMManager:
         sys_dir = self.cfg.systems_dir / vm.system.name
         rootfs = sys_dir / "rootfs.ext4"
         sysdisk = sys_dir / "system.ext4"
+        swap = sys_dir / "swap.raw"
         # If we're (re-)provisioning a system whose rootfs already has
         # /var/lib/clickbench-agent/provisioned set, drop just the rootfs so
         # the agent reruns the full install/start/load flow on the next
@@ -326,6 +328,24 @@ class VMManager:
             log.info("[%s] rootfs exists but no snapshot — dropping it for "
                      "a fresh agent state", vm.system.name)
             rootfs.unlink()
+        # For memory-bound dataframe systems, also (re)create a sparse
+        # swap.raw block device that the in-VM agent mkswaps + swapons.
+        # Sized to the worst-case working set we've seen; sparse so the
+        # host pays only for the bytes the guest actually pages out.
+        if vm.system.name in NEEDS_SWAP and not _has_snapshot(vm):
+            with contextlib.suppress(FileNotFoundError):
+                swap.unlink()
+        if vm.system.name in NEEDS_SWAP and not swap.exists():
+            log.info("[%s] creating swap.raw (%d GiB sparse)",
+                     vm.system.name, SWAP_SIZE_GB)
+            p = await asyncio.create_subprocess_exec(
+                "truncate", "-s", f"{SWAP_SIZE_GB}G", str(swap),
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, err = await p.communicate()
+            if p.returncode != 0:
+                raise RuntimeError(
+                    f"truncate swap.raw failed: {err.decode(errors='replace')[-400:]}")
         if rootfs.exists() and sysdisk.exists():
             return
         log.info("[%s] building rootfs + system disk", vm.system.name)
@@ -408,6 +428,20 @@ class VMManager:
                 "is_root_device": False,
                 "is_read_only": True,
             })
+        # Per-VM swap disk for memory-bound dataframe systems. The in-VM
+        # agent finds it by scanning /dev/vd? for an unformatted block
+        # device, then mkswaps + swapons it. Reflink-snapshotted along
+        # with rootfs + sysdisk so a restored VM resumes with the same
+        # paged-out pages it had at snapshot time.
+        if vm.system.name in NEEDS_SWAP:
+            swap_path = self.cfg.systems_dir / vm.system.name / "swap.raw"
+            if swap_path.exists():
+                await fc.put(sock, "/drives/swap", {
+                    "drive_id": "swap",
+                    "path_on_host": str(swap_path),
+                    "is_root_device": False,
+                    "is_read_only": False,
+                })
         await fc.put(sock, "/machine-config", {
             "vcpu_count": self.cfg.vm_vcpus,
             "mem_size_mib": self.cfg.vm_mem_mib,
@@ -565,6 +599,14 @@ class VMManager:
             sys_dir / "system.golden.ext4",
         )
 
+    def _swap_paths(self, vm: VM) -> tuple[Path, Path] | None:
+        """(working swap.raw, golden swap.raw) — or None for systems
+        that don't need swap."""
+        if vm.system.name not in NEEDS_SWAP:
+            return None
+        sys_dir = self.cfg.systems_dir / vm.system.name
+        return sys_dir / "swap.raw", sys_dir / "swap.golden.raw"
+
     async def _snapshot_disks(self, vm: VM) -> None:
         rootfs, sysdisk, rootfs_gold, sysdisk_gold = self._golden_paths(vm)
         # Reflink-clone the working images into the golden slot. We can't
@@ -588,13 +630,20 @@ class VMManager:
                 raise RuntimeError(
                     f"reflink snapshot cp {src} -> {dst} failed: "
                     f"{err.decode(errors='replace')[-400:]}")
-        await asyncio.gather(
+        clones = [
             _clone(rootfs, rootfs_gold),
             _clone(sysdisk, sysdisk_gold),
-        )
-        log.info("[%s] golden disks saved (%s, %s)", vm.system.name,
-                 _fmt_size(rootfs_gold.stat().st_size),
-                 _fmt_size(sysdisk_gold.stat().st_size))
+        ]
+        swap_pair = self._swap_paths(vm)
+        if swap_pair is not None and swap_pair[0].exists():
+            clones.append(_clone(swap_pair[0], swap_pair[1]))
+        await asyncio.gather(*clones)
+        sizes = [_fmt_size(rootfs_gold.stat().st_size),
+                 _fmt_size(sysdisk_gold.stat().st_size)]
+        if swap_pair is not None and swap_pair[1].exists():
+            sizes.append(_fmt_size(swap_pair[1].stat().st_size))
+        log.info("[%s] golden disks saved (%s)", vm.system.name,
+                 ", ".join(sizes))
 
     async def _restore_disks(self, vm: VM) -> None:
         rootfs, sysdisk, rootfs_gold, sysdisk_gold = self._golden_paths(vm)
@@ -621,10 +670,14 @@ class VMManager:
                 raise RuntimeError(
                     f"reflink cp {src} -> {dst} failed: "
                     f"{err.decode(errors='replace')[-400:]}")
-        await asyncio.gather(
+        clones = [
             _clone(rootfs_gold, rootfs),
             _clone(sysdisk_gold, sysdisk),
-        )
+        ]
+        swap_pair = self._swap_paths(vm)
+        if swap_pair is not None and swap_pair[1].exists():
+            clones.append(_clone(swap_pair[1], swap_pair[0]))
+        await asyncio.gather(*clones)
         log.info("[%s] working disks reflink-cloned from golden",
                  vm.system.name)
 
@@ -676,7 +729,11 @@ class VMManager:
         # as user N.
         if _has_snapshot(vm):
             rootfs, sysdisk, _, _ = self._golden_paths(vm)
-            for p in (rootfs, sysdisk):
+            to_unlink = [rootfs, sysdisk]
+            swap_pair = self._swap_paths(vm)
+            if swap_pair is not None:
+                to_unlink.append(swap_pair[0])
+            for p in to_unlink:
                 with contextlib.suppress(FileNotFoundError):
                     p.unlink()
 
