@@ -163,17 +163,22 @@ async function loadExamples(name) {
         o.disabled = true;
         exampleSel.appendChild(o);
     } else {
+        // Unselected placeholder so the first real change(...) the
+        // user picks always counts as "different from current value"
+        // and fires the change handler — even if they're re-picking
+        // the option that was selected before they edited the
+        // textarea. The textarea-edit handler below resets us back
+        // to this entry.
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "—";
+        placeholder.disabled = true;
+        exampleSel.appendChild(placeholder);
         for (let i = 0; i < qs.length; i++) {
             const o = document.createElement("option");
             o.value = String(i);
             const label = qs[i].replace(/\s+/g, " ").slice(0, 90);
             o.textContent = `Q${i + 1}: ${label}`;
-            // change only fires when the value actually changes, so
-            // reselecting the same option from the dropdown is a
-            // no-op there. Listen on the option itself so a click
-            // re-applies the example even if the user picked it
-            // already (and has since edited the textarea).
-            o.addEventListener("click", () => applyExampleIdx(i));
             exampleSel.appendChild(o);
         }
         // Clamp prevIndex into range; default to 0.
@@ -339,13 +344,17 @@ function applyCurrentExample() {
     applyExampleIdx(parseInt(exampleSel.value, 10));
 }
 
-// `change` fires only when the value actually changes, so re-picking
-// the same option does nothing there. `input` is identical on
-// <select>. To re-apply on re-select, watch `blur` (the native
-// dropdown closes and the select loses focus) and the per-option
-// click handler in loadExamples.
 exampleSel.addEventListener("change", applyCurrentExample);
-exampleSel.addEventListener("blur", applyCurrentExample);
+// When the user types in the textarea, mark the select as
+// "unselected" (the disabled placeholder option). That way a
+// subsequent click on whatever they had picked before counts as a
+// real change and re-applies the example — no more blur-listener
+// hack.
+queryEl.addEventListener("input", () => {
+    if (queryEl.value !== pristineQuery) {
+        exampleSel.value = "";
+    }
+});
 queryEl.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runQuery();
 });
