@@ -33,20 +33,18 @@ public class S3AnonymousProvider implements AWSCredentialsProvider {
 }
 EOF
 
-# Compile the shim against the AWS SDK + Hadoop jars bundled in the trino
-# image. Target Java 11 bytecode for portability. Skip if already built.
+# Compile the shim against every jar under /usr/lib/trino. The narrower
+# AWS-SDK + Hadoop name-glob we used to rely on stopped matching after
+# pinning trino:455 (the dependency layout shifted between releases),
+# producing "package com.amazonaws.auth does not exist" errors. Casting
+# the classpath net at every jar avoids guessing at upstream renames.
 if [ ! -f shim/S3AnonymousProvider.jar ]; then
     sudo docker run --rm \
         -v "$PWD/shim:/shim" \
         --entrypoint sh trinodb/trino:455 -c '
             set -e
             cd /shim
-            CP=$(find /usr/lib/trino \( -name "*aws-java-sdk*.jar" -o -name "*hadoop-apache*.jar" \) 2>/dev/null | tr "\n" ":")
-            if [ -z "$CP" ]; then
-                # Last resort: every jar under trino. Order matters for classpath
-                # only in case of duplicate classes, which we do not have here.
-                CP=$(find /usr/lib/trino -name "*.jar" 2>/dev/null | tr "\n" ":")
-            fi
+            CP=$(find /usr/lib/trino -name "*.jar" 2>/dev/null | tr "\n" ":")
             javac --release 11 -cp "$CP" S3AnonymousProvider.java
             jar cf S3AnonymousProvider.jar S3AnonymousProvider.class
         '
