@@ -276,6 +276,8 @@ async function runQuery() {
     if (!selected) return;
     const sql = queryEl.value;
     if (!sql.trim()) return;
+    // Running a single query takes us out of competition view.
+    hideRunAll();
     runBtn.disabled = true;
     outEl.textContent = "(running …)";
     timeEl.textContent = "…";
@@ -356,6 +358,7 @@ function applyCurrentExample() {
 exampleSel.addEventListener("change", () => {
     applyCurrentExample();
     refreshRunAllVisibility();
+    hideRunAll();
 });
 // When the user types in the textarea, mark the select as
 // "unselected" (the disabled placeholder option). That way a
@@ -367,6 +370,7 @@ queryEl.addEventListener("input", () => {
         exampleSel.value = "";
     }
     refreshRunAllVisibility();
+    hideRunAll();
 });
 queryEl.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runQuery();
@@ -437,6 +441,16 @@ function refreshRunAllVisibility() {
         && !isNaN(parseInt(exampleSel.value, 10));
     const haveCustom = queryEl.value.trim() !== "";
     runAllBtn.style.display = (haveExample || haveCustom) ? "" : "none";
+}
+
+function hideRunAll() {
+    // Picking a different example / editing the query / pressing Run
+    // are all signals that the user's attention has moved off the
+    // competition rail. Collapse it so the right pane retakes the
+    // full width.
+    if (runAllSection.style.display === "none") return;
+    runAllSection.style.display = "none";
+    uiSplit.classList.remove("split");
 }
 
 async function ensureQueriesLoaded(name) {
