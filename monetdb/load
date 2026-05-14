@@ -9,13 +9,14 @@ sudo monetdb release test
 
 chmod 777 ~ hits.tsv
 
-# Drive mclient non-interactively. The bundled noble build uses the
-# long-form `--password=...`; `-P` isn't recognized and makes mclient
-# dump --help. Passing the password inline avoids depending on
-# whether $HOME/.monetdb is actually read in the agent's environment.
-mclient -h 127.0.0.1 -u monetdb --password=monetdb -d test < create.sql
+# Drive mclient non-interactively. The bundled monetdb-client has no
+# password flag at all (not -P, not --password). Both user and password
+# come from /root/.monetdb (stamped by install). Critically, passing
+# `-u monetdb` makes mclient SKIP the file's password and prompt
+# interactively — so don't pass -u either; let the file supply both.
+mclient -h 127.0.0.1 -d test < create.sql
 echo "COPY INTO hits FROM '$(pwd)/hits.tsv' USING DELIMITERS '\\t';" |
-    mclient -h 127.0.0.1 -u monetdb --password=monetdb -d test
+    mclient -h 127.0.0.1 -d test
 
 rm -f hits.tsv
 sync
