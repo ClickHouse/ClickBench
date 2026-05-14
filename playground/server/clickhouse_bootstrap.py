@@ -39,8 +39,10 @@ class Credentials(NamedTuple):
     db: str
     writer_user: str
     writer_password: str
+    # The reader's password is *always* empty — the user is created
+    # in CH with sha256_hash(""), and clients just pass their name
+    # with no password — so we don't keep it as a field.
     reader_user: str
-    reader_password: str
 
 
 def _gen_pw(n: int = 32) -> str:
@@ -199,7 +201,7 @@ async def bootstrap(cfg: Config) -> Credentials | None:
     return Credentials(
         url=cfg.ch_cloud_url, db=db,
         writer_user="playground_writer", writer_password=writer_pw,
-        reader_user="playground_reader", reader_password="",
+        reader_user="playground_reader",
     )
 
 

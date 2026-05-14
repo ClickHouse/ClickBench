@@ -291,8 +291,7 @@ class App:
         async with aiohttp.ClientSession() as s:
             async with s.post(
                 self.ch_creds.url, data=sql,
-                auth=aiohttp.BasicAuth(self.ch_creds.reader_user,
-                                       self.ch_creds.reader_password),
+                auth=aiohttp.BasicAuth(self.ch_creds.reader_user),
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as r:
                 text = await r.text()
