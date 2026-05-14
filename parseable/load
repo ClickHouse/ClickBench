@@ -4,7 +4,7 @@ set -eu
 NUM_CORES=$(nproc)
 
 # Prefer the pre-decompressed hits.json shipped on the playground's
-# readonly dataset disk — it's a 75 GB symlink target, doesn't burn
+# readonly dataset disk — it's a 217 GB symlink target, doesn't burn
 # the VM's 200 GB sparse sysdisk on a redundant gunzip. Fall back to
 # wget + gunzip for standalone use.
 if [ -f /opt/clickbench/datasets_ro/hits.json ]; then
@@ -20,44 +20,43 @@ else
     pv -s "$FILE_SIZE" hits.json.gz | pigz -d > hits.json
 fi
 
-# Split into chunks wrapped in [ ... , ... ] arrays for parseable's ingest API.
-mkdir -p partitioned
-rm -f partitioned/hits_*.json
-
-split_and_process() {
-    local chunk_num=$1
-    local content
-    content=$(cat)
-    {
-        echo "["
-        echo "$content" | sed '$!s/$/,/'
-        echo "]"
-    } > "./partitioned/hits_${chunk_num}.json"
-}
-export -f split_and_process
-
-LINES_PER_CHUNK=2500
-pv hits.json | parallel --pipe -N$LINES_PER_CHUNK --block 10M \
-    --jobs "$NUM_CORES" split_and_process {#}
-
-rm -f hits.json hits.json.gz partitioned/hits_*.json
-# (the hits.json/.gz might be a symlink into datasets_ro — rm removes
-#  the symlink, not the file.)
-
-# Create the stream.
+# Create the stream first — ingest below needs it to exist.
 curl --silent --location --request PUT 'http://localhost:8000/api/v1/logstream/hits' \
     -H 'X-P-Static-Schema-Flag: true' \
     -H 'Content-Type: application/json' \
     -u "admin:admin" \
     --data-binary @static_schema.json >/dev/null
 
-# Parallel ingest of chunks.
+# Wrap each block of LINES_PER_CHUNK NDJSON lines in [ ... ] and POST
+# directly to /api/v1/ingest. The previous implementation wrote each
+# chunk as a separate file under ./partitioned/ first — at 2500 lines
+# per chunk that produced ~40000 files totaling >200 GB, filling up
+# the VM's sparse rootfs (`No space left on device` in load.log).
+# Streaming the chunks straight to curl keeps the on-disk footprint
+# at zero.
+ingest_chunk() {
+    awk 'BEGIN{print "["} {
+        if (NR>1) print prev ","
+        prev=$0
+    } END{ if (prev) print prev; print "]" }' |
+        curl --silent --location \
+            -H 'Content-Type: application/json' \
+            -H 'X-P-Stream: hits' \
+            -k -XPOST -u "admin:admin" \
+            'http://localhost:8000/api/v1/ingest' \
+            --data-binary @- >/dev/null
+}
+export -f ingest_chunk
+
+LINES_PER_CHUNK=2500
 INGEST_JOBS=6
-find partitioned -name "hits_*" -type f | parallel --jobs $INGEST_JOBS \
-    'curl --silent -H "Content-Type: application/json" -H "X-P-Stream: hits" -k -XPOST -u "admin:admin" "http://localhost:8000/api/v1/ingest" --data-binary @"{}"'
+pv hits.json | parallel --pipe -N$LINES_PER_CHUNK --block 10M \
+    --jobs "$INGEST_JOBS" ingest_chunk
+
+# Drop the symlink to the RO dataset — no chunk files to clean up.
+rm -f hits.json hits.json.gz
 
 # Allow sync to complete.
 sleep 180
 
-rm -rf partitioned
 sync
