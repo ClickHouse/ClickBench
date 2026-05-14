@@ -112,6 +112,17 @@ button.run-all:hover:not(:disabled) {
 #runall-table tr.running td.time { color: var(--muted); }
 #runall-table tr.winner td { background: var(--accent); }
 
+/* Flash on every state change in competition mode: yellow that
+   fades out over a second. .flash is added by JS only to rows whose
+   stringified status differs from the previous render. */
+@keyframes runall-flash {
+    from { background-color: var(--accent); }
+    to   { background-color: transparent; }
+}
+#runall-table tr.flash td {
+    animation: runall-flash 1s ease-out;
+}
+
 .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .row label { margin: 0; }
 .stats { font-family: monospace; }

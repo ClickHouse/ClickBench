@@ -464,6 +464,9 @@ async function runAll() {
 
     const status = {};
     for (const t of targets) status[t.name] = {state: "running"};
+    // Reset the flash-diff cache so the first render seeds 'running'
+    // for every row without animating them all at once.
+    runAllLast = {};
     renderRunAll(status);
 
     await Promise.all(targets.map(async (t) => {
@@ -496,6 +499,14 @@ async function runAll() {
     runAllBtn.disabled = false;
 }
 
+let runAllLast = {};
+
+function _runAllRowKey(s) {
+    if (s.state === "done") return `done:${s.time}`;
+    if (s.state === "failed") return `failed:${s.note || ""}`;
+    return "running";
+}
+
 function renderRunAll(status) {
     const done = [], failed = [], running = [];
     for (const [name, s] of Object.entries(status)) {
@@ -506,6 +517,17 @@ function renderRunAll(status) {
     done.sort((a, b) => a.time - b.time);
     failed.sort((a, b) => a.name.localeCompare(b.name));
     running.sort((a, b) => a.name.localeCompare(b.name));
+    // Diff against the previous render so only rows whose status
+    // string actually changed get the flash animation; otherwise the
+    // mere act of re-sorting would re-animate everyone every tick.
+    const changed = new Set();
+    for (const [name, s] of Object.entries(status)) {
+        const key = _runAllRowKey(s);
+        if (runAllLast[name] !== undefined && runAllLast[name] !== key) {
+            changed.add(name);
+        }
+        runAllLast[name] = key;
+    }
     const tbody = runAllTable.querySelector("tbody");
     tbody.innerHTML = "";
     const fragment = document.createDocumentFragment();
@@ -513,7 +535,10 @@ function renderRunAll(status) {
     for (let i = 0; i < all.length; i++) {
         const row = all[i];
         const tr = document.createElement("tr");
-        tr.className = row.state + (i === 0 && row.state === "done" ? " winner" : "");
+        const cls = [row.state];
+        if (i === 0 && row.state === "done") cls.push("winner");
+        if (changed.has(row.name)) cls.push("flash");
+        tr.className = cls.join(" ");
         const td1 = document.createElement("td");
         td1.textContent = row.name;
         const td2 = document.createElement("td");
