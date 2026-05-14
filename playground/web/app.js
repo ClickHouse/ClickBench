@@ -365,8 +365,8 @@ exampleSel.addEventListener("change", () => {
 queryEl.addEventListener("input", () => {
     if (queryEl.value !== pristineQuery) {
         exampleSel.value = "";
-        refreshRunAllVisibility();
     }
+    refreshRunAllVisibility();
 });
 queryEl.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runQuery();
@@ -431,8 +431,12 @@ const runAllSection = $("#ui-runall");
 const runAllTable = $("#runall-table");
 
 function refreshRunAllVisibility() {
-    const v = exampleSel.value;
-    runAllBtn.style.display = (v === "" || isNaN(parseInt(v, 10))) ? "none" : "";
+    // Always available when there's *something* to run: a picked
+    // example index OR a non-empty custom query in the textarea.
+    const haveExample = exampleSel.value !== ""
+        && !isNaN(parseInt(exampleSel.value, 10));
+    const haveCustom = queryEl.value.trim() !== "";
+    runAllBtn.style.display = (haveExample || haveCustom) ? "" : "none";
 }
 
 async function ensureQueriesLoaded(name) {
@@ -460,20 +464,31 @@ window.addEventListener("resize", _measureSplitOffset);
 
 async function runAll() {
     const idx = parseInt(exampleSel.value, 10);
-    if (isNaN(idx)) return;
+    const useExampleIndex = !isNaN(idx);
+    const customQuery = queryEl.value;
+    if (!useExampleIndex && !customQuery.trim()) return;
     runAllBtn.disabled = true;
     runAllSection.style.display = "";
     uiSplit.classList.add("split");
     _measureSplitOffset();
     runAllSection.focus();
 
-    // Collect snapshotted/ready systems with an example at this index.
+    // Collect candidate systems. With an example picked, each system
+    // runs its OWN translation of the example at the same index
+    // (the apples-to-apples ClickBench format). With a custom query
+    // in the textarea, every system runs the exact same string —
+    // the systems whose query language doesn't accept it will just
+    // show up in the failed bucket.
     const candidates = Object.values(stateByName)
         .filter(s => s.state === "snapshotted" || s.state === "ready");
     const targets = [];
     for (const s of candidates) {
-        const qs = await ensureQueriesLoaded(s.name);
-        if (qs && idx < qs.length) targets.push({name: s.name, query: qs[idx]});
+        if (useExampleIndex) {
+            const qs = await ensureQueriesLoaded(s.name);
+            if (qs && idx < qs.length) targets.push({name: s.name, query: qs[idx]});
+        } else {
+            targets.push({name: s.name, query: customQuery});
+        }
     }
 
     const status = {};
