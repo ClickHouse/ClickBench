@@ -12,6 +12,19 @@ sudo docker pull "orioledb/orioledb:$VERSION"
 
 mkdir -p /tmp/data
 
+# Park PGDATA on the per-VM system disk (mounted at /opt/clickbench/sysdisk).
+# The default /var/lib/postgresql/data lives in the container's writable
+# layer, which sits on the guest's 200 GiB rootfs — orioledb's per-COPY
+# undo log roughly doubles the write footprint of the base table and
+# blew through that:
+#   PANIC: could not write buffer to file orioledb_undo/...
+#          No space left on device  (line 69,533,798 of hits.tsv)
+# The sysdisk is sized via DISK_OVERRIDES_GB in systems.py (400 GiB
+# for this engine), so PGDATA fits there comfortably.
+sudo mkdir -p /opt/clickbench/sysdisk/pgdata
+# The orioledb image runs postgres as uid 999.
+sudo chown 999:999 /opt/clickbench/sysdisk/pgdata
+
 # (Re)create container with our config. Remove any existing one first.
 if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     sudo docker rm -f "$CONTAINER_NAME" >/dev/null
@@ -22,6 +35,7 @@ SHM_SIZE=$(echo "$MEM_SIZE/2/1024" | bc)
 
 sudo docker run --name "$CONTAINER_NAME" \
     -v /tmp/data:/tmp/data \
+    -v /opt/clickbench/sysdisk/pgdata:/var/lib/postgresql/data \
     --shm-size="${SHM_SIZE}m" \
     -p 5432:5432 \
     -e POSTGRES_HOST_AUTH_METHOD=trust \
