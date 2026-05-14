@@ -1,20 +1,13 @@
 #!/bin/bash
 set -eu
 
-if PGPASSWORD=test psql -h localhost -U postgres -c 'SELECT 1' >/dev/null 2>&1; then
-    exit 0
+sudo systemctl start cedardb.service
+
+# On multi-NUMA systems stay within one node for better performance.
+numa_nodes=$(ls -d /sys/devices/system/node/node* 2>/dev/null | wc -l)
+if [ "${numa_nodes}" -gt 1 ]; then
+    parallel=$(cat /sys/devices/system/node/node0/cpulist \
+        | tr ',' '\n' \
+        | awk -F'-' '{if(NF==2) s+=($2-$1+1); else s+=1} END{print s}')
+    until psql -c "SET debug.parallel = ${parallel};" >/dev/null 2>&1; do sleep 1; done
 fi
-
-# `docker run --rm` cleans up container on exit; we run detached.
-sudo docker stop cedardb >/dev/null 2>&1 || true
-sudo docker rm cedardb >/dev/null 2>&1 || true
-
-sudo docker run -d --rm -p 5432:5432 \
-    -v "$(pwd)/data:/data" \
-    -v "$(pwd)/db:/var/lib/cedardb/data" \
-    -e CEDAR_PASSWORD=test \
-    --name cedardb cedardb/cedardb:latest >/dev/null
-
-until pg_isready -h localhost --dbname postgres -U postgres >/dev/null 2>&1; do
-    sleep 1
-done

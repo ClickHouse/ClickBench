@@ -2,4 +2,4 @@
 set -eu
 
 # No ingestion — reported size is the parquet file itself.
-stat -c%s data/hits.parquet
+stat -c%s hits.parquet
