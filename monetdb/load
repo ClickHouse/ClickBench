@@ -9,16 +9,13 @@ sudo monetdb release test
 
 chmod 777 ~ hits.tsv
 
-# Drive mclient non-interactively. The old query.expect wrapper waited
-# on an interactive "password:" prompt that never fires when mclient
-# picks credentials from ~/.monetdb (which the install script stamps
-# with user=monetdb / password=monetdb). Feed SQL via stdin; auth
-# comes from /root/.monetdb (HOME=root in the agent's systemd unit).
-# We don't pass -P because the bundled mclient build doesn't have
-# that flag — passing -P dumped --help and broke the load entirely.
-mclient -h 127.0.0.1 -u monetdb -d test < create.sql
+# Drive mclient non-interactively. The bundled noble build uses the
+# long-form `--password=...`; `-P` isn't recognized and makes mclient
+# dump --help. Passing the password inline avoids depending on
+# whether $HOME/.monetdb is actually read in the agent's environment.
+mclient -h 127.0.0.1 -u monetdb --password=monetdb -d test < create.sql
 echo "COPY INTO hits FROM '$(pwd)/hits.tsv' USING DELIMITERS '\\t';" |
-    mclient -h 127.0.0.1 -u monetdb -d test
+    mclient -h 127.0.0.1 -u monetdb --password=monetdb -d test
 
 rm -f hits.tsv
 sync
