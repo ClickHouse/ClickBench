@@ -143,6 +143,10 @@ button.run-all:hover:not(:disabled) {
 aside#ui-runall {
     margin: 0;
     overflow-y: auto;
+    /* Reserve scrollbar gutter even when content fits — without this
+       the rail's width fluctuates as rows finish, briefly making the
+       right pane overflow and the page grow a horizontal scrollbar. */
+    scrollbar-gutter: stable;
     height: 100%;
     border: 1px solid var(--border);
     background: var(--bg-alt);
