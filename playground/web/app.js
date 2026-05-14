@@ -237,6 +237,30 @@ function refreshDownUI() {
     }
 }
 
+function _maybePrettyJson(s) {
+    // If the body parses as JSON (entire string), re-emit it with
+    // 2-space indentation. Otherwise return the original — most
+    // engines print plain tables and we shouldn't touch them.
+    if (!s || s.length < 2) return s;
+    const first = s.charCodeAt(0);
+    // Cheap pre-filter: only attempt JSON.parse when the first
+    // non-whitespace byte looks like '{' or '['. Avoids parsing
+    // every 14 GB count(*) row through a try/catch.
+    let i = 0;
+    while (i < s.length && (s.charCodeAt(i) <= 32)) i++;
+    const c = s.charCodeAt(i);
+    if (c !== 123 /* { */ && c !== 91 /* [ */) return s;
+    try {
+        const parsed = JSON.parse(s);
+        // Only pretty-print structured values; bare numbers/strings/
+        // booleans shouldn't be re-serialized.
+        if (parsed === null || typeof parsed !== "object") return s;
+        return JSON.stringify(parsed, null, 2);
+    } catch {
+        return s;
+    }
+}
+
 function showResult(r) {
     if (!r) {
         outEl.textContent = "";
@@ -246,7 +270,7 @@ function showResult(r) {
         uiStats.style.display = "none";
         return;
     }
-    outEl.textContent = r.output;
+    outEl.textContent = _maybePrettyJson(r.output);
     timeEl.textContent = r.time;
     outLabelEl.textContent = r.truncated === "yes" ? "Output (truncated)" : "Output";
     uiOutput.style.display = "";
