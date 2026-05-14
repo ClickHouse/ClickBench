@@ -58,25 +58,14 @@ hive.metastore=file
 hive.metastore.catalog.dir=local:///meta
 local.location=/data
 fs.native-local.enabled=true
-fs.hadoop.enabled=true
-hive.config.resources=/etc/trino/core-site.xml
+# trino:latest dropped the legacy hadoop-S3 plugin, which is why
+# fs.hadoop.enabled=true + a custom AWSCredentialsProvider shim no
+# longer worked: 'External location is not a valid file system URI:
+# s3://...'. Switch to the native S3 file system; the bucket is
+# public so we configure it to skip the AWS signing flow entirely.
+fs.native-s3.enabled=true
+s3.region=eu-central-1
+s3.endpoint=https://s3.eu-central-1.amazonaws.com
+s3.path-style-access=false
 hive.non-managed-table-writes-enabled=true
-EOF
-
-cat > etc/core-site.xml <<'EOF'
-<?xml version="1.0"?>
-<configuration>
-    <property>
-        <name>trino.s3.credentials-provider</name>
-        <value>S3AnonymousProvider</value>
-    </property>
-    <property>
-        <name>trino.s3.endpoint</name>
-        <value>https://s3.eu-central-1.amazonaws.com</value>
-    </property>
-    <property>
-        <name>trino.s3.region</name>
-        <value>eu-central-1</value>
-    </property>
-</configuration>
 EOF
