@@ -35,7 +35,7 @@ import aiohttp
 
 from . import firecracker as fc
 from . import net
-from .systems import MEM_OVERRIDES_MIB, NEEDS_SWAP, SWAP_SIZE_GB
+from .systems import NEEDS_SWAP, SWAP_SIZE_GB
 from .config import Config
 from .systems import System, TRUSTED_INTERNET, DATALAKE_FILTERED
 
@@ -492,11 +492,7 @@ class VMManager:
                 })
         await fc.put(sock, "/machine-config", {
             "vcpu_count": self.cfg.vm_vcpus,
-            # Per-system override for memory-hungry engines (Umbra) that
-            # ENOMEM out even with the per-VM swap drive. See
-            # MEM_OVERRIDES_MIB in systems.py.
-            "mem_size_mib": MEM_OVERRIDES_MIB.get(
-                vm.system.name, self.cfg.vm_mem_mib),
+            "mem_size_mib": self.cfg.vm_mem_mib,
             "smt": False,
         })
         await fc.put(sock, "/actions", {"action_type": "InstanceStart"})

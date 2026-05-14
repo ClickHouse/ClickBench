@@ -115,18 +115,6 @@ NEEDS_SWAP: frozenset[str] = frozenset({
 # partitioned-parquet set.
 SWAP_SIZE_GB: int = 256
 
-# Per-system VM RAM override (MiB). The default cfg.vm_mem_mib is 16 GiB,
-# which is enough for almost every engine when paired with the swap
-# drive above — but Umbra keeps tripping on `psql:create.sql:109:
-# ERROR: unable to allocate memory` partway through the COPY even with
-# 256 GiB of swap attached. The thrash is so heavy that allocations
-# from inside the docker container return ENOMEM before the guest
-# kernel can swap pages out. Giving Umbra a bigger RAM allotment keeps
-# the working set resident; the host has 1 TiB so a 96 GiB VM is cheap.
-MEM_OVERRIDES_MIB: dict[str, int] = {
-    "umbra": 96 * 1024,
-}
-
 
 @dataclass(frozen=True)
 class System:
