@@ -251,20 +251,20 @@ class App:
                         body = await r.read()
                         headers = {k: r.headers[k] for k in r.headers if k.startswith("X-")}
                         headers.setdefault("X-Output-Bytes", str(len(body)))
-                        if r.status >= 500 and await self._daemon_unhealthy(vm):
-                            # Daemon died (not just a bad query). Tear
-                            # the VM down so the next request restores
-                            # from snapshot. Bubble the error up on
-                            # the first attempt for retry.
+                        if r.status >= 400:
+                            # ANY error tears the VM down so the next
+                            # request restores from snapshot. The
+                            # playground accepts destructive SQL
+                            # (DROP TABLE hits, TRUNCATE, ...) — once
+                            # an error happens we can't be sure the
+                            # daemon's state is still consistent, so
+                            # the safe move is always to reset.
                             self.sink.write_event(
-                                system=system_name, kind="post-query-unhealthy",
+                                system=system_name, kind="post-query-error",
                                 detail=f"attempt {attempt}: status={r.status}",
                             )
                             await self.vmm.kick(system_name,
-                                                "post-query-check-failed")
-                            if attempt == 1:
-                                await asyncio.sleep(0.5)
-                                continue
+                                                "post-query-error")
                         return body, headers, r.status
             except Exception as e:
                 last_exc = e
@@ -278,20 +278,6 @@ class App:
                 raise
         # unreachable, but keep mypy happy
         raise RuntimeError(str(last_exc))
-
-    async def _daemon_unhealthy(self, vm) -> bool:
-        """Hit the agent's /check endpoint. Returns True if ./check
-        reports the daemon is not serving (so the host should teardown
-        + restore). Returns False on transient transport errors so a
-        single dropped packet doesn't trigger a restore."""
-        url = self.vmm.agent_url(vm) + "/check"
-        try:
-            async with aiohttp.ClientSession() as s:
-                async with s.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
-                    return r.status != 200
-        except Exception:
-            return False
-
 
 def build_app() -> web.Application:
     obj = App()
