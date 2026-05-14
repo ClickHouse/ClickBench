@@ -15,7 +15,13 @@ query=$(cat)
 # original ClickBench runner used `.mode trash` to discard rows
 # for clean timing, but the user wants to see output here. The
 # Run Time line still parses fine.
-script=$(printf '.timer on\n.mode box\n%s\n' "$query")
+#
+# .maxrows -1 / .maxwidth 0: gizmosql_client is a DuckDB-cli fork
+# and inherits its non-TTY truncation behavior, which collapses any
+# table taller than the default page to a "<N> rows (<M> columns)"
+# summary line. Disable both row and column truncation so the user
+# sees the whole result.
+script=$(printf '.timer on\n.maxrows -1\n.maxwidth 0\n.mode box\n%s\n' "$query")
 
 raw=$(printf '%s' "$script" | gizmosql_client 2>&1) && exit_code=0 || exit_code=$?
 
