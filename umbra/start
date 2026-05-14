@@ -14,6 +14,8 @@ sudo docker run -d --name umbradb \
     -p 5432:5432 \
     --ulimit nofile=1048576:1048576 \
     --ulimit memlock=8388608:8388608 \
+    --memory=128g \
+    --memory-swap=-1 \
     umbradb/umbra:latest >/dev/null
 
 # Container needs a moment before psql can connect.
