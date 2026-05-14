@@ -1,4 +1,6 @@
 #!/bin/bash
 set -e
 
-[ -x vortex/target/release/query_bench ]
+# Stateless system — confirm datafusion-cli (the playground's query
+# driver) is on PATH.
+command -v datafusion-cli >/dev/null

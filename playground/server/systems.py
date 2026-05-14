@@ -48,11 +48,18 @@ _EXTERNAL = {
     # not "broken", just over-provisioned for shared use.
     "chdb-dataframe", "duckdb-dataframe", "duckdb-memory",
     "polars-dataframe", "daft-parquet", "daft-parquet-partitioned",
-    # Upstream is broken or asks for credentials we don't have.
+    # pandas loads the full 100M-row hits.parquet into a Python
+    # process; even with PyArrow-backed dtypes peak RSS is 30+ GB,
+    # overflowing the playground's 16 GB VMs. Out of scope.
+    "pandas",
+    # Upstream is broken, asks for credentials we don't have, or
+    # the engine can't survive a 16 GB cap.
     # - paradedb-partitioned: install script aborts ("pg_lakehouse was
     #   removed from ParadeDB after 0.10.x"); historical benchmark only.
+    # - paradedb: postgres backend crashes during index VACUUM under
+    #   16 GB RAM; not investigable without bumping VM RAM.
     # - pg_duckdb-motherduck: requires MOTHERDUCK_TOKEN (cloud creds).
-    "paradedb-partitioned", "pg_duckdb-motherduck",
+    "paradedb", "paradedb-partitioned", "pg_duckdb-motherduck",
 }
 
 # Systems we trust to keep outbound internet access *after* the snapshot,
