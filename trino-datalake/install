@@ -33,18 +33,23 @@ public class S3AnonymousProvider implements AWSCredentialsProvider {
 }
 EOF
 
-# Compile the shim against every jar under /usr/lib/trino. The narrower
-# AWS-SDK + Hadoop name-glob we used to rely on stopped matching after
-# pinning trino:455 (the dependency layout shifted between releases),
-# producing "package com.amazonaws.auth does not exist" errors. Casting
-# the classpath net at every jar avoids guessing at upstream renames.
+# Compile the shim against the AWS-SDK and Hadoop jars bundled in the
+# image. The trino:455 image does NOT ship a `find` binary, so the
+# previous approach (find /usr/lib/trino -name '*.jar') silently
+# returned empty and javac complained that com.amazonaws.auth doesn't
+# exist. Use a shell glob instead. The legacy file names had a
+# `com.amazonaws_` / `io.trino.hadoop_` prefix in earlier Trino
+# builds; current :455 drops both prefixes — match either.
 if [ ! -f shim/S3AnonymousProvider.jar ]; then
     sudo docker run --rm \
         -v "$PWD/shim:/shim" \
         --entrypoint sh trinodb/trino:455 -c '
             set -e
             cd /shim
-            CP=$(find /usr/lib/trino -name "*.jar" 2>/dev/null | tr "\n" ":")
+            HDFS=/usr/lib/trino/plugin/hive/hdfs
+            CP=$(ls "$HDFS"/{com.amazonaws_,}aws-java-sdk-core-*.jar \
+                    "$HDFS"/{io.trino.hadoop_,}hadoop-apache-*.jar \
+                    2>/dev/null | tr "\n" ":")
             javac --release 11 -cp "$CP" S3AnonymousProvider.java
             jar cf S3AnonymousProvider.jar S3AnonymousProvider.class
         '
