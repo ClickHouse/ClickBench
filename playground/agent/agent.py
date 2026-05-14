@@ -393,12 +393,20 @@ def _provision() -> tuple[int, bytes]:
         # Skip stop/start for systems without a real daemon (chdb,
         # polars, duckdb): they're in-process tools with no separate
         # process to manage.
+        #
+        # Also skip for daemons whose data lives only in their own
+        # process address space (daft, pandas, chdb-dataframe, ...).
+        # The default stop/restart wipes the loaded DataFrame and the
+        # restored snapshot serves queries against a daemon whose
+        # `hits = None`. A marker file in the system dir opts out.
         stop = SYSTEM_DIR / "stop"
         start = SYSTEM_DIR / "start"
         check = SYSTEM_DIR / "check"
+        preserve_state = (SYSTEM_DIR / ".preserve-state").exists()
         has_daemon = (stop.exists() and start.exists() and
                       check.exists() and os.access(stop, os.X_OK) and
-                      os.access(start, os.X_OK))
+                      os.access(start, os.X_OK) and
+                      not preserve_state)
         if has_daemon:
             log_lines.append(b"\n=== pre-snapshot stop ===\n")
             r = subprocess.run([str(stop)], cwd=str(SYSTEM_DIR),
