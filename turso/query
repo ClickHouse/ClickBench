@@ -8,6 +8,12 @@ export HOME=${HOME:=~}
 # shellcheck disable=SC1091
 source "$HOME/.turso/env"
 
+# Turso is alpha software and tursodb panics at the slightest
+# provocation. The default panic message hides the call stack; enable
+# rust backtraces so the panic the user sees in the playground UI
+# carries enough context to file an upstream bug.
+export RUST_BACKTRACE=1
+
 query=$(cat)
 
 TIMEFORMAT='%R'
