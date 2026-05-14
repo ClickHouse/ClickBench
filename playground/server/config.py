@@ -99,7 +99,7 @@ def load() -> Config:
         cpu_busy_threshold=float(os.environ.get("VM_CPU_BUSY_THRESHOLD", "0.97")),
         vm_cpu_total_seconds_cap=_env_int("VM_CPU_TOTAL_SECONDS_CAP", 3600),
         host_min_free_ram_gb=_env_int("HOST_MIN_FREE_RAM_GB", 32),
-        host_min_free_disk_gb=_env_int("HOST_MIN_FREE_DISK_GB", 500),
+        host_min_free_disk_gb=_env_int("HOST_MIN_FREE_DISK_GB", 100),
         vm_disk_pct_kill_threshold=float(os.environ.get("VM_DISK_FULL_PCT", "0.97")),
         ch_cloud_url=os.environ.get("CLICKHOUSE_CLOUD_URL", ""),
         ch_cloud_user=os.environ.get("CLICKHOUSE_CLOUD_USER", ""),
