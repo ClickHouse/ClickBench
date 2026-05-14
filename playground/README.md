@@ -38,7 +38,7 @@ Host state lives under `/opt/clickbench-playground/`:
 /opt/clickbench-playground/
 ├── bin/                   firecracker, jailer
 ├── kernel/vmlinux         guest kernel
-├── base-rootfs.ext4       pristine Ubuntu 22.04 rootfs (built once)
+├── base-rootfs.ext4       pristine Ubuntu 24.04 rootfs (built once)
 ├── datasets/              hits.parquet, hits_*.parquet, hits.tsv, hits.csv
 ├── datasets.ext4          read-only image of datasets/ (attached to every VM)
 ├── systems/<name>/        per-system rootfs, snapshot, sockets, logs

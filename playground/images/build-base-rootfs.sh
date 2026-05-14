@@ -1,7 +1,7 @@
 #!/bin/bash
-# Build a base Ubuntu 22.04 rootfs for the Firecracker microVMs.
+# Build a base Ubuntu 24.04 rootfs for the Firecracker microVMs.
 #
-# Strategy: start from the official Ubuntu 22.04 cloud image (qcow2), convert
+# Strategy: start from the official Ubuntu 24.04 cloud image (qcow2), convert
 # to raw, mount it, install python3 + sudo + curl + iproute2, drop the agent in
 # place, install a systemd unit that runs the agent on boot, and add a
 # /etc/fstab line that mounts the dataset disk read-only.
@@ -22,7 +22,7 @@ OUT="${STATE_DIR}/base-rootfs.ext4"
 # The image is sparse: mkfs.ext4 with lazy_itable_init writes only the
 # superblocks (~50 MB) upfront, and clones inherit that sparseness.
 SIZE_GB="${BASE_ROOTFS_SIZE_GB:-200}"
-CLOUDIMG_URL="${UBUNTU_CLOUDIMG_URL:-https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img}"
+CLOUDIMG_URL="${UBUNTU_CLOUDIMG_URL:-https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 AGENT_DIR="${REPO_DIR}/playground/agent"
 
@@ -31,7 +31,7 @@ echo "[base] state=$STATE_DIR out=$OUT size=${SIZE_GB}G"
 mkdir -p "$TMP"
 mkdir -p "$STATE_DIR/cache"
 
-CLOUDIMG="$STATE_DIR/cache/jammy-cloudimg.img"
+CLOUDIMG="$STATE_DIR/cache/noble-cloudimg.img"
 if [ ! -f "$CLOUDIMG" ]; then
     echo "[base] downloading cloud image"
     curl -fsSL "$CLOUDIMG_URL" -o "${CLOUDIMG}.part"

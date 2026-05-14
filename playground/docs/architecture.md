@@ -22,7 +22,7 @@
 └────────────────────────────┬─────────────────────────────────────────────┘
                              │ HTTP over per-VM TAP /24
 ┌────────────────────────────▼─────────────────────────────────────────────┐
-│   Firecracker microVM  (Ubuntu 22.04, 4 vCPU / 16 GB / 200 GB sparse)    │
+│   Firecracker microVM  (Ubuntu 24.04, 4 vCPU / 16 GB / 200 GB sparse)    │
 │   ┌──────────────────────────────────────────────────────────────────┐   │
 │   │ in-VM agent (stdlib python HTTP server)                          │   │
 │   │   /health, /stats, /provision, /query                            │   │
