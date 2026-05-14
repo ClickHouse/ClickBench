@@ -171,11 +171,14 @@ def _ensure_daemon_started() -> None:
             return
         subprocess.run([str(start)], cwd=str(SYSTEM_DIR),
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                       timeout=300, check=False)
+                       timeout=PROVISION_TIMEOUT, check=False)
         # Wait for ./check to confirm before unblocking the /query.
+        # 10 min covers cold-starting Druid + the other JVM stacks
+        # we ship (Doris, Pinot, Trino). On a fast daemon this loop
+        # exits in well under a second.
         check = SYSTEM_DIR / "check"
         if check.exists():
-            for _ in range(120):
+            for _ in range(1200):
                 rc = subprocess.run([str(check)], cwd=str(SYSTEM_DIR),
                                     stdout=subprocess.DEVNULL,
                                     stderr=subprocess.DEVNULL,
@@ -540,6 +543,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
             # The host uses this at restore time to gate VM-state="ready"
             # for slow daemons (Doris, Druid, Trino, etc.); without it
             # the first user query arrives mid-start and times out.
+            #
+            # Check btime here too. The Python process state — including
+            # _daemon_started — survives a snapshot restore, so without
+            # this call /ready would happily report ready=true throughout
+            # a 5–10 minute post-restore daemon-rebuild window.
+            _maybe_reconcile_for_restore()
             ready = _daemon_started.is_set()
             self._send_json(200 if ready else 503,
                             {"ready": ready, "system": SYSTEM_NAME})
@@ -672,11 +681,22 @@ def _proc_btime() -> int | None:
 
 
 def _maybe_reconcile_for_restore() -> None:
-    """Called on each /query: if /proc/stat btime has shifted since
-    the last call, the VM was snapshot-restored and any docker daemon
-    needs reconciling (the kernel-side cgroup/netfilter state diverged
-    from dockerd's restored view of it). The reconcile itself is a
-    no-op when docker isn't installed."""
+    """If /proc/stat btime has shifted since the last call, the VM was
+    snapshot-restored. Reconcile docker (the kernel-side cgroup /
+    netfilter state diverged from dockerd's restored view of it) and
+    clear _daemon_started so /ready reflects the truth: the daemon may
+    be technically running post-restore but is often broken (Druid's
+    SQL endpoint, byconity's compose stack, ...), and we need to
+    rebuild it before serving queries.
+
+    Idempotent: subsequent calls see the same btime and return cheaply.
+
+    Called from BOTH the /ready handler and the btime-watcher thread
+    so the readiness probe accurately returns 503 throughout the
+    post-restore rebuild — without this, the agent's Python-process
+    state (including _daemon_started) survives the snapshot, /ready
+    returns 200 immediately, and the host sends /query right into the
+    middle of a 5–10 minute daemon recovery."""
     global _last_seen_btime
     cur = _proc_btime()
     if cur is None:
@@ -696,6 +716,11 @@ def _maybe_reconcile_for_restore() -> None:
         # ./start. Clear the daemon-started gate so the very next
         # _ensure_daemon_started() call brings the stack back up.
         _daemon_started.clear()
+        # Kick off the rebuild asynchronously. /ready (or whoever
+        # called us) returns promptly; the host's /ready poll then
+        # waits for _daemon_started to flip back to True.
+        threading.Thread(target=_ensure_daemon_started, daemon=True,
+                         name="daemon-restart").start()
 
 
 def _reconcile_docker_after_restore() -> None:
@@ -829,6 +854,20 @@ def _activate_swap() -> None:
     print(f"agent: swapon {target} rc={rc}", flush=True)
 
 
+def _btime_watcher() -> None:
+    """Background thread that polls btime and triggers reconcile the
+    moment a snapshot restore is detected — independent of whether any
+    /ready or /query has arrived yet. Without it, restore detection
+    is gated on a request landing, and the first /ready after restore
+    reports stale-true _daemon_started until that request lands."""
+    while True:
+        try:
+            _maybe_reconcile_for_restore()
+        except Exception as e:
+            sys.stderr.write(f"[agent] btime watcher error: {e!r}\n")
+        time.sleep(1)
+
+
 def main() -> None:
     addr = ("0.0.0.0", LISTEN_PORT)
     print(f"agent: system={SYSTEM_NAME} listen={addr[0]}:{addr[1]} "
@@ -842,6 +881,8 @@ def main() -> None:
     global _last_seen_btime
     _last_seen_btime = _proc_btime()
     _kick_daemon_if_provisioned()
+    threading.Thread(target=_btime_watcher, daemon=True,
+                     name="btime-watcher").start()
     with ReusableServer(addr, Handler) as srv:
         srv.serve_forever()
 
