@@ -2,9 +2,15 @@
 
 All knobs are read from environment variables so a single systemd unit can drop
 them in. Falls back to sensible defaults for local development.
+
+ClickHouse credentials (for the logging sink and any future shared-query
+feature) can also be supplied via an INI file at
+`<state_dir>/clickhouse.conf`. Env vars, if set, take precedence over the
+file so existing deployments keep working unchanged.
 """
 from __future__ import annotations
 
+import configparser
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -76,11 +82,38 @@ class Config:
     def firecracker_bin(self) -> Path: return self.state_dir / "bin" / "firecracker"
 
 
+def _load_clickhouse_conf(state_dir: Path) -> dict[str, str]:
+    """Parse <state_dir>/clickhouse.conf. Format is INI with a single
+    [clickhouse] section:
+
+        [clickhouse]
+        url = https://your-host.clickhouse.cloud:8443
+        user = default
+        password = ...
+        db = playground
+
+    Missing file / parse errors return {} silently — the env-var path
+    still works and the logging sink just stays disabled.
+    """
+    path = state_dir / "clickhouse.conf"
+    if not path.exists():
+        return {}
+    parser = configparser.ConfigParser()
+    try:
+        parser.read(path)
+    except configparser.Error:
+        return {}
+    if "clickhouse" not in parser:
+        return {}
+    return {k: v for k, v in parser["clickhouse"].items()}
+
+
 def load() -> Config:
     state_dir = Path(os.environ.get("PLAYGROUND_STATE_DIR", "/opt/clickbench-playground"))
     repo_dir = Path(os.environ.get("PLAYGROUND_REPO_DIR", "/home/ubuntu/ClickBench"))
     listen = os.environ.get("PLAYGROUND_LISTEN", "0.0.0.0:8000")
     host, _, port = listen.rpartition(":")
+    ch_conf = _load_clickhouse_conf(state_dir)
     return Config(
         state_dir=state_dir,
         repo_dir=repo_dir,
@@ -101,8 +134,8 @@ def load() -> Config:
         host_min_free_ram_gb=_env_int("HOST_MIN_FREE_RAM_GB", 32),
         host_min_free_disk_gb=_env_int("HOST_MIN_FREE_DISK_GB", 100),
         vm_disk_pct_kill_threshold=float(os.environ.get("VM_DISK_FULL_PCT", "0.97")),
-        ch_cloud_url=os.environ.get("CLICKHOUSE_CLOUD_URL", ""),
-        ch_cloud_user=os.environ.get("CLICKHOUSE_CLOUD_USER", ""),
-        ch_cloud_password=os.environ.get("CLICKHOUSE_CLOUD_PASSWORD", ""),
-        ch_cloud_db=os.environ.get("CLICKHOUSE_CLOUD_DB", "playground"),
+        ch_cloud_url=os.environ.get("CLICKHOUSE_CLOUD_URL", ch_conf.get("url", "")),
+        ch_cloud_user=os.environ.get("CLICKHOUSE_CLOUD_USER", ch_conf.get("user", "")),
+        ch_cloud_password=os.environ.get("CLICKHOUSE_CLOUD_PASSWORD", ch_conf.get("password", "")),
+        ch_cloud_db=os.environ.get("CLICKHOUSE_CLOUD_DB", ch_conf.get("db", "playground")),
     )
