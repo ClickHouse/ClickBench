@@ -37,6 +37,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 from pathlib import Path
 
 SYSTEM_DIR = Path(os.environ.get("CLICKBENCH_SYSTEM_DIR", "/opt/clickbench/system"))
@@ -639,7 +640,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     oom = _recent_oom_messages()
                     if oom:
                         err_snip = "kernel OOM-killer:\n" + oom
-                headers["X-Error"] = err_snip.replace("\n", " | ")[:512]
+                # HTTP headers can't carry raw newlines, so URL-encode
+                # the (truncated) snippet. The UI decodes via
+                # decodeURIComponent so real \n survives end-to-end.
+                headers["X-Error"] = urllib.parse.quote(err_snip[-512:])
             self._send(200 if (rc == 0 or truncated) else 502, body, headers)
             return
         self._send_json(404, {"error": "not found", "path": self.path})

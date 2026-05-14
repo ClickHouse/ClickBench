@@ -25,6 +25,7 @@ import contextlib
 import logging
 import signal
 import time
+import urllib.parse
 
 
 def _id_to_b64url(n: int) -> str:
@@ -248,7 +249,11 @@ class App:
                                 if "X-Query-Time" in headers else None),
                     wall_time=wall,
                     status=status,
-                    error=err or headers.get("X-Error", ""),
+                    # The agent URL-encodes X-Error so newlines survive
+                    # the HTTP header. Decode before logging so the
+                    # ClickHouse log stores the raw multi-line error.
+                    error=err or urllib.parse.unquote(
+                        headers.get("X-Error", "")),
                 )
             except Exception:
                 log.exception("logging request failed")
@@ -260,7 +265,10 @@ class App:
         resp.headers["X-Wall-Time"] = f"{wall:.6f}"
         resp.headers["X-Query-Id"] = _id_to_b64url(query_id)
         if err and "X-Error" not in resp.headers:
-            resp.headers["X-Error"] = err[:512]
+            # URL-encode to match the agent path so the client always
+            # decodes uniformly. err is usually a one-liner, so this
+            # is a no-op in practice; but keeps the contract simple.
+            resp.headers["X-Error"] = urllib.parse.quote(err[:512])
         return resp
 
     async def handle_saved(self, req: web.Request) -> web.Response:

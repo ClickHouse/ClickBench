@@ -272,6 +272,15 @@ async function pollState() {
     }
 }
 
+// X-Error is URL-encoded on the wire because HTTP headers can't carry
+// raw \n. Decode here so real newlines survive end-to-end. Falls back
+// to the raw value if the header isn't actually encoded (older agents).
+function _decodeXError(s) {
+    if (!s) return s;
+    try { return decodeURIComponent(s); }
+    catch { return s; }
+}
+
 async function runQuery() {
     if (!selected) return;
     const sql = queryEl.value;
@@ -301,7 +310,7 @@ async function runQuery() {
         const wt = h("X-Wall-Time");
         let output = txt;
         if (r.status >= 400) {
-            const err = h("X-Error");
+            const err = _decodeXError(h("X-Error"));
             if (err) {
                 const trailer = `\n\n(error)\n${err}`;
                 output = (txt === "(no output)" ? "" : txt) + trailer;
@@ -543,7 +552,7 @@ async function runAll() {
             const h = (k) => r.headers.get(k);
             const qid = h("X-Query-Id");
             if (r.status >= 400) {
-                const err = h("X-Error") || `HTTP ${r.status}`;
+                const err = _decodeXError(h("X-Error")) || `HTTP ${r.status}`;
                 return {
                     ok: false, note: err, qid,
                     payload: {
@@ -639,9 +648,13 @@ function pickFromRunAll(name) {
     // Switch the system list highlight + state panel to this system.
     if (stateByName[name]) select(name);
     // Rewrite the query textarea + result pane to this system's run.
+    // Do NOT update pristineQuery: loadExamples already set it to the
+    // new system's example inside select(), and overwriting it with
+    // entry.query causes the next rail click's loadExamples to think
+    // the textarea is pristine and clobber the user's edited query
+    // with that system's example.
     if (entry.query) {
         queryEl.value = entry.query;
-        pristineQuery = entry.query;
     }
     if (entry.payload) {
         resultsByName[name] = entry.payload;
