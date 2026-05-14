@@ -79,6 +79,12 @@ class VM:
     cpu_busy_since: Optional[float] = None
     rss_bytes: int = 0
     rootfs_used_bytes: int = 0
+    # Cumulative (utime+stime) jiffies of the firecracker process at
+    # the moment this VM transitioned to "ready" (after restore). The
+    # CPU-cap watchdog uses (current - baseline) / SC_CLK_TCK to bill
+    # only the time spent serving queries, not the boot/resume cost.
+    # Cleared on teardown.
+    cpu_baseline_jiffies: int = 0
 
 
 class VMManager:
@@ -606,6 +612,9 @@ class VMManager:
         await self._wait_for_daemon_ready(vm, timeout=600)
         vm.state = "ready"
         vm.ready_since = time.time()
+        # Baseline the firecracker's current jiffy counter so the
+        # per-VM CPU-cap watchdog can bill only post-ready CPU time.
+        vm.cpu_baseline_jiffies = _read_proc_jiffies(vm.pid) if vm.pid else 0
 
     def _golden_paths(self, vm: VM) -> tuple[Path, Path, Path, Path]:
         """(working rootfs, working sysdisk, golden rootfs, golden sysdisk)."""
@@ -734,6 +743,7 @@ class VMManager:
             await self._shutdown(vm)
         vm.state = "snapshotted" if _has_snapshot(vm) else "down"
         vm.ready_since = None
+        vm.cpu_baseline_jiffies = 0
         # Drop the decompressed snapshot.bin if we still have the .zst — it's
         # ~16 GB of redundancy on disk. Keep .zst as the canonical artifact.
         zst = vm.snapshot_bin.with_suffix(".bin.zst")
@@ -874,3 +884,17 @@ def _pid_alive(pid: int) -> bool:
         return False
     except PermissionError:
         return True
+
+
+def _read_proc_jiffies(pid: int) -> int:
+    """Return (utime+stime) for `pid` in jiffies, or 0 if unreadable."""
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text()
+    except (FileNotFoundError, PermissionError):
+        return 0
+    end = stat.rfind(")")
+    parts = stat[end + 2:].split()
+    try:
+        return int(parts[11]) + int(parts[12])
+    except (IndexError, ValueError):
+        return 0

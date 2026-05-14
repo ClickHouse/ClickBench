@@ -27,7 +27,7 @@ from pathlib import Path
 
 from .config import Config
 from .logging_sink import LoggingSink
-from .vm_manager import VM, VMManager
+from .vm_manager import VM, VMManager, _read_proc_jiffies
 
 log = logging.getLogger("monitor")
 
@@ -128,6 +128,24 @@ class Monitor:
                 return
         else:
             vm.cpu_busy_since = None
+
+        # Cumulative CPU-cap watchdog. Only checked once we've passed
+        # the post-provision boundary (vm.state == "ready"); the
+        # cpu_baseline_jiffies was captured at that transition, so the
+        # delta below isolates query-serving CPU from boot/restore.
+        if vm.state == "ready" and vm.pid is not None and vm.cpu_baseline_jiffies:
+            jiffies = _read_proc_jiffies(vm.pid)
+            if jiffies > 0:
+                clk = os.sysconf("SC_CLK_TCK") or 100
+                delta_s = (jiffies - vm.cpu_baseline_jiffies) / clk
+                if delta_s >= self.cfg.vm_cpu_total_seconds_cap:
+                    self.sink.write_event(
+                        system=vm.system.name, kind="cpu-cap",
+                        detail=f"cumulative CPU {delta_s:.0f}s >= "
+                               f"{self.cfg.vm_cpu_total_seconds_cap}s",
+                    )
+                    await self.vmm.kick(vm.system.name, "cpu-cap")
+                    return
 
         # Disk usage watchdog
         cap = self.cfg.vm_rootfs_size_gb * (1 << 30)

@@ -45,6 +45,11 @@ class Config:
     # Watchdog thresholds.
     cpu_busy_window_sec: int
     cpu_busy_threshold: float
+    # Cumulative CPU-seconds (across all vCPUs) a VM may burn between
+    # restore and now. Anything past this is presumably a runaway and
+    # the watchdog kicks the VM. Counts only "ready" state — provision
+    # is allowed to use as much CPU as it wants.
+    vm_cpu_total_seconds_cap: int
     host_min_free_ram_gb: int
     host_min_free_disk_gb: int
     # Per-system disk full check.
@@ -92,6 +97,7 @@ def load() -> Config:
         max_warm_vms=_env_int("PLAYGROUND_MAX_VMS", 16),
         cpu_busy_window_sec=_env_int("VM_CPU_BUSY_WINDOW_SEC", 120),
         cpu_busy_threshold=float(os.environ.get("VM_CPU_BUSY_THRESHOLD", "0.97")),
+        vm_cpu_total_seconds_cap=_env_int("VM_CPU_TOTAL_SECONDS_CAP", 3600),
         host_min_free_ram_gb=_env_int("HOST_MIN_FREE_RAM_GB", 32),
         host_min_free_disk_gb=_env_int("HOST_MIN_FREE_DISK_GB", 500),
         vm_disk_pct_kill_threshold=float(os.environ.get("VM_DISK_FULL_PCT", "0.97")),
