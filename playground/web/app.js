@@ -491,6 +491,15 @@ async function runAll() {
     const useExampleIndex = !isNaN(idx);
     const customQuery = queryEl.value;
     if (!useExampleIndex && !customQuery.trim()) return;
+    // Track which mode the competition was launched in. pickFromRunAll
+    // uses this to decide whether to update pristineQuery on rail
+    // clicks: in example-mode, each row click should re-baseline
+    // pristineQuery to the new system's example translation so it
+    // tracks the visible textarea cleanly; in custom-mode the
+    // original pristineQuery is intentionally stale (different from
+    // the textarea) so the user's edit isn't treated as pristine and
+    // clobbered by loadExamples.
+    runAllExampleMode = useExampleIndex;
     runAllBtn.disabled = true;
     runAllSection.style.display = "";
     uiSplit.classList.add("split");
@@ -640,6 +649,7 @@ async function runAll() {
 
 let runAllStatus = {};
 let runAllSelected = null;
+let runAllExampleMode = false;
 
 function pickFromRunAll(name) {
     const entry = runAllStatus[name];
@@ -648,13 +658,17 @@ function pickFromRunAll(name) {
     // Switch the system list highlight + state panel to this system.
     if (stateByName[name]) select(name);
     // Rewrite the query textarea + result pane to this system's run.
-    // Do NOT update pristineQuery: loadExamples already set it to the
-    // new system's example inside select(), and overwriting it with
-    // entry.query causes the next rail click's loadExamples to think
-    // the textarea is pristine and clobber the user's edited query
-    // with that system's example.
+    // pristineQuery handling depends on which mode the competition is
+    // in. In example-mode, entry.query IS the new system's example
+    // translation, so re-baseline pristineQuery so subsequent rail
+    // clicks see the textarea as pristine and let loadExamples swap
+    // in the next system's translation cleanly. In custom-mode,
+    // entry.query is the user's edited string; leaving pristineQuery
+    // alone keeps loadExamples from thinking the edit is pristine
+    // and replacing it with that system's example.
     if (entry.query) {
         queryEl.value = entry.query;
+        if (runAllExampleMode) pristineQuery = entry.query;
     }
     if (entry.payload) {
         resultsByName[name] = entry.payload;
