@@ -664,15 +664,24 @@ class VMManager:
 
     async def _snapshot_disks(self, vm: VM) -> None:
         rootfs, sysdisk, rootfs_gold, sysdisk_gold = self._golden_paths(vm)
-        # Reflink-clone the working images into the golden slot. We can't
-        # rename: the working file stays bound to Firecracker's open
-        # virtio-blk fd through the post-snapshot resume + shutdown, and
-        # any writes during that window would leak into the golden (we
-        # observed restored systems hitting ext4 EBADMSG on small files
-        # like duckdb's hits.db.wal and a venv activate script). With
-        # reflink the snapshot is near-instant; the working file's
-        # post-snapshot writes diverge into its own extents and don't
-        # touch the golden.
+        # Two-phase save:
+        #   1. Reflink-clone the working images into the golden slot.
+        #      The working file stays bound to Firecracker's open
+        #      virtio-blk fd through the post-snapshot resume + shutdown,
+        #      and any writes during that window would leak into the
+        #      golden (observed restored systems hitting ext4 EBADMSG
+        #      on small files like duckdb's hits.db.wal and a venv
+        #      activate script). With reflink the snapshot is
+        #      near-instant; the working file's post-snapshot writes
+        #      diverge into its own extents and don't touch the golden.
+        #   2. zstd-compress the reflinked golden in place, deleting
+        #      the uncompressed copy. The reflink savings are gone
+        #      (compressed bytes don't share extents with the original)
+        #      but disk usage drops ~30-60% per system, which is the
+        #      whole point — 100 snapshotted systems × 70-100 GB
+        #      goldens fills a 7 TB host. The cost is paid back at
+        #      restore time, where we decompress to a fresh working
+        #      file (no reflink possible from .zst).
         async def _clone(src: Path, dst: Path) -> None:
             if dst.exists():
                 dst.unlink()
@@ -685,6 +694,33 @@ class VMManager:
                 raise RuntimeError(
                     f"reflink snapshot cp {src} -> {dst} failed: "
                     f"{err.decode(errors='replace')[-400:]}")
+
+        async def _compress(gold: Path) -> None:
+            # Compress fast (-1) on all cores (-T0). --sparse=auto on
+            # the decompress side will restore zero holes from the
+            # frame metadata. Two-step: create .zst, verify, *then*
+            # unlink the original. We deliberately don't pass --rm
+            # because an interrupted zstd with --rm could lose the
+            # only copy of the golden.
+            zst = gold.with_suffix(gold.suffix + ".zst")
+            with contextlib.suppress(FileNotFoundError):
+                zst.unlink()
+            proc = await asyncio.create_subprocess_exec(
+                "zstd", "-1", "-T0", "--sparse",
+                "--quiet", "-o", str(zst), str(gold),
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, err = await proc.communicate()
+            if proc.returncode != 0:
+                with contextlib.suppress(FileNotFoundError):
+                    zst.unlink()
+                raise RuntimeError(
+                    f"zstd compress {gold} failed: "
+                    f"{err.decode(errors='replace')[-400:]}")
+            # Compression succeeded; the uncompressed reflink is now
+            # redundant.
+            gold.unlink()
+
         clones = [
             _clone(rootfs, rootfs_gold),
             _clone(sysdisk, sysdisk_gold),
@@ -693,47 +729,83 @@ class VMManager:
         if swap_pair is not None and swap_pair[0].exists():
             clones.append(_clone(swap_pair[0], swap_pair[1]))
         await asyncio.gather(*clones)
-        sizes = [_fmt_size(rootfs_gold.stat().st_size),
-                 _fmt_size(sysdisk_gold.stat().st_size)]
+
+        # Compress all goldens in parallel — they're independent files.
+        compresses = [_compress(rootfs_gold), _compress(sysdisk_gold)]
         if swap_pair is not None and swap_pair[1].exists():
-            sizes.append(_fmt_size(swap_pair[1].stat().st_size))
-        log.info("[%s] golden disks saved (%s)", vm.system.name,
+            compresses.append(_compress(swap_pair[1]))
+        await asyncio.gather(*compresses)
+
+        sizes = [
+            _fmt_size(rootfs_gold.with_suffix(".ext4.zst").stat().st_size),
+            _fmt_size(sysdisk_gold.with_suffix(".ext4.zst").stat().st_size),
+        ]
+        if swap_pair is not None:
+            swap_zst = swap_pair[1].with_suffix(".raw.zst")
+            if swap_zst.exists():
+                sizes.append(_fmt_size(swap_zst.stat().st_size))
+        log.info("[%s] golden disks saved + zstd (%s)", vm.system.name,
                  ", ".join(sizes))
 
     async def _restore_disks(self, vm: VM) -> None:
         rootfs, sysdisk, rootfs_gold, sysdisk_gold = self._golden_paths(vm)
-        if not rootfs_gold.exists() or not sysdisk_gold.exists():
+        # Either form is acceptable; each pair has at most one of the
+        # two present. The .zst path is the post-compression world
+        # (see _snapshot_disks). The plain .ext4 path is the legacy
+        # uncompressed form — kept for backwards compatibility with
+        # older snapshots taken before the zstd hook landed.
+        def _pair(gold: Path) -> Path:
+            zst = gold.with_suffix(gold.suffix + ".zst")
+            if zst.exists():
+                return zst
+            if gold.exists():
+                return gold
             raise RuntimeError(
-                f"[{vm.system.name}] missing golden disks; cannot restore")
-        # Reflink-clone the goldens into fresh working copies. The host
-        # filesystem must be ext4 with the `reflink` feature enabled (or
-        # XFS / btrfs / any other CoW-capable fs) — see
-        # playground/scripts/install-firecracker.sh. Clones are O(1)
-        # extent-list copies; the real cost is paid lazily on first
-        # write to a shared block. With reflink, a restore goes from
-        # 5-30 s (full sparse-cp) to a few ms.
-        # Both clones can run concurrently; they touch disjoint files.
-        async def _clone(src: Path, dst: Path) -> None:
+                f"[{vm.system.name}] missing golden {gold.name}{{,.zst}}; "
+                "cannot restore")
+
+        rootfs_src = _pair(rootfs_gold)
+        sysdisk_src = _pair(sysdisk_gold)
+
+        async def _materialize(src: Path, dst: Path) -> None:
+            """Reflink-clone an uncompressed golden (cheap, O(1)) or
+            zstd-decompress a compressed one (paid only at restore
+            time). Working file is created sparsely either way."""
             if dst.exists():
                 dst.unlink()
-            proc = await asyncio.create_subprocess_exec(
-                "cp", "--reflink=always", str(src), str(dst),
-                stderr=asyncio.subprocess.PIPE,
-            )
+            if src.suffix == ".zst":
+                # zstd -d --sparse=always re-creates zero holes that
+                # the source ext4/swap.raw image had.
+                proc = await asyncio.create_subprocess_exec(
+                    "zstd", "-d", "-T0", "--sparse",
+                    "--quiet", "-o", str(dst), str(src),
+                    stderr=asyncio.subprocess.PIPE,
+                )
+            else:
+                proc = await asyncio.create_subprocess_exec(
+                    "cp", "--reflink=always", str(src), str(dst),
+                    stderr=asyncio.subprocess.PIPE,
+                )
             _, err = await proc.communicate()
             if proc.returncode != 0:
                 raise RuntimeError(
-                    f"reflink cp {src} -> {dst} failed: "
+                    f"restore materialize {src} -> {dst} failed: "
                     f"{err.decode(errors='replace')[-400:]}")
-        clones = [
-            _clone(rootfs_gold, rootfs),
-            _clone(sysdisk_gold, sysdisk),
+
+        jobs = [
+            _materialize(rootfs_src, rootfs),
+            _materialize(sysdisk_src, sysdisk),
         ]
         swap_pair = self._swap_paths(vm)
-        if swap_pair is not None and swap_pair[1].exists():
-            clones.append(_clone(swap_pair[1], swap_pair[0]))
-        await asyncio.gather(*clones)
-        log.info("[%s] working disks reflink-cloned from golden",
+        if swap_pair is not None:
+            swap_gold = swap_pair[1]
+            swap_zst = swap_gold.with_suffix(swap_gold.suffix + ".zst")
+            if swap_zst.exists():
+                jobs.append(_materialize(swap_zst, swap_pair[0]))
+            elif swap_gold.exists():
+                jobs.append(_materialize(swap_gold, swap_pair[0]))
+        await asyncio.gather(*jobs)
+        log.info("[%s] working disks materialized from golden",
                  vm.system.name)
 
     async def _shutdown(self, vm: VM) -> None:
@@ -887,12 +959,17 @@ def _has_snapshot(vm: VM) -> bool:
     golden disks have been captured. A half-built snapshot (memory present
     but goldens missing, or vice versa) is treated as no snapshot at all
     so the next ensure_ready_for_query re-provisions cleanly.
+
+    Goldens may be either the raw ext4 file (.ext4) or the zstd-compressed
+    form (.ext4.zst) — see _snapshot_disks for the compression hook and
+    _restore_disks for the decompression path. Either is acceptable.
     """
     mem_ok = (vm.snapshot_bin.exists() or
               vm.snapshot_bin.with_suffix(".bin.zst").exists())
     sys_dir = vm.snapshot_bin.parent
-    disks_ok = ((sys_dir / "rootfs.golden.ext4").exists() and
-                (sys_dir / "system.golden.ext4").exists())
+    def gold_ok(name: str) -> bool:
+        return (sys_dir / name).exists() or (sys_dir / (name + ".zst")).exists()
+    disks_ok = gold_ok("rootfs.golden.ext4") and gold_ok("system.golden.ext4")
     return mem_ok and disks_ok
 
 
