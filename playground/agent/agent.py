@@ -686,6 +686,12 @@ def _maybe_reconcile_for_restore() -> None:
             f"{_last_seen_btime} -> {cur}; reconciling docker\n")
         _last_seen_btime = cur
         _reconcile_docker_after_restore()
+        # docker daemon restart kills containers that aren't pinned
+        # via `restart: unless-stopped`; for compose-based systems
+        # like byconity that means the worker is dead until we re-run
+        # ./start. Clear the daemon-started gate so the very next
+        # _ensure_daemon_started() call brings the stack back up.
+        _daemon_started.clear()
 
 
 def _reconcile_docker_after_restore() -> None:
