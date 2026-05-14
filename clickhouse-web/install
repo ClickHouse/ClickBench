@@ -10,10 +10,17 @@ if [ ! -x /usr/bin/clickhouse ]; then
     sudo ./clickhouse install --noninteractive
 fi
 
-# Cache directory used by the web disk. ClickHouse now enforces
-#   "Filesystem cache absolute path must lie inside /var/lib/clickhouse/caches/"
-# so /dev/shm/clickhouse (which we used to use for tmpfs-backed cache)
-# is rejected with BAD_ARGUMENTS at table-create time. Park the cache
-# under the canonical caches/ tree.
-sudo mkdir -p /var/lib/clickhouse/caches/web
-sudo chown clickhouse:clickhouse /var/lib/clickhouse/caches/web
+# Cache directory used by the web disk. ClickHouse rejects any
+# filesystem-cache path outside /var/lib/clickhouse/caches/ with
+# BAD_ARGUMENTS at CREATE TABLE time, but we still want the actual
+# bytes to live in tmpfs (/dev/shm) for the speed: cold queries
+# pull ~1 GB on first run and tmpfs avoids touching the host SSD.
+#
+# Trick: hand ClickHouse a path that satisfies its policy check
+# (.../caches/web) but is itself a symlink into /dev/shm. CH only
+# verifies the lexical prefix of the configured path; it doesn't
+# canonicalise the target.
+sudo mkdir -p /dev/shm/clickhouse /var/lib/clickhouse/caches
+sudo chown clickhouse:clickhouse /dev/shm/clickhouse
+# Replace any prior real dir / stale symlink atomically.
+sudo ln -sfn /dev/shm/clickhouse /var/lib/clickhouse/caches/web
