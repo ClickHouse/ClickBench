@@ -15,4 +15,4 @@ sudo docker run -d --name trino \
     -v "$PWD/etc/core-site.xml:/etc/trino/core-site.xml:ro" \
     -v "$PWD/data/meta:/data/meta" \
     -v "$PWD/shim/S3AnonymousProvider.jar:/usr/lib/trino/plugin/hive/hdfs/S3AnonymousProvider.jar:ro" \
-    trinodb/trino:latest
+    trinodb/trino:455

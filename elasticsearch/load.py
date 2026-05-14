@@ -47,8 +47,12 @@ def main():
     with requests.Session() as session:
         session.headers.update({"Content-Type": "application/x-ndjson"})
 
-        # Read compressed NDJSON directly from hits.json.gz, decompressing on the fly
-        with gzip.open("hits.json.gz", mode="rt", encoding="utf-8") as f:
+        # Read compressed NDJSON directly from hits.json.gz, decompressing
+        # on the fly. Open in binary mode: bulk_stream interleaves
+        # ACTION_META_BYTES (bytes) with each doc, and requests refuses to
+        # `sock.sendall()` a generator that mixes str and bytes
+        # (`TypeError: a bytes-like object is required, not 'str'`).
+        with gzip.open("hits.json.gz", mode="rb") as f:
             print("Reading from hits.json.gz")
             while True:
                 docs = list(islice(f, BULK_SIZE))

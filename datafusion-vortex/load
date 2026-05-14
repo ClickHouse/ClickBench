@@ -1,17 +1,12 @@
 #!/bin/bash
 set -e
 
-# clickbench fetches Parquet and converts to .vortex on first invocation.
-# Run query 0 once with the bundled queries.sql to trigger conversion;
-# the wrapping driver will time the load via wall clock around this script.
-export PATH="$PWD/vortex/target/release:$PATH"
-
-clickbench -i 1 \
-    --targets datafusion:vortex \
-    --display-format gh-json \
-    --queries-file ./queries.sql \
-    --flavor single \
-    --hide-progress-bar \
-    -q 0 >/dev/null
+# The ./query path uses datafusion-cli reading hits.parquet directly,
+# so make sure that file is in CWD. (The shared bench_download already
+# stages it; we don't need vortex's clickbench warmup for playground
+# query output.)
+if [ ! -e hits.parquet ]; then
+    ../lib/download-hits-parquet-single .
+fi
 
 sync

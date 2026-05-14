@@ -5,4 +5,4 @@
 set -e
 
 query=$(cat)
-./clickhouse local --time --query="$(cat create.sql); ${query}"
+./clickhouse local --time --format=Pretty --query="$(cat create.sql); ${query}"

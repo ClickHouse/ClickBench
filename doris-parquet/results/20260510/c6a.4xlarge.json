@@ -1,5 +1,5 @@
 {
-    "system": "Apache Doris (Parquet, partitioned)",
+    "system": "Doris (Parquet, partitioned)",
     "date": "2026-05-10",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,

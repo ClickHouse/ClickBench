@@ -1,12 +1,45 @@
 #!/bin/bash
 set -e
 
-PINOT_VERSION=1.3.0
+PINOT_VERSION=1.5.0
 PINOT_DIR="apache-pinot-$PINOT_VERSION-bin"
 
+# Wait for the controller's REST API to be live. `start` only waits for
+# the broker; the controller can lag, and AddTable below talks to the
+# controller, not the broker.
+for _ in $(seq 1 120); do
+    if curl -sf -o /dev/null http://localhost:9000/health 2>/dev/null; then
+        break
+    fi
+    sleep 1
+done
+
+# Wait for at least one broker AND server to register with the
+# DefaultTenant tag. QuickStart launches the components asynchronously
+# and AddTable below rejects the config with
+#   "Failed to find instances with tag: DefaultTenant_BROKER ..."
+# if the broker hasn't checked in yet.
+for _ in $(seq 1 60); do
+    brokers=$(curl -sf http://localhost:9000/brokers 2>/dev/null \
+        | python3 -c 'import json,sys;d=json.load(sys.stdin);print(sum(len(v) for v in d.values()))' \
+        2>/dev/null || echo 0)
+    servers=$(curl -sf http://localhost:9000/instances 2>/dev/null \
+        | python3 -c 'import json,sys;d=json.load(sys.stdin);print(sum(1 for x in d.get("instances",[]) if x.startswith("Server_")))' \
+        2>/dev/null || echo 0)
+    if [ "$brokers" -ge 1 ] && [ "$servers" -ge 1 ]; then
+        break
+    fi
+    sleep 1
+done
+
+# Register the schema and table. Previously trailed `|| true`, which
+# masked genuine failures (controller not up, bad JSON, etc.) and let
+# LaunchDataIngestionJob run against a missing table — the symptom
+# was a misleading "Failed to fetch hits/schema" deep in the ingestion
+# job. Fail loudly here.
 "./${PINOT_DIR}/bin/pinot-admin.sh" AddTable \
     -tableConfigFile offline_table.json \
-    -schemaFile schema.json -exec || true
+    -schemaFile schema.json -exec
 
 # Pinot was unable to load data as a single file without errors. Split.
 split -d --additional-suffix .tsv -n l/100 hits.tsv parts

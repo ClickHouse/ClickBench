@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-TIDB_MODE=${TIDB_MODE:-tiflash}
+TIDB_MODE=${TIDB_MODE:-tikv}
 TIDBVERSION=${TIDBVERSION:-8.5.1}
 
 TIUP_HOME=$(pwd)
@@ -22,7 +22,8 @@ else
     NUM_TIFLASH_INSTANCES=1
 fi
 
-nohup tiup playground "$TIDBVERSION" --db 1 --pd 1 --kv 1 \
+nohup tiup playground "$TIDBVERSION" --tag clickbench \
+    --db 1 --pd 1 --kv 1 \
     --tiflash $NUM_TIFLASH_INSTANCES \
     --db.config "$DB_CONFIG_FILE" \
     --without-monitor > tiup-cluster.out 2>&1 &
@@ -46,11 +47,33 @@ mysql --host 127.0.0.1 --port 4000 -u root \
 # tiflash store shows up. 5 minutes is enough for a fresh tiup playground
 # in practice.
 if [[ "$TIDB_MODE" != "tikv" ]]; then
-    for _ in $(seq 1 60); do
+    # Two phases:
+    # 1) at least one tiflash row in information_schema.cluster_info
+    # 2) ALTER TABLE ... SET TIFLASH REPLICA 1 actually succeeds —
+    #    cluster_info can report tiflash before the placement driver
+    #    accepts replica DDL, and ./load fails with
+    #      "the tiflash replica count: 1 should be less than
+    #       the total tiflash server count: 0"
+    # Probe with a throwaway table so we don't pollute the real schema.
+    for _ in $(seq 1 120); do
         cnt=$(mysql --host 127.0.0.1 --port 4000 -u root -B -N -e \
             "SELECT COUNT(*) FROM information_schema.cluster_info WHERE type = 'tiflash';" \
             2>/dev/null || echo 0)
         [ "$cnt" -ge 1 ] && break
+        sleep 5
+    done
+    mysql --host 127.0.0.1 --port 4000 -u root \
+        -e "DROP TABLE IF EXISTS test._tiflash_probe;
+            CREATE TABLE test._tiflash_probe (x INT);" \
+        >/dev/null 2>&1 || true
+    for _ in $(seq 1 60); do
+        if mysql --host 127.0.0.1 --port 4000 -u root \
+                -e "ALTER TABLE test._tiflash_probe SET TIFLASH REPLICA 1;" \
+                2>/dev/null; then
+            mysql --host 127.0.0.1 --port 4000 -u root \
+                -e "DROP TABLE test._tiflash_probe;" >/dev/null 2>&1 || true
+            break
+        fi
         sleep 5
     done
 fi

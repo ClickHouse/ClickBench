@@ -10,7 +10,7 @@ query=$(cat)
 
 start=$(date +%s.%N)
 sudo docker exec -i trino trino --catalog hive --schema clickbench \
-    --output-format=NULL --execute "$query"
+    --output-format=ALIGNED --execute "$query"
 end=$(date +%s.%N)
 
 awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2

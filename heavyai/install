@@ -23,6 +23,17 @@ if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
 fi
 
 mkdir -p heavyai-storage
+# OmniSciDB v5.10 tightened CSV ingestion: paths passed to COPY FROM
+# must match the `allowed-import-paths` allowlist or the server
+# refuses the load with
+#   File or directory path "/tmp/hits.csv" is not whitelisted.
+# The default in this image is empty. The load script stages the
+# dataset at /tmp/hits.csv inside the container, so allow /tmp via
+# the config file the startomnisci wrapper reads on launch.
+cat > heavyai-storage/omnisci.conf <<'EOF'
+allowed-import-paths = ["/tmp/"]
+EOF
+
 sudo docker run -d \
     --name "$CONTAINER_NAME" \
     -p 6274:6274 \

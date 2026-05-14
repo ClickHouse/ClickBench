@@ -9,4 +9,4 @@ set -e
 
 query=$(cat)
 clickhouse-client --query "SYSTEM DROP FILESYSTEM CACHE" >/dev/null
-clickhouse-client --time --query="$query"
+clickhouse-client --time --format=Pretty --query="$query"

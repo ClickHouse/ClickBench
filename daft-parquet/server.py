@@ -74,9 +74,9 @@ async def query(request: Request):
     if not sql:
         raise HTTPException(status_code=400, detail="empty query")
     start = timeit.default_timer()
-    daft.sql(sql).collect()
+    result = daft.sql(sql).collect()
     elapsed = round(timeit.default_timer() - start, 3)
-    return {"elapsed": elapsed}
+    return {"elapsed": elapsed, "result": str(result)}
 
 
 @app.get("/data-size")

@@ -1,6 +1,9 @@
 #!/bin/bash
 # Install MongoDB and the mongosh shell.
 # https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-ubuntu/
+# Pinned to the 7.0 series: MongoDB 8.0+ added a hardcoded refusal to
+# start on Linux >= 6.19 ("MongoDB cannot start: Linux kernel versions
+# 6.19 and newer..."), and the playground guest kernel is 7.0.
 set -e
 
 if command -v mongod >/dev/null 2>&1 && command -v mongosh >/dev/null 2>&1; then
@@ -10,12 +13,13 @@ fi
 sudo apt-get update -y
 sudo apt-get install -y gnupg curl
 
-curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | \
-    sudo gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg --dearmor
+curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | \
+    sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
 
-# shellcheck disable=SC1091
-source /etc/lsb-release
-echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu ${DISTRIB_CODENAME}/mongodb-org/8.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-8.0.list
+# MongoDB doesn't publish a 7.0 repository for noble (only 8.0+).
+# Pin to the jammy repo — the 7.0 packages there depend on libssl3
+# which noble also provides, so the install works.
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
 
 sudo apt-get update -y
 sudo apt-get install -y mongodb-org

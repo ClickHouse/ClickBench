@@ -57,9 +57,11 @@ async def query(request: Request):
     if not sql:
         raise HTTPException(status_code=400, detail="empty query")
     start = timeit.default_timer()
-    conn.query(sql, "Null")
+    # Pretty so the playground UI shows the actual result table, not
+    # just the timing.
+    res = conn.query(sql, "Pretty")
     elapsed = round(timeit.default_timer() - start, 3)
-    return {"elapsed": elapsed}
+    return {"elapsed": elapsed, "result": str(res)}
 
 
 @app.get("/data-size")

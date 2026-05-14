@@ -22,9 +22,45 @@ trap 'rm -rf "$tmpdir"' EXIT
 # Ensure the script ends with `;` followed by a newline.
 printf '%s\n' "${query%;};" > "$tmpdir/q.sql"
 
+# Drill's Arrow/Netty RootAllocator hits ExceptionInInitializerError
+# on JDK 17+ unless java.base/java.nio + neighbours are opened to
+# ALL-UNNAMED. drill-embedded launches sqlline, which reads JAVA_OPTS
+# (not DRILL_JAVA_OPTS — that one is only consumed by drillbit.sh).
+# Pass via both so the right one wins regardless of which entry path
+# the image's launcher uses.
+DRILL_OPENS=(
+    --add-opens=java.base/java.nio=ALL-UNNAMED
+    --add-opens=java.base/java.lang=ALL-UNNAMED
+    --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+    --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+    --add-opens=java.base/java.util=ALL-UNNAMED
+    --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+    --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
+    -Dio.netty.tryReflectionSetAccessible=true
+    -Darrow.memory.debug.allocator=false
+    -Dorg.apache.drill.exec.memory.debug.allocator=false
+    # apache/drill image bundles a JVM whose CgroupV2Subsystem
+    # NPEs on the host's cgroup-v2 layout (the playground VM
+    # mounts only `cgroup2` with no controllers visible to the
+    # container). The NPE in jdk.internal.platform.cgroupv2
+    # kills RootAllocator init and every query returns
+    # 'No current connection / Could not initialize class
+    #  org.apache.drill.exec.memory.RootAllocator'.
+    # Turning off the JVM's container-aware sysinfo path skips
+    # the offending code entirely.
+    -XX:-UseContainerSupport
+)
+OPENS="${DRILL_OPENS[*]}"
+
 out=$(sudo docker run --rm \
     -v "$(pwd)/hits.parquet:/hits.parquet:ro" \
     -v "$tmpdir/q.sql:/q.sql:ro" \
+    -e DRILL_JAVA_OPTS="$OPENS" \
+    -e DRILL_SHELL_JAVA_OPTS="$OPENS" \
+    -e JAVA_OPTS="$OPENS" \
+    -e _JAVA_OPTIONS="$OPENS" \
     --entrypoint /bin/sh apache/drill \
     -c '$DRILL_HOME/bin/drill-embedded --run=/q.sql' 2>&1) && status=0 || status=$?
 
@@ -38,18 +74,23 @@ if [ "$status" -ne 0 ] || printf '%s\n' "$out" | \
     exit 1
 fi
 
-# sqlline echoes "1/1     SELECT ..." (the script prelude) and
-# "(N rows in X.YYY seconds)" alongside the result rows; strip both
-# for the result body, then pull the last "(... seconds)" for the timing.
+# sqlline echoes "1/1     SELECT ..." (the script prelude) plus a
+# footer summarizing the result rows. Older sqlline printed
+#   (N rows in X.YYY seconds)
+# but the current apache/drill image prints
+#   N row(s) selected (X.YYY seconds)
+# Strip either footer from the result body and pull the last
+# "(X.YYY seconds)" for the timing.
 printf '%s\n' "$out" \
-    | grep -vE '^[0-9]+/[0-9]+ |\([0-9]+ rows? in [0-9.]+ seconds?\)|^Apache Drill|^"' \
+    | grep -vE '^[0-9]+/[0-9]+ |^[0-9]+ rows? selected \([0-9.]+ seconds?\)|\([0-9]+ rows? in [0-9.]+ seconds?\)|^Apache Drill|^"' \
     || true
 
-secs=$(printf '%s\n' "$out" | grep -oE '\([0-9]+ rows? in [0-9.]+ seconds?\)' \
-    | grep -oE '[0-9.]+ seconds?' | grep -oE '[0-9.]+' | tail -n1)
+secs=$(printf '%s\n' "$out" \
+    | grep -oE '\([0-9.]+ seconds?\)' \
+    | grep -oE '[0-9.]+' | tail -n1)
 
 if [ -z "$secs" ]; then
-    echo "no '(N rows in X.YYY seconds)' marker in drill output" >&2
+    echo "no '(X.YYY seconds)' marker in drill output" >&2
     exit 1
 fi
 
