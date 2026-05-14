@@ -9,8 +9,14 @@ sudo monetdb release test
 
 chmod 777 ~ hits.tsv
 
-./query.expect "$(cat create.sql)"
-./query.expect "COPY INTO hits FROM '$(pwd)/hits.tsv' USING DELIMITERS '\t'"
+# Drive mclient non-interactively. The old query.expect wrapper spawned
+# mclient with no -P and waited on an interactive "password:" prompt;
+# under certain mclient builds the prompt never fires (auth comes from
+# ~/.monetdb), expect times out, and the whole load step fails.
+# Pass credentials with -P and feed SQL via stdin.
+mclient -h 127.0.0.1 -u monetdb -P monetdb -d test < create.sql
+echo "COPY INTO hits FROM '$(pwd)/hits.tsv' USING DELIMITERS '\\t';" |
+    mclient -h 127.0.0.1 -u monetdb -P monetdb -d test
 
 rm -f hits.tsv
 sync
