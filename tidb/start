@@ -22,7 +22,8 @@ else
     NUM_TIFLASH_INSTANCES=1
 fi
 
-nohup tiup playground "$TIDBVERSION" --db 1 --pd 1 --kv 1 \
+nohup tiup playground "$TIDBVERSION" --tag clickbench \
+    --db 1 --pd 1 --kv 1 \
     --tiflash $NUM_TIFLASH_INSTANCES \
     --db.config "$DB_CONFIG_FILE" \
     --without-monitor > tiup-cluster.out 2>&1 &
