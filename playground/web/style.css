@@ -78,14 +78,16 @@ button {
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 button:hover:not(:disabled) { filter: brightness(0.95); }
 
-/* "Run all" — faint secondary button next to the example selector. */
+/* "Run all" — faint secondary button, pushed to the right end of the
+   buttons row via margin-left:auto so it sits opposite the primary
+   Run/Example controls. */
 button.run-all {
     background: transparent;
     color: var(--muted);
     border-color: var(--muted);
     font-weight: normal;
     padding: 4px 10px;
-    margin-left: 8px;
+    margin-left: auto;
 }
 button.run-all:hover:not(:disabled) {
     background: var(--accent);
