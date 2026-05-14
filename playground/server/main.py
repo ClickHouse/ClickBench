@@ -102,17 +102,7 @@ class App:
         name = req.match_info["name"]
         if name not in self.systems:
             raise web.HTTPNotFound()
-        # `queries.sql` is the convention for nearly every system in
-        # the catalog, but a handful ship their workload under a more
-        # honest extension (victorialogs uses queries.logsql for its
-        # LogsQL pipeline). Try both.
         path = self.cfg.repo_dir / name / "queries.sql"
-        if not path.exists():
-            for ext in ("logsql", "py", "txt"):
-                alt = self.cfg.repo_dir / name / f"queries.{ext}"
-                if alt.exists():
-                    path = alt
-                    break
         if not path.exists():
             return web.json_response([])
         text = path.read_text(errors="replace")
