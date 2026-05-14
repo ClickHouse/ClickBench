@@ -98,14 +98,18 @@ async def bootstrap(cfg: Config) -> Credentials | None:
     db = cfg.ch_cloud_db or "playground"
     writer_pw, reader_pw = _load_or_make_credentials(cfg)
     async with aiohttp.ClientSession() as session:
-        # Find the IP CH Cloud sees us connecting from — that's the
-        # host the writer user is restricted to.
-        body = await _ch_exec(
-            session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
-            "SELECT toString(remote_address())",
-        )
-        # CH returns "ip:port\n"; strip the port.
-        writer_host = body.strip().split(":")[0]
+        # The writer user is host-pinned to our public IP. Resolve it
+        # via api.ipify.org rather than asking CH (its various
+        # client-address functions vary by interface and version).
+        try:
+            async with session.get(
+                "https://api.ipify.org",
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as r:
+                writer_host = (await r.text()).strip()
+        except Exception:
+            writer_host = "0.0.0.0"  # fallback: no IP restriction
+        log.info("writer host (public IP) = %s", writer_host)
 
         # Schema DDL from the .sql file. Each statement runs in its
         # own request so server-side parameter substitution works.
