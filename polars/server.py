@@ -64,9 +64,17 @@ async def query(request: Request):
     except SyntaxError as e:
         raise HTTPException(status_code=400, detail=f"syntax error: {e}")
     start = timeit.default_timer()
-    eval(compiled, {"hits": hits, "pl": pl, "date": date})
+    value = eval(compiled, {"hits": hits, "pl": pl, "date": date})
     elapsed = round(timeit.default_timer() - start, 3)
-    return {"elapsed": elapsed}
+    # Render the eval result so the playground UI shows something
+    # instead of just a timing line. polars DataFrames / Series /
+    # LazyFrames have a useful __str__; everything else (scalar,
+    # tuple, dict, ...) falls through repr.
+    if isinstance(value, (pl.DataFrame, pl.Series, pl.LazyFrame)):
+        result = str(value)
+    else:
+        result = repr(value)
+    return {"elapsed": elapsed, "result": result}
 
 
 @app.get("/data-size")
