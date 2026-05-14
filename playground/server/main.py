@@ -60,6 +60,11 @@ from aiohttp import web
 # restarts isn't load-bearing for this use case.
 _RATE_PER_MINUTE = 200
 _RATE_PER_HOUR = 3000
+# Above this many distinct IPs in the dict, do a full O(N) sweep on
+# the next request to drop entries whose newest timestamp is > 1h
+# old (or whose deque is empty). Bounds the dict at ~threshold *
+# 24 KB-per-entry-worst-case after a sweep.
+_RATE_GC_THRESHOLD = 4096
 _rate_lock = threading.Lock()
 _rate_hits: dict[str, collections.deque[float]] = {}
 
@@ -80,6 +85,17 @@ def _rate_check(req: web.Request) -> web.Response | None:
     hour_ago = now - 3600
     minute_ago = now - 60
     with _rate_lock:
+        # Bulk GC. Drop any IP whose newest hit fell outside the
+        # 1-hour window (or whose deque is empty for whatever
+        # reason). Without this, one-shot source IPs would
+        # accumulate forever and grow _rate_hits unboundedly. Only
+        # fires when the dict has grown past the threshold, so the
+        # cost is amortized O(1) per request.
+        if len(_rate_hits) > _RATE_GC_THRESHOLD:
+            for stale in [k for k, d in _rate_hits.items()
+                          if not d or d[-1] < hour_ago]:
+                _rate_hits.pop(stale, None)
+
         dq = _rate_hits.get(ip)
         if dq is None:
             dq = collections.deque()
@@ -108,14 +124,6 @@ def _rate_check(req: web.Request) -> web.Response | None:
                 status=429, headers={"Retry-After": str(retry)},
             )
         dq.append(now)
-        # Occasional GC: if a deque ever empties (unlikely under live
-        # load but possible for one-shot IPs), let it linger one cycle
-        # then drop. We do the drop opportunistically on insert.
-        if len(_rate_hits) > 10000:
-            # Pathological: 10k+ distinct IPs in the last hour. Evict
-            # entries whose newest hit is > 1h ago.
-            for stale_ip in [k for k, d in _rate_hits.items() if not d]:
-                _rate_hits.pop(stale_ip, None)
     return None
 
 

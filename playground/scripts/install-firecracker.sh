@@ -75,5 +75,30 @@ echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-clickbench-playground.c
 sudo sysctl -w net.ipv4.conf.all.route_localnet=1 >/dev/null
 echo "net.ipv4.conf.all.route_localnet=1" | sudo tee -a /etc/sysctl.d/99-clickbench-playground.conf >/dev/null
 
+# Local DNS resolver for the VMs. enable_filtered_internet REDIRECTs
+# the VM TAP's UDP/53 to the host's port 53. systemd-resolved binds
+# only to 127.0.0.53 / .54, so REDIRECT'd traffic (dst=10.200.x.1:53)
+# hits a closed port without a real listener. Dnsmasq fills that gap:
+# bind every non-loopback address, forward upstream, UDP only from
+# the VM side (iptables INPUT drops TCP/53 from VM addresses).
+if ! command -v dnsmasq >/dev/null 2>&1; then
+    sudo apt-get install -y dnsmasq
+fi
+sudo tee /etc/dnsmasq.d/playground.conf >/dev/null <<'CONF'
+# Managed by playground/scripts/install-firecracker.sh — do not edit.
+port=53
+bind-interfaces
+# systemd-resolved already owns 127.0.0.53/54 on loopback; leave it.
+except-interface=lo
+no-resolv
+server=1.1.1.1
+server=8.8.8.8
+no-dhcp-interface=
+log-queries=no
+cache-size=2000
+CONF
+sudo systemctl enable dnsmasq >/dev/null 2>&1 || true
+sudo systemctl restart dnsmasq
+
 echo "[install] done"
 "$STATE_DIR/bin/firecracker" --version

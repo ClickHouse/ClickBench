@@ -10,6 +10,10 @@ if [ ! -x /usr/bin/clickhouse ]; then
     sudo ./clickhouse install --noninteractive
 fi
 
-# Cache directory used by the web disk.
-sudo mkdir -p /dev/shm/clickhouse
-sudo chown clickhouse:clickhouse /dev/shm/clickhouse
+# Cache directory used by the web disk. ClickHouse now enforces
+#   "Filesystem cache absolute path must lie inside /var/lib/clickhouse/caches/"
+# so /dev/shm/clickhouse (which we used to use for tmpfs-backed cache)
+# is rejected with BAD_ARGUMENTS at table-create time. Park the cache
+# under the canonical caches/ tree.
+sudo mkdir -p /var/lib/clickhouse/caches/web
+sudo chown clickhouse:clickhouse /var/lib/clickhouse/caches/web

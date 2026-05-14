@@ -133,16 +133,27 @@ async def setup_host_firewall() -> None:
     packet to. Without these INPUT rules the proxy would be an
     open, unauthenticated S3 allowlist relay reachable from the
     public internet. Same logic for the host's UDP/53 resolver.
+
+    Per-protocol source allowlists:
+      TCP 8080 / 8443 (SNI proxy): internal CIDR + loopback.
+      UDP 53 (DNS):                internal CIDR + loopback.
+      TCP 53 (DNS):                loopback only — VMs must use UDP.
+                                   Big-payload DNS-over-TCP is a
+                                   classic exfiltration channel.
     """
-    # (proto, dport)
+    # (proto, dport, allowed_sources)
     ports = (
-        ("tcp", str(PROXY_HTTPS_PORT)),
-        ("tcp", str(PROXY_HTTP_PORT)),
-        ("tcp", "53"),
-        ("udp", "53"),
+        ("tcp", str(PROXY_HTTPS_PORT), (_INTERNAL_CIDR, "127.0.0.0/8")),
+        ("tcp", str(PROXY_HTTP_PORT),  (_INTERNAL_CIDR, "127.0.0.0/8")),
+        ("udp", "53",                  (_INTERNAL_CIDR, "127.0.0.0/8")),
+        # TCP/53 explicitly loopback-only: VMs are not allowed to use
+        # DNS-over-TCP. enable_filtered_internet's FORWARD DROP already
+        # covers the routed path; this closes the alternate path where
+        # a VM addresses the host's TAP IP directly.
+        ("tcp", "53",                  ("127.0.0.0/8",)),
     )
-    for proto, dport in ports:
-        for src in (_INTERNAL_CIDR, "127.0.0.0/8"):
+    for proto, dport, sources in ports:
+        for src in sources:
             allow = ("-p", proto, "--dport", dport, "-s", src, "-j", "ACCEPT")
             rc, _, _ = await _run("sudo", "iptables", "-C", "INPUT",
                                   *allow, check=False)
