@@ -2,11 +2,11 @@
 set -eu
 
 # Idempotent: if mserver is already serving the test DB, do nothing.
-# Pass `--password=...` inline (the bundled noble mclient build has
-# no -P short flag — passing -P dumps --help — and depending on
-# $HOME/.monetdb is fragile across environments).
+# Both user and password come from /root/.monetdb (stamped by install).
+# Don't pass -u — that disables the file's password and forces an
+# interactive prompt — so `mclient` only gets -h / -d here.
 if echo 'SELECT 1;' | \
-    mclient -h 127.0.0.1 -u monetdb --password=monetdb -d test >/dev/null 2>&1; then
+    mclient -h 127.0.0.1 -d test >/dev/null 2>&1; then
     exit 0
 fi
 
@@ -40,13 +40,13 @@ for _ in $(seq 1 120); do
         # --help when -s ARG comes after -d. Stdin avoids the
         # argument-parsing ambiguity entirely.
         if echo 'SELECT 1;' | \
-            mclient -h "$host" -u monetdb --password=monetdb -d test \
+            mclient -h "$host" -d test \
             >/dev/null 2>&1; then
             exit 0
         fi
     done
     last_err=$(echo 'SELECT 1;' | \
-        mclient -h 127.0.0.1 -u monetdb --password=monetdb -d test 2>&1 || true)
+        mclient -h 127.0.0.1 -d test 2>&1 || true)
     sleep 1
 done
 echo "monetdb start: mclient still failing after 120 s" >&2
