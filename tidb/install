@@ -2,7 +2,7 @@
 set -eu
 
 # Defaults match the original benchmark.sh; override via env if needed.
-TIDB_MODE=${TIDB_MODE:-tiflash}
+TIDB_MODE=${TIDB_MODE:-tikv}
 TIDBVERSION=${TIDBVERSION:-8.5.1}
 
 if [[ ! $TIDB_MODE =~ ^(tikv|tikv-tiflash|tiflash)$ ]]; then
