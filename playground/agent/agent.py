@@ -600,6 +600,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if not sql.strip():
                 self._send_json(400, {"error": "empty query"})
                 return
+            # If /proc/stat's btime has shifted since the last call
+            # the VM was snapshot-restored and any docker daemon needs
+            # to be reconciled before we run the query script.
+            _maybe_reconcile_for_restore()
             # First /query after a snapshot restore: start the daemon
             # (it was stopped pre-snapshot to keep snapshots small).
             # Subsequent calls are a near-instant no-op.
@@ -644,6 +648,44 @@ class Handler(http.server.BaseHTTPRequestHandler):
 class ReusableServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
     daemon_threads = True
+
+
+_last_seen_btime: int | None = None
+
+
+def _proc_btime() -> int | None:
+    """Read /proc/stat btime (the Unix timestamp of the kernel's last
+    boot). Shifts on snapshot/restore because uptime is preserved
+    while wall-clock advances, so we use it to detect restores from
+    inside the (restored) agent process."""
+    try:
+        for line in Path("/proc/stat").read_text().splitlines():
+            if line.startswith("btime "):
+                return int(line.split()[1])
+    except Exception:
+        return None
+    return None
+
+
+def _maybe_reconcile_for_restore() -> None:
+    """Called on each /query: if /proc/stat btime has shifted since
+    the last call, the VM was snapshot-restored and any docker daemon
+    needs reconciling (the kernel-side cgroup/netfilter state diverged
+    from dockerd's restored view of it). The reconcile itself is a
+    no-op when docker isn't installed."""
+    global _last_seen_btime
+    cur = _proc_btime()
+    if cur is None:
+        return
+    if _last_seen_btime is None:
+        _last_seen_btime = cur
+        return
+    if cur != _last_seen_btime:
+        sys.stderr.write(
+            f"[agent] btime shifted "
+            f"{_last_seen_btime} -> {cur}; reconciling docker\n")
+        _last_seen_btime = cur
+        _reconcile_docker_after_restore()
 
 
 def _reconcile_docker_after_restore() -> None:
@@ -783,6 +825,12 @@ def main() -> None:
           f"dir={SYSTEM_DIR} data={DATASETS_DIR}", flush=True)
     _activate_swap()
     _reconcile_docker_after_restore()
+    # Capture btime *now*, before snapshot is taken: the snapshot
+    # freezes this value into memory, and after restore the live
+    # /proc/stat btime will have shifted, so _maybe_reconcile_for_restore
+    # picks up the change on the first post-restore /query.
+    global _last_seen_btime
+    _last_seen_btime = _proc_btime()
     _kick_daemon_if_provisioned()
     with ReusableServer(addr, Handler) as srv:
         srv.serve_forever()
