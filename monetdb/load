@@ -9,14 +9,16 @@ sudo monetdb release test
 
 chmod 777 ~ hits.tsv
 
-# Drive mclient non-interactively. The old query.expect wrapper spawned
-# mclient with no -P and waited on an interactive "password:" prompt;
-# under certain mclient builds the prompt never fires (auth comes from
-# ~/.monetdb), expect times out, and the whole load step fails.
-# Pass credentials with -P and feed SQL via stdin.
-mclient -h 127.0.0.1 -u monetdb -P monetdb -d test < create.sql
+# Drive mclient non-interactively. The old query.expect wrapper waited
+# on an interactive "password:" prompt that never fires when mclient
+# picks credentials from ~/.monetdb (which the install script stamps
+# with user=monetdb / password=monetdb). Feed SQL via stdin; auth
+# comes from /root/.monetdb (HOME=root in the agent's systemd unit).
+# We don't pass -P because the bundled mclient build doesn't have
+# that flag — passing -P dumped --help and broke the load entirely.
+mclient -h 127.0.0.1 -u monetdb -d test < create.sql
 echo "COPY INTO hits FROM '$(pwd)/hits.tsv' USING DELIMITERS '\\t';" |
-    mclient -h 127.0.0.1 -u monetdb -P monetdb -d test
+    mclient -h 127.0.0.1 -u monetdb -d test
 
 rm -f hits.tsv
 sync
