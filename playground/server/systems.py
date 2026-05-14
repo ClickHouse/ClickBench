@@ -84,6 +84,10 @@ DATALAKE_FILTERED: frozenset[str] = frozenset({
     "clickhouse-datalake-partitioned",
     "duckdb-datalake",
     "duckdb-datalake-partitioned",
+    "presto-datalake",
+    "presto-datalake-partitioned",
+    "trino-datalake",
+    "trino-datalake-partitioned",
 })
 
 # DataFrame / in-process engines load the full 100M-row hits set into a
