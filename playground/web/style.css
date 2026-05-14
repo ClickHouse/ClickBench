@@ -78,6 +78,40 @@ button {
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 button:hover:not(:disabled) { filter: brightness(0.95); }
 
+/* "Run all" — faint secondary button next to the example selector. */
+button.run-all {
+    background: transparent;
+    color: var(--muted);
+    border-color: var(--muted);
+    font-weight: normal;
+    padding: 4px 10px;
+    margin-left: 8px;
+}
+button.run-all:hover:not(:disabled) {
+    background: var(--accent);
+    color: var(--accent-fg);
+    border-color: var(--border);
+    filter: none;
+}
+
+/* Competition-mode table. */
+#runall-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+}
+#runall-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #eee;
+    font-family: monospace;
+}
+#runall-table td.time { text-align: right; }
+#runall-table tr.done td.time { color: var(--good); font-weight: 600; }
+#runall-table tr.failed td.time { color: var(--bad); }
+#runall-table tr.running td.time { color: var(--muted); }
+#runall-table tr.winner td { background: var(--accent); }
+
 .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .row label { margin: 0; }
 .stats { font-family: monospace; }

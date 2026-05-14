@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ClickBench Playground &mdash; run SQL against 90+ databases</title>
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
 <header>
@@ -20,6 +20,15 @@
         <button id="run">Run query</button>
         <label for="example" class="row-label">Example</label>
         <select id="example"></select>
+        <button id="run-all" class="run-all" type="button" style="display:none"
+                title="Run this example's equivalent on every snapshotted system in parallel">Run all</button>
+    </section>
+
+    <section id="ui-runall" style="display:none">
+        <label>Competition</label>
+        <table id="runall-table">
+            <tbody></tbody>
+        </table>
     </section>
 
     <section id="ui-query">
@@ -52,6 +61,6 @@
     </section>
 </main>
 
-<script src="app.js?v=26"></script>
+<script src="app.js?v=27"></script>
 </body>
 </html>

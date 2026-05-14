@@ -187,6 +187,7 @@ async function loadExamples(name) {
             idx = prevIndex;
         }
         exampleSel.value = String(idx);
+        refreshRunAllVisibility();
         // Replace the textarea with this system's example at the same
         // index, but only if the user hasn't edited the current text
         // (i.e., it still matches whatever example we last set, or
@@ -352,7 +353,10 @@ function applyCurrentExample() {
     applyExampleIdx(parseInt(exampleSel.value, 10));
 }
 
-exampleSel.addEventListener("change", applyCurrentExample);
+exampleSel.addEventListener("change", () => {
+    applyCurrentExample();
+    refreshRunAllVisibility();
+});
 // When the user types in the textarea, mark the select as
 // "unselected" (the disabled placeholder option). That way a
 // subsequent click on whatever they had picked before counts as a
@@ -361,6 +365,7 @@ exampleSel.addEventListener("change", applyCurrentExample);
 queryEl.addEventListener("input", () => {
     if (queryEl.value !== pristineQuery) {
         exampleSel.value = "";
+        refreshRunAllVisibility();
     }
 });
 queryEl.addEventListener("keydown", (e) => {
@@ -413,3 +418,118 @@ async function maybeLoadShared() {
     await maybeLoadShared();
     pollTimer = setInterval(pollState, 2000);
 })();
+
+// ─── Competition mode ────────────────────────────────────────────────
+// "Run all" fires the SAME example index against every snapshotted
+// system in parallel, each using its OWN translation of that query
+// (pandas runs hits.count(), polars runs hits.select(pl.len())..., etc.).
+// Results are rendered in a table that re-sorts on every update:
+// completed (fastest first), then failed (alphabetical), then running
+// (alphabetical).
+const runAllBtn = $("#run-all");
+const runAllSection = $("#ui-runall");
+const runAllTable = $("#runall-table");
+
+function refreshRunAllVisibility() {
+    const v = exampleSel.value;
+    runAllBtn.style.display = (v === "" || isNaN(parseInt(v, 10))) ? "none" : "";
+}
+
+async function ensureQueriesLoaded(name) {
+    if (queriesByName[name]) return queriesByName[name];
+    try {
+        const r = await fetch(`${API}/api/queries/${encodeURIComponent(name)}`);
+        queriesByName[name] = r.ok ? await r.json() : [];
+    } catch {
+        queriesByName[name] = [];
+    }
+    return queriesByName[name];
+}
+
+async function runAll() {
+    const idx = parseInt(exampleSel.value, 10);
+    if (isNaN(idx)) return;
+    runAllBtn.disabled = true;
+    runAllSection.style.display = "";
+
+    // Collect snapshotted/ready systems with an example at this index.
+    const candidates = Object.values(stateByName)
+        .filter(s => s.state === "snapshotted" || s.state === "ready");
+    const targets = [];
+    for (const s of candidates) {
+        const qs = await ensureQueriesLoaded(s.name);
+        if (qs && idx < qs.length) targets.push({name: s.name, query: qs[idx]});
+    }
+    targets.sort((a, b) => a.name.localeCompare(b.name));
+
+    const status = {};
+    for (const t of targets) status[t.name] = {state: "running"};
+    renderRunAll(status);
+
+    await Promise.all(targets.map(async (t) => {
+        const t0 = performance.now();
+        try {
+            const r = await fetch(`${API}/api/query?system=${encodeURIComponent(t.name)}`, {
+                method: "POST",
+                body: t.query,
+                headers: {"Content-Type": "application/octet-stream"},
+            });
+            // Drain the body so the connection closes promptly; we
+            // only look at headers + status.
+            await r.arrayBuffer();
+            const h = (k) => r.headers.get(k);
+            if (r.status >= 400) {
+                status[t.name] = {state: "failed", note: h("X-Error") || `HTTP ${r.status}`};
+            } else {
+                const qt = h("X-Query-Time");
+                const wt = h("X-Wall-Time");
+                const tsec = qt != null && qt !== ""
+                    ? parseFloat(qt)
+                    : (wt != null && wt !== "" ? parseFloat(wt) : (performance.now() - t0) / 1000);
+                status[t.name] = {state: "done", time: tsec};
+            }
+        } catch (e) {
+            status[t.name] = {state: "failed", note: String(e)};
+        }
+        renderRunAll(status);
+    }));
+    runAllBtn.disabled = false;
+}
+
+function renderRunAll(status) {
+    const done = [], failed = [], running = [];
+    for (const [name, s] of Object.entries(status)) {
+        if (s.state === "done") done.push({name, ...s});
+        else if (s.state === "failed") failed.push({name, ...s});
+        else running.push({name, ...s});
+    }
+    done.sort((a, b) => a.time - b.time);
+    failed.sort((a, b) => a.name.localeCompare(b.name));
+    running.sort((a, b) => a.name.localeCompare(b.name));
+    const tbody = runAllTable.querySelector("tbody");
+    tbody.innerHTML = "";
+    const fragment = document.createDocumentFragment();
+    const all = [...done, ...failed, ...running];
+    for (let i = 0; i < all.length; i++) {
+        const row = all[i];
+        const tr = document.createElement("tr");
+        tr.className = row.state + (i === 0 && row.state === "done" ? " winner" : "");
+        const td1 = document.createElement("td");
+        td1.textContent = row.name;
+        const td2 = document.createElement("td");
+        td2.className = "time";
+        if (row.state === "done") {
+            td2.textContent = `${row.time.toFixed(3)} s`;
+        } else if (row.state === "failed") {
+            td2.textContent = "failed";
+            td2.title = row.note || "";
+        } else {
+            td2.textContent = "running";
+        }
+        tr.appendChild(td1); tr.appendChild(td2);
+        fragment.appendChild(tr);
+    }
+    tbody.appendChild(fragment);
+}
+
+runAllBtn.addEventListener("click", runAll);
