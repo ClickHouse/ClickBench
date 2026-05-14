@@ -1,25 +1,11 @@
 """Batched, async logger that writes events to ClickHouse Cloud over HTTPS.
 
-Two tables (auto-created on first connect if writeable):
-
-  playground.requests
-    ts                  DateTime64(6)
-    client_addr         String
-    user_agent          String
-    system              String
-    query               String
-    output_bytes        UInt64
-    output_truncated    UInt8
-    query_time          Nullable(Float64)   from agent X-Query-Time
-    wall_time           Float64             host-side end-to-end
-    status              UInt16              HTTP status returned to client
-    error               String
-
-  playground.events
-    ts                  DateTime64(6)
-    system              String
-    kind                String              "restart" / "oom-kick" / "boot" / ...
-    detail              String
+Schema + users are bootstrapped on server startup by
+`clickhouse_bootstrap.bootstrap()` — see clickhouse-bootstrap.sql for the
+canonical DDL of the `requests` (request log + shared queries) and
+`events` (operational events) tables and the `request_by_id`
+parameterized view. This module only writes; it uses the writer user
+issued by the bootstrap, NOT the default user.
 
 When CLICKHOUSE_CLOUD_URL is unset, both tables are mirrored to
 /opt/clickbench-playground/logs/requests.jsonl and events.jsonl so the
@@ -38,44 +24,20 @@ from typing import Any
 import aiohttp
 
 from .config import Config
+from .clickhouse_bootstrap import Credentials
 
 log = logging.getLogger("logging_sink")
 
 
-_REQUESTS_DDL = """
-CREATE TABLE IF NOT EXISTS playground.requests (
-    ts                DateTime64(6) DEFAULT now64(6),
-    client_addr       String,
-    user_agent        String,
-    system            String,
-    query             String,
-    output_bytes      UInt64,
-    output_truncated  UInt8,
-    query_time        Nullable(Float64),
-    wall_time         Float64,
-    status            UInt16,
-    error             String
-) ENGINE = MergeTree ORDER BY (system, ts)
-"""
-
-_EVENTS_DDL = """
-CREATE TABLE IF NOT EXISTS playground.events (
-    ts      DateTime64(6) DEFAULT now64(6),
-    system  String,
-    kind    String,
-    detail  String
-) ENGINE = MergeTree ORDER BY (system, ts)
-"""
-
-
 class LoggingSink:
-    def __init__(self, cfg: Config):
+    def __init__(self, cfg: Config, creds: Credentials | None):
         self.cfg = cfg
+        self._creds = creds
         self._queue: asyncio.Queue[tuple[str, dict]] = asyncio.Queue(maxsize=10000)
         self._task: asyncio.Task | None = None
         self._session: aiohttp.ClientSession | None = None
         self._local_files: dict[str, Path] = {}
-        self._enabled = bool(cfg.ch_cloud_url and cfg.ch_cloud_user and cfg.ch_cloud_password)
+        self._enabled = creds is not None
 
     async def start(self) -> None:
         self.cfg.logs_dir.mkdir(parents=True, exist_ok=True)
@@ -84,12 +46,7 @@ class LoggingSink:
             "events":   self.cfg.logs_dir / "events.jsonl",
         }
         if self._enabled:
-            try:
-                self._session = aiohttp.ClientSession()
-                await self._run_ddl()
-            except Exception as e:
-                log.warning("ClickHouse Cloud DDL failed (%r); falling back to JSONL only", e)
-                self._enabled = False
+            self._session = aiohttp.ClientSession()
         self._task = asyncio.create_task(self._flusher(), name="logging-sink")
 
     async def stop(self) -> None:
@@ -119,17 +76,13 @@ class LoggingSink:
             except Exception:
                 pass
 
-    async def _run_ddl(self) -> None:
-        await self._exec_ch(f"CREATE DATABASE IF NOT EXISTS {self.cfg.ch_cloud_db}")
-        await self._exec_ch(_REQUESTS_DDL.replace("playground.", f"{self.cfg.ch_cloud_db}."))
-        await self._exec_ch(_EVENTS_DDL.replace("playground.", f"{self.cfg.ch_cloud_db}."))
-
     async def _exec_ch(self, sql: str) -> None:
-        assert self._session is not None
+        assert self._session is not None and self._creds is not None
         async with self._session.post(
-            self.cfg.ch_cloud_url,
+            self._creds.url,
             data=sql,
-            auth=aiohttp.BasicAuth(self.cfg.ch_cloud_user, self.cfg.ch_cloud_password),
+            auth=aiohttp.BasicAuth(self._creds.writer_user,
+                                   self._creds.writer_password),
             timeout=aiohttp.ClientTimeout(total=30),
         ) as r:
             if r.status >= 300:
@@ -137,10 +90,10 @@ class LoggingSink:
                 raise RuntimeError(f"CH error {r.status}: {txt[:500]}")
 
     async def _insert_ch(self, table: str, rows: list[dict]) -> None:
-        if not rows:
+        if not rows or self._creds is None:
             return
         body = "\n".join(json.dumps(r, default=str) for r in rows)
-        sql = f"INSERT INTO {self.cfg.ch_cloud_db}.{table} FORMAT JSONEachRow\n{body}"
+        sql = f"INSERT INTO {self._creds.db}.{table} FORMAT JSONEachRow\n{body}"
         await self._exec_ch(sql)
 
     async def _flusher(self) -> None:

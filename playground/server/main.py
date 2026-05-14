@@ -20,10 +20,25 @@ snapshot and retries exactly once, matching the spec.
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
 import logging
 import signal
 import time
+
+
+def _id_to_b64url(n: int) -> str:
+    """64-bit unsigned int -> 11-char URL-safe base64 (no padding).
+    Symmetric counterpart to _b64url_to_id. The same number can travel
+    as a UInt64 inside ClickHouse and as a tidy URL handle."""
+    return base64.urlsafe_b64encode(
+        n.to_bytes(8, "big"),
+    ).rstrip(b"=").decode("ascii")
+
+
+def _b64url_to_id(s: str) -> int:
+    pad = "=" * (-len(s) % 4)
+    return int.from_bytes(base64.urlsafe_b64decode(s + pad), "big")
 from pathlib import Path
 
 import aiohttp
@@ -44,10 +59,24 @@ class App:
         self.cfg = config_mod.load()
         self.systems = systems_mod.discover(self.cfg.repo_dir)
         self.vmm = VMManager(self.cfg, self.systems)
-        self.sink = LoggingSink(self.cfg)
+        # CH credentials are populated by on_startup after the
+        # bootstrap runs. None means CH integration is disabled and
+        # the sink falls back to JSONL.
+        self.ch_creds = None
+        self.sink = LoggingSink(self.cfg, None)
         self.monitor = Monitor(self.cfg, self.vmm, self.sink)
 
     async def on_startup(self, _app: web.Application) -> None:
+        from . import clickhouse_bootstrap
+        try:
+            self.ch_creds = await clickhouse_bootstrap.bootstrap(self.cfg)
+        except Exception as e:
+            log.warning("ClickHouse bootstrap failed (%r); CH integration disabled", e)
+            self.ch_creds = None
+        # Replace the placeholder sink with one wired to the bootstrap's
+        # writer credentials.
+        self.sink = LoggingSink(self.cfg, self.ch_creds)
+        self.monitor.sink = self.sink
         await self.sink.start()
         await self.monitor.start()
         # SNI-allowlist proxy that mediates outbound HTTP/HTTPS for
@@ -193,6 +222,12 @@ class App:
         body = b""
         headers: dict[str, str] = {}
         err: str | None = None
+        # Random 64-bit handle returned to the client as a base64url
+        # string (X-Query-Id) AND persisted to the requests table.
+        # The same id is the key the browser uses to permalink the
+        # result via /api/saved/<id>.
+        import secrets
+        query_id = secrets.randbits(64)
         try:
             body, headers, status = await self._dispatch_query(system_name, sql)
         except Exception as e:
@@ -202,16 +237,18 @@ class App:
             wall = time.monotonic() - wall_t0
             try:
                 self.sink.write_request(
+                    id=query_id,
                     client_addr=client_addr, user_agent=ua,
                     system=system_name,
                     query=sql.decode("utf-8", errors="replace")[:65536],
+                    output=body.decode("utf-8", errors="replace")[:1 << 20],
                     output_bytes=int(headers.get("X-Output-Bytes", "0") or 0),
                     output_truncated=int(headers.get("X-Output-Truncated", "0") or 0),
                     query_time=(float(headers["X-Query-Time"])
                                 if "X-Query-Time" in headers else None),
                     wall_time=wall,
                     status=status,
-                    error=err or "",
+                    error=err or headers.get("X-Error", ""),
                 )
             except Exception:
                 log.exception("logging request failed")
@@ -221,9 +258,42 @@ class App:
         for k, v in headers.items():
             resp.headers[k] = v
         resp.headers["X-Wall-Time"] = f"{wall:.6f}"
+        resp.headers["X-Query-Id"] = _id_to_b64url(query_id)
         if err and "X-Error" not in resp.headers:
             resp.headers["X-Error"] = err[:512]
         return resp
+
+    async def handle_saved(self, req: web.Request) -> web.Response:
+        """Look up a previously-saved query+result by its base64url id.
+        Returns a JSON object with output, error, timing — the browser
+        replays it as if the query just ran.
+        """
+        if self.ch_creds is None:
+            raise web.HTTPServiceUnavailable(reason="shared queries disabled (no CH)")
+        b64 = req.match_info["b64"]
+        try:
+            qid = _b64url_to_id(b64)
+        except Exception:
+            raise web.HTTPBadRequest(reason="malformed id")
+        # Read through the parameterized view as the reader user. The
+        # view has SQL SECURITY DEFINER so the reader doesn't need a
+        # direct grant on the requests table.
+        sql = (f"SELECT * FROM {self.ch_creds.db}.request_by_id(q_id={qid}) "
+               f"FORMAT JSONEachRow")
+        async with aiohttp.ClientSession() as s:
+            async with s.post(
+                self.ch_creds.url, data=sql,
+                auth=aiohttp.BasicAuth(self.ch_creds.reader_user,
+                                       self.ch_creds.reader_password),
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as r:
+                text = await r.text()
+                if r.status >= 300:
+                    raise web.HTTPBadGateway(reason=f"ch {r.status}: {text[:300]}")
+        text = text.strip()
+        if not text:
+            raise web.HTTPNotFound(reason="no saved query with that id")
+        return web.Response(text=text, content_type="application/json")
 
     async def _dispatch_query(self, system_name: str, sql: bytes
                               ) -> tuple[bytes, dict[str, str], int]:
@@ -293,6 +363,7 @@ def build_app() -> web.Application:
     app.router.add_post("/api/admin/provision/{name}", obj.handle_admin_provision)
     app.router.add_post("/api/warmup/{name}", obj.handle_warmup)
     app.router.add_post("/api/query", obj.handle_query)
+    app.router.add_get("/api/saved/{b64}", obj.handle_saved)
 
     # Static UI
     web_dir = Path(__file__).resolve().parent.parent / "web"
@@ -333,7 +404,7 @@ def build_app() -> web.Application:
         resp.headers["Access-Control-Expose-Headers"] = (
             "X-Query-Time, X-Wall-Time, X-Query-Wall-Time, "
             "X-Output-Bytes, X-Output-Truncated, X-Exit-Code, "
-            "X-System, X-Error"
+            "X-System, X-Error, X-Query-Id"
         )
         return resp
 
