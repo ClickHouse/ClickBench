@@ -598,11 +598,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
             }
             if script_t is not None:
                 headers["X-Query-Time"] = f"{script_t:.6f}"
-            if rc != 0:
+            # When _cap truncated the output the script was almost
+            # certainly killed mid-write — its rc is non-zero (SIGPIPE
+            # / SIGKILL) and stderr is full of "broken pipe"-style
+            # noise. That's not a real query failure, so don't surface
+            # it as an error: return 200 and let X-Output-Truncated=1
+            # tell the UI to label the result accordingly.
+            if rc != 0 and not truncated:
                 # Surface a snippet of stderr so the client sees *something*.
                 err_snip = err[-1024:].decode("utf-8", errors="replace")
                 headers["X-Error"] = err_snip.replace("\n", " | ")[:512]
-            self._send(200 if rc == 0 else 502, body, headers)
+            self._send(200 if (rc == 0 or truncated) else 502, body, headers)
             return
         self._send_json(404, {"error": "not found", "path": self.path})
 
