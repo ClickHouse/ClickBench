@@ -777,7 +777,7 @@ function applyTopRowFilters() {
     const matches = data.filter(elem =>
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
-        ((selectors.hardware.cpu && elem.hardware === "cpu") || (selectors.hardware.gpu && elem.hardware === "gpu")));
+        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")));
 
     function apply(container, getValues) {
         const allowed = new Set(matches.flatMap(getValues).map(x => String(x)));
@@ -1083,7 +1083,7 @@ function render() {
         elem.tags.filter(type => selectors.type[type]).length > 0 &&
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
-        ((selectors.hardware.cpu && elem.hardware === "cpu") || (selectors.hardware.gpu && elem.hardware === "gpu"))
+        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu"))
         );
 
     /// Filter out unreasonable entries
