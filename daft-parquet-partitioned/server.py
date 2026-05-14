@@ -25,7 +25,13 @@ app = FastAPI()
 hits = None
 data_bytes = 0
 
-PARQUET_GLOB = os.environ.get("BENCH_DAFT_PARQUET", "hits_*.parquet")
+# Daft's glob expansion doesn't always find files under a CWD-relative
+# pattern (resolves to no matches even when `ls hits_*.parquet` does).
+# Resolve to an absolute path so the matcher sees the same view as ls.
+PARQUET_GLOB = os.environ.get(
+    "BENCH_DAFT_PARQUET",
+    os.path.abspath("hits_*.parquet"),
+)
 
 
 def _data_size_bytes() -> int:
@@ -47,22 +53,30 @@ def health():
 @app.post("/load")
 def load():
     global hits, data_bytes
+    import traceback
     start = timeit.default_timer()
     data_bytes = _data_size_bytes()
-    df = daft.read_parquet(PARQUET_GLOB)
-    df = df.with_column("EventTime", col("EventTime").cast(DataType.timestamp("s")))
-    df = df.with_column("EventDate", col("EventDate").cast(DataType.date()))
-    df = df.with_column("URL", col("URL").decode("utf-8"))
-    df = df.with_column("Title", col("Title").decode("utf-8"))
-    df = df.with_column("Referer", col("Referer").decode("utf-8"))
-    df = df.with_column("MobilePhoneModel", col("MobilePhoneModel").decode("utf-8"))
-    df = df.with_column("SearchPhrase", col("SearchPhrase").decode("utf-8"))
-    hits = df
-    # Register so daft.sql can see `hits`.
     try:
-        daft.catalog.register_table("hits", df)  # type: ignore[attr-defined]
-    except Exception:
-        pass
+        df = daft.read_parquet(PARQUET_GLOB)
+        df = df.with_column("EventTime", col("EventTime").cast(DataType.timestamp("s")))
+        df = df.with_column("EventDate", col("EventDate").cast(DataType.date()))
+        df = df.with_column("URL", col("URL").decode("utf-8"))
+        df = df.with_column("Title", col("Title").decode("utf-8"))
+        df = df.with_column("Referer", col("Referer").decode("utf-8"))
+        df = df.with_column("MobilePhoneModel", col("MobilePhoneModel").decode("utf-8"))
+        df = df.with_column("SearchPhrase", col("SearchPhrase").decode("utf-8"))
+        hits = df
+        # Register so daft.sql can see `hits`.
+        try:
+            daft.catalog.register_table("hits", df)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+    except Exception as e:
+        # Surface the real failure to the caller — FastAPI's default
+        # 500 just returns "Internal Server Error" which makes the
+        # /provision log useless for debugging.
+        raise HTTPException(status_code=500,
+                            detail=f"{type(e).__name__}: {e}\n{traceback.format_exc()}")
     elapsed = round(timeit.default_timer() - start, 3)
     return {"elapsed": elapsed}
 
