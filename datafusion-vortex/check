@@ -1,5 +1,8 @@
 #!/bin/bash
 set -e
 
-# Verify the clickbench binary is on PATH.
-[ -x vortex/target/release/clickbench ]
+# Stateless system — confirm datafusion-cli (the playground's query
+# driver) is built. The vortex bench binary (used by benchmark.sh,
+# not by ./query) was renamed from `clickbench` to `query_bench`
+# upstream, so the old check would always fail post-install.
+command -v datafusion-cli >/dev/null

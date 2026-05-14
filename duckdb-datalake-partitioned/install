@@ -4,5 +4,8 @@ set -e
 if ! command -v duckdb >/dev/null 2>&1; then
     export HOME=${HOME:=~}
     curl https://install.duckdb.org | sh
-    sudo ln -sf "$HOME/.duckdb/cli/latest/duckdb" /usr/local/bin/duckdb
+    # See duckdb-datalake/install — readlink before symlinking so the
+    # path stays valid regardless of $HOME at provision time.
+    target=$(readlink -f "$HOME/.duckdb/cli/latest/duckdb")
+    sudo ln -sf "$target" /usr/local/bin/duckdb
 fi

@@ -50,4 +50,7 @@ fi
 # enough to "datafusion (parquet)" semantics for the playground.
 if ! command -v datafusion-cli >/dev/null 2>&1; then
     cargo install --locked --version 49.0.2 datafusion-cli
+    # Cargo installs into $HOME/.cargo/bin; the playground agent
+    # runs scripts with a stripped PATH, so symlink into /usr/local/bin.
+    sudo ln -sf "$HOME/.cargo/bin/datafusion-cli" /usr/local/bin/datafusion-cli
 fi

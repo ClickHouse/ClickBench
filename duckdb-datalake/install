@@ -4,5 +4,12 @@ set -e
 if ! command -v duckdb >/dev/null 2>&1; then
     export HOME=${HOME:=~}
     curl https://install.duckdb.org | sh
-    sudo ln -sf "$HOME/.duckdb/cli/latest/duckdb" /usr/local/bin/duckdb
+    # Resolve symlink so /usr/local/bin/duckdb points at an absolute
+    # binary path regardless of $HOME. The installer puts the binary
+    # at $HOME/.duckdb/cli/<version>/duckdb and a "latest" symlink
+    # alongside; we follow the symlink at install time to avoid a
+    # stale-symlink trap if the user's $HOME differs between
+    # provision and use.
+    target=$(readlink -f "$HOME/.duckdb/cli/latest/duckdb")
+    sudo ln -sf "$target" /usr/local/bin/duckdb
 fi
