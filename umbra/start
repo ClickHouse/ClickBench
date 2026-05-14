@@ -8,14 +8,27 @@ fi
 sudo docker stop umbradb >/dev/null 2>&1 || true
 sudo docker rm umbradb >/dev/null 2>&1 || true
 
+# Umbra's working set during the ClickBench COPY blows well past the
+# guest VM's 16 GiB RAM. The agent has already mkswap'd + swapon'd a
+# 256 GiB swap.raw block device — we just need to make sure (a) the
+# guest kernel is willing to overcommit anonymous mappings well past
+# physical RAM (overcommit_memory=1; default 0 is heuristic and
+# refuses sufficiently large mmaps), and (b) the docker cgroup
+# doesn't sit between Umbra and the swap. No --memory / --memory-swap
+# cap so the container can grow into the available RAM+swap, and
+# --memory-swappiness=100 so the kernel pages out anonymous memory
+# aggressively the moment we exceed physical RAM.
+sudo sysctl -wq vm.overcommit_memory=1 vm.swappiness=100 || true
+
 sudo docker run -d --name umbradb \
     -v "$(pwd)/db:/var/db" \
     -v "$(pwd)/data:/data" \
     -p 5432:5432 \
     --ulimit nofile=1048576:1048576 \
     --ulimit memlock=8388608:8388608 \
-    --memory=128g \
+    --memory=256g \
     --memory-swap=-1 \
+    --memory-swappiness=100 \
     umbradb/umbra:latest >/dev/null
 
 # Container needs a moment before psql can connect.
