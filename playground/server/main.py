@@ -93,10 +93,11 @@ class App:
     async def handle_queries(self, req: web.Request) -> web.Response:
         """Return example queries for a system from its queries.sql.
 
-        Splits on `;\n` so multi-line queries stay together. Truncates to
-        a sane upper bound — ClickBench has 43 per system, no need to
-        cap, but if a fork ships thousands we don't want to ship them
-        all to the browser.
+        Splits by lines: one example per non-empty, non-comment line.
+        ClickBench's benchmark files are uniformly one-query-per-line —
+        SQL ones end with `;`, dataframe ones (pandas/polars/daft) and
+        LogsQL ones (victorialogs) don't, and a `;\n` splitter collapsed
+        the whole pandas file into one entry. Truncates to 200 entries.
         """
         name = req.match_info["name"]
         if name not in self.systems:
@@ -105,14 +106,11 @@ class App:
         if not path.exists():
             return web.json_response([])
         text = path.read_text(errors="replace")
-        # Split on `;\n` then trim. Drop empties.
         out = []
-        for chunk in text.split(";\n"):
-            q = chunk.strip()
-            if not q:
+        for line in text.splitlines():
+            q = line.strip()
+            if not q or q.startswith("--") or q.startswith("#"):
                 continue
-            if not q.endswith(";"):
-                q += ";"
             out.append(q)
             if len(out) >= 200:
                 break
