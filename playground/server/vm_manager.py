@@ -35,7 +35,7 @@ import aiohttp
 
 from . import firecracker as fc
 from . import net
-from .systems import NEEDS_SWAP, SWAP_SIZE_GB
+from .systems import NEEDS_SWAP, SWAP_SIZE_GB, SYSDISK_OVERRIDES_GB
 from .config import Config
 from .systems import System, TRUSTED_INTERNET, DATALAKE_FILTERED
 
@@ -398,10 +398,17 @@ class VMManager:
             return
         log.info("[%s] building rootfs + system disk", vm.system.name)
         script = self.cfg.repo_dir / "playground" / "images" / "build-system-rootfs.sh"
+        build_env = {**os.environ,
+                     "PLAYGROUND_STATE_DIR": str(self.cfg.state_dir)}
+        # Per-system sysdisk-size override for engines whose load blew
+        # through the 200 GiB default (postgresql-orioledb, ...).
+        sysdisk_override = SYSDISK_OVERRIDES_GB.get(vm.system.name)
+        if sysdisk_override:
+            build_env["VM_SYSDISK_SIZE_GB"] = str(sysdisk_override)
         p = await asyncio.create_subprocess_exec(
             "bash", str(script), vm.system.name,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-            env={**os.environ, "PLAYGROUND_STATE_DIR": str(self.cfg.state_dir)},
+            env=build_env,
         )
         out, _ = await p.communicate()
         if p.returncode != 0:

@@ -69,6 +69,11 @@ function renderList() {
         row.textContent = s.display_name;
         row.dataset.tooltip = tooltipFor(sObj, st);
         row.addEventListener("click", () => onSlabClick(s.name));
+        // In competition mode, hovering a slab highlights its row in
+        // the leaderboard so the user can scan from picker to result
+        // without losing context.
+        row.addEventListener("mouseenter", () => _setRailHover(s.name));
+        row.addEventListener("mouseleave", () => _setRailHover(null));
         listEl.appendChild(row);
     }
 }
@@ -449,6 +454,17 @@ function refreshRunAllVisibility() {
         && !isNaN(parseInt(exampleSel.value, 10));
     const haveCustom = queryEl.value.trim() !== "";
     runAllBtn.style.display = (haveExample || haveCustom) ? "" : "none";
+}
+
+function _setRailHover(name) {
+    // Toggle a `.slab-hover` class on the matching tr in the
+    // competition table. No-op when the rail isn't visible.
+    if (runAllSection.style.display === "none") return;
+    const tbody = runAllTable.querySelector("tbody");
+    if (!tbody) return;
+    for (const tr of tbody.children) {
+        tr.classList.toggle("slab-hover", tr.dataset.name === name);
+    }
 }
 
 function hideRunAll() {

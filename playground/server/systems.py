@@ -120,6 +120,24 @@ NEEDS_SWAP: frozenset[str] = frozenset({
 # partitioned-parquet set.
 SWAP_SIZE_GB: int = 256
 
+# Per-system sysdisk-size override (apparent size, in GiB). Default is
+# 200 GiB as set by build-system-rootfs.sh. The image is sparse so the
+# apparent size doesn't cost physical bytes upfront — only what the
+# guest actually writes. Rootfs is intentionally not overridable here:
+# the build script clones the base ext4 image via sparse-cp without
+# resize2fs, so a bigger rootfs would require a deeper change.
+SYSDISK_OVERRIDES_GB: dict[str, int] = {
+    # postgresql-orioledb's COPY blew through 200 GiB before reaching
+    # the end of hits.tsv:
+    #   PANIC: could not write buffer to file orioledb_undo/0000000319page:
+    #          No space left on device  (line 69,533,798 of hits.tsv)
+    # The orioledb extension keeps a per-statement undo log inside
+    # PGDATA that roughly doubles the write footprint of the base
+    # table. The install script parks PGDATA on the sysdisk
+    # specifically so this override actually helps.
+    "postgresql-orioledb": 400,
+}
+
 
 @dataclass(frozen=True)
 class System:

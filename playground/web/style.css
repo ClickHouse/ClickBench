@@ -116,6 +116,11 @@ button.run-all:hover:not(:disabled) {
 #runall-table tr:hover td { background: #f5f5f5; }
 #runall-table tr.selected td { background: white; color: var(--fg); font-weight: 600; }
 #runall-table tr.selected:hover td { background: white; }
+/* Hovering the matching slab in the system picker highlights the
+   competition row, so the user can move between picker and result
+   without losing track of which system they're looking at. */
+#runall-table tr.slab-hover td { background: #fff4d6; }
+#runall-table tr.selected.slab-hover td { background: #fff4d6; }
 #runall-table td.time.pending { color: var(--muted); }
 
 /* Default view: #ui-main fills the row, the (hidden) aside takes no
