@@ -71,7 +71,6 @@ Environment variables (read by `server/config.py`):
 | `CLICKHOUSE_CLOUD_PASSWORD`    | password                                      |
 | `PLAYGROUND_STATE_DIR`         | defaults to `/opt/clickbench-playground`      |
 | `PLAYGROUND_LISTEN`            | defaults to `0.0.0.0:8000`                    |
-| `PLAYGROUND_MAX_VMS`           | concurrent live VMs cap (default 16)          |
 | `CLICKBENCH_OUTPUT_LIMIT`      | per-query response body cap in bytes, enforced inside the in-VM agent (default 262144 = 256 KB) |
 
 ## Lifecycle of a request

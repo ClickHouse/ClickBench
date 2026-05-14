@@ -39,9 +39,6 @@ class Config:
     vm_vcpus: int
     vm_mem_mib: int
     vm_rootfs_size_gb: int
-    # Max number of VMs we'll keep "warm" (resumed from snapshot, ready to
-    # answer) concurrently.
-    max_warm_vms: int
     # Watchdog thresholds.
     cpu_busy_window_sec: int
     cpu_busy_threshold: float
@@ -120,7 +117,6 @@ def load() -> Config:
         # disabled in systems.py instead of bumping VM RAM for everyone.
         vm_mem_mib=_env_int("VM_MEM_MIB", 16 * 1024),
         vm_rootfs_size_gb=_env_int("VM_ROOTFS_SIZE_GB", 200),
-        max_warm_vms=_env_int("PLAYGROUND_MAX_VMS", 16),
         cpu_busy_window_sec=_env_int("VM_CPU_BUSY_WINDOW_SEC", 120),
         cpu_busy_threshold=float(os.environ.get("VM_CPU_BUSY_THRESHOLD", "0.97")),
         vm_cpu_total_seconds_cap=_env_int("VM_CPU_TOTAL_SECONDS_CAP", 3600),
