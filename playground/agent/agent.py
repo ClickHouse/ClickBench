@@ -68,9 +68,13 @@ STATE_DIR.mkdir(parents=True, exist_ok=True)
 PROVISION_DONE = STATE_DIR / "provisioned"
 PROVISION_LOG = STATE_DIR / "provision.log"
 
-# Single-writer lock; the agent serializes queries per VM. Two ClickBench
-# scripts hitting the same socket/temp file concurrently would not be safe.
-_query_lock = threading.Lock()
+# Concurrency policy: /query is *not* serialized at the agent level —
+# we let the host fan multiple requests at the same VM in parallel.
+# Per-system ./query scripts are expected to handle this (use $$ /
+# mktemp for scratch state, never a fixed PID file). Engines that
+# fundamentally don't support concurrent queries (e.g. embedded
+# DuckDB with its file-level exclusive lock) will fail one of the
+# concurrent requests; that's acceptable and visible to the user.
 _provision_lock = threading.Lock()
 # Tracks whether we've successfully run ./start since this agent process
 # came up. After a snapshot restore the daemon doesn't exist in the
@@ -618,8 +622,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             # (it was stopped pre-snapshot to keep snapshots small).
             # Subsequent calls are a near-instant no-op.
             _ensure_daemon_started()
-            with _query_lock:
-                rc, out, err, wall = _run_query(sql)
+            rc, out, err, wall = _run_query(sql)
             script_t = _extract_script_timing(err)
             body, truncated = _cap(out)
             headers = {
