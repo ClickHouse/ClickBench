@@ -65,12 +65,10 @@ _rate_hits: dict[str, collections.deque[float]] = {}
 
 
 def _client_ip(req: web.Request) -> str:
-    """First hop in X-Forwarded-For if present (we sit behind nothing
-    by default; a reverse proxy operator can wire one in), else the
-    socket peer."""
-    xff = req.headers.get("X-Forwarded-For")
-    if xff:
-        return xff.split(",")[0].strip() or (req.remote or "?")
+    """TCP peer address — never the X-Forwarded-For header. Honoring
+    XFF without an authenticated reverse proxy in front would let any
+    caller spoof their IP and bypass the rate limit by rotating the
+    header value."""
     return req.remote or "?"
 
 
