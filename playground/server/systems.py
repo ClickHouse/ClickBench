@@ -31,7 +31,7 @@ _EXTERNAL = {
     # Managed cloud services / require API keys / external infra.
     "alloydb", "athena", "athena-partitioned", "aurora-mysql",
     "aurora-postgresql", "bigquery", "brytlytdb", "bytehouse", "chyt",
-    "clickhouse-cloud", "clickhouse-tencent", "clickhouse-web",
+    "clickhouse-cloud", "clickhouse-tencent",
     "crunchy-bridge-for-analytics", "databend", "databricks", "exasol",
     "firebolt", "firebolt-parquet", "firebolt-parquet-partitioned",
     "gravitons", "hologres", "hydrolix", "kinetica",
@@ -87,6 +87,10 @@ TRUSTED_INTERNET: frozenset[str] = frozenset({
 DATALAKE_FILTERED: frozenset[str] = frozenset({
     "clickhouse-datalake",
     "clickhouse-datalake-partitioned",
+    # clickhouse-web ATTACHes the table to a remote web disk pointed at
+    # https://clickhouse-public-datasets.s3.amazonaws.com/web/ — every
+    # query pulls parts on demand, so it needs post-snapshot S3 access.
+    "clickhouse-web",
     "duckdb-datalake",
     "duckdb-datalake-partitioned",
     "presto-datalake",
