@@ -803,9 +803,17 @@ class VMManager:
                 ),
             ) as r:
                 body = await r.read()
+                # Stash the full body — the 2000-byte tail we surface in
+                # the exception only covers the install epilogue; the real
+                # failure often happens later (start, check, load).
+                dump = self.cfg.logs_dir / f"provision-{vm.system.name}.log"
+                with contextlib.suppress(Exception):
+                    dump.write_bytes(body)
                 if r.status >= 300:
-                    raise RuntimeError(f"agent /provision failed: {r.status}: "
-                                       f"{body[-2000:].decode(errors='replace')}")
+                    raise RuntimeError(
+                        f"agent /provision failed: {r.status}: "
+                        f"{body[-2000:].decode(errors='replace')} "
+                        f"(full output: {dump})")
 
     async def _sync_guest(self, vm: VM) -> None:
         url = self.agent_url(vm) + "/sync"
