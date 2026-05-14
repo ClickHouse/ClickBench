@@ -3,19 +3,22 @@ set -eu
 
 NUM_CORES=$(nproc)
 
-# In the playground, the gzipped JSON dataset is shipped read-only at
-# /opt/clickbench/datasets_ro/hits.json.gz; symlink it instead of wget'ing
-# 4.6 GB on every parseable provision.
-if [ -f /opt/clickbench/datasets_ro/hits.json.gz ]; then
+# Prefer the pre-decompressed hits.json shipped on the playground's
+# readonly dataset disk — it's a 75 GB symlink target, doesn't burn
+# the VM's 200 GB sparse sysdisk on a redundant gunzip. Fall back to
+# wget + gunzip for standalone use.
+if [ -f /opt/clickbench/datasets_ro/hits.json ]; then
+    ln -sf /opt/clickbench/datasets_ro/hits.json hits.json
+elif [ -f /opt/clickbench/datasets_ro/hits.json.gz ]; then
     ln -sf /opt/clickbench/datasets_ro/hits.json.gz hits.json.gz
+    FILE_SIZE=$(stat -L -c %s hits.json.gz)
+    pv -s "$FILE_SIZE" hits.json.gz | pigz -d > hits.json
 else
     wget --continue --progress=dot:giga \
         'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+    FILE_SIZE=$(stat -L -c %s hits.json.gz)
+    pv -s "$FILE_SIZE" hits.json.gz | pigz -d > hits.json
 fi
-
-# Decompress with progress.
-FILE_SIZE=$(stat -L -c %s hits.json.gz)
-pv -s "$FILE_SIZE" hits.json.gz | pigz -d > hits.json
 
 # Split into chunks wrapped in [ ... , ... ] arrays for parseable's ingest API.
 mkdir -p partitioned
@@ -37,7 +40,9 @@ LINES_PER_CHUNK=2500
 pv hits.json | parallel --pipe -N$LINES_PER_CHUNK --block 10M \
     --jobs "$NUM_CORES" split_and_process {#}
 
-rm -f hits.json hits.json.gz
+rm -f hits.json hits.json.gz partitioned/hits_*.json
+# (the hits.json/.gz might be a symlink into datasets_ro — rm removes
+#  the symlink, not the file.)
 
 # Create the stream.
 curl --silent --location --request PUT 'http://localhost:8000/api/v1/logstream/hits' \

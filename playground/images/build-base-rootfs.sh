@@ -319,6 +319,22 @@ set -e
 dir="${1:-.}"; mkdir -p "$dir"; cd "$dir"
 ln -sf /opt/clickbench/datasets_ro/hits.csv hits.csv
 EOF
+cat > /opt/clickbench/lib/download-hits-json <<'EOF'
+#!/bin/bash
+# Pre-decompressed hits.json (~75 GB) on the readonly dataset disk.
+# Load scripts that previously did wget + gunzip into the VM (and ran
+# out of disk for the 75 GB decompressed copy) can just consume this
+# file directly.
+set -e
+dir="${1:-.}"; mkdir -p "$dir"; cd "$dir"
+ln -sf /opt/clickbench/datasets_ro/hits.json hits.json
+EOF
+cat > /opt/clickbench/lib/download-hits-json-gz <<'EOF'
+#!/bin/bash
+set -e
+dir="${1:-.}"; mkdir -p "$dir"; cd "$dir"
+ln -sf /opt/clickbench/datasets_ro/hits.json.gz hits.json.gz
+EOF
 chmod +x /opt/clickbench/lib/download-hits-*
 cat > /etc/fstab <<EOF
 LABEL=cbdata    /opt/clickbench/datasets_ro   ext4      ro,nofail,noatime,nodev,nosuid                                                            0 0

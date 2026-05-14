@@ -61,12 +61,22 @@ else
 fi
 
 step "json.gz"
-# Used by parseable. The full hits.json.gz is ~4.6 GB on
+# Used by parseable. The full hits.json.gz is ~23 GB on
 # datasets.clickhouse.com.
-if [ ! -f "$DATASETS/hits.json.gz" ] || [ "$(stat -c%s "$DATASETS/hits.json.gz" 2>/dev/null || echo 0)" -lt 3500000000 ]; then
+if [ ! -f "$DATASETS/hits.json.gz" ] || [ "$(stat -c%s "$DATASETS/hits.json.gz" 2>/dev/null || echo 0)" -lt 22000000000 ]; then
     wget --continue --progress=dot:giga \
         -O "$DATASETS/hits.json.gz" \
         'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+else
+    step "  cached"
+fi
+
+step "json (decompressed)"
+# parseable / victorialogs decompress hits.json.gz at load time and
+# blow out the 200 GB sysdisk; stage the decompressed copy on the
+# read-only dataset disk so they can stream it without a temp file.
+if [ ! -f "$DATASETS/hits.json" ] || [ "$(stat -c%s "$DATASETS/hits.json" 2>/dev/null || echo 0)" -lt 70000000000 ]; then
+    pigz -dk -c "$DATASETS/hits.json.gz" > "$DATASETS/hits.json"
 else
     step "  cached"
 fi
