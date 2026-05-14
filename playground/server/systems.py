@@ -63,29 +63,24 @@ _EXTERNAL = {
     "paradedb", "paradedb-partitioned", "pg_duckdb-motherduck",
 }
 
-# Systems we trust to keep outbound internet access *after* the snapshot,
-# i.e. at query time. Used by datalake-style benchmarks that read live S3
-# during the query; without internet they fail with a DNS error. Stays
-# tight on purpose — adding a system here means user queries from that
-# VM can reach the wider internet, so only put ClickHouse-family engines
-# here (per request).
-TRUSTED_INTERNET: frozenset[str] = frozenset({
-    "clickhouse",
-    "clickhouse-parquet",
-    "clickhouse-parquet-partitioned",
+# Systems that need outbound access at query time get routed through
+# the SNI-allowlist proxy on the host (see sni_proxy.py +
+# net.enable_filtered_internet). Only HTTPS to the S3 hosts in
+# sni_proxy.DEFAULT_ALLOW survives; everything else is dropped. The
+# ClickHouse-family engines used to live in a separate
+# `TRUSTED_INTERNET` set that gave them unrestricted egress (so an
+# arbitrary user SQL could `url('http://169.254.169.254/...')` or
+# reach internal hosts) — that set is gone; they all now use this
+# filtered path too.
+DATALAKE_FILTERED: frozenset[str] = frozenset({
     "chdb",
     "chdb-parquet",
     "chdb-parquet-partitioned",
-})
-
-# Systems that need outbound access only to s3.amazonaws.com (or
-# regional S3 hostnames). Their post-snapshot internet is routed
-# through an SNI-allowlist proxy on the host (see sni_proxy.py +
-# net.enable_filtered_internet). HTTPS works end-to-end; everything
-# else is dropped.
-DATALAKE_FILTERED: frozenset[str] = frozenset({
+    "clickhouse",
     "clickhouse-datalake",
     "clickhouse-datalake-partitioned",
+    "clickhouse-parquet",
+    "clickhouse-parquet-partitioned",
     # clickhouse-web ATTACHes the table to a remote web disk pointed at
     # https://clickhouse-public-datasets.s3.amazonaws.com/web/ — every
     # query pulls parts on demand, so it needs post-snapshot S3 access.

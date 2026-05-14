@@ -37,7 +37,7 @@ from . import firecracker as fc
 from . import net
 from .systems import NEEDS_SWAP, SWAP_SIZE_GB, SYSDISK_OVERRIDES_GB
 from .config import Config
-from .systems import System, TRUSTED_INTERNET, DATALAKE_FILTERED
+from .systems import System, DATALAKE_FILTERED
 
 log = logging.getLogger("vm_manager")
 
@@ -351,7 +351,7 @@ class VMManager:
                 await self._shutdown(vm)
                 if vm.system.name in DATALAKE_FILTERED:
                     await net.enable_filtered_internet(vm.slot)
-                elif vm.system.name not in TRUSTED_INTERNET:
+                else:
                     await net.disable_internet(vm.slot)
             vm.state = "snapshotted"
             vm.provisioned_at = time.time()
@@ -628,13 +628,10 @@ class VMManager:
         # Firecracker tries to mmap it.
         await self._decompress_snapshot(vm)
         await net.ensure_tap(vm.slot)
-        # Trusted systems (e.g. ClickHouse variants that read live S3 at
-        # query time) keep outbound internet after restore. Everything
-        # else stays offline.
+        # Systems that read live S3 at query time get the SNI-allowlist
+        # proxy. Everything else stays fully offline post-snapshot.
         if vm.system.name in DATALAKE_FILTERED:
             await net.enable_filtered_internet(vm.slot)
-        elif vm.system.name in TRUSTED_INTERNET:
-            await net.enable_internet(vm.slot)
         await self._boot(vm, restore_snapshot=True)
         await self._wait_for_agent(vm, timeout=60)
         # Block here until the system's daemon reports ready, so the

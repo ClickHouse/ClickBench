@@ -118,15 +118,56 @@ async def enable_internet(slot: int) -> None:
 PROXY_HTTPS_PORT = 8443
 PROXY_HTTP_PORT = 8080
 
+# /16 we hand TAP addresses out of — used to scope INPUT firewall rules.
+_INTERNAL_CIDR = f"{_BASE}.0.0/16"
+
+
+async def setup_host_firewall() -> None:
+    """Install INPUT rules so the SNI proxy + local DNS resolver are
+    only reachable from the per-VM TAPs (10.200.0.0/16) and loopback.
+    Run once at server startup.
+
+    Why this matters: sni_proxy.py binds 0.0.0.0:{8443,8080} so the
+    iptables PREROUTING REDIRECT from the VM's TAP can find it
+    regardless of which TAP IP the kernel routes the redirected
+    packet to. Without these INPUT rules the proxy would be an
+    open, unauthenticated S3 allowlist relay reachable from the
+    public internet. Same logic for the host's UDP/53 resolver.
+    """
+    # (proto, dport)
+    ports = (
+        ("tcp", str(PROXY_HTTPS_PORT)),
+        ("tcp", str(PROXY_HTTP_PORT)),
+        ("tcp", "53"),
+        ("udp", "53"),
+    )
+    for proto, dport in ports:
+        for src in (_INTERNAL_CIDR, "127.0.0.0/8"):
+            allow = ("-p", proto, "--dport", dport, "-s", src, "-j", "ACCEPT")
+            rc, _, _ = await _run("sudo", "iptables", "-C", "INPUT",
+                                  *allow, check=False)
+            if rc != 0:
+                # Insert at the top so we override any permissive default.
+                await _run("sudo", "iptables", "-I", "INPUT", "1", *allow)
+        drop = ("-p", proto, "--dport", dport, "-j", "DROP")
+        rc, _, _ = await _run("sudo", "iptables", "-C", "INPUT",
+                              *drop, check=False)
+        if rc != 0:
+            await _run("sudo", "iptables", "-A", "INPUT", *drop)
+
 
 async def enable_filtered_internet(slot: int) -> None:
     """Allow the VM to reach the *allowlisted* outside world only.
 
-    Redirects all TCP 80/443 from the VM's TAP to the host's
-    SNI-filtering proxy (see sni_proxy.py). DNS (UDP+TCP 53) is
-    permitted untouched so the VM can still resolve hostnames; the
-    proxy itself uses the host's resolver to open the upstream socket.
-    Every other outbound port from the VM is DROPped.
+    PREROUTING REDIRECTs:
+      - TCP 443/80 → the host's SNI-filtering proxy.
+      - UDP 53    → the host's local DNS resolver (operator must run
+                    a UDP-only resolver on the host — see
+                    playground/scripts/install-firecracker.sh).
+    TCP 53 is dropped entirely (no big-payload DNS, the classic
+    exfiltration channel — see GHSA / RFC1918 advisories cited in
+    the security review). Every other outbound port from the VM is
+    DROPped at FORWARD.
     """
     # Clear any prior `enable_internet` ACCEPT — its blanket allow
     # rule would otherwise take precedence over the DROP we'll add
@@ -135,25 +176,35 @@ async def enable_filtered_internet(slot: int) -> None:
     await disable_internet(slot)
     tap = tap_name(slot)
     iface = await _host_default_iface()
-    _, _, cidr = addr_for(slot)
 
-    # NAT redirects for the http/https ports.
-    for dport, to_port in ((443, PROXY_HTTPS_PORT), (80, PROXY_HTTP_PORT)):
-        match = ("-i", tap, "-p", "tcp", "--dport", str(dport),
-                 "-j", "REDIRECT", "--to-ports", str(to_port))
+    # NAT redirects:
+    #   TCP 443/80 -> SNI proxy
+    #   UDP 53     -> host's local DNS resolver on port 53
+    nat_rules = (
+        ("-i", tap, "-p", "tcp", "--dport", "443",
+         "-j", "REDIRECT", "--to-ports", str(PROXY_HTTPS_PORT)),
+        ("-i", tap, "-p", "tcp", "--dport", "80",
+         "-j", "REDIRECT", "--to-ports", str(PROXY_HTTP_PORT)),
+        ("-i", tap, "-p", "udp", "--dport", "53",
+         "-j", "REDIRECT", "--to-ports", "53"),
+    )
+    for match in nat_rules:
         rc, _, _ = await _run("sudo", "iptables", "-t", "nat",
                               "-C", "PREROUTING", *match, check=False)
         if rc != 0:
             await _run("sudo", "iptables", "-t", "nat",
                        "-A", "PREROUTING", *match)
 
-    # FORWARD: allow DNS, allow established replies, drop everything else.
+    # FORWARD: drop TCP/53 (DNS tunneling), drop UDP/53 too as a
+    # belt-and-braces (the REDIRECT above already short-circuits it,
+    # but if the resolver is down we don't want fall-through to
+    # upstream). Allow established replies for the SNI proxy's
+    # outbound to upstream. Catchall DROP at the end.
     forward_rules = (
-        ("-i", tap, "-p", "udp", "--dport", "53", "-j", "ACCEPT"),
-        ("-i", tap, "-p", "tcp", "--dport", "53", "-j", "ACCEPT"),
+        ("-i", tap, "-p", "udp", "--dport", "53", "-j", "DROP"),
+        ("-i", tap, "-p", "tcp", "--dport", "53", "-j", "DROP"),
         ("-i", iface, "-o", tap, "-m", "state", "--state",
          "RELATED,ESTABLISHED", "-j", "ACCEPT"),
-        # Catchall drop. Must come last.
         ("-i", tap, "-j", "DROP"),
     )
     for rule in forward_rules:
@@ -161,33 +212,37 @@ async def enable_filtered_internet(slot: int) -> None:
                               check=False)
         if rc != 0:
             await _run("sudo", "iptables", "-A", "FORWARD", *rule)
-
-    # MASQUERADE so the DNS replies (and the host's outbound to the proxy
-    # target) get NAT'd properly back to the VM.
-    rc, out, _ = await _run("sudo", "iptables", "-t", "nat", "-S", "POSTROUTING")
-    if f"-s {cidr}" not in out.decode(errors="replace"):
-        await _run("sudo", "iptables", "-t", "nat", "-A", "POSTROUTING",
-                   "-s", cidr, "-o", iface, "-j", "MASQUERADE")
+    # No POSTROUTING MASQUERADE here: the SNI proxy on the host opens
+    # its OWN outbound socket to the allowlisted upstream, so the
+    # host's normal egress path handles the source rewrite. The VM's
+    # only legitimate outbound traffic now goes via REDIRECT to a
+    # local listener; nothing on the VM's CIDR ever reaches the
+    # outside interface directly.
 
 
 async def disable_filtered_internet(slot: int) -> None:
     """Drop the rules added by enable_filtered_internet. Idempotent."""
     tap = tap_name(slot)
     iface = await _host_default_iface()
-    _, _, cidr = addr_for(slot)
 
-    for dport, to_port in ((443, PROXY_HTTPS_PORT), (80, PROXY_HTTP_PORT)):
+    nat_rules = (
+        ("-i", tap, "-p", "tcp", "--dport", "443",
+         "-j", "REDIRECT", "--to-ports", str(PROXY_HTTPS_PORT)),
+        ("-i", tap, "-p", "tcp", "--dport", "80",
+         "-j", "REDIRECT", "--to-ports", str(PROXY_HTTP_PORT)),
+        ("-i", tap, "-p", "udp", "--dport", "53",
+         "-j", "REDIRECT", "--to-ports", "53"),
+    )
+    for match in nat_rules:
         while True:
             rc, _, _ = await _run("sudo", "iptables", "-t", "nat", "-D",
-                                  "PREROUTING", "-i", tap, "-p", "tcp",
-                                  "--dport", str(dport), "-j", "REDIRECT",
-                                  "--to-ports", str(to_port), check=False)
+                                  "PREROUTING", *match, check=False)
             if rc != 0:
                 break
 
     forward_rules = (
-        ("-i", tap, "-p", "udp", "--dport", "53", "-j", "ACCEPT"),
-        ("-i", tap, "-p", "tcp", "--dport", "53", "-j", "ACCEPT"),
+        ("-i", tap, "-p", "udp", "--dport", "53", "-j", "DROP"),
+        ("-i", tap, "-p", "tcp", "--dport", "53", "-j", "DROP"),
         ("-i", iface, "-o", tap, "-m", "state", "--state",
          "RELATED,ESTABLISHED", "-j", "ACCEPT"),
         ("-i", tap, "-j", "DROP"),
@@ -198,13 +253,6 @@ async def disable_filtered_internet(slot: int) -> None:
                                   check=False)
             if rc != 0:
                 break
-
-    while True:
-        rc, _, _ = await _run("sudo", "iptables", "-t", "nat", "-D",
-                              "POSTROUTING", "-s", cidr, "-o", iface,
-                              "-j", "MASQUERADE", check=False)
-        if rc != 0:
-            break
 
 
 async def disable_internet(slot: int) -> None:

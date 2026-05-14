@@ -87,6 +87,11 @@ class App:
             https_port=net.PROXY_HTTPS_PORT,
             http_port=net.PROXY_HTTP_PORT,
         )
+        # Lock the proxy + local DNS resolver to internal/VM traffic
+        # only. The proxy binds 0.0.0.0 so iptables PREROUTING REDIRECT
+        # from each TAP can find it; without these INPUT rules it
+        # would be an open S3 allowlist relay on the public internet.
+        await net.setup_host_firewall()
 
     async def on_cleanup(self, _app: web.Application) -> None:
         await self.monitor.stop()
@@ -161,6 +166,19 @@ class App:
         return web.Response(body=data, content_type="text/plain")
 
     async def handle_admin_provision(self, req: web.Request) -> web.Response:
+        # Heavy operation (re-runs install/start/load, can take hours on
+        # the postgres-indexed-class systems): only callable from the
+        # host itself. The public UI must never be able to trigger this.
+        # Trust the TCP peer address — we don't honor X-Forwarded-For
+        # here, because the server is meant to listen on the same host
+        # the operator drives the curls from. If you put it behind a
+        # reverse proxy, the proxy itself becomes the peer and the
+        # check still passes (which is fine: the proxy is part of the
+        # admin trust boundary).
+        peer = req.transport.get_extra_info("peername") if req.transport else None
+        peer_ip = peer[0] if peer else ""
+        if peer_ip not in ("127.0.0.1", "::1"):
+            raise web.HTTPForbidden(reason="admin endpoint, loopback only")
         name = req.match_info["name"]
         if name not in self.systems:
             raise web.HTTPNotFound()
@@ -420,7 +438,10 @@ def build_app() -> web.Application:
     app.router.add_get("/", root_redirect)
     app.router.add_get("/ui/", ui_index)
     app.router.add_get("/ui", ui_index)
-    app.router.add_static("/ui/", path=str(web_dir), show_index=False, follow_symlinks=True)
+    # follow_symlinks=False — GHSA-5h86-8mv2-jq9f covers a path-traversal
+    # in aiohttp's static handler that's only reachable when symlinks are
+    # followed. The repo's web/ tree has no symlinks anyway.
+    app.router.add_static("/ui/", path=str(web_dir), show_index=False)
 
     return app
 
