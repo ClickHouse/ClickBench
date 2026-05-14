@@ -114,6 +114,7 @@ button.run-all:hover:not(:disabled) {
 #runall-table tr:hover td { background: #f5f5f5; }
 #runall-table tr.selected td { background: white; color: var(--fg); font-weight: 600; }
 #runall-table tr.selected:hover td { background: white; }
+#runall-table td.time.pending { color: var(--muted); }
 
 /* Default view: #ui-main fills the row, the (hidden) aside takes no
    space. The .split modifier is added by JS only when competition

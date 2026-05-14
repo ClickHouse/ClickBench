@@ -475,10 +475,15 @@ async function runAll() {
         const qs = await ensureQueriesLoaded(s.name);
         if (qs && idx < qs.length) targets.push({name: s.name, query: qs[idx]});
     }
-    targets.sort((a, b) => a.name.localeCompare(b.name));
 
     const status = {};
-    for (const t of targets) status[t.name] = {state: "running"};
+    for (const t of targets) {
+        status[t.name] = {
+            state: "running",
+            runs: [{state: "running"}, {state: "pending"}, {state: "pending"}],
+            query: t.query,
+        };
+    }
     // Reset the flash-diff cache so the first render seeds 'running'
     // for every row without animating them all at once.
     runAllLast = {};
@@ -486,7 +491,16 @@ async function runAll() {
     runAllStatus = status;
     renderRunAll(status);
 
-    await Promise.all(targets.map(async (t) => {
+    // Random order: keep the table sorted but fire requests in a
+    // shuffled sequence so no single system gets a systematic head
+    // start.
+    const shuffled = targets.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    async function _runOne(t) {
         const t0 = performance.now();
         try {
             const r = await fetch(`${API}/api/query?system=${encodeURIComponent(t.name)}`, {
@@ -494,49 +508,86 @@ async function runAll() {
                 body: t.query,
                 headers: {"Content-Type": "application/octet-stream"},
             });
-            // Read the body so we can show it when the user clicks
-            // the row to pull this system's result into the main pane.
             const body = await r.arrayBuffer();
             const txt = bytesToText(body) || "(no output)";
             const h = (k) => r.headers.get(k);
             const qid = h("X-Query-Id");
             if (r.status >= 400) {
                 const err = h("X-Error") || `HTTP ${r.status}`;
-                status[t.name] = {
-                    state: "failed", note: err,
+                return {
+                    ok: false, note: err, qid,
                     payload: {
                         output: `(error)\n${err}`,
                         time: "—", wall: "—", bytes: "—",
                         truncated: "—", exit: String(r.status),
                     },
-                    qid,
-                    query: t.query,
-                };
-            } else {
-                const qt = h("X-Query-Time");
-                const wt = h("X-Wall-Time");
-                const tsec = qt != null && qt !== ""
-                    ? parseFloat(qt)
-                    : (wt != null && wt !== "" ? parseFloat(wt) : (performance.now() - t0) / 1000);
-                status[t.name] = {
-                    state: "done", time: tsec,
-                    payload: {
-                        output: txt,
-                        time: qt ? `${parseFloat(qt).toFixed(3)} s` : "—",
-                        wall: wt ? `${parseFloat(wt).toFixed(3)} s` : `${tsec.toFixed(3)} s`,
-                        bytes: h("X-Output-Bytes") || String(body.byteLength),
-                        truncated: h("X-Output-Truncated") === "1" ? "yes" : "no",
-                        exit: h("X-Exit-Code") || String(r.status),
-                    },
-                    qid,
-                    query: t.query,
                 };
             }
+            const qt = h("X-Query-Time");
+            const wt = h("X-Wall-Time");
+            const tsec = qt != null && qt !== ""
+                ? parseFloat(qt)
+                : (wt != null && wt !== "" ? parseFloat(wt) : (performance.now() - t0) / 1000);
+            return {
+                ok: true, time: tsec, qid,
+                payload: {
+                    output: txt,
+                    time: qt ? `${parseFloat(qt).toFixed(3)} s` : "—",
+                    wall: wt ? `${parseFloat(wt).toFixed(3)} s` : `${tsec.toFixed(3)} s`,
+                    bytes: h("X-Output-Bytes") || String(body.byteLength),
+                    truncated: h("X-Output-Truncated") === "1" ? "yes" : "no",
+                    exit: h("X-Exit-Code") || String(r.status),
+                },
+            };
         } catch (e) {
-            status[t.name] = {state: "failed", note: String(e), query: t.query};
+            return {ok: false, note: String(e)};
+        }
+    }
+
+    function _recordRun(name, idx, res, query) {
+        const s = status[name];
+        if (!s) return;
+        s.runs[idx] = res.ok
+            ? {state: "done", time: res.time}
+            : {state: "failed", note: res.note};
+        // Cache the first successful run's payload for click-to-show.
+        if (res.ok && !s.payload) {
+            s.payload = res.payload;
+            s.qid = res.qid;
+            s.query = query;
+        } else if (!res.ok && !s.payload && idx === 0) {
+            s.payload = res.payload || {
+                output: `(error)\n${res.note || ""}`,
+                time: "—", wall: "—", bytes: "—", truncated: "—", exit: "err",
+            };
+            s.query = query;
+        }
+        // Overall: failed if any run failed; done when all 3 are done;
+        // running otherwise.
+        if (s.runs.some(r => r.state === "failed")) {
+            s.state = "failed";
+            s.note = s.runs.find(r => r.state === "failed").note;
+        } else if (s.runs.every(r => r.state === "done")) {
+            s.state = "done";
+            s.time = Math.min(...s.runs.map(r => r.time));
+        } else {
+            s.state = "running";
         }
         runAllStatus = status;
         renderRunAll(status);
+    }
+
+    // Run all three rounds in the shuffled order; rounds 2 and 3 only
+    // fire for systems whose round 1 succeeded.
+    await Promise.all(shuffled.map(async (t) => {
+        const r1 = await _runOne(t);
+        _recordRun(t.name, 0, r1, t.query);
+        if (!r1.ok) return;
+        const r2 = await _runOne(t);
+        _recordRun(t.name, 1, r2, t.query);
+        if (!r2.ok) return;
+        const r3 = await _runOne(t);
+        _recordRun(t.name, 2, r3, t.query);
     }));
     runAllBtn.disabled = false;
 }
@@ -575,9 +626,14 @@ function pickFromRunAll(name) {
 let runAllLast = {};
 
 function _runAllRowKey(s) {
-    if (s.state === "done") return `done:${s.time}`;
-    if (s.state === "failed") return `failed:${s.note || ""}`;
-    return "running";
+    const runs = (s.runs || []).map(r => {
+        if (!r) return "-";
+        if (r.state === "done") return `d:${r.time}`;
+        if (r.state === "failed") return `f`;
+        if (r.state === "pending") return `p`;
+        return r.state;
+    }).join("|");
+    return `${s.state}|${runs}`;
 }
 
 function renderRunAll(status) {
@@ -616,17 +672,25 @@ function renderRunAll(status) {
         tr.addEventListener("click", () => pickFromRunAll(row.name));
         const td1 = document.createElement("td");
         td1.textContent = row.name;
-        const td2 = document.createElement("td");
-        td2.className = "time";
-        if (row.state === "done") {
-            td2.textContent = `${row.time.toFixed(3)} s`;
-        } else if (row.state === "failed") {
-            td2.textContent = "failed";
-            td2.title = row.note || "";
-        } else {
-            td2.textContent = "running";
+        tr.appendChild(td1);
+        const runs = row.runs || [{state: row.state, time: row.time, note: row.note}];
+        for (let k = 0; k < 3; k++) {
+            const td = document.createElement("td");
+            td.className = "time";
+            const r = runs[k];
+            if (!r || r.state === "pending") {
+                td.textContent = "—";
+                td.classList.add("pending");
+            } else if (r.state === "done") {
+                td.textContent = `${r.time.toFixed(3)} s`;
+            } else if (r.state === "failed") {
+                td.textContent = "failed";
+                td.title = r.note || "";
+            } else {
+                td.textContent = "running";
+            }
+            tr.appendChild(td);
         }
-        tr.appendChild(td1); tr.appendChild(td2);
         fragment.appendChild(tr);
     }
     tbody.appendChild(fragment);
