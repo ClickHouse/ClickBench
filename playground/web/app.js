@@ -446,11 +446,13 @@ async function ensureQueriesLoaded(name) {
     return queriesByName[name];
 }
 
+const uiSplit = $("#ui-split");
 async function runAll() {
     const idx = parseInt(exampleSel.value, 10);
     if (isNaN(idx)) return;
     runAllBtn.disabled = true;
     runAllSection.style.display = "";
+    uiSplit.classList.add("split");
 
     // Collect snapshotted/ready systems with an example at this index.
     const candidates = Object.values(stateByName)

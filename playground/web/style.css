@@ -116,29 +116,23 @@ button.run-all:hover:not(:disabled) {
 #runall-table tr.winner:hover td { background: var(--accent); filter: brightness(0.95); }
 #runall-table tr.selected td { outline: 2px solid var(--info); outline-offset: -2px; }
 
-/* Two-column layout when the competition panel is visible. The
-   left rail shrinks to its content (minimal width — the longest
-   "Q9.999 s" cell); the right column claims the rest. When the
-   aside is display:none the grid is one column and the right pane
-   gets 100 % width. */
-#ui-split {
+/* Default view: #ui-main fills the row, the (hidden) aside takes no
+   space. The .split modifier is added by JS only when competition
+   mode is active; that's when the grid actually splits into rail +
+   main and the rail shrinks to max-content. */
+#ui-split { margin: 12px 0; }
+#ui-split.split {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-    margin: 12px 0;
-    align-items: start;
-}
-#ui-split:has(aside#ui-runall:not([style*="display: none"])) {
     grid-template-columns: max-content minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
 }
 #ui-main { min-width: 0; }
 #ui-main > section:first-child { margin-top: 0; }
 aside#ui-runall { margin: 0; }
 aside#ui-runall #runall-table { width: auto; }
 @media (max-width: 800px) {
-    #ui-split:has(aside#ui-runall:not([style*="display: none"])) {
-        grid-template-columns: 1fr;
-    }
+    #ui-split.split { grid-template-columns: 1fr; }
 }
 
 /* Flash on every state change in competition mode: yellow that
