@@ -28,30 +28,22 @@ curl --silent --location --request PUT 'http://localhost:8000/api/v1/logstream/h
     --data-binary @static_schema.json >/dev/null
 
 # Wrap each block of LINES_PER_CHUNK NDJSON lines in [ ... ] and POST
-# directly to /api/v1/ingest. The previous implementation wrote each
-# chunk as a separate file under ./partitioned/ first — at 2500 lines
-# per chunk that produced ~40000 files totaling >200 GB, filling up
-# the VM's sparse rootfs (`No space left on device` in load.log).
-# Streaming the chunks straight to curl keeps the on-disk footprint
-# at zero.
-ingest_chunk() {
-    awk 'BEGIN{print "["} {
-        if (NR>1) print prev ","
-        prev=$0
-    } END{ if (prev) print prev; print "]" }' |
-        curl --silent --location \
-            -H 'Content-Type: application/json' \
-            -H 'X-P-Stream: hits' \
-            -k -XPOST -u "admin:admin" \
-            'http://localhost:8000/api/v1/ingest' \
-            --data-binary @- >/dev/null
-}
-export -f ingest_chunk
-
+# directly to /api/v1/ingest. Inlined into parallel's command string
+# because parallel runs jobs via /bin/sh by default, and a bash
+# `export -f`'d function isn't visible in that shell — the previous
+# version silently no-op'd every chunk and load wrote 0 rows.
 LINES_PER_CHUNK=2500
 INGEST_JOBS=6
 pv hits.json | parallel --pipe -N$LINES_PER_CHUNK --block 10M \
-    --jobs "$INGEST_JOBS" ingest_chunk
+    --jobs "$INGEST_JOBS" --halt-on-error 0 '
+        awk "BEGIN{print \"[\"} NR>1{print prev \",\"} {prev=\$0} END{if (prev) print prev; print \"]\"}" |
+        curl --silent --show-error --fail \
+            -H "Content-Type: application/json" \
+            -H "X-P-Stream: hits" \
+            -k -XPOST -u "admin:admin" \
+            "http://localhost:8000/api/v1/ingest" \
+            --data-binary @- >/dev/null
+    '
 
 # Drop the symlink to the RO dataset — no chunk files to clean up.
 rm -f hits.json hits.json.gz
