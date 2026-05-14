@@ -1,7 +1,46 @@
 #!/bin/bash
+# Idempotent. Returns only when:
+#   1) HTTP is up on :9200,
+#   2) the cluster has reached at least yellow,
+#   3) the `hits` index (if it exists) reports active shards.
+#
+# Post-snapshot-restore symptom we're guarding against:
+# /_search returns 503 no_shard_available_action_exception while ES is
+# still recovering shards. We poll _cluster/health and refuse to return
+# success until shards are actually assigned.
 set -eu
 
-if curl -sSf 'http://localhost:9200' >/dev/null 2>&1; then
-    exit 0
+if ! curl -sSf 'http://localhost:9200' >/dev/null 2>&1; then
+    sudo systemctl start elasticsearch.service
 fi
-sudo systemctl start elasticsearch.service
+
+# Wait for HTTP up.
+for _ in $(seq 1 60); do
+    curl -sSf 'http://localhost:9200' >/dev/null 2>&1 && break
+    sleep 2
+done
+
+# Wait for cluster to reach at least yellow.
+# wait_for_status blocks server-side up to timeout; loop in case it
+# returns timed_out=true.
+for _ in $(seq 1 30); do
+    if curl -sSf \
+        'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=30s' \
+        2>/dev/null | grep -Eq '"status":"(yellow|green)"'; then
+        break
+    fi
+    sleep 2
+done
+
+# If `hits` exists, wait until its primary shards are active.
+if curl -sSf 'http://localhost:9200/hits' >/dev/null 2>&1; then
+    for _ in $(seq 1 60); do
+        body=$(curl -sS 'http://localhost:9200/_cluster/health/hits?wait_for_status=yellow&wait_for_active_shards=1&timeout=10s' 2>/dev/null || true)
+        if printf '%s' "$body" | grep -Eq '"status":"(yellow|green)"'; then
+            if printf '%s' "$body" | grep -Eq '"active_shards":[1-9]'; then
+                break
+            fi
+        fi
+        sleep 2
+    done
+fi
