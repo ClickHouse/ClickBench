@@ -7,9 +7,16 @@ set -e
 
 query=$(cat)
 
-CURRENT_DATE=$(date +%Y-%m-%d)
-START_TIME="${CURRENT_DATE}T00:00:00.000Z"
-END_TIME="${CURRENT_DATE}T23:59:00.000Z"
+# Parseable filters every query by [startTime, endTime] against the
+# row's ingest timestamp. The original benchmark used today's calendar
+# day, which only works if the dataset was loaded today. In the
+# playground the data is ingested during initial provisioning and
+# then frozen into a snapshot, so "today" from the query script's
+# point of view drifts past the load day and every row falls outside
+# the window → all queries return zero. Use a wide window that
+# covers any plausible load + query date.
+START_TIME="2000-01-01T00:00:00.000Z"
+END_TIME="2099-12-31T23:59:00.000Z"
 
 # JSON-escape quotes inside the query.
 escaped=$(printf '%s' "$query" | sed 's/"/\\"/g')
