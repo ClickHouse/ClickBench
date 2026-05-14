@@ -115,15 +115,39 @@ class VMManager:
         # one's write window under ~5 minutes on a single fast SSD.
         self._snapshot_sem = asyncio.Semaphore(int(os.environ.get(
             "PLAYGROUND_SNAPSHOT_CONCURRENCY", "6")))
-        # Stable slot allocation: sort systems alphabetically so each system
-        # always gets the same slot id (and therefore the same TAP/IP).
-        for i, name in enumerate(sorted(systems.keys()), start=1):
+        # Stable slot allocation. Each system gets a slot id (used as
+        # the TAP name fc-tap-<slot> and the /24 IP block 10.200.<slot>.0/24);
+        # snapshot.state has the TAP name baked in, so once a snapshot
+        # exists we MUST keep handing the same slot back to the same
+        # system or restore fails with
+        #   "Open tap device failed: Operation not permitted (os error 1).
+        #    Invalid TUN/TAP Backend provided by fc-tap-<old>"
+        # Persist the map so removing a system (e.g. sirius from
+        # _EXTERNAL) doesn't shift every later alphabetical neighbor.
+        slot_map_path = config.state_dir / "slot-assignments.json"
+        slot_map: dict[str, int] = {}
+        if slot_map_path.exists():
+            with contextlib.suppress(Exception):
+                slot_map = json.loads(slot_map_path.read_text())
+        used = set(slot_map.values())
+        next_slot = 1
+        for name in sorted(systems.keys()):
+            if name in slot_map:
+                continue
+            while next_slot in used:
+                next_slot += 1
+            slot_map[name] = next_slot
+            used.add(next_slot)
+        with contextlib.suppress(Exception):
+            slot_map_path.write_text(json.dumps(slot_map, indent=2, sort_keys=True))
+        for name in sorted(systems.keys()):
             sys = systems[name]
+            slot = slot_map[name]
             sys_state_dir = config.systems_dir / name
             sys_state_dir.mkdir(parents=True, exist_ok=True)
             vm = VM(
                 system=sys,
-                slot=i,
+                slot=slot,
                 api_sock=config.vms_dir / f"{name}.sock",
                 log_sock=config.vms_dir / f"{name}.log.sock",
                 snapshot_bin=sys_state_dir / "snapshot.bin",
