@@ -467,6 +467,8 @@ async function runAll() {
     // Reset the flash-diff cache so the first render seeds 'running'
     // for every row without animating them all at once.
     runAllLast = {};
+    runAllSelected = null;
+    runAllStatus = status;
     renderRunAll(status);
 
     await Promise.all(targets.map(async (t) => {
@@ -477,26 +479,82 @@ async function runAll() {
                 body: t.query,
                 headers: {"Content-Type": "application/octet-stream"},
             });
-            // Drain the body so the connection closes promptly; we
-            // only look at headers + status.
-            await r.arrayBuffer();
+            // Read the body so we can show it when the user clicks
+            // the row to pull this system's result into the main pane.
+            const body = await r.arrayBuffer();
+            const txt = bytesToText(body) || "(no output)";
             const h = (k) => r.headers.get(k);
+            const qid = h("X-Query-Id");
             if (r.status >= 400) {
-                status[t.name] = {state: "failed", note: h("X-Error") || `HTTP ${r.status}`};
+                const err = h("X-Error") || `HTTP ${r.status}`;
+                status[t.name] = {
+                    state: "failed", note: err,
+                    payload: {
+                        output: `(error)\n${err}`,
+                        time: "—", wall: "—", bytes: "—",
+                        truncated: "—", exit: String(r.status),
+                    },
+                    qid,
+                    query: t.query,
+                };
             } else {
                 const qt = h("X-Query-Time");
                 const wt = h("X-Wall-Time");
                 const tsec = qt != null && qt !== ""
                     ? parseFloat(qt)
                     : (wt != null && wt !== "" ? parseFloat(wt) : (performance.now() - t0) / 1000);
-                status[t.name] = {state: "done", time: tsec};
+                status[t.name] = {
+                    state: "done", time: tsec,
+                    payload: {
+                        output: txt,
+                        time: qt ? `${parseFloat(qt).toFixed(3)} s` : "—",
+                        wall: wt ? `${parseFloat(wt).toFixed(3)} s` : `${tsec.toFixed(3)} s`,
+                        bytes: h("X-Output-Bytes") || String(body.byteLength),
+                        truncated: h("X-Output-Truncated") === "1" ? "yes" : "no",
+                        exit: h("X-Exit-Code") || String(r.status),
+                    },
+                    qid,
+                    query: t.query,
+                };
             }
         } catch (e) {
-            status[t.name] = {state: "failed", note: String(e)};
+            status[t.name] = {state: "failed", note: String(e), query: t.query};
         }
+        runAllStatus = status;
         renderRunAll(status);
     }));
     runAllBtn.disabled = false;
+}
+
+let runAllStatus = {};
+let runAllSelected = null;
+
+function pickFromRunAll(name) {
+    const entry = runAllStatus[name];
+    if (!entry) return;
+    runAllSelected = name;
+    // Switch the system list highlight + state panel to this system.
+    if (stateByName[name]) select(name);
+    // Rewrite the query textarea + result pane to this system's run.
+    if (entry.query) {
+        queryEl.value = entry.query;
+        pristineQuery = entry.query;
+    }
+    if (entry.payload) {
+        resultsByName[name] = entry.payload;
+        showResult(entry.payload);
+    }
+    // Update URL: prefer the X-Query-Id for sharability, fall back
+    // to a system-scoped permalink so reload at least reopens the
+    // right system.
+    const u = new URL(window.location.href);
+    if (entry.qid) {
+        u.searchParams.set("q", entry.qid);
+    } else {
+        u.searchParams.delete("q");
+    }
+    window.history.replaceState({}, "", u.toString());
+    renderRunAll(runAllStatus);  // re-paint to highlight the selected row
 }
 
 let runAllLast = {};
@@ -538,7 +596,10 @@ function renderRunAll(status) {
         const cls = [row.state];
         if (i === 0 && row.state === "done") cls.push("winner");
         if (changed.has(row.name)) cls.push("flash");
+        if (runAllSelected === row.name) cls.push("selected");
         tr.className = cls.join(" ");
+        tr.dataset.name = row.name;
+        tr.addEventListener("click", () => pickFromRunAll(row.name));
         const td1 = document.createElement("td");
         td1.textContent = row.name;
         const td2 = document.createElement("td");

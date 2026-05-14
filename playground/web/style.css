@@ -111,6 +111,31 @@ button.run-all:hover:not(:disabled) {
 #runall-table tr.failed td.time { color: var(--bad); }
 #runall-table tr.running td.time { color: var(--muted); }
 #runall-table tr.winner td { background: var(--accent); }
+#runall-table tr { cursor: pointer; }
+#runall-table tr:hover td { background: #f5f5f5; }
+#runall-table tr.winner:hover td { background: var(--accent); filter: brightness(0.95); }
+#runall-table tr.selected td { outline: 2px solid var(--info); outline-offset: -2px; }
+
+/* Two-column layout when the competition panel is visible. The
+   panel is the left rail (~300px); the right column gets the
+   query textarea and the output. The aside collapses cleanly when
+   ui-runall is display:none — the grid falls back to 1 column. */
+#ui-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    margin: 12px 0;
+}
+#ui-split:has(aside#ui-runall:not([style*="display: none"])) {
+    grid-template-columns: 320px minmax(0, 1fr);
+}
+#ui-main > section:first-child { margin-top: 0; }
+aside#ui-runall { margin: 0; }
+@media (max-width: 800px) {
+    #ui-split:has(aside#ui-runall:not([style*="display: none"])) {
+        grid-template-columns: 1fr;
+    }
+}
 
 /* Flash on every state change in competition mode: yellow that
    fades out over a second. .flash is added by JS only to rows whose

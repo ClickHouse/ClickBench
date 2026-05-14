@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ClickBench Playground &mdash; run SQL against 90+ databases</title>
-<link rel="stylesheet" href="style.css?v=17">
+<link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
 <header>
@@ -24,29 +24,33 @@
                 title="Run this example's equivalent on every snapshotted system in parallel">Run all</button>
     </section>
 
-    <section id="ui-runall" style="display:none">
-        <label>Competition</label>
-        <table id="runall-table">
-            <tbody></tbody>
-        </table>
-    </section>
+    <div id="ui-split">
+        <aside id="ui-runall" style="display:none">
+            <label>Competition</label>
+            <table id="runall-table">
+                <tbody></tbody>
+            </table>
+        </aside>
 
-    <section id="ui-query">
-        <textarea id="query" rows="10"
-            spellcheck="false" autocomplete="off" autocorrect="off"
-            autocapitalize="off"
-            data-gramm="false" data-gramm_editor="false"
-            data-enable-grammarly="false">SELECT COUNT(*) FROM hits;</textarea>
-    </section>
+        <div id="ui-main">
+            <section id="ui-query">
+                <textarea id="query" rows="10"
+                    spellcheck="false" autocomplete="off" autocorrect="off"
+                    autocapitalize="off"
+                    data-gramm="false" data-gramm_editor="false"
+                    data-enable-grammarly="false">SELECT COUNT(*) FROM hits;</textarea>
+            </section>
 
-    <section class="row stats" id="ui-stats" style="display:none">
-        <div>Time: <span id="time">&mdash;</span></div>
-    </section>
+            <section class="row stats" id="ui-stats" style="display:none">
+                <div>Time: <span id="time">&mdash;</span></div>
+            </section>
 
-    <section id="ui-output" style="display:none">
-        <label for="output" id="output-label">Output</label>
-        <pre id="output"></pre>
-    </section>
+            <section id="ui-output" style="display:none">
+                <label for="output" id="output-label">Output</label>
+                <pre id="output"></pre>
+            </section>
+        </div>
+    </div>
 
     <section id="ui-down" style="display:none">
         <label>Last error</label>
@@ -61,6 +65,6 @@
     </section>
 </main>
 
-<script src="app.js?v=28"></script>
+<script src="app.js?v=29"></script>
 </body>
 </html>
