@@ -563,13 +563,20 @@ async function runAll() {
             s.query = query;
         }
         // Overall: failed if any run failed; done when all 3 are done;
-        // running otherwise.
+        // running otherwise. bestTime tracks the min of whatever runs
+        // have completed so far so partial-done systems can sort into
+        // the done group instead of sitting in running until the last
+        // round lands.
+        const doneRuns = s.runs.filter(r => r.state === "done");
+        s.bestTime = doneRuns.length
+            ? Math.min(...doneRuns.map(r => r.time))
+            : undefined;
         if (s.runs.some(r => r.state === "failed")) {
             s.state = "failed";
             s.note = s.runs.find(r => r.state === "failed").note;
         } else if (s.runs.every(r => r.state === "done")) {
             s.state = "done";
-            s.time = Math.min(...s.runs.map(r => r.time));
+            s.time = s.bestTime;
         } else {
             s.state = "running";
         }
@@ -639,11 +646,14 @@ function _runAllRowKey(s) {
 function renderRunAll(status) {
     const done = [], failed = [], running = [];
     for (const [name, s] of Object.entries(status)) {
-        if (s.state === "done") done.push({name, ...s});
-        else if (s.state === "failed") failed.push({name, ...s});
+        if (s.state === "failed") failed.push({name, ...s});
+        // Include partial-done systems in the timed group so the
+        // table sorts as soon as the first run lands rather than
+        // waiting for all three rounds.
+        else if (s.bestTime != null) done.push({name, ...s});
         else running.push({name, ...s});
     }
-    done.sort((a, b) => a.time - b.time);
+    done.sort((a, b) => a.bestTime - b.bestTime);
     failed.sort((a, b) => a.name.localeCompare(b.name));
     running.sort((a, b) => a.name.localeCompare(b.name));
     // Diff against the previous render so only rows whose status
