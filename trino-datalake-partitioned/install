@@ -14,7 +14,7 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 sudo apt-get install -y bc
 
-sudo docker pull trinodb/trino:latest
+sudo docker pull trinodb/trino:455
 
 mkdir -p data/meta etc/catalog shim
 sudo chown 1000:1000 data/meta shim
@@ -38,7 +38,7 @@ EOF
 if [ ! -f shim/S3AnonymousProvider.jar ]; then
     sudo docker run --rm \
         -v "$PWD/shim:/shim" \
-        --entrypoint sh trinodb/trino:latest -c '
+        --entrypoint sh trinodb/trino:455 -c '
             set -e
             cd /shim
             CP=$(find /usr/lib/trino \( -name "*aws-java-sdk*.jar" -o -name "*hadoop-apache*.jar" \) 2>/dev/null | tr "\n" ":")
@@ -58,6 +58,10 @@ hive.metastore=file
 hive.metastore.catalog.dir=local:///meta
 local.location=/data
 fs.native-local.enabled=true
+# Pin to trino:455 (last release shipping the legacy hadoop-S3 plugin
+# with a custom AWSCredentialsProvider). 461+ removed it, and the new
+# fs.native-s3 has no anonymous-creds mode so we can't read the public
+# bucket without it.
 fs.hadoop.enabled=true
 hive.config.resources=/etc/trino/core-site.xml
 hive.non-managed-table-writes-enabled=true
