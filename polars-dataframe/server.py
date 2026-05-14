@@ -67,9 +67,9 @@ async def query(request: Request):
     except SyntaxError as e:
         raise HTTPException(status_code=400, detail=f"syntax error: {e}")
     start = timeit.default_timer()
-    eval(compiled, {"hits": hits, "pl": pl, "date": date})
+    result = eval(compiled, {"hits": hits, "pl": pl, "date": date})
     elapsed = round(timeit.default_timer() - start, 3)
-    return {"elapsed": elapsed}
+    return {"elapsed": elapsed, "result": str(result)}
 
 
 @app.get("/data-size")
