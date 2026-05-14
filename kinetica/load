@@ -9,8 +9,14 @@ CLI="./kisql --host localhost --user admin"
 # decompressed TSV.
 wget --continue --progress=dot:giga \
     'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
-# Symlink rather than copy: hits.tsv.gz is 16 GB and we only read it once.
-sudo ln -sf "$PWD/hits.tsv.gz" ./kinetica-persist/hits.tsv.gz
+# Move (rename) rather than symlink: the kinetica daemon runs inside a
+# docker container with ./kinetica-persist bind-mounted, so a symlink
+# pointing at $PWD/hits.tsv.gz dangles inside the container and `LOAD
+# INTO ... FROM FILE PATHS 'hits.tsv.gz'` returns
+#   Not_Found: No such file(s) (File(s):hits.tsv.gz)
+# The persist dir and $PWD live on the same overlay filesystem, so
+# mv is a rename — cheap.
+sudo mv hits.tsv.gz ./kinetica-persist/
 
 $CLI --file create.sql
 $CLI --sql "ALTER TIER ram WITH OPTIONS ('capacity' = '27000000000');"
