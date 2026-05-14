@@ -35,6 +35,12 @@ class Config:
     # aiohttp parses it.
     listen_host: str
     listen_port: int
+    # TLS. When tls_cert + tls_key are both set, the server binds on
+    # tls_port with TLS *in addition to* listen_port (which becomes the
+    # plain-HTTP redirect listener). Empty strings disable TLS.
+    tls_cert: str
+    tls_key: str
+    tls_port: int
     # Per-VM resources.
     vm_vcpus: int
     vm_mem_mib: int
@@ -110,6 +116,9 @@ def load() -> Config:
         repo_dir=repo_dir,
         listen_host=host or "0.0.0.0",
         listen_port=int(port or 8000),
+        tls_cert=os.environ.get("PLAYGROUND_TLS_CERT", ""),
+        tls_key=os.environ.get("PLAYGROUND_TLS_KEY", ""),
+        tls_port=_env_int("PLAYGROUND_TLS_PORT", 443),
         vm_vcpus=_env_int("VM_VCPUS", 4),
         # 16 GB. DataFrame-style engines (chdb-dataframe, duckdb-dataframe,
         # daft-*, polars-dataframe) would need >100 GB to load the full

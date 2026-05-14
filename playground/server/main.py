@@ -559,9 +559,28 @@ def main() -> None:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(runner.setup())
+
+    # Always bind the plain port.
     site = web.TCPSite(runner, cfg.listen_host, cfg.listen_port)
     loop.run_until_complete(site.start())
-    log.info("playground listening on http://%s:%d", cfg.listen_host, cfg.listen_port)
+    log.info("playground listening on http://%s:%d",
+             cfg.listen_host, cfg.listen_port)
+
+    # If TLS is configured, also bind the TLS port. The unit needs
+    # CAP_NET_BIND_SERVICE to bind 443 as an unprivileged user; see
+    # clickbench-playground.service.
+    if cfg.tls_cert and cfg.tls_key:
+        import ssl
+        sslctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        sslctx.load_cert_chain(cfg.tls_cert, cfg.tls_key)
+        # Disable client-cert request (we serve over TLS, we don't
+        # mutually authenticate).
+        sslctx.verify_mode = ssl.CERT_NONE
+        tls_site = web.TCPSite(runner, cfg.listen_host, cfg.tls_port,
+                               ssl_context=sslctx)
+        loop.run_until_complete(tls_site.start())
+        log.info("playground listening on https://%s:%d",
+                 cfg.listen_host, cfg.tls_port)
 
     stop = asyncio.Event()
     for sig in (signal.SIGTERM, signal.SIGINT):

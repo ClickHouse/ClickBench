@@ -75,6 +75,40 @@ echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-clickbench-playground.c
 sudo sysctl -w net.ipv4.conf.all.route_localnet=1 >/dev/null
 echo "net.ipv4.conf.all.route_localnet=1" | sudo tee -a /etc/sysctl.d/99-clickbench-playground.conf >/dev/null
 
+# TLS for the playground API. We use certbot --standalone (binds 80
+# briefly for HTTP-01) to acquire / renew a Let's Encrypt cert for
+# the public hostname. The unprivileged playground user reads the
+# private key via the ssl-cert group; a deploy hook re-applies that
+# ownership after every renewal so renewals don't lock us out.
+#
+# Skipped entirely if PLAYGROUND_TLS_DOMAIN isn't set — operators
+# running the playground purely on a private network don't need
+# the cert.
+if [ -n "${PLAYGROUND_TLS_DOMAIN:-}" ]; then
+    sudo apt-get install -y certbot
+    getent group ssl-cert >/dev/null || sudo groupadd ssl-cert
+    sudo usermod -aG ssl-cert "${SUDO_USER:-ubuntu}"
+    if [ ! -d "/etc/letsencrypt/live/${PLAYGROUND_TLS_DOMAIN}" ]; then
+        sudo certbot certonly --standalone --non-interactive --agree-tos \
+            -m "${PLAYGROUND_TLS_EMAIL:-${SUDO_USER:-ubuntu}@$(hostname -d 2>/dev/null || echo localhost)}" \
+            -d "${PLAYGROUND_TLS_DOMAIN}"
+    fi
+    sudo tee /etc/letsencrypt/renewal-hooks/deploy/clickbench-ssl-cert.sh >/dev/null <<'HOOK'
+#!/bin/bash
+# Managed by playground/scripts/install-firecracker.sh. After every
+# cert renewal, re-apply ssl-cert group ownership so the unprivileged
+# playground user can keep reading the new privkey.
+set -e
+chgrp -R ssl-cert /etc/letsencrypt/live /etc/letsencrypt/archive
+chmod 750 /etc/letsencrypt/live /etc/letsencrypt/archive
+find /etc/letsencrypt/live /etc/letsencrypt/archive -type d -exec chmod 750 {} \;
+find /etc/letsencrypt/archive -name "privkey*.pem" -exec chmod 640 {} \;
+HOOK
+    sudo chmod 755 /etc/letsencrypt/renewal-hooks/deploy/clickbench-ssl-cert.sh
+    # Apply once now so the freshly issued cert is readable too.
+    sudo bash /etc/letsencrypt/renewal-hooks/deploy/clickbench-ssl-cert.sh
+fi
+
 # Local DNS resolver for the VMs. enable_filtered_internet REDIRECTs
 # the VM TAP's UDP/53 to the host's port 53. systemd-resolved binds
 # only to 127.0.0.53 / .54, so REDIRECT'd traffic (dst=10.200.x.1:53)
