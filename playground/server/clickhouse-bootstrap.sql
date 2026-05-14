@@ -3,14 +3,10 @@
 -- Run as the default user on every server startup. Idempotent: CREATE
 -- IF NOT EXISTS / CREATE OR REPLACE / ALTER USER ... IDENTIFIED.
 --
--- Parameters (passed via HTTP ?param_db=... etc. or substituted in
--- Python for the user-creation statements where CH doesn't accept
--- query parameters):
---   {db:Identifier}        target database name
---   {writer_pw:String}     freshly-rotated password for the writer user
---   {writer_host:String}   IP the writer must connect from (the playground
---                          server's public IP, as seen by CH Cloud)
---   {reader_pw:String}     freshly-rotated password for the reader user
+-- Parameter:
+--   {db:Identifier}        target database name (substituted in Python
+--                          before submit — CH doesn't substitute
+--                          Identifier params inside CREATE VIEW)
 
 -- ===========================================================================
 -- Schema
