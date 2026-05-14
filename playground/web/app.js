@@ -447,12 +447,25 @@ async function ensureQueriesLoaded(name) {
 }
 
 const uiSplit = $("#ui-split");
+
+function _measureSplitOffset() {
+    // Pin the split row's height so that aside scrolls inside its
+    // own track. Read the distance from the page top to #ui-split
+    // and store it in a CSS var; the layout rule subtracts it from
+    // 100 vh.
+    const top = uiSplit.getBoundingClientRect().top + window.scrollY;
+    document.documentElement.style.setProperty("--ui-split-offset", `${top + 20}px`);
+}
+window.addEventListener("resize", _measureSplitOffset);
+
 async function runAll() {
     const idx = parseInt(exampleSel.value, 10);
     if (isNaN(idx)) return;
     runAllBtn.disabled = true;
     runAllSection.style.display = "";
     uiSplit.classList.add("split");
+    _measureSplitOffset();
+    runAllSection.focus();
 
     // Collect snapshotted/ready systems with an example at this index.
     const candidates = Object.values(stateByName)
@@ -596,7 +609,6 @@ function renderRunAll(status) {
         const row = all[i];
         const tr = document.createElement("tr");
         const cls = [row.state];
-        if (i === 0 && row.state === "done") cls.push("winner");
         if (changed.has(row.name)) cls.push("flash");
         if (runAllSelected === row.name) cls.push("selected");
         tr.className = cls.join(" ");
@@ -618,6 +630,25 @@ function renderRunAll(status) {
         fragment.appendChild(tr);
     }
     tbody.appendChild(fragment);
+    runAllOrder = all.map(r => r.name);
 }
+
+// Up/down navigation through the rail. The aside is focusable
+// (tabindex=0) so the user can tab into it; arrow keys then walk
+// the current sort order and pick the next/prev row.
+let runAllOrder = [];
+runAllSection.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    if (!runAllOrder.length) return;
+    e.preventDefault();
+    let i = runAllOrder.indexOf(runAllSelected);
+    if (i === -1) i = e.key === "ArrowDown" ? -1 : runAllOrder.length;
+    const step = e.key === "ArrowDown" ? 1 : -1;
+    const next = runAllOrder[Math.max(0, Math.min(runAllOrder.length - 1, i + step))];
+    pickFromRunAll(next);
+    // Keep the picked row in view inside the scrollable rail.
+    const sel = runAllTable.querySelector("tr.selected");
+    if (sel) sel.scrollIntoView({block: "nearest"});
+});
 
 runAllBtn.addEventListener("click", runAll);

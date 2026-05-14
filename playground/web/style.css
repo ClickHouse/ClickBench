@@ -110,11 +110,10 @@ button.run-all:hover:not(:disabled) {
 #runall-table tr.done td.time { color: var(--good); font-weight: 600; }
 #runall-table tr.failed td.time { color: var(--bad); }
 #runall-table tr.running td.time { color: var(--muted); }
-#runall-table tr.winner td { background: var(--accent); }
 #runall-table tr { cursor: pointer; }
 #runall-table tr:hover td { background: #f5f5f5; }
-#runall-table tr.winner:hover td { background: var(--accent); filter: brightness(0.95); }
-#runall-table tr.selected td { outline: 2px solid var(--info); outline-offset: -2px; }
+#runall-table tr.selected td { background: white; color: var(--fg); font-weight: 600; }
+#runall-table tr.selected:hover td { background: white; }
 
 /* Default view: #ui-main fills the row, the (hidden) aside takes no
    space. The .split modifier is added by JS only when competition
@@ -125,14 +124,28 @@ button.run-all:hover:not(:disabled) {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
     gap: 16px;
-    align-items: start;
+    align-items: stretch;
+    /* Take the rest of the viewport (whatever's left below the
+       buttons row) so the rail can scroll independently rather than
+       stretching the page. */
+    height: calc(100vh - var(--ui-split-offset, 200px));
 }
-#ui-main { min-width: 0; }
+#ui-main { min-width: 0; overflow: auto; }
 #ui-main > section:first-child { margin-top: 0; }
-aside#ui-runall { margin: 0; }
-aside#ui-runall #runall-table { width: auto; }
+aside#ui-runall {
+    margin: 0;
+    overflow-y: auto;
+    height: 100%;
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+    outline: none;
+}
+aside#ui-runall #runall-table {
+    width: max-content;
+    border: 0;
+}
 @media (max-width: 800px) {
-    #ui-split.split { grid-template-columns: 1fr; }
+    #ui-split.split { grid-template-columns: 1fr; height: auto; }
 }
 
 /* Flash on every state change in competition mode: yellow that
