@@ -370,7 +370,6 @@ queryEl.addEventListener("input", () => {
         exampleSel.value = "";
     }
     refreshRunAllVisibility();
-    hideRunAll();
 });
 queryEl.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runQuery();
@@ -444,10 +443,12 @@ function refreshRunAllVisibility() {
 }
 
 function hideRunAll() {
-    // Picking a different example / editing the query / pressing Run
-    // are all signals that the user's attention has moved off the
-    // competition rail. Collapse it so the right pane retakes the
-    // full width.
+    // Picking a different example or pressing Run are signals that
+    // the user's attention has moved off the competition rail.
+    // Collapse it so the right pane retakes the full width. Editing
+    // the textarea does *not* trigger this — the user may want to
+    // tweak the query, see the results refresh, and still compare
+    // against the rail.
     if (runAllSection.style.display === "none") return;
     runAllSection.style.display = "none";
     uiSplit.classList.remove("split");
