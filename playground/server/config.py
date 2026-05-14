@@ -26,10 +26,6 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-def _env_bytes(name: str, default: int) -> int:
-    return _env_int(name, default)
-
-
 @dataclass(frozen=True)
 class Config:
     # Where on the host disk we keep VM artifacts and dataset images.
@@ -43,8 +39,6 @@ class Config:
     vm_vcpus: int
     vm_mem_mib: int
     vm_rootfs_size_gb: int
-    # Output cap applied at the host edge (the agent enforces a per-VM cap too).
-    output_limit_bytes: int
     # Max number of VMs we'll keep "warm" (resumed from snapshot, ready to
     # answer) concurrently.
     max_warm_vms: int
@@ -126,7 +120,6 @@ def load() -> Config:
         # disabled in systems.py instead of bumping VM RAM for everyone.
         vm_mem_mib=_env_int("VM_MEM_MIB", 16 * 1024),
         vm_rootfs_size_gb=_env_int("VM_ROOTFS_SIZE_GB", 200),
-        output_limit_bytes=_env_bytes("PLAYGROUND_OUTPUT_LIMIT", 10 * 1024),
         max_warm_vms=_env_int("PLAYGROUND_MAX_VMS", 16),
         cpu_busy_window_sec=_env_int("VM_CPU_BUSY_WINDOW_SEC", 120),
         cpu_busy_threshold=float(os.environ.get("VM_CPU_BUSY_THRESHOLD", "0.97")),

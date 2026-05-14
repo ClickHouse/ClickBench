@@ -52,7 +52,7 @@ into the first cold query.
   - GET /health, /stats, /provision-log
   - POST /provision (install → start → check → load → stop → drop_caches)
   - POST /sync (guest fsync just before host snapshot)
-  - POST /query (10 KB output cap, fractional-second timing in headers)
+  - POST /query (256 KB output cap, fractional-second timing in headers)
 - `playground/images/` — `build-base-rootfs.sh` (Ubuntu 24.04 → flat 8 GB
   ext4 with agent pre-installed), `build-system-rootfs.sh` (per-system
   200 GB sparse rootfs + sized system disk with pre-staged dataset).
