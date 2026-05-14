@@ -1,0 +1,10 @@
+# Runtime dependencies for the playground host server.
+#
+# aiohttp >= 3.10 covers:
+#   GHSA-5h86-8mv2-jq9f  static handler symlink path traversal (3.9.2)
+#   GHSA-q3qx-c6g2-7pw2  request smuggling (3.9.4)
+#   GHSA-pjjw-qhg8-p2p9  follow_symlinks default tightening (3.10.x)
+#
+# main.py asserts this minimum at startup; the pin here is for the
+# pip-based install path.
+aiohttp>=3.10

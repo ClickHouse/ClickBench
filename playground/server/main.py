@@ -42,8 +42,99 @@ def _b64url_to_id(s: str) -> int:
     return int.from_bytes(base64.urlsafe_b64decode(s + pad), "big")
 from pathlib import Path
 
+import collections
+import threading
+
 import aiohttp
 from aiohttp import web
+
+# --- Per-IP rate limiting ------------------------------------------
+#
+# /api/query and /api/warmup are unauthenticated; a single bad actor
+# can wedge the playground by spamming restores or kicking heavy
+# queries against snapshotted systems. Bound the damage with two
+# rolling windows per source IP:
+#   200 requests / minute
+#   3000 requests / hour
+# In-memory, since restarts are infrequent and per-IP state across
+# restarts isn't load-bearing for this use case.
+_RATE_PER_MINUTE = 200
+_RATE_PER_HOUR = 3000
+_rate_lock = threading.Lock()
+_rate_hits: dict[str, collections.deque[float]] = {}
+
+
+def _client_ip(req: web.Request) -> str:
+    """First hop in X-Forwarded-For if present (we sit behind nothing
+    by default; a reverse proxy operator can wire one in), else the
+    socket peer."""
+    xff = req.headers.get("X-Forwarded-For")
+    if xff:
+        return xff.split(",")[0].strip() or (req.remote or "?")
+    return req.remote or "?"
+
+
+def _rate_check(req: web.Request) -> web.Response | None:
+    """Return a 429 Response if the caller has exceeded either window,
+    else None. Increments the counter on a pass."""
+    ip = _client_ip(req)
+    now = time.monotonic()
+    hour_ago = now - 3600
+    minute_ago = now - 60
+    with _rate_lock:
+        dq = _rate_hits.get(ip)
+        if dq is None:
+            dq = collections.deque()
+            _rate_hits[ip] = dq
+        # Trim timestamps older than 1 hour. The deque is sorted
+        # because we only ever append `now`, so popping from the left
+        # is O(1) per stale entry.
+        while dq and dq[0] < hour_ago:
+            dq.popleft()
+        if len(dq) >= _RATE_PER_HOUR:
+            retry = max(1, int(dq[0] + 3600 - now))
+            return web.json_response(
+                {"error": "rate limit (hour)",
+                 "limit": _RATE_PER_HOUR, "retry_after": retry},
+                status=429, headers={"Retry-After": str(retry)},
+            )
+        recent = sum(1 for t in dq if t >= minute_ago)
+        if recent >= _RATE_PER_MINUTE:
+            # Find oldest sample inside the 1-minute window to suggest
+            # a reasonable retry-after.
+            oldest_in_min = next(t for t in dq if t >= minute_ago)
+            retry = max(1, int(oldest_in_min + 60 - now))
+            return web.json_response(
+                {"error": "rate limit (minute)",
+                 "limit": _RATE_PER_MINUTE, "retry_after": retry},
+                status=429, headers={"Retry-After": str(retry)},
+            )
+        dq.append(now)
+        # Occasional GC: if a deque ever empties (unlikely under live
+        # load but possible for one-shot IPs), let it linger one cycle
+        # then drop. We do the drop opportunistically on insert.
+        if len(_rate_hits) > 10000:
+            # Pathological: 10k+ distinct IPs in the last hour. Evict
+            # entries whose newest hit is > 1h ago.
+            for stale_ip in [k for k, d in _rate_hits.items() if not d]:
+                _rate_hits.pop(stale_ip, None)
+    return None
+
+
+# Refuse to start on aiohttp versions vulnerable to the static-handler
+# path traversal (GHSA-5h86-8mv2-jq9f, fixed in 3.9.2) and the HTTP
+# request-smuggling fixes that landed in 3.9.x / 3.10.x. We mitigate
+# follow_symlinks at the call site too, but a runtime guard catches
+# any future regression where someone re-enables it under an old lib.
+_AIOHTTP_MIN = (3, 10, 0)
+_aiohttp_v = tuple(int(p) for p in aiohttp.__version__.split(".")[:3]
+                   if p.isdigit())
+if _aiohttp_v < _AIOHTTP_MIN:
+    raise RuntimeError(
+        f"aiohttp {aiohttp.__version__} is too old; "
+        f"require >= {'.'.join(str(x) for x in _AIOHTTP_MIN)} "
+        "(GHSA-5h86-8mv2-jq9f and request-smuggling fixes)"
+    )
 
 from . import config as config_mod
 from . import net
@@ -202,6 +293,8 @@ class App:
         VM that's already serving. Refuses to initial-provision; if no
         snapshot exists, returns 409 and the user has to /admin/provision.
         """
+        if (resp := _rate_check(req)) is not None:
+            return resp
         name = req.match_info["name"]
         if name not in self.systems:
             raise web.HTTPNotFound()
@@ -226,6 +319,8 @@ class App:
             log.warning("warmup failed for %s: %r", name, e)
 
     async def handle_query(self, req: web.Request) -> web.StreamResponse:
+        if (resp := _rate_check(req)) is not None:
+            return resp
         system_name = req.query.get("system", "")
         if system_name not in self.systems:
             return web.json_response({"error": f"unknown system: {system_name!r}"},
