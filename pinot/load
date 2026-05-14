@@ -14,6 +14,24 @@ for _ in $(seq 1 120); do
     sleep 1
 done
 
+# Wait for at least one broker AND server to register with the
+# DefaultTenant tag. QuickStart launches the components asynchronously
+# and AddTable below rejects the config with
+#   "Failed to find instances with tag: DefaultTenant_BROKER ..."
+# if the broker hasn't checked in yet.
+for _ in $(seq 1 60); do
+    brokers=$(curl -sf http://localhost:9000/brokers 2>/dev/null \
+        | python3 -c 'import json,sys;d=json.load(sys.stdin);print(sum(len(v) for v in d.values()))' \
+        2>/dev/null || echo 0)
+    servers=$(curl -sf http://localhost:9000/instances 2>/dev/null \
+        | python3 -c 'import json,sys;d=json.load(sys.stdin);print(sum(1 for x in d.get("instances",[]) if x.startswith("Server_")))' \
+        2>/dev/null || echo 0)
+    if [ "$brokers" -ge 1 ] && [ "$servers" -ge 1 ]; then
+        break
+    fi
+    sleep 1
+done
+
 # Register the schema and table. Previously trailed `|| true`, which
 # masked genuine failures (controller not up, bad JSON, etc.) and let
 # LaunchDataIngestionJob run against a missing table — the symptom
