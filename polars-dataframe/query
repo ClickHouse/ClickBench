@@ -1,13 +1,12 @@
 #!/bin/bash
-# Reads a SQL query from stdin, dispatches to the running polars server.
-# Stdout: server response JSON (small).
+# Reads a query from stdin, dispatches to the running in-VM server.
+# Stdout: result (rendered table or scalar from the server).
 # Stderr: query runtime in fractional seconds on the last line.
 # Exit non-zero on error.
 set -e
 
 query=$(cat)
 
-# Capture HTTP status and body separately to detect errors cleanly.
 tmp=$(mktemp)
 status=$(curl -sS -o "$tmp" -w '%{http_code}' \
     -X POST --data-binary @- http://127.0.0.1:8000/query <<<"$query")
@@ -20,5 +19,10 @@ if [ "$status" != "200" ]; then
     exit 1
 fi
 
-echo "$body"
-echo "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["elapsed"])' >&2
+# Pull `result` for stdout and `elapsed` for stderr (host timing protocol).
+python3 - "$body" <<'PY'
+import json, sys
+d = json.loads(sys.argv[1])
+print(d.get("result", ""))
+sys.stderr.write(str(d["elapsed"]) + "\n")
+PY

@@ -61,9 +61,12 @@ async def query(request: Request):
     except SyntaxError as e:
         raise HTTPException(status_code=400, detail=f"syntax error: {e}")
     start = timeit.default_timer()
-    eval(compiled, {"hits": hits, "pd": pd})
+    result = eval(compiled, {"hits": hits, "pd": pd})
     elapsed = round(timeit.default_timer() - start, 3)
-    return {"elapsed": elapsed}
+    # Render the result as a string so the playground UI sees the actual
+    # query output instead of just the timing. Truncated by the agent
+    # to OUTPUT_LIMIT before it reaches the browser.
+    return {"elapsed": elapsed, "result": str(result)}
 
 
 @app.get("/data-size")
