@@ -44,30 +44,39 @@ class Credentials(NamedTuple):
 
 
 def _gen_pw(n: int = 32) -> str:
-    # URL-safe random string. Avoid characters that need escaping in
-    # SQL literals.
-    return secrets.token_urlsafe(n)
+    # URL-safe random string with at least one digit + one special char
+    # (CH Cloud's password policy requires both).
+    body = secrets.token_urlsafe(n)
+    return body + "!1"
+
+
+# SHA-256 of the empty string. Lets us tell ClickHouse "no password"
+# in a form the server understands (it stores sha256_hash users) while
+# the operator-facing identity is plainly empty.
+_SHA256_EMPTY = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 
 def _credentials_path(cfg: Config) -> Path:
     return cfg.state_dir / "clickhouse-credentials.json"
 
 
-def _load_or_make_credentials(cfg: Config) -> tuple[str, str]:
-    """Return (writer_password, reader_password). Persist on first run."""
+def _load_or_make_credentials(cfg: Config) -> str:
+    """Return the writer's password. Persist on first run.
+
+    The reader has no password — it's an unauthenticated public identity
+    that can only SELECT from the parameterized request_by_id view —
+    so we don't manage one here.
+    """
     path = _credentials_path(cfg)
     if path.exists():
         with contextlib.suppress(Exception):
             data = json.loads(path.read_text())
-            return data["writer_password"], data["reader_password"]
-    creds = {
-        "writer_password": _gen_pw(),
-        "reader_password": _gen_pw(),
-    }
+            return data["writer_password"]
+    creds = {"writer_password": _gen_pw()}
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(creds, indent=2))
     path.chmod(0o600)
-    return creds["writer_password"], creds["reader_password"]
+    return creds["writer_password"]
 
 
 async def _ch_exec(session: aiohttp.ClientSession,
@@ -96,7 +105,7 @@ async def bootstrap(cfg: Config) -> Credentials | None:
     if not (cfg.ch_cloud_url and cfg.ch_cloud_user and cfg.ch_cloud_password):
         return None
     db = cfg.ch_cloud_db or "playground"
-    writer_pw, reader_pw = _load_or_make_credentials(cfg)
+    writer_pw = _load_or_make_credentials(cfg)
     async with aiohttp.ClientSession() as session:
         # The writer user is host-pinned to our public IP. Resolve it
         # via api.ipify.org rather than asking CH (its various
@@ -111,15 +120,20 @@ async def bootstrap(cfg: Config) -> Credentials | None:
             writer_host = "0.0.0.0"  # fallback: no IP restriction
         log.info("writer host (public IP) = %s", writer_host)
 
-        # Schema DDL from the .sql file. Each statement runs in its
-        # own request so server-side parameter substitution works.
-        sql_blob = _SQL_FILE.read_text()
-        # Strip line comments and split on `;` boundaries.
+        # Schema DDL from the .sql file. We substitute {db:Identifier}
+        # in Python rather than via HTTP params because the CREATE VIEW
+        # body contains a *view-time* parameter ({q_id:UInt64}) and
+        # ClickHouse skips HTTP param substitution for DDL when there
+        # are unbound placeholders — the result is the VIEW DDL going
+        # out with literal `{db:Identifier}` and the parser barking
+        # "Database `` does not exist". Python substitution is fine
+        # because the db name is our own (no SQL-injection vector).
+        sql_blob = _SQL_FILE.read_text().replace("{db:Identifier}", db)
         statements = _split_sql_statements(sql_blob)
         for stmt in statements:
             await _ch_exec(
                 session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
-                stmt, params={"db": db},
+                stmt,
             )
 
         # Users — passwords + host clause go inline; ALTER on every
@@ -150,13 +164,15 @@ async def bootstrap(cfg: Config) -> Credentials | None:
             f"GRANT INSERT ON {db}.events TO playground_writer",
         )
 
-        # Reader: public, SELECT-only on the parameterized view, with
-        # tight resource caps. Profile-style settings prevent anyone
-        # who somehow gets the password from using it as a foothold.
+        # Reader: public, no password — SELECT-only on the parameterized
+        # view, with tight resource caps. The empty password is
+        # expressed as sha256_hash of the empty string so CH stores it
+        # in the same shape as any other sha256 user but the
+        # operator-facing identity is plainly "no password".
         await _ch_exec(
             session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
             f"CREATE USER IF NOT EXISTS playground_reader "
-            f"IDENTIFIED WITH sha256_password BY '{reader_pw}' "
+            f"IDENTIFIED WITH sha256_hash BY '{_SHA256_EMPTY}' "
             f"DEFAULT DATABASE {db} "
             f"SETTINGS readonly = 2, "
             f"max_execution_time = 5, "
@@ -168,7 +184,7 @@ async def bootstrap(cfg: Config) -> Credentials | None:
         await _ch_exec(
             session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
             f"ALTER USER playground_reader "
-            f"IDENTIFIED WITH sha256_password BY '{reader_pw}'",
+            f"IDENTIFIED WITH sha256_hash BY '{_SHA256_EMPTY}'",
         )
         await _ch_exec(
             session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
@@ -183,7 +199,7 @@ async def bootstrap(cfg: Config) -> Credentials | None:
     return Credentials(
         url=cfg.ch_cloud_url, db=db,
         writer_user="playground_writer", writer_password=writer_pw,
-        reader_user="playground_reader", reader_password=reader_pw,
+        reader_user="playground_reader", reader_password="",
     )
 
 
