@@ -74,18 +74,23 @@ if [ "$status" -ne 0 ] || printf '%s\n' "$out" | \
     exit 1
 fi
 
-# sqlline echoes "1/1     SELECT ..." (the script prelude) and
-# "(N rows in X.YYY seconds)" alongside the result rows; strip both
-# for the result body, then pull the last "(... seconds)" for the timing.
+# sqlline echoes "1/1     SELECT ..." (the script prelude) plus a
+# footer summarizing the result rows. Older sqlline printed
+#   (N rows in X.YYY seconds)
+# but the current apache/drill image prints
+#   N row(s) selected (X.YYY seconds)
+# Strip either footer from the result body and pull the last
+# "(X.YYY seconds)" for the timing.
 printf '%s\n' "$out" \
-    | grep -vE '^[0-9]+/[0-9]+ |\([0-9]+ rows? in [0-9.]+ seconds?\)|^Apache Drill|^"' \
+    | grep -vE '^[0-9]+/[0-9]+ |^[0-9]+ rows? selected \([0-9.]+ seconds?\)|\([0-9]+ rows? in [0-9.]+ seconds?\)|^Apache Drill|^"' \
     || true
 
-secs=$(printf '%s\n' "$out" | grep -oE '\([0-9]+ rows? in [0-9.]+ seconds?\)' \
-    | grep -oE '[0-9.]+ seconds?' | grep -oE '[0-9.]+' | tail -n1)
+secs=$(printf '%s\n' "$out" \
+    | grep -oE '\([0-9.]+ seconds?\)' \
+    | grep -oE '[0-9.]+' | tail -n1)
 
 if [ -z "$secs" ]; then
-    echo "no '(N rows in X.YYY seconds)' marker in drill output" >&2
+    echo "no '(X.YYY seconds)' marker in drill output" >&2
     exit 1
 fi
 
