@@ -271,6 +271,26 @@ def _run_query(sql: bytes) -> tuple[int, bytes, bytes, float]:
     return rc, bytes(stdout_buf), bytes(stderr_buf), time.monotonic() - t0
 
 
+def _recent_oom_messages() -> str:
+    """Return kernel OOM-killer messages from `dmesg`, or '' if nothing
+    relevant. Called when the query script exits non-zero with empty
+    stdout AND stderr — the daemon was likely OOM-killed and never
+    got a chance to write a real error message.
+    """
+    try:
+        out = subprocess.run(
+            ["dmesg", "--ctime"],
+            capture_output=True, timeout=5, check=False,
+        ).stdout.decode(errors="replace")
+    except Exception:
+        return ""
+    needles = ("killed process", "out of memory", "oom-killer",
+               "invoked oom-killer")
+    lines = [ln for ln in out.splitlines()
+             if any(n in ln.lower() for n in needles)]
+    return "\n".join(lines[-20:])
+
+
 def _extract_script_timing(stderr: bytes) -> float | None:
     """
     Pull fractional-seconds timing from the last numeric line of stderr,
@@ -607,6 +627,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if rc != 0 and not truncated:
                 # Surface a snippet of stderr so the client sees *something*.
                 err_snip = err[-1024:].decode("utf-8", errors="replace")
+                # Both stdout and stderr empty usually means the
+                # daemon was OOM-killed mid-query. Pull the recent
+                # OOM-killer lines from dmesg so the UI shows a real
+                # cause instead of a blank error.
+                if not body.strip() and not err_snip.strip():
+                    oom = _recent_oom_messages()
+                    if oom:
+                        err_snip = "kernel OOM-killer:\n" + oom
                 headers["X-Error"] = err_snip.replace("\n", " | ")[:512]
             self._send(200 if (rc == 0 or truncated) else 502, body, headers)
             return
