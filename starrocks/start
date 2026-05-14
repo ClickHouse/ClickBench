@@ -7,9 +7,16 @@ export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-$(dpkg --print-architecture)
 export PATH=$JAVA_HOME/bin:$PATH
 
 # Idempotent: if FE is up AND at least one BE is alive, we're done.
+#
+# `SHOW BACKENDS` TSV columns are:
+#   1 BackendId  2 IP  3 HeartbeatPort  4 BePort  5 HttpPort
+#   6 BrpcPort   7 LastStartTime  8 LastHeartbeat  9 Alive  ...
+# An earlier version of this script checked column 10
+# (SystemDecommissioned) instead of 9 (Alive), so the wait loop
+# timed out even when SHOW BACKENDS reported the BE as alive.
 backend_alive() {
     mysql -h127.0.0.1 -P9030 -uroot -B -N -e 'SHOW BACKENDS' 2>/dev/null \
-        | awk -F'\t' 'tolower($10)=="true" { found=1 } END { exit !found }'
+        | awk -F'\t' 'tolower($9)=="true" { found=1 } END { exit !found }'
 }
 
 if mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null 2>&1 \
