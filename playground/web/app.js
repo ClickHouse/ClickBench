@@ -312,6 +312,14 @@ async function runQuery() {
             truncated: h("X-Output-Truncated") === "1" ? "yes" : "no",
             exit: h("X-Exit-Code") || String(r.status),
         };
+        // Permalink: the server returns a base64url 64-bit id; drop
+        // it in the URL bar so reload/share keeps the result.
+        const qid = h("X-Query-Id");
+        if (qid) {
+            const u = new URL(window.location.href);
+            u.searchParams.set("q", qid);
+            window.history.replaceState({}, "", u.toString());
+        }
     } catch (e) {
         payload = {
             output: `(client error)\n${e}`,
@@ -359,6 +367,42 @@ queryEl.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runQuery();
 });
 
+async function maybeLoadShared() {
+    // ?q=<base64url> permalink — fetch the saved query+result and
+    // replay it as if we just ran it.
+    const u = new URL(window.location.href);
+    const qid = u.searchParams.get("q");
+    if (!qid) return;
+    try {
+        const r = await fetch(`${API}/api/saved/${encodeURIComponent(qid)}`);
+        if (!r.ok) return;
+        const row = await r.json();
+        // The CH parameterized view returns JSONEachRow → one object.
+        const sys = row.system;
+        if (sys && stateByName[sys]) {
+            select(sys);
+        }
+        queryEl.value = row.query || "";
+        pristineQuery = queryEl.value;
+        const payload = {
+            output: row.output || "(no output)",
+            time: row.query_time != null ? `${row.query_time.toFixed(3)} s` : "—",
+            wall: row.wall_time != null ? `${row.wall_time.toFixed(3)} s` : "—",
+            bytes: String(row.output_bytes ?? ""),
+            truncated: row.output_truncated ? "yes" : "no",
+            exit: String(row.status ?? ""),
+        };
+        if (row.error) {
+            payload.output = (payload.output === "(no output)" ? "" : payload.output)
+                + `\n\n(error)\n${row.error}`;
+        }
+        resultsByName[selected] = payload;
+        showResult(payload);
+    } catch (e) {
+        console.error("failed to load shared query", e);
+    }
+}
+
 (async function init() {
     // Treat the HTML default ("SELECT COUNT(*) FROM hits;") as pristine
     // so first-system selection is free to swap it for the first
@@ -366,5 +410,6 @@ queryEl.addEventListener("keydown", (e) => {
     pristineQuery = queryEl.value;
     await loadCatalog();
     await pollState();
+    await maybeLoadShared();
     pollTimer = setInterval(pollState, 2000);
 })();
