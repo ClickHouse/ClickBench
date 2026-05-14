@@ -407,6 +407,12 @@ def _provision() -> tuple[int, bytes]:
                       check.exists() and os.access(stop, os.X_OK) and
                       os.access(start, os.X_OK) and
                       not preserve_state)
+        if preserve_state:
+            # The daemon is already running with state we want to keep
+            # (loaded DataFrame), so we don't restart it. The snapshot
+            # ships it as-is — mark /ready before snapshot so the host
+            # doesn't wait the full 600 s after restore.
+            _daemon_started.set()
         if has_daemon:
             log_lines.append(b"\n=== pre-snapshot stop ===\n")
             r = subprocess.run([str(stop)], cwd=str(SYSTEM_DIR),
