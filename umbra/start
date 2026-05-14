@@ -10,15 +10,22 @@ sudo docker rm umbradb >/dev/null 2>&1 || true
 
 # Umbra's working set during the ClickBench COPY blows well past the
 # guest VM's 16 GiB RAM. The agent has already mkswap'd + swapon'd a
-# 256 GiB swap.raw block device — we just need to make sure (a) the
-# guest kernel is willing to overcommit anonymous mappings well past
-# physical RAM (overcommit_memory=1; default 0 is heuristic and
-# refuses sufficiently large mmaps), and (b) the docker cgroup
-# doesn't sit between Umbra and the swap. No --memory / --memory-swap
-# cap so the container can grow into the available RAM+swap, and
-# --memory-swappiness=100 so the kernel pages out anonymous memory
-# aggressively the moment we exceed physical RAM.
-sudo sysctl -wq vm.overcommit_memory=1 vm.swappiness=100 || true
+# 256 GiB swap.raw block device, so what we need is:
+#   - vm.overcommit_memory=1 so the kernel doesn't refuse a single
+#     huge mmap (default heuristic mode rejects allocations that
+#     would exceed physical RAM + swap by a wide margin).
+#   - vm.swappiness=100 to bias the kernel toward paging anonymous
+#     memory out as soon as we exceed physical RAM (default 60 is
+#     too conservative — Umbra ENOMEMs before the kernel reclaims
+#     enough).
+#   - vm.max_map_count raised. Umbra issues a large number of small
+#     mmaps; the 65530 default is easy to hit on a 100 M-row COPY.
+#   - NO docker memory cgroup. cgroup v2 silently discards
+#     --memory-swappiness, and any --memory cap creates a hard
+#     ceiling that the kernel will OOM on regardless of how much
+#     swap is available. Let the host kernel manage memory.
+sudo sysctl -wq vm.overcommit_memory=1 vm.swappiness=100 \
+    vm.max_map_count=1048576 || true
 
 sudo docker run -d --name umbradb \
     -v "$(pwd)/db:/var/db" \
@@ -26,9 +33,6 @@ sudo docker run -d --name umbradb \
     -p 5432:5432 \
     --ulimit nofile=1048576:1048576 \
     --ulimit memlock=8388608:8388608 \
-    --memory=256g \
-    --memory-swap=-1 \
-    --memory-swappiness=100 \
     umbradb/umbra:latest >/dev/null
 
 # Container needs a moment before psql can connect.
