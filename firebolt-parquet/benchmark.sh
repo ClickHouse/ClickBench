@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Playground reads this line to pre-stage the dataset on the per-VM
+# system disk; the rest of benchmark.sh is unchanged.
+export BENCH_DOWNLOAD_SCRIPT="download-hits-parquet-single"
+
 # Download the hits.parquet file
 echo "Downloading dataset..."
 rm -rf data

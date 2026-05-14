@@ -1,0 +1,28 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it against the firebolt-core
+# container via /?database=clickbench.
+# Stdout: query result (firebolt's JSON_Compact format).
+# Stderr: query runtime in fractional seconds on the last line,
+#         pulled from the response's `.statistics.elapsed`.
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+# Result + sub-result caches off so timings are real; output_format
+# matches what firebolt's run.sh uses for the public benchmark.
+PARAMS='database=clickbench&enable_result_cache=false&enable_subresult_cache=false&enable_scan_cache=false&output_format=JSON_Compact'
+
+resp=$(curl -sS --max-time 600 "http://localhost:3473/?${PARAMS}" \
+            --data-binary "$query")
+
+# Firebolt returns a JSON object whether the query succeeded or not.
+# A failed query has an "errors" key; a successful one carries
+# "data" + "statistics".
+if printf '%s' "$resp" | jq -e '.errors' >/dev/null 2>&1; then
+    printf '%s\n' "$resp" >&2
+    exit 1
+fi
+
+printf '%s\n' "$resp"
+printf '%s\n' "$resp" | jq -r '.statistics.elapsed' >&2

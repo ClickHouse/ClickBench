@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eu
+
+# Partitioned-parquet variant: stage hits_*.parquet under ./data so
+# the container sees them at /firebolt-core/clickbench/*.parquet;
+# create.sql declares an external table with FROM PATTERN that
+# matches the glob.
+mkdir -p data
+shopt -s nullglob
+for f in hits_*.parquet; do
+    mv -f "$f" "data/$f"
+done
+shopt -u nullglob
+
+curl -sSf 'http://localhost:3473/?enable_multi_query_requests=true' \
+    --data-binary 'DROP DATABASE IF EXISTS clickbench;CREATE DATABASE clickbench;'
+curl -sSf 'http://localhost:3473/?database=clickbench&enable_multi_query_requests=true' \
+    --data-binary @create.sql
+
+sync

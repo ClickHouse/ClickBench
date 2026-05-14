@@ -1,0 +1,38 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: if firebolt-core already answers SELECT 1, do nothing.
+if curl -sS --max-time 5 'http://localhost:3473/' \
+        --data-binary 'SELECT 1;' 2>/dev/null | grep -q '^1'; then
+    exit 0
+fi
+
+mkdir -p data
+
+# `firebolt-core` is the public self-hosted image. Container needs
+# memlock 8 GiB and seccomp unconfined per upstream's run docs. The
+# data dir maps to /firebolt-core/clickbench inside the container so
+# create.sql's FROM PATTERN can read the parquet files.
+sudo docker run -dit --name firebolt-core --rm \
+    --ulimit memlock=8589934592:8589934592 \
+    --security-opt seccomp=unconfined \
+    -p 127.0.0.1:3473:3473 \
+    -v /firebolt-core/volume \
+    -v "$(pwd)/data:/firebolt-core/clickbench" \
+    ghcr.io/firebolt-db/firebolt-core:preview-rc >/dev/null
+
+# Wait for the cluster to be "actually" ready. firebolt-core's HTTP
+# port comes up immediately but returns
+#   {"errors":[{"description":"Cluster not yet healthy: ..."}]}
+# at HTTP 200 until the engine threads have warmed; bench against a
+# sentinel string instead of HTTP status to avoid that trap.
+for _ in $(seq 1 600); do
+    if curl -sS --max-time 5 'http://localhost:3473/' \
+            --data-binary "SELECT 'firebolt-ready';" 2>/dev/null \
+            | grep -q 'firebolt-ready'; then
+        exit 0
+    fi
+    sleep 1
+done
+echo "firebolt-core did not become healthy in 10 min" >&2
+exit 1

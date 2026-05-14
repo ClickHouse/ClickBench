@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# firebolt-core was started with --rm; stop is enough to clean up.
+sudo docker container stop firebolt-core >/dev/null 2>&1 || true
