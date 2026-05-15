@@ -1,73 +1,18 @@
-Bytehouse is a derivative of ClickHouse.
-It is based on very old ClickHouse version (20.4.54418) and many features are unsupported.
+# ByteHouse ClickBench Reproduction
 
-## Status
+## Reproduce The Result
 
-ByteHouse's international cloud (bytehouse.cloud) is no longer reachable
-from outside the China region. The service still operates within China
-via Volcengine. All existing results in this directory were collected
-against the international cloud and have been re-tagged with
-`"historical"`. Future submissions running against a self-managed
-ByteHouse instance (or via Volcengine) should not be tagged historical.
+If you want to reproduce the benchmark result, please send an email to [gaoyuanning@bytedance.com](mailto:gaoyuanning@bytedance.com) to get the EC2 login information.
 
-https://bytehouse.cloud/signup
+After logging in to the EC2 instance:
 
-Sign Up. Only Asia-Pacific South-East 1 AWS region is available. Verify email.
-
-Create virtual warehouse. Size L.
-
-Go to "Databases" and create database "test".
-
-Go to "SQL Worksheet" and copy-paste create.sql query there.
-
-Note: S3 import does not support public buckets. And it requires pasting secret access key, which we are not going to do. So, switch to using CLI.
-
-Create a machine in ap-southeast-1 region and install Bytehouse CLI:
-
-```
-wget --continue --progress=dot:giga https://github.com/bytehouse-cloud/cli/releases/download/v1.5.34/bytehouse-cli_1.5.34_Linux_x86_64.tar.gz
-tar xvf bytehouse-cli_1.5.34_Linux_x86_64.tar.gz
+```bash
+git clone <github_repo_url>
+cd ClickBench/bytehouse
+./benchmark.sh
 ```
 
-```
-export user='...'
-export password='...'
-export account='AWS...'
-export warehouse='test'
-```
+## Notes
 
-```
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
-gzip -d -f hits.csv.gz
-```
-
-Load the data:
-
-```
-echo -n "Load time: "
-command time -f '%e' ./bytehouse-cli --user "$user" --account "$account" --password "$password" --region ap-southeast-1 --secure --warehouse "$warehouse" --query "INSERT INTO test.hits FORMAT CSV" < hits.csv
-```
-
-```
-99,997,497 total rows sent, 0 rows/s (81.14 GB, 0.00 B/s)
-total rows sent: 99,997,497, average speed = 134,320 rows/s
-Elapsed: 12m24.754608947s. 81.14 GB (108.94 MB/s).
-─── End of Execution ───
-
-real    12m25.310s
-```
-
-Run the benchmark:
-
-```
-./run.sh 2>&1 | tee log.txt 
-
-cat log.txt | grep --text -F 'Elapsed' | 
-    grep --text -oP 'Elapsed: [\d\.]+(ms|s)\. Processed: \d+ row' | 
-    sed -r -e 's/Elapsed: ([0-9\.]+)(ms|s)\. Processed: ([0-9]+) row/\1 \2 \3/' | 
-    awk '{ if ($3 == 0) { print "null" } else if ($2 == "ms") { print $1 / 1000 } else { print $1 } }' |
-    awk '{ if (i % 3 == 0) { printf "[" }; printf $1; if (i % 3 != 2) { printf "," } else { print "]," }; ++i; }'
-```
-
-Note: cluster size L is the maximum that can be created.
-An attempt to create XL gives "Failed AWAITING RESOURCES". 
+- Please use the EC2 environment provided through email for reproduction.
+- Run the benchmark inside the `bytehouse` directory.

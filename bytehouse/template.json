@@ -1,0 +1,12 @@
+{
+  "system": "ByteHouse",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative",
+    "lukewarm-cold-run"
+  ]
+}
