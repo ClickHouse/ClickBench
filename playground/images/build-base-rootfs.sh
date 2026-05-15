@@ -180,11 +180,15 @@ cat > /etc/modules-load.d/clickbench.conf <<EOF
 overlay
 br_netfilter
 veth
-iptable_nat
 ip_tables
+iptable_nat
+iptable_filter
+iptable_raw
+iptable_mangle
 nf_conntrack
 nf_nat
 xt_MASQUERADE
+xt_conntrack
 EOF
 rm -f /tmp/linux-modules-*.deb /tmp/linux-image-*.deb
 MODSCRIPT
