@@ -53,6 +53,12 @@ class Config:
     # the watchdog kicks the VM. Counts only "ready" state — provision
     # is allowed to use as much CPU as it wants.
     vm_cpu_total_seconds_cap: int
+    # Seconds since the last /query a "ready" VM is allowed to linger
+    # before the monitor tears it down. Snapshot is preserved; the
+    # next /query restores in seconds. Keeps the kernel's KVM
+    # async_pf_execute workqueue from accumulating idle VMs and
+    # slowing unrelated services (sshd in particular).
+    idle_kick_after_sec: int
     host_min_free_ram_gb: int
     host_min_free_disk_gb: int
     # Per-system disk full check.
@@ -129,6 +135,10 @@ def load() -> Config:
         cpu_busy_window_sec=_env_int("VM_CPU_BUSY_WINDOW_SEC", 120),
         cpu_busy_threshold=float(os.environ.get("VM_CPU_BUSY_THRESHOLD", "0.97")),
         vm_cpu_total_seconds_cap=_env_int("VM_CPU_TOTAL_SECONDS_CAP", 3600),
+        # 10 minutes default. Cold restore is ~5-30 s for most engines,
+        # so a user returning within 10 min finds a warm VM; longer
+        # gaps cost a single fresh restore.
+        idle_kick_after_sec=_env_int("VM_IDLE_KICK_AFTER_SEC", 600),
         host_min_free_ram_gb=_env_int("HOST_MIN_FREE_RAM_GB", 32),
         host_min_free_disk_gb=_env_int("HOST_MIN_FREE_DISK_GB", 100),
         vm_disk_pct_kill_threshold=float(os.environ.get("VM_DISK_FULL_PCT", "0.97")),

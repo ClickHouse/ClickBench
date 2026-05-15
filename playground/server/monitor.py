@@ -111,6 +111,23 @@ class Monitor:
         return cpu_seconds / (dt * self.cfg.vm_vcpus)
 
     async def _check_per_vm(self, vm: VM, cpu_pct: float | None) -> None:
+        # Idle reaper. A "ready" VM that hasn't seen a /query in
+        # idle_kick_after_sec is consuming KVM threads + memory
+        # mappings + a TAP for no reason. The kernel's async_pf_execute
+        # workqueue starts hogging CPU when too many VMs idle-spin in
+        # parallel (see dmesg), which slows down unrelated services
+        # (sshd accept loop, in particular). Tear down idle ones; the
+        # snapshot is preserved and the next /query restores in seconds.
+        if (vm.state == "ready" and vm.last_used > 0
+                and time.time() - vm.last_used >= self.cfg.idle_kick_after_sec):
+            self.sink.write_event(
+                system=vm.system.name, kind="idle-reaper",
+                detail=f"idle for {int(time.time() - vm.last_used)}s "
+                       f"(threshold {self.cfg.idle_kick_after_sec}s)",
+            )
+            await self.vmm.kick(vm.system.name, "idle-reaper")
+            return
+
         # CPU saturation watchdog
         if cpu_pct is None:
             vm.cpu_busy_since = None
