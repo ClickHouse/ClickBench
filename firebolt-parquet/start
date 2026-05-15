@@ -45,5 +45,17 @@ for _ in $(seq 1 600); do
     fi
     sleep 1
 done
-echo "firebolt-core did not become healthy in 10 min" >&2
+{
+    echo "firebolt-core did not become healthy in 10 min"
+    echo "=== docker ps -a ==="
+    sudo docker ps -a 2>&1
+    echo "=== docker inspect firebolt-core (state) ==="
+    sudo docker inspect firebolt-core --format '{{json .State}}' 2>&1
+    echo "=== docker logs firebolt-core --tail 50 ==="
+    sudo docker logs firebolt-core --tail 50 2>&1
+    echo "=== curl http://localhost:3473/ ==="
+    curl -sS --max-time 3 'http://localhost:3473/' --data-binary 'SELECT 1' 2>&1
+    echo "=== ss listeners ==="
+    sudo ss -lntp 2>&1 | head -20
+} >&2
 exit 1
