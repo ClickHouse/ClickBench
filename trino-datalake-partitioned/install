@@ -14,7 +14,7 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 sudo apt-get install -y bc
 
-sudo docker pull trinodb/trino:latest
+sudo docker pull trinodb/trino:455
 
 mkdir -p data/meta etc/catalog shim
 sudo chown 1000:1000 data/meta shim
@@ -33,15 +33,23 @@ public class S3AnonymousProvider implements AWSCredentialsProvider {
 }
 EOF
 
-# Compile the shim against the AWS SDK + Hadoop jars bundled in the trino
-# image. Target Java 11 bytecode for portability. Skip if already built.
+# Compile the shim against the AWS-SDK and Hadoop jars bundled in the
+# image. The trino:455 image does NOT ship a `find` binary, so the
+# previous approach (find /usr/lib/trino -name '*.jar') silently
+# returned empty and javac complained that com.amazonaws.auth doesn't
+# exist. Use a shell glob instead. The legacy file names had a
+# `com.amazonaws_` / `io.trino.hadoop_` prefix in earlier Trino
+# builds; current :455 drops both prefixes — match either.
 if [ ! -f shim/S3AnonymousProvider.jar ]; then
     sudo docker run --rm \
         -v "$PWD/shim:/shim" \
-        --entrypoint sh trinodb/trino:latest -c '
+        --entrypoint sh trinodb/trino:455 -c '
             set -e
             cd /shim
-            CP="/usr/lib/trino/plugin/hive/hdfs/com.amazonaws_aws-java-sdk-core-1.12.797.jar:/usr/lib/trino/plugin/hive/hdfs/io.trino.hadoop_hadoop-apache-3.3.5-3.jar"
+            HDFS=/usr/lib/trino/plugin/hive/hdfs
+            CP=$(ls "$HDFS"/{com.amazonaws_,}aws-java-sdk-core-*.jar \
+                    "$HDFS"/{io.trino.hadoop_,}hadoop-apache-*.jar \
+                    2>/dev/null | tr "\n" ":")
             javac --release 11 -cp "$CP" S3AnonymousProvider.java
             jar cf S3AnonymousProvider.jar S3AnonymousProvider.class
         '
@@ -53,6 +61,10 @@ hive.metastore=file
 hive.metastore.catalog.dir=local:///meta
 local.location=/data
 fs.native-local.enabled=true
+# Pin to trino:455 (last release shipping the legacy hadoop-S3 plugin
+# with a custom AWSCredentialsProvider). 461+ removed it, and the new
+# fs.native-s3 has no anonymous-creds mode so we can't read the public
+# bucket without it.
 fs.hadoop.enabled=true
 hive.config.resources=/etc/trino/core-site.xml
 hive.non-managed-table-writes-enabled=true

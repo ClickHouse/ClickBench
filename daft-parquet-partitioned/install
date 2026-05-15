@@ -9,4 +9,4 @@ if [ ! -d myenv ]; then
 fi
 # shellcheck disable=SC1091
 source myenv/bin/activate
-pip install --quiet pandas packaging 'daft==0.7.4' fastapi uvicorn
+pip install --quiet pandas packaging daft fastapi uvicorn

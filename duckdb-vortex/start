@@ -1,2 +1,9 @@
 #!/bin/bash
+# duckdb is embedded — no daemon to start. We do clean any stale WAL
+# files that may have been captured in the snapshot: a .wal whose footer
+# wasn't fully flushed pre-snapshot can leave duckdb refusing to open
+# the database ("IO Error: ... Bad message"). The .wal is regenerated
+# on the next write, so dropping it is safe between query sessions.
+shopt -s nullglob
+rm -f ./*.wal ./*.db.wal
 exit 0

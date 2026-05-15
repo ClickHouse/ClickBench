@@ -30,3 +30,12 @@ fi
     git submodule update --init --recursive --force
     cargo build --release --bin query_bench --package bench-vortex
 )
+
+# Build datafusion-cli so ./query can return actual rows instead of
+# the bench driver's JSON timing blob. See datafusion-vortex/install.
+if ! command -v datafusion-cli >/dev/null 2>&1; then
+    cargo install --locked --version 49.0.2 datafusion-cli
+    # Cargo installs into $HOME/.cargo/bin; the playground agent
+    # runs scripts with a stripped PATH, so symlink into /usr/local/bin.
+    sudo ln -sf "$HOME/.cargo/bin/datafusion-cli" /usr/local/bin/datafusion-cli
+fi

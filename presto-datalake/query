@@ -11,7 +11,7 @@ start=$(date +%s.%N)
 java -jar presto-cli.jar --server http://localhost:8081 \
     --catalog hive --schema clickbench \
     --session offset_clause_enabled=true \
-    --output-format=NULL --execute "$query"
+    --output-format=ALIGNED --execute "$query"
 end=$(date +%s.%N)
 
 awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2

@@ -60,9 +60,12 @@ async def query(request: Request):
     if not sql:
         raise HTTPException(status_code=400, detail="empty query")
     start = timeit.default_timer()
-    conn.execute(sql).fetchall()
+    # Use show() (DuckDB CLI-style table) so the playground UI sees
+    # the actual result, not just the timing.
+    rel = conn.sql(sql)
+    res = str(rel) if rel is not None else ""
     elapsed = round(timeit.default_timer() - start, 3)
-    return {"elapsed": elapsed}
+    return {"elapsed": elapsed, "result": res}
 
 
 @app.get("/data-size")

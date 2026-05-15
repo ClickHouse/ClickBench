@@ -13,8 +13,9 @@ Routes:
     GET  /data-size  -> bytes the DataFrame currently occupies (estimated_size)
 
 The /query endpoint takes a Python expression directly rather than an SQL
-string mapped to a hardcoded lambda. Workload lives in queries.py
-(line-by-line expressions). queries.sql is kept for cross-system reference.
+string mapped to a hardcoded lambda. The workload lives in queries.sql,
+one Python expression per line (the filename matches the cross-system
+convention; the contents are not SQL).
 """
 
 import os
@@ -66,9 +67,9 @@ async def query(request: Request):
     except SyntaxError as e:
         raise HTTPException(status_code=400, detail=f"syntax error: {e}")
     start = timeit.default_timer()
-    eval(compiled, {"hits": hits, "pl": pl, "date": date})
+    result = eval(compiled, {"hits": hits, "pl": pl, "date": date})
     elapsed = round(timeit.default_timer() - start, 3)
-    return {"elapsed": elapsed}
+    return {"elapsed": elapsed, "result": str(result)}
 
 
 @app.get("/data-size")

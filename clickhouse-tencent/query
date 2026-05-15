@@ -6,4 +6,4 @@
 set -e
 
 query=$(cat)
-clickhouse-client --time --query="$query"
+clickhouse-client --time --format=Pretty --query="$query"

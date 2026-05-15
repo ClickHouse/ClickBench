@@ -3,9 +3,14 @@ set -e
 
 ./ursa client < create.sql
 
-# The download script puts hits_*.parquet in the cwd; move them to the
-# server's user_files dir so the file() table function can read them.
-sudo mv hits_*.parquet user_files/
+# The download script puts hits_*.parquet in the cwd. Symlink them into
+# the server's user_files dir; the file() table function reads through
+# the symlinks, and we avoid a 14 GB copy of data we'll discard after
+# INSERT.
+mkdir -p user_files
+for f in hits_*.parquet; do
+    ln -sf "$PWD/$f" user_files/"$f"
+done
 
 ./ursa client \
     --query "INSERT INTO hits SELECT * FROM file('hits_*.parquet')" \

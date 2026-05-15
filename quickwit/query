@@ -19,11 +19,23 @@ resp=$(curl -sS -X POST \
     -d "$query" \
     http://localhost:7280/api/v1/_elastic/hits/_search)
 
-took=$(printf '%s' "$resp" | jq -r 'if has("error") or has("status") then empty else (.took | tostring) end')
-if [ -z "$took" ]; then
+# Treat the response as an error if it carries any of the known
+# error keys (.error / .status / .message) OR if it has no .took
+# at all. The previous check looked only at .error/.status — a
+# malformed-body response like
+#   {"message":"expected value at line 1 column 1"}
+# slipped through as success.
+err=$(printf '%s' "$resp" | jq -r '
+    if has("error")    then "error: "   + (.error|tostring)
+    elif has("status") then "status: "  + (.status|tostring)
+    elif has("message") then "message: " + (.message|tostring)
+    elif (.took // null) == null then "no .took in response"
+    else empty end')
+if [ -n "$err" ]; then
     printf '%s\n' "$resp" >&2
     exit 1
 fi
+took=$(printf '%s' "$resp" | jq -r '.took')
 
 printf '%s\n' "$resp"
 

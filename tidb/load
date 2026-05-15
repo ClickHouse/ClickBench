@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-TIDB_MODE=${TIDB_MODE:-tiflash}
+TIDB_MODE=${TIDB_MODE:-tikv}
 DB_NAME=test
 TABLE_NAME=hits
 DATA_DIR=/tmp/data

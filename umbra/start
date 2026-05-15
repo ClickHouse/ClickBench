@@ -8,6 +8,25 @@ fi
 sudo docker stop umbradb >/dev/null 2>&1 || true
 sudo docker rm umbradb >/dev/null 2>&1 || true
 
+# Umbra's working set during the ClickBench COPY blows well past the
+# guest VM's 16 GiB RAM. The agent has already mkswap'd + swapon'd a
+# 256 GiB swap.raw block device, so what we need is:
+#   - vm.overcommit_memory=1 so the kernel doesn't refuse a single
+#     huge mmap (default heuristic mode rejects allocations that
+#     would exceed physical RAM + swap by a wide margin).
+#   - vm.swappiness=100 to bias the kernel toward paging anonymous
+#     memory out as soon as we exceed physical RAM (default 60 is
+#     too conservative — Umbra ENOMEMs before the kernel reclaims
+#     enough).
+#   - vm.max_map_count raised. Umbra issues a large number of small
+#     mmaps; the 65530 default is easy to hit on a 100 M-row COPY.
+#   - NO docker memory cgroup. cgroup v2 silently discards
+#     --memory-swappiness, and any --memory cap creates a hard
+#     ceiling that the kernel will OOM on regardless of how much
+#     swap is available. Let the host kernel manage memory.
+sudo sysctl -wq vm.overcommit_memory=1 vm.swappiness=100 \
+    vm.max_map_count=1048576 || true
+
 sudo docker run -d --name umbradb \
     -v "$(pwd)/db:/var/db" \
     -v "$(pwd)/data:/data" \

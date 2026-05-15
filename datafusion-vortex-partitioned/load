@@ -1,15 +1,9 @@
 #!/bin/bash
 set -e
 
-# query_bench fetches Parquet and converts to .vortex on first invocation.
-export PATH="$PWD/vortex/target/release:$PATH"
-
-query_bench clickbench -i 1 \
-    --targets datafusion:vortex \
-    --display-format gh-json \
-    --queries-file ./queries.sql \
-    --flavor partitioned \
-    --hide-progress-bar \
-    -q 0 >/dev/null
+# ./query uses datafusion-cli against the partitioned parquet files
+# under partitioned/. See datafusion-vortex/load for the rationale.
+mkdir -p partitioned
+../lib/download-hits-parquet-partitioned partitioned
 
 sync

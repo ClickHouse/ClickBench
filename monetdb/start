@@ -2,12 +2,55 @@
 set -eu
 
 # Idempotent: if mserver is already serving the test DB, do nothing.
-# Pass `-P monetdb` so this works regardless of $HOME / .monetdb.
-if mclient -u monetdb -P monetdb -d test -s 'SELECT 1' >/dev/null 2>&1; then
+# Both user and password come from /root/.monetdb (stamped by install).
+# Don't pass -u — that disables the file's password and forces an
+# interactive prompt — so `mclient` only gets -h / -d here.
+if echo 'SELECT 1;' | \
+    mclient -h 127.0.0.1 -d test >/dev/null 2>&1; then
     exit 0
+fi
+
+# After a Firecracker snapshot+restore monetdbd's pid file
+# (.merovingian.lock + .gdk_lock) is preserved on disk but the actual
+# process is gone. `monetdbd start` then exits with "another monetdbd
+# is already running" and doesn't relaunch, so `mclient` never gets a
+# server to talk to and ./check spins for 15 minutes. Force a clean
+# slate: kill any leftover mserver/monetdbd, clear lock files, then
+# (re)start.
+if ! pgrep -x monetdbd >/dev/null; then
+    sudo rm -f /var/lib/monetdb/.merovingian.lock /var/lib/monetdb/.gdk_lock
+    sudo pkill -KILL -x mserver5 2>/dev/null || true
 fi
 
 sudo monetdbd start /var/lib/monetdb || true
 
-# Make sure the database is released (online).
-sudo monetdb release test || true
+# After daemon-side restart the test DB lands "stopped"; release +
+# start to bring it back online. (release alone is not enough — it
+# only un-marks maintenance; start actually starts mserver5 for it.)
+sudo monetdb release test 2>/dev/null || true
+sudo monetdb start   test 2>/dev/null || true
+
+# Wait for connections to actually go through. Try a couple of host
+# spellings — without -h, mclient hunts for unix sockets that may not
+# exist on a fresh restart; with -h 127.0.0.1 it goes straight to TCP.
+last_err=""
+for _ in $(seq 1 120); do
+    for host in 127.0.0.1 localhost; do
+        # Feed SQL via stdin — some mclient versions seem to print
+        # --help when -s ARG comes after -d. Stdin avoids the
+        # argument-parsing ambiguity entirely.
+        if echo 'SELECT 1;' | \
+            mclient -h "$host" -d test \
+            >/dev/null 2>&1; then
+            exit 0
+        fi
+    done
+    last_err=$(echo 'SELECT 1;' | \
+        mclient -h 127.0.0.1 -d test 2>&1 || true)
+    sleep 1
+done
+echo "monetdb start: mclient still failing after 120 s" >&2
+echo "  last mclient error: $last_err" >&2
+sudo monetdb status 2>&1 | tail -20 >&2 || true
+sudo ss -ltnp | grep -E ':5000[0-9]\b' >&2 || true
+exit 1

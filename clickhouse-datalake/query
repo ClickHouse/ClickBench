@@ -7,4 +7,4 @@ set -e
 
 query=$(cat)
 ./clickhouse local --path . --time --use_page_cache_for_object_storage 1 \
-    --query="$query"
+    --format=Pretty --query="$query"
