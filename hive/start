@@ -1,0 +1,21 @@
+#!/bin/bash
+set -e
+
+HIVE_VERSION=4.0.1
+
+if sudo docker ps --format '{{.Names}}' | grep -qx hive; then
+    exit 0
+fi
+if sudo docker ps -a --format '{{.Names}}' | grep -qx hive; then
+    sudo docker start hive
+    exit 0
+fi
+
+# SERVICE_NAME=hiveserver2 launches an embedded Derby metastore alongside
+# HiveServer2 in the same JVM — single-node Hive without a separate
+# metastore service or HDFS.
+sudo docker run -d --name hive \
+    -p 10000:10000 -p 10002:10002 \
+    -e SERVICE_NAME=hiveserver2 \
+    -v "$PWD/data:/clickbench" \
+    apache/hive:${HIVE_VERSION}

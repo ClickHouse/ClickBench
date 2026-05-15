@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+# Place the parquet file inside the Hive external-table LOCATION.
+# The Hive container reads /clickbench/hits (== ./data/hits on the host).
+ln -f hits.parquet data/hits/hits.parquet
+sudo chown -R 1000:1000 data
+
+# Run create.sql via beeline inside the container. -n hive matches the
+# default container user so the external LOCATION is readable; --silent
+# suppresses beeline's prompt/timing chrome which would otherwise leak
+# into ./load's stdout and confuse the driver's load-time parser.
+sudo docker cp create.sql hive:/tmp/create.sql
+sudo docker exec -i hive beeline -u 'jdbc:hive2://localhost:10000/' -n hive \
+    --silent=true -f /tmp/create.sql
+
+rm -f hits.parquet
+sync

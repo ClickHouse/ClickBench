@@ -1,0 +1,74 @@
+# Apache Impala 4 quickstart cluster, in four containers on one
+# user-defined bridge network. Mirrors the upstream
+# docker/quickstart-compose layout from the Apache Impala repo, minus
+# HDFS — the table data is bind-mounted into every container at
+# /clickbench so Impala reads it through its local-filesystem driver
+# rather than through HDFS or S3.
+
+services:
+  hms:
+    image: apache/impala:4.4.1-impala_quickstart_hms
+    container_name: impala-hms
+    command: ["hms"]
+    volumes:
+      - hms_warehouse:/var/lib/hive
+      - ./data:/clickbench:rw
+    networks:
+      - impala-net
+    hostname: hms
+
+  statestored:
+    image: apache/impala:4.4.1-impala_quickstart_statestored
+    container_name: impala-statestored
+    command: ["-redirect_stdout_stderr=false", "-logtostderr", "-v=1"]
+    networks:
+      - impala-net
+    hostname: statestored
+
+  catalogd:
+    image: apache/impala:4.4.1-impala_quickstart_catalogd
+    container_name: impala-catalogd
+    depends_on:
+      - statestored
+      - hms
+    command:
+      - "-redirect_stdout_stderr=false"
+      - "-logtostderr"
+      - "-v=1"
+      - "-hms_event_polling_interval_s=1"
+      - "-invalidate_tables_timeout_s=999999"
+    volumes:
+      - ./data:/clickbench:rw
+    networks:
+      - impala-net
+    hostname: catalogd
+
+  impalad-1:
+    image: apache/impala:4.4.1-impala_quickstart_impalad_coord_exec
+    container_name: impala-impalad-1
+    depends_on:
+      - statestored
+      - catalogd
+    command:
+      - "-v=1"
+      - "-redirect_stdout_stderr=false"
+      - "-logtostderr"
+      - "-kudu_master_hosts="
+      - "-mt_dop_auto_fallback=true"
+      - "--default_query_options=default_file_format=parquet"
+    ports:
+      - "21000:21000"
+      - "21050:21050"
+      - "25000:25000"
+    volumes:
+      - ./data:/clickbench:rw
+    networks:
+      - impala-net
+    hostname: impalad-1
+
+networks:
+  impala-net:
+    driver: bridge
+
+volumes:
+  hms_warehouse:

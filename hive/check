@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+# HiveServer2 exposes a JSON status endpoint on its web UI port (10002).
+# /jmx works once the JVM is fully up; while the container is starting
+# (or stopped) curl fails. That makes it a clean readiness signal — no
+# log-tailing, no false positives across stop+start cycles.
+curl -sfo /dev/null http://localhost:10002/jmx

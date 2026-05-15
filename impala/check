@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+# Impala's coordinator exposes its web UI on 25000. /healthz returns
+# 200 "OK" once the daemon has finished registering with statestored
+# and catalogd — i.e. the cluster is actually ready to accept queries,
+# not just listening on the SQL ports. While the stack is stopped the
+# port is closed and curl fails as it should.
+out=$(curl -sf http://localhost:25000/healthz)
+[ "$out" = "OK" ]

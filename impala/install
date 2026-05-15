@@ -1,0 +1,26 @@
+#!/bin/bash
+set -e
+
+# Docker, the compose plugin, and curl. The compose v2 plugin lives in
+# the docker-compose-v2 package on Ubuntu 24.04 / Debian 12; the older
+# docker-compose Python package would also work but is deprecated.
+if ! command -v docker >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y docker.io docker-compose-v2
+else
+    sudo apt-get install -y docker-compose-v2
+fi
+sudo apt-get install -y curl
+
+# Pull all four service images up-front so the first ./start doesn't
+# include image-pull wall-clock — it stays a pure container-start
+# operation and ./check's readiness timeout is enough.
+sudo docker compose -f docker-compose.yml pull
+
+# Catalogd and impalad both bind-mount this dir as /clickbench. Create
+# it before the first ./start so the mount succeeds even when the
+# compose stack is brought up before the first ./load.
+mkdir -p data/hits
+# The Impala containers run their daemons as uid 1000 ("impala"); make
+# the bind-mount writable by that uid even when cloud-init runs as root.
+sudo chown -R 1000:1000 data

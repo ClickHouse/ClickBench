@@ -1,0 +1,16 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via beeline against HiveServer2
+# in the running container.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+start=$(date +%s.%N)
+sudo docker exec -i hive beeline -u 'jdbc:hive2://localhost:10000/clickbench' -n hive \
+    --silent=true --outputformat=tsv2 -e "$query"
+end=$(date +%s.%N)
+
+awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2
