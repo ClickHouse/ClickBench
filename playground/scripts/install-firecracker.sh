@@ -20,16 +20,17 @@ sudo chown "$(id -u):$(id -g)" \
 
 # The playground relies on reflink (cp --reflink=always) to clone
 # 200 GB-apparent / multi-GB-real per-VM disks in milliseconds instead
-# of seconds. ext4 ships reflink support behind the `shared_blocks`
-# feature flag, but mke2fs in Ubuntu 22.04 / 24.04 doesn't expose it
-# yet — so we format the playground volume as XFS, which has reflink
-# enabled by default since mkfs.xfs 4.18 (2018). If you're staging the
-# host yourself, set this up before running install-firecracker.sh:
+# of seconds, and on transparent zstd compression to fit 100 system
+# goldens on the host. Btrfs gives us both out of the box. Format the
+# playground volume before running install-firecracker.sh:
 #
-#   sudo mkfs.xfs -L cbplayground -f /dev/<your-device>
-#   echo 'LABEL=cbplayground /opt/clickbench-playground xfs \
-#       defaults,noatime,discard,nofail 0 2' | sudo tee -a /etc/fstab
+#   sudo mkfs.btrfs -L cbplayground -f /dev/<your-device>
+#   echo 'LABEL=cbplayground /opt/clickbench-playground btrfs \
+#       defaults,noatime,compress=zstd:1,nofail 0 2' | sudo tee -a /etc/fstab
 #   sudo mount /opt/clickbench-playground
+#
+# (XFS also works for reflink but doesn't have transparent compression,
+# so on XFS the host fills up at ~7 TB once every system is provisioned.)
 #
 # Sanity-check at install time so a missing reflink is loud:
 if ! ( cd "$STATE_DIR" && tmp1="$(mktemp -p .)" && \
