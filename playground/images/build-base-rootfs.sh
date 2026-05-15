@@ -215,6 +215,30 @@ export DEBIAN_FRONTEND=noninteractive
 update-alternatives --set iptables  /usr/sbin/iptables-legacy
 update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
 
+# dockerd 28+ adds "DIRECT ACCESS FILTERING" — it inserts DROP rules
+# into the iptables `raw` table to block traffic going straight to
+# container IPs. The Firecracker CI kernel doesn't compile in
+# CONFIG_IP_NF_RAW, so `iptables -t raw -A PREROUTING` fails with
+# "Table does not exist", and `docker run` for the default bridge
+# exits 125. Switch the default bridge network to
+# `gateway_mode_ipv4=nat-unprotected` (no raw-table DROP rules)
+# via daemon.json. Container traffic still NATs through iptables
+# `nat` and `filter` (which the kernel does have); we lose the
+# extra layer of "no host-bypass" protection that DIRECT ACCESS
+# FILTERING gives, which is fine for a sandboxed microVM with
+# one container.
+mkdir -p /etc/docker
+cat > /etc/docker/daemon.json <<EOF
+{
+    "default-network-opts": {
+        "bridge": {
+            "com.docker.network.bridge.gateway_mode_ipv4": "nat-unprotected",
+            "com.docker.network.bridge.gateway_mode_ipv6": "nat-unprotected"
+        }
+    }
+}
+EOF
+
 # Network: parse `ip=GUEST::GATEWAY:NETMASK:::eth0:off` from /proc/cmdline
 # at boot and apply it to eth0. Some kernels we run (Ubuntu's generic) lack
 # CONFIG_IP_PNP, which makes the kernel's `ip=` boot-arg a no-op and leaves
