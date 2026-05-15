@@ -1,0 +1,12 @@
+{
+  "system": "Greengage",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C",
+    "column-oriented",
+    "PostgreSQL compatible",
+    "lukewarm-cold-run"
+  ]
+}

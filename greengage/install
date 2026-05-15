@@ -1,0 +1,129 @@
+#!/bin/bash
+# Greengage's prebuilt .deb (greengage6.deb) targets Ubuntu 22.04 (libssl3,
+# libperl5.34, etc.) and the cluster init requires kernel tuning, sshd, and
+# the gpadmin user — none of which we want to impose on the benchmark host.
+# Run everything inside a privileged ubuntu:22.04 container instead; the
+# other scripts (start/stop/check/load/query) docker-exec into it.
+#
+# Idempotent: re-running this script after a successful install does nothing.
+set -eu
+
+NAME=clickbench-greengage
+IMAGE=ubuntu:22.04
+GG_VERSION=6.30.1
+DEB_URL="https://github.com/GreengageDB/greengage/releases/download/${GG_VERSION}/greengage6.deb"
+
+# 1. Make sure docker is installed and the daemon is up.
+if ! command -v docker >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update -y
+        sudo apt-get install -y docker.io
+    elif command -v yum >/dev/null 2>&1; then
+        sudo yum install -y docker
+    else
+        echo "greengage/install: install docker manually first" >&2
+        exit 1
+    fi
+fi
+sudo systemctl start docker 2>/dev/null || sudo service docker start || true
+
+# 2. Skip if the container is already created and the cluster is initialized.
+if sudo docker container inspect "$NAME" >/dev/null 2>&1; then
+    if sudo docker exec "$NAME" test -d /data0/coordinator/gpseg-1 2>/dev/null; then
+        echo "greengage: container '$NAME' already initialized; nothing to do" >&2
+        exit 0
+    fi
+fi
+
+sudo docker pull "$IMAGE"
+
+# 3. Long-lived privileged container. Bridge mode + --hostname localhost so
+# gpinitsystem's ssh-to-localhost lands on the container's own sshd. Publish
+# 5432 so clients on the host can also reach postgres if desired.
+if ! sudo docker container inspect "$NAME" >/dev/null 2>&1; then
+    sudo docker run -d --privileged --hostname localhost -p 5432:5432 \
+        --name "$NAME" "$IMAGE" sleep infinity
+fi
+
+# 4. Inside the container: install the .deb, kernel tuning, gpadmin user,
+# sshd. The .deb itself ships no postinst, so the gpadmin user has to be
+# created by us.
+sudo docker exec -i "$NAME" bash -s <<EOF
+set -eu
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y curl ca-certificates sudo openssh-server openssh-client \
+    iproute2 iputils-ping less net-tools rsync zip libcap2-bin procps
+
+# Greengage 6 still needs Python 2 for gpinitsystem / gpstart.
+apt-get install -y python2 python2.7 python-is-python2 || true
+
+# Fetch and install the prebuilt .deb. apt resolves the long Depends list.
+curl -fsSL -o /tmp/greengage6.deb "${DEB_URL}"
+apt-get install -y /tmp/greengage6.deb
+rm -f /tmp/greengage6.deb
+
+# Kernel tuning. --privileged means these affect the host kernel;
+# gpinitsystem checks them so they must be set.
+SHMALL=\$(expr \$(getconf _PHYS_PAGES) / 2)
+SHMAX=\$(expr \$(getconf _PHYS_PAGES) / 2 \* \$(getconf PAGE_SIZE))
+sysctl -w kernel.shmall=\$SHMALL >/dev/null
+sysctl -w kernel.shmmax=\$SHMAX >/dev/null
+sysctl -w kernel.shmmni=4096 >/dev/null
+sysctl -w vm.overcommit_memory=2 >/dev/null
+sysctl -w vm.overcommit_ratio=95 >/dev/null
+sysctl -w net.ipv4.ip_local_port_range="10000 65535" >/dev/null
+sysctl -w kernel.sem="250 2048000 200 8192" >/dev/null
+
+cat > /etc/security/limits.d/99-gpadmin.conf <<LIMITS
+* soft nofile 524288
+* hard nofile 524288
+* soft nproc 131072
+* hard nproc 131072
+LIMITS
+
+# gpadmin user with passwordless ssh to localhost (gpinitsystem requirement).
+groupadd -f gpadmin
+id -u gpadmin >/dev/null 2>&1 || useradd gpadmin -m -g gpadmin -s /bin/bash
+echo "gpadmin ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gpadmin
+sudo -u gpadmin bash -c '
+    set -e
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+    [ -f ~/.ssh/id_rsa ] || ssh-keygen -t rsa -b 4096 -N "" -f ~/.ssh/id_rsa
+    cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+'
+
+# /bin/ping in this image has no caps, so even root can't open a raw socket.
+# gpinitsystem pings localhost to verify reachability.
+setcap cap_net_raw+ep /bin/ping
+[ -e /bin/ping6 ] && setcap cap_net_raw+ep /bin/ping6 || true
+
+# sshd setup.
+ssh-keygen -A
+mkdir -p /run/sshd
+echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
+echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
+/usr/sbin/sshd
+
+# Data dirs and gpadmin shell env.
+mkdir -p /data0/primary /data0/coordinator
+chown -R gpadmin:gpadmin /data0
+grep -q greengage_path /home/gpadmin/.bashrc || \
+    echo "source /opt/greengagedb/greengage/greengage_path.sh" >> /home/gpadmin/.bashrc
+grep -q COORDINATOR_DATA_DIRECTORY /home/gpadmin/.bashrc || \
+    echo "export COORDINATOR_DATA_DIRECTORY=/data0/coordinator/gpseg-1" >> /home/gpadmin/.bashrc
+
+echo localhost > /home/gpadmin/hosts
+chown gpadmin:gpadmin /home/gpadmin/hosts
+EOF
+
+# 5. Drop gpinitsystem_config in and run gpinitsystem.
+sudo docker cp "$(dirname "$0")/gpinitsystem_config" \
+    "$NAME":/home/gpadmin/gpinitsystem_config
+sudo docker exec "$NAME" chown gpadmin:gpadmin /home/gpadmin/gpinitsystem_config
+
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc \
+    'gpinitsystem -a -c gpinitsystem_config -h hosts'
