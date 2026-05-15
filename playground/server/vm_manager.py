@@ -367,6 +367,7 @@ class VMManager:
         rootfs = sys_dir / "rootfs.ext4"
         sysdisk = sys_dir / "system.ext4"
         swap = sys_dir / "swap.raw"
+        base = self.cfg.state_dir / "base-rootfs.ext4"
         # If we're (re-)provisioning a system whose rootfs already has
         # /var/lib/clickbench-agent/provisioned set, drop just the rootfs so
         # the agent reruns the full install/start/load flow on the next
@@ -376,6 +377,23 @@ class VMManager:
             log.info("[%s] rootfs exists but no snapshot — dropping it for "
                      "a fresh agent state", vm.system.name)
             rootfs.unlink()
+        # If base-rootfs has been rebuilt since the per-system rootfs was
+        # cloned (typically because we updated the in-VM agent or one of
+        # the lib/download-* stubs), drop the stale rootfs and the system
+        # disk too — the system disk's upper layer holds the scripts
+        # rsynced from the repo, so a stale agent and stale per-system
+        # scripts both come from here. Without this check, every code
+        # change to playground/agent/agent.py silently fails to reach
+        # already-provisioned systems on re-provision: vm_manager finds
+        # rootfs.ext4 + system.ext4 already present and skips the rebuild.
+        if rootfs.exists() and base.exists() and \
+                rootfs.stat().st_mtime < base.stat().st_mtime:
+            log.info("[%s] base-rootfs is newer than rootfs — dropping "
+                     "rootfs + sysdisk for a fresh agent + scripts",
+                     vm.system.name)
+            rootfs.unlink()
+            with contextlib.suppress(FileNotFoundError):
+                sysdisk.unlink()
         # For memory-bound dataframe systems, also (re)create a sparse
         # swap.raw block device that the in-VM agent mkswaps + swapons.
         # Sized to the worst-case working set we've seen; sparse so the
