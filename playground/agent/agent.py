@@ -383,12 +383,25 @@ def _provision() -> tuple[int, bytes]:
             return 1, b"".join(log_lines)
         log_lines.append(b"\n=== check ok ===\n")
 
-        # No explicit data staging — the system's load script sees
-        # hits.parquet / hits.tsv / hits.csv / hits_*.parquet at cwd
-        # already, because cwd is the overlay merged dir
-        # /opt/clickbench/system and the dataset disk's contents (the
+        # Most datasets surface in cwd already: cwd is the overlay merged
+        # dir /opt/clickbench/system and the dataset disk's contents (the
         # overlay's lower) sit at /opt/clickbench/datasets_ro at the
-        # filesystem root, matching the names the load scripts use.
+        # filesystem root, so hits.parquet / hits.tsv / hits.csv are
+        # named exactly as the load scripts expect.
+        #
+        # Partitioned parquet is the exception: the upstream layout puts
+        # the 100 hits_N.parquet files under hits_partitioned/, and load
+        # scripts glob `hits_*.parquet` from cwd, not from a subdir.
+        # Materialize symlinks at cwd so the glob resolves. We do this in
+        # the agent rather than per-system to avoid 6+ systems each
+        # reimplementing the same staging step (which historically rotted
+        # — ClickBench upstream centralised this in lib/download-hits-*).
+        hits_partitioned = DATASETS_DIR / "hits_partitioned"
+        if hits_partitioned.is_dir():
+            for src in hits_partitioned.glob("hits_*.parquet"):
+                dst = SYSTEM_DIR / src.name
+                if not dst.exists():
+                    os.symlink(src, dst)
 
         # Run load.
         t0 = time.monotonic()
