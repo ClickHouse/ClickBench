@@ -29,5 +29,5 @@ r = o.get("result", "")
 sys.stdout.write(r)
 if r and not r.endswith("\n"):
     sys.stdout.write("\n")
-sys.stderr.write(f"{o[\"elapsed\"]}\n")
+sys.stderr.write(str(o["elapsed"]) + "\n")
 '
