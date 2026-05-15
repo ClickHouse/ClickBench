@@ -22,15 +22,6 @@ fi
 # policy-acceptable path instead — to CH the cache dir *is*
 # /var/lib/clickhouse/caches/web with no symlink to resolve.
 sudo mkdir -p /dev/shm/clickhouse /var/lib/clickhouse/caches/web
-# Remove a stale symlink left by a prior install attempt: mkdir on a
-# symlink-to-dir succeeds without replacing it, so an old caches/web
-# pointing at /dev/shm would still be a symlink at mount time.
-if [ -L /var/lib/clickhouse/caches/web ]; then
-    sudo rm /var/lib/clickhouse/caches/web
-    sudo mkdir /var/lib/clickhouse/caches/web
-fi
 sudo chown clickhouse:clickhouse /dev/shm/clickhouse /var/lib/clickhouse/caches/web
-if ! mountpoint -q /var/lib/clickhouse/caches/web; then
-    sudo mount --bind /dev/shm/clickhouse /var/lib/clickhouse/caches/web
-fi
+sudo mount --bind /dev/shm/clickhouse /var/lib/clickhouse/caches/web
 sudo chown clickhouse:clickhouse /var/lib/clickhouse/caches/web
