@@ -314,10 +314,17 @@ ln -sf /opt/clickbench/datasets_ro/hits.parquet hits.parquet
 EOF
 cat > /opt/clickbench/lib/download-hits-parquet-partitioned <<'EOF'
 #!/bin/bash
+# Partitioned parquet files live under datasets_ro/hits_partitioned/
+# on the read-only datasets disk (matching the
+# datasets/hits_partitioned/ layout build-datasets-image.sh rsyncs
+# from). Link them into cwd as a flat hits_*.parquet so the system
+# load scripts can glob `hits_*.parquet` exactly like in the
+# upstream `lib/download-hits-parquet-partitioned`.
 set -e
 dir="${1:-.}"; mkdir -p "$dir"; cd "$dir"
 for i in $(seq 0 99); do
-    ln -sf "/opt/clickbench/datasets_ro/hits_${i}.parquet" "hits_${i}.parquet"
+    ln -sf "/opt/clickbench/datasets_ro/hits_partitioned/hits_${i}.parquet" \
+        "hits_${i}.parquet"
 done
 EOF
 cat > /opt/clickbench/lib/download-hits-tsv <<'EOF'
