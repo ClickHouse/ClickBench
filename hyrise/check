@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+psql -h 127.0.0.1 -p 5432 -U postgres -c 'SELECT 1' >/dev/null

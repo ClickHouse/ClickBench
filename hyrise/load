@@ -1,0 +1,22 @@
+#!/bin/bash
+set -eu
+
+# Stage hits.csv next to hits.csv.json under data/. The bind mount on
+# the container exposes this dir as /data:ro.
+#
+# Idempotent: BENCH_DURABLE=no triggers ./load again on every cold cycle.
+# The first invocation moves hits.csv (delivered into cwd by
+# download-hits-csv) into data/; subsequent invocations reuse the staged
+# file because the dataset is many GB and re-downloading it per cycle
+# would blow up the run time without changing the measurement.
+if [ -f hits.csv ]; then
+    cp hits.csv.json data/
+    mv -f hits.csv data/hits.csv
+fi
+
+# COPY into a not-yet-existing table works because hits.csv.json next to
+# the data file tells Hyrise's CSV parser the column types — running
+# CREATE TABLE first and then COPY trips an internal Hyrise assertion.
+psql -h 127.0.0.1 -p 5432 -U postgres -v ON_ERROR_STOP=1 -q \
+    -c "COPY hits FROM '/data/hits.csv' WITH (FORMAT CSV);"
+sync

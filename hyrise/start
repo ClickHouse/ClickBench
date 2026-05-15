@@ -1,0 +1,23 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-hyrise}
+
+# If already running, leave it alone — the cold-cycle driver invokes
+# ./start after ./stop, but ./check is the authoritative readiness signal
+# so this idempotency just avoids a redundant restart.
+if [ "$(sudo docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null || echo false)" = "true" ]; then
+    exit 0
+fi
+
+# Recreate from scratch every cold cycle. Hyrise has no on-disk state, so
+# `docker start` on a previously-stopped container would give us an empty
+# DB anyway — recreating means we don't have to worry about a stale
+# container holding the port or a stale bind-mount path.
+sudo docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+
+sudo docker run -d --name "$CONTAINER_NAME" \
+    -p 5432:5432 \
+    -v "$(pwd)/data:/data:ro" \
+    --ulimit nofile=1048576:1048576 \
+    clickbench-hyrise >/dev/null
