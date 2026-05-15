@@ -89,28 +89,54 @@ async def _host_default_iface() -> str:
     raise RuntimeError(f"could not find default route: {text!r}")
 
 
+async def _strip_slot(slot: int) -> None:
+    """Remove every iptables rule that mentions this slot's TAP or CIDR.
+
+    Each enable/disable function calls this before installing its own
+    rules. That removes the previous mode's rules cleanly and avoids
+    the rule-order trap where, e.g., a 'disable_internet' catch-all
+    DROP added earlier sits ABOVE the RELATED-ESTABLISHED ACCEPT a
+    later 'enable_filtered_internet' wants to add — which would
+    silently block all reply traffic to the VM.
+    """
+    tap = tap_name(slot)
+    _, _, cidr = addr_for(slot)
+    needle_tap = f" {tap} "  # match -i/-o flags' value with surrounding spaces
+    needle_cidr = f" {cidr} "
+
+    for table, chain in (("filter", "FORWARD"),
+                         ("nat", "POSTROUTING"),
+                         ("nat", "PREROUTING")):
+        rc, out, _ = await _run("sudo", "iptables", "-t", table, "-S", chain,
+                                check=False)
+        if rc != 0:
+            continue
+        for line in out.decode(errors="replace").splitlines():
+            if not line.startswith("-A "):
+                continue
+            padded = " " + line + " "
+            if needle_tap not in padded and needle_cidr not in padded:
+                continue
+            # Convert "-A CHAIN ..." into "-D CHAIN ..." for deletion.
+            args = line.split()
+            args[0] = "-D"
+            await _run("sudo", "iptables", "-t", table, *args, check=False)
+
+
 async def enable_internet(slot: int) -> None:
     """Allow the VM to reach the outside world via MASQUERADE + FORWARD."""
-    # Any prior filtered_internet rules for this slot put a `-j DROP`
-    # catchall at the end of FORWARD that would take precedence over
-    # the ACCEPT we're about to add. Strip those first.
-    await disable_filtered_internet(slot)
+    await _strip_slot(slot)
     iface = await _host_default_iface()
+    tap = tap_name(slot)
     _, _, cidr = addr_for(slot)
-    # MASQUERADE rule: add only if not already present.
-    rc, out, _ = await _run("sudo", "iptables", "-t", "nat", "-S", "POSTROUTING")
-    if f"-s {cidr}" not in out.decode(errors="replace"):
-        await _run("sudo", "iptables", "-t", "nat", "-A", "POSTROUTING",
-                   "-s", cidr, "-o", iface, "-j", "MASQUERADE")
-    # FORWARD rules
+    await _run("sudo", "iptables", "-t", "nat", "-A", "POSTROUTING",
+               "-s", cidr, "-o", iface, "-j", "MASQUERADE")
     for rule in (
-        ("-i", tap_name(slot), "-o", iface, "-j", "ACCEPT"),
-        ("-i", iface, "-o", tap_name(slot), "-m", "state", "--state",
+        ("-i", tap, "-o", iface, "-j", "ACCEPT"),
+        ("-i", iface, "-o", tap, "-m", "state", "--state",
          "RELATED,ESTABLISHED", "-j", "ACCEPT"),
     ):
-        rc, out, _ = await _run("sudo", "iptables", "-C", "FORWARD", *rule, check=False)
-        if rc != 0:
-            await _run("sudo", "iptables", "-A", "FORWARD", *rule)
+        await _run("sudo", "iptables", "-A", "FORWARD", *rule)
 
 
 # Ports the SNI-filtering proxy listens on (see sni_proxy.py). Kept in
@@ -179,109 +205,65 @@ async def enable_filtered_internet(slot: int) -> None:
     exfiltration channel — see GHSA / RFC1918 advisories cited in
     the security review). Every other outbound port from the VM is
     DROPped at FORWARD.
+
+    No POSTROUTING MASQUERADE here: the SNI proxy on the host opens
+    its OWN outbound socket to the allowlisted upstream, so the
+    host's normal egress path handles the source rewrite. The VM's
+    only legitimate outbound traffic now goes via REDIRECT to a
+    local listener; nothing on the VM's CIDR ever reaches the
+    outside interface directly.
     """
-    # Clear any prior `enable_internet` ACCEPT — its blanket allow
-    # rule would otherwise take precedence over the DROP we'll add
-    # at the bottom of FORWARD and the VM would still have unrestricted
-    # access.
-    await disable_internet(slot)
+    await _strip_slot(slot)
     tap = tap_name(slot)
     iface = await _host_default_iface()
 
-    # NAT redirects:
-    #   TCP 443/80 -> SNI proxy
-    #   UDP 53     -> host's local DNS resolver on port 53
-    nat_rules = (
+    # NAT redirects: TCP 443/80 → SNI proxy, UDP 53 → host DNS resolver.
+    for match in (
         ("-i", tap, "-p", "tcp", "--dport", "443",
          "-j", "REDIRECT", "--to-ports", str(PROXY_HTTPS_PORT)),
         ("-i", tap, "-p", "tcp", "--dport", "80",
          "-j", "REDIRECT", "--to-ports", str(PROXY_HTTP_PORT)),
         ("-i", tap, "-p", "udp", "--dport", "53",
          "-j", "REDIRECT", "--to-ports", "53"),
-    )
-    for match in nat_rules:
-        rc, _, _ = await _run("sudo", "iptables", "-t", "nat",
-                              "-C", "PREROUTING", *match, check=False)
-        if rc != 0:
-            await _run("sudo", "iptables", "-t", "nat",
-                       "-A", "PREROUTING", *match)
+    ):
+        await _run("sudo", "iptables", "-t", "nat", "-A", "PREROUTING", *match)
 
-    # FORWARD: drop TCP/53 (DNS tunneling), drop UDP/53 too as a
-    # belt-and-braces (the REDIRECT above already short-circuits it,
-    # but if the resolver is down we don't want fall-through to
-    # upstream). Allow established replies for the SNI proxy's
-    # outbound to upstream. Catchall DROP at the end.
-    forward_rules = (
+    # FORWARD: drop TCP/53 + UDP/53 (DNS-over-TCP is a classic exfil
+    # channel; UDP/53 is REDIRECTed above, this is a belt-and-braces
+    # for a downed resolver). Allow established replies for the SNI
+    # proxy's outbound to upstream. Catch-all DROP at the end.
+    for rule in (
         ("-i", tap, "-p", "udp", "--dport", "53", "-j", "DROP"),
         ("-i", tap, "-p", "tcp", "--dport", "53", "-j", "DROP"),
         ("-i", iface, "-o", tap, "-m", "state", "--state",
          "RELATED,ESTABLISHED", "-j", "ACCEPT"),
         ("-i", tap, "-j", "DROP"),
-    )
-    for rule in forward_rules:
-        rc, _, _ = await _run("sudo", "iptables", "-C", "FORWARD", *rule,
-                              check=False)
-        if rc != 0:
-            await _run("sudo", "iptables", "-A", "FORWARD", *rule)
-    # No POSTROUTING MASQUERADE here: the SNI proxy on the host opens
-    # its OWN outbound socket to the allowlisted upstream, so the
-    # host's normal egress path handles the source rewrite. The VM's
-    # only legitimate outbound traffic now goes via REDIRECT to a
-    # local listener; nothing on the VM's CIDR ever reaches the
-    # outside interface directly.
-
-
-async def disable_filtered_internet(slot: int) -> None:
-    """Drop the rules added by enable_filtered_internet. Idempotent."""
-    tap = tap_name(slot)
-    iface = await _host_default_iface()
-
-    nat_rules = (
-        ("-i", tap, "-p", "tcp", "--dport", "443",
-         "-j", "REDIRECT", "--to-ports", str(PROXY_HTTPS_PORT)),
-        ("-i", tap, "-p", "tcp", "--dport", "80",
-         "-j", "REDIRECT", "--to-ports", str(PROXY_HTTP_PORT)),
-        ("-i", tap, "-p", "udp", "--dport", "53",
-         "-j", "REDIRECT", "--to-ports", "53"),
-    )
-    for match in nat_rules:
-        while True:
-            rc, _, _ = await _run("sudo", "iptables", "-t", "nat", "-D",
-                                  "PREROUTING", *match, check=False)
-            if rc != 0:
-                break
-
-    forward_rules = (
-        ("-i", tap, "-p", "udp", "--dport", "53", "-j", "DROP"),
-        ("-i", tap, "-p", "tcp", "--dport", "53", "-j", "DROP"),
-        ("-i", iface, "-o", tap, "-m", "state", "--state",
-         "RELATED,ESTABLISHED", "-j", "ACCEPT"),
-        ("-i", tap, "-j", "DROP"),
-    )
-    for rule in forward_rules:
-        while True:
-            rc, _, _ = await _run("sudo", "iptables", "-D", "FORWARD", *rule,
-                                  check=False)
-            if rc != 0:
-                break
+    ):
+        await _run("sudo", "iptables", "-A", "FORWARD", *rule)
 
 
 async def disable_internet(slot: int) -> None:
-    """Drop the masquerade + forward rules added by enable_internet."""
-    iface = await _host_default_iface()
-    _, _, cidr = addr_for(slot)
-    # Best-effort removal — repeat until iptables reports the rule isn't there.
-    while True:
-        rc, _, _ = await _run("sudo", "iptables", "-t", "nat", "-D", "POSTROUTING",
-                              "-s", cidr, "-o", iface, "-j", "MASQUERADE", check=False)
-        if rc != 0:
-            break
+    """Isolate the VM: remove every per-slot rule and install per-slot
+    catch-all DROPs (both directions) so the VM cannot reach the
+    outside world via FORWARD's default policy.
+
+    Why the explicit DROPs are necessary: the host's FORWARD policy
+    is ACCEPT (Docker would flip it but we disable Docker's iptables
+    management, and we don't want to flip the global policy ourselves
+    — it would break unrelated forwarding on the host). With just the
+    per-slot ACCEPTs removed, a 'disabled' VM still has clear egress
+    because every FORWARD packet falls through to the default ACCEPT.
+    Notably this lets a VM reach 169.254.169.254 (EC2 IMDS) — even
+    without our MASQUERADE rule the AWS hypervisor responds to the
+    VM's RFC1918 source, and the reply gets forwarded back the same
+    way. Any system exposing arbitrary code execution to the
+    benchmark consumer (pandas, polars, dataframe variants) could
+    then pivot to the host's IAM role.
+    """
+    await _strip_slot(slot)
+    tap = tap_name(slot)
     for rule in (
-        ("-i", tap_name(slot), "-o", iface, "-j", "ACCEPT"),
-        ("-i", iface, "-o", tap_name(slot), "-m", "state", "--state",
-         "RELATED,ESTABLISHED", "-j", "ACCEPT"),
+        ("-i", tap, "-j", "DROP"),
+        ("-o", tap, "-j", "DROP"),
     ):
-        while True:
-            rc, _, _ = await _run("sudo", "iptables", "-D", "FORWARD", *rule, check=False)
-            if rc != 0:
-                break
+        await _run("sudo", "iptables", "-A", "FORWARD", *rule)
