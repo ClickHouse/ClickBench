@@ -198,6 +198,19 @@ sudo tee "$MNT/tmp/customize-rest.sh" >/dev/null <<'CUSTOMIZE'
 set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
+# iptables backend: pin to legacy (xtables). Ubuntu 24.04 defaults to
+# the nft variant, but the Firecracker CI kernel (vmlinux-6.1.141)
+# does not have CONFIG_NF_TABLES, so any nft call returns
+# `Failed to initialize nft: Protocol not supported`. dockerd's
+# bridge-driver init does `iptables -t nat -N DOCKER` at startup;
+# the nft failure aborts dockerd → docker.service exits 1 → every
+# docker-based system fails at install time with
+# "Cannot connect to the Docker daemon".
+# The legacy backend uses x_tables/ip_tables/iptable_nat which the
+# firecracker kernel does compile in (see modules-load.d above).
+update-alternatives --set iptables  /usr/sbin/iptables-legacy
+update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+
 # Network: parse `ip=GUEST::GATEWAY:NETMASK:::eth0:off` from /proc/cmdline
 # at boot and apply it to eth0. Some kernels we run (Ubuntu's generic) lack
 # CONFIG_IP_PNP, which makes the kernel's `ip=` boot-arg a no-op and leaves
