@@ -8,6 +8,12 @@ if curl -sS --max-time 5 'http://localhost:3473/' \
 fi
 
 mkdir -p data fb-volume
+# firebolt-core runs as UID/GID 1111 inside the container and refuses
+# to start if its data dir is not writeable by that uid (the engine
+# self-checks and aborts with "directory ... is not readable or
+# writeable by the Firebolt Core process"). Set the host-side
+# ownership accordingly so the bind-mounted dir is usable.
+sudo chown 1111:1111 fb-volume
 
 # If the container exists (stopped from a prior agent pre-snapshot
 # cycle), just start it back — the data lives on the bind-mounted
