@@ -4,5 +4,5 @@
 export BENCH_DOWNLOAD_SCRIPT=""
 export BENCH_DURABLE=yes
 # Trino bootstrap on a cold sysdisk pushes past the 300s default.
-export BENCH_CHECK_TIMEOUT=1800
+export BENCH_CHECK_TIMEOUT=3600
 exec ../lib/benchmark-common.sh
