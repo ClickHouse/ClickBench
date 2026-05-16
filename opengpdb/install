@@ -106,13 +106,19 @@ echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
 echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
 /usr/sbin/sshd
 
-# Data dirs and gpadmin shell env.
+# Data dirs and gpadmin shell env. Write to .bash_profile, not .bashrc:
+# the start/stop/install commands all run as `bash -lc <cmd>`, which is a
+# non-interactive login shell. Login shells read .bash_profile (or .profile
+# if absent), but the default Ubuntu .bashrc short-circuits on
+# non-interactive shells, so PATH additions placed in .bashrc never load
+# and gpinitsystem/gpstart/gpstop come back "command not found".
 mkdir -p /data0/primary /data0/coordinator
 chown -R gpadmin:gpadmin /data0
-grep -q greenplum_path /home/gpadmin/.bashrc 2>/dev/null || \
-    echo "source /opt/greenplum-db-6/greenplum_path.sh" >> /home/gpadmin/.bashrc
-grep -q COORDINATOR_DATA_DIRECTORY /home/gpadmin/.bashrc 2>/dev/null || \
-    echo "export COORDINATOR_DATA_DIRECTORY=/data0/coordinator/gpseg-1" >> /home/gpadmin/.bashrc
+cat > /home/gpadmin/.bash_profile <<'PROFILE'
+source /opt/greenplum-db-6/greenplum_path.sh
+export COORDINATOR_DATA_DIRECTORY=/data0/coordinator/gpseg-1
+PROFILE
+chown gpadmin:gpadmin /home/gpadmin/.bash_profile
 
 echo localhost > /home/gpadmin/hosts
 chown gpadmin:gpadmin /home/gpadmin/hosts
