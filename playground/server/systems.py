@@ -137,21 +137,6 @@ SYSDISK_OVERRIDES_GB: dict[str, int] = {
 }
 
 
-# Per-system VM RAM override (MiB). Default is the host's VM_MEM_MIB
-# (16 GiB), which suits nearly every system. Bumps live here.
-VM_MEM_OVERRIDES_MIB: dict[str, int] = {
-    # umbra's COPY consistently ENOMEMs ~9 min into the load on a
-    # 16 GiB VM, even with NEEDS_SWAP / 256 GiB swap.raw / overcommit
-    # _memory=1 / no docker cgroup cap. Diagnostic dump confirms
-    # memory.max=max + memory.swap.max=max + swap mounted, so the
-    # failure is umbra's own allocator returning at the working-set
-    # peak before the kernel can reclaim. 32 GiB lets the COPY land;
-    # the snapshot carries the warmed working set into restored
-    # queries.
-    "umbra": 32 * 1024,
-}
-
-
 @dataclass(frozen=True)
 class System:
     name: str

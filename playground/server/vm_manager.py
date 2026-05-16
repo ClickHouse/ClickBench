@@ -35,9 +35,7 @@ import aiohttp
 
 from . import firecracker as fc
 from . import net
-from .systems import (
-    NEEDS_SWAP, SWAP_SIZE_GB, SYSDISK_OVERRIDES_GB, VM_MEM_OVERRIDES_MIB,
-)
+from .systems import NEEDS_SWAP, SWAP_SIZE_GB, SYSDISK_OVERRIDES_GB
 from .config import Config
 from .systems import System, DATALAKE_FILTERED
 
@@ -517,10 +515,9 @@ class VMManager:
                     "is_root_device": False,
                     "is_read_only": False,
                 })
-        mem_mib = VM_MEM_OVERRIDES_MIB.get(vm.system.name, self.cfg.vm_mem_mib)
         await fc.put(sock, "/machine-config", {
             "vcpu_count": self.cfg.vm_vcpus,
-            "mem_size_mib": mem_mib,
+            "mem_size_mib": self.cfg.vm_mem_mib,
             "smt": False,
         })
         await fc.put(sock, "/actions", {"action_type": "InstanceStart"})
