@@ -11,20 +11,10 @@ for _ in {1..300}; do
     sleep 1
 done
 
-# Use the pre-decompressed hits.json on the playground's readonly
-# dataset disk (no temp file, no 75 GB gunzip in the VM). Fall back
-# to wget + gunzip when running standalone.
-if [ -f /opt/clickbench/datasets_ro/hits.json ]; then
-    HITS=/opt/clickbench/datasets_ro/hits.json
-else
-    wget --continue --progress=dot:giga \
-        'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
-    gunzip -f hits.json.gz
-    HITS=hits.json
-fi
+# Bulk insert via 8 parallel jsonline streams. hits.json is delivered
+# by the shared lib/download-hits-json helper (symlink to the RO
+# dataset on the playground, wget + pigz elsewhere).
+split -n r/8 -d --filter="curl -sS -T - -X POST 'http://localhost:9428/insert/jsonline?_time_field=EventTime&_stream_fields=AdvEngineID,CounterID'" hits.json
 
-# Bulk insert via 8 parallel jsonline streams.
-split -n r/8 -d --filter="curl -sS -T - -X POST 'http://localhost:9428/insert/jsonline?_time_field=EventTime&_stream_fields=AdvEngineID,CounterID'" "$HITS"
-
-[ "$HITS" = "hits.json" ] && rm -f hits.json
+rm -f hits.json
 sync
