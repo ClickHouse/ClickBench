@@ -18,7 +18,7 @@ services:
     hostname: hms
 
   statestored:
-    image: apache/impala:4.4.1-impala_quickstart_statestored
+    image: apache/impala:4.4.1-statestored
     container_name: impala-statestored
     command: ["-redirect_stdout_stderr=false", "-logtostderr", "-v=1"]
     networks:
@@ -26,7 +26,7 @@ services:
     hostname: statestored
 
   catalogd:
-    image: apache/impala:4.4.1-impala_quickstart_catalogd
+    image: apache/impala:4.4.1-catalogd
     container_name: impala-catalogd
     depends_on:
       - statestored
@@ -44,7 +44,7 @@ services:
     hostname: catalogd
 
   impalad-1:
-    image: apache/impala:4.4.1-impala_quickstart_impalad_coord_exec
+    image: apache/impala:4.4.1-impalad_coord_exec
     container_name: impala-impalad-1
     depends_on:
       - statestored
@@ -65,6 +65,20 @@ services:
     networks:
       - impala-net
     hostname: impalad-1
+
+  # impala-shell is not bundled in the coordinator image — it lives in
+  # the separate quickstart_client image. Run that as a long-lived
+  # sidecar (sleep infinity) and `docker exec` impala-shell into it for
+  # ./load and ./query. The image's default entrypoint runs a one-shot
+  # data-load script; override it so the container just stays alive.
+  client:
+    image: apache/impala:4.4.1-impala_quickstart_client
+    container_name: impala-client
+    depends_on:
+      - impalad-1
+    entrypoint: ["sleep", "infinity"]
+    networks:
+      - impala-net
 
 networks:
   impala-net:

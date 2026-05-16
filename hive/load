@@ -1,9 +1,19 @@
 #!/bin/bash
 set -e
 
-# Place the parquet file inside the Hive external-table LOCATION.
-# The Hive container reads /clickbench/hits (== ./data/hits on the host).
-ln -f hits.parquet data/hits/hits.parquet
+# Stage hits.parquet under data/hits/ — that dir is the Hive external
+# table's LOCATION via the /clickbench bind mount inside the container.
+#
+# Idempotent: BENCH_DURABLE=no triggers ./load again on every cold
+# cycle, but the dataset is 14 GB and re-staging it every cycle would
+# blow up the run time without changing the measurement. The first
+# invocation moves hits.parquet (delivered into cwd by
+# download-hits-parquet-single) into data/hits/; subsequent invocations
+# find no source file and reuse the staged copy.
+if [ -f hits.parquet ]; then
+    mkdir -p data/hits
+    mv -f hits.parquet data/hits/hits.parquet
+fi
 sudo chown -R 1000:1000 data
 
 # Run create.sql via beeline inside the container. -n hive matches the
@@ -14,5 +24,4 @@ sudo docker cp create.sql hive:/tmp/create.sql
 sudo docker exec -i hive beeline -u 'jdbc:hive2://localhost:10000/' -n hive \
     --silent=true -f /tmp/create.sql
 
-rm -f hits.parquet
 sync

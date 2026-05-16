@@ -11,6 +11,15 @@ images, orchestrated with `docker-compose`:
 The benchmark therefore reproduces on a single VM with nothing beyond
 Docker installed.
 
+**Hardware requirement:** Impala's C++ daemons (`statestored`, `catalogd`,
+`impalad`) refuse to start on a CPU without AVX — they log
+> This machine does not meet the minimum requirements for Impala
+> functionality. The CPU does not support AVX
+
+and exit. Only AVX-capable x86_64 machines work; Graviton/aarch64 hosts
+(including under QEMU emulation, which doesn't expose AVX) are not
+supported.
+
 The ClickBench `hits.parquet` file stores `EventTime`,
 `ClientEventTime` and `LocalEventTime` as Unix-epoch `BIGINT` values and
 `EventDate` as an `INT` count of days since 1970-01-01. `create.sql`

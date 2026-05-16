@@ -9,7 +9,7 @@ set -e
 query=$(cat)
 
 start=$(date +%s.%N)
-sudo docker exec -i impala-impalad-1 impala-shell.sh -d clickbench -B --quiet -q "$query"
+sudo docker exec -i impala-client impala-shell -i impalad-1:21050 -d clickbench -B --quiet -q "$query"
 end=$(date +%s.%N)
 
 awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2

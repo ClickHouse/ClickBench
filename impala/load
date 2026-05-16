@@ -9,8 +9,8 @@ sudo chown -R 1000:1000 data
 # Apply the schema via impala-shell inside the running coordinator
 # container. -B (no-header) + --quiet keeps the output free of pretty
 # tables so the driver's load-time parser is not confused.
-sudo docker cp create.sql impala-impalad-1:/tmp/create.sql
-sudo docker exec -i impala-impalad-1 impala-shell.sh -B --quiet -f /tmp/create.sql
+sudo docker cp create.sql impala-client:/tmp/create.sql
+sudo docker exec -i impala-client impala-shell -i impalad-1:21050 -B --quiet -f /tmp/create.sql
 
 rm -f hits.parquet
 sync
