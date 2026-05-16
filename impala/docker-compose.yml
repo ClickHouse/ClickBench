@@ -4,10 +4,17 @@
 # HDFS — the table data is bind-mounted into every container at
 # /clickbench so Impala reads it through its local-filesystem driver
 # rather than through HDFS or S3.
+#
+# Pinned to 4.5.0 because 4.4.1's impalad_coord_exec/catalogd images
+# ship without jdo-api on the HMS-client classpath: both daemons
+# crashed at startup with NoClassDefFoundError: javax/jdo/JDOException
+# (a SIGSEGV during the "Check failure" abort path), preventing the
+# /healthz readiness probe from ever returning. 4.5.0 is the newest
+# tagged release and is the first to bundle the missing jar.
 
 services:
   hms:
-    image: apache/impala:4.4.1-impala_quickstart_hms
+    image: apache/impala:4.5.0-impala_quickstart_hms
     container_name: impala-hms
     command: ["hms"]
     volumes:
@@ -18,7 +25,7 @@ services:
     hostname: hms
 
   statestored:
-    image: apache/impala:4.4.1-statestored
+    image: apache/impala:4.5.0-statestored
     container_name: impala-statestored
     command: ["-redirect_stdout_stderr=false", "-logtostderr", "-v=1"]
     networks:
@@ -26,7 +33,7 @@ services:
     hostname: statestored
 
   catalogd:
-    image: apache/impala:4.4.1-catalogd
+    image: apache/impala:4.5.0-catalogd
     container_name: impala-catalogd
     depends_on:
       - statestored
@@ -44,7 +51,7 @@ services:
     hostname: catalogd
 
   impalad-1:
-    image: apache/impala:4.4.1-impalad_coord_exec
+    image: apache/impala:4.5.0-impalad_coord_exec
     container_name: impala-impalad-1
     depends_on:
       - statestored
@@ -72,7 +79,7 @@ services:
   # ./load and ./query. The image's default entrypoint runs a one-shot
   # data-load script; override it so the container just stays alive.
   client:
-    image: apache/impala:4.4.1-impala_quickstart_client
+    image: apache/impala:4.5.0-impala_quickstart_client
     container_name: impala-client
     depends_on:
       - impalad-1
