@@ -29,6 +29,7 @@ import contextlib
 import http.server
 import json
 import os
+import re
 import shutil
 import signal
 import socket
@@ -82,6 +83,33 @@ _provision_lock = threading.Lock()
 # first /query has to bring it up.
 _daemon_started = threading.Event()
 _daemon_lock = threading.Lock()
+
+
+_BENCH_VAR_RE = re.compile(
+    r'^\s*(?:export\s+)?(?P<name>[A-Z_][A-Z0-9_]*)='
+    r'(?:"(?P<dq>[^"]*)"|\'(?P<sq>[^\']*)\'|(?P<bare>[^\s#"\']*))',
+    re.MULTILINE,
+)
+
+
+def _bench_var(name: str) -> str:
+    """Return the value of a top-level `VAR=…` assignment in the
+    system's benchmark.sh, or "" if absent. Driven by static grep, NOT
+    `source` — benchmark.sh ends with `exec ../lib/benchmark-common.sh`,
+    so sourcing it would derail the agent. The bench-common driver and
+    the playground agent both rely on the same variable surface
+    (BENCH_DOWNLOAD_SCRIPT, PLAYGROUND_SKIP_RESTART_BEFORE_SNAPSHOT,
+    PLAYGROUND_RESTART_AFTER_RESTORE_SNAPSHOT, …), so a per-system
+    benchmark.sh stays the single source of truth."""
+    bf = SYSTEM_DIR / "benchmark.sh"
+    try:
+        text = bf.read_text()
+    except FileNotFoundError:
+        return ""
+    for m in _BENCH_VAR_RE.finditer(text):
+        if m.group("name") == name:
+            return (m.group("dq") or m.group("sq") or m.group("bare") or "").strip()
+    return ""
 
 
 def _cap(b: bytes) -> tuple[bytes, bool]:
@@ -443,7 +471,7 @@ def _provision() -> tuple[int, bytes]:
         stop = SYSTEM_DIR / "stop"
         start = SYSTEM_DIR / "start"
         check = SYSTEM_DIR / "check"
-        preserve_state = (SYSTEM_DIR / ".preserve-state").exists()
+        preserve_state = _bench_var("PLAYGROUND_SKIP_RESTART_BEFORE_SNAPSHOT") == "yes"
         has_daemon = (stop.exists() and start.exists() and
                       check.exists() and os.access(stop, os.X_OK) and
                       os.access(start, os.X_OK) and
@@ -732,6 +760,24 @@ def _maybe_reconcile_for_restore() -> None:
         # ./start. Clear the daemon-started gate so the very next
         # _ensure_daemon_started() call brings the stack back up.
         _daemon_started.clear()
+        # Some systems' ./start scripts short-circuit on a shallow
+        # health probe (e.g. byconity checks `SELECT 1` against the
+        # local server; quickwit checks `docker ps` for the container)
+        # and never touch the broken cluster-internal connections that
+        # firecracker's frozen-time snapshot stranded. For those,
+        # PLAYGROUND_RESTART_AFTER_RESTORE_SNAPSHOT=yes in benchmark.sh
+        # opts the system into a forced ./stop before ./start so the
+        # next bring-up is from a clean state.
+        if _bench_var("PLAYGROUND_RESTART_AFTER_RESTORE_SNAPSHOT") == "yes":
+            stop = SYSTEM_DIR / "stop"
+            if stop.exists() and os.access(stop, os.X_OK):
+                sys.stderr.write(
+                    "[agent] PLAYGROUND_RESTART_AFTER_RESTORE_SNAPSHOT: "
+                    "force ./stop\n")
+                subprocess.run([str(stop)], cwd=str(SYSTEM_DIR),
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT,
+                               timeout=300, check=False)
         # Kick off the rebuild asynchronously. /ready (or whoever
         # called us) returns promptly; the host's /ready poll then
         # waits for _daemon_started to flip back to True.
