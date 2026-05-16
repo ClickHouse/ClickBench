@@ -37,6 +37,32 @@ sudo docker run -d --name umbradb \
 
 # Container needs a moment before psql can connect.
 for _ in $(seq 1 60); do
-    PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -c 'SELECT 1' >/dev/null 2>&1 && exit 0
+    if PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres \
+            -c 'SELECT 1' >/dev/null 2>&1; then
+        # Diagnostic dump so a future OOM during load lands with the
+        # memory/swap state of the VM in the provision log. Previously
+        # silent — every "unable to allocate memory" failure looked
+        # the same and we couldn't tell whether the agent's mkswap+
+        # swapon ran, whether the container saw the swap, or whether
+        # the sysctl tweaks above stuck.
+        echo "=== umbra: VM memory state ==="
+        free -h || true
+        echo "=== umbra: swap state ==="
+        swapon --show=NAME,SIZE,USED,PRIO --bytes || true
+        echo "=== umbra: container memory cgroup ==="
+        sudo docker inspect umbradb --format \
+            'memory={{.HostConfig.Memory}} memory-swap={{.HostConfig.MemorySwap}}' || true
+        cgpath=$(sudo docker inspect umbradb --format '{{.State.Pid}}' 2>/dev/null | \
+            xargs -I{} cat /proc/{}/cgroup 2>/dev/null | awk -F: '{print $NF}')
+        if [ -n "$cgpath" ]; then
+            for f in memory.max memory.swap.max memory.swap.current; do
+                p="/sys/fs/cgroup${cgpath}/$f"
+                [ -r "$p" ] && echo "  $f = $(cat "$p")"
+            done
+        fi
+        echo "=== umbra: container procs ==="
+        sudo docker top umbradb -eo pid,vsz,rss,comm 2>&1 | head -10
+        exit 0
+    fi
     sleep 1
 done
