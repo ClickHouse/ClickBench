@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Bind-mounted into /opt/hive/conf/hive-site.xml on the hms container.
+  The image's /opt/hive/conf/ ships only *.template files, so without
+  this file:
+
+   * the metastore runs with all defaults (still functional for HMS),
+     BUT
+   * DbNotificationListener is not registered, so any client RPC into
+     get_current_notificationEventId throws TApplicationException.
+
+  Catalogd subscribes to the notification log on startup (controlled
+  by -hms_event_polling_interval_s; we set 0 in compose to opt out),
+  but impalad also calls get_current_notificationEventId during DDL
+  (CREATE DATABASE clickbench in ./load), which can't be opted out of
+  on the client side. Registering DbNotificationListener server-side
+  is the fix.
+
+  schematool -initSchema runs once on first hms start (per
+  hms-entrypoint.sh). With this file in place at that moment, schematool
+  creates the NOTIFICATION_LOG / NOTIFICATION_SEQUENCE tables alongside
+  the rest of the HMS schema. We rely on the cloud-init VM being fresh
+  every run so the entrypoint always re-initializes.
+-->
+<configuration>
+  <property>
+    <name>hive.metastore.transactional.event.listeners</name>
+    <value>org.apache.hive.hcatalog.listener.DbNotificationListener</value>
+  </property>
+</configuration>

@@ -22,6 +22,12 @@ services:
     volumes:
       - hms_warehouse:/var/lib/hive
       - ./data:/clickbench:rw
+      # Register DbNotificationListener server-side so client RPCs to
+      # get_current_notificationEventId succeed; without it, DDL like
+      # CREATE DATABASE in ./load fails with
+      # TApplicationException: Internal error processing
+      #   get_current_notificationEventId
+      - ./hms-hive-site.xml:/opt/hive/conf/hive-site.xml:ro
     networks:
       - impala-net
     hostname: hms
