@@ -1,10 +1,24 @@
 #!/bin/bash
-set -e
-
 # Impala's coordinator exposes its web UI on 25000. /healthz returns
 # 200 "OK" once the daemon has finished registering with statestored
 # and catalogd — i.e. the cluster is actually ready to accept queries,
 # not just listening on the SQL ports. While the stack is stopped the
 # port is closed and curl fails as it should.
-out=$(curl -sf http://localhost:25000/healthz)
-[ "$out" = "OK" ]
+#
+# On failure dump container status to stderr — bench_check_loop captures
+# the last call's stderr and prints it after a readiness timeout, so this
+# turns "did not succeed within 300s" into something actionable
+# (which container is missing/crashed) without spamming the run log
+# on every iteration.
+out=$(curl -sSf -m 5 http://localhost:25000/healthz 2>&1) || {
+    {
+        printf 'impala/check: /healthz unreachable: %s\n' "$out"
+        sudo docker ps -a --filter 'name=impala-' \
+            --format '  {{.Names}}: {{.Status}}'
+    } >&2
+    exit 1
+}
+[ "$out" = "OK" ] || {
+    echo "impala/check: /healthz returned: $out" >&2
+    exit 1
+}
