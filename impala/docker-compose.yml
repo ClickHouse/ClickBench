@@ -44,7 +44,17 @@ services:
       - "-redirect_stdout_stderr=false"
       - "-logtostderr"
       - "-v=1"
-      - "-hms_event_polling_interval_s=1"
+      # 0 disables HMS event polling. The entrypoint defaults to 1
+      # (poll every second), which causes catalogd to subscribe to the
+      # metastore's notification log on startup via
+      # get_current_notificationEventId. The quickstart hms image
+      # ships without DbNotificationListener configured, so that RPC
+      # throws "Internal error processing get_current_notificationEventId"
+      # and the FATAL aborts catalogd before /healthz on impalad ever
+      # reaches OK. We don't need event-driven cache invalidation in a
+      # single-process benchmark — `invalidate metadata` after ./load
+      # is enough.
+      - "-hms_event_polling_interval_s=0"
       - "-invalidate_tables_timeout_s=999999"
       # Override entrypoint default. With it on, the daemon expands
       # `hms` to its reverse-DNS FQDN. Even with the network renamed,
