@@ -15,6 +15,14 @@ out=$(curl -sSf -m 5 http://localhost:25000/healthz 2>&1) || {
         printf 'impala/check: /healthz unreachable: %s\n' "$out"
         sudo docker ps -a --filter 'name=impala-' \
             --format '  {{.Names}}: {{.Status}}'
+        # Dump the tail of any container that has exited so the
+        # bench_check_loop timeout report shows *why* impalad/catalogd
+        # crashed (SIGSEGV, OOM, config error) instead of just "Exited".
+        for c in $(sudo docker ps -a --filter 'name=impala-' \
+                       --filter 'status=exited' --format '{{.Names}}'); do
+            echo "--- $c (last 50 log lines) ---"
+            sudo docker logs --tail 50 "$c" 2>&1 | sed 's/^/  /'
+        done
     } >&2
     exit 1
 }
