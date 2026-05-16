@@ -71,6 +71,17 @@ update-locale LANG=en_US.UTF-8
 apt-get install -y python2 python2.7
 ln -sf /usr/bin/python2 /usr/local/bin/python
 
+# gpstart/gpstop import psutil (process management) and \`builtins\` from
+# the \`future\` package (Py2/3 compat shim). Ubuntu 22.04 dropped both
+# from its repos; bootstrap pip for Python 2 from pypa.io's 2.7 endpoint
+# and pip-install them. Without this, gpinitsystem's final
+# "Restart in production mode" step crashes with ImportError and the
+# cluster never comes up despite all 14 segments having been built.
+curl -fsSL https://bootstrap.pypa.io/pip/2.7/get-pip.py -o /tmp/get-pip.py
+python2 /tmp/get-pip.py
+pip2 install psutil future
+rm -f /tmp/get-pip.py
+
 # Fetch and install the prebuilt .deb. apt resolves the long Depends list.
 curl -fsSL -o /tmp/greengage6.deb "${DEB_URL}"
 apt-get install -y /tmp/greengage6.deb
