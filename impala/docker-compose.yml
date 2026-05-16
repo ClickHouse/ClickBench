@@ -5,12 +5,14 @@
 # /clickbench so Impala reads it through its local-filesystem driver
 # rather than through HDFS or S3.
 #
-# Pinned to 4.5.0 because 4.4.1's impalad_coord_exec/catalogd images
-# ship without jdo-api on the HMS-client classpath: both daemons
-# crashed at startup with NoClassDefFoundError: javax/jdo/JDOException
-# (a SIGSEGV during the "Check failure" abort path), preventing the
-# /healthz readiness probe from ever returning. 4.5.0 is the newest
-# tagged release and is the first to bundle the missing jar.
+# Pinned to 4.5.0; 4.4.1 has the same jdo-api gap so the pin alone
+# doesn't matter, but 4.5.0 is the newest tagged release. The
+# missing jdo-api jar is supplied via a bind-mount under
+# /opt/impala/lib/ on the two daemons (./install fetches it from
+# Maven Central); without that, both impalad_coord_exec and catalogd
+# crash at startup with NoClassDefFoundError: javax/jdo/JDOException →
+# SIGSEGV in the C++ "Check failure" abort path, before /healthz ever
+# opens.
 
 services:
   hms:
@@ -46,6 +48,7 @@ services:
       - "-invalidate_tables_timeout_s=999999"
     volumes:
       - ./data:/clickbench:rw
+      - ./data/extra-lib/jdo-api-3.0.1.jar:/opt/impala/lib/jdo-api-3.0.1.jar:ro
     networks:
       - impala-net
     hostname: catalogd
@@ -69,6 +72,7 @@ services:
       - "25000:25000"
     volumes:
       - ./data:/clickbench:rw
+      - ./data/extra-lib/jdo-api-3.0.1.jar:/opt/impala/lib/jdo-api-3.0.1.jar:ro
     networks:
       - impala-net
     hostname: impalad-1
