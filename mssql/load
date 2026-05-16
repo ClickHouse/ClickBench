@@ -1,0 +1,53 @@
+#!/bin/bash
+set -eu
+
+PASSWORD=${MSSQL_SA_PASSWORD:-YourStr0ngPa55w0rd!}
+
+SQLCMD=(sudo docker exec -i mssql1 /opt/mssql-tools18/bin/sqlcmd
+    -S localhost -U sa -P "$PASSWORD" -C -b -t 0 -l 0)
+
+# Recreate the database from a known-empty state. SIMPLE recovery keeps the
+# log small during the bulk load.
+"${SQLCMD[@]}" -Q "
+IF DB_ID('clickbench') IS NOT NULL
+BEGIN
+    ALTER DATABASE clickbench SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE clickbench;
+END
+CREATE DATABASE clickbench;
+ALTER DATABASE clickbench SET RECOVERY SIMPLE;
+"
+
+# Create the table as a plain heap. Loading into a heap and then building
+# the clustered columnstore index (below) produces fully-sized, well-
+# compressed rowgroups — better than inserting into an existing
+# columnstore, which has to pass through the delta store unless every bcp
+# batch is exactly a full rowgroup.
+"${SQLCMD[@]}" -d clickbench < create.sql
+
+# bcp inside the container reads /clickbench/hits.tsv from the bind-mount
+# established in ./start. The mssql process runs as UID 10001, so the file
+# needs to be world-readable.
+chmod 644 hits.tsv
+chmod o+rx .
+
+# -c   character mode (TSV-friendly)
+# -t   field terminator
+# -r   row terminator
+# -b   batch size (rows per implicit commit; large value = one big batch)
+# -F   first row (skip none; ClickBench TSV has no header)
+# -E   keep identity columns from file (defensive; we have none)
+sudo docker exec mssql1 /opt/mssql-tools18/bin/bcp \
+    clickbench.dbo.hits in /clickbench/hits.tsv \
+    -S localhost -U sa -P "$PASSWORD" -C \
+    -c -t $'\t' -r '\n' -b 1048576 -F 1
+
+# Convert the heap into a clustered columnstore index. After this, the
+# whole table is stored as compressed column segments and batch-mode
+# execution is enabled for queries against it.
+"${SQLCMD[@]}" -d clickbench -Q "
+CREATE CLUSTERED COLUMNSTORE INDEX cci_hits ON hits;
+"
+
+rm -f hits.tsv
+sync
