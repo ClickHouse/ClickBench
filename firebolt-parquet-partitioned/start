@@ -29,12 +29,21 @@ else
     #                            across the agent's pre-snapshot
     #                            stop+start cycle or the snapshot
     #                            ships an empty DB).
+    # The agent stages partitioned parquet at $PWD as symlinks pointing
+    # at /opt/clickbench/datasets_ro/hits_partitioned/hits_N.parquet
+    # (an absolute host-VM path). `./load` then `mv`s those symlinks
+    # into data/, but inside the container the absolute target is
+    # unreachable and the symlinks dangle — load reports success but
+    # the external table sees zero files and every query returns
+    # rows_read=0. Bind-mount the dataset disk into the container at
+    # the same absolute path so the symlinks resolve.
     sudo docker run -dit --name firebolt-core \
         --ulimit memlock=8589934592:8589934592 \
         --security-opt seccomp=unconfined \
         -p 127.0.0.1:3473:3473 \
         -v "$(pwd)/fb-volume:/firebolt-core/volume" \
         -v "$(pwd)/data:/firebolt-core/clickbench" \
+        -v "/opt/clickbench/datasets_ro:/opt/clickbench/datasets_ro:ro" \
         ghcr.io/firebolt-db/firebolt-core:preview-rc >/dev/null
 fi
 
