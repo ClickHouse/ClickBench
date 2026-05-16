@@ -385,16 +385,22 @@ def _provision() -> tuple[int, bytes]:
                 PROVISION_LOG.write_bytes(b"".join(log_lines))
                 return r.returncode, b"".join(log_lines)
 
-        # Wait for ./check to succeed for up to 300s
+        # Wait for ./check to succeed. Per-system override via
+        # BENCH_CHECK_TIMEOUT in benchmark.sh (same surface as the
+        # standalone bench driver); default 900 s, which covers
+        # Druid / Pinot / similar JVM-stack engines that need 5-10 min
+        # for Zookeeper / Coordinator / Broker / Historical to come up
+        # in sequence. Trino on a cold sysdisk has been observed
+        # pushing past 900 s, hence the override hook.
         check = SYSTEM_DIR / "check"
+        check_budget = 900
+        override = _bench_var("BENCH_CHECK_TIMEOUT")
+        if override.isdigit():
+            check_budget = max(check_budget, int(override))
         ok = False
         t0 = time.monotonic()
         last_check: subprocess.CompletedProcess | None = None
-        # Druid / Pinot / similar JVM-stack engines need 5-10 min to come
-        # up from a cold start, between Zookeeper / Coordinator / Broker /
-        # Historical processes booting in sequence. 300 s was too tight
-        # for those; 900 s covers the slowest observed cases.
-        while time.monotonic() - t0 < 900:
+        while time.monotonic() - t0 < check_budget:
             last_check = subprocess.run(
                 [str(check)], cwd=str(SYSTEM_DIR),
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -404,7 +410,8 @@ def _provision() -> tuple[int, bytes]:
                 break
             time.sleep(1)
         if not ok:
-            log_lines.append(b"\n=== check did not succeed within 900s ===\n")
+            log_lines.append(
+                f"\n=== check did not succeed within {check_budget}s ===\n".encode())
             if last_check is not None:
                 log_lines.append(last_check.stderr or b"")
             PROVISION_LOG.write_bytes(b"".join(log_lines))
