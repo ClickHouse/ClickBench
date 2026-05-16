@@ -1,0 +1,4 @@
+-- LocustDB has no CREATE TABLE: tables are materialised at --load time
+-- from the CSV file directly, with column types either declared via
+-- `--schema` or inferred. The hits table is created by the `--load`
+-- invocation in ./load.
