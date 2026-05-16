@@ -24,8 +24,27 @@
   every run so the entrypoint always re-initializes.
 -->
 <configuration>
+  <!-- Register the listener that writes events to NOTIFICATION_LOG. -->
   <property>
     <name>hive.metastore.transactional.event.listeners</name>
     <value>org.apache.hive.hcatalog.listener.DbNotificationListener</value>
+  </property>
+
+  <!-- Some Hive code paths gate getCurrentNotificationEventId on
+       hive.metastore.event.db.notification.api.auth=false; with auth
+       on (the default), an unauthenticated client (impalad/catalogd
+       connecting as "impala") gets MetaException back, surfaced as
+       TApplicationException "Internal error processing
+       get_current_notificationEventId" to the client. -->
+  <property>
+    <name>hive.metastore.event.db.notification.api.auth</name>
+    <value>false</value>
+  </property>
+
+  <!-- Make the notification API serialize full thrift objects, which
+       newer Hive clients (including Impala 4.x) expect. -->
+  <property>
+    <name>hive.metastore.notifications.add.thrift.objects</name>
+    <value>true</value>
   </property>
 </configuration>
