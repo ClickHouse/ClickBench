@@ -46,6 +46,12 @@ services:
       - "-v=1"
       - "-hms_event_polling_interval_s=1"
       - "-invalidate_tables_timeout_s=999999"
+      # Override entrypoint default. With it on, the daemon expands
+      # `hms` to its reverse-DNS FQDN. Even with the network renamed,
+      # docker still appends the network as a hostname suffix, and the
+      # resulting hostname can pick up illegal URI characters; keep
+      # the configured `hms` literal so the URI parses cleanly.
+      - "-use_resolved_hostname=false"
     volumes:
       - ./data:/clickbench:rw
       - ./data/extra-lib/jdo-api-3.0.1.jar:/opt/impala/lib/jdo-api-3.0.1.jar:ro
@@ -67,6 +73,8 @@ services:
       - "-kudu_master_hosts="
       - "-mt_dop_auto_fallback=true"
       - "--default_query_options=default_file_format=parquet"
+      # See catalogd above — same FQDN-underscore problem applies here.
+      - "-use_resolved_hostname=false"
     ports:
       - "21000:21000"
       - "21050:21050"
@@ -95,6 +103,14 @@ services:
 
 networks:
   impala-net:
+    # Pin the network name; without `name:` compose auto-prefixes the
+    # current project (= cwd basename), producing `impala_impala-net`.
+    # Catalogd then reverse-resolves the hms IP and gets back a
+    # hostname containing an underscore (`impala-hms.impala_impala-net`),
+    # which java.net.URI rejects with
+    #   URISyntaxException: Illegal character in hostname at index 26
+    # before HiveMetaStoreClient can connect.
+    name: impala-net
     driver: bridge
 
 volumes:
