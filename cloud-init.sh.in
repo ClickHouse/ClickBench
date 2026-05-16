@@ -68,7 +68,14 @@ echo "Total time: $SECONDS" | tee -a log
 
 RESULTS_URL="https://play.clickhouse.com/?user=sink&query=INSERT+INTO+data+FORMAT+RawBLOB"
 
-curl ${RESULTS_URL} --data-binary @log
-curl ${RESULTS_URL} --data-binary @/var/log/cloud-init-output.log
+# The sink enforces a per-row size cap. Cloud-init logs from systems that
+# build from source (e.g. compiling Hyrise/WarehousePG, pulling Spark
+# tarballs, apt-installing build-essential) can run to hundreds of MB,
+# and pushing the full file fails with a "Too large" reject — losing the
+# whole log including the diagnostic tail we actually care about. Send
+# only the last 1 MB of each file: that's enough to capture the bench
+# output, any tracebacks, and the final readiness/timing lines.
+tail -c 1000000 log | curl ${RESULTS_URL} --data-binary @-
+tail -c 1000000 /var/log/cloud-init-output.log | curl ${RESULTS_URL} --data-binary @-
 
 shutdown now
