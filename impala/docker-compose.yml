@@ -49,6 +49,7 @@ services:
     volumes:
       - ./data:/clickbench:rw
       - ./data/extra-lib/jdo-api-3.0.1.jar:/opt/impala/lib/jdo-api-3.0.1.jar:ro
+      - ./hive-site.xml:/opt/impala/conf/hive-site.xml:ro
     networks:
       - impala-net
     hostname: catalogd
@@ -73,6 +74,7 @@ services:
     volumes:
       - ./data:/clickbench:rw
       - ./data/extra-lib/jdo-api-3.0.1.jar:/opt/impala/lib/jdo-api-3.0.1.jar:ro
+      - ./hive-site.xml:/opt/impala/conf/hive-site.xml:ro
     networks:
       - impala-net
     hostname: impalad-1
