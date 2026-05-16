@@ -21,15 +21,23 @@ PORT_BASE=6000
 #### the specified interface addresses).
 declare -a DATA_DIRECTORY=(/data0/primary /data0/primary /data0/primary /data0/primary /data0/primary /data0/primary /data0/primary /data0/primary /data0/primary /data0/primary /data0/primary /data0/primary /data0/primary /data0/primary)
 
+#### Display name for the array. Stops gpinitsystem's [WARN] about the
+#### default and makes log output identify the cluster.
+ARRAY_NAME="ClickBench"
+
 #### OS-configured hostname or IP address of the coordinator host.
-COORDINATOR_HOSTNAME=localhost
+#### Greengage 6 / OpenGPDB 6 are Greenplum 6 forks and still use the
+#### MASTER_* variable names; gpinitsystem fatals with
+#### "MASTER_HOSTNAME variable not set" if the COORDINATOR_* names from
+#### Greenplum 7+ are used.
+MASTER_HOSTNAME=localhost
 
-#### File system location where the coordinator data directory 
+#### File system location where the coordinator data directory
 #### will be created.
-COORDINATOR_DIRECTORY=/data0/coordinator
+MASTER_DIRECTORY=/data0/coordinator
 
-#### Port number for the coordinator instance. 
-COORDINATOR_PORT=5432
+#### Port number for the coordinator instance.
+MASTER_PORT=5432
 
 #### Shell utility used to connect to remote hosts.
 TRUSTED_SHELL=ssh

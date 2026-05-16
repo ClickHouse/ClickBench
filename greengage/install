@@ -124,7 +124,9 @@ mkdir -p /data0/primary /data0/coordinator
 chown -R gpadmin:gpadmin /data0
 cat > /home/gpadmin/.bash_profile <<'PROFILE'
 source /opt/greengagedb/greengage/greengage_path.sh
-export COORDINATOR_DATA_DIRECTORY=/data0/coordinator/gpseg-1
+# Greengage 6 is a Greenplum 6 fork; gpstart/gpstop look up
+# MASTER_DATA_DIRECTORY, not the Greenplum 7+ COORDINATOR_DATA_DIRECTORY.
+export MASTER_DATA_DIRECTORY=/data0/coordinator/gpseg-1
 PROFILE
 chown gpadmin:gpadmin /home/gpadmin/.bash_profile
 
