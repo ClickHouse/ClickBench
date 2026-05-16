@@ -32,7 +32,7 @@ sudo docker run -d --name umbradb \
     -v "$(pwd)/data:/data" \
     -p 5432:5432 \
     --ulimit nofile=1048576:1048576 \
-    --ulimit memlock=8388608:8388608 \
+    --ulimit memlock=-1:-1 \
     umbradb/umbra:latest >/dev/null
 
 # Container needs a moment before psql can connect.
@@ -49,9 +49,16 @@ for _ in $(seq 1 60); do
         free -h || true
         echo "=== umbra: swap state ==="
         swapon --show=NAME,SIZE,USED,PRIO --bytes || true
+        echo "=== umbra: sysctl ==="
+        for k in vm.overcommit_memory vm.swappiness vm.max_map_count \
+                vm.overcommit_ratio; do
+            echo "  $k = $(sysctl -n $k 2>/dev/null)"
+        done
         echo "=== umbra: container memory cgroup ==="
         sudo docker inspect umbradb --format \
             'memory={{.HostConfig.Memory}} memory-swap={{.HostConfig.MemorySwap}}' || true
+        echo "=== umbra: container memlock ulimit ==="
+        sudo docker exec umbradb sh -c 'ulimit -l' 2>&1 || true
         cgpath=$(sudo docker inspect umbradb --format '{{.State.Pid}}' 2>/dev/null | \
             xargs -I{} cat /proc/{}/cgroup 2>/dev/null | awk -F: '{print $NF}')
         if [ -n "$cgpath" ]; then
