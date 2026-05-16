@@ -61,8 +61,14 @@ apt-get install -y curl ca-certificates sudo openssh-server openssh-client \
 locale-gen en_US.UTF-8
 update-locale LANG=en_US.UTF-8
 
-# OpenGPDB 6 requires python 2.7 (Depends in the .deb).
-apt-get install -y python2 python2.7 python-is-python2 || true
+# OpenGPDB 6 requires Python 2: gpinitsystem invokes bare \`python\` and
+# bails with "/usr/bin/env: 'python': No such file" near the end of init
+# if it can't find one. python-is-python2 has been silently failing to
+# create /usr/bin/python here; install python2 and make a symlink in
+# /usr/local/bin so the dpkg /usr/bin slot stays clean and we don't depend
+# on the universe package's postinst.
+apt-get install -y python2 python2.7
+ln -sf /usr/bin/python2 /usr/local/bin/python
 
 curl -fsSL -o /tmp/opengpdb.deb "${DEB_URL}"
 apt-get install -y /tmp/opengpdb.deb

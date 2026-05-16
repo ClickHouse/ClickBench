@@ -62,8 +62,14 @@ apt-get install -y curl ca-certificates sudo openssh-server openssh-client \
 locale-gen en_US.UTF-8
 update-locale LANG=en_US.UTF-8
 
-# Greengage 6 still needs Python 2 for gpinitsystem / gpstart.
-apt-get install -y python2 python2.7 python-is-python2 || true
+# Greengage 6 still needs Python 2: gpinitsystem invokes bare \`python\` and
+# bails with "/usr/bin/env: 'python': No such file" near the end of init
+# if it can't find one. python-is-python2 has been silently failing to
+# create /usr/bin/python here; install python2 and make a symlink in
+# /usr/local/bin so the dpkg /usr/bin slot stays clean and we don't depend
+# on the universe package's postinst.
+apt-get install -y python2 python2.7
+ln -sf /usr/bin/python2 /usr/local/bin/python
 
 # Fetch and install the prebuilt .deb. apt resolves the long Depends list.
 curl -fsSL -o /tmp/greengage6.deb "${DEB_URL}"
