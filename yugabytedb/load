@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eu
+
+# Create the test database and apply the schema. Idempotent enough:
+# subsequent runs see the database already exists and skip.
+./yugabyte/bin/ysqlsh -U yugabyte -c "CREATE DATABASE test;" 2>/dev/null || true
+./yugabyte/bin/ysqlsh -U yugabyte -c "ALTER DATABASE test SET temp_file_limit=-1;"
+./yugabyte/bin/ysqlsh -U yugabyte -d test -c "DROP TABLE IF EXISTS hits;"
+./yugabyte/bin/ysqlsh -U yugabyte -d test -v ON_ERROR_STOP=1 -t < create.sql
+
+# COPY from the local hits.tsv. yugabytedb's COPY is single-stream;
+# expect ~78 minutes on c6a.4xlarge per the original benchmark notes.
+./yugabyte/bin/ysqlsh -U yugabyte -d test -v ON_ERROR_STOP=1 <<'EOF'
+\copy hits FROM 'hits.tsv';
+EOF
+
+./yugabyte/bin/ysqlsh -U yugabyte -d test -v ON_ERROR_STOP=1 -t -c 'ANALYZE hits;'
+
+rm -f hits.tsv
+sync

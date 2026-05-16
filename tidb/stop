@@ -1,0 +1,19 @@
+#!/bin/bash
+
+TIUP_HOME=$(pwd)
+export TIUP_HOME
+PATH="$TIUP_HOME/bin/:$PATH"
+export PATH
+
+tiup playground display >/dev/null 2>&1 || exit 0
+
+# tiup playground exposes no clean stop; kill the playground process group.
+pids=$(pgrep -f 'tiup playground' || true)
+if [ -n "$pids" ]; then
+    kill $pids 2>/dev/null || true
+    sleep 5
+    pids=$(pgrep -f 'tiup playground' || true)
+    if [ -n "$pids" ]; then
+        kill -9 $pids 2>/dev/null || true
+    fi
+fi

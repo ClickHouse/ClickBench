@@ -1,0 +1,2 @@
+#!/bin/bash
+./yugabyte/bin/yugabyted stop 2>/dev/null || true

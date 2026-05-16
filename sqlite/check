@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+sqlite3 :memory: 'SELECT 1' >/dev/null

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+pkill -x siglens 2>/dev/null || true
+for _ in $(seq 1 15); do
+    pgrep -x siglens >/dev/null 2>&1 || exit 0
+    sleep 1
+done
+pkill -9 -x siglens 2>/dev/null || true

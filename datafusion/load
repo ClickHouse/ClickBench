@@ -1,0 +1,6 @@
+#!/bin/bash
+# datafusion queries hits.parquet directly via an external table created
+# inline in each query (see create.sql, executed by ./query). No persistent
+# database to load.
+set -e
+sync

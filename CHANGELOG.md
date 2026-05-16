@@ -2,6 +2,19 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-05-11
+Unified benchmark scripts for different systems by providing a common interface in a set of scripts: `install`, `start`, `check`, `stop`, `load`, `query`, and `data-size`. Make the dataset download scripts common as well. Use a general benchmark runner in `lib/` to ensure different systems get equal treatment. This makes it easier to add more ways of testing, different datasets, and scenarios to the benchmark, and simplifies support of all 88 systems presented. Note: for embedded systems, such as pandas, polars, and the Python duckdb module, wrap them into a Python HTTP server, so that the benchmark can run each query separately.
+
+Restart databases before measuring the cold run of each query as requested in [#667](https://github.com/ClickHouse/ClickBench/issues/667) and [#793](https://github.com/ClickHouse/ClickBench/issues/793). This prevents unfair measurements and removes the way for cheating on the benchmark for systems that do excessive in-process caching without flushing it before the cold run. Unify flushing the OS page cache before a cold run, so that all benchmark entries follow the same rules. Notes: for stateless systems (such as query engines on top of Parquet), the restart is a no-op; for systems without durability and in-memory systems, the restart before each query also requires repeated data loading, which time is included in the cold query measurement. A downside and potential problem of this approach is that systems that speculatively prewarm during startup can now get an advantage. Also, this change is not applicable to SaaS (cloud) systems.
+
+Introduced a new measurement - QPS and error rate on concurrent workload (10 connections for 10 minutes) to prove the advantage of the refactoring. Currently, the metric is not exposed in the benchmark. 
+
+Re-run 88 systems on every machine. Fixed queries with regexps for MariaDB and SQLite. Added ARM64 versions for some systems: databend, octosql, octeryx. Use the faster data loader for MariaDB. An attempt to rerun CedarDB showed [a bug](https://github.com/ClickHouse/ClickBench/issues/891). Added new systems: Trino, Presto, Quickwit. Generic runner for pandas and polars. Fixed issues with Spark variants. Clean up some tags. Some systems are found dead: vertica, kinetica, singlestore, heavyai.     
+
+Improve the website: move important selectors (open-source, hardware, tuned) on top and show them horizontally, they also filter out visible options in other selectors. When the mouse pointer is on top of a system, highlight their tags. Add a button on the diagram to remove a system from the report. Add measurement date to the diagram (as requested in [#639](https://github.com/ClickHouse/ClickBench/issues/639)). Make some cloud machine names shorter to remove clutter. The report methodology (aggregation of the measurements) and the default selection remain unchanged.
+
+(Alexey Milovidov)
+
 ### 2026-05-08
 Refactored directory structure to keep every historical result - they are organized in directories `system/results/YYYYMMDD/*.json` for each date. Compared to using git history, this unifies the format and structure of the results, making them ready for analysis. You can analyze it with clickhouse-local: `ch "SELECT * FROM '*/results/*/*.json'"` or export the data: `ch "SELECT * FROM '*/results/*/*.json' ORDER BY _path INTO OUTFILE 'results.parquet'"` (Alexey Milovidov).
 
@@ -56,7 +69,7 @@ The systems on the main chart are distinguished by color (systems from the same 
 
 Added the "open-source" and "proprietary" tags, so that you can list only open-source databases. For the reference, Umbra, Hyper, and CedarDB are proprietary.
 
-Removed pointless tags, that some systems attribute to themself. One system misattributed itself as "mysql-compatible", two others added tags with their names, another reported two programming languages, a few systems reported an "analytical" tag, which is pointless, and one system didn't report itself as "ClickHouse-derivative" while being based on the ClickHouse interfaces and architecture.
+Removed pointless tags, that some systems attribute to themselves. One system misattributed itself as "mysql-compatible", two others added tags with their names, another reported two programming languages, a few systems reported an "analytical" tag, which is pointless, and one system didn't report itself as "ClickHouse-derivative" while being based on the ClickHouse interfaces and architecture.
 
 Some systems provided bogus results on the loading time or data size. For example, one system reported data size 1000 times less, and we didn't notice that. This was corrected. The comparison on the loading time will not include stateless systems that don't require data loading.
 

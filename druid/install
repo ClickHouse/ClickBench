@@ -1,0 +1,39 @@
+#!/bin/bash
+set -e
+
+# 33.0.0 was retired from the dlcdn.apache.org mirror; bump to a
+# currently-published Druid release.
+VERSION=37.0.0
+DRUID_DIR="apache-druid-${VERSION}"
+
+if [ ! -d "$DRUID_DIR" ]; then
+    # Druid 33+ requires Java 17 or 21; openjdk-11 trips its
+    # `verify-java` check on startup with "Druid requires Java 17 or 21".
+    sudo apt-get update -y
+    sudo apt-get install -y openjdk-17-jdk curl
+
+    if [ ! -f "${DRUID_DIR}-bin.tar.gz" ]; then
+        wget --continue --progress=dot:giga -O"${DRUID_DIR}-bin.tar.gz" \
+            "https://dlcdn.apache.org/druid/${VERSION}/${DRUID_DIR}-bin.tar.gz"
+    fi
+    tar xf "${DRUID_DIR}-bin.tar.gz"
+    "./${DRUID_DIR}/bin/verify-java"
+
+    # Have to increase indexer memory limit
+    sed -i 's MaxDirectMemorySize=1g MaxDirectMemorySize=5g g' \
+        "${DRUID_DIR}/conf/druid/single-server/medium/middleManager/runtime.properties"
+
+    # Disable cache to test query performance
+    sed -i 's druid.historical.cache.useCache=true druid.historical.cache.useCache=false g' \
+        "${DRUID_DIR}/conf/druid/single-server/medium/historical/runtime.properties"
+    sed -i 's druid.historical.cache.populateCache=true druid.historical.cache.populateCache=false g' \
+        "${DRUID_DIR}/conf/druid/single-server/medium/historical/runtime.properties"
+    sed -i 's druid.processing.buffer.sizeBytes=500MiB druid.processing.buffer.sizeBytes=1000MiB g' \
+        "${DRUID_DIR}/conf/druid/single-server/medium/historical/runtime.properties"
+
+    if ! grep -q '^druid.query.groupBy.maxMergingDictionarySize' \
+        "${DRUID_DIR}/conf/druid/single-server/medium/historical/runtime.properties"; then
+        echo "druid.query.groupBy.maxMergingDictionarySize=5000000000" \
+            >> "${DRUID_DIR}/conf/druid/single-server/medium/historical/runtime.properties"
+    fi
+fi

@@ -1,0 +1,3 @@
+#!/bin/bash
+# datafusion-cli is an embedded CLI tool — no daemon to start.
+exit 0

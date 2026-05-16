@@ -1,0 +1,55 @@
+#!/bin/bash
+set -eu
+
+PGVERSION=${PGVERSION:-17}
+
+export DEBIAN_FRONTEND=noninteractive
+
+# --- ClickHouse ---
+if [ ! -x /usr/bin/clickhouse ]; then
+    cd /tmp
+    curl https://clickhouse.com/ | sh
+    sudo ./clickhouse install --noninteractive
+    rm -f clickhouse
+    cd -
+fi
+
+# --- PostgreSQL + pg_clickhouse ---
+sudo apt-get update -y
+sudo apt-get install -y postgresql-common
+sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+
+sudo apt-get update -y
+sudo apt-get install -y \
+    postgresql-$PGVERSION \
+    postgresql-server-dev-$PGVERSION \
+    libcurl4-openssl-dev \
+    uuid-dev \
+    libssl-dev \
+    make \
+    cmake \
+    g++ \
+    pgxnclient
+
+memory=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+threads=$(nproc)
+cpus=$(($threads / 2))
+shared_buffers=$(($memory / 4))
+effective_cache_size=$(($memory - ($memory / 4)))
+max_worker_processes=$(($threads + 15))
+
+sudo tee /etc/postgresql/$PGVERSION/main/conf.d/clickbench.conf <<EOF
+shared_buffers=${shared_buffers}kB
+max_worker_processes=${max_worker_processes}
+max_parallel_workers=${threads}
+max_parallel_maintenance_workers=${cpus}
+max_parallel_workers_per_gather=${cpus}
+max_wal_size=32GB
+work_mem=64MB
+effective_cache_size = ${effective_cache_size}kB
+EOF
+
+sudo systemctl restart postgresql@$PGVERSION-main
+
+# Build/install the pg_clickhouse extension (idempotent on rerun).
+pgxn install pg_clickhouse || true

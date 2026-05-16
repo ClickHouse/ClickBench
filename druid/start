@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e
+
+VERSION=37.0.0
+DRUID_DIR="apache-druid-${VERSION}"
+
+# Health check: SQL endpoint must accept queries, not just /status. The
+# router's /status comes up immediately while the broker / historical
+# wiring is still recovering. Post-snapshot-restore in particular the
+# JVMs are alive but the SQL stack stays unhealthy for 10+ minutes —
+# ZK session skew across the snapshot boundary, most likely. The old
+# "if /status: exit" gate let queries land in that window and time out.
+sql_healthy() {
+    curl -sf -o /dev/null --max-time 5 \
+        -XPOST -H 'Content-Type: application/json' \
+        http://localhost:8888/druid/v2/sql/ \
+        -d '{"query": "SELECT 1"}' 2>/dev/null
+}
+
+if sql_healthy; then
+    exit 0
+fi
+
+# Otherwise: clean slate. Kill any JVMs left over from a snapshot
+# restore, then cold-start Druid. The launcher spawns one Java process
+# per role (coordinator, broker, historical, ...) and they all share
+# the org.apache.druid.cli.Main entrypoint.
+pkill -KILL -f org.apache.druid.cli.Main 2>/dev/null || true
+sleep 2
+
+# Druid launcher does not start Druid as a daemon. Run it in background,
+# with its own session so the start script can exit and leave Druid
+# running.
+nohup "./${DRUID_DIR}/bin/start-single-server-medium" \
+    >> druid.log 2>&1 < /dev/null &
+disown

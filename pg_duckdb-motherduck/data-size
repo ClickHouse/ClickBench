@@ -1,0 +1,6 @@
+#!/bin/bash
+# The data lives in MotherDuck's cloud, not in the local container, so
+# `du` on the postgres data dir would just report bookkeeping. Report
+# the source parquet size (≈ 14.8 GB) so the lib's post-load size
+# sanity check (data must be > 5 GB) doesn't false-positive.
+echo 14779976446

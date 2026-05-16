@@ -1,0 +1,179 @@
+#!/bin/bash
+# Cloudberry needs a RHEL-family host (yum, grubby, the wheel group, /data0,
+# etc.). To make the benchmark portable, we run everything inside a Rocky 9
+# container instead of bare-metal. The other scripts (start/stop/check/load/
+# query) docker-exec into this container.
+#
+# Idempotent: re-running this script after a successful install does nothing.
+set -eu
+
+NAME=clickbench-cloudberry
+IMAGE=rockylinux:9
+CBDB_VERSION=1.5.3
+
+# 1. Make sure docker is installed and the daemon is up.
+if ! command -v docker >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update -y
+        sudo apt-get install -y docker.io
+    elif command -v yum >/dev/null 2>&1; then
+        sudo yum install -y docker
+    else
+        echo "cloudberry/install: install docker manually first" >&2
+        exit 1
+    fi
+fi
+sudo systemctl start docker 2>/dev/null || sudo service docker start || true
+
+# 2. Skip if the container is already created and the cluster is initialized.
+if sudo docker container inspect "$NAME" >/dev/null 2>&1; then
+    if sudo docker exec "$NAME" test -d /data0/coordinator/gpseg-1 2>/dev/null; then
+        echo "cloudberry: container '$NAME' already initialized; nothing to do" >&2
+        exit 0
+    fi
+fi
+
+sudo docker pull "$IMAGE"
+
+# 3. Create a long-lived privileged container. We can't use --network host
+# because gpinitsystem's ssh-to-localhost would land on the host's sshd.
+# Bridge mode gives the container its own port 22 (isolated to the
+# container's sshd); we publish 5432 so clients on the host can reach
+# postgres.
+if ! sudo docker container inspect "$NAME" >/dev/null 2>&1; then
+    sudo docker run -d --privileged --hostname localhost -p 5432:5432 \
+        --name "$NAME" "$IMAGE" sleep infinity
+fi
+
+# 4. Inside the container: install build deps, kernel tuning, gpadmin user,
+# sshd, build Cloudberry from source, init a single-segment cluster.
+#
+# The whole RHEL-specific install lives in a heredoc so this script remains
+# the single source of truth. It mirrors the original cloudberry/install
+# logic minus the host-only bits (grubby, systemctl restart sshd, reboot).
+sudo docker exec -i "$NAME" bash -s <<EOF
+set -eu
+
+# Build deps.
+yum install -y epel-release dnf-plugins-core
+yum config-manager --set-enabled crb || true
+
+# libcurl conflicts with the libcurl-minimal preinstalled in rockylinux:9 —
+# --allowerasing tells yum to swap them. Done in its own call so the rest
+# of the deps don't need the flag.
+yum install -y --allowerasing libcurl libcurl-devel
+
+yum install -y go gcc gcc-c++ git gdb \
+    automake autoconf bash bison bison-devel \
+    bzip2 bzip2-devel \
+    flex flex-devel \
+    iproute iputils krb5-devel \
+    less libevent libevent-devel \
+    libxml2 libxml2-devel libyaml \
+    libzstd libzstd-devel \
+    make openldap openssh openssh-clients openssh-server \
+    openssl openssl-devel openssl-libs \
+    perl python3-devel readline readline-devel \
+    rsync sed sudo tar wget which zip zlib python3-pip \
+    apr apr-devel apr-util \
+    libyaml-devel xerces-c-devel \
+    procps-ng \
+    R R-devel || \
+    yum install -y go gcc gcc-c++ git automake autoconf bison flex \
+        krb5-devel libevent libevent-devel libxml2 libxml2-devel \
+        libzstd-devel make openssh openssh-server openssl openssl-devel \
+        perl python3-devel readline readline-devel rsync sudo tar wget \
+        which zlib python3-pip apr apr-devel apr-util procps-ng iputils \
+        libyaml-devel xerces-c-devel
+
+# Kernel tuning. --privileged + --network host means these affect the host;
+# Cloudberry's gpinitsystem checks them, so they must be set.
+SHMALL=\$(expr \$(getconf _PHYS_PAGES) / 2)
+SHMAX=\$(expr \$(getconf _PHYS_PAGES) / 2 \* \$(getconf PAGE_SIZE))
+sysctl -w kernel.shmall=\$SHMALL >/dev/null
+sysctl -w kernel.shmmax=\$SHMAX >/dev/null
+sysctl -w kernel.shmmni=4096 >/dev/null
+sysctl -w vm.overcommit_memory=2 >/dev/null
+sysctl -w vm.overcommit_ratio=95 >/dev/null
+sysctl -w net.ipv4.ip_local_port_range="10000 65535" >/dev/null
+sysctl -w kernel.sem="250 2048000 200 8192" >/dev/null
+
+cat > /etc/security/limits.d/99-gpadmin.conf <<LIMITS
+* soft nofile 524288
+* hard nofile 524288
+* soft nproc 131072
+* hard nproc 131072
+LIMITS
+
+
+# gpadmin user with passwordless ssh to localhost (gpinitsystem requirement).
+groupadd -f gpadmin
+id -u gpadmin >/dev/null 2>&1 || useradd gpadmin -m -g gpadmin
+echo "gpadmin ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gpadmin
+sudo -u gpadmin bash -c '
+    set -e
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+    [ -f ~/.ssh/id_rsa ] || ssh-keygen -t rsa -b 4096 -N "" -f ~/.ssh/id_rsa
+    cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+'
+
+# /bin/ping in this image has no caps and no setuid bit, so even root can't
+# open a raw socket. gpinitsystem pings localhost to verify reachability.
+setcap cap_net_raw+ep /bin/ping
+[ -e /bin/ping6 ] && setcap cap_net_raw+ep /bin/ping6 || true
+
+# sshd setup (ssh-keygen -A creates host keys).
+ssh-keygen -A
+mkdir -p /run/sshd
+echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
+echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
+/usr/sbin/sshd
+
+# Build Cloudberry from source if not already built.
+if [ ! -x /usr/local/cloudberrydb/bin/postgres ]; then
+    cd /tmp
+    if [ ! -f cloudberry-${CBDB_VERSION}.tar.gz ]; then
+        curl -fsSL -o cloudberry-${CBDB_VERSION}.tar.gz \
+            https://github.com/cloudberrydb/cloudberrydb/archive/refs/tags/${CBDB_VERSION}.tar.gz
+    fi
+    rm -rf cloudberry-${CBDB_VERSION}
+    tar -xzf cloudberry-${CBDB_VERSION}.tar.gz
+    cd cloudberry-${CBDB_VERSION}
+    echo -e "/usr/local/lib\n/usr/local/lib64" >> /etc/ld.so.conf
+    ldconfig
+    ./configure --prefix=/usr/local/cloudberrydb
+    # Cap parallelism: cloudberry's build (especially the link phase) eats
+    # several GB per worker; on big boxes \$(nproc) can OOM the host.
+    JOBS=\$(nproc); JOBS=\$(( JOBS > 16 ? 16 : JOBS ))
+    make -j\$JOBS
+    make install
+    chown -R gpadmin:gpadmin /usr/local/cloudberrydb
+fi
+
+# Cloudberry's gpstart/gpstop import the python pgdb (PygreSQL) module.
+# Build PygreSQL against cloudberry's pg_config so the right libpq is
+# linked. 5.2.5 is the last release before the pgdb→pg rename.
+source /usr/local/cloudberrydb/greenplum_path.sh
+pip3 install --quiet 'PygreSQL==5.2.5' psutil
+
+# Data dirs and gpadmin shell env.
+mkdir -p /data0/primary /data0/coordinator
+chown -R gpadmin:gpadmin /data0
+grep -q greenplum_path /home/gpadmin/.bashrc || \
+    echo "source /usr/local/cloudberrydb/greenplum_path.sh" >> /home/gpadmin/.bashrc
+grep -q COORDINATOR_DATA_DIRECTORY /home/gpadmin/.bashrc || \
+    echo "export COORDINATOR_DATA_DIRECTORY=/data0/coordinator/gpseg-1" >> /home/gpadmin/.bashrc
+
+echo localhost > /home/gpadmin/hosts
+chown gpadmin:gpadmin /home/gpadmin/hosts
+EOF
+
+# 5. Drop gpinitsystem_config in and run gpinitsystem.
+sudo docker cp "$(dirname "$0")/gpinitsystem_config" \
+    "$NAME":/home/gpadmin/gpinitsystem_config
+sudo docker exec "$NAME" chown gpadmin:gpadmin /home/gpadmin/gpinitsystem_config
+
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc \
+    'gpinitsystem -a -c gpinitsystem_config -h hosts'

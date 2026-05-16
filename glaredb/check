@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+./glaredb -c "SELECT 1" >/dev/null

@@ -1,10 +1,12 @@
 {
     "system": "Sail (Parquet, partitioned)",
+    "date": "2025-09-30",
     "machine": "c6a.2xlarge",
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
     "tags": [
-        "column-oriented"
+        "column-oriented",
+        "stateless"
     ]
 }

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+sudo mysql test -N -e "SELECT data_length + index_length FROM information_schema.TABLES WHERE table_schema = 'test' AND table_name = 'hits';"

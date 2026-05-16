@@ -1,0 +1,25 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: if HTTP API on :9000 already responds, do nothing.
+if curl -sSf -G --data-urlencode 'query=SELECT 1' 'http://localhost:9000/exec' >/dev/null 2>&1; then
+    exit 0
+fi
+
+questdb/bin/questdb.sh start
+
+# Wait for HTTP port.
+for _ in $(seq 1 60); do
+    if nc -z localhost 9000 2>/dev/null; then break; fi
+    sleep 1
+done
+
+# Tweak config (idempotent — sed -i with same value is safe).
+mkdir -p ~/.questdb/conf
+if [ -f ~/.questdb/conf/server.conf ]; then
+    sed -i 's/query.timeout.sec=60/query.timeout.sec=500/' ~/.questdb/conf/server.conf
+    sed -i "s|cairo.sql.copy.root=import|cairo.sql.copy.root=$PWD|" ~/.questdb/conf/server.conf
+    questdb/bin/questdb.sh stop
+    sleep 2
+    questdb/bin/questdb.sh start
+fi

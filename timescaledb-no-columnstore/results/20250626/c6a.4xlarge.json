@@ -1,5 +1,6 @@
 {
     "system": "TimescaleDB (no columnstore)",
+    "date": "2025-06-26",
     "machine": "c6a.4xlarge",
     "cluster_size": 1,
     "proprietary": "no",

@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eu
+
+# Prefer the pre-decompressed hits.json shipped on the playground's
+# readonly dataset disk — decompressing the 22 GB hits.json.gz into
+# a 217 GB hits.json blows past the VM's sparse rootfs budget and
+# kills the load with "No space left on device". Fall back to wget +
+# pigz for standalone use.
+if [ -f /opt/clickbench/datasets_ro/hits.json ]; then
+    ln -sf /opt/clickbench/datasets_ro/hits.json hits.json
+else
+    wget --continue --progress=dot:giga \
+        'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+    pigz -d -f hits.json.gz
+fi
+
+python3 send_datawithactionline.py
+
+rm -f hits.json
+sync

@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+if [ ! -x ./clickhouse ]; then
+    curl https://clickhouse.com/ | sh
+fi

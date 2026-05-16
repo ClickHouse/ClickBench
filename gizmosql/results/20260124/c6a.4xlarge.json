@@ -8,7 +8,8 @@
     "tuned": "no",
     "tags": [
         "C++",
-        "column-oriented"
+        "column-oriented",
+        "DuckDB derivative"
     ],
     "load_time": 132,
     "data_size": 26924298240,

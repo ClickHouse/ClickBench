@@ -1,0 +1,24 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via datafusion-cli using create.sql
+# to define the hits view, then the query.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+set -e
+
+DF=arrow-datafusion/target/release/datafusion-cli
+
+query=$(cat)
+tmp=$(mktemp /tmp/datafusion.XXXXXX.sql)
+trap 'rm -f "$tmp"' EXIT
+printf '%s\n' "$query" > "$tmp"
+
+out=$("$DF" -f create.sql "$tmp" 2>&1) && status=0 || status=$?
+
+if [ "$status" -ne 0 ]; then
+    printf '%s\n' "$out" >&2
+    exit "$status"
+fi
+
+printf '%s\n' "$out" | grep -v 'Elapsed' || true
+
+printf '%s\n' "$out" | awk '/Elapsed/ { e = $2 } END { print e }' >&2

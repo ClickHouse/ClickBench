@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
 """
-Note: Keep in sync with spark-*/query.py (see README-accelerators.md for details)
+Reads SQL on stdin, runs it once via PySpark+Gluten, prints result on stdout
+and runtime in fractional seconds as the LAST line on stderr.
 
-Highlights:
-- memory is split between heap (for Spark) and off-heap (for Gluten)
-- Gluten configuration is added to `SparkSession`
+Note: Keep in sync with spark-*/query.py (see README-accelerators.md for details)
 """
 
 from pyspark.sql import SparkSession
@@ -19,7 +18,6 @@ import timeit
 query = sys.stdin.read()
 print(query)
 
-# Calculate available memory to configurate SparkSession (in MB)
 ram = int(round(psutil.virtual_memory().available / (1024 ** 2) * 0.7))
 heap = ram // 2
 off_heap = ram - heap
@@ -46,18 +44,19 @@ builder = (
 spark = builder.getOrCreate()
 
 df = spark.read.parquet("hits.parquet")
-# Do casting before creating the view so no need to change to unreadable integer dates in SQL
 df = df.withColumn("EventTime", F.col("EventTime").cast("timestamp"))
 df = df.withColumn("EventDate", F.date_add(F.lit("1970-01-01"), F.col("EventDate")))
 df.createOrReplaceTempView("hits")
 
-for try_num in range(3):
-    try:
-        start = timeit.default_timer()
-        result = spark.sql(query)
-        result.show(100) # some queries should return more than 20 rows which is the default show limit
-        end = timeit.default_timer()
-        print("Time: ", end - start)
-    except Exception as e:
-        print(e)
-        print("Failure!")
+try:
+    start = timeit.default_timer()
+    result = spark.sql(query)
+    result.show(100)
+    end = timeit.default_timer()
+    elapsed = end - start
+    print(f"Time: {elapsed}")
+    print(f"{elapsed:.6f}", file=sys.stderr)
+except Exception as e:
+    print(e, file=sys.stderr)
+    print("Failure!", file=sys.stderr)
+    sys.exit(1)

@@ -1,0 +1,79 @@
+#!/bin/bash
+set -eu
+
+TIDB_MODE=${TIDB_MODE:-tikv}
+TIDBVERSION=${TIDBVERSION:-8.5.1}
+
+TIUP_HOME=$(pwd)
+export TIUP_HOME
+PATH="$TIUP_HOME/bin/:$PATH"
+export PATH
+
+# Idempotent: if MySQL protocol on :4000 already responds, do nothing.
+if mysql --host 127.0.0.1 --port 4000 -u root -e "SELECT 1" >/dev/null 2>&1; then
+    exit 0
+fi
+
+if [[ $TIDB_MODE == "tikv" ]]; then
+    DB_CONFIG_FILE=./config/tidb-tikv.toml
+    NUM_TIFLASH_INSTANCES=0
+else
+    DB_CONFIG_FILE=./config/tidb-tiflash.toml
+    NUM_TIFLASH_INSTANCES=1
+fi
+
+nohup tiup playground "$TIDBVERSION" --tag clickbench \
+    --db 1 --pd 1 --kv 1 \
+    --tiflash $NUM_TIFLASH_INSTANCES \
+    --db.config "$DB_CONFIG_FILE" \
+    --without-monitor > tiup-cluster.out 2>&1 &
+
+while [ ! -f tiup-cluster.out ]; do sleep 1; done
+while ! grep -q 'TiDB Playground Cluster is started' tiup-cluster.out; do
+    echo "Cluster is not running yet. Checking again in 10 seconds..."
+    sleep 10
+done
+
+# Disable non-prepared plan cache (matches original benchmark behavior).
+mysql --host 127.0.0.1 --port 4000 -u root \
+    -e "SET GLOBAL tidb_enable_non_prepared_plan_cache = OFF;"
+
+# `TiDB Playground Cluster is started` fires when tidb itself is up, but
+# tiflash registers later. ./load then runs `ALTER TABLE ... SET TIFLASH
+# REPLICA 1` immediately, and that fails with
+#   the tiflash replica count: 1 should be less than the total tiflash server count: 0
+# if no tiflash store has joined yet. Poll information_schema.cluster_info
+# (the canonical "what components does PD see" view) until at least one
+# tiflash store shows up. 5 minutes is enough for a fresh tiup playground
+# in practice.
+if [[ "$TIDB_MODE" != "tikv" ]]; then
+    # Two phases:
+    # 1) at least one tiflash row in information_schema.cluster_info
+    # 2) ALTER TABLE ... SET TIFLASH REPLICA 1 actually succeeds —
+    #    cluster_info can report tiflash before the placement driver
+    #    accepts replica DDL, and ./load fails with
+    #      "the tiflash replica count: 1 should be less than
+    #       the total tiflash server count: 0"
+    # Probe with a throwaway table so we don't pollute the real schema.
+    for _ in $(seq 1 120); do
+        cnt=$(mysql --host 127.0.0.1 --port 4000 -u root -B -N -e \
+            "SELECT COUNT(*) FROM information_schema.cluster_info WHERE type = 'tiflash';" \
+            2>/dev/null || echo 0)
+        [ "$cnt" -ge 1 ] && break
+        sleep 5
+    done
+    mysql --host 127.0.0.1 --port 4000 -u root \
+        -e "DROP TABLE IF EXISTS test._tiflash_probe;
+            CREATE TABLE test._tiflash_probe (x INT);" \
+        >/dev/null 2>&1 || true
+    for _ in $(seq 1 60); do
+        if mysql --host 127.0.0.1 --port 4000 -u root \
+                -e "ALTER TABLE test._tiflash_probe SET TIFLASH REPLICA 1;" \
+                2>/dev/null; then
+            mysql --host 127.0.0.1 --port 4000 -u root \
+                -e "DROP TABLE test._tiflash_probe;" >/dev/null 2>&1 || true
+            break
+        fi
+        sleep 5
+    done
+fi

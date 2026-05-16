@@ -1,0 +1,5 @@
+#!/bin/bash
+# Drill queries hits.parquet directly via the dfs filesystem plugin (mounted
+# into the docker container per query). No persistent DB to load.
+set -e
+sync

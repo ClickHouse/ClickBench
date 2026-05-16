@@ -1,6 +1,15 @@
 Bytehouse is a derivative of ClickHouse.
 It is based on very old ClickHouse version (20.4.54418) and many features are unsupported.
 
+## Status
+
+ByteHouse's international cloud (bytehouse.cloud) is no longer reachable
+from outside the China region. The service still operates within China
+via Volcengine. All existing results in this directory were collected
+against the international cloud and have been re-tagged with
+`"historical"`. Future submissions running against a self-managed
+ByteHouse instance (or via Volcengine) should not be tagged historical.
+
 https://bytehouse.cloud/signup
 
 Sign Up. Only Asia-Pacific South-East 1 AWS region is available. Verify email.

@@ -1,0 +1,37 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via tableau hyperapi against the
+# partitioned parquet files (registered as a temp external table from
+# create.sql).
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# Stage stdin into a temp file: `python3 - <<'PY'` already consumes stdin to
+# read the program, so sys.stdin.read() inside the heredoc returns "".
+query_file=$(mktemp)
+trap 'rm -f "$query_file"' EXIT
+cat > "$query_file"
+
+python3 - "$query_file" <<'PY'
+import sys
+import timeit
+from tableauhyperapi import HyperProcess, Telemetry, Connection
+
+with open(sys.argv[1]) as f:
+    query = f.read()
+
+with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU) as hyper:
+    with Connection(hyper.endpoint) as connection:
+        connection.execute_command(open("create.sql").read())
+        start = timeit.default_timer()
+        rows = connection.execute_list_query(query)
+        end = timeit.default_timer()
+
+for r in rows:
+    print(r)
+
+print(f"{end - start:.3f}", file=sys.stderr)
+PY

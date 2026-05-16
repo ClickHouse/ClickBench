@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+sudo docker exec vertica_ce /opt/vertica/bin/vsql -U dbadmin -c 'SELECT 1' >/dev/null 2>&1

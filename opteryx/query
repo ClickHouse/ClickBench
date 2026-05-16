@@ -1,0 +1,51 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via opteryx (Python in-process)
+# against the partitioned parquet under ./hits/.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+set -e
+
+query=$(cat)
+
+"$HOME/opteryx_venv/bin/python" - "$query" <<'PY'
+import sys
+import timeit
+import opteryx
+
+query = sys.argv[1]
+
+start = timeit.default_timer()
+res = opteryx.query(query)
+# In opteryx 0.26 `opteryx.query()` returns a Cursor / Relation. Probe
+# the common materialisation methods in priority order — different
+# versions expose different combinations.
+out = None
+for method in ("arrow", "to_arrow_table", "fetchall"):
+    fn = getattr(res, method, None)
+    if callable(fn):
+        try:
+            out = fn()
+            break
+        except Exception:
+            continue
+end = timeit.default_timer()
+
+if out is None:
+    # Final fallback: iterate the cursor directly (older API).
+    for row in res:
+        print(row)
+elif hasattr(out, "to_pylist"):
+    # pyarrow.Table — print as TSV header + rows.
+    cols = out.column_names
+    print("\t".join(cols))
+    for row in out.to_pylist():
+        print("\t".join("" if row.get(c) is None else str(row.get(c))
+                        for c in cols))
+elif isinstance(out, (list, tuple)):
+    for row in out:
+        print(row)
+else:
+    print(out)
+
+print(f"{end - start:.3f}", file=sys.stderr)
+PY

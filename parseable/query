@@ -1,0 +1,38 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via parseable's HTTP /api/v1/query.
+# Stdout: query result (JSON).
+# Stderr: query runtime in fractional seconds on the last line (wall-clock).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+# Parseable filters every query by [startTime, endTime] against the
+# row's ingest timestamp. The original benchmark used today's calendar
+# day, which only works if the dataset was loaded today. In the
+# playground the data is ingested during initial provisioning and
+# then frozen into a snapshot, so "today" from the query script's
+# point of view drifts past the load day and every row falls outside
+# the window → all queries return zero. Use a wide window that
+# covers any plausible load + query date.
+START_TIME="2000-01-01T00:00:00.000Z"
+END_TIME="2099-12-31T23:59:00.000Z"
+
+# JSON-escape quotes inside the query.
+escaped=$(printf '%s' "$query" | sed 's/"/\\"/g')
+JSON=$(printf '{"query":"%s","startTime":"%s","endTime":"%s"}' "$escaped" "$START_TIME" "$END_TIME")
+
+t1=$(date +%s.%N)
+out=$(curl -sS -H "Content-Type: application/json" -k -XPOST \
+    -u "admin:admin" 'http://localhost:8000/api/v1/query' \
+    --data "$JSON") && exit_code=0 || exit_code=$?
+t2=$(date +%s.%N)
+
+if [ "$exit_code" -ne 0 ]; then
+    printf '%s\n' "$out" >&2
+    exit "$exit_code"
+fi
+
+printf '%s\n' "$out"
+
+awk -v a="$t1" -v b="$t2" 'BEGIN { printf "%.6f\n", b - a }' >&2

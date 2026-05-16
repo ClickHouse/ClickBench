@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-paradedb}
+export PGPASSWORD='postgres'
+
+# Move all hits_*.parquet files into the container at /tmp/partitioned/.
+sudo docker exec -i "$CONTAINER_NAME" mkdir -p /tmp/partitioned
+for f in hits_*.parquet; do
+    sudo docker cp "$f" "$CONTAINER_NAME":/tmp/partitioned/
+done
+
+psql -h localhost -U postgres -p 5432 -t -c "DROP FOREIGN TABLE IF EXISTS hits;" || true
+psql -h localhost -U postgres -p 5432 -t -c "DROP SERVER IF EXISTS parquet_server CASCADE;" || true
+psql -h localhost -U postgres -p 5432 -t -c "DROP FOREIGN DATA WRAPPER IF EXISTS parquet_wrapper CASCADE;" || true
+
+psql -h localhost -U postgres -p 5432 -v ON_ERROR_STOP=1 -t < create.sql
+
+rm -f hits_*.parquet
+sync

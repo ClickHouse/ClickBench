@@ -11,8 +11,7 @@
         "column-oriented",
         "ClickHouse derivative",
         "embedded",
-        "stateless",
-        "serverless"
+        "stateless"
     ],
     "load_time": 0,
     "data_size": 14737670832,

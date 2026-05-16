@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+PINOT_VERSION=1.5.0
+PINOT_DIR="apache-pinot-$PINOT_VERSION-bin"
+
+# Idempotent: if broker query endpoint is up, do nothing.
+if curl -sf -o /dev/null -w '%{http_code}' \
+    -XPOST -H'Content-Type: application/json' \
+    http://localhost:8000/query/sql/ \
+    -d '{"sql":"SELECT 1"}' 2>/dev/null | grep -q '^200'; then
+    exit 0
+fi
+
+nohup "./${PINOT_DIR}/bin/pinot-admin.sh" QuickStart -type batch \
+    >> pinot.log 2>&1 < /dev/null &
+disown

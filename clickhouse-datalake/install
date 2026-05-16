@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+if [ ! -x ./clickhouse ]; then
+    curl https://clickhouse.com/ | sh
+fi
+
+# Use a userspace page cache sized to ~80% of RAM for S3 object reads.
+RAM=$(awk '/MemTotal/ {print int($2 * 0.8 * 1024)}' /proc/meminfo)
+cat > clickhouse-local.yaml <<YAML
+page_cache_max_size: ${RAM}
+YAML

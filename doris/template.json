@@ -1,5 +1,5 @@
 {
-  "system": "Apache Doris",
+  "system": "Doris",
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
@@ -7,7 +7,6 @@
     "C++",
     "column-oriented",
     "MySQL compatible",
-    "ClickHouse derivative",
-    "lukewarm-cold-run"
+    "ClickHouse derivative"
   ]
 }

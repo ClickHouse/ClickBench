@@ -15,7 +15,7 @@ sudo apt-get install -y g++ capnproto libclang-14-dev
 
 cargo build --features "enable_rocksdb" --features "enable_lz4" --release
 
-../../download-hits-csv
+../../lib/download-hits-csv
 
 target/release/repl --load hits.csv --db-path db
 

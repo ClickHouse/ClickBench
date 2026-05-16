@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e -x
-docker exec hdfs-namenode hdfs dfs -mkdir /user
-docker exec hdfs-namenode hdfs dfs -mkdir /user/clickhouse
+
+# Idempotent (-p), so re-running across BENCH_DURABLE restart iterations
+# doesn't fail on "File exists" once the dirs are set up.
+docker exec hdfs-namenode hdfs dfs -mkdir -p /user/clickhouse
 docker exec hdfs-namenode hdfs dfs -chown clickhouse /user/clickhouse
-docker exec hdfs-namenode hdfs dfs -chmod -R 775 /user/clickhouse 
+docker exec hdfs-namenode hdfs dfs -chmod -R 775 /user/clickhouse

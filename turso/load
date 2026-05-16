@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+export HOME=${HOME:=~}
+# shellcheck disable=SC1091
+source "$HOME/.turso/env"
+
+# Turso is alpha software and tursodb has been panicking partway
+# through the CSV import:
+#   thread 'main' panicked at core/storage/sqlite3_ondisk.rs:818:5:
+#   assertion failed: !*syncing.borrow()
+# Ask the rust runtime for a full backtrace so the provision log
+# captures the call stack instead of just the panic line.
+export RUST_BACKTRACE=1
+
+# Idempotent: blow away any prior DB.
+rm -f mydb
+
+tursodb mydb < create.sql
+tursodb mydb '.import --csv hits.csv hits'
+
+rm -f hits.csv
+sync

@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+if sudo docker ps --format '{{.Names}}' | grep -qx trino; then
+    exit 0
+fi
+if sudo docker ps -a --format '{{.Names}}' | grep -qx trino; then
+    sudo docker start trino
+    exit 0
+fi
+
+sudo docker run -d --name trino \
+    -p 8080:8080 \
+    -v "$PWD/etc/catalog/hive.properties:/etc/trino/catalog/hive.properties:ro" \
+    -v "$PWD/etc/core-site.xml:/etc/trino/core-site.xml:ro" \
+    -v "$PWD/data/meta:/data/meta" \
+    -v "$PWD/shim/S3AnonymousProvider.jar:/usr/lib/trino/plugin/hive/hdfs/S3AnonymousProvider.jar:ro" \
+    trinodb/trino:455

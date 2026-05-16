@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+stat -c %s data/hits/hits.parquet

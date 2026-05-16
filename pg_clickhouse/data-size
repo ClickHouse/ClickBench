@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+# Data is in ClickHouse, not Postgres. Report the hits table on-disk size.
+clickhouse-client --query "SELECT total_bytes FROM system.tables WHERE name = 'hits' AND database = 'default'"
