@@ -243,6 +243,46 @@ cat > /etc/docker/daemon.json <<EOF
 }
 EOF
 
+# Restore the one iptables rule that the disabled docker-iptables would
+# normally have installed: MASQUERADE for the docker0 bridge subnet.
+# Without it, container-originated traffic leaves the VM with src
+# 172.17.0.x — the host's per-slot MASQUERADE only matches 10.200.X.0/24
+# (VM tap subnet), so 172.17.0.x packets exit ens1 with their RFC1918
+# source unchanged and AWS drops them. Symptoms: presto-datalake /
+# cloudberry's containers fail DNS ("Name or service not known") and
+# every outbound HTTP from inside a container hangs. This is the nat
+# table; the missing kernel CONFIG_IP_NF_RAW (which made us flip
+# iptables=false in the first place) doesn't affect it.
+cat > /usr/local/sbin/clickbench-docker-nat <<'NATEOF'
+#!/bin/bash
+set -e
+# Idempotent — the systemd unit may fire on every boot, including after
+# a snapshot restore where the rule may already be there.
+if ! iptables -t nat -C POSTROUTING -s 172.17.0.0/16 ! -o docker0 \
+        -j MASQUERADE 2>/dev/null; then
+    iptables -t nat -A POSTROUTING -s 172.17.0.0/16 ! -o docker0 \
+        -j MASQUERADE
+fi
+NATEOF
+chmod +x /usr/local/sbin/clickbench-docker-nat
+
+cat > /etc/systemd/system/clickbench-docker-nat.service <<EOF
+[Unit]
+Description=Replace docker's missing MASQUERADE rule for docker0 → eth0
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/clickbench-docker-nat
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target docker.service
+EOF
+systemctl enable clickbench-docker-nat.service
+
 # Network: parse `ip=GUEST::GATEWAY:NETMASK:::eth0:off` from /proc/cmdline
 # at boot and apply it to eth0. Some kernels we run (Ubuntu's generic) lack
 # CONFIG_IP_PNP, which makes the kernel's `ip=` boot-arg a no-op and leaves
