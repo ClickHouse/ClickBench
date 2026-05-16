@@ -36,10 +36,11 @@ chmod o+rx .
 # -r   row terminator
 # -b   batch size (rows per implicit commit; large value = one big batch)
 # -F   first row (skip none; ClickBench TSV has no header)
-# -E   keep identity columns from file (defensive; we have none)
+# -u   trust the server certificate (bcp's flag — *not* -C, which in bcp
+#      means "code page" and would consume the next arg as its value).
 sudo docker exec mssql1 /opt/mssql-tools18/bin/bcp \
     clickbench.dbo.hits in /clickbench/hits.tsv \
-    -S localhost -U sa -P "$PASSWORD" -C \
+    -S localhost -U sa -P "$PASSWORD" -u \
     -c -t $'\t' -r '\n' -b 1048576 -F 1
 
 # Convert the heap into a clustered columnstore index. After this, the
