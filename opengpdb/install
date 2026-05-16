@@ -154,5 +154,16 @@ sudo docker cp "$(dirname "$0")/gpinitsystem_config" \
     "$NAME":/home/gpadmin/gpinitsystem_config
 sudo docker exec "$NAME" chown gpadmin:gpadmin /home/gpadmin/gpinitsystem_config
 
+# gpinitsystem returns non-zero (typically 2) whenever its post-init
+# log scan finds any WARN/ERROR line, even harmless ones (e.g.
+# "CHECK_POINT_SEGMENTS variable not set, will set to default value",
+# "Detected a single host GPDB array build"). The cluster itself comes
+# up cleanly — "Database successfully started" / "Greenplum Database
+# instance successfully created" both run before the exit. Tolerate the
+# exit code and use gpstate -s as the authoritative health check.
 sudo docker exec "$NAME" sudo -iu gpadmin bash -lc \
-    'gpinitsystem -a -c gpinitsystem_config -h hosts'
+    'gpinitsystem -a -c gpinitsystem_config -h hosts' || true
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc 'gpstate -s' >/dev/null || {
+    echo "opengpdb/install: cluster not running after gpinitsystem" >&2
+    exit 1
+}
