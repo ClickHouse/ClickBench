@@ -21,7 +21,17 @@ sudo chown -R 1000:1000 data
 # suppresses beeline's prompt/timing chrome which would otherwise leak
 # into ./load's stdout and confuse the driver's load-time parser.
 sudo docker cp create.sql hive:/tmp/create.sql
+# `< /dev/null` is load-bearing: bench_main runs ./load inside
+# `while read query; do ... done < queries.sql`, so our inherited
+# stdin IS the queries.sql fd. With -i, docker exec forwards host
+# stdin into the container until EOF; beeline (running with -f) never
+# reads it, so docker silently drains queries.sql while waiting for
+# beeline to consume nothing. The next bench_main read then hits EOF
+# and the whole query loop exits after Q1, with no error message
+# (Q1's [t,t,t] is the only timing in the log, then it jumps straight
+# to data-size). Redirecting stdin from /dev/null isolates this
+# docker call from the surrounding loop's input.
 sudo docker exec -i hive beeline -u 'jdbc:hive2://localhost:10000/' -n hive \
-    --silent=true -f /tmp/create.sql
+    --silent=true -f /tmp/create.sql < /dev/null
 
 sync
