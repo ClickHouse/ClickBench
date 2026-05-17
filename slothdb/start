@@ -1,0 +1,3 @@
+#!/bin/bash
+# slothdb is embedded — no daemon to start.
+exit 0
