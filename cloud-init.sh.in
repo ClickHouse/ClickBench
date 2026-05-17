@@ -73,9 +73,24 @@ RESULTS_URL="https://play.clickhouse.com/?user=sink&query=INSERT+INTO+data+FORMA
 # tarballs, apt-installing build-essential) can run to hundreds of MB,
 # and pushing the full file fails with a "Too large" reject — losing the
 # whole log including the diagnostic tail we actually care about. Send
-# only the last 1 MB of each file: that's enough to capture the bench
-# output, any tracebacks, and the final readiness/timing lines.
-tail -c 1000000 log | curl ${RESULTS_URL} --data-binary @-
-tail -c 1000000 /var/log/cloud-init-output.log | curl ${RESULTS_URL} --data-binary @-
+# the first 100 KB + last 900 KB of each file: the head captures the
+# `System name:` / `Proprietary:` / `Tuned:` / `Tags:` lines emitted
+# before benchmark.sh runs (a plain tail -c 1000000 dropped these on
+# build-from-source systems), and the tail still captures bench output,
+# tracebacks, and final readiness/timing lines.
+send_log() {
+    local f="$1" size
+    size=$(stat -c%s "$f" 2>/dev/null || echo 0)
+    if [ "$size" -le 1000000 ]; then
+        curl ${RESULTS_URL} --data-binary @"$f"
+    else
+        { head -c 100000 "$f"
+          printf '\n...[%d bytes truncated]...\n' "$((size - 1000000))"
+          tail -c 900000 "$f"
+        } | curl ${RESULTS_URL} --data-binary @-
+    fi
+}
+send_log log
+send_log /var/log/cloud-init-output.log
 
 shutdown now
