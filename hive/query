@@ -9,8 +9,14 @@ set -e
 query=$(cat)
 
 start=$(date +%s.%N)
+# `< /dev/null`: see hive/load for the long version. bench_run_query
+# pipes the query in via `printf | ./query`, so the printf pipe is
+# already drained by `query=$(cat)` above and our stdin is at EOF
+# here — but make the docker-exec stdin source explicit so this
+# script stays safe if anyone ever calls it without the printf-pipe
+# wrapping.
 sudo docker exec -i hive beeline -u 'jdbc:hive2://localhost:10000/clickbench' -n hive \
-    --silent=true --outputformat=tsv2 -e "$query"
+    --silent=true --outputformat=tsv2 -e "$query" < /dev/null
 end=$(date +%s.%N)
 
 awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2

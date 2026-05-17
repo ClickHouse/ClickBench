@@ -21,6 +21,22 @@ sudo docker compose -f docker-compose.yml pull
 # it before the first ./start so the mount succeeds even when the
 # compose stack is brought up before the first ./load.
 mkdir -p data/hits
+
+# Apache Impala's published 4.4.x and 4.5.0 quickstart images ship the
+# embedded HMS client library but NOT the jdo-api jar it loads through
+# reflection, so impalad_coord_exec and catalogd both crash at startup
+# with NoClassDefFoundError: javax.jdo.JDOException → SIGSEGV in the
+# C++ "Check failure" abort path, before /healthz ever opens.
+# Pull jdo-api from Maven Central into a host-side dir; the compose
+# bind-mounts it under /opt/impala/lib/ in both daemon containers,
+# which is already on their Java classpath.
+JDO_API_VERSION=3.0.1
+mkdir -p data/extra-lib
+if [ ! -f "data/extra-lib/jdo-api-${JDO_API_VERSION}.jar" ]; then
+    curl -fsSL -o "data/extra-lib/jdo-api-${JDO_API_VERSION}.jar" \
+        "https://repo1.maven.org/maven2/javax/jdo/jdo-api/${JDO_API_VERSION}/jdo-api-${JDO_API_VERSION}.jar"
+fi
+
 # The Impala containers run their daemons as uid 1000 ("impala"); make
 # the bind-mount writable by that uid even when cloud-init runs as root.
 sudo chown -R 1000:1000 data
