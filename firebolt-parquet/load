@@ -1,0 +1,17 @@
+#!/bin/bash
+set -eu
+
+# Parquet variant: data stays in ./data (mounted as
+# /firebolt-core/clickbench in the container), create.sql declares
+# an external table that reads it on every query.
+mkdir -p data
+if [ -f hits.parquet ]; then
+    mv -f hits.parquet data/hits.parquet
+fi
+
+curl -sSf 'http://localhost:3473/?enable_multi_query_requests=true' \
+    --data-binary 'DROP DATABASE IF EXISTS clickbench;CREATE DATABASE clickbench;'
+curl -sSf 'http://localhost:3473/?database=clickbench&enable_multi_query_requests=true' \
+    --data-binary @create.sql
+
+sync

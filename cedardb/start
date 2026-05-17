@@ -30,10 +30,15 @@ if ! sudo docker run -d --rm -p 5432:5432 \
     exit 1
 fi
 
-for _ in $(seq 1 60); do
+# First-boot initdb inside the container can run for well over a
+# minute (observed ~90-120 s of "Fixing permissions"/"Setting up
+# database directory" before postgres actually listens). Older
+# 60 s budget bailed during that phase. Give it 5 min — pg_isready
+# exits fast once the daemon is up so this only matters on failure.
+for _ in $(seq 1 600); do
     pg_isready -h localhost --dbname postgres -U postgres >/dev/null 2>&1 && exit 0
     sleep 1
 done
-echo "cedardb did not become ready in 60 s; container logs:" >&2
+echo "cedardb did not become ready in 600 s; container logs:" >&2
 sudo docker logs cedardb 2>&1 | tail -40 >&2 || true
 exit 1
