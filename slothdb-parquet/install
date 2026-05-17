@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+if ! command -v slothdb >/dev/null 2>&1; then
+    # SlothDB only publishes a prebuilt linux-x64 binary as a GitHub release
+    # asset; there is no apt/dnf/brew package on Linux yet. Pin to a known
+    # release rather than `latest` so the benchmark stays reproducible.
+    VERSION="v0.2.6"
+    TMP_FILE=$(mktemp)
+    curl -fsSL \
+        "https://github.com/SouravRoy-ETL/slothdb/releases/download/${VERSION}/slothdb-linux-x64" \
+        -o "$TMP_FILE"
+    chmod +x "$TMP_FILE"
+    sudo mv "$TMP_FILE" /usr/local/bin/slothdb
+fi

@@ -1,0 +1,27 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via slothdb against hits.slothdb
+# (which contains a VIEW over hits.parquet).
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+#
+# slothdb has no built-in `.timer` so we measure wall-clock around the
+# subprocess.
+set -e
+
+query=$(cat)
+
+err_file=$(mktemp)
+trap 'rm -f "$err_file"' EXIT
+
+start_t=$(date +%s.%N)
+out=$(slothdb hits.slothdb -c "$query" 2>"$err_file") && status=0 || status=$?
+end_t=$(date +%s.%N)
+
+if [ "$status" -ne 0 ]; then
+    cat "$err_file" >&2
+    exit "$status"
+fi
+
+printf '%s\n' "$out"
+awk -v s="$start_t" -v e="$end_t" 'BEGIN { printf "%.6f\n", e - s }' >&2
