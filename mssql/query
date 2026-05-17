@@ -16,21 +16,24 @@ query=$(cat)
 # startup + sqlcmd connect (~80–150 ms), which would dominate the
 # sub-second queries.
 #
-# `-t 0` disables the per-query timeout (some Q's run for minutes), `-l 0`
-# disables the login timeout, `-w 65535 -y 0` keeps wide result rows from
-# being truncated so a VARCHAR(MAX) doesn't spill its tail across lines.
-# `-W` and `-y` are mutually exclusive in mssql-tools18's sqlcmd (it
-# rejects the pair with "Sqlcmd: The y and the W options are mutually
-# exclusive" and exits before running any SQL — making every query
-# return null in the bench log). Drop -W; we keep -y 0 because we
-# care more about not truncating VARCHAR(MAX) results than about
-# trimming trailing spaces.
+# `-t 0` disables the per-query timeout (some Q's run for minutes),
+# `-l 0` disables the login timeout, `-h -1` suppresses headers and
+# `-w 65535` keeps wide rows on a single line for clean stdout.
+#
+# Why no -y / -W: mssql-tools18's sqlcmd rejects -y combined with -W
+# AND with -h ("Sqlcmd: The y and the W options are mutually
+# exclusive", "Sqlcmd: The -h and the -y 0 options are mutually
+# exclusive"). It exits before running any SQL — every query in the
+# 22:22 and 05:16 runs returned [null,null,null] because of this.
+# Drop both -W and -y; we keep -h -1 because we care about clean
+# stdout, and the timing parser reads `elapsed time = N ms` from
+# STATISTICS TIME, which isn't affected by column-width truncation.
 sql=$(printf 'SET NOCOUNT ON;\nSET STATISTICS TIME ON;\n%s\n' "$query")
 
 raw=$(printf '%s\n' "$sql" | sudo docker exec -i mssql1 \
     /opt/mssql-tools18/bin/sqlcmd \
     -S localhost -U sa -P "$PASSWORD" -C -d clickbench \
-    -h -1 -w 65535 -y 0 -b -t 0 -l 0 2>&1) && exit_code=0 || exit_code=$?
+    -h -1 -w 65535 -b -t 0 -l 0 2>&1) && exit_code=0 || exit_code=$?
 
 # sqlcmd reports T-SQL errors as "Msg NNNNN, Level ...". With -b set,
 # sqlcmd also exits non-zero, but be defensive in case batch errors leak
