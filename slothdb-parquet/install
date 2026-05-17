@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# slothdb links against libgomp at runtime; Ubuntu 24.04 cloud images
+# don't ship it by default and the binary then refuses to start with
+# "error while loading shared libraries: libgomp.so.1".
+sudo apt-get install -y libgomp1
+
 if ! command -v slothdb >/dev/null 2>&1; then
     # SlothDB only publishes a prebuilt linux-x64 binary as a GitHub release
     # asset; there is no apt/dnf/brew package on Linux yet. Pin to a known
