@@ -54,7 +54,13 @@ def format_value(name: str, value: object) -> str:
         return repr(value)
     if isinstance(value, (bytes, bytearray)):
         value = value.decode("utf-8", errors="replace")
-    s = str(value).replace("'", "''")
+    # The frigatebird REPL reads one statement per line, so any literal
+    # 0x0A / 0x0D inside a string value would split the INSERT across
+    # lines and the parser would see an unterminated string followed by
+    # garbage continuations. Hits' string columns (UserAgent, Referer,
+    # SearchPhrase, Title, ...) carry real newlines, so swap them — and
+    # carriage returns — for spaces before quoting.
+    s = str(value).replace("\r", " ").replace("\n", " ").replace("'", "''")
     return "'" + s + "'"
 
 
