@@ -37,3 +37,34 @@ If LocustDB's load or scan still crashes on the modern code path, the
 benchmark will report load + null query times and surface the panic in
 the run log, instead of silently failing as it did in the original
 attempt.
+
+## Newer panic during load (2026-05-17)
+
+On c6a.4xlarge the load thread panics partway through ingest with a
+column-length consistency violation inside `mem_store`:
+
+```
+thread '<unnamed>' panicked at src/mem_store/partition.rs:56:13:
+Expected column "" to have length 1146880 but got 1114112
+(column: ColumnHandle { key: ColumnLocator { table: "hits", id: 1323, column: "" },
+  name: "", size_bytes: 151369, ... })
+```
+
+Worth noting:
+
+- The shortfall (1146880 − 1114112 = 32768) is exactly `2 × --partition-size`,
+  so one column is missing two partitions' worth of rows when the
+  invariant check fires. The `--partition-size 16384` workaround for the
+  older `stringpack.rs` panic doesn't help here — it appears to have
+  just relocated the failure from the scan path to the load path.
+- `column: ""` with `id: 1323` (well past hits' ~105 user columns) is a
+  LocustDB-internal synthetic column (string-dict shard or similar),
+  not one of ours, so it can't be worked around by reshaping the CSV.
+- Only the load thread panics; the `repl` process keeps running, so
+  the harness sits on the load step until cloud-init's outer timeout
+  (currently 36000 s) kills the instance. The result row therefore
+  shows up in the sink as `Total time: 36016` with no per-query
+  timings, rather than as a clean per-query failure.
+
+Until upstream fixes this, LocustDB runs on the full hits dataset will
+not produce a result file.
