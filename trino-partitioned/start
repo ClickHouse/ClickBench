@@ -13,4 +13,5 @@ sudo docker run -d --name trino \
     -p 8080:8080 \
     -v "$PWD/etc/catalog/hive.properties:/etc/trino/catalog/hive.properties:ro" \
     -v "$PWD/data:/clickbench" \
+    -v "/opt/clickbench/datasets_ro:/opt/clickbench/datasets_ro:ro" \
     trinodb/trino:latest

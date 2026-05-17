@@ -7,7 +7,7 @@ set -e
 
 querytxt=$(cat)
 
-# A "null" query in queries.spl means "not supported"; emit null timing.
+# A "null" query in queries.sql means "not supported"; emit null timing.
 if [ "$querytxt" = "null" ]; then
     echo "{}"
     echo "null" >&2
