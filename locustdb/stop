@@ -1,0 +1,13 @@
+#!/bin/bash
+# Best-effort shutdown of the LocustDB server, driven off the PID file
+# ./start writes. Avoids pkill -f against argv, which can mis-target
+# unrelated processes.
+pid_file=run/server.pid
+if [ -s "$pid_file" ]; then
+    pid=$(cat "$pid_file")
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" 2>/dev/null || true
+    fi
+    rm -f "$pid_file"
+fi
+exit 0
