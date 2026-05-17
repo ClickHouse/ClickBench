@@ -1,0 +1,11 @@
+{
+  "system": "Hive (Parquet, single)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "MapReduce",
+    "Tez"
+  ]
+}

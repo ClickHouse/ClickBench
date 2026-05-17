@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+# Place hits.parquet inside the external table's LOCATION. The bind
+# mount on every container exposes this dir as /clickbench.
+ln -f hits.parquet data/hits/hits.parquet
+sudo chown -R 1000:1000 data
+
+# Apply the schema via impala-shell inside the running coordinator
+# container. -B (no-header) + --quiet keeps the output free of pretty
+# tables so the driver's load-time parser is not confused.
+sudo docker cp create.sql impala-client:/tmp/create.sql
+# `< /dev/null`: docker exec -i forwards host stdin to the container
+# until EOF, even when the inner program (impala-shell -f) never reads
+# it. If bench_main ever calls ./load while its `while read ... done <
+# queries.sql` redirect is active (BENCH_DURABLE=no, or any future use
+# in the loop), docker would drain the queries.sql fd and the loop
+# would exit silently after one query — exactly the failure mode hive
+# hit. Explicitly source stdin from /dev/null to keep this script
+# isolated.
+sudo docker exec -i impala-client impala-shell -i impalad-1:21050 -B --quiet -f /tmp/create.sql < /dev/null
+
+rm -f hits.parquet
+sync

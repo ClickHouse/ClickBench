@@ -1,0 +1,40 @@
+#!/bin/bash
+set -e
+
+HIVE_VERSION=4.0.1
+
+if sudo docker ps --format '{{.Names}}' | grep -qx hive; then
+    exit 0
+fi
+
+# apache/hive's entrypoint writes /opt/hive/conf/hiveserver2.pid on first
+# launch and refuses to start HS2 again if the file already exists
+# ("HiveServer2 running as process 7. Stop it first."). After a
+# docker stop the file lives on in the writable layer, so `docker start`
+# on the same container never brings HS2 back up. Workaround: always
+# remove the previous container and run a fresh one. The embedded Derby
+# metastore lives inside the (ephemeral) container, so BENCH_DURABLE=no
+# in benchmark.sh re-runs ./load on every cold cycle to recreate the
+# schema after the restart — without that we'd lose the table catalog.
+sudo docker rm -f hive >/dev/null 2>&1 || true
+
+# Size HiveServer2's JVM heap to a fraction of host RAM. The image's
+# entrypoint exports HADOOP_CLIENT_OPTS="-Xmx1G $SERVICE_OPTS", so the
+# last -Xmx wins — that's how we override the 1 GB default. With 1 GB
+# the parquet vectorized reader OOMs on every non-trivial query
+# ("GC overhead limit exceeded" inside MapRecordProcessor). 60% of
+# host RAM is the same ratio presto/ uses, with a floor at 4 GB so
+# small VMs still get a usable size.
+RAM_GB=$(awk '/MemTotal/{ printf "%d", $2 / 1024 / 1024 }' /proc/meminfo)
+HEAP_GB=$(( RAM_GB * 60 / 100 ))
+[ "$HEAP_GB" -lt 4 ] && HEAP_GB=4
+
+# SERVICE_NAME=hiveserver2 launches an embedded Derby metastore alongside
+# HiveServer2 in the same JVM — single-node Hive without a separate
+# metastore service or HDFS.
+sudo docker run -d --name hive \
+    -p 10000:10000 -p 10002:10002 \
+    -e SERVICE_NAME=hiveserver2 \
+    -e SERVICE_OPTS="-Xmx${HEAP_GB}G" \
+    -v "$PWD/data:/clickbench" \
+    apache/hive:${HIVE_VERSION}
