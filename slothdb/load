@@ -4,20 +4,15 @@ set -e
 # Idempotent: blow away any prior partial DB.
 rm -f hits.slothdb
 
-# slothdb's CLI takes one SQL string via `-c`. Concatenate the CREATE
-# with the parquet ingest in a single invocation. The parquet file stores
-# EventDate as days-since-epoch and the *Time columns as unix seconds, so
-# convert on the way in (same shape as the duckdb loader).
-sql="$(cat create.sql)
-INSERT INTO hits
-SELECT * REPLACE (
-    make_date(EventDate) AS EventDate,
-    epoch_ms(EventTime * 1000) AS EventTime,
-    epoch_ms(ClientEventTime * 1000) AS ClientEventTime,
-    epoch_ms(LocalEventTime * 1000) AS LocalEventTime)
-FROM read_parquet('hits.parquet', binary_as_string=True);"
-
-slothdb hits.slothdb -c "$sql"
+# Use CTAS — slothdb's parser doesn't support DuckDB's `SELECT * REPLACE (...)`
+# (its REPLACE keyword is reserved for CREATE OR REPLACE), and a full
+# column-typed CREATE TABLE has its own gaps. CTAS infers types directly
+# from the parquet. The *Time columns stay as integers (unix seconds)
+# rather than TIMESTAMPs; Q19/Q43 (extract / DATE_TRUNC on EventTime)
+# may therefore fail with a type error, matching slothdb's own bench
+# setup which runs against `FROM 'hits.parquet'` directly without
+# converting time columns.
+slothdb hits.slothdb -c "CREATE TABLE hits AS SELECT * FROM 'hits.parquet';"
 
 rm -f hits.parquet
 sync

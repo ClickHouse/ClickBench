@@ -1,7 +1,8 @@
-CREATE VIEW hits AS
-SELECT * REPLACE (
-    make_date(EventDate) AS EventDate,
-    epoch_ms(EventTime * 1000) AS EventTime,
-    epoch_ms(ClientEventTime * 1000) AS ClientEventTime,
-    epoch_ms(LocalEventTime * 1000) AS LocalEventTime)
-FROM read_parquet('hits.parquet', binary_as_string=True);
+-- slothdb's parser does not support DuckDB's `SELECT * REPLACE (...)`
+-- syntax, so we cannot transparently rewrite EventTime/EventDate inside
+-- the view definition. Leave the columns as their parquet types
+-- (EventDate as INT32 days-since-epoch, *Time as INT32 unix seconds);
+-- Q19/Q43 may fail with a type error on extract/DATE_TRUNC, matching
+-- slothdb's own bench/run.py setup which queries `FROM 'hits.parquet'`
+-- directly without type rewrites.
+CREATE VIEW hits AS SELECT * FROM 'hits.parquet';
