@@ -20,12 +20,25 @@ else
     pv -s "$FILE_SIZE" hits.json.gz | pigz -d > hits.json
 fi
 
-# Create the stream first — ingest below needs it to exist.
-curl --silent --location --request PUT 'http://localhost:8000/api/v1/logstream/hits' \
+# Create the stream first — ingest below needs it to exist. Loud
+# error reporting on purpose: the previous --silent + ignored exit
+# code masked a 400 here for the entire load (every /ingest then
+# returned 400 because the stream didn't exist, and the only
+# evidence was 100k+ curl 400 lines in the provision log).
+echo "==> creating logstream hits"
+resp=$(curl --silent --show-error --location --request PUT \
+    -w '\nHTTP_CODE=%{http_code}\n' \
+    'http://localhost:8000/api/v1/logstream/hits' \
     -H 'X-P-Static-Schema-Flag: true' \
     -H 'Content-Type: application/json' \
     -u "admin:admin" \
-    --data-binary @static_schema.json >/dev/null
+    --data-binary @static_schema.json) || true
+printf '%s\n' "$resp"
+code=$(printf '%s' "$resp" | awk -F= '/^HTTP_CODE=/ {print $2}' | tail -1)
+if [ "${code:-}" != "200" ] && [ "${code:-}" != "201" ]; then
+    echo "parseable logstream create failed (HTTP $code)" >&2
+    exit 1
+fi
 
 # Wrap each block of LINES_PER_CHUNK NDJSON lines in [ ... ] and POST
 # directly to /api/v1/ingest. Inlined into parallel's command string

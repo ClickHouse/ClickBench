@@ -1,0 +1,8 @@
+#!/bin/bash
+
+NAME=clickbench-greengage
+
+# Bring the cluster down inside the container, then pause the container.
+# Both steps tolerate "already stopped".
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc 'gpstop -a' 2>/dev/null || true
+sudo docker stop "$NAME" >/dev/null 2>&1 || true

@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+NAME=clickbench-opengpdb
+
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc \
+    'psql -d postgres -t -c "SELECT 1"' >/dev/null

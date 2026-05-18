@@ -6,6 +6,7 @@
   "tags": [
     "C",
     "column-oriented",
-    "PostgreSQL compatible"
+    "PostgreSQL compatible",
+    "Greenplum derivative"
   ]
 }

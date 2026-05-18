@@ -11,8 +11,15 @@ DRUID_DIR="apache-druid-${VERSION}"
 # datasource).
 "./${DRUID_DIR}/bin/post-index-task" --file ingest.json --url http://localhost:8081 || true
 
-# Wait until the hits datasource is queryable.
-for _ in $(seq 1 600); do
+# Wait until the hits datasource is queryable. Druid's index task can
+# legitimately take hours on a 16 GiB VM; budget 4 h here, and fail
+# loudly if hits still isn't queryable so the agent doesn't take a
+# snapshot of a half-ingested datasource (which would otherwise look
+# "snapshotted" but every query returns
+#   druidException ... Object 'hits' not found
+# at runtime).
+cnt=""
+for _ in $(seq 1 2880); do  # 2880 * 5s = 4 h
     cnt=$(curl -sf -XPOST -H'Content-Type: application/json' \
         http://localhost:8888/druid/v2/sql/ \
         -d '{"query": "SELECT COUNT(*) FROM hits"}' 2>/dev/null \
@@ -22,6 +29,13 @@ for _ in $(seq 1 600); do
     fi
     sleep 5
 done
+if [ -z "$cnt" ] || [ "$cnt" -le 0 ]; then
+    echo "druid: hits datasource still not queryable after 4 h; ingestion" >&2
+    echo "did not finish. Dumping recent task list for diagnosis:" >&2
+    curl -sS http://localhost:8081/druid/indexer/v1/tasks 2>&1 | head -c 2000 >&2
+    exit 1
+fi
+echo "druid: hits has $cnt rows after ingestion"
 
 rm -f hits.tsv
 sync

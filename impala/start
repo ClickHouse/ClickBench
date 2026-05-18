@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+# Bring up the four-service quickstart stack. `docker compose up -d` is
+# idempotent — already-running services are left alone, stopped ones
+# are restarted, missing ones are created. We don't need a separate
+# branch for "already up".
+sudo docker compose -f docker-compose.yml up -d

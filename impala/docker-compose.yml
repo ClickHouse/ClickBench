@@ -1,0 +1,133 @@
+# Apache Impala 4 quickstart cluster, in four containers on one
+# user-defined bridge network. Mirrors the upstream
+# docker/quickstart-compose layout from the Apache Impala repo, minus
+# HDFS — the table data is bind-mounted into every container at
+# /clickbench so Impala reads it through its local-filesystem driver
+# rather than through HDFS or S3.
+#
+# Pinned to 4.5.0; 4.4.1 has the same jdo-api gap so the pin alone
+# doesn't matter, but 4.5.0 is the newest tagged release. The
+# missing jdo-api jar is supplied via a bind-mount under
+# /opt/impala/lib/ on the two daemons (./install fetches it from
+# Maven Central); without that, both impalad_coord_exec and catalogd
+# crash at startup with NoClassDefFoundError: javax/jdo/JDOException →
+# SIGSEGV in the C++ "Check failure" abort path, before /healthz ever
+# opens.
+
+services:
+  hms:
+    image: apache/impala:4.5.0-impala_quickstart_hms
+    container_name: impala-hms
+    command: ["hms"]
+    volumes:
+      - hms_warehouse:/var/lib/hive
+      - ./data:/clickbench:rw
+      # Register DbNotificationListener server-side so client RPCs to
+      # get_current_notificationEventId succeed; without it, DDL like
+      # CREATE DATABASE in ./load fails with
+      # TApplicationException: Internal error processing
+      #   get_current_notificationEventId
+      - ./hms-hive-site.xml:/opt/hive/conf/hive-site.xml:ro
+    networks:
+      - impala-net
+    hostname: hms
+
+  statestored:
+    image: apache/impala:4.5.0-statestored
+    container_name: impala-statestored
+    command: ["-redirect_stdout_stderr=false", "-logtostderr", "-v=1"]
+    networks:
+      - impala-net
+    hostname: statestored
+
+  catalogd:
+    image: apache/impala:4.5.0-catalogd
+    container_name: impala-catalogd
+    depends_on:
+      - statestored
+      - hms
+    command:
+      - "-redirect_stdout_stderr=false"
+      - "-logtostderr"
+      - "-v=1"
+      # 0 disables HMS event polling. The entrypoint defaults to 1
+      # (poll every second), which causes catalogd to subscribe to the
+      # metastore's notification log on startup via
+      # get_current_notificationEventId. The quickstart hms image
+      # ships without DbNotificationListener configured, so that RPC
+      # throws "Internal error processing get_current_notificationEventId"
+      # and the FATAL aborts catalogd before /healthz on impalad ever
+      # reaches OK. We don't need event-driven cache invalidation in a
+      # single-process benchmark — `invalidate metadata` after ./load
+      # is enough.
+      - "-hms_event_polling_interval_s=0"
+      - "-invalidate_tables_timeout_s=999999"
+      # Override entrypoint default. With it on, the daemon expands
+      # `hms` to its reverse-DNS FQDN. Even with the network renamed,
+      # docker still appends the network as a hostname suffix, and the
+      # resulting hostname can pick up illegal URI characters; keep
+      # the configured `hms` literal so the URI parses cleanly.
+      - "-use_resolved_hostname=false"
+    volumes:
+      - ./data:/clickbench:rw
+      - ./data/extra-lib/jdo-api-3.0.1.jar:/opt/impala/lib/jdo-api-3.0.1.jar:ro
+      - ./hive-site.xml:/opt/impala/conf/hive-site.xml:ro
+    networks:
+      - impala-net
+    hostname: catalogd
+
+  impalad-1:
+    image: apache/impala:4.5.0-impalad_coord_exec
+    container_name: impala-impalad-1
+    depends_on:
+      - statestored
+      - catalogd
+    command:
+      - "-v=1"
+      - "-redirect_stdout_stderr=false"
+      - "-logtostderr"
+      - "-kudu_master_hosts="
+      - "-mt_dop_auto_fallback=true"
+      - "--default_query_options=default_file_format=parquet"
+      # See catalogd above — same FQDN-underscore problem applies here.
+      - "-use_resolved_hostname=false"
+    ports:
+      - "21000:21000"
+      - "21050:21050"
+      - "25000:25000"
+    volumes:
+      - ./data:/clickbench:rw
+      - ./data/extra-lib/jdo-api-3.0.1.jar:/opt/impala/lib/jdo-api-3.0.1.jar:ro
+      - ./hive-site.xml:/opt/impala/conf/hive-site.xml:ro
+    networks:
+      - impala-net
+    hostname: impalad-1
+
+  # impala-shell is not bundled in the coordinator image — it lives in
+  # the separate quickstart_client image. Run that as a long-lived
+  # sidecar (sleep infinity) and `docker exec` impala-shell into it for
+  # ./load and ./query. The image's default entrypoint runs a one-shot
+  # data-load script; override it so the container just stays alive.
+  client:
+    image: apache/impala:4.5.0-impala_quickstart_client
+    container_name: impala-client
+    depends_on:
+      - impalad-1
+    entrypoint: ["sleep", "infinity"]
+    networks:
+      - impala-net
+
+networks:
+  impala-net:
+    # Pin the network name; without `name:` compose auto-prefixes the
+    # current project (= cwd basename), producing `impala_impala-net`.
+    # Catalogd then reverse-resolves the hms IP and gets back a
+    # hostname containing an underscore (`impala-hms.impala_impala-net`),
+    # which java.net.URI rejects with
+    #   URISyntaxException: Illegal character in hostname at index 26
+    # before HiveMetaStoreClient can connect.
+    name: impala-net
+    driver: bridge
+
+volumes:
+  hms_warehouse:
