@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["Java","MapReduce","Tez"],
+    "tags": ["Java","MapReduce","stateless"],
     "load_time": 9,
     "data_size": 14779976446,
     "concurrent_qps": null,
