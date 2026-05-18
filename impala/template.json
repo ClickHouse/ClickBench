@@ -6,6 +6,7 @@
   "tags": [
     "C++",
     "MPP",
-    "column-oriented"
+    "column-oriented",
+    "stateless"
   ]
 }

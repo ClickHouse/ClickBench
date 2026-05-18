@@ -6,6 +6,7 @@
   "tags": [
     "Java",
     "MapReduce",
-    "Tez"
+    "Tez",
+    "stateless"
   ]
 }
