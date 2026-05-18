@@ -1,14 +1,47 @@
 #!/bin/bash
 set -e
 
-# Bring the byconity stack up. Idempotent: if the server already responds,
-# do nothing.
-if docker compose exec -T server clickhouse-client --port 52145 \
-        --query "SELECT 1" >/dev/null 2>&1; then
+# Idempotent at the server-only level (SELECT 1 against the server
+# container only) — but if hits already exists, also require a
+# worker-touching query to succeed before declaring start done. This
+# closes the post-snapshot-restore window where SELECT 1 passes
+# immediately on the server but server↔worker BRPC is still stale and
+# the first /query returns
+#   Code: 2008. ... 112:[E111]Fail to connect Socket{addr=172.18.0.X:30605}
+#   Not connected to 172.18.0.X:30605 yet, server_id=NNN
+ck() {
+    docker compose exec -T server clickhouse-client --port 52145 \
+        --query "SELECT 1" >/dev/null 2>&1 || return 1
+    local exists
+    exists=$(docker compose exec -T server clickhouse-client --port 52145 \
+        --query "EXISTS TABLE hits" 2>/dev/null || echo 0)
+    if [ "$exists" = "1" ]; then
+        docker compose exec -T server clickhouse-client --port 52145 \
+            --query "SELECT count() FROM hits WHERE AdvEngineID <> 0 LIMIT 1" \
+            >/dev/null 2>&1 || return 1
+    fi
+    return 0
+}
+
+if ck; then
     exit 0
 fi
 
 docker compose up -d
+
+# Wait for the cluster to actually serve a worker-touching query.
+# Polls for up to 10 min: cnch-worker BRPC reconnect is normally <30s
+# after a snapshot restore but slow firecracker boots have been
+# observed taking longer.
+for _ in $(seq 1 600); do
+    if ck; then
+        exit 0
+    fi
+    sleep 1
+done
+echo "byconity/start: cluster did not become query-ready within 600s" >&2
+docker compose ps >&2 || true
+exit 1
 
 # HDFS user setup runs in load (after ./check confirms the stack is up
 # — hdfs-namenode is a dependency of server, so when SELECT 1 works,
