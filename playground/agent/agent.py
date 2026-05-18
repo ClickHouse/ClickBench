@@ -370,6 +370,17 @@ def _provision() -> tuple[int, bytes]:
         ]
 
         log_lines: list[bytes] = []
+
+        def _flush() -> None:
+            """Flush the in-memory log to disk so /provision-log returns
+            useful state while /provision is still in flight (e.g. while
+            the check-loop is polling for many minutes). Without this
+            the log file is empty until /provision returns and any
+            diagnostic block in install/start scripts is invisible
+            until then."""
+            with contextlib.suppress(OSError):
+                PROVISION_LOG.write_bytes(b"".join(log_lines))
+
         for name, cmd in steps:
             t0 = time.monotonic()
             log_lines.append(f"\n=== {name} ===\n".encode())
@@ -381,8 +392,8 @@ def _provision() -> tuple[int, bytes]:
             dt = time.monotonic() - t0
             log_lines.append(r.stdout or b"")
             log_lines.append(f"=== {name} done rc={r.returncode} in {dt:.1f}s ===\n".encode())
+            _flush()
             if r.returncode != 0:
-                PROVISION_LOG.write_bytes(b"".join(log_lines))
                 return r.returncode, b"".join(log_lines)
 
         # Wait for ./check to succeed. Per-system override via
@@ -414,9 +425,10 @@ def _provision() -> tuple[int, bytes]:
                 f"\n=== check did not succeed within {check_budget}s ===\n".encode())
             if last_check is not None:
                 log_lines.append(last_check.stderr or b"")
-            PROVISION_LOG.write_bytes(b"".join(log_lines))
+            _flush()
             return 1, b"".join(log_lines)
         log_lines.append(b"\n=== check ok ===\n")
+        _flush()
 
         # Most datasets surface in cwd already: cwd is the overlay merged
         # dir /opt/clickbench/system and the dataset disk's contents (the
@@ -449,8 +461,8 @@ def _provision() -> tuple[int, bytes]:
         dt = time.monotonic() - t0
         log_lines.append(r.stdout or b"")
         log_lines.append(f"=== load done rc={r.returncode} in {dt:.1f}s ===\n".encode())
+        _flush()
         if r.returncode != 0:
-            PROVISION_LOG.write_bytes(b"".join(log_lines))
             return r.returncode, b"".join(log_lines)
 
         # Pre-snapshot housekeeping. Order:
