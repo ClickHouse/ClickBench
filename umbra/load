@@ -5,12 +5,49 @@ mkdir -p data
 mv hits.tsv data/
 chmod -R 777 data
 
+# Diagnostic: attach strace to umbra-server before COPY so the failing
+# memory-related syscall (mmap / mlock / brk / mremap …) lands in the
+# provision log. The container has its own PID namespace; resolve to
+# the host-VM PID via `docker top` and strace from the host (which
+# has CAP_SYS_PTRACE). We trace only the memory-related syscalls so
+# the file stays manageable.
+sudo apt-get install -y -qq strace >/dev/null 2>&1 || true
+umbra_pid=$(sudo docker top umbradb -eo pid,comm 2>/dev/null | \
+    awk '$2=="umbra-server"{print $1; exit}')
+strace_pid=""
+if [ -n "${umbra_pid:-}" ]; then
+    echo "umbra-server host PID: $umbra_pid"
+    sudo strace -p "$umbra_pid" -f -tt \
+        -e trace=mmap,mmap2,mlock,mlock2,munlock,mlockall,munlockall,brk,mremap,madvise,memfd_create \
+        -o /tmp/umbra-syscalls.strace >/dev/null 2>&1 &
+    strace_pid=$!
+    sleep 2
+fi
+
 # create.sql for umbra both creates the table and ingests via COPY. Use
 # ON_ERROR_STOP=1 so a mid-COPY failure (e.g. the box runs out of memory
 # and Umbra survives but the COPY transaction errored) bubbles up
 # instead of leaving a half-loaded table.
+set +e
 PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres \
     -v ON_ERROR_STOP=1 -f create.sql
+load_rc=$?
+set -e
+
+# Stop strace and dump the failing syscalls.
+if [ -n "$strace_pid" ]; then
+    sudo kill "$strace_pid" 2>/dev/null || true
+    wait "$strace_pid" 2>/dev/null || true
+fi
+if [ -f /tmp/umbra-syscalls.strace ]; then
+    echo "=== umbra-server: ENOMEM syscall lines ==="
+    sudo grep -E "ENOMEM|= -1 E" /tmp/umbra-syscalls.strace | tail -40
+    echo "=== umbra-server: last 100 syscalls (regardless of result) ==="
+    sudo tail -100 /tmp/umbra-syscalls.strace
+fi
+if [ "$load_rc" -ne 0 ]; then
+    exit "$load_rc"
+fi
 
 # Belt-and-braces row-count check. Umbra has been observed to leave a
 # partial table on memory-constrained hosts (16 GB c6a.4xlarge can't

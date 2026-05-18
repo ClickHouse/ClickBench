@@ -57,16 +57,20 @@ fi
 
 cat > etc/catalog/hive.properties <<'EOF'
 connector.name=hive
+# trino:455 still ships the legacy hadoop-based file systems. Newer
+# trino releases (461+) dropped fs.hadoop.* in favour of native FS
+# providers; the native S3 replacement (fs.native-s3.enabled=true)
+# has no anonymous-credentials mode, so we'd lose access to the
+# public clickhouse-public-datasets bucket. Pin trino:455 and stay
+# on the Hadoop FS for both local + S3.
+#
+# 455 does NOT recognise fs.native-local.enabled / local.location
+# (those landed in a later release); leaving them in fails
+# Bootstrap with `Configuration property '...' was not used` and
+# the JVM exits 100 before /v1/info ever comes up. Use file:///
+# (Hadoop RawLocalFileSystem) for the file-metastore path.
 hive.metastore=file
-hive.metastore.catalog.dir=local:///meta
-local.location=/data
-fs.native-local.enabled=true
-# trino:455 still ships the legacy hadoop-S3 file system. Newer
-# trino releases (461+) dropped it and fs.native-s3.enabled=true
-# doesn't have an anonymous-credentials mode, so we'd be unable to
-# read the public clickhouse-public-datasets bucket. Pin trino:455
-# in install/start until upstream re-adds anonymous-S3 to the native
-# filesystem.
+hive.metastore.catalog.dir=file:///data/meta
 fs.hadoop.enabled=true
 hive.config.resources=/etc/trino/core-site.xml
 hive.non-managed-table-writes-enabled=true

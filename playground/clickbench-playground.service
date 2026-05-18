@@ -1,0 +1,61 @@
+[Unit]
+Description=ClickBench Playground API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+# ssl-cert membership lets the process read the Let's Encrypt
+# privkey under /etc/letsencrypt/{live,archive} (ownership set by
+# the deploy hook in /etc/letsencrypt/renewal-hooks/deploy/).
+SupplementaryGroups=ssl-cert
+WorkingDirectory=/home/ubuntu/ClickBench
+EnvironmentFile=-/home/ubuntu/ClickBench/playground/.env
+ExecStart=/usr/bin/python3 -m playground.server.main
+Restart=on-failure
+RestartSec=3
+
+# Grant the playground process CAP_NET_BIND_SERVICE so it can bind
+# 443 as the unprivileged `ubuntu` user. We do NOT lock the
+# capability bounding set: the server uses `sudo` to invoke
+# iptables / ip tuntap / mount / firecracker etc., and the root
+# child of sudo needs the full capability set to do that work.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+# --- Hardening -----------------------------------------------------
+#
+# The server runs as the unprivileged `ubuntu` user; privileged work
+# (iptables, ip tuntap, mount, firecracker) is delegated to sudo with
+# an operator-managed sudoers allowlist. These directives keep the
+# systemd unit from regaining capabilities or filesystem write access
+# if the python process is compromised.
+#
+# What we deliberately do NOT set:
+#   - NoNewPrivileges / RestrictSUIDSGID — both would break sudo,
+#     which the server uses to invoke iptables / ip tuntap / mount.
+#     The narrower defence is the constrained sudoers file.
+#   - ProtectSystem=strict — the sudo'd children (iptables-restore,
+#     mkfs.ext4, mount, ...) need to touch /etc, /run, etc.
+#     ProtectSystem=full is the practical maximum.
+#   - PrivateNetwork — the server needs the host network namespace
+#     to manage TAPs and the SNI proxy.
+#   - PrivateDevices — we use /dev/kvm, /dev/loop*, /dev/net/tun.
+#
+ProtectSystem=full
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK AF_PACKET
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+# Explicit write allow-list: state dir for VM artifacts + Python's
+# bytecode cache. Everything else under ProtectSystem=full is RO.
+ReadWritePaths=/opt/clickbench-playground /home/ubuntu/.cache
+
+[Install]
+WantedBy=multi-user.target

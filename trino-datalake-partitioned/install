@@ -57,14 +57,18 @@ fi
 
 cat > etc/catalog/hive.properties <<'EOF'
 connector.name=hive
-hive.metastore=file
-hive.metastore.catalog.dir=local:///meta
-local.location=/data
-fs.native-local.enabled=true
 # Pin to trino:455 (last release shipping the legacy hadoop-S3 plugin
-# with a custom AWSCredentialsProvider). 461+ removed it, and the new
-# fs.native-s3 has no anonymous-creds mode so we can't read the public
-# bucket without it.
+# with a custom AWSCredentialsProvider). 461+ removed it, and the
+# new fs.native-s3 has no anonymous-creds mode so we'd lose access
+# to the public bucket.
+#
+# 455 does NOT recognise fs.native-local.enabled / local.location
+# (those landed in a later release); leaving them in fails
+# Bootstrap with `Configuration property '...' was not used` and
+# the JVM exits 100 before /v1/info ever comes up. Use file:///
+# (Hadoop RawLocalFileSystem) for the file-metastore path.
+hive.metastore=file
+hive.metastore.catalog.dir=file:///data/meta
 fs.hadoop.enabled=true
 hive.config.resources=/etc/trino/core-site.xml
 hive.non-managed-table-writes-enabled=true
