@@ -19,14 +19,23 @@ query=$(cat)
 sql_n=$(printf '%s' "$query" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/;$//')
 
 # Locate the query index by exact match against queries.sql lines.
-idx=$(awk -v needle="$sql_n" '
-    {
-        line = $0
-        sub(/^[[:space:]]+/, "", line)
-        sub(/[[:space:]]+$/, "", line)
-        sub(/;$/, "", line)
-        if (line == needle) { print NR; exit 0 }
-    }' queries.sql)
+# Using bash string compare instead of awk because Q29's regex contains
+# backslash escapes (`\.`, `\1`) and `awk -v needle=...` reinterprets them
+# as awk escape sequences before the comparison runs — Q29 then misses.
+idx=""
+n=0
+while IFS= read -r line; do
+    n=$((n + 1))
+    # Strip leading/trailing whitespace and a trailing semicolon to match
+    # the same normalization applied to the stdin SQL above.
+    s="${line#"${line%%[![:space:]]*}"}"
+    s="${s%"${s##*[![:space:]]}"}"
+    s="${s%;}"
+    if [ "$s" = "$sql_n" ]; then
+        idx=$n
+        break
+    fi
+done < queries.sql
 
 if [ -z "$idx" ]; then
     echo "query: no matching entry in queries.sql for input SQL" >&2

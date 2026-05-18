@@ -20,7 +20,9 @@ struct WallClock {
     ~WallClock() {
         auto t1 = std::chrono::steady_clock::now();
         double secs = std::chrono::duration<double>(t1 - t0).count();
-        std::fprintf(stderr, "time: %.6f\n", secs);
+        // Bare decimal so the harness's `^[0-9]+(\.[0-9]+)?$` regex
+        // picks it up as the last numeric line on stderr.
+        std::fprintf(stderr, "%.6f\n", secs);
     }
 };
 
