@@ -1,0 +1,15 @@
+#!/bin/bash
+# Confirm the storage tree and at least one binary are present. The
+# benchmark driver polls this between cold cycles; for an embedded CLI
+# stack like GenDB's, that just means "data + binaries are ready".
+set -e
+
+cd "$(dirname "$0")"
+
+# Storage layout exists and has at least one fixed-width column file.
+test -d db/hits
+test -s db/hits/WatchID.bin
+
+# At least q1 has been compiled (install is idempotent so this also
+# covers re-runs).
+test -x generated/q1

@@ -1,0 +1,46 @@
+#!/bin/bash
+# Read one SQL query from stdin, match it against queries.sql to find the
+# query index N, then run generated/qN against the binary store in db/.
+#
+# stdout: query output (CSV-ish, header line then rows).
+# stderr: a "time: <secs>" line (printed by gendb::WallClock's destructor
+#         in the generated binary). Per ClickBench's query-script contract,
+#         the last numeric line on stderr is taken as the runtime.
+#
+# Exit non-zero on error so the harness records `null` for that try.
+set -e
+
+cd "$(dirname "$0")"
+
+# Slurp stdin (one SQL statement, possibly with leading/trailing whitespace).
+query=$(cat)
+# Normalize for matching: strip leading/trailing whitespace and the
+# trailing semicolon that ClickBench's queries.sql lines omit.
+sql_n=$(printf '%s' "$query" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/;$//')
+
+# Locate the query index by exact match against queries.sql lines.
+idx=$(awk -v needle="$sql_n" '
+    {
+        line = $0
+        sub(/^[[:space:]]+/, "", line)
+        sub(/[[:space:]]+$/, "", line)
+        sub(/;$/, "", line)
+        if (line == needle) { print NR; exit 0 }
+    }' queries.sql)
+
+if [ -z "$idx" ]; then
+    echo "query: no matching entry in queries.sql for input SQL" >&2
+    printf '%s\n' "$query" | head -c 200 >&2
+    exit 2
+fi
+
+bin="generated/q${idx}"
+if [ ! -x "$bin" ]; then
+    echo "query: missing binary $bin — was install run?" >&2
+    exit 2
+fi
+
+# Run. The binary writes:
+#   stdout — query result rows (header + data)
+#   stderr — `time: <seconds>` on exit (from WallClock destructor)
+exec "$bin" "$(pwd)/db"

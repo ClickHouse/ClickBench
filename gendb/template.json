@@ -1,0 +1,13 @@
+{
+  "system": "GenDB",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "stateless",
+    "embedded",
+    "code generation"
+  ]
+}
