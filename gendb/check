@@ -1,15 +1,18 @@
 #!/bin/bash
-# Confirm the storage tree and at least one binary are present. The
-# benchmark driver polls this between cold cycles; for an embedded CLI
-# stack like GenDB's, that just means "data + binaries are ready".
+# Readiness probe for the harness — must pass right after ./install, BEFORE
+# bench_download and bench_load put any data on disk. Other embedded CLIs
+# (duckdb, hyper, chdb, …) follow the same convention: ./check verifies the
+# system can answer queries at all, not that the data is loaded.
+#
+# Previous version also asserted db/hits/WatchID.bin existed; that made the
+# 300s `bench_check_loop` after bench_start time out on every CI machine
+# (load hadn't run yet), so the run aborted without producing any results.
 set -e
 
 cd "$(dirname "$0")"
 
-# Storage layout exists and has at least one fixed-width column file.
-test -d db/hits
-test -s db/hits/WatchID.bin
-
-# At least q1 has been compiled (install is idempotent so this also
-# covers re-runs).
+# q1 is the simplest binary (just prints HITS_ROWS) and exits without
+# touching any column files — perfect smoke test that the install step
+# produced a working binary on this hardware.
 test -x generated/q1
+generated/q1 ./db >/dev/null
