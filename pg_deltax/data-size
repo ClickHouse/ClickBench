@@ -1,0 +1,8 @@
+#!/bin/bash
+# Report the test database's on-disk size: tables + indexes + TOAST. Excludes
+# pg_wal (durability metadata that grows with activity rather than dataset
+# size) and cluster-wide files (pg_global, pg_xact). Same convention as
+# pgpro_tam and postgresql-orioledb.
+set -eu
+
+sudo -u postgres psql -t -A -c "SELECT pg_database_size('test')"

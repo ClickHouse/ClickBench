@@ -1,0 +1,4 @@
+#!/bin/bash
+
+PGVERSION=${PGVERSION:-18}
+sudo systemctl stop postgresql@$PGVERSION-main || true
