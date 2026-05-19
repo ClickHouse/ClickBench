@@ -4,7 +4,7 @@
 set -eu
 
 PGVERSION=${PGVERSION:-18}
-PG_DELTAX_REPO=${PG_DELTAX_REPO:-https://github.com/xataio/pg_deltax.git}
+PG_DELTAX_REPO=${PG_DELTAX_REPO:-https://github.com/xataio/deltax.git}
 # Empty by default: don't touch git state. Set to a tag/branch/sha to force
 # a checkout. Avoids clobbering local iteration when ~/pg_deltax is either a
 # git checkout on a feature branch or a non-git rsync from `make deploy`.
