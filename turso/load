@@ -17,7 +17,13 @@ export RUST_BACKTRACE=1
 rm -f mydb
 
 tursodb mydb < create.sql
-tursodb mydb '.import --csv hits.csv hits'
+tursodb mydb <<'EOF' 2>&1 | grep -v '^Inserting batch of'
+PRAGMA synchronous = OFF;
+BEGIN;
+.import --csv hits.csv hits
+COMMIT;
+EOF
+tursodb mydb 'PRAGMA wal_checkpoint(TRUNCATE);' > /dev/null
 
 rm -f hits.csv
 sync
