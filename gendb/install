@@ -1,0 +1,30 @@
+#!/bin/bash
+# GenDB is a code-generating engine — the per-query .cpp files in
+# generated/ were synthesized once (offline) by GenDB's multi-agent
+# LLM pipeline against the ClickBench schema + queries; we ship them
+# in this repo so that running the benchmark needs no LLM access.
+#
+# install just compiles the per-query binaries. The Anthropic SDK and
+# Node.js dependencies that the upstream GenDB orchestrator pulls in
+# are only required if you want to RE-GENERATE the .cpp files; see
+# README.md.
+set -e
+
+sudo apt-get update -y >/dev/null
+sudo apt-get install -y --no-install-recommends \
+    build-essential g++ wget python3-pip python3-dev >/dev/null
+
+# DuckDB python is used by the ingestion step in `load` to convert the
+# downloaded hits.parquet into raw per-column binary files (the storage
+# format GenDB's storage designer agent produced).
+pip3 install --quiet --break-system-packages duckdb pyarrow numpy
+
+# Compile all per-query binaries up-front so first `query` invocation
+# doesn't pay compile overhead. ~40 binaries × ~1 s each on 96 cores.
+cd "$(dirname "$0")/generated"
+for cpp in q*.cpp; do
+    name="${cpp%.cpp}"
+    if [ ! -x "$name" ] || [ "$cpp" -nt "$name" ]; then
+        g++ -std=c++17 -O3 -march=native -fopenmp -o "$name" "$cpp"
+    fi
+done
