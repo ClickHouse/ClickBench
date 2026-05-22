@@ -456,6 +456,18 @@ const additional_data_size_points = [
         </td>
     </tr>
     <tr>
+        <th>Data Format: </th>
+        <td id="selectors_data_format">
+            <a id="select-all-data-formats" class="selector selector-active">All</a>
+        </td>
+    </tr>
+    <tr>
+        <th>Partitioning: </th>
+        <td id="selectors_partitioning">
+            <a id="select-all-partitioning" class="selector selector-active">All</a>
+        </td>
+    </tr>
+    <tr>
         <th>Machine: </th>
         <td id="selectors_machine">
             <a id="select-all-machines" class="selector selector-active">All</a>
@@ -519,6 +531,8 @@ const missing_result_time = 300;
 let selectors = {
     "database": {},
     "tags": {},
+    "data_format": {},
+    "partitioning": {},
     "machine": {},
     "cluster_size": {},
     "opensource": {"yes": true, "no": true},
@@ -550,8 +564,14 @@ if (new_theme && new_theme != theme) {
 
 let databases = document.getElementById('selectors_database');
 let tags = document.getElementById('selectors_tags');
+let data_formats = document.getElementById('selectors_data_format');
+let partitioning = document.getElementById('selectors_partitioning');
 let machines = document.getElementById('selectors_machine');
 let cluster_sizes = document.getElementById('selectors_cluster_size');
+
+const data_format_tags = new Set(['dataframe', 'feather', 'parquet', 'Velox', 'Vortex']);
+const data_format_tag_aliases = {'DataFrame': 'dataframe', 'Gluten-on-Velox': 'Velox', 'Parquet': 'parquet'};
+const partitioning_tags = new Set(['partitioned', 'single']);
 
 function normalizeDatabase(system) {
     return system.replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
@@ -571,6 +591,12 @@ function uniqueValues(values) {
 data.forEach(elem => {
     elem.database = normalizeDatabase(elem.system);
     elem.tags = uniqueValues([...(elem.tags || []), ...tagsFromDatabaseName(elem.system)]);
+    elem.data_format = uniqueValues(elem.tags
+        .map(tag => data_format_tag_aliases[tag] || tag)
+        .filter(tag => data_format_tags.has(tag)));
+    elem.partitioning = elem.tags.filter(tag => partitioning_tags.has(tag));
+    if (elem.partitioning.length == 0) elem.partitioning = ['native'];
+    elem.tags = elem.tags.filter(tag => !data_format_tags.has(data_format_tag_aliases[tag] || tag) && !partitioning_tags.has(tag));
 });
 
 let unique_databases = [... new Set(data.map(elem => elem.database))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
@@ -584,22 +610,26 @@ data.forEach(elem => {
 const database_to_tags = {};
 data.forEach(d => {
     if (!database_to_tags[d.database]) database_to_tags[d.database] = new Set();
-    (d.tags || []).forEach(t => database_to_tags[d.database].add(t));
+    [...(d.tags || []), ...(d.data_format || []), ...(d.partitioning || [])].forEach(t => database_to_tags[d.database].add(t));
 });
 
 function highlightDatabaseTags(databaseName) {
     const databaseTags = database_to_tags[databaseName] || new Set();
-    for (const elem of tags.childNodes) {
-        if (elem.tagName !== 'A') continue;
-        if (databaseTags.has(elem.innerText)) elem.classList.add('selector-tag-hilite');
-    }
+    [tags, data_formats, partitioning].forEach(container => {
+        for (const elem of container.childNodes) {
+            if (elem.tagName !== 'A') continue;
+            if (databaseTags.has(elem.innerText)) elem.classList.add('selector-tag-hilite');
+        }
+    });
 }
 
 function clearDatabaseTagsHighlight() {
-    for (const elem of tags.childNodes) {
-        if (elem.tagName !== 'A') continue;
-        elem.classList.remove('selector-tag-hilite');
-    }
+    [tags, data_formats, partitioning].forEach(container => {
+        for (const elem of container.childNodes) {
+            if (elem.tagName !== 'A') continue;
+            elem.classList.remove('selector-tag-hilite');
+        }
+    });
 }
 
 function toggle(e, elem, selectors_map) {
@@ -644,21 +674,21 @@ unique_databases.map(elem => {
 
 const tag_to_databases = {};
 data.forEach(d => {
-    (d.tags || []).forEach(t => {
+    [...(d.tags || []), ...(d.data_format || []), ...(d.partitioning || [])].forEach(t => {
         if (!tag_to_databases[t]) tag_to_databases[t] = new Set();
         tag_to_databases[t].add(d.database);
     });
 });
 
-[... new Set(data.map(elem => elem.tags).flat())].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())).map(elem => {
+function makeValueSelector(container, selectors_map, elem) {
     let selector = document.createElement('a');
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
-    tags.appendChild(selector);
-    selectors.tags[elem] = true;
-    selector.addEventListener('click', e => toggle(e, elem, selectors.tags));
+    container.appendChild(selector);
+    selectors_map[elem] = true;
+    selector.addEventListener('click', e => toggle(e, elem, selectors_map));
 
-    /// Highlighting summary rows and detail columns on hovering over a tag.
+    /// Highlighting summary rows and detail columns on hovering over a selector value.
     selector.addEventListener('mouseover', () => {
         const tagged = tag_to_databases[elem] || new Set();
         [...document.querySelectorAll('.summary-row')].map(row => {
@@ -670,6 +700,18 @@ data.forEach(d => {
         [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(th => { th.className = 'th-entry' });
     });
+}
+
+[... new Set(data.map(elem => elem.tags).flat())].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())).map(elem => {
+    makeValueSelector(tags, selectors.tags, elem);
+});
+
+[... new Set(data.map(elem => elem.data_format).flat())].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())).map(elem => {
+    makeValueSelector(data_formats, selectors.data_format, elem);
+});
+
+['native', 'partitioned', 'single'].map(elem => {
+    makeValueSelector(partitioning, selectors.partitioning, elem);
 });
 
 [... new Set(data.map(elem => elem.machine))].sort((a, b) => {
@@ -763,6 +805,8 @@ document.getElementById('selector-tuned-no').addEventListener('click', e => {
 
 document.getElementById('select-all-databases').addEventListener('click', e => toggleAll(e, selectors.database));
 document.getElementById('select-all-tags').addEventListener('click', e => toggleAll(e, selectors.tags));
+document.getElementById('select-all-data-formats').addEventListener('click', e => toggleAll(e, selectors.data_format));
+document.getElementById('select-all-partitioning').addEventListener('click', e => toggleAll(e, selectors.partitioning));
 document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
 document.getElementById('select-all-cluster-sizes').addEventListener('click', e => toggleAll(e, selectors.cluster_size));
 
@@ -781,6 +825,8 @@ selectors.queries = [...data[0].result.keys()].map(k => true);
 function updateSelectors() {
     [...databases.childNodes].map(elem => { elem.className = selectors.database[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...tags.childNodes].map(elem => { elem.className = selectors.tags[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...data_formats.childNodes].map(elem => { elem.className = selectors.data_format[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...partitioning.childNodes].map(elem => { elem.className = selectors.partitioning[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...machines.childNodes].map(elem => { elem.className = selectors.machine[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...cluster_sizes.childNodes].map(elem => { elem.className = selectors.cluster_size[elem.innerText] ? 'selector selector-active' : 'selector' });
 
@@ -816,6 +862,8 @@ function applyTopRowFilters() {
 
     apply(databases, e => [e.database]);
     apply(tags, e => e.tags || []);
+    apply(data_formats, e => e.data_format || []);
+    apply(partitioning, e => e.partitioning || []);
     apply(machines, e => [e.machine]);
     apply(cluster_sizes, e => [e.cluster_size]);
 }
@@ -835,6 +883,8 @@ function findPassiveSelectors(filtered_data) {
     }
     process('database', databases);
     process('tags', tags);
+    process('data_format', data_formats);
+    process('partitioning', partitioning);
     process('machine', machines);
     process('cluster_size', cluster_sizes);
 }
@@ -1102,11 +1152,19 @@ function render() {
 
     applyTopRowFilters();
 
+    function matchesSelector(values, selectors_map) {
+        return values.length == 0
+            ? Object.values(selectors_map).every(x => x)
+            : values.filter(type => selectors_map[type]).length > 0;
+    }
+
     let filtered_data = data.filter(elem =>
         selectors.database[elem.database] &&
         selectors.machine[elem.machine] &&
         selectors.cluster_size[elem.cluster_size] &&
-        elem.tags.filter(type => selectors.tags[type]).length > 0 &&
+        matchesSelector(elem.tags, selectors.tags) &&
+        matchesSelector(elem.data_format, selectors.data_format) &&
+        matchesSelector(elem.partitioning, selectors.partitioning) &&
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
         ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu"))
