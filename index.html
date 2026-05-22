@@ -659,6 +659,10 @@ function uniqueValues(values) {
     return [...new Set(values)];
 }
 
+function isClusterSizeAlias(machine) {
+    return /^(?:\d+)?(?:XS|S|M|L|XL|XXL)$/.test(machine);
+}
+
 data.forEach(elem => {
     elem.database = normalizeDatabase(elem.system);
     elem.tags = uniqueValues([...(elem.tags || []), ...tagsFromDatabaseName(elem.system)]);
@@ -785,7 +789,7 @@ function makeValueSelector(container, selectors_map, elem) {
     makeValueSelector(partitioning, selectors.partitioning, elem);
 });
 
-[... new Set(data.map(elem => elem.machine))].sort((a, b) => {
+[... new Set(data.map(elem => elem.machine))].filter(elem => !isClusterSizeAlias(elem)).sort((a, b) => {
     const count_diff = data.filter(elem => elem.machine === b).length - data.filter(elem => elem.machine === a).length;
     return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
 }).map(elem => {
@@ -1229,7 +1233,7 @@ function render() {
 
     let filtered_data = data.filter(elem =>
         selectors.database[elem.database] &&
-        selectors.machine[elem.machine] &&
+        (isClusterSizeAlias(elem.machine) || selectors.machine[elem.machine]) &&
         selectors.cluster_size[elem.cluster_size] &&
         matchesSelector(elem.tags, selectors.tags) &&
         matchesSelector(elem.data_format, selectors.data_format) &&
@@ -1471,8 +1475,12 @@ function decodeState(state) {
         } else if (typeof selectors[k] === 'object') {
             decoded[k] = Array.isArray(selectors[k]) ? [] : {};
 
-            const keys = k === 'database' ? Object.keys(database_aliases) : Object.keys(selectors[k]);
-            const filtered = v.substring(1, v.length).split('|').filter(s => s !== '')
+            const keys = k === 'database'
+                ? Object.keys(database_aliases)
+                : k === 'machine'
+                    ? [...new Set(data.map(elem => elem.machine))]
+                    : Object.keys(selectors[k]);
+            let filtered = v.substring(1, v.length).split('|').filter(s => s !== '')
                 .map(substr => {
                     const matches = keys.filter(x => isSubsequence(x, decodeURIComponent(substr)));
                     if (matches.length == 0) return null;
@@ -1480,6 +1488,14 @@ function decodeState(state) {
                     return k === 'database' ? database_aliases[match] : match;
                 })
                 .filter(x => x !== null);
+
+            if (k === 'machine') {
+                const aliasFiltered = filtered.filter(isClusterSizeAlias);
+                filtered = filtered.filter(x => !isClusterSizeAlias(x));
+                if (v.startsWith('+') && filtered.length == 0 && aliasFiltered.length > 0) {
+                    return;
+                }
+            }
 
             if (v.startsWith('+')) {
                 Object.keys(selectors[k]).forEach(x => {
