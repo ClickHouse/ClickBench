@@ -26,6 +26,7 @@
             --selector-passive-background-color: #EEDDCC;
             --selector-hover-text-color: black;
             --selector-hover-background-color: #FDB;
+            --selector-divider-color: #DDD;
 
             --summary-every-other-row-color: #F8F8F8;
             --highlight-color: #EEE;
@@ -59,6 +60,7 @@
             --selector-passive-background-color: #566;
             --selector-hover-text-color: black;
             --selector-hover-background-color: white;
+            --selector-divider-color: #1F566D;
 
             --summary-every-other-row-color: #042e41;
             --highlight-color: #064663;
@@ -117,6 +119,12 @@
             padding-right: 1rem;
         }
 
+        .selector-section th,
+        .selector-section td {
+            border-top: 1px solid var(--selector-divider-color);
+            padding-top: 0.7rem;
+        }
+
         .inline-filter {
             display: inline-block;
             margin-right: 1.5rem;
@@ -126,6 +134,62 @@
         .inline-filter-label {
             font-weight: bold;
             margin-right: 0.25rem;
+        }
+
+        .selector-row {
+            padding-bottom: 0.5rem;
+        }
+
+        .advanced-filters {
+            display: inline-block;
+            margin-top: 0.25rem;
+        }
+
+        .advanced-filters summary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-bottom: 0.65rem;
+            padding: 0.35rem 0.7rem;
+            border: 1px solid var(--selector-divider-color);
+            border-radius: 0.5rem;
+            background: var(--selector-background-color);
+            color: var(--selector-text-color);
+            cursor: pointer;
+            font-weight: bold;
+            list-style: none;
+        }
+
+        .advanced-filters summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .advanced-filters summary::after {
+            content: "▾";
+            color: var(--link-color);
+            font-size: 0.85rem;
+            line-height: 1;
+        }
+
+        .advanced-filters[open] summary::after {
+            content: "▴";
+        }
+
+        .advanced-filters summary:hover {
+            color: var(--selector-hover-text-color);
+            background: var(--selector-hover-background-color);
+        }
+
+        .advanced-filters summary:hover::after {
+            color: var(--link-hover-color);
+        }
+
+        .advanced-filters .inline-filter {
+            margin-bottom: 0.5rem;
+        }
+
+        .advanced-filter-row {
+            margin-top: 0.25rem;
         }
 
         .selector {
@@ -425,17 +489,13 @@ const additional_data_size_points = [
 
 <table class="selectors-container stick-left">
     <tr>
-        <td colspan="2">
-            <span class="inline-filter" id="selectors_opensource">
-                <span class="inline-filter-label">Open source:</span>
-                <a id="selector-opensource-yes" class="selector selector-active">Yes</a>
-                <a id="selector-opensource-no" class="selector selector-active">No</a>
-            </span>
-            <span class="inline-filter" id="selectors_hardware">
-                <span class="inline-filter-label">Hardware:</span>
-                <a id="selector-hardware-cpu" class="selector selector-active">CPU</a>
-                <a id="selector-hardware-gpu" class="selector selector-active">GPU</a>
-            </span>
+        <th>Metric: </th>
+        <td id="selectors_run" class="selector-row">
+            <a class="selector" id="selector-metric-combined">Combined</a>
+            <a class="selector" id="selector-metric-cold">Cold Run</a>
+            <a class="selector" id="selector-metric-hot">Hot Run</a>
+            <a class="selector" id="selector-metric-load">Load Time</a>
+            <a class="selector" id="selector-metric-size">Storage Size</a>
             <span class="inline-filter" id="selectors_tuned">
                 <span class="inline-filter-label">Tuned:</span>
                 <a id="selector-tuned-no" class="selector">No</a>
@@ -449,25 +509,21 @@ const additional_data_size_points = [
             <a id="select-all-databases" class="selector selector-active">All</a>
         </td>
     </tr>
-    <tr>
-        <th>Tags: </th>
-        <td id="selectors_tags">
-            <a id="select-all-tags" class="selector selector-active">All</a>
-        </td>
-    </tr>
-    <tr>
+    <tr class="selector-section">
         <th>Data Format: </th>
-        <td id="selectors_data_format">
-            <a id="select-all-data-formats" class="selector selector-active">All</a>
+        <td class="selector-row">
+            <span class="inline-filter" id="selectors_data_format">
+                <a id="select-all-data-formats" class="selector selector-active">All</a>
+            </span>
+            <span class="inline-filter">
+                <span class="inline-filter-label">Partitioning:</span>
+                <span id="selectors_partitioning">
+                    <a id="select-all-partitioning" class="selector selector-active">All</a>
+                </span>
+            </span>
         </td>
     </tr>
-    <tr>
-        <th>Partitioning: </th>
-        <td id="selectors_partitioning">
-            <a id="select-all-partitioning" class="selector selector-active">All</a>
-        </td>
-    </tr>
-    <tr>
+    <tr class="selector-section">
         <th>Machine: </th>
         <td id="selectors_machine">
             <a id="select-all-machines" class="selector selector-active">All</a>
@@ -479,14 +535,29 @@ const additional_data_size_points = [
             <a id="select-all-cluster-sizes" class="selector selector-active">All</a>
         </td>
     </tr>
-    <tr>
-        <th>Metric: </th>
-        <td id="selectors_run">
-            <a class="selector" id="selector-metric-combined">Combined</a>
-            <a class="selector" id="selector-metric-cold">Cold Run</a>
-            <a class="selector" id="selector-metric-hot">Hot Run</a>
-            <a class="selector" id="selector-metric-load">Load Time</a>
-            <a class="selector" id="selector-metric-size">Storage Size</a>
+    <tr class="selector-section">
+        <td colspan="2">
+            <details class="advanced-filters">
+                <summary>More filters</summary>
+                <div>
+                    <span class="inline-filter" id="selectors_opensource">
+                        <span class="inline-filter-label">Open source:</span>
+                        <a id="selector-opensource-yes" class="selector selector-active">Yes</a>
+                        <a id="selector-opensource-no" class="selector selector-active">No</a>
+                    </span>
+                    <span class="inline-filter" id="selectors_hardware">
+                        <span class="inline-filter-label">Hardware:</span>
+                        <a id="selector-hardware-cpu" class="selector selector-active">CPU</a>
+                        <a id="selector-hardware-gpu" class="selector selector-active">GPU</a>
+                    </span>
+                </div>
+                <div class="advanced-filter-row">
+                    <span class="inline-filter-label">Tags:</span>
+                    <span id="selectors_tags">
+                        <a id="select-all-tags" class="selector selector-active">All</a>
+                    </span>
+                </div>
+            </details>
         </td>
     </tr>
 </table>
@@ -781,24 +852,18 @@ document.getElementById('selector-hardware-gpu').addEventListener('click', e => 
     updateHistory();
 });
 
-document.getElementById('selector-tuned-yes').addEventListener('click', e => {
-    selectors.tuned.yes = !selectors.tuned.yes;
-    if (selectors.tuned.yes) {
-        e.target.classList.add('selector-active');
-    } else {
-        e.target.classList.remove('selector-active');
-    }
+document.getElementById('selector-tuned-yes').addEventListener('click', () => {
+    selectors.tuned.yes = true;
+    selectors.tuned.no = false;
+    updateSelectors();
     render();
     updateHistory();
 });
 
-document.getElementById('selector-tuned-no').addEventListener('click', e => {
-    selectors.tuned.no = !selectors.tuned.no;
-    if (selectors.tuned.no) {
-        e.target.classList.add('selector-active');
-    } else {
-        e.target.classList.remove('selector-active');
-    }
+document.getElementById('selector-tuned-no').addEventListener('click', () => {
+    selectors.tuned.no = true;
+    selectors.tuned.yes = false;
+    updateSelectors();
     render();
     updateHistory();
 });
@@ -810,8 +875,9 @@ document.getElementById('select-all-partitioning').addEventListener('click', e =
 document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
 document.getElementById('select-all-cluster-sizes').addEventListener('click', e => toggleAll(e, selectors.cluster_size));
 
-[...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => elem.addEventListener('click', e => {
-    [...e.target.parentElement.querySelectorAll('a')].map(elem => { elem.className = elem == e.target ? 'selector selector-active' : 'selector' });
+const metric_selectors = [...document.querySelectorAll('[id^="selector-metric-"]')];
+metric_selectors.map(elem => elem.addEventListener('click', e => {
+    metric_selectors.map(elem => { elem.className = elem == e.target ? 'selector selector-active' : 'selector' });
 }));
 
 document.getElementById('selector-metric-combined').addEventListener('click', e => { selectors.metric = 'combined'; render(); updateHistory(); });
@@ -830,7 +896,7 @@ function updateSelectors() {
     [...machines.childNodes].map(elem => { elem.className = selectors.machine[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...cluster_sizes.childNodes].map(elem => { elem.className = selectors.cluster_size[elem.innerText] ? 'selector selector-active' : 'selector' });
 
-    [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
+    metric_selectors.map(elem => {
         elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
 
     [...document.querySelectorAll('.query-checkbox')].map((elem, i) => { elem.checked = selectors.queries[i] });
@@ -861,11 +927,14 @@ function applyTopRowFilters() {
     }
 
     apply(databases, e => [e.database]);
-    apply(tags, e => e.tags || []);
     apply(data_formats, e => e.data_format || []);
     apply(partitioning, e => e.partitioning || []);
     apply(machines, e => [e.machine]);
     apply(cluster_sizes, e => [e.cluster_size]);
+
+    for (const elem of tags.childNodes) {
+        if (elem.tagName === 'A') elem.style.display = '';
+    }
 }
 
 function findPassiveSelectors(filtered_data) {
