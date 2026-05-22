@@ -553,12 +553,38 @@ let tags = document.getElementById('selectors_tags');
 let machines = document.getElementById('selectors_machine');
 let cluster_sizes = document.getElementById('selectors_cluster_size');
 
-let unique_databases = [... new Set(data.map(elem => elem.system))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+function normalizeDatabase(system) {
+    return system.replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function tagsFromDatabaseName(system) {
+    return [...system.matchAll(/\(([^)]*)\)/g)]
+        .flatMap(match => match[1].split(','))
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+}
+
+function uniqueValues(values) {
+    return [...new Set(values)];
+}
+
+data.forEach(elem => {
+    elem.database = normalizeDatabase(elem.system);
+    elem.tags = uniqueValues([...(elem.tags || []), ...tagsFromDatabaseName(elem.system)]);
+});
+
+let unique_databases = [... new Set(data.map(elem => elem.database))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+
+const database_aliases = {};
+data.forEach(elem => {
+    database_aliases[elem.database] = elem.database;
+    database_aliases[elem.system] = elem.database;
+});
 
 const database_to_tags = {};
 data.forEach(d => {
-    if (!database_to_tags[d.system]) database_to_tags[d.system] = new Set();
-    (d.tags || []).forEach(t => database_to_tags[d.system].add(t));
+    if (!database_to_tags[d.database]) database_to_tags[d.database] = new Set();
+    (d.tags || []).forEach(t => database_to_tags[d.database].add(t));
 });
 
 function highlightDatabaseTags(databaseName) {
@@ -598,15 +624,15 @@ unique_databases.map(elem => {
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
     databases.appendChild(selector);
-    selectors.database[elem] = data.some(entry => entry.system == elem && !entry.hide);
+    selectors.database[elem] = data.some(entry => entry.database == elem && !entry.hide);
     selector.addEventListener('click', e => toggle(e, elem, selectors.database));
 
     /// Highlighting summary rows and table columns on hovering over the database selector.
     selector.addEventListener('mouseover', e => {
         [...document.querySelectorAll('.summary-row')].map(row => {
-            row.className = row.dataset.system == elem ? 'summary-row summary-row-hilite' : 'summary-row' });
+            row.className = row.dataset.database == elem ? 'summary-row summary-row-hilite' : 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(th => {
-            th.className = th.dataset.system == elem ? 'th-entry th-entry-hilite' : 'th-entry' });
+            th.className = th.dataset.database == elem ? 'th-entry th-entry-hilite' : 'th-entry' });
         highlightDatabaseTags(elem);
     });
     selector.addEventListener('mouseout', e => {
@@ -620,7 +646,7 @@ const tag_to_databases = {};
 data.forEach(d => {
     (d.tags || []).forEach(t => {
         if (!tag_to_databases[t]) tag_to_databases[t] = new Set();
-        tag_to_databases[t].add(d.system);
+        tag_to_databases[t].add(d.database);
     });
 });
 
@@ -636,9 +662,9 @@ data.forEach(d => {
     selector.addEventListener('mouseover', () => {
         const tagged = tag_to_databases[elem] || new Set();
         [...document.querySelectorAll('.summary-row')].map(row => {
-            row.className = tagged.has(row.dataset.system) ? 'summary-row summary-row-hilite' : 'summary-row' });
+            row.className = tagged.has(row.dataset.database) ? 'summary-row summary-row-hilite' : 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(th => {
-            th.className = tagged.has(th.dataset.system) ? 'th-entry th-entry-hilite' : 'th-entry' });
+            th.className = tagged.has(th.dataset.database) ? 'th-entry th-entry-hilite' : 'th-entry' });
     });
     selector.addEventListener('mouseout', () => {
         [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
@@ -788,7 +814,7 @@ function applyTopRowFilters() {
         }
     }
 
-    apply(databases, e => [e.system]);
+    apply(databases, e => [e.database]);
     apply(tags, e => e.tags || []);
     apply(machines, e => [e.machine]);
     apply(cluster_sizes, e => [e.cluster_size]);
@@ -807,7 +833,7 @@ function findPassiveSelectors(filtered_data) {
             }
         }
     }
-    process('system', databases);
+    process('database', databases);
     process('tags', tags);
     process('machine', machines);
     process('cluster_size', cluster_sizes);
@@ -933,8 +959,8 @@ function renderSummary(filtered_data) {
         let tr = document.createElement('tr');
         tr.className = 'summary-row';
 
-        tr.dataset.system = elem.system;
-        tr.addEventListener('mouseover', () => highlightDatabaseTags(elem.system));
+        tr.dataset.database = elem.database;
+        tr.addEventListener('mouseover', () => highlightDatabaseTags(elem.database));
         tr.addEventListener('mouseout', clearDatabaseTagsHighlight);
 
         let td_name = document.createElement('td');
@@ -948,9 +974,9 @@ function renderSummary(filtered_data) {
             remove.addEventListener('click', e => {
                 e.preventDefault();
                 e.stopPropagation();
-                selectors.database[elem.system] = false;
+                selectors.database[elem.database] = false;
                 for (const s of databases.childNodes) {
-                    if (s.tagName === 'A' && s.innerText === elem.system) {
+                    if (s.tagName === 'A' && s.innerText === elem.database) {
                         s.className = 'selector';
                     }
                 }
@@ -1077,7 +1103,7 @@ function render() {
     applyTopRowFilters();
 
     let filtered_data = data.filter(elem =>
-        selectors.database[elem.system] &&
+        selectors.database[elem.database] &&
         selectors.machine[elem.machine] &&
         selectors.cluster_size[elem.cluster_size] &&
         elem.tags.filter(type => selectors.tags[type]).length > 0 &&
@@ -1138,8 +1164,8 @@ function render() {
         let th = document.createElement('th');
         th.appendChild(document.createTextNode(`${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
         th.className = 'th-entry';
-        th.dataset.system = elem.system;
-        th.addEventListener('mouseover', () => highlightDatabaseTags(elem.system));
+        th.dataset.database = elem.database;
+        th.addEventListener('mouseover', () => highlightDatabaseTags(elem.database));
         th.addEventListener('mouseout', clearDatabaseTagsHighlight);
         details_head.appendChild(th);
     });
@@ -1318,8 +1344,15 @@ function decodeState(state) {
         } else if (typeof selectors[k] === 'object') {
             decoded[k] = Array.isArray(selectors[k]) ? [] : {};
 
+            const keys = k === 'database' ? Object.keys(database_aliases) : Object.keys(selectors[k]);
             const filtered = v.substring(1, v.length).split('|').filter(s => s !== '')
-                .map(substr => Object.keys(selectors[k]).filter(x => isSubsequence(x, decodeURIComponent(substr))).reduce((a, b) => a.length <= b.length ? a : b));
+                .map(substr => {
+                    const matches = keys.filter(x => isSubsequence(x, decodeURIComponent(substr)));
+                    if (matches.length == 0) return null;
+                    const match = matches.reduce((a, b) => a.length <= b.length ? a : b);
+                    return k === 'database' ? database_aliases[match] : match;
+                })
+                .filter(x => x !== null);
 
             if (v.startsWith('+')) {
                 Object.keys(selectors[k]).forEach(x => {
@@ -1357,6 +1390,20 @@ function normalizeSelectorState(state) {
     }
     delete normalizedState.system;
     delete normalizedState.type;
+
+    if (normalizedState.database) {
+        const normalizedDatabase = {};
+        Object.keys(selectors.database).forEach(database => {
+            normalizedDatabase[database] = selectors.database[database];
+        });
+        Object.entries(normalizedState.database).forEach(([database, selected]) => {
+            const normalizedName = database_aliases[database] || normalizeDatabase(database);
+            if (Object.hasOwn(selectors.database, normalizedName)) {
+                normalizedDatabase[normalizedName] = selected;
+            }
+        });
+        normalizedState.database = normalizedDatabase;
+    }
 
     return {
         ...selectors,
