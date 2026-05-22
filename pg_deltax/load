@@ -29,8 +29,8 @@ sudo -u postgres psql -v ON_ERROR_STOP=1 -t test -c "CREATE EXTENSION pg_deltax"
 # Schema + partitioning + compression setup. mock_now pins the partition
 # boundary calculation to the dataset's epoch (the hits data is from 2013).
 sudo -u postgres psql -v ON_ERROR_STOP=1 -t test < create.sql
-sudo -u postgres psql -v ON_ERROR_STOP=1 -t test -c "SET pg_deltax.mock_now = '2013-07-01 12:00:00'; SELECT deltax_create_table('hits', 'eventtime', '3 days'::interval, 15)"
-sudo -u postgres psql -v ON_ERROR_STOP=1 -t test -c "SELECT deltax_enable_compression('hits', order_by => ARRAY['counterid', 'userid', 'eventtime'], segment_size => 30000)"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t test -c "SET pg_deltax.mock_now = '2013-07-01 12:00:00'; SELECT deltax.deltax_create_table('hits', 'eventtime', '3 days'::interval, 15)"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t test -c "SELECT deltax.deltax_enable_compression('hits', order_by => ARRAY['counterid', 'userid', 'eventtime'], segment_size => 30000)"
 
 # Direct backfill: load and compress in a single pass using FORMAT deltax_compress.
 sudo -u postgres psql -v ON_ERROR_STOP=1 test -c "COPY hits FROM '$PARQUET_DIR/hits_*.parquet' WITH (FORMAT deltax_compress)"
