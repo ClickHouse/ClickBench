@@ -530,6 +530,12 @@ const additional_data_size_points = [
         </td>
     </tr>
     <tr>
+        <th>Ram: </th>
+        <td id="selectors_ram">
+            <a id="select-all-ram" class="selector selector-active">All</a>
+        </td>
+    </tr>
+    <tr>
         <th>Cluster size: </th>
         <td id="selectors_cluster_size">
             <a id="select-all-cluster-sizes" class="selector selector-active">All</a>
@@ -605,6 +611,7 @@ let selectors = {
     "data_format": {},
     "partitioning": {},
     "machine": {},
+    "ram": {},
     "cluster_size": {},
     "opensource": {"yes": true, "no": true},
     "hardware": {"cpu": true, "gpu": false},
@@ -638,6 +645,7 @@ let tags = document.getElementById('selectors_tags');
 let data_formats = document.getElementById('selectors_data_format');
 let partitioning = document.getElementById('selectors_partitioning');
 let machines = document.getElementById('selectors_machine');
+let ram = document.getElementById('selectors_ram');
 let cluster_sizes = document.getElementById('selectors_cluster_size');
 
 const data_format_tags = new Set(['dataframe', 'feather', 'parquet', 'Velox', 'Vortex']);
@@ -663,7 +671,35 @@ function isClusterSizeAlias(machine) {
     return /^(?:\d+)?(?:XS|S|M|L|XL|XXL)$/.test(machine);
 }
 
+function splitMachineAndRam(machine) {
+    const cloud_match = machine.match(/^(ClickHouse ☁️):\s*(\d+GiB)$/);
+    if (cloud_match) {
+        return {machine: cloud_match[1], ram: cloud_match[2]};
+    }
+
+    const ram_match = machine.match(/^(\d+GiB)$/);
+    return {machine: ram_match ? null : machine, ram: ram_match ? ram_match[1] : null};
+}
+
+function displayMachine(elem) {
+    const cluster = Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×' : '';
+    return cluster + (elem.machine || elem.ram[0] || '');
+}
+
+const machine_aliases = {};
+const machine_to_ram_aliases = {};
+
 data.forEach(elem => {
+    const original_machine = elem.machine;
+    const machine_and_ram = splitMachineAndRam(original_machine);
+    elem.machine = machine_and_ram.machine;
+    elem.ram = machine_and_ram.ram ? [machine_and_ram.ram] : [];
+    machine_aliases[original_machine] = elem.machine;
+    if (elem.machine) {
+        machine_aliases[elem.machine] = elem.machine;
+    }
+    if (machine_and_ram.ram) machine_to_ram_aliases[original_machine] = machine_and_ram.ram;
+
     elem.database = normalizeDatabase(elem.system);
     elem.tags = uniqueValues([...(elem.tags || []), ...tagsFromDatabaseName(elem.system)]);
     elem.data_format = uniqueValues(elem.tags
@@ -789,7 +825,11 @@ function makeValueSelector(container, selectors_map, elem) {
     makeValueSelector(partitioning, selectors.partitioning, elem);
 });
 
-[... new Set(data.map(elem => elem.machine))].filter(elem => !isClusterSizeAlias(elem)).sort((a, b) => {
+[... new Set(data.map(elem => elem.ram).flat())].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'})).map(elem => {
+    makeValueSelector(ram, selectors.ram, elem);
+});
+
+[... new Set(data.map(elem => elem.machine))].filter(elem => elem && !isClusterSizeAlias(elem)).sort((a, b) => {
     const count_diff = data.filter(elem => elem.machine === b).length - data.filter(elem => elem.machine === a).length;
     return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
 }).map(elem => {
@@ -877,6 +917,7 @@ document.getElementById('select-all-tags').addEventListener('click', e => toggle
 document.getElementById('select-all-data-formats').addEventListener('click', e => toggleAll(e, selectors.data_format));
 document.getElementById('select-all-partitioning').addEventListener('click', e => toggleAll(e, selectors.partitioning));
 document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
+document.getElementById('select-all-ram').addEventListener('click', e => toggleAll(e, selectors.ram));
 document.getElementById('select-all-cluster-sizes').addEventListener('click', e => toggleAll(e, selectors.cluster_size));
 
 const metric_selectors = [...document.querySelectorAll('[id^="selector-metric-"]')];
@@ -898,6 +939,7 @@ function updateSelectors() {
     [...data_formats.childNodes].map(elem => { elem.className = selectors.data_format[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...partitioning.childNodes].map(elem => { elem.className = selectors.partitioning[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...machines.childNodes].map(elem => { elem.className = selectors.machine[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...ram.childNodes].map(elem => { elem.className = selectors.ram[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...cluster_sizes.childNodes].map(elem => { elem.className = selectors.cluster_size[elem.innerText] ? 'selector selector-active' : 'selector' });
 
     metric_selectors.map(elem => {
@@ -933,7 +975,8 @@ function applyTopRowFilters() {
     apply(databases, e => [e.database]);
     apply(data_formats, e => e.data_format || []);
     apply(partitioning, e => e.partitioning || []);
-    apply(machines, e => [e.machine]);
+    apply(machines, e => e.machine ? [e.machine] : []);
+    apply(ram, e => e.ram || []);
     apply(cluster_sizes, e => [e.cluster_size]);
 
     for (const elem of tags.childNodes) {
@@ -959,6 +1002,7 @@ function findPassiveSelectors(filtered_data) {
     process('data_format', data_formats);
     process('partitioning', partitioning);
     process('machine', machines);
+    process('ram', ram);
     process('cluster_size', cluster_sizes);
 }
 
@@ -1109,7 +1153,7 @@ function renderSummary(filtered_data) {
             td_name.appendChild(remove);
 
             let link = document.createElement('a');
-            link.appendChild(document.createTextNode(`${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+            link.appendChild(document.createTextNode(`${elem.system} (${displayMachine(elem)})`));
             link.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + elem.source;
             link.style.color = `oklch(var(--hashed-link-lightness) 0.2018 ${nameToColor(elem.system.split(' ')[0])})`
             td_name.appendChild(link);
@@ -1233,7 +1277,8 @@ function render() {
 
     let filtered_data = data.filter(elem =>
         selectors.database[elem.database] &&
-        (isClusterSizeAlias(elem.machine) || selectors.machine[elem.machine]) &&
+        (!elem.machine || isClusterSizeAlias(elem.machine) || selectors.machine[elem.machine]) &&
+        matchesSelector(elem.ram, selectors.ram) &&
         selectors.cluster_size[elem.cluster_size] &&
         matchesSelector(elem.tags, selectors.tags) &&
         matchesSelector(elem.data_format, selectors.data_format) &&
@@ -1293,7 +1338,7 @@ function render() {
     sorted_indices.map(idx => {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
-        th.appendChild(document.createTextNode(`${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+        th.appendChild(document.createTextNode(`${elem.system}\n(${displayMachine(elem)})`));
         th.className = 'th-entry';
         th.dataset.database = elem.database;
         th.addEventListener('mouseover', () => highlightDatabaseTags(elem.database));
@@ -1478,12 +1523,18 @@ function decodeState(state) {
             const keys = k === 'database'
                 ? Object.keys(database_aliases)
                 : k === 'machine'
-                    ? [...new Set(data.map(elem => elem.machine))]
+                    ? Object.keys(machine_aliases)
                     : Object.keys(selectors[k]);
             let filtered = v.substring(1, v.length).split('|').filter(s => s !== '')
                 .map(substr => {
-                    const matches = keys.filter(x => isSubsequence(x, decodeURIComponent(substr)));
+                    const decodedSubstr = decodeURIComponent(substr);
+                    if (keys.includes(decodedSubstr)) return decodedSubstr;
+                    const matches = keys.filter(x => isSubsequence(x, decodedSubstr));
                     if (matches.length == 0) return null;
+                    if (k === 'machine') {
+                        const machineMatch = matches.find(x => machine_to_ram_aliases[x]);
+                        if (machineMatch) return machineMatch;
+                    }
                     const match = matches.reduce((a, b) => a.length <= b.length ? a : b);
                     return k === 'database' ? database_aliases[match] : match;
                 })
@@ -1495,6 +1546,16 @@ function decodeState(state) {
                 if (v.startsWith('+') && filtered.length == 0 && aliasFiltered.length > 0) {
                     return;
                 }
+                const ramFiltered = filtered
+                    .map(x => machine_to_ram_aliases[x])
+                    .filter(x => x && Object.hasOwn(selectors.ram, x));
+                if (ramFiltered.length > 0 && !decoded.ram) {
+                    decoded.ram = {};
+                    Object.keys(selectors.ram).forEach(x => {
+                        decoded.ram[x] = v.startsWith('+') ? ramFiltered.includes(x) : !ramFiltered.includes(x);
+                    });
+                }
+                filtered = filtered.map(x => machine_aliases[x] || x);
             }
 
             if (v.startsWith('+')) {
@@ -1546,6 +1607,32 @@ function normalizeSelectorState(state) {
             }
         });
         normalizedState.database = normalizedDatabase;
+    }
+
+    if (normalizedState.machine) {
+        const normalizedMachine = {};
+        const normalizedRam = normalizedState.ram ? {...normalizedState.ram} : {...selectors.ram};
+        Object.keys(selectors.machine).forEach(machine => {
+            normalizedMachine[machine] = selectors.machine[machine];
+        });
+        Object.entries(normalizedState.machine).forEach(([machine, selected]) => {
+            const normalizedName = machine_aliases[machine] || machine;
+            if (Object.hasOwn(selectors.machine, normalizedName)) {
+                normalizedMachine[normalizedName] = selected;
+            }
+
+            const ramValue = machine_to_ram_aliases[machine];
+            if (ramValue && Object.hasOwn(selectors.ram, ramValue)) {
+                if (selected && !normalizedState.ram) {
+                    Object.keys(normalizedRam).forEach(value => {
+                        normalizedRam[value] = false;
+                    });
+                }
+                normalizedRam[ramValue] = selected;
+            }
+        });
+        normalizedState.machine = normalizedMachine;
+        normalizedState.ram = normalizedRam;
     }
 
     return {
