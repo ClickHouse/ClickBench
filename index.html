@@ -228,7 +228,7 @@
             font-weight: bold;
         }
 
-        .remove-system {
+        .remove-database {
             visibility: hidden;
             cursor: pointer;
             color: var(--link-color);
@@ -238,11 +238,11 @@
             padding-right: 1.5rem;
         }
 
-        .summary-row:hover .remove-system {
+        .summary-row:hover .remove-database {
             visibility: visible;
         }
 
-        .remove-system:hover {
+        .remove-database:hover {
             color: var(--link-hover-color);
         }
 
@@ -444,15 +444,15 @@ const additional_data_size_points = [
         </td>
     </tr>
     <tr>
-        <th>System: </th>
-        <td id="selectors_system">
-            <a id="select-all-systems" class="selector selector-active">All</a>
+        <th>Database: </th>
+        <td id="selectors_database">
+            <a id="select-all-databases" class="selector selector-active">All</a>
         </td>
     </tr>
     <tr>
-        <th>Type: </th>
-        <td id="selectors_type">
-            <a id="select-all-types" class="selector selector-active">All</a>
+        <th>Tags: </th>
+        <td id="selectors_tags">
+            <a id="select-all-tags" class="selector selector-active">All</a>
         </td>
     </tr>
     <tr>
@@ -483,7 +483,7 @@ const additional_data_size_points = [
     <thead>
         <tr>
             <th class="summary-name">
-                System &amp; Machine
+                Database &amp; Machine
             </th>
             <th colspan="2">
                 Relative <span id="time-or-size">time</span> (lower is better).<br/>
@@ -517,8 +517,8 @@ const missing_result_penalty = 2;
 const missing_result_time = 300;
 
 let selectors = {
-    "system": {},
-    "type": {},
+    "database": {},
+    "tags": {},
     "machine": {},
     "cluster_size": {},
     "opensource": {"yes": true, "no": true},
@@ -548,29 +548,29 @@ if (new_theme && new_theme != theme) {
 
 /// Generate selectors
 
-let systems = document.getElementById('selectors_system');
-let types = document.getElementById('selectors_type');
+let databases = document.getElementById('selectors_database');
+let tags = document.getElementById('selectors_tags');
 let machines = document.getElementById('selectors_machine');
 let cluster_sizes = document.getElementById('selectors_cluster_size');
 
-let unique_systems = [... new Set(data.map(elem => elem.system))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+let unique_databases = [... new Set(data.map(elem => elem.system))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
 
-const system_to_tags = {};
+const database_to_tags = {};
 data.forEach(d => {
-    if (!system_to_tags[d.system]) system_to_tags[d.system] = new Set();
-    (d.tags || []).forEach(t => system_to_tags[d.system].add(t));
+    if (!database_to_tags[d.system]) database_to_tags[d.system] = new Set();
+    (d.tags || []).forEach(t => database_to_tags[d.system].add(t));
 });
 
-function highlightSystemTags(systemName) {
-    const tags = system_to_tags[systemName] || new Set();
-    for (const elem of types.childNodes) {
+function highlightDatabaseTags(databaseName) {
+    const databaseTags = database_to_tags[databaseName] || new Set();
+    for (const elem of tags.childNodes) {
         if (elem.tagName !== 'A') continue;
-        if (tags.has(elem.innerText)) elem.classList.add('selector-tag-hilite');
+        if (databaseTags.has(elem.innerText)) elem.classList.add('selector-tag-hilite');
     }
 }
 
-function clearSystemTagsHighlight() {
-    for (const elem of types.childNodes) {
+function clearDatabaseTagsHighlight() {
+    for (const elem of tags.childNodes) {
         if (elem.tagName !== 'A') continue;
         elem.classList.remove('selector-tag-hilite');
     }
@@ -593,34 +593,34 @@ function toggleAll(e, selectors_map) {
     updateHistory();
 }
 
-unique_systems.map(elem => {
+unique_databases.map(elem => {
     let selector = document.createElement('a');
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
-    systems.appendChild(selector);
-    selectors.system[elem] = data.some(entry => entry.system == elem && !entry.hide);
-    selector.addEventListener('click', e => toggle(e, elem, selectors.system));
+    databases.appendChild(selector);
+    selectors.database[elem] = data.some(entry => entry.system == elem && !entry.hide);
+    selector.addEventListener('click', e => toggle(e, elem, selectors.database));
 
-    /// Highlighting summary rows and table columns on hovering over the system selector.
+    /// Highlighting summary rows and table columns on hovering over the database selector.
     selector.addEventListener('mouseover', e => {
         [...document.querySelectorAll('.summary-row')].map(row => {
             row.className = row.dataset.system == elem ? 'summary-row summary-row-hilite' : 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(th => {
             th.className = th.dataset.system == elem ? 'th-entry th-entry-hilite' : 'th-entry' });
-        highlightSystemTags(elem);
+        highlightDatabaseTags(elem);
     });
     selector.addEventListener('mouseout', e => {
         [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(row => { row.className = 'th-entry' });
-        clearSystemTagsHighlight();
+        clearDatabaseTagsHighlight();
     });
 });
 
-const tag_to_systems = {};
+const tag_to_databases = {};
 data.forEach(d => {
     (d.tags || []).forEach(t => {
-        if (!tag_to_systems[t]) tag_to_systems[t] = new Set();
-        tag_to_systems[t].add(d.system);
+        if (!tag_to_databases[t]) tag_to_databases[t] = new Set();
+        tag_to_databases[t].add(d.system);
     });
 });
 
@@ -628,13 +628,13 @@ data.forEach(d => {
     let selector = document.createElement('a');
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
-    types.appendChild(selector);
-    selectors.type[elem] = true;
-    selector.addEventListener('click', e => toggle(e, elem, selectors.type));
+    tags.appendChild(selector);
+    selectors.tags[elem] = true;
+    selector.addEventListener('click', e => toggle(e, elem, selectors.tags));
 
     /// Highlighting summary rows and detail columns on hovering over a tag.
     selector.addEventListener('mouseover', () => {
-        const tagged = tag_to_systems[elem] || new Set();
+        const tagged = tag_to_databases[elem] || new Set();
         [...document.querySelectorAll('.summary-row')].map(row => {
             row.className = tagged.has(row.dataset.system) ? 'summary-row summary-row-hilite' : 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(th => {
@@ -735,8 +735,8 @@ document.getElementById('selector-tuned-no').addEventListener('click', e => {
     updateHistory();
 });
 
-document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
-document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
+document.getElementById('select-all-databases').addEventListener('click', e => toggleAll(e, selectors.database));
+document.getElementById('select-all-tags').addEventListener('click', e => toggleAll(e, selectors.tags));
 document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
 document.getElementById('select-all-cluster-sizes').addEventListener('click', e => toggleAll(e, selectors.cluster_size));
 
@@ -753,8 +753,8 @@ document.getElementById('selector-metric-size').addEventListener('click', e => {
 selectors.queries = [...data[0].result.keys()].map(k => true);
 
 function updateSelectors() {
-    [...systems.childNodes].map(elem => { elem.className = selectors.system[elem.innerText] ? 'selector selector-active' : 'selector' });
-    [...types.childNodes].map(elem => { elem.className = selectors.type[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...databases.childNodes].map(elem => { elem.className = selectors.database[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...tags.childNodes].map(elem => { elem.className = selectors.tags[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...machines.childNodes].map(elem => { elem.className = selectors.machine[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...cluster_sizes.childNodes].map(elem => { elem.className = selectors.cluster_size[elem.innerText] ? 'selector selector-active' : 'selector' });
 
@@ -788,8 +788,8 @@ function applyTopRowFilters() {
         }
     }
 
-    apply(systems, e => [e.system]);
-    apply(types, e => e.tags || []);
+    apply(databases, e => [e.system]);
+    apply(tags, e => e.tags || []);
     apply(machines, e => [e.machine]);
     apply(cluster_sizes, e => [e.cluster_size]);
 }
@@ -807,8 +807,8 @@ function findPassiveSelectors(filtered_data) {
             }
         }
     }
-    process('system', systems);
-    process('tags', types);
+    process('system', databases);
+    process('tags', tags);
     process('machine', machines);
     process('cluster_size', cluster_sizes);
 }
@@ -934,22 +934,22 @@ function renderSummary(filtered_data) {
         tr.className = 'summary-row';
 
         tr.dataset.system = elem.system;
-        tr.addEventListener('mouseover', () => highlightSystemTags(elem.system));
-        tr.addEventListener('mouseout', clearSystemTagsHighlight);
+        tr.addEventListener('mouseover', () => highlightDatabaseTags(elem.system));
+        tr.addEventListener('mouseout', clearDatabaseTagsHighlight);
 
         let td_name = document.createElement('td');
         td_name.className = 'summary-name';
 
         if (!elem.fake) {
             let remove = document.createElement('span');
-            remove.className = 'remove-system';
+            remove.className = 'remove-database';
             remove.textContent = '✕';
-            remove.title = 'Remove this system from the selection';
+            remove.title = 'Remove this database from the selection';
             remove.addEventListener('click', e => {
                 e.preventDefault();
                 e.stopPropagation();
-                selectors.system[elem.system] = false;
-                for (const s of systems.childNodes) {
+                selectors.database[elem.system] = false;
+                for (const s of databases.childNodes) {
                     if (s.tagName === 'A' && s.innerText === elem.system) {
                         s.className = 'selector';
                     }
@@ -1077,10 +1077,10 @@ function render() {
     applyTopRowFilters();
 
     let filtered_data = data.filter(elem =>
-        selectors.system[elem.system] &&
+        selectors.database[elem.system] &&
         selectors.machine[elem.machine] &&
         selectors.cluster_size[elem.cluster_size] &&
-        elem.tags.filter(type => selectors.type[type]).length > 0 &&
+        elem.tags.filter(type => selectors.tags[type]).length > 0 &&
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
         ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu"))
@@ -1139,8 +1139,8 @@ function render() {
         th.appendChild(document.createTextNode(`${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
         th.className = 'th-entry';
         th.dataset.system = elem.system;
-        th.addEventListener('mouseover', () => highlightSystemTags(elem.system));
-        th.addEventListener('mouseout', clearSystemTagsHighlight);
+        th.addEventListener('mouseover', () => highlightDatabaseTags(elem.system));
+        th.addEventListener('mouseout', clearDatabaseTagsHighlight);
         details_head.appendChild(th);
     });
 
@@ -1307,6 +1307,11 @@ function decodeState(state) {
     let decoded = {};
     state.split('&').forEach(kv => {
         let [k, v] = kv.split('=');
+        if (k === 'system') {
+            k = 'database';
+        } else if (k === 'type') {
+            k = 'tags';
+        }
 
         if (typeof selectors[k] === 'string') {
             decoded[k] = v;
@@ -1337,32 +1342,34 @@ function updateHistory() {
 
 window.onpopstate = function(event) {
     if (!event.state) { return; }
-    selectors = event.state;
-    if (!selectors.opensource) {
-        selectors.opensource = {"yes": true, "no": false};
-    }
-    if (!selectors.hardware) {
-        selectors.hardware = {"cpu": true, "gpu": false};
-    }
-    if (!selectors.tuned) {
-        selectors.tuned = {"no": true, "yes": false};
-    }
+    selectors = normalizeSelectorState(event.state);
     updateSelectors();
     render();
 };
 
+function normalizeSelectorState(state) {
+    const normalizedState = {...state};
+    if (normalizedState.system && !normalizedState.database) {
+        normalizedState.database = normalizedState.system;
+    }
+    if (normalizedState.type && !normalizedState.tags) {
+        normalizedState.tags = normalizedState.type;
+    }
+    delete normalizedState.system;
+    delete normalizedState.type;
+
+    return {
+        ...selectors,
+        ...normalizedState,
+        opensource: normalizedState.opensource || selectors.opensource || {"yes": true, "no": false},
+        hardware: normalizedState.hardware || selectors.hardware || {"cpu": true, "gpu": false},
+        tuned: normalizedState.tuned || selectors.tuned || {"no": true, "yes": false},
+    };
+}
+
 if (window.location.hash) {
     try {
-        selectors = decodeState(decodeURIComponent(window.location.hash.substring(1)));
-        if (!selectors.opensource) {
-            selectors.opensource = {"yes": true, "no": false};
-        }
-        if (!selectors.hardware) {
-            selectors.hardware = {"cpu": true, "gpu": false};
-        }
-        if (!selectors.tuned) {
-            selectors.tuned = {"no": true, "yes": false};
-        }
+        selectors = normalizeSelectorState(decodeState(decodeURIComponent(window.location.hash.substring(1))));
     } catch {}
 }
 
