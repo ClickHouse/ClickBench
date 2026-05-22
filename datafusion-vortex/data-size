@@ -1,5 +1,4 @@
 #!/bin/bash
 set -e
 
-# Sum the byte counts of all generated .vortex files.
-find . -name '*.vortex' -printf '%s\n' | awk '{s+=$1} END {print s+0}'
+find vortex -name '*.vortex' -printf '%s\n' | awk '{s+=$1} END {print s+0}'
