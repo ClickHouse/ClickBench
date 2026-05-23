@@ -705,6 +705,7 @@ data.forEach(elem => {
     elem.data_format = uniqueValues(elem.tags
         .map(tag => data_format_tag_aliases[tag] || tag)
         .filter(tag => data_format_tags.has(tag)));
+    if (elem.data_format.length == 0) elem.data_format = ['native'];
     elem.partitioning = elem.tags.filter(tag => partitioning_tags.has(tag));
     if (elem.partitioning.length == 0) elem.partitioning = ['native'];
     elem.tags = elem.tags.filter(tag => !data_format_tags.has(data_format_tag_aliases[tag] || tag) && !partitioning_tags.has(tag));
@@ -817,7 +818,7 @@ function makeValueSelector(container, selectors_map, elem) {
     makeValueSelector(tags, selectors.tags, elem);
 });
 
-[... new Set(data.map(elem => elem.data_format).flat())].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())).map(elem => {
+['native', ...[... new Set(data.map(elem => elem.data_format).flat())].filter(elem => elem != 'native').sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))].map(elem => {
     makeValueSelector(data_formats, selectors.data_format, elem);
 });
 
