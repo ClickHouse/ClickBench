@@ -1,43 +1,43 @@
-SELECT COUNT(*) FROM hits;
-SELECT COUNT(*) FROM hits WHERE AdvEngineID <> 0;
-SELECT SUM(AdvEngineID), COUNT(*), AVG(ResolutionWidth) FROM hits;
-SELECT AVG(UserID) FROM hits;
-SELECT COUNT(DISTINCT UserID) FROM hits;
-SELECT COUNT(DISTINCT SearchPhrase) FROM hits;
-SELECT MIN(EventDate), MAX(EventDate) FROM hits;
-SELECT AdvEngineID, COUNT(*) FROM hits WHERE AdvEngineID <> 0 GROUP BY AdvEngineID ORDER BY COUNT(*) DESC;
-SELECT RegionID, COUNT(DISTINCT UserID) AS u FROM hits GROUP BY RegionID ORDER BY u DESC LIMIT 10;
-SELECT RegionID, SUM(AdvEngineID), COUNT(*) AS c, AVG(ResolutionWidth), COUNT(DISTINCT UserID) FROM hits GROUP BY RegionID ORDER BY c DESC LIMIT 10;
-SELECT MobilePhoneModel, COUNT(DISTINCT UserID) AS u FROM hits WHERE MobilePhoneModel <> '' GROUP BY MobilePhoneModel ORDER BY u DESC LIMIT 10;
-SELECT MobilePhone, MobilePhoneModel, COUNT(DISTINCT UserID) AS u FROM hits WHERE MobilePhoneModel <> '' GROUP BY MobilePhone, MobilePhoneModel ORDER BY u DESC LIMIT 10;
-SELECT SearchPhrase, COUNT(*) AS c FROM hits WHERE SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;
-SELECT SearchPhrase, COUNT(DISTINCT UserID) AS u FROM hits WHERE SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY u DESC LIMIT 10;
-SELECT SearchEngineID, SearchPhrase, COUNT(*) AS c FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, SearchPhrase ORDER BY c DESC LIMIT 10;
-SELECT UserID, COUNT(*) FROM hits GROUP BY UserID ORDER BY COUNT(*) DESC LIMIT 10;
-SELECT UserID, SearchPhrase, COUNT(*) FROM hits GROUP BY UserID, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
-SELECT UserID, SearchPhrase, COUNT(*) FROM hits GROUP BY UserID, SearchPhrase LIMIT 10;
-SELECT UserID, extract(minute FROM EventTime) AS m, SearchPhrase, COUNT(*) FROM hits GROUP BY UserID, m, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
-SELECT UserID FROM hits WHERE UserID = 435090932899640449;
-SELECT COUNT(*) FROM hits WHERE URL LIKE '%google%';
-SELECT SearchPhrase, MIN(URL), COUNT(*) AS c FROM hits WHERE URL LIKE '%google%' AND SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;
-SELECT SearchPhrase, MIN(URL), MIN(Title), COUNT(*) AS c, COUNT(DISTINCT UserID) FROM hits WHERE Title LIKE '%Google%' AND URL NOT LIKE '%.google.%' AND SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;
-SELECT * FROM hits WHERE URL LIKE '%google%' ORDER BY EventTime LIMIT 10;
-SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY EventTime LIMIT 10;
-SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY SearchPhrase LIMIT 10;
-SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY EventTime, SearchPhrase LIMIT 10;
-SELECT CounterID, AVG(STRLEN(URL)) AS l, COUNT(*) AS c FROM hits WHERE URL <> '' GROUP BY CounterID HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;
-SELECT REGEXP_REPLACE(Referer, '^https?://(?:www\.)?([^/]+)/.*$', '\1') AS k, AVG(STRLEN(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;
-SELECT SUM(ResolutionWidth), SUM(ResolutionWidth + 1), SUM(ResolutionWidth + 2), SUM(ResolutionWidth + 3), SUM(ResolutionWidth + 4), SUM(ResolutionWidth + 5), SUM(ResolutionWidth + 6), SUM(ResolutionWidth + 7), SUM(ResolutionWidth + 8), SUM(ResolutionWidth + 9), SUM(ResolutionWidth + 10), SUM(ResolutionWidth + 11), SUM(ResolutionWidth + 12), SUM(ResolutionWidth + 13), SUM(ResolutionWidth + 14), SUM(ResolutionWidth + 15), SUM(ResolutionWidth + 16), SUM(ResolutionWidth + 17), SUM(ResolutionWidth + 18), SUM(ResolutionWidth + 19), SUM(ResolutionWidth + 20), SUM(ResolutionWidth + 21), SUM(ResolutionWidth + 22), SUM(ResolutionWidth + 23), SUM(ResolutionWidth + 24), SUM(ResolutionWidth + 25), SUM(ResolutionWidth + 26), SUM(ResolutionWidth + 27), SUM(ResolutionWidth + 28), SUM(ResolutionWidth + 29), SUM(ResolutionWidth + 30), SUM(ResolutionWidth + 31), SUM(ResolutionWidth + 32), SUM(ResolutionWidth + 33), SUM(ResolutionWidth + 34), SUM(ResolutionWidth + 35), SUM(ResolutionWidth + 36), SUM(ResolutionWidth + 37), SUM(ResolutionWidth + 38), SUM(ResolutionWidth + 39), SUM(ResolutionWidth + 40), SUM(ResolutionWidth + 41), SUM(ResolutionWidth + 42), SUM(ResolutionWidth + 43), SUM(ResolutionWidth + 44), SUM(ResolutionWidth + 45), SUM(ResolutionWidth + 46), SUM(ResolutionWidth + 47), SUM(ResolutionWidth + 48), SUM(ResolutionWidth + 49), SUM(ResolutionWidth + 50), SUM(ResolutionWidth + 51), SUM(ResolutionWidth + 52), SUM(ResolutionWidth + 53), SUM(ResolutionWidth + 54), SUM(ResolutionWidth + 55), SUM(ResolutionWidth + 56), SUM(ResolutionWidth + 57), SUM(ResolutionWidth + 58), SUM(ResolutionWidth + 59), SUM(ResolutionWidth + 60), SUM(ResolutionWidth + 61), SUM(ResolutionWidth + 62), SUM(ResolutionWidth + 63), SUM(ResolutionWidth + 64), SUM(ResolutionWidth + 65), SUM(ResolutionWidth + 66), SUM(ResolutionWidth + 67), SUM(ResolutionWidth + 68), SUM(ResolutionWidth + 69), SUM(ResolutionWidth + 70), SUM(ResolutionWidth + 71), SUM(ResolutionWidth + 72), SUM(ResolutionWidth + 73), SUM(ResolutionWidth + 74), SUM(ResolutionWidth + 75), SUM(ResolutionWidth + 76), SUM(ResolutionWidth + 77), SUM(ResolutionWidth + 78), SUM(ResolutionWidth + 79), SUM(ResolutionWidth + 80), SUM(ResolutionWidth + 81), SUM(ResolutionWidth + 82), SUM(ResolutionWidth + 83), SUM(ResolutionWidth + 84), SUM(ResolutionWidth + 85), SUM(ResolutionWidth + 86), SUM(ResolutionWidth + 87), SUM(ResolutionWidth + 88), SUM(ResolutionWidth + 89) FROM hits;
-SELECT SearchEngineID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, ClientIP ORDER BY c DESC LIMIT 10;
-SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits WHERE SearchPhrase <> '' GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;
-SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh), AVG(ResolutionWidth) FROM hits GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10;
-SELECT URL, COUNT(*) AS c FROM hits GROUP BY URL ORDER BY c DESC LIMIT 10;
-SELECT 1, URL, COUNT(*) AS c FROM hits GROUP BY 1, URL ORDER BY c DESC LIMIT 10;
-SELECT ClientIP, ClientIP - 1, ClientIP - 2, ClientIP - 3, COUNT(*) AS c FROM hits GROUP BY ClientIP, ClientIP - 1, ClientIP - 2, ClientIP - 3 ORDER BY c DESC LIMIT 10;
-SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND URL <> '' GROUP BY URL ORDER BY PageViews DESC LIMIT 10;
-SELECT Title, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND Title <> '' GROUP BY Title ORDER BY PageViews DESC LIMIT 10;
-SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND IsLink <> 0 AND IsDownload = 0 GROUP BY URL ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;
-SELECT TraficSourceID, SearchEngineID, AdvEngineID, CASE WHEN (SearchEngineID = 0 AND AdvEngineID = 0) THEN Referer ELSE '' END AS Src, URL AS Dst, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 GROUP BY TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;
-SELECT URLHash, EventDate, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND TraficSourceID IN (-1, 6) AND RefererHash = 3594120000172545465 GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 10 OFFSET 100;
-SELECT WindowClientWidth, WindowClientHeight, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND DontCountHits = 0 AND URLHash = 2868770270353813622 GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10 OFFSET 10000;
-SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;
+util.NumRows@
++´0≠util.LoadF"AdvEngineID"
+{𝕤⋄a←util.LoadF"AdvEngineID"⋄w←util.LoadF"ResolutionWidth"⋄⟨+´a,≠a,(+´w)÷≠w⟩}@
+{𝕤⋄u←util.LoadF"UserID"⋄(+´u)÷≠u}@
+≠⍷util.LoadF"UserID"
+≠⍷util.LoadS"SearchPhrase"
+{𝕤⋄e←util.LoadF"EventDate"⋄⟨⌊´e,⌈´e⟩}@
+{𝕤⋄a←util.LoadF"AdvEngineID"⋄k←(0≠a)/a⋄⟨ks,cs⟩←(≠⊣)util._groupBy k⋄o←⍒cs⋄⟨o⊏ks,o⊏cs⟩}@
+{𝕤⋄r←util.LoadF"RegionID"⋄u←util.LoadF"UserID"⋄⟨ks,ds⟩←{≠⍷u⊏˜𝕩}util._groupBy r⋄t←util.TopN 10‿ds⋄⟨t⊏ks,t⊏ds⟩}@
+{𝕤⋄r←util.LoadF"RegionID"⋄a←util.LoadF"AdvEngineID"⋄w←util.LoadF"ResolutionWidth"⋄u←util.LoadF"UserID"⋄⟨ks,vs⟩←{i←𝕩⋄⟨+´a⊏˜i,≠i,(+´w⊏˜i)÷≠i,≠⍷u⊏˜i⟩}util._groupBy r⋄c←1⊑¨vs⋄t←util.TopN 10‿c⋄⟨t⊏ks,t⊏vs⟩}@
+{𝕤⋄m←util.LoadS"MobilePhoneModel"⋄u←util.LoadF"UserID"⋄mk←0<≠¨m⋄k←mk/m⋄u2←mk/u⋄⟨ks,ds⟩←{≠⍷u2⊏˜𝕩}util._groupBy k⋄t←util.TopN 10‿ds⋄⟨t⊏ks,t⊏ds⟩}@
+{𝕤⋄p←util.LoadF"MobilePhone"⋄m←util.LoadS"MobilePhoneModel"⋄u←util.LoadF"UserID"⋄mk←0<≠¨m⋄k←(mk/p)util.Pair(mk/m)⋄u2←mk/u⋄⟨ks,ds⟩←{≠⍷u2⊏˜𝕩}util._groupBy k⋄t←util.TopN 10‿ds⋄⟨t⊏ks,t⊏ds⟩}@
+{𝕤⋄s←util.LoadS"SearchPhrase"⋄k←(0<≠¨s)/s⋄⟨ks,cs⟩←(≠⊣)util._groupBy k⋄t←util.TopN 10‿cs⋄⟨t⊏ks,t⊏cs⟩}@
+{𝕤⋄s←util.LoadS"SearchPhrase"⋄u←util.LoadF"UserID"⋄mk←0<≠¨s⋄k←mk/s⋄u2←mk/u⋄⟨ks,ds⟩←{≠⍷u2⊏˜𝕩}util._groupBy k⋄t←util.TopN 10‿ds⋄⟨t⊏ks,t⊏ds⟩}@
+{𝕤⋄se←util.LoadF"SearchEngineID"⋄s←util.LoadS"SearchPhrase"⋄mk←0<≠¨s⋄k←(mk/se)util.Pair(mk/s)⋄⟨ks,cs⟩←(≠⊣)util._groupBy k⋄t←util.TopN 10‿cs⋄⟨t⊏ks,t⊏cs⟩}@
+{𝕤⋄u←util.LoadF"UserID"⋄⟨ks,cs⟩←(≠⊣)util._groupBy u⋄t←util.TopN 10‿cs⋄⟨t⊏ks,t⊏cs⟩}@
+{𝕤⋄u←util.LoadF"UserID"⋄s←util.LoadS"SearchPhrase"⋄⟨ks,cs⟩←(≠⊣)util._groupBy u util.Pair s⋄t←util.TopN 10‿cs⋄⟨t⊏ks,t⊏cs⟩}@
+{𝕤⋄u←util.LoadF"UserID"⋄s←util.LoadS"SearchPhrase"⋄⟨ks,cs⟩←(≠⊣)util._groupBy u util.Pair s⋄t←(10⌊≠ks)↑↕≠ks⋄⟨t⊏ks,t⊏cs⟩}@
+{𝕤⋄u←util.LoadF"UserID"⋄e←util.LoadF"EventTime"⋄s←util.LoadS"SearchPhrase"⋄mn←60|⌊e÷60⋄k←u util.Pair mn util.Pair s⋄⟨ks,cs⟩←(≠⊣)util._groupBy k⋄t←util.TopN 10‿cs⋄⟨t⊏ks,t⊏cs⟩}@
+{𝕤⋄u←util.LoadF"UserID"⋄≠(435090932899640449=u)/u}@
++´"google"util.ContainsAny util.LoadS"URL"
+{𝕤⋄u←util.LoadS"URL"⋄s←util.LoadS"SearchPhrase"⋄mk←("google"util.ContainsAny u)∧0<≠¨s⋄u2←mk/u⋄s2←mk/s⋄⟨ks,vs⟩←{i←𝕩⋄⟨util.LexMin u2⊏˜i,≠i⟩}util._groupBy s2⋄c←1⊑¨vs⋄t←util.TopN 10‿c⋄⟨t⊏ks,t⊏vs⟩}@
+{𝕤⋄u←util.LoadS"URL"⋄ti←util.LoadS"Title"⋄s←util.LoadS"SearchPhrase"⋄id←util.LoadF"UserID"⋄mk←("Google"util.ContainsAny ti)∧(¬".google."util.ContainsAny u)∧0<≠¨s⋄u2←mk/u⋄t2←mk/ti⋄s2←mk/s⋄i2←mk/id⋄⟨ks,vs⟩←{i←𝕩⋄⟨util.LexMin u2⊏˜i,util.LexMin t2⊏˜i,≠i,≠⍷i2⊏˜i⟩}util._groupBy s2⋄c←2⊑¨vs⋄t←util.TopN 10‿c⋄⟨t⊏ks,t⊏vs⟩}@
+{𝕤⋄u←util.LoadS"URL"⋄e←util.LoadF"EventTime"⋄mk←"google"util.ContainsAny u⋄10↑⍋mk/e}@
+{𝕤⋄s←util.LoadS"SearchPhrase"⋄e←util.LoadF"EventTime"⋄mk←0<≠¨s⋄(10↑⍋mk/e)⊏mk/s}@
+{𝕤⋄s←util.LoadS"SearchPhrase"⋄s2←(0<≠¨s)/s⋄(10↑⍋s2)⊏s2}@
+{𝕤⋄s←util.LoadS"SearchPhrase"⋄e←util.LoadF"EventTime"⋄mk←0<≠¨s⋄(10↑⍋mk/e)⊏mk/s}@
+{𝕤⋄c←util.LoadF"CounterID"⋄u←util.LoadS"URL"⋄l←≠¨u⋄mk←0<l⋄c2←mk/c⋄l2←mk/l⋄⟨ks,vs⟩←{i←𝕩⋄⟨(+´l2⊏˜i)÷≠i,≠i⟩}util._groupBy c2⋄cs←1⊑¨vs⋄ls←0⊑¨vs⋄kp←cs>100000⋄k2←kp/ks⋄l3←kp/ls⋄c3←kp/cs⋄t←util.TopN 25‿l3⋄⟨t⊏k2,t⊏l3,t⊏c3⟩}@
+{𝕤⋄ref←util.LoadS"Referer"⋄mk←0<≠¨ref⋄r2←mk/ref⋄SP←{pre𝕊s:(((≠pre)≤≠s)∧pre≡(≠pre)↑s)◶⟨s,(≠pre)↓s⟩@}⋄H←{s←"http://"SP𝕩⋄s↩"https://"SP s⋄s↩"www."SP s⋄(⊑s⊐'/')↑s}⋄k←H¨r2⋄l←≠¨r2⋄⟨ks,vs⟩←{i←𝕩⋄⟨(+´l⊏˜i)÷≠i,≠i,util.LexMin r2⊏˜i⟩}util._groupBy k⋄cs←1⊑¨vs⋄kp←cs>100000⋄k2←kp/ks⋄v2←kp/vs⋄l2←0⊑¨v2⋄t←util.TopN 25‿l2⋄⟨t⊏k2,t⊏v2⟩}@
+{𝕤⋄w←util.LoadF"ResolutionWidth"⋄(+´w)+(≠w)×↕90}@
+{𝕤⋄se←util.LoadF"SearchEngineID"⋄ci←util.LoadF"ClientIP"⋄s←util.LoadS"SearchPhrase"⋄ir←util.LoadF"IsRefresh"⋄w←util.LoadF"ResolutionWidth"⋄mk←0<≠¨s⋄k←(mk/se)util.Pair(mk/ci)⋄i2←mk/ir⋄w2←mk/w⋄⟨ks,vs⟩←{i←𝕩⋄⟨≠i,+´i2⊏˜i,(+´w2⊏˜i)÷≠i⟩}util._groupBy k⋄cs←0⊑¨vs⋄t←util.TopN 10‿cs⋄⟨t⊏ks,t⊏vs⟩}@
+{𝕤⋄wi←util.LoadF"WatchID"⋄ci←util.LoadF"ClientIP"⋄s←util.LoadS"SearchPhrase"⋄ir←util.LoadF"IsRefresh"⋄w←util.LoadF"ResolutionWidth"⋄mk←0<≠¨s⋄k←(mk/wi)util.Pair(mk/ci)⋄i2←mk/ir⋄w2←mk/w⋄⟨ks,vs⟩←{i←𝕩⋄⟨≠i,+´i2⊏˜i,(+´w2⊏˜i)÷≠i⟩}util._groupBy k⋄cs←0⊑¨vs⋄t←util.TopN 10‿cs⋄⟨t⊏ks,t⊏vs⟩}@
+{𝕤⋄wi←util.LoadF"WatchID"⋄ci←util.LoadF"ClientIP"⋄ir←util.LoadF"IsRefresh"⋄w←util.LoadF"ResolutionWidth"⋄k←wi util.Pair ci⋄⟨ks,vs⟩←{i←𝕩⋄⟨≠i,+´ir⊏˜i,(+´w⊏˜i)÷≠i⟩}util._groupBy k⋄cs←0⊑¨vs⋄t←util.TopN 10‿cs⋄⟨t⊏ks,t⊏vs⟩}@
+{𝕤⋄u←util.LoadS"URL"⋄⟨ks,cs⟩←(≠⊣)util._groupBy u⋄t←util.TopN 10‿cs⋄⟨t⊏ks,t⊏cs⟩}@
+{𝕤⋄u←util.LoadS"URL"⋄⟨ks,cs⟩←(≠⊣)util._groupBy u⋄t←util.TopN 10‿cs⋄⟨(≠t)⥊1,t⊏ks,t⊏cs⟩}@
+{𝕤⋄ci←util.LoadF"ClientIP"⋄⟨ks,cs⟩←(≠⊣)util._groupBy ci⋄t←util.TopN 10‿cs⋄k←t⊏ks⋄⟨k,k-1,k-2,k-3,t⊏cs⟩}@
+{𝕤⋄ci←util.LoadF"CounterID"⋄ed←util.LoadF"EventDate"⋄dh←util.LoadF"DontCountHits"⋄ir←util.LoadF"IsRefresh"⋄u←util.LoadS"URL"⋄mk←(62=ci)∧(ed≥15887)∧(ed≤15917)∧(0=dh)∧(0=ir)∧0<≠¨u⋄u2←mk/u⋄⟨ks,cs⟩←(≠⊣)util._groupBy u2⋄t←util.TopN 10‿cs⋄⟨t⊏ks,t⊏cs⟩}@
+{𝕤⋄ci←util.LoadF"CounterID"⋄ed←util.LoadF"EventDate"⋄dh←util.LoadF"DontCountHits"⋄ir←util.LoadF"IsRefresh"⋄ti←util.LoadS"Title"⋄mk←(62=ci)∧(ed≥15887)∧(ed≤15917)∧(0=dh)∧(0=ir)∧0<≠¨ti⋄t2←mk/ti⋄⟨ks,cs⟩←(≠⊣)util._groupBy t2⋄t←util.TopN 10‿cs⋄⟨t⊏ks,t⊏cs⟩}@
+{𝕤⋄ci←util.LoadF"CounterID"⋄ed←util.LoadF"EventDate"⋄ir←util.LoadF"IsRefresh"⋄il←util.LoadF"IsLink"⋄id←util.LoadF"IsDownload"⋄u←util.LoadS"URL"⋄mk←(62=ci)∧(ed≥15887)∧(ed≤15917)∧(0=ir)∧(0≠il)∧(0=id)⋄u2←mk/u⋄⟨ks,cs⟩←(≠⊣)util._groupBy u2⋄o←⍒cs⋄sl←(10⌊0⌈(≠o)-1000)↑1000↓o⋄⟨sl⊏ks,sl⊏cs⟩}@
+{𝕤⋄ci←util.LoadF"CounterID"⋄ed←util.LoadF"EventDate"⋄ir←util.LoadF"IsRefresh"⋄ts←util.LoadF"TraficSourceID"⋄se←util.LoadF"SearchEngineID"⋄ae←util.LoadF"AdvEngineID"⋄re←util.LoadS"Referer"⋄u←util.LoadS"URL"⋄mk←(62=ci)∧(ed≥15887)∧(ed≤15917)∧(0=ir)⋄t2←mk/ts⋄s2←mk/se⋄a2←mk/ae⋄r2←mk/re⋄u2←mk/u⋄src←((0=s2)∧0=a2){𝕨?𝕩;""}¨r2⋄k←t2 util.Pair s2 util.Pair a2 util.Pair src util.Pair u2⋄⟨ks,cs⟩←(≠⊣)util._groupBy k⋄o←⍒cs⋄sl←(10⌊0⌈(≠o)-1000)↑1000↓o⋄⟨sl⊏ks,sl⊏cs⟩}@
+{𝕤⋄ci←util.LoadF"CounterID"⋄ed←util.LoadF"EventDate"⋄ir←util.LoadF"IsRefresh"⋄ts←util.LoadF"TraficSourceID"⋄rh←util.LoadF"RefererHash"⋄uh←util.LoadF"URLHash"⋄mk←(62=ci)∧(ed≥15887)∧(ed≤15917)∧(0=ir)∧((ts=¯1)∨(ts=6))∧rh=3594120000172545465⋄k←(mk/uh)util.Pair(mk/ed)⋄⟨ks,cs⟩←(≠⊣)util._groupBy k⋄o←⍒cs⋄sl←(10⌊0⌈(≠o)-100)↑100↓o⋄⟨sl⊏ks,sl⊏cs⟩}@
+{𝕤⋄ci←util.LoadF"CounterID"⋄ed←util.LoadF"EventDate"⋄ir←util.LoadF"IsRefresh"⋄dh←util.LoadF"DontCountHits"⋄uh←util.LoadF"URLHash"⋄ww←util.LoadF"WindowClientWidth"⋄wh←util.LoadF"WindowClientHeight"⋄mk←(62=ci)∧(ed≥15887)∧(ed≤15917)∧(0=ir)∧(0=dh)∧uh=2868770270353813622⋄k←(mk/ww)util.Pair(mk/wh)⋄⟨ks,cs⟩←(≠⊣)util._groupBy k⋄o←⍒cs⋄sl←(10⌊0⌈(≠o)-10000)↑10000↓o⋄⟨sl⊏ks,sl⊏cs⟩}@
+{𝕤⋄ci←util.LoadF"CounterID"⋄ed←util.LoadF"EventDate"⋄ir←util.LoadF"IsRefresh"⋄dh←util.LoadF"DontCountHits"⋄et←util.LoadF"EventTime"⋄mk←(62=ci)∧(ed≥15900)∧(ed≤15901)∧(0=ir)∧(0=dh)⋄m←60×⌊(mk/et)÷60⋄⟨ks,cs⟩←(≠⊣)util._groupBy m⋄o←⍋ks⋄sl←(10⌊0⌈(≠o)-1000)↑1000↓o⋄⟨sl⊏ks,sl⊏cs⟩}@
