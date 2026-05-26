@@ -15,6 +15,7 @@ import sys
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
 SRC = sys.argv[1] if len(sys.argv) > 1 else "hits.parquet"
@@ -54,28 +55,31 @@ for rg in range(pf.num_row_groups):
             np_arr = arr.to_numpy(zero_copy_only=False).astype("<f8", copy=False)
             fhs_f64[col].write(np_arr.tobytes())
         else:
-            # arr is a chunked array of (large_)string. Iterate chunks,
-            # build a single concatenated bytes buffer + a vector of
-            # absolute byte offsets, write both in one shot per chunk.
-            # Cast to a plain (large_)string array so the buffer layout is
-            # the well-known 3-buffer form regardless of whether the
-            # parquet reader handed us a string, large_string,
-            # string_view, dictionary-encoded variant, etc. The cast is
-            # zero-copy when the chunk is already in the target layout
-            # and copies otherwise.
-            base = str_offsets[col]
-            arr2 = arr.cast(pa.large_string())
-            for chunk in arr2.chunks:
-                buf = chunk.buffers()
-                raw_offs = np.frombuffer(buf[1], dtype="<i8")
-                raw_bytes = buf[2].to_pybytes() if buf[2] is not None else b""
+            # Don't poke at chunk.buffers() directly — the buffer layout
+            # depends on whether the parquet reader returned a string,
+            # large_string, string_view, dictionary-encoded variant, or
+            # something else, and the pip-installed pyarrow on the
+            # benchmark VMs has been observed to return a chunked array
+            # whose nominal type is large_string but whose offsets
+            # buffer is still i32, producing garbage when read as i64.
+            #
+            # Public-API path: get per-string byte lengths via
+            # `binary_length` (works on any binary/string variant), then
+            # prefix-sum into absolute byte offsets and pull the
+            # concatenated bytes out of a null-filled contiguous array.
+            # Nulls become zero-length strings.
+            arr2 = pc.fill_null(arr.combine_chunks(),
+                                pa.scalar("", type=arr.type))
+            lens = pc.binary_length(arr2).to_numpy().astype("<f8", copy=False)
+            offs = np.empty(len(arr2), dtype="<f8")
+            np.cumsum(lens, dtype="<f8", out=offs)
+            offs += str_offsets[col]
+            fhs_off[col].write(offs.tobytes())
+            value_buf = arr2.buffers()[2]
+            if value_buf is not None:
+                raw_bytes = value_buf.to_pybytes()
                 fhs_str[col].write(raw_bytes)
-                # Drop the first offset (running base in this chunk's
-                # frame) and shift the rest by the absolute base.
-                shifted = (raw_offs[1:].astype("<f8") - raw_offs[0]) + base
-                fhs_off[col].write(shifted.tobytes())
-                base += len(raw_bytes)
-            str_offsets[col] = base
+                str_offsets[col] += len(raw_bytes)
     if rg % 25 == 0 or rg == pf.num_row_groups - 1:
         print(f"  rg {rg} done", flush=True)
 
