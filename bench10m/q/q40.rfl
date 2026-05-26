@@ -1,0 +1,1 @@
+(take (select {PageViews: (count URLHash) from: hits where: (and (== CounterID 62) (>= EventDate 2013.07.01) (<= EventDate 2013.07.31) (== IsRefresh 0) (in TraficSourceID [-1 6]) (== RefererHash 3594120000172545465)) by: {URLHash: URLHash EventDate: EventDate} desc: PageViews take: 110}) [100 10])

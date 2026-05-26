@@ -1,0 +1,1 @@
+(table [a b c] (list (list (sum (at hits 'AdvEngineID))) (list (count hits)) (list (avg (at hits 'ResolutionWidth)))))

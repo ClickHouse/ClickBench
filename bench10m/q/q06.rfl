@@ -1,0 +1,1 @@
+(table [a b] (list (list (min (at hits 'EventDate))) (list (max (at hits 'EventDate)))))

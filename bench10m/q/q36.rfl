@@ -1,0 +1,1 @@
+(select {URL: URL PageViews: (count URL) from: hits where: (and (== CounterID 62) (>= EventDate 2013.07.01) (<= EventDate 2013.07.31) (== DontCountHits 0) (== IsRefresh 0) (!= URL "")) by: URL desc: PageViews take: 10})

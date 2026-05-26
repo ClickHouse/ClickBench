@@ -1,0 +1,1 @@
+(take (select {PageViews: (count URL) from: hits where: (and (== CounterID 62) (>= EventDate 2013.07.01) (<= EventDate 2013.07.31) (== IsRefresh 0)) by: {TraficSourceID: TraficSourceID SearchEngineID: SearchEngineID AdvEngineID: AdvEngineID Src: (if (and (== SearchEngineID 0) (== AdvEngineID 0)) Referer "") Dst: URL} desc: PageViews take: 1010}) [1000 10])

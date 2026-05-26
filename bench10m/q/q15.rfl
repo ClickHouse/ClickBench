@@ -1,0 +1,1 @@
+(select {UserID: UserID c: (count UserID) from: hits by: UserID desc: c take: 10})

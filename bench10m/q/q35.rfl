@@ -1,0 +1,1 @@
+(select {c: (count ClientIP) from: hits by: {ClientIP: ClientIP c1: (- ClientIP 1) c2: (- ClientIP 2) c3: (- ClientIP 3)} desc: c take: 10})

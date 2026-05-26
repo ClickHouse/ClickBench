@@ -1,0 +1,1 @@
+(select {u: (count UserID) from: (select {from: hits where: (!= MobilePhoneModel "") by: {MobilePhone: MobilePhone MobilePhoneModel: MobilePhoneModel UserID: UserID}}) by: {MobilePhone: MobilePhone MobilePhoneModel: MobilePhoneModel} desc: u take: 10})

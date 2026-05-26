@@ -1,0 +1,1 @@
+(take (select {PageViews: (count WindowClientWidth) from: hits where: (and (== CounterID 62) (>= EventDate 2013.07.01) (<= EventDate 2013.07.31) (== IsRefresh 0) (== DontCountHits 0) (== URLHash 2868770270353813622)) by: {WindowClientWidth: WindowClientWidth WindowClientHeight: WindowClientHeight} desc: PageViews take: 10010}) [10000 10])

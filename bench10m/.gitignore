@@ -1,0 +1,10 @@
+# Generated / data artefacts — not source of truth
+*.csv
+*.db
+hits_*
+rfsplayed*
+rf_out*.txt
+rf100k_out.txt
+rf_times.txt
+duck_out*.txt
+duck100k_out.txt

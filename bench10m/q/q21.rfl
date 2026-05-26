@@ -1,0 +1,1 @@
+(select {SearchPhrase: SearchPhrase u: (count UserID) c: (count SearchPhrase) from: hits where: (and (like URL "*google*") (!= SearchPhrase "")) by: SearchPhrase desc: c take: 10})

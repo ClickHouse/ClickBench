@@ -1,0 +1,1 @@
+(select {AdvEngineID: AdvEngineID c: (count AdvEngineID) from: hits where: (!= AdvEngineID 0) by: AdvEngineID desc: c take: 10})

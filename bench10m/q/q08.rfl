@@ -1,0 +1,1 @@
+(select {RegionID: RegionID u: (count (distinct UserID)) from: hits by: RegionID desc: u take: 10})

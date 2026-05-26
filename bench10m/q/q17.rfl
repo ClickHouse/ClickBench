@@ -1,0 +1,1 @@
+(select {c: (count UserID) from: hits by: {UserID: UserID SearchPhrase: SearchPhrase} take: 10})

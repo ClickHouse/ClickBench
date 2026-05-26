@@ -1,0 +1,1 @@
+(select {from: (select {CounterID: CounterID l: (avg (strlen URL)) c: (count CounterID) from: hits where: (!= URL "") by: CounterID}) where: (> c 100000) desc: l take: 25})

@@ -1,0 +1,1 @@
+(take (select {PageViews: (count EventTime) from: hits where: (and (== CounterID 62) (>= EventDate 2013.07.14) (<= EventDate 2013.07.15) (== IsRefresh 0) (== DontCountHits 0)) by: {M: (xbar EventTime 60000000000)} asc: M take: 1010}) [1000 10])

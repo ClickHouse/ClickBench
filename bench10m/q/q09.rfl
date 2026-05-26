@@ -1,0 +1,1 @@
+(select {RegionID: RegionID s: (sum AdvEngineID) c: (count RegionID) a: (avg ResolutionWidth) u: (count (distinct UserID)) from: hits by: RegionID desc: c take: 10})

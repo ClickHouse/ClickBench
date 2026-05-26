@@ -1,0 +1,1 @@
+(select {c: (count UserID) from: hits by: {UserID: UserID m: (minute EventTime) SearchPhrase: SearchPhrase} desc: c take: 10})

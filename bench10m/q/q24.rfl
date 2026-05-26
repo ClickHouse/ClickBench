@@ -1,0 +1,1 @@
+(at (select {from: hits where: (!= SearchPhrase "") asc: EventTime take: 10}) 'SearchPhrase)

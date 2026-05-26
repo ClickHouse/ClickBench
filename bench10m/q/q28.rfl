@@ -1,0 +1,1 @@
+(select {from: (select {k: Referer l: (avg (strlen Referer)) c: (count Referer) r: (count Referer) from: hits where: (!= Referer "") by: Referer}) where: (> c 100000) desc: l take: 25})

@@ -1,0 +1,1 @@
+(select {from: hits where: (like URL (concat "*" (concat "goo" (concat "gle" "*")))) asc: EventTime take: 10})
