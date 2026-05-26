@@ -10,8 +10,11 @@ fi
 sudo apt-get update
 # libffi-dev so CBQN's optional FFI module compiles; the stock build
 # pulls in the headers unconditionally and fails the o3 target without
-# them on a fresh Ubuntu image.
-sudo apt-get install -y build-essential gcc git libffi-dev
+# them on a fresh Ubuntu image. python3-pyarrow (with python3-pip as a
+# fallback in case the distro packages don't resolve) gives prep.py the
+# parquet reader it needs at load time.
+sudo apt-get install -y build-essential gcc git libffi-dev \
+    python3-pip python3-pyarrow python3-numpy
 
 tmp=$(mktemp -d)
 git clone --depth=1 https://github.com/dzaima/CBQN.git "$tmp/CBQN"

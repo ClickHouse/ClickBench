@@ -5,9 +5,10 @@ set -e
 rm -rf cols
 mkdir -p cols
 
-# Ensure pyarrow is available for the preprocessor.
-sudo apt-get install -y python3-pip python3-pyarrow >/dev/null 2>&1 \
-    || pip3 install --quiet pyarrow
+# python3-pyarrow is installed by ./install; if a caller skipped that
+# step, fall back to pip.
+python3 -c 'import pyarrow' 2>/dev/null \
+    || pip3 install --quiet --break-system-packages pyarrow numpy
 
 # Convert hits.parquet to per-column binary files. The preprocessor is
 # Python only because BQN doesn't have a parquet reader; the queries
