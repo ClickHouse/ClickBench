@@ -1,0 +1,29 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via duckdb against hits.db (a VIEW
+# over a remote S3 parquet).
+# Stdout: query result. Stderr: runtime in fractional seconds on the last
+# line. Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+# Pin the S3 region (eu-central-1) on every invocation so DuckDB
+# doesn't default to us-east-1 and get into a redirect loop. The
+# session-scoped SECRET keeps creds at empty so the chain doesn't
+# probe IMDS (which the playground's SNI filter blocks).
+out=$(duckdb hits.db \
+    -c "SET s3_region='eu-central-1'" \
+    -c "CREATE OR REPLACE SECRET (TYPE S3, KEY_ID '', SECRET '', REGION 'eu-central-1')" \
+    -c "SET parquet_metadata_cache=true" \
+    -c ".timer on" \
+    -c "$query" 2>/tmp/duckdb.err.$$) && status=0 || status=$?
+
+if [ "$status" -ne 0 ]; then
+    cat /tmp/duckdb.err.$$ >&2
+    rm -f /tmp/duckdb.err.$$
+    exit "$status"
+fi
+rm -f /tmp/duckdb.err.$$
+
+printf '%s\n' "$out" | grep -v '^Run Time '
+printf '%s\n' "$out" | awk '/^Run Time/ { print $5 }' | tail -n1 >&2

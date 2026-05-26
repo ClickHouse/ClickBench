@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# Data lives in S3; create.sql defines a remote-backed ENGINE = S3 table.
+# Create the table once here; clickhouse-local persists the metadata in the
+# --path directory so subsequent ./query invocations can reuse it.
+./clickhouse local --path . --query="DROP TABLE IF EXISTS hits"
+./clickhouse local --path . --query="$(cat create.sql)"
+sync

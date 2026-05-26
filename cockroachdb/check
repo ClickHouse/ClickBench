@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+cockroach sql --insecure --host=localhost -e 'SELECT 1' >/dev/null 2>&1

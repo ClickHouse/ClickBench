@@ -9,7 +9,8 @@
     "comment": "",
     "tags": [
         "column-oriented",
-        "lukewarm-cold-run"
+        "lukewarm-cold-run",
+        "stateless"
     ],
     "load_time": 2,
     "data_size": 470000128,

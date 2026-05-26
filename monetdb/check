@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# Use the /root/.monetdb credential file (stamped by install) for both
+# user and password. The bundled mclient build has no -P / --password
+# flag, and passing -u alone disables the file's password and forces
+# an interactive prompt — so neither user nor password go on the
+# command line here.
+echo 'SELECT 1;' | mclient -h 127.0.0.1 -d test >/dev/null 2>&1

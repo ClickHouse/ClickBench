@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+sudo chmod -R 777 db 2>/dev/null || true
+du -bcs db | grep total | awk '{print $1}'

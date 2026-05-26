@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+psql -h localhost -p 5432 -U postgres -t -c 'SELECT 1' >/dev/null

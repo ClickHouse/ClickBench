@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+./octosql --help >/dev/null

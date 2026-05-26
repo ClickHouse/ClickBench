@@ -288,6 +288,7 @@ In addition, there are also systems where the code to run the benchmark is provi
 Currently, this includes
 
 - Vertica
+- kdb (KDB-X Community Edition)
 
 Please help us add more systems and run the benchmarks on more types of VMs:
 

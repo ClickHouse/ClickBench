@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+# Note: this benchmark expects to run in eu-central-1 (Frankfurt) on an
+# n-class network-optimized machine (e.g. c5n.4xlarge), since data is fetched
+# over HTTP from a public ClickHouse-hosted dataset.
+
+if [ ! -x /usr/bin/clickhouse ]; then
+    curl https://clickhouse.com/ | sh
+    sudo ./clickhouse install --noninteractive
+fi
+
+# Cache directory used by the web disk. ClickHouse rejects any
+# filesystem-cache path outside /var/lib/clickhouse/caches/ with
+# BAD_ARGUMENTS at CREATE TABLE time, but we still want the actual
+# bytes to live in tmpfs (/dev/shm) for the speed: cold queries
+# pull ~1 GB on first run and tmpfs avoids touching the host SSD.
+#
+# Newer ClickHouse versions canonicalise the path before the policy
+# check, so the older symlink trick (caches/web → /dev/shm/...) is
+# rejected with BAD_ARGUMENTS. Bind-mount tmpfs at the
+# policy-acceptable path instead — to CH the cache dir *is*
+# /var/lib/clickhouse/caches/web with no symlink to resolve.
+sudo mkdir -p /dev/shm/clickhouse /var/lib/clickhouse/caches/web
+sudo chown clickhouse:clickhouse /dev/shm/clickhouse /var/lib/clickhouse/caches/web
+sudo mount --bind /dev/shm/clickhouse /var/lib/clickhouse/caches/web
+sudo chown clickhouse:clickhouse /var/lib/clickhouse/caches/web

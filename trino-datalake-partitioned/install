@@ -1,0 +1,89 @@
+#!/bin/bash
+set -e
+
+# Trino's S3 client uses the AWS default credentials chain, which fails on
+# anonymous public buckets, and Trino has no built-in flag for unsigned
+# requests (see trinodb/trino#27512, PR #27758 closed unmerged). To read
+# the public bucket we drop a tiny shim that returns AnonymousAWSCredentials
+# into the legacy HDFS S3 plugin and point trino.s3.credentials-provider
+# at it.
+
+if ! command -v docker >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y docker.io
+fi
+sudo apt-get install -y bc
+
+sudo docker pull trinodb/trino:455
+
+mkdir -p data/meta etc/catalog shim
+sudo chown 1000:1000 data/meta shim
+
+cat > shim/S3AnonymousProvider.java <<'EOF'
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AnonymousAWSCredentials;
+import org.apache.hadoop.conf.Configuration;
+import java.net.URI;
+
+public class S3AnonymousProvider implements AWSCredentialsProvider {
+    public S3AnonymousProvider(URI uri, Configuration conf) {}
+    public AWSCredentials getCredentials() { return new AnonymousAWSCredentials(); }
+    public void refresh() {}
+}
+EOF
+
+# Compile the shim against the AWS-SDK and Hadoop jars bundled in the
+# image. The trino:455 image does NOT ship a `find` binary, so the
+# previous approach (find /usr/lib/trino -name '*.jar') silently
+# returned empty and javac complained that com.amazonaws.auth doesn't
+# exist. Use a shell glob instead. The legacy file names had a
+# `com.amazonaws_` / `io.trino.hadoop_` prefix in earlier Trino
+# builds; current :455 drops both prefixes — match either.
+if [ ! -f shim/S3AnonymousProvider.jar ]; then
+    sudo docker run --rm \
+        -v "$PWD/shim:/shim" \
+        --entrypoint sh trinodb/trino:455 -c '
+            set -e
+            cd /shim
+            HDFS=/usr/lib/trino/plugin/hive/hdfs
+            CP=$(ls "$HDFS"/{com.amazonaws_,}aws-java-sdk-core-*.jar \
+                    "$HDFS"/{io.trino.hadoop_,}hadoop-apache-*.jar \
+                    2>/dev/null | tr "\n" ":")
+            javac --release 11 -cp "$CP" S3AnonymousProvider.java
+            jar cf S3AnonymousProvider.jar S3AnonymousProvider.class
+        '
+fi
+
+cat > etc/catalog/hive.properties <<'EOF'
+connector.name=hive
+hive.metastore=file
+hive.metastore.catalog.dir=local:///meta
+local.location=/data
+fs.native-local.enabled=true
+# Pin to trino:455 (last release shipping the legacy hadoop-S3 plugin
+# with a custom AWSCredentialsProvider). 461+ removed it, and the new
+# fs.native-s3 has no anonymous-creds mode so we can't read the public
+# bucket without it.
+fs.hadoop.enabled=true
+hive.config.resources=/etc/trino/core-site.xml
+hive.non-managed-table-writes-enabled=true
+EOF
+
+cat > etc/core-site.xml <<'EOF'
+<?xml version="1.0"?>
+<configuration>
+    <property>
+        <name>trino.s3.credentials-provider</name>
+        <value>S3AnonymousProvider</value>
+    </property>
+    <property>
+        <name>trino.s3.endpoint</name>
+        <value>https://s3.eu-central-1.amazonaws.com</value>
+    </property>
+    <property>
+        <name>trino.s3.region</name>
+        <value>eu-central-1</value>
+    </property>
+</configuration>
+EOF

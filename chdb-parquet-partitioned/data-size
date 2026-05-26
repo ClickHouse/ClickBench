@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+du -bcs hits_*.parquet | awk '/total$/ { print $1 }'

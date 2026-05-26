@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+export PGPASSWORD='gparray'
+psql -h localhost -p 5432 -U gpadmin -d demo -t -A -c "SELECT pg_database_size('demo')"

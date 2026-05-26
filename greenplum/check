@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+export PGPASSWORD='gparray'
+psql -h localhost -p 5432 -U gpadmin -d demo -c 'SELECT 1' >/dev/null

@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+DORIS_HOME=$(cat .doris_home)
+du -bs "$DORIS_HOME"/be/storage/ | cut -f1

@@ -1,0 +1,10 @@
+#!/bin/bash
+set -eu
+
+# hits.json is delivered by the shared lib/download-hits-json helper
+# (symlink to the RO dataset on the playground, wget + pigz
+# elsewhere).
+python3 send_datawithactionline.py
+
+rm -f hits.json
+sync

@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+# create.sql is an ATTACH TABLE that points to a remote web disk; nothing is
+# downloaded or written here, the table is materialized on-demand at query
+# time, with /dev/shm/clickhouse/ as a local cache.
+clickhouse-client < create.sql
+sync

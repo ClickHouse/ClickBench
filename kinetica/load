@@ -1,0 +1,33 @@
+#!/bin/bash
+set -eu
+
+export KI_PWD=admin
+CLI="./kisql --host localhost --user admin"
+
+# Kinetica's `load into ... format delimited text` reads the gzipped TSV
+# directly from its persist directory, so we fetch the gzip rather than the
+# decompressed TSV.
+wget --continue --progress=dot:giga \
+    'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
+# Move (rename) rather than symlink: the kinetica daemon runs inside a
+# docker container with ./kinetica-persist bind-mounted, so a symlink
+# pointing at $PWD/hits.tsv.gz dangles inside the container and `LOAD
+# INTO ... FROM FILE PATHS 'hits.tsv.gz'` returns
+#   Not_Found: No such file(s) (File(s):hits.tsv.gz)
+# The persist dir and $PWD live on the same overlay filesystem, so
+# mv is a rename — cheap.
+sudo mv hits.tsv.gz ./kinetica-persist/
+
+$CLI --file create.sql
+# Playground VMs have 16 GiB RAM total. The upstream 27 GB cap was
+# sized for a host-mode benchmark machine; in the VM the RAM tier
+# alone exceeds physical memory, kinetica's rank-1 worker gets
+# OOM-killed mid-LOAD, and the load fails with
+#   [GPUdb]executeSql: Internal_Error: Rank 1 non-responsive
+# Cap the RAM tier at 9 GB and rely on the on-disk tier for the rest.
+$CLI --sql "ALTER TIER ram WITH OPTIONS ('capacity' = '9000000000');"
+
+$CLI --sql "load into hits from file paths 'hits.tsv.gz' format delimited text (INCLUDES HEADER=false, DELIMITER = '\t') WITH OPTIONS (NUM_TASKS_PER_RANK=16, ON ERROR=SKIP);"
+
+sudo rm -f ./kinetica-persist/hits.tsv.gz
+sync

@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# External Parquet table — report the source file size.
+stat -c %s data/hits/hits.parquet

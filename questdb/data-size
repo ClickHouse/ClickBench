@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eu
+
+# QuestDB stores per-table data under ~/.questdb/db/<table>. The previous
+# `~/.questdb/db/hits*` glob silently broke on v9.x layouts that don't
+# suffix the directory name; the run logged
+#   du: cannot access '/root/.questdb/db/hits*': No such file or directory
+# followed by "Data size: 0", and the materialized view's parser rejected
+# the output for missing data_size. Measure the whole db tree instead
+# (it only contains the bench's `hits` table).
+sudo du -bcs ~/.questdb/db 2>/dev/null | tail -1 | awk '{print $1}'

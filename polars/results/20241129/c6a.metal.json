@@ -6,7 +6,8 @@
     "tuned": "no",
     "comment": "",
     "tags": [
-        "column-oriented"
+        "column-oriented",
+        "stateless"
     ],
     "load_time": null,
     "data_size": 14779976446,

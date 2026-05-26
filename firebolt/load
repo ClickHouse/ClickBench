@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eu
+
+# Stage hits.parquet where the container can see it (./data is
+# bind-mounted as /firebolt-core/clickbench).
+mkdir -p data
+if [ -f hits.parquet ]; then
+    mv -f hits.parquet data/hits.parquet
+fi
+
+# create.sql CREATEs hits_external pointing at the parquet file, then
+# INSERTs into the managed `hits` table — the ingested-to-Firebolt
+# variant of the benchmark.
+curl -sSf 'http://localhost:3473/?enable_multi_query_requests=true' \
+    --data-binary 'DROP DATABASE IF EXISTS clickbench;CREATE DATABASE clickbench;'
+curl -sSf 'http://localhost:3473/?database=clickbench&enable_multi_query_requests=true' \
+    --data-binary @create.sql
+
+rm -f data/hits.parquet
+sync

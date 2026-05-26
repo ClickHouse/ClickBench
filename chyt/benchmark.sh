@@ -1,28 +1,9 @@
 #!/bin/bash
-
+# Thin shim — actual flow is in lib/benchmark-common.sh.
+# CHYT executes against a remote YT cluster ($YT_PROXY); no local download.
 export YT_USE_HOSTS=0
-export CHYT_ALIAS=*ch_public
-
-echo "----------------"
-# Create table
-echo "Creating table"
-command time -f '%e' yt clickhouse execute "$(cat create.sql)" --alias $CHYT_ALIAS --proxy $YT_PROXY
-echo "----------------"
-
-echo "----------------"
-# Fill table
-echo -n "Load time: "
-command time -f '%e' yt clickhouse execute "$(cat fill_data.sql)" --alias $CHYT_ALIAS --proxy $YT_PROXY
-echo "----------------"
-
-echo "----------------"
-# Sort table
-echo -n "Load time: "
-command time -f '%e' yt sort --src //home/hits --dst //home/hits --sort-by "CounterID" --sort-by "EventDate" --sort-by "UserID" --sort-by "EventTime" --sort-by "WatchID" --proxy $YT_PROXY
-echo "----------------"
-
-echo "----------------"
-# Run benchmark
-echo "Starting benchmark"
-./run.sh
-echo "----------------"
+export CHYT_ALIAS="${CHYT_ALIAS:-*ch_public}"
+export BENCH_DOWNLOAD_SCRIPT=""
+export BENCH_DURABLE=yes
+export BENCH_RESTARTABLE=no
+exec ../lib/benchmark-common.sh

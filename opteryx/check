@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+"$HOME/opteryx_venv/bin/python" -m opteryx "SELECT version()" >/dev/null

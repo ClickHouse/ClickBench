@@ -1,90 +1,14 @@
 #!/bin/bash
-set -eo pipefail
-
-export DEBIAN_FRONTEND=noninteractive
-
-# Install prerequisites quietly
-sudo apt-get update -qq >/dev/null
-sudo apt-get install -y -qq wget curl jq bc docker.io >/dev/null
-sudo systemctl start docker
-
-# We use the Quickwit v0.9 release candidate. Stable v0.8.2 is missing
-# `cardinality`, `wildcard`, and several other features the benchmark relies
-# on; only the v0.9 line (still unreleased as of writing) provides them.
-QW_IMAGE="quickwit/quickwit:v0.9.0-rc"
-sudo docker pull -q "$QW_IMAGE" >/dev/null
-
-# Quickwit's data directory (shared between the server and the local-ingest
-# container).
-QW_DATA="$(pwd)/qwdata"
-sudo rm -rf "$QW_DATA"
-mkdir -p "$QW_DATA"
-
-# Start the server in the background. Quickwit defaults: REST on 7280, gRPC on 7281.
-# Mount node-config.yaml on top of the image's default config to bump the
-# searcher timeouts (defaults are 30s, which is too low for some of the
-# nested high-cardinality aggregations on the full 100M-row dataset).
-sudo docker run -d --name qw --network host \
-    -v "$QW_DATA":/quickwit/qwdata \
-    -v "$(pwd)/node-config.yaml":/quickwit/config/quickwit.yaml \
-    "$QW_IMAGE" run >/dev/null
-echo "Quickwit container started"
-
-# Wait for the server to come up.
-for i in $(seq 1 60); do
-    if curl -sS -f http://localhost:7280/api/v1/version >/dev/null 2>&1; then
-        echo "Quickwit is ready"
-        break
-    fi
-    sleep 1
-done
-
-# Create the index from the YAML config.
-curl -sS -X POST http://localhost:7280/api/v1/indexes \
-    -H 'Content-Type: application/yaml' \
-    --data-binary @index_config.yaml | jq -r '.index_uid // .message'
-
-# Download the data quietly (the dataset is ~14 GB; full progress would
-# dominate the captured benchmark log).
-wget --continue -q 'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
-
-START=$(date +%s)
-
-# Use `quickwit tool local-ingest` instead of the Elasticsearch-compatible
-# bulk endpoint. v0.9's sharded ingest-v2 API caps single-node throughput
-# to a few MB/s and gets stuck waiting for shards to scale, while
-# `local-ingest` builds splits directly and writes them to the index
-# storage. The running server picks up new splits on its next metastore
-# poll (default 30s).
-#
-# local-ingest emits a "Num docs ... Thrghput ... Time" progress line
-# roughly once per second; we throttle that to once per ~30 seconds so
-# the captured log stays compact, and pass the surrounding lines through
-# unchanged.
-zcat hits.json.gz | sudo docker run --rm -i --network host \
-    -v "$QW_DATA":/quickwit/qwdata \
-    "$QW_IMAGE" tool local-ingest --index hits -y 2>&1 \
-    | awk '/Num docs/ { n = systime(); if (n - last >= 30) { print; fflush(); last = n } next }
-           { print; fflush() }'
-
-# Wait long enough for the server to refresh its metastore view.
-sleep 35
-
-# Show stats.
-curl -sS "http://localhost:7280/api/v1/indexes/hits/describe" \
-    | jq '{num_published_docs, num_published_splits, size_published_splits}' \
-    | tee stats.json
-
-END=$(date +%s)
-echo "Load time: $((END - START))"
-
-# Data size on disk.
-echo -n "Data size: "
-sudo du -sb "$QW_DATA" | awk '{print $1}'
-
-# Run queries
-chmod +x run.sh
-./run.sh
-
-sudo docker stop qw 2>/dev/null || true
-sudo docker rm qw 2>/dev/null || true
+# Thin shim — actual flow is in lib/benchmark-common.sh.
+# Quickwit takes Elasticsearch-format JSON queries; the load script fetches
+# hits.json.gz directly so no shared download-hits-* script applies.
+export BENCH_DOWNLOAD_SCRIPT=""
+export BENCH_DURABLE=yes
+export BENCH_QUERIES_FILE="queries.json"
+# After firecracker snapshot+restore the cluster's
+# internal connections (brpc/gossip) are stale; ./start's
+# shallow health probe doesn't notice and short-circuits.
+# Tell the playground agent to ./stop the cluster before
+# ./start so the next bring-up is from a clean state.
+export PLAYGROUND_RESTART_AFTER_RESTORE_SNAPSHOT=yes
+exec ../lib/benchmark-common.sh

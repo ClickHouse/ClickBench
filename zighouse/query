@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+query=$(cat)
+ZIGHOUSE_CLICKBENCH_SUBMIT=1 ./zighouse --backend native query-timed zighouse-store "$query"

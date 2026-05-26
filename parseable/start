@@ -1,0 +1,21 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: if already up, do nothing.
+if curl -sSf -u admin:admin 'http://localhost:8000/api/v1/about' >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Tune batch size by hardware (matches original).
+CPU_COUNT=$(nproc)
+if [ "$CPU_COUNT" -ge 190 ]; then
+    export P_EXECUTION_BATCH_SIZE=75000
+elif [ "$CPU_COUNT" -ge 15 ]; then
+    export P_EXECUTION_BATCH_SIZE=40000
+else
+    export P_EXECUTION_BATCH_SIZE=1000000
+fi
+export RUST_LOG=warn
+
+nohup ./parseable local-store > parseable.log 2>&1 &
+disown

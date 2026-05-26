@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+export PGPASSWORD=${PGPASSWORD:-mypass}
+psql -U postgres -h localhost -d postgres -t -c 'SELECT 1' >/dev/null

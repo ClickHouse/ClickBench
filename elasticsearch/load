@@ -1,0 +1,25 @@
+#!/bin/bash
+set -eu
+
+# Fetch source data (NDJSON, gzipped). load.py reads it directly.
+wget --continue --progress=dot:giga \
+    'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+
+# Idempotent: drop existing index.
+curl -sS -X DELETE "http://localhost:9200/hits" >/dev/null 2>&1 || true
+
+# Create index with explicit field types (mirrors ClickHouse). Use -f so a
+# non-2xx (e.g. cluster red → 503) aborts the load instead of silently
+# proceeding to bulk-load against a missing index, which spams thousands
+# of "Sent batch N - Warning: HTTP 503" lines and a NULL result.
+curl -sSf -X PUT "http://localhost:9200/hits?pretty" \
+    -H 'Content-Type: application/json' -d @mapping.json >/dev/null
+
+# Bulk load NDJSON (gzipped) via the ES Bulk API.
+python3 load.py
+
+# Force a flush so on-disk size is final.
+curl -sS -X GET "http://localhost:9200/_flush?pretty" >/dev/null
+
+rm -f hits.json.gz
+sync

@@ -1,0 +1,15 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client
+
+sudo docker pull pgduckdb/pgduckdb:17-v1.0.0
+
+# pg_duckdb-parquet bind-mounts hits.parquet into the container at start
+# time (the create.sql view reads from /tmp/hits.parquet directly), so
+# the file has to exist before ./start runs. The lib's bench_download
+# step happens after start, so download here in install instead.
+if [ ! -f hits.parquet ]; then
+    ../lib/download-hits-parquet-single
+fi

@@ -1,33 +1,7 @@
 #!/bin/bash
-
-set -euo pipefail
-
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
-bash rust-init.sh -y
-export HOME=${HOME:=~}
-source ~/.cargo/env
-
-# Install Dependencies
-sudo apt-get update -y
-sudo apt-get install -y gcc jq build-essential
-
-# Install Vortex from latest release main branch
-git clone https://github.com/spiraldb/vortex.git || true
-cd vortex
-git checkout 0.44.0
-git submodule update --init
-# We build a release version of the benchmarking utility using mimalloc, just like the datafusion-cli
-cargo build --release --bin query_bench --package bench-vortex
-export PATH="`pwd`/target/release:$PATH"
-cd ..
-
-# Vortex's benchmarking utility generates appropriate Vortex files by itself, so we just run it to make sure they exist before we start measuring.
-# This will download parquet files (with time and string columns already converted to the logically correct datatype) and generate Vortex files from them.
-echo -n "Load time: "
-command time -f '%e' query_bench clickbench -i 1 --targets datafusion:vortex --display-format gh-json -q 0 --hide-progress-bar --flavor partitioned
-
-# Run benchmarks for single parquet and partitioned, our CLI generates the relevant vortex files.
-./run.sh partitioned
-
-echo "Data size: $(find . -name '*.vortex' | xargs wc -c | grep total)"
+# Thin shim — actual flow is in lib/benchmark-common.sh.
+# query_bench (the vortex driver) handles its own dataset download/conversion.
+export BENCH_DOWNLOAD_SCRIPT=""
+export BENCH_DURABLE=yes
+export BENCH_RESTARTABLE=no
+exec ../lib/benchmark-common.sh

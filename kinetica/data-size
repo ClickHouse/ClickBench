@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+du -bcs ./kinetica-persist/gpudb | grep total | awk '{print $1}'

@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+# The ./query path uses datafusion-cli reading hits.parquet directly,
+# so make sure that file is in CWD. (The shared bench_download already
+# stages it; we don't need vortex's clickbench warmup for playground
+# query output.)
+if [ ! -e hits.parquet ]; then
+    ../lib/download-hits-parquet-single .
+fi
+
+sync

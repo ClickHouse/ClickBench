@@ -1,19 +1,7 @@
 #!/bin/bash
-
-# Install
-
-curl https://clickhouse.com/ | sh
-
-# Configure
-
-RAM=$(awk '/MemTotal/ {print int($2 * 0.8 * 1024)}' /proc/meminfo)
-> clickhouse-local.yaml echo "
-page_cache_max_size: ${RAM}
-"
-
-# Run the queries
-
-./run.sh
-
-echo "Load time: 0"
-echo "Data size: 14779976446"
+# Thin shim — actual flow is in lib/benchmark-common.sh.
+# Data is read directly from S3, no local download.
+export BENCH_DOWNLOAD_SCRIPT=""
+export BENCH_DURABLE=yes
+export BENCH_RESTARTABLE=no
+exec ../lib/benchmark-common.sh

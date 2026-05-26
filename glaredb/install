@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# Idempotent: only download glaredb if not already present.
+if [ ! -x ./glaredb ]; then
+    export GLAREDB_INSTALL_DIR="$(pwd)"
+    export GLAREDB_VERSION="v25.5.11"
+    curl -fsSL https://glaredb.com/install.sh | sh
+fi

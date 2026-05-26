@@ -7,6 +7,6 @@
     "C",
     "column-oriented",
     "PostgreSQL compatible",
-    "lukewarm-cold-run"
+    "Greenplum derivative"
   ]
 }

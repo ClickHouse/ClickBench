@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+test -x ./zighouse

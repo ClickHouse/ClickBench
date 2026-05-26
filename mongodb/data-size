@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+sudo du -bcs /var/lib/mongodb/ | grep total | awk '{print $1}'

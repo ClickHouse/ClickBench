@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+SR_DIR=$(cat .sr_dir)
+du -bcs "$SR_DIR/storage/" | awk '/total$/ {print $1}'

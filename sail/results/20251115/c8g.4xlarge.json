@@ -1,10 +1,12 @@
 {
     "system": "Sail (Parquet)",
+    "date": "2025-11-15",
     "machine": "c8g.4xlarge",
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
     "tags": [
-        "column-oriented"
+        "column-oriented",
+        "stateless"
     ]
 }

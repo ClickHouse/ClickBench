@@ -1,0 +1,7 @@
+#!/bin/bash
+
+pkill -f 'pinot-admin' 2>/dev/null || true
+pkill -f 'pinot.tools.admin' 2>/dev/null || true
+pkill -f 'org.apache.pinot' 2>/dev/null || true
+sleep 2
+exit 0

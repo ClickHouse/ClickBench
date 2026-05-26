@@ -1,0 +1,42 @@
+#!/bin/bash
+set -eu
+
+PASSWORD=${MCS_PASSWORD:-tsFgm457%3cj}
+
+# Idempotent: if mariadb on :3306 is already responsive, nothing to do.
+if mariadb --skip-ssl --password="$PASSWORD" --host 127.0.0.1 -e 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+if ! sudo docker ps -a --format '{{.Names}}' | grep -qx mcs1; then
+    sudo docker run -d -p 3306:3306 \
+        --shm-size=512m \
+        -e PM1=mcs1 \
+        --hostname=mcs1 \
+        --name mcs1 \
+        mariadb/columnstore >/dev/null
+    # Wait for mariadb-internal to come up enough for the provisioner.
+    for _ in $(seq 1 60); do
+        sudo docker exec mcs1 mariadb -e 'SELECT 1' >/dev/null 2>&1 && break
+        sleep 1
+    done
+    sudo docker exec mcs1 provision mcs1
+else
+    sudo docker start mcs1 >/dev/null
+fi
+
+# Wait for the server, then grant the running user a password so the rest
+# of the per-system scripts can talk to it without sudo'ing into the
+# container. GRANT must hit a working server, so retry briefly.
+for _ in $(seq 1 60); do
+    sudo docker exec mcs1 mariadb -e \
+        "GRANT ALL PRIVILEGES ON *.* TO '$(whoami)'@'%' IDENTIFIED BY '${PASSWORD}'; FLUSH PRIVILEGES;" \
+        >/dev/null 2>&1 && break
+    sleep 1
+done
+
+# Make sure we can actually log in.
+for _ in $(seq 1 60); do
+    mariadb --skip-ssl --password="$PASSWORD" --host 127.0.0.1 -e 'SELECT 1' >/dev/null 2>&1 && exit 0
+    sleep 1
+done

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# ./query uses datafusion-cli against the partitioned parquet files
+# under partitioned/. See datafusion-vortex/load for the rationale.
+mkdir -p partitioned
+../lib/download-hits-parquet-partitioned partitioned
+
+sync

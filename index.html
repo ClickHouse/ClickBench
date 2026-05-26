@@ -29,6 +29,7 @@
 
             --summary-every-other-row-color: #F8F8F8;
             --highlight-color: #EEE;
+            --tag-hilite-color: #FF88AA;
 
             --bar-color1: oklch(calc(0.9 - 0.6) 0.1 calc(90 - 60));
             --bar-color2: oklch(calc(0.9 - 0.4) 0.1 calc(90 - 40));
@@ -61,6 +62,7 @@
 
             --summary-every-other-row-color: #042e41;
             --highlight-color: #064663;
+            --tag-hilite-color: #CC6600;
 
             --bar-color1: oklch(calc(0.4 + 0.6) 0.1 calc(250 - 180));
             --bar-color2: oklch(calc(0.4 + 0.4) 0.1 calc(250 - 120));
@@ -115,6 +117,17 @@
             padding-right: 1rem;
         }
 
+        .inline-filter {
+            display: inline-block;
+            margin-right: 1.5rem;
+            white-space: nowrap;
+        }
+
+        .inline-filter-label {
+            font-weight: bold;
+            margin-right: 0.25rem;
+        }
+
         .selector {
             display: inline-block;
             margin-left: 0.1rem;
@@ -133,6 +146,10 @@
         .selector-passive {
             color: var(--selector-active-text-color);
             background: var(--selector-passive-background-color);
+        }
+
+        .selector-tag-hilite {
+            background: var(--tag-hilite-color) !important;
         }
 
         a, a:visited {
@@ -162,10 +179,27 @@
             white-space: nowrap;
             text-align: right;
             padding-right: 1rem;
+            position: relative;
         }
 
         .summary-bar-cell {
             width: 100%;
+            position: relative;
+        }
+
+        .summary-date {
+            position: absolute;
+            right: 0.5rem;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            font-size: 80%;
+            text-stroke: 2px var(--background-color);
+            -webkit-text-stroke: 2px var(--background-color);
+            paint-order: stroke fill;
+            pointer-events: none;
+            font-family: monospace;
         }
 
         .summary-bar {
@@ -192,6 +226,24 @@
         .summary-row:hover, .summary-row-hilite {
             background: var(--highlight-color) !important;
             font-weight: bold;
+        }
+
+        .remove-system {
+            visibility: hidden;
+            cursor: pointer;
+            color: var(--link-color);
+            user-select: none;
+            position: absolute;
+            left: -1rem;
+            padding-right: 1.5rem;
+        }
+
+        .summary-row:hover .remove-system {
+            visibility: visible;
+        }
+
+        .remove-system:hover {
+            color: var(--link-hover-color);
         }
 
         #details {
@@ -373,6 +425,25 @@ const additional_data_size_points = [
 
 <table class="selectors-container stick-left">
     <tr>
+        <td colspan="2">
+            <span class="inline-filter" id="selectors_opensource">
+                <span class="inline-filter-label">Open source:</span>
+                <a id="selector-opensource-yes" class="selector selector-active">Yes</a>
+                <a id="selector-opensource-no" class="selector selector-active">No</a>
+            </span>
+            <span class="inline-filter" id="selectors_hardware">
+                <span class="inline-filter-label">Hardware:</span>
+                <a id="selector-hardware-cpu" class="selector selector-active">CPU</a>
+                <a id="selector-hardware-gpu" class="selector selector-active">GPU</a>
+            </span>
+            <span class="inline-filter" id="selectors_tuned">
+                <span class="inline-filter-label">Tuned:</span>
+                <a id="selector-tuned-no" class="selector">No</a>
+                <a id="selector-tuned-yes" class="selector selector-active">Yes</a>
+            </span>
+        </td>
+    </tr>
+    <tr>
         <th>System: </th>
         <td id="selectors_system">
             <a id="select-all-systems" class="selector selector-active">All</a>
@@ -394,27 +465,6 @@ const additional_data_size_points = [
         <th>Cluster size: </th>
         <td id="selectors_cluster_size">
             <a id="select-all-cluster-sizes" class="selector selector-active">All</a>
-        </td>
-    </tr>
-    <tr>
-        <th>Open source: </th>
-        <td id="selectors_opensource">
-            <a id="selector-opensource-yes" class="selector selector-active">Yes</a>
-            <a id="selector-opensource-no" class="selector selector-active">No</a>
-        </td>
-    </tr>
-    <tr>
-        <th>Hardware: </th>
-        <td id="selectors_hardware">
-            <a id="selector-hardware-cpu" class="selector selector-active">CPU</a>
-            <a id="selector-hardware-gpu" class="selector selector-active">GPU</a>
-        </td>
-    </tr>
-    <tr>
-        <th>Tuned: </th>
-        <td id="selectors_tuned">
-            <a id="selector-tuned-no" class="selector">No</a>
-            <a id="selector-tuned-yes" class="selector selector-active">Yes</a>
         </td>
     </tr>
     <tr>
@@ -492,7 +542,8 @@ document.getElementById('toggle-dark').addEventListener('click', e => setTheme('
 
 let new_theme = window.localStorage.getItem('theme');
 if (new_theme && new_theme != theme) {
-    setTheme(new_theme);
+    theme = new_theme;
+    document.documentElement.setAttribute('data-theme', theme);
 }
 
 /// Generate selectors
@@ -503,6 +554,27 @@ let machines = document.getElementById('selectors_machine');
 let cluster_sizes = document.getElementById('selectors_cluster_size');
 
 let unique_systems = [... new Set(data.map(elem => elem.system))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+
+const system_to_tags = {};
+data.forEach(d => {
+    if (!system_to_tags[d.system]) system_to_tags[d.system] = new Set();
+    (d.tags || []).forEach(t => system_to_tags[d.system].add(t));
+});
+
+function highlightSystemTags(systemName) {
+    const tags = system_to_tags[systemName] || new Set();
+    for (const elem of types.childNodes) {
+        if (elem.tagName !== 'A') continue;
+        if (tags.has(elem.innerText)) elem.classList.add('selector-tag-hilite');
+    }
+}
+
+function clearSystemTagsHighlight() {
+    for (const elem of types.childNodes) {
+        if (elem.tagName !== 'A') continue;
+        elem.classList.remove('selector-tag-hilite');
+    }
+}
 
 function toggle(e, elem, selectors_map) {
     selectors_map[elem] = !selectors_map[elem];
@@ -535,10 +607,20 @@ unique_systems.map(elem => {
             row.className = row.dataset.system == elem ? 'summary-row summary-row-hilite' : 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(th => {
             th.className = th.dataset.system == elem ? 'th-entry th-entry-hilite' : 'th-entry' });
+        highlightSystemTags(elem);
     });
     selector.addEventListener('mouseout', e => {
         [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(row => { row.className = 'th-entry' });
+        clearSystemTagsHighlight();
+    });
+});
+
+const tag_to_systems = {};
+data.forEach(d => {
+    (d.tags || []).forEach(t => {
+        if (!tag_to_systems[t]) tag_to_systems[t] = new Set();
+        tag_to_systems[t].add(d.system);
     });
 });
 
@@ -549,6 +631,19 @@ unique_systems.map(elem => {
     types.appendChild(selector);
     selectors.type[elem] = true;
     selector.addEventListener('click', e => toggle(e, elem, selectors.type));
+
+    /// Highlighting summary rows and detail columns on hovering over a tag.
+    selector.addEventListener('mouseover', () => {
+        const tagged = tag_to_systems[elem] || new Set();
+        [...document.querySelectorAll('.summary-row')].map(row => {
+            row.className = tagged.has(row.dataset.system) ? 'summary-row summary-row-hilite' : 'summary-row' });
+        [...document.querySelectorAll('.th-entry')].map(th => {
+            th.className = tagged.has(th.dataset.system) ? 'th-entry th-entry-hilite' : 'th-entry' });
+    });
+    selector.addEventListener('mouseout', () => {
+        [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
+        [...document.querySelectorAll('.th-entry')].map(th => { th.className = 'th-entry' });
+    });
 });
 
 [... new Set(data.map(elem => elem.machine))].sort((a, b) => {
@@ -676,6 +771,27 @@ function updateSelectors() {
 
     document.getElementById('selector-tuned-yes').className = selectors.tuned.yes ? 'selector selector-active' : 'selector';
     document.getElementById('selector-tuned-no').className = selectors.tuned.no ? 'selector selector-active' : 'selector';
+}
+
+function applyTopRowFilters() {
+    const matches = data.filter(elem =>
+        ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
+        ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
+        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")));
+
+    function apply(container, getValues) {
+        const allowed = new Set(matches.flatMap(getValues).map(x => String(x)));
+        for (const elem of container.childNodes) {
+            if (elem.tagName !== 'A') continue;
+            if (elem.id && elem.id.startsWith('select-all-')) continue;
+            elem.style.display = allowed.has(elem.innerText) ? '' : 'none';
+        }
+    }
+
+    apply(systems, e => [e.system]);
+    apply(types, e => e.tags || []);
+    apply(machines, e => [e.machine]);
+    apply(cluster_sizes, e => [e.cluster_size]);
 }
 
 function findPassiveSelectors(filtered_data) {
@@ -818,11 +934,31 @@ function renderSummary(filtered_data) {
         tr.className = 'summary-row';
 
         tr.dataset.system = elem.system;
+        tr.addEventListener('mouseover', () => highlightSystemTags(elem.system));
+        tr.addEventListener('mouseout', clearSystemTagsHighlight);
 
         let td_name = document.createElement('td');
         td_name.className = 'summary-name';
 
         if (!elem.fake) {
+            let remove = document.createElement('span');
+            remove.className = 'remove-system';
+            remove.textContent = '✕';
+            remove.title = 'Remove this system from the selection';
+            remove.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectors.system[elem.system] = false;
+                for (const s of systems.childNodes) {
+                    if (s.tagName === 'A' && s.innerText === elem.system) {
+                        s.className = 'selector';
+                    }
+                }
+                render();
+                updateHistory();
+            });
+            td_name.appendChild(remove);
+
             let link = document.createElement('a');
             link.appendChild(document.createTextNode(`${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
             link.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + elem.source;
@@ -866,6 +1002,13 @@ function renderSummary(filtered_data) {
             transparent 100%)`;
 
         td_bar.appendChild(bar);
+
+        if (elem.date) {
+            let date_span = document.createElement('span');
+            date_span.className = 'summary-date';
+            date_span.textContent = elem.date;
+            td_bar.appendChild(date_span);
+        }
 
         tr.appendChild(td_name);
         tr.appendChild(td_bar);
@@ -931,6 +1074,8 @@ function render() {
     clearElement(details_head);
     clearElement(details_body);
 
+    applyTopRowFilters();
+
     let filtered_data = data.filter(elem =>
         selectors.system[elem.system] &&
         selectors.machine[elem.machine] &&
@@ -938,7 +1083,7 @@ function render() {
         elem.tags.filter(type => selectors.type[type]).length > 0 &&
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
-        ((selectors.hardware.cpu && elem.hardware === "cpu") || (selectors.hardware.gpu && elem.hardware === "gpu"))
+        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu"))
         );
 
     /// Filter out unreasonable entries
@@ -946,7 +1091,7 @@ function render() {
         filtered_data = filtered_data.filter(elem => elem.data_size);
     }
     if (selectors.metric == 'load') {
-        filtered_data = filtered_data.filter(elem => elem.load_time >= 5);
+        filtered_data = filtered_data.filter(elem => elem.load_time >= 5 && !elem.tags.includes('stateless'));
     }
     if (selectors.metric == 'cold' || selectors.metric == 'combined' || selectors.metric == 'load') {
         filtered_data = filtered_data.filter(elem => !elem.tags.includes('in-memory'));
@@ -994,6 +1139,8 @@ function render() {
         th.appendChild(document.createTextNode(`${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
         th.className = 'th-entry';
         th.dataset.system = elem.system;
+        th.addEventListener('mouseover', () => highlightSystemTags(elem.system));
+        th.addEventListener('mouseout', clearSystemTagsHighlight);
         details_head.appendChild(th);
     });
 

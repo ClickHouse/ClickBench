@@ -1,0 +1,34 @@
+#!/bin/bash
+set -e
+
+if sudo docker ps --format '{{.Names}}' | grep -qx trino; then
+    exit 0
+fi
+if sudo docker ps -a --format '{{.Names}}' | grep -qx trino; then
+    sudo docker start trino
+    exit 0
+fi
+
+sudo docker run -d --name trino \
+    -p 8080:8080 \
+    -v "$PWD/etc/catalog/hive.properties:/etc/trino/catalog/hive.properties:ro" \
+    -v "$PWD/etc/core-site.xml:/etc/trino/core-site.xml:ro" \
+    -v "$PWD/data/meta:/data/meta" \
+    -v "$PWD/shim/S3AnonymousProvider.jar:/usr/lib/trino/plugin/hive/hdfs/S3AnonymousProvider.jar:ro" \
+    trinodb/trino:455
+
+# One-shot diagnostic: trino is slow to come up and the agent's
+# check loop only watches /v1/info. If the container died or trino
+# is stuck in startup, we want a snapshot of container state in the
+# provision log so the failure is debuggable.
+sleep 30
+echo "=== trino-datalake: docker ps -a ==="
+sudo docker ps -a 2>&1 | head -10
+echo "=== trino-datalake: trino state ==="
+sudo docker inspect trino --format \
+    'Status={{.State.Status}} Running={{.State.Running}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}}' 2>&1
+echo "=== trino-datalake: docker logs --tail 80 ==="
+sudo docker logs trino --tail 80 2>&1
+echo "=== trino-datalake: /v1/info ==="
+curl -sS --max-time 3 http://localhost:8080/v1/info 2>&1 | head -c 500
+echo

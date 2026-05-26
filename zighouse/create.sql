@@ -1,0 +1,2 @@
+-- ZigHouse imports the ClickBench Parquet dataset directly with:
+-- zighouse import-clickbench-parquet-hot hits.parquet <store>

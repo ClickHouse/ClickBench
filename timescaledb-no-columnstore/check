@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+sudo -u postgres psql -t -c 'SELECT 1' >/dev/null

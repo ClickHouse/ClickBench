@@ -1,0 +1,18 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y apt-transport-https apt-utils curl gnupg lsb-release
+
+if [ ! -f /etc/apt/trusted.gpg.d/cratedb.asc ]; then
+    curl -sS https://cdn.crate.io/downloads/debian/DEB-GPG-KEY-crate \
+        | sudo tee /etc/apt/trusted.gpg.d/cratedb.asc >/dev/null
+fi
+
+if [ ! -f /etc/apt/sources.list.d/crate-stable.list ]; then
+    echo "deb https://cdn.crate.io/downloads/debian/testing/ default main" \
+        | sudo tee /etc/apt/sources.list.d/crate-stable.list
+    sudo apt-get update -y
+fi
+
+sudo apt-get install -y postgresql-client crate

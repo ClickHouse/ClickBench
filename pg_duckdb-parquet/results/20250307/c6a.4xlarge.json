@@ -8,8 +8,10 @@
     "tuned": "no",
     "tags": [
         "column-oriented",
+        "DuckDB derivative",
         "PostgreSQL compatible",
-        "lukewarm-cold-run"
+        "lukewarm-cold-run",
+        "stateless"
     ],
     "load_time": 0,
     "data_size": 14820803219,

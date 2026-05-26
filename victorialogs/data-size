@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+du -sb victoria-logs-data | awk '{print $1}'

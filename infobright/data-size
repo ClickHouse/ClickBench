@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+sudo docker exec mysql_ib du -bcs /mnt/mysql_data/ /usr/local/infobright-4.0.7-x86_64/cache \
+    | grep total | awk '{print $1}'
