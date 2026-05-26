@@ -57,21 +57,21 @@ for rg in range(pf.num_row_groups):
             # arr is a chunked array of (large_)string. Iterate chunks,
             # build a single concatenated bytes buffer + a vector of
             # absolute byte offsets, write both in one shot per chunk.
+            # Cast to a plain (large_)string array so the buffer layout is
+            # the well-known 3-buffer form regardless of whether the
+            # parquet reader handed us a string, large_string,
+            # string_view, dictionary-encoded variant, etc. The cast is
+            # zero-copy when the chunk is already in the target layout
+            # and copies otherwise.
             base = str_offsets[col]
-            for chunk in arr.chunks:
+            arr2 = arr.cast(pa.large_string())
+            for chunk in arr2.chunks:
                 buf = chunk.buffers()
-                if chunk.type in (pa.string(), pa.binary()):
-                    # buf[1] = int32 offsets (length+1), buf[2] = bytes
-                    raw_offs = np.frombuffer(buf[1], dtype="<i4")
-                else:
-                    # large_string/large_binary: int64 offsets
-                    raw_offs = np.frombuffer(buf[1], dtype="<i8")
-                # buf[2] may be None for an all-empty chunk.
+                raw_offs = np.frombuffer(buf[1], dtype="<i8")
                 raw_bytes = buf[2].to_pybytes() if buf[2] is not None else b""
                 fhs_str[col].write(raw_bytes)
-                # Drop the first offset (which is the running base from
-                # this chunk's perspective) and shift the rest by the
-                # absolute base we've accumulated so far.
+                # Drop the first offset (running base in this chunk's
+                # frame) and shift the rest by the absolute base.
                 shifted = (raw_offs[1:].astype("<f8") - raw_offs[0]) + base
                 fhs_off[col].write(shifted.tobytes())
                 base += len(raw_bytes)
