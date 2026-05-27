@@ -101,4 +101,15 @@ for fh in fhs_str.values():
 for fh in fhs_off.values():
     fh.close()
 
+# Dump the first f64 offsets of each .off file so we can see in the
+# benchmark log exactly what bytes are sitting on disk. If BQN reads a
+# fractional value out of these files, the bytes printed here will tell
+# us whether prep wrote them wrong or whether something between prep
+# and query corrupted the file.
+for col in fhs_off.keys():
+    with open(os.path.join(DST, col + ".off"), "rb") as f:
+        head = f.read(64)
+    vals = np.frombuffer(head, dtype="<f8")
+    print(f"  {col}.off head: {vals.tolist()}", flush=True)
+
 print("prep complete")
