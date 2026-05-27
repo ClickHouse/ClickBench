@@ -23,12 +23,12 @@ DST = sys.argv[2] if len(sys.argv) > 2 else "cols"
 
 os.makedirs(DST, exist_ok=True)
 
+print(f"pyarrow: {pa.__version__}; numpy: {np.__version__}", flush=True)
+
 pf = pq.ParquetFile(SRC)
 schema = pf.schema_arrow
 columns = [schema.field(i).name for i in range(len(schema))]
 print(f"columns: {len(columns)}; row groups: {pf.num_row_groups}", flush=True)
-
-STRING_TYPES = (pa.string(), pa.large_string(), pa.binary(), pa.large_binary())
 
 fhs_f64 = {}
 fhs_str = {}
@@ -37,7 +37,8 @@ str_offsets = {}
 
 for col in columns:
     typ = schema.field(col).type
-    if typ in STRING_TYPES or pa.types.is_string(typ) or pa.types.is_binary(typ):
+    if (pa.types.is_string(typ) or pa.types.is_large_string(typ)
+        or pa.types.is_binary(typ) or pa.types.is_large_binary(typ)):
         fhs_str[col] = open(os.path.join(DST, col + ".str"), "wb")
         fhs_off[col] = open(os.path.join(DST, col + ".off"), "wb")
         # First offset is always 0.0 (stored as f64).
@@ -70,16 +71,26 @@ for rg in range(pf.num_row_groups):
             # Nulls become zero-length strings.
             arr2 = pc.fill_null(arr.combine_chunks(),
                                 pa.scalar("", type=arr.type))
-            lens = pc.binary_length(arr2).to_numpy().astype("<f8", copy=False)
-            offs = np.empty(len(arr2), dtype="<f8")
-            np.cumsum(lens, dtype="<f8", out=offs)
-            offs += str_offsets[col]
+            # Lengths and bytes from the public-API path. Build offsets
+            # in int64 to keep this independent of `binary_length`'s
+            # element type, then promote to f64 at the very last step.
+            lens_i64 = pc.binary_length(arr2).to_numpy().astype("<i8",
+                                                                 copy=False)
+            offs_i64 = np.cumsum(lens_i64, dtype="<i8")
+            offs_i64 += str_offsets[col]
+            offs = offs_i64.astype("<f8", copy=False)
             fhs_off[col].write(offs.tobytes())
             value_buf = arr2.buffers()[2]
             if value_buf is not None:
                 raw_bytes = value_buf.to_pybytes()
                 fhs_str[col].write(raw_bytes)
                 str_offsets[col] += len(raw_bytes)
+            # Sanity check: the running offset must match the bytes we
+            # just appended. A mismatch means the parquet reader handed
+            # us a buffer layout that this code doesn't understand.
+            assert offs_i64[-1] == str_offsets[col], (
+                f"{col}: cumsum_end={offs_i64[-1]} but bytes_total="
+                f"{str_offsets[col]} at rg {rg}")
     if rg % 25 == 0 or rg == pf.num_row_groups - 1:
         print(f"  rg {rg} done", flush=True)
 
