@@ -6,9 +6,8 @@ scripts can read directly via `•FBytes` + `8‿64 •bit._cast`.
 Layout written under ./cols/:
   <ColName>.f64   — numeric columns, raw little-endian float64
   <ColName>.str   — concatenated UTF-8 bytes for string columns
-  <ColName>.off   — int64 little-endian byte offsets into .str,
-                    stored as f64 so BQN's `8‿64 •bit._cast` reads them
-                    as plain numbers (count(strings)+1 entries)
+  <ColName>.off   — little-endian int64 byte offsets into .str,
+                    reconstructed by util.bqn:BytesToI64 (count+1 entries)
 """
 import os
 import sys
@@ -41,8 +40,8 @@ for col in columns:
         or pa.types.is_binary(typ) or pa.types.is_large_binary(typ)):
         fhs_str[col] = open(os.path.join(DST, col + ".str"), "wb")
         fhs_off[col] = open(os.path.join(DST, col + ".off"), "wb")
-        # First offset is always 0.0 (stored as f64).
-        fhs_off[col].write(np.array([0.0], dtype="<f8").tobytes())
+        # First offset is always 0 (stored as int64 little-endian).
+        fhs_off[col].write(np.array([0], dtype="<i8").tobytes())
         str_offsets[col] = 0
     else:
         fhs_f64[col] = open(os.path.join(DST, col + ".f64"), "wb")
@@ -71,15 +70,14 @@ for rg in range(pf.num_row_groups):
             # Nulls become zero-length strings.
             arr2 = pc.fill_null(arr.combine_chunks(),
                                 pa.scalar("", type=arr.type))
-            # Lengths and bytes from the public-API path. Build offsets
-            # in int64 to keep this independent of `binary_length`'s
-            # element type, then promote to f64 at the very last step.
+            # Offsets stay int64 end-to-end. util.bqn reads them via a
+            # byte-by-byte reconstruction (no `•bit._cast`) so the file
+            # format is just little-endian int64.
             lens_i64 = pc.binary_length(arr2).to_numpy().astype("<i8",
                                                                  copy=False)
             offs_i64 = np.cumsum(lens_i64, dtype="<i8")
             offs_i64 += str_offsets[col]
-            offs = offs_i64.astype("<f8", copy=False)
-            fhs_off[col].write(offs.tobytes())
+            fhs_off[col].write(offs_i64.tobytes())
             value_buf = arr2.buffers()[2]
             if value_buf is not None:
                 raw_bytes = value_buf.to_pybytes()
@@ -101,15 +99,13 @@ for fh in fhs_str.values():
 for fh in fhs_off.values():
     fh.close()
 
-# Dump the first f64 offsets of each .off file so we can see in the
-# benchmark log exactly what bytes are sitting on disk. If BQN reads a
-# fractional value out of these files, the bytes printed here will tell
-# us whether prep wrote them wrong or whether something between prep
-# and query corrupted the file.
+# Dump the first int64 offsets of each .off file so we can see in the
+# benchmark log exactly what bytes are sitting on disk if a query later
+# reads bogus offsets.
 for col in fhs_off.keys():
     with open(os.path.join(DST, col + ".off"), "rb") as f:
         head = f.read(64)
-    vals = np.frombuffer(head, dtype="<f8")
+    vals = np.frombuffer(head, dtype="<i8")
     print(f"  {col}.off head: {vals.tolist()}", flush=True)
 
 print("prep complete")
