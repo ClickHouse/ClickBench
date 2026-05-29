@@ -4,43 +4,50 @@
 # non-commercial key auto-installed on first run.
 #   https://www.jsoftware.com/
 #   https://github.com/jsoftware/data_jd
+#
+# Note: Jd's C extensions ship as x86_64 .so files only — the bundled
+# ARM "rpi" build in data_jd/cd/rpi is too old (GCC 4.9 from 2015) to
+# match the current jd.ijs (v4.48), so this entry runs on x86_64 Linux
+# (c6a.*, c7a.*, etc.) but not on the aarch64 fleet (c8g.*, t4g.*).
 set -e
 
 if command -v ijconsole >/dev/null 2>&1; then
     exit 0
 fi
 
-sudo apt-get update
-sudo apt-get install -y wget unzip
+arch=$(uname -m)
+if [ "$arch" != "x86_64" ]; then
+    echo "jd/install: unsupported architecture '$arch'. Jd's libjd.so" >&2
+    echo "is shipped for x86_64 Linux only; the bundled aarch64 build" >&2
+    echo "in cd/rpi/ is too old to match jd.ijs v4.48." >&2
+    exit 1
+fi
 
-# 1. J 9.6 runtime — the latest build96 Linux 64-bit zip.
+sudo apt-get update
+sudo apt-get install -y wget unzip git
+
+# Stage J 9.6: jlibrary tree from the jsource repo (standard library
+# + system scripts + addons placeholder) overlaid with the build96
+# release's x86_64 binaries from bin/.
 tmp=$(mktemp -d)
+git clone --depth=1 --branch build96 \
+    https://github.com/jsoftware/jsource.git "$tmp/jsource"
+cp -r "$tmp/jsource/jlibrary" "$HOME/j9.6"
+
 wget -q -O "$tmp/l64.zip" \
     https://github.com/jsoftware/jsource/releases/download/build96/l64.zip
-mkdir -p "$HOME/j9.6"
-unzip -q "$tmp/l64.zip" -d "$HOME/j9.6"
+unzip -q "$tmp/l64.zip" -d "$tmp/jbin"
+cp -f "$tmp/jbin/j64"/{jconsole,libj.so,libtsdll.so,libgmp.so} \
+    "$HOME/j9.6/bin/"
 
-# The release ships a "bin/jconsole" binary; the J wiki recommends
-# renaming to ijconsole on Linux to avoid clashing with the JDK's
-# jconsole. Symlink ours into /usr/local/bin under that name.
+# The J wiki recommends symlinking jconsole as ijconsole on Linux to
+# avoid clashing with the JDK's jconsole.
 sudo ln -sf "$HOME/j9.6/bin/jconsole" /usr/local/bin/ijconsole
 
-# 2. Jd — installed via J's package manager. Pacman pulls the latest
-# data_jd zip from jsoftware/data_jd and unpacks it into ~/j9.6/addons.
-ijconsole <<'JEOF'
+# Install the data/jd addon via J's package manager.
+ijconsole </dev/null <<'JEOF'
 load 'pacman'
-'install' jpkg 'data/jd'
-exit ''
-JEOF
-
-# Verify Jd loads and accept the auto-installed non-commercial key.
-ijconsole <<'JEOF'
-load 'data/jd/jd'
-jdadminx 'verify'
-jd 'createtable t a int'
-jd 'insert t a';1 2 3
-echo (": jd 'reads count a from t')
-jd 'dropdb'
+install_jpkg_ 'data/jd'
 exit ''
 JEOF
 
