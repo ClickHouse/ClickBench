@@ -1,0 +1,47 @@
+#!/bin/bash
+# Install J 9.6 + Jd (J database) from Jsoftware. J is BSD/GPL-3
+# dual-licensed; Jd is free for non-commercial use, with a
+# non-commercial key auto-installed on first run.
+#   https://www.jsoftware.com/
+#   https://github.com/jsoftware/data_jd
+set -e
+
+if command -v ijconsole >/dev/null 2>&1; then
+    exit 0
+fi
+
+sudo apt-get update
+sudo apt-get install -y wget unzip
+
+# 1. J 9.6 runtime — the latest build96 Linux 64-bit zip.
+tmp=$(mktemp -d)
+wget -q -O "$tmp/l64.zip" \
+    https://github.com/jsoftware/jsource/releases/download/build96/l64.zip
+mkdir -p "$HOME/j9.6"
+unzip -q "$tmp/l64.zip" -d "$HOME/j9.6"
+
+# The release ships a "bin/jconsole" binary; the J wiki recommends
+# renaming to ijconsole on Linux to avoid clashing with the JDK's
+# jconsole. Symlink ours into /usr/local/bin under that name.
+sudo ln -sf "$HOME/j9.6/bin/jconsole" /usr/local/bin/ijconsole
+
+# 2. Jd — installed via J's package manager. Pacman pulls the latest
+# data_jd zip from jsoftware/data_jd and unpacks it into ~/j9.6/addons.
+ijconsole <<'JEOF'
+load 'pacman'
+'install' jpkg 'data/jd'
+exit ''
+JEOF
+
+# Verify Jd loads and accept the auto-installed non-commercial key.
+ijconsole <<'JEOF'
+load 'data/jd/jd'
+jdadminx 'verify'
+jd 'createtable t a int'
+jd 'insert t a';1 2 3
+echo (": jd 'reads count a from t')
+jd 'dropdb'
+exit ''
+JEOF
+
+rm -rf "$tmp"

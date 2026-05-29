@@ -1,0 +1,6 @@
+#!/bin/bash
+# Reads a Jd query line from stdin, runs it via ijconsole, prints the
+# result to stdout, and writes the wall-clock runtime in fractional
+# seconds on the last line of stderr.
+set -e
+ijconsole query.ijs
