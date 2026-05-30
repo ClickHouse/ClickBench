@@ -40,10 +40,37 @@ plus J operators for things Jd's query layer doesn't ship (`LIMIT`,
 
 ## Load
 
-`./load` ingests `hits.csv` via Jd's built-in CSV loader
-(`csvprepare_jd_` + `csvload_jd_`). The loader writes per-column
-files to a dedicated database under `~/j9.6-user/temp/jd/csvload/`;
-that's the database `./query` opens.
+`./load` ingests `hits.csv` via Jd's CSV loader with an **explicit
+column schema** instead of `csvload_jd_`'s auto-inference. The
+default flow types every string column by sampling the first 5000
+rows and then runs `csvscan` to widen any column it inferred as
+`byte` to the full-file max width. ClickBench has very sparse text
+columns (e.g. `OpenstatServiceName`, `SocialNetwork`) that look
+empty in the 5000-row sample → typed as `byte`, then later widened
+to hundreds of chars × 100 M rows. With ~30 such columns the
+splayed table grew past 500 GB during the load and segfaulted.
+Declaring text columns as `varbyte` (variable-length, per-row
+offset + concatenated data) keeps storage proportional to actual
+string content. The script writes a hand-rolled `hits.cdefs` file
+into the csvload jdcsv folder, then calls `csvrd` directly,
+skipping `csvcdefs` (auto-type) and `csvscan` (byte-width
+widening).
+
+Schema choices:
+
+* `int` (8-byte signed) for every numeric column. Jd's `int1` /
+  `int2` / `int4` leave per-row data as `n,x` char matrices, and
+  the `<>` predicate then sees a shape-2 column vs a shape-0
+  scalar, so we use the flat 8-byte JINT form everywhere.
+* `varbyte` for TEXT / VARCHAR / CHAR.
+* `edate` for `EventDate`, `edatetime` for the three TIMESTAMP
+  columns. Both are 8-byte epoch-nanos and Jd's csv loader parses
+  iso8601 from `iso8601-char` mode (CSV format is
+  `YYYY-MM-DD` / `YYYY-MM-DD HH:MM:SS`).
+
+The loader writes per-column files to a dedicated database under
+`~/j9.6-user/temp/jd/csvload/`; that's the database `./query`
+opens.
 
 ## Query
 
@@ -62,15 +89,22 @@ places:
 * **`LIMIT n OFFSET m`** uses `n {. m }. jd '...'`.
 * **`COUNT(DISTINCT col)`** uses J's `# ~.` (count of unique items)
   after pulling the column with `jd 'reads col from t'`.
-* **Q29** (`REGEXP_REPLACE`) and **Q43** (`DATE_TRUNC('minute', ...)`)
-  use facilities not in Jd's `reads` language; they currently return
-  the literal `'null'` and the benchmark driver records them as
-  missing. They could be expressed with a J-side computed column —
-  contributions welcome.
-
-`EventDate` literals (`'2013-07-01'`, etc.) in Q37–Q42 are encoded as
-days-since-epoch integers (the form Jd stores `EventDate` in after the
-CSV load): 2013-07-01 = day 15887, 2013-07-31 = day 15917.
+* **`min` / `avg` on `varbyte`**: Jd's aggregators are numeric-only,
+  so Q23's `MIN(URL)` / `MIN(Title)` become `first URL` / `first Title`
+  (any value from each group, semantically `ANY_VALUE`).
+* **Q28** (`AVG(LENGTH(URL))`), **Q29** (`REGEXP_REPLACE`), and
+  **Q43** (`DATE_TRUNC('minute', ...)`) use facilities not in Jd's
+  `reads` language; they currently return the literal `'null'` and
+  the benchmark driver records them as missing. They could be
+  expressed with a J-side computed column — contributions welcome.
+* **`order by` requires the column in `select`**: Jd's parser rejects
+  `reads SearchPhrase from hits order by EventTime` because the order
+  key isn't projected. Q25 / Q27 are rewritten to project
+  `EventTime,SearchPhrase` (timing unaffected; only the printed output
+  has one extra column).
+* **`COUNT(DISTINCT col)`**: outside `reads`, J's `# ~. ; }. jd '…'`
+  (count of unique, after dropping the header row). The `}.` drops
+  the header box so the unique scan only sees the data values.
 
 ## Performance notes
 
