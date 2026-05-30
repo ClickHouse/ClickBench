@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C","embedded","in-memory","array language"],
+    "tags": ["C","embedded","array language"],
     "load_time": 472,
     "data_size": 118169498884,
     "concurrent_qps": 0.223,
