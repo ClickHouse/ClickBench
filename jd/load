@@ -1,7 +1,12 @@
 #!/bin/bash
 # Load hits.csv into a Jd database via Jd's built-in CSV loader. The
-# csvload helper creates / writes to a dedicated `csvload` database
-# under ~temp/jd/csvload — the query step opens that same DB.
+# loader creates / writes to a dedicated `csvload` database under
+# ~/j9.6-user/temp/jd/csvload — `query.ijs` opens that same DB.
+#
+# ClickBench's hits.csv has no header row, so we use `csvload_jd_
+# 'hits';0` (treat the first row as data, Jd assigns sequential
+# default column names c1, c2, …) and then rename to the canonical
+# ClickBench schema via `csvrename_jd_`.
 set -e
 
 # Reset any prior csvload DB so we measure a clean load.
@@ -10,7 +15,11 @@ rm -rf "$HOME/j9.6-user/temp/jd/csvload"
 ijconsole </dev/null <<'JEOF'
 load 'data/jd/jd'
 csvprepare_jd_ 'hits';'hits.csv'
-csvload_jd_ 'hits';1   NB. 1 = first row is header
+csvload_jd_ 'hits';0     NB. 0 = no header row, default names c1..c105
+
+newn=: ;:'WatchID JavaEnable Title GoodEvent EventTime EventDate CounterID ClientIP RegionID UserID CounterClass OS UserAgent URL Referer IsRefresh RefererCategoryID RefererRegionID URLCategoryID URLRegionID ResolutionWidth ResolutionHeight ResolutionDepth FlashMajor FlashMinor FlashMinor2 NetMajor NetMinor UserAgentMajor UserAgentMinor CookieEnable JavascriptEnable IsMobile MobilePhone MobilePhoneModel Params IPNetworkID TraficSourceID SearchEngineID SearchPhrase AdvEngineID IsArtifical WindowClientWidth WindowClientHeight ClientTimeZone ClientEventTime SilverlightVersion1 SilverlightVersion2 SilverlightVersion3 SilverlightVersion4 PageCharset CodeVersion IsLink IsDownload IsNotBounce FUniqID OriginalURL HID IsOldCounter IsEvent IsParameter DontCountHits WithHash HitColor LocalEventTime Age Sex Income Interests Robotness RemoteIP WindowName OpenerName HistoryLength BrowserLanguage BrowserCountry SocialNetwork SocialAction HTTPError SendTiming DNSTiming ConnectTiming ResponseStartTiming ResponseEndTiming FetchTiming SocialSourceNetworkID SocialSourcePage ParamPrice ParamOrderID ParamCurrency ParamCurrencyID OpenstatServiceName OpenstatCampaignID OpenstatAdID OpenstatSourceID UTMSource UTMMedium UTMCampaign UTMContent UTMTerm FromTag HasGCLID RefererHash URLHash CLID'
+oldn=: {."1 jd 'read from hits'
+csvrename_jd_ 'hits';oldn;<newn
 exit ''
 JEOF
 
