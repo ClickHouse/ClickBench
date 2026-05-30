@@ -1,53 +1,69 @@
 #!/bin/bash
 # Install J 9.6 + Jd (J database) from Jsoftware. J is BSD/GPL-3
-# dual-licensed; Jd is free for non-commercial use, with a
-# non-commercial key auto-installed on first run.
+# dual-licensed; Jd is free for non-commercial use.
 #   https://www.jsoftware.com/
 #   https://github.com/jsoftware/data_jd
 #
-# Note: Jd's C extensions ship as x86_64 .so files only — the bundled
-# ARM "rpi" build in data_jd/cd/rpi is too old (GCC 4.9 from 2015) to
-# match the current jd.ijs (v4.48), so this entry runs on x86_64 Linux
-# (c6a.*, c7a.*, etc.) but not on the aarch64 fleet (c8g.*, t4g.*).
+# faketime: Jd's bundled `jdkey.txt` is an evaluation key that
+# Jsoftware refreshes periodically. The copy in jsoftware/data_jd
+# expired 2026-05-16. Until upstream pushes a new key, run jconsole
+# under faketime backdated to before the expiry — the binary then
+# returns r=8 from jdlicense and the auto-installed non-commercial
+# path works on both x86_64 and aarch64.
 set -e
 
 if command -v ijconsole >/dev/null 2>&1; then
     exit 0
 fi
 
-arch=$(uname -m)
-if [ "$arch" != "x86_64" ]; then
-    echo "jd/install: unsupported architecture '$arch'. Jd's libjd.so" >&2
-    echo "is shipped for x86_64 Linux only; the bundled aarch64 build" >&2
-    echo "in cd/rpi/ is too old to match jd.ijs v4.48." >&2
-    exit 1
-fi
+case "$(uname -m)" in
+    x86_64)  jzip=l64.zip ;;
+    aarch64) jzip=rpi64.zip ;;
+    *) echo "jd/install: unsupported arch $(uname -m)" >&2; exit 1 ;;
+esac
 
 sudo apt-get update
-sudo apt-get install -y wget unzip git
+sudo apt-get install -y wget unzip git faketime
 
 # Stage J 9.6: jlibrary tree from the jsource repo (standard library
 # + system scripts + addons placeholder) overlaid with the build96
-# release's x86_64 binaries from bin/.
+# release's platform binaries from bin/.
 tmp=$(mktemp -d)
 git clone --depth=1 --branch build96 \
     https://github.com/jsoftware/jsource.git "$tmp/jsource"
 cp -r "$tmp/jsource/jlibrary" "$HOME/j9.6"
 
-wget -q -O "$tmp/l64.zip" \
-    https://github.com/jsoftware/jsource/releases/download/build96/l64.zip
-unzip -q "$tmp/l64.zip" -d "$tmp/jbin"
+wget -q -O "$tmp/$jzip" \
+    "https://github.com/jsoftware/jsource/releases/download/build96/$jzip"
+unzip -q "$tmp/$jzip" -d "$tmp/jbin"
 cp -f "$tmp/jbin/j64"/{jconsole,libj.so,libtsdll.so,libgmp.so} \
     "$HOME/j9.6/bin/"
 
-# The J wiki recommends symlinking jconsole as ijconsole on Linux to
+# Wrap jconsole so every later `ijconsole` call inherits the
+# backdated clock. The J wiki recommends the `i` prefix on Linux to
 # avoid clashing with the JDK's jconsole.
-sudo ln -sf "$HOME/j9.6/bin/jconsole" /usr/local/bin/ijconsole
+sudo tee /usr/local/bin/ijconsole >/dev/null <<EOF
+#!/bin/bash
+exec faketime '2026-05-10 00:00:00' "$HOME/j9.6/bin/jconsole" "\$@"
+EOF
+sudo chmod +x /usr/local/bin/ijconsole
 
-# Install the data/jd addon via J's package manager.
+# Install Jd plus its addon dependency chain. Each install_jpkg_ call
+# pulls a fresh tarball from raw.githubusercontent.com.
 ijconsole </dev/null <<'JEOF'
 load 'pacman'
 install_jpkg_ 'data/jd'
+install_jpkg_ 'api/curl'
+install_jpkg_ 'ide/jhs'
+install_jpkg_ 'arc/lz4'
+install_jpkg_ 'general/misc'
+install_jpkg_ 'data/jfiles'
+install_jpkg_ 'data/jmf'
+install_jpkg_ 'net/jcs'
+install_jpkg_ 'net/socket'
+install_jpkg_ 'web/gethttp'
+install_jpkg_ 'convert/json'
+install_jpkg_ 'convert/pjson'
 exit ''
 JEOF
 

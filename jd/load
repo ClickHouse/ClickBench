@@ -1,32 +1,16 @@
 #!/bin/bash
-# Load hits.csv into a Jd database under ./db/. We use the CSV input
-# rather than parquet because Jd ships a fast CSV loader (csvload_jd_)
-# and no parquet reader.
+# Load hits.csv into a Jd database via Jd's built-in CSV loader. The
+# csvload helper creates / writes to a dedicated `csvload` database
+# under ~temp/jd/csvload — the query step opens that same DB.
 set -e
 
-# Discard any prior database.
-rm -rf db
-mkdir -p db
+# Reset any prior csvload DB so we measure a clean load.
+rm -rf "$HOME/j9.6-user/temp/jd/csvload"
 
-# Decompressed hits.csv is 75 GB; the file is already in cwd from
-# lib/download-hits-csv. Jd's csvload reads it row-group by row-group
-# and writes columns out to disk under ./db.
-ijconsole <<'JEOF'
-load 'data/jd/jd'
-
-NB. Create the database under ./db
-jdadminx 'sandp'
-NB. (sandp is just a default database label — we override the path
-NB.  via the JDB folder convention; see jdadmin docs.)
-
-NB. Use csvprepare/csvload to ingest hits.csv. Column types and
-NB. names come from the standard ClickBench schema in create.txt.
+ijconsole </dev/null <<'JEOF'
 load 'data/jd/jd'
 csvprepare_jd_ 'hits';'hits.csv'
 csvload_jd_ 'hits';1   NB. 1 = first row is header
-
-NB. Persist + close
-jdadmin'close'
 exit ''
 JEOF
 

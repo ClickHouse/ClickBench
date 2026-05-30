@@ -16,26 +16,41 @@ plus J operators for things Jd's query layer doesn't ship (`LIMIT`,
 
 `./install`:
 
-1. Downloads the J 9.6 runtime zip
-   ([jsoftware/jsource `build96` release](https://github.com/jsoftware/jsource/releases/tag/build96))
-   to `~/j9.6` and symlinks `bin/jconsole` to `/usr/local/bin/ijconsole`
-   (the J wiki recommends the `i`-prefix to avoid clashing with the
-   JDK's `jconsole`).
-2. Uses J's package manager (`pacman` / `jpkg`) to install the
-   [`data/jd`](https://github.com/jsoftware/data_jd) addon.
-3. Runs a smoke-test query so Jd auto-installs the non-commercial key.
+1. Clones `jsoftware/jsource@build96` and uses `jlibrary/` as the J
+   installation root, then overlays the platform-specific binary
+   (`jconsole`, `libj.so`, `libtsdll.so`, `libgmp.so`) from the same
+   tag's release zip (`l64.zip` on x86_64, `rpi64.zip` on aarch64).
+   The release zip ships binaries only and won't run without
+   `jlibrary/`'s standard library.
+2. Installs a small `/usr/local/bin/ijconsole` wrapper that
+   re-execs the real `jconsole` under `faketime '2026-05-10
+   00:00:00'`. **Why:** Jd's bundled `jdkey.txt` is an evaluation
+   key Jsoftware refreshes periodically, and the copy in
+   `jsoftware/data_jd` expired 2026-05-16. Until upstream pushes a
+   new key (tracked in the data_jd repo as `jdkey.txt`), every
+   `jconsole` invocation needs to see a date before the expiry or
+   `jdlicense` returns `_2` ("eval key") and `jd.ijs:147` asserts
+   out. Backdating with faketime is the cheapest workaround that
+   keeps the rest of Jd intact.
+3. Uses J's package manager (`pacman` / `jpkg`) to install the
+   [`data/jd`](https://github.com/jsoftware/data_jd) addon and its
+   J-side dependencies (`api/curl`, `ide/jhs`, `arc/lz4`,
+   `general/misc`, `data/jfiles`, `data/jmf`, `net/jcs`,
+   `net/socket`, `web/gethttp`, `convert/json`, `convert/pjson`).
 
 ## Load
 
 `./load` ingests `hits.csv` via Jd's built-in CSV loader
-(`csvprepare_jd_` + `csvload_jd_`). Jd writes per-column files under
-`./db/`.
+(`csvprepare_jd_` + `csvload_jd_`). The loader writes per-column
+files to a dedicated database under `~/j9.6-user/temp/jd/csvload/`;
+that's the database `./query` opens.
 
 ## Query
 
 `./query` reads a J expression from stdin and evaluates it via
-`ijconsole query.ijs`. The `query.ijs` script loads the Jd database,
-times the eval, and emits the result on stdout / runtime on stderr.
+`ijconsole query.ijs`. The `query.ijs` script opens the `csvload`
+database, times the eval, prints the result to stdout, and emits
+the runtime in fractional seconds to file id 5 (stderr).
 
 ## Query adaptations
 
