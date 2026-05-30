@@ -1,3 +1,16 @@
 #!/bin/bash
+# Locate the csvload database dir. J 9.6's ~temp resolves to
+# ~/j9.6-user/temp for a normal user but to /tmp (or $TMPDIR) when
+# jconsole detects it's running as root — see j9.6/bin/profile.ijs.
+# cloud-init runs as root, so the cloudy load lands under /tmp;
+# local laptop runs land under ~/j9.6-user/temp. Try both.
 set -e
-du -sb "$HOME/j9.6-user/temp/jd/csvload" 2>/dev/null | awk '{ print $1 }'
+for p in "${TMPDIR:-/tmp}/jd/csvload" \
+         "$HOME/j9.6-user/temp/jd/csvload" \
+         "$HOME/j9.6/user/temp/jd/csvload"; do
+    if [ -d "$p" ]; then
+        du -sb "$p" | awk '{print $1}'
+        exit 0
+    fi
+done
+echo 0

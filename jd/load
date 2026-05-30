@@ -15,7 +15,11 @@
 set -e
 
 # Reset any prior csvload DB so we measure a clean load.
-rm -rf "$HOME/j9.6-user/temp/jd/csvload"
+# J's ~temp resolves to /tmp under root (cloud-init) and to
+# ~/j9.6-user/temp under a normal user — see j9.6/bin/profile.ijs.
+rm -rf "$HOME/j9.6-user/temp/jd/csvload" \
+       "${TMPDIR:-/tmp}/jd/csvload" \
+       "$HOME/j9.6/user/temp/jd/csvload"
 
 ijconsole </dev/null <<'JEOF'
 load 'data/jd/jd'
