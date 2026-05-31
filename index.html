@@ -26,6 +26,7 @@
             --selector-passive-background-color: #EEDDCC;
             --selector-hover-text-color: black;
             --selector-hover-background-color: #FDB;
+            --selector-divider-color: #DDD;
 
             --summary-every-other-row-color: #F8F8F8;
             --highlight-color: #EEE;
@@ -59,6 +60,7 @@
             --selector-passive-background-color: #566;
             --selector-hover-text-color: black;
             --selector-hover-background-color: white;
+            --selector-divider-color: #1F566D;
 
             --summary-every-other-row-color: #042e41;
             --highlight-color: #064663;
@@ -117,6 +119,12 @@
             padding-right: 1rem;
         }
 
+        .selector-section th,
+        .selector-section td {
+            border-top: 1px solid var(--selector-divider-color);
+            padding-top: 0.7rem;
+        }
+
         .inline-filter {
             display: inline-block;
             margin-right: 1.5rem;
@@ -126,6 +134,62 @@
         .inline-filter-label {
             font-weight: bold;
             margin-right: 0.25rem;
+        }
+
+        .selector-row {
+            padding-bottom: 0.5rem;
+        }
+
+        .advanced-filters {
+            display: inline-block;
+            margin-top: 0.25rem;
+        }
+
+        .advanced-filters summary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-bottom: 0.65rem;
+            padding: 0.35rem 0.7rem;
+            border: 1px solid var(--selector-divider-color);
+            border-radius: 0.5rem;
+            background: var(--selector-background-color);
+            color: var(--selector-text-color);
+            cursor: pointer;
+            font-weight: bold;
+            list-style: none;
+        }
+
+        .advanced-filters summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .advanced-filters summary::after {
+            content: "▾";
+            color: var(--link-color);
+            font-size: 0.85rem;
+            line-height: 1;
+        }
+
+        .advanced-filters[open] summary::after {
+            content: "▴";
+        }
+
+        .advanced-filters summary:hover {
+            color: var(--selector-hover-text-color);
+            background: var(--selector-hover-background-color);
+        }
+
+        .advanced-filters summary:hover::after {
+            color: var(--link-hover-color);
+        }
+
+        .advanced-filters .inline-filter {
+            margin-bottom: 0.5rem;
+        }
+
+        .advanced-filter-row {
+            margin-top: 0.25rem;
         }
 
         .selector {
@@ -228,7 +292,7 @@
             font-weight: bold;
         }
 
-        .remove-system {
+        .remove-database {
             visibility: hidden;
             cursor: pointer;
             color: var(--link-color);
@@ -238,11 +302,11 @@
             padding-right: 1.5rem;
         }
 
-        .summary-row:hover .remove-system {
+        .summary-row:hover .remove-database {
             visibility: visible;
         }
 
-        .remove-system:hover {
+        .remove-database:hover {
             color: var(--link-hover-color);
         }
 
@@ -425,17 +489,13 @@ const additional_data_size_points = [
 
 <table class="selectors-container stick-left">
     <tr>
-        <td colspan="2">
-            <span class="inline-filter" id="selectors_opensource">
-                <span class="inline-filter-label">Open source:</span>
-                <a id="selector-opensource-yes" class="selector selector-active">Yes</a>
-                <a id="selector-opensource-no" class="selector selector-active">No</a>
-            </span>
-            <span class="inline-filter" id="selectors_hardware">
-                <span class="inline-filter-label">Hardware:</span>
-                <a id="selector-hardware-cpu" class="selector selector-active">CPU</a>
-                <a id="selector-hardware-gpu" class="selector selector-active">GPU</a>
-            </span>
+        <th>Metric: </th>
+        <td id="selectors_run" class="selector-row">
+            <a class="selector" id="selector-metric-combined">Combined</a>
+            <a class="selector" id="selector-metric-cold">Cold Run</a>
+            <a class="selector" id="selector-metric-hot">Hot Run</a>
+            <a class="selector" id="selector-metric-load">Load Time</a>
+            <a class="selector" id="selector-metric-size">Storage Size</a>
             <span class="inline-filter" id="selectors_tuned">
                 <span class="inline-filter-label">Tuned:</span>
                 <a id="selector-tuned-no" class="selector">No</a>
@@ -443,22 +503,36 @@ const additional_data_size_points = [
             </span>
         </td>
     </tr>
-    <tr>
-        <th>System: </th>
-        <td id="selectors_system">
-            <a id="select-all-systems" class="selector selector-active">All</a>
+    <tr class="selector-section">
+        <th>Database: </th>
+        <td id="selectors_database">
+            <a id="select-all-databases" class="selector selector-active">All</a>
         </td>
     </tr>
-    <tr>
-        <th>Type: </th>
-        <td id="selectors_type">
-            <a id="select-all-types" class="selector selector-active">All</a>
+    <tr class="selector-section">
+        <th>Data Format: </th>
+        <td class="selector-row">
+            <span class="inline-filter" id="selectors_data_format">
+                <a id="select-all-data-formats" class="selector selector-active">All</a>
+            </span>
+            <span class="inline-filter">
+                <span class="inline-filter-label">Partitioning:</span>
+                <span id="selectors_partitioning">
+                    <a id="select-all-partitioning" class="selector selector-active">All</a>
+                </span>
+            </span>
         </td>
     </tr>
-    <tr>
+    <tr class="selector-section">
         <th>Machine: </th>
         <td id="selectors_machine">
             <a id="select-all-machines" class="selector selector-active">All</a>
+        </td>
+    </tr>
+    <tr>
+        <th>Ram: </th>
+        <td id="selectors_ram">
+            <a id="select-all-ram" class="selector selector-active">All</a>
         </td>
     </tr>
     <tr>
@@ -467,14 +541,29 @@ const additional_data_size_points = [
             <a id="select-all-cluster-sizes" class="selector selector-active">All</a>
         </td>
     </tr>
-    <tr>
-        <th>Metric: </th>
-        <td id="selectors_run">
-            <a class="selector" id="selector-metric-combined">Combined</a>
-            <a class="selector" id="selector-metric-cold">Cold Run</a>
-            <a class="selector" id="selector-metric-hot">Hot Run</a>
-            <a class="selector" id="selector-metric-load">Load Time</a>
-            <a class="selector" id="selector-metric-size">Storage Size</a>
+    <tr class="selector-section">
+        <td colspan="2">
+            <details class="advanced-filters">
+                <summary>More filters</summary>
+                <div>
+                    <span class="inline-filter" id="selectors_opensource">
+                        <span class="inline-filter-label">Open source:</span>
+                        <a id="selector-opensource-yes" class="selector selector-active">Yes</a>
+                        <a id="selector-opensource-no" class="selector selector-active">No</a>
+                    </span>
+                    <span class="inline-filter" id="selectors_hardware">
+                        <span class="inline-filter-label">Hardware:</span>
+                        <a id="selector-hardware-cpu" class="selector selector-active">CPU</a>
+                        <a id="selector-hardware-gpu" class="selector selector-active">GPU</a>
+                    </span>
+                </div>
+                <div class="advanced-filter-row">
+                    <span class="inline-filter-label">Tags:</span>
+                    <span id="selectors_tags">
+                        <a id="select-all-tags" class="selector selector-active">All</a>
+                    </span>
+                </div>
+            </details>
         </td>
     </tr>
 </table>
@@ -483,7 +572,7 @@ const additional_data_size_points = [
     <thead>
         <tr>
             <th class="summary-name">
-                System &amp; Machine
+                Database &amp; Machine
             </th>
             <th colspan="2">
                 Relative <span id="time-or-size">time</span> (lower is better).<br/>
@@ -517,9 +606,12 @@ const missing_result_penalty = 2;
 const missing_result_time = 300;
 
 let selectors = {
-    "system": {},
-    "type": {},
+    "database": {},
+    "tags": {},
+    "data_format": {},
+    "partitioning": {},
     "machine": {},
+    "ram": {},
     "cluster_size": {},
     "opensource": {"yes": true, "no": true},
     "hardware": {"cpu": true, "gpu": false},
@@ -548,32 +640,108 @@ if (new_theme && new_theme != theme) {
 
 /// Generate selectors
 
-let systems = document.getElementById('selectors_system');
-let types = document.getElementById('selectors_type');
+let databases = document.getElementById('selectors_database');
+let tags = document.getElementById('selectors_tags');
+let data_formats = document.getElementById('selectors_data_format');
+let partitioning = document.getElementById('selectors_partitioning');
 let machines = document.getElementById('selectors_machine');
+let ram = document.getElementById('selectors_ram');
 let cluster_sizes = document.getElementById('selectors_cluster_size');
 
-let unique_systems = [... new Set(data.map(elem => elem.system))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+const data_format_tags = new Set(['dataframe', 'feather', 'parquet', 'Velox', 'Vortex']);
+const data_format_tag_aliases = {'DataFrame': 'dataframe', 'Gluten-on-Velox': 'Velox', 'Parquet': 'parquet'};
+const partitioning_tags = new Set(['partitioned', 'single']);
 
-const system_to_tags = {};
-data.forEach(d => {
-    if (!system_to_tags[d.system]) system_to_tags[d.system] = new Set();
-    (d.tags || []).forEach(t => system_to_tags[d.system].add(t));
-});
-
-function highlightSystemTags(systemName) {
-    const tags = system_to_tags[systemName] || new Set();
-    for (const elem of types.childNodes) {
-        if (elem.tagName !== 'A') continue;
-        if (tags.has(elem.innerText)) elem.classList.add('selector-tag-hilite');
-    }
+function normalizeDatabase(system) {
+    return system.replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
 }
 
-function clearSystemTagsHighlight() {
-    for (const elem of types.childNodes) {
-        if (elem.tagName !== 'A') continue;
-        elem.classList.remove('selector-tag-hilite');
+function tagsFromDatabaseName(system) {
+    return [...system.matchAll(/\(([^)]*)\)/g)]
+        .flatMap(match => match[1].split(','))
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+}
+
+function uniqueValues(values) {
+    return [...new Set(values)];
+}
+
+function isClusterSizeAlias(machine) {
+    return /^(?:\d+)?(?:XS|S|M|L|XL|XXL)$/.test(machine);
+}
+
+function splitMachineAndRam(machine) {
+    const cloud_match = machine.match(/^(ClickHouse ☁️):\s*(\d+GiB)$/);
+    if (cloud_match) {
+        return {machine: cloud_match[1], ram: cloud_match[2]};
     }
+
+    const ram_match = machine.match(/^(\d+GiB)$/);
+    return {machine: ram_match ? null : machine, ram: ram_match ? ram_match[1] : null};
+}
+
+function displayMachine(elem) {
+    const cluster = Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×' : '';
+    return cluster + (elem.machine || elem.ram[0] || '');
+}
+
+const machine_aliases = {};
+const machine_to_ram_aliases = {};
+
+data.forEach(elem => {
+    const original_machine = elem.machine;
+    const machine_and_ram = splitMachineAndRam(original_machine);
+    elem.machine = machine_and_ram.machine;
+    elem.ram = machine_and_ram.ram ? [machine_and_ram.ram] : [];
+    machine_aliases[original_machine] = elem.machine;
+    if (elem.machine) {
+        machine_aliases[elem.machine] = elem.machine;
+    }
+    if (machine_and_ram.ram) machine_to_ram_aliases[original_machine] = machine_and_ram.ram;
+
+    elem.database = normalizeDatabase(elem.system);
+    elem.tags = uniqueValues([...(elem.tags || []), ...tagsFromDatabaseName(elem.system)]);
+    elem.data_format = uniqueValues(elem.tags
+        .map(tag => data_format_tag_aliases[tag] || tag)
+        .filter(tag => data_format_tags.has(tag)));
+    if (elem.data_format.length == 0) elem.data_format = ['native'];
+    elem.partitioning = elem.tags.filter(tag => partitioning_tags.has(tag));
+    if (elem.partitioning.length == 0) elem.partitioning = ['native'];
+    elem.tags = elem.tags.filter(tag => !data_format_tags.has(data_format_tag_aliases[tag] || tag) && !partitioning_tags.has(tag));
+});
+
+let unique_databases = [... new Set(data.map(elem => elem.database))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+
+const database_aliases = {};
+data.forEach(elem => {
+    database_aliases[elem.database] = elem.database;
+    database_aliases[elem.system] = elem.database;
+});
+
+const database_to_tags = {};
+data.forEach(d => {
+    if (!database_to_tags[d.database]) database_to_tags[d.database] = new Set();
+    [...(d.tags || []), ...(d.data_format || []), ...(d.partitioning || [])].forEach(t => database_to_tags[d.database].add(t));
+});
+
+function highlightDatabaseTags(databaseName) {
+    const databaseTags = database_to_tags[databaseName] || new Set();
+    [tags, data_formats, partitioning].forEach(container => {
+        for (const elem of container.childNodes) {
+            if (elem.tagName !== 'A') continue;
+            if (databaseTags.has(elem.innerText)) elem.classList.add('selector-tag-hilite');
+        }
+    });
+}
+
+function clearDatabaseTagsHighlight() {
+    [tags, data_formats, partitioning].forEach(container => {
+        for (const elem of container.childNodes) {
+            if (elem.tagName !== 'A') continue;
+            elem.classList.remove('selector-tag-hilite');
+        }
+    });
 }
 
 function toggle(e, elem, selectors_map) {
@@ -593,60 +761,76 @@ function toggleAll(e, selectors_map) {
     updateHistory();
 }
 
-unique_systems.map(elem => {
+unique_databases.map(elem => {
     let selector = document.createElement('a');
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
-    systems.appendChild(selector);
-    selectors.system[elem] = data.some(entry => entry.system == elem && !entry.hide);
-    selector.addEventListener('click', e => toggle(e, elem, selectors.system));
+    databases.appendChild(selector);
+    selectors.database[elem] = data.some(entry => entry.database == elem && !entry.hide);
+    selector.addEventListener('click', e => toggle(e, elem, selectors.database));
 
-    /// Highlighting summary rows and table columns on hovering over the system selector.
+    /// Highlighting summary rows and table columns on hovering over the database selector.
     selector.addEventListener('mouseover', e => {
         [...document.querySelectorAll('.summary-row')].map(row => {
-            row.className = row.dataset.system == elem ? 'summary-row summary-row-hilite' : 'summary-row' });
+            row.className = row.dataset.database == elem ? 'summary-row summary-row-hilite' : 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(th => {
-            th.className = th.dataset.system == elem ? 'th-entry th-entry-hilite' : 'th-entry' });
-        highlightSystemTags(elem);
+            th.className = th.dataset.database == elem ? 'th-entry th-entry-hilite' : 'th-entry' });
+        highlightDatabaseTags(elem);
     });
     selector.addEventListener('mouseout', e => {
         [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(row => { row.className = 'th-entry' });
-        clearSystemTagsHighlight();
+        clearDatabaseTagsHighlight();
     });
 });
 
-const tag_to_systems = {};
+const tag_to_databases = {};
 data.forEach(d => {
-    (d.tags || []).forEach(t => {
-        if (!tag_to_systems[t]) tag_to_systems[t] = new Set();
-        tag_to_systems[t].add(d.system);
+    [...(d.tags || []), ...(d.data_format || []), ...(d.partitioning || [])].forEach(t => {
+        if (!tag_to_databases[t]) tag_to_databases[t] = new Set();
+        tag_to_databases[t].add(d.database);
     });
 });
 
-[... new Set(data.map(elem => elem.tags).flat())].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())).map(elem => {
+function makeValueSelector(container, selectors_map, elem) {
     let selector = document.createElement('a');
     selector.className = 'selector selector-active';
     selector.appendChild(document.createTextNode(elem));
-    types.appendChild(selector);
-    selectors.type[elem] = true;
-    selector.addEventListener('click', e => toggle(e, elem, selectors.type));
+    container.appendChild(selector);
+    selectors_map[elem] = true;
+    selector.addEventListener('click', e => toggle(e, elem, selectors_map));
 
-    /// Highlighting summary rows and detail columns on hovering over a tag.
+    /// Highlighting summary rows and detail columns on hovering over a selector value.
     selector.addEventListener('mouseover', () => {
-        const tagged = tag_to_systems[elem] || new Set();
+        const tagged = tag_to_databases[elem] || new Set();
         [...document.querySelectorAll('.summary-row')].map(row => {
-            row.className = tagged.has(row.dataset.system) ? 'summary-row summary-row-hilite' : 'summary-row' });
+            row.className = tagged.has(row.dataset.database) ? 'summary-row summary-row-hilite' : 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(th => {
-            th.className = tagged.has(th.dataset.system) ? 'th-entry th-entry-hilite' : 'th-entry' });
+            th.className = tagged.has(th.dataset.database) ? 'th-entry th-entry-hilite' : 'th-entry' });
     });
     selector.addEventListener('mouseout', () => {
         [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
         [...document.querySelectorAll('.th-entry')].map(th => { th.className = 'th-entry' });
     });
+}
+
+[... new Set(data.map(elem => elem.tags).flat())].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())).map(elem => {
+    makeValueSelector(tags, selectors.tags, elem);
 });
 
-[... new Set(data.map(elem => elem.machine))].sort((a, b) => {
+['native', ...[... new Set(data.map(elem => elem.data_format).flat())].filter(elem => elem != 'native').sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))].map(elem => {
+    makeValueSelector(data_formats, selectors.data_format, elem);
+});
+
+['native', 'partitioned', 'single'].map(elem => {
+    makeValueSelector(partitioning, selectors.partitioning, elem);
+});
+
+[... new Set(data.map(elem => elem.ram).flat())].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'})).map(elem => {
+    makeValueSelector(ram, selectors.ram, elem);
+});
+
+[... new Set(data.map(elem => elem.machine))].filter(elem => elem && !isClusterSizeAlias(elem)).sort((a, b) => {
     const count_diff = data.filter(elem => elem.machine === b).length - data.filter(elem => elem.machine === a).length;
     return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
 }).map(elem => {
@@ -713,35 +897,33 @@ document.getElementById('selector-hardware-gpu').addEventListener('click', e => 
     updateHistory();
 });
 
-document.getElementById('selector-tuned-yes').addEventListener('click', e => {
-    selectors.tuned.yes = !selectors.tuned.yes;
-    if (selectors.tuned.yes) {
-        e.target.classList.add('selector-active');
-    } else {
-        e.target.classList.remove('selector-active');
-    }
+document.getElementById('selector-tuned-yes').addEventListener('click', () => {
+    selectors.tuned.yes = true;
+    selectors.tuned.no = false;
+    updateSelectors();
     render();
     updateHistory();
 });
 
-document.getElementById('selector-tuned-no').addEventListener('click', e => {
-    selectors.tuned.no = !selectors.tuned.no;
-    if (selectors.tuned.no) {
-        e.target.classList.add('selector-active');
-    } else {
-        e.target.classList.remove('selector-active');
-    }
+document.getElementById('selector-tuned-no').addEventListener('click', () => {
+    selectors.tuned.no = true;
+    selectors.tuned.yes = false;
+    updateSelectors();
     render();
     updateHistory();
 });
 
-document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
-document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
+document.getElementById('select-all-databases').addEventListener('click', e => toggleAll(e, selectors.database));
+document.getElementById('select-all-tags').addEventListener('click', e => toggleAll(e, selectors.tags));
+document.getElementById('select-all-data-formats').addEventListener('click', e => toggleAll(e, selectors.data_format));
+document.getElementById('select-all-partitioning').addEventListener('click', e => toggleAll(e, selectors.partitioning));
 document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
+document.getElementById('select-all-ram').addEventListener('click', e => toggleAll(e, selectors.ram));
 document.getElementById('select-all-cluster-sizes').addEventListener('click', e => toggleAll(e, selectors.cluster_size));
 
-[...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => elem.addEventListener('click', e => {
-    [...e.target.parentElement.querySelectorAll('a')].map(elem => { elem.className = elem == e.target ? 'selector selector-active' : 'selector' });
+const metric_selectors = [...document.querySelectorAll('[id^="selector-metric-"]')];
+metric_selectors.map(elem => elem.addEventListener('click', e => {
+    metric_selectors.map(elem => { elem.className = elem == e.target ? 'selector selector-active' : 'selector' });
 }));
 
 document.getElementById('selector-metric-combined').addEventListener('click', e => { selectors.metric = 'combined'; render(); updateHistory(); });
@@ -753,12 +935,15 @@ document.getElementById('selector-metric-size').addEventListener('click', e => {
 selectors.queries = [...data[0].result.keys()].map(k => true);
 
 function updateSelectors() {
-    [...systems.childNodes].map(elem => { elem.className = selectors.system[elem.innerText] ? 'selector selector-active' : 'selector' });
-    [...types.childNodes].map(elem => { elem.className = selectors.type[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...databases.childNodes].map(elem => { elem.className = selectors.database[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...tags.childNodes].map(elem => { elem.className = selectors.tags[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...data_formats.childNodes].map(elem => { elem.className = selectors.data_format[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...partitioning.childNodes].map(elem => { elem.className = selectors.partitioning[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...machines.childNodes].map(elem => { elem.className = selectors.machine[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...ram.childNodes].map(elem => { elem.className = selectors.ram[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...cluster_sizes.childNodes].map(elem => { elem.className = selectors.cluster_size[elem.innerText] ? 'selector selector-active' : 'selector' });
 
-    [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
+    metric_selectors.map(elem => {
         elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
 
     [...document.querySelectorAll('.query-checkbox')].map((elem, i) => { elem.checked = selectors.queries[i] });
@@ -788,10 +973,16 @@ function applyTopRowFilters() {
         }
     }
 
-    apply(systems, e => [e.system]);
-    apply(types, e => e.tags || []);
-    apply(machines, e => [e.machine]);
+    apply(databases, e => [e.database]);
+    apply(data_formats, e => e.data_format || []);
+    apply(partitioning, e => e.partitioning || []);
+    apply(machines, e => e.machine ? [e.machine] : []);
+    apply(ram, e => e.ram || []);
     apply(cluster_sizes, e => [e.cluster_size]);
+
+    for (const elem of tags.childNodes) {
+        if (elem.tagName === 'A') elem.style.display = '';
+    }
 }
 
 function findPassiveSelectors(filtered_data) {
@@ -807,9 +998,12 @@ function findPassiveSelectors(filtered_data) {
             }
         }
     }
-    process('system', systems);
-    process('tags', types);
+    process('database', databases);
+    process('tags', tags);
+    process('data_format', data_formats);
+    process('partitioning', partitioning);
     process('machine', machines);
+    process('ram', ram);
     process('cluster_size', cluster_sizes);
 }
 
@@ -933,24 +1127,24 @@ function renderSummary(filtered_data) {
         let tr = document.createElement('tr');
         tr.className = 'summary-row';
 
-        tr.dataset.system = elem.system;
-        tr.addEventListener('mouseover', () => highlightSystemTags(elem.system));
-        tr.addEventListener('mouseout', clearSystemTagsHighlight);
+        tr.dataset.database = elem.database;
+        tr.addEventListener('mouseover', () => highlightDatabaseTags(elem.database));
+        tr.addEventListener('mouseout', clearDatabaseTagsHighlight);
 
         let td_name = document.createElement('td');
         td_name.className = 'summary-name';
 
         if (!elem.fake) {
             let remove = document.createElement('span');
-            remove.className = 'remove-system';
+            remove.className = 'remove-database';
             remove.textContent = '✕';
-            remove.title = 'Remove this system from the selection';
+            remove.title = 'Remove this database from the selection';
             remove.addEventListener('click', e => {
                 e.preventDefault();
                 e.stopPropagation();
-                selectors.system[elem.system] = false;
-                for (const s of systems.childNodes) {
-                    if (s.tagName === 'A' && s.innerText === elem.system) {
+                selectors.database[elem.database] = false;
+                for (const s of databases.childNodes) {
+                    if (s.tagName === 'A' && s.innerText === elem.database) {
                         s.className = 'selector';
                     }
                 }
@@ -960,7 +1154,7 @@ function renderSummary(filtered_data) {
             td_name.appendChild(remove);
 
             let link = document.createElement('a');
-            link.appendChild(document.createTextNode(`${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+            link.appendChild(document.createTextNode(`${elem.system} (${displayMachine(elem)})`));
             link.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + elem.source;
             link.style.color = `oklch(var(--hashed-link-lightness) 0.2018 ${nameToColor(elem.system.split(' ')[0])})`
             td_name.appendChild(link);
@@ -1076,11 +1270,20 @@ function render() {
 
     applyTopRowFilters();
 
+    function matchesSelector(values, selectors_map) {
+        return values.length == 0
+            ? Object.values(selectors_map).every(x => x)
+            : values.filter(type => selectors_map[type]).length > 0;
+    }
+
     let filtered_data = data.filter(elem =>
-        selectors.system[elem.system] &&
-        selectors.machine[elem.machine] &&
+        selectors.database[elem.database] &&
+        (!elem.machine || isClusterSizeAlias(elem.machine) || selectors.machine[elem.machine]) &&
+        matchesSelector(elem.ram, selectors.ram) &&
         selectors.cluster_size[elem.cluster_size] &&
-        elem.tags.filter(type => selectors.type[type]).length > 0 &&
+        matchesSelector(elem.tags, selectors.tags) &&
+        matchesSelector(elem.data_format, selectors.data_format) &&
+        matchesSelector(elem.partitioning, selectors.partitioning) &&
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
         ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu"))
@@ -1136,11 +1339,11 @@ function render() {
     sorted_indices.map(idx => {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
-        th.appendChild(document.createTextNode(`${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+        th.appendChild(document.createTextNode(`${elem.system}\n(${displayMachine(elem)})`));
         th.className = 'th-entry';
-        th.dataset.system = elem.system;
-        th.addEventListener('mouseover', () => highlightSystemTags(elem.system));
-        th.addEventListener('mouseout', clearSystemTagsHighlight);
+        th.dataset.database = elem.database;
+        th.addEventListener('mouseover', () => highlightDatabaseTags(elem.database));
+        th.addEventListener('mouseout', clearDatabaseTagsHighlight);
         details_head.appendChild(th);
     });
 
@@ -1307,14 +1510,54 @@ function decodeState(state) {
     let decoded = {};
     state.split('&').forEach(kv => {
         let [k, v] = kv.split('=');
+        if (k === 'system') {
+            k = 'database';
+        } else if (k === 'type') {
+            k = 'tags';
+        }
 
         if (typeof selectors[k] === 'string') {
             decoded[k] = v;
         } else if (typeof selectors[k] === 'object') {
             decoded[k] = Array.isArray(selectors[k]) ? [] : {};
 
-            const filtered = v.substring(1, v.length).split('|').filter(s => s !== '')
-                .map(substr => Object.keys(selectors[k]).filter(x => isSubsequence(x, decodeURIComponent(substr))).reduce((a, b) => a.length <= b.length ? a : b));
+            const keys = k === 'database'
+                ? Object.keys(database_aliases)
+                : k === 'machine'
+                    ? Object.keys(machine_aliases)
+                    : Object.keys(selectors[k]);
+            let filtered = v.substring(1, v.length).split('|').filter(s => s !== '')
+                .map(substr => {
+                    const decodedSubstr = decodeURIComponent(substr);
+                    if (keys.includes(decodedSubstr)) return decodedSubstr;
+                    const matches = keys.filter(x => isSubsequence(x, decodedSubstr));
+                    if (matches.length == 0) return null;
+                    if (k === 'machine') {
+                        const machineMatch = matches.find(x => machine_to_ram_aliases[x]);
+                        if (machineMatch) return machineMatch;
+                    }
+                    const match = matches.reduce((a, b) => a.length <= b.length ? a : b);
+                    return k === 'database' ? database_aliases[match] : match;
+                })
+                .filter(x => x !== null);
+
+            if (k === 'machine') {
+                const aliasFiltered = filtered.filter(isClusterSizeAlias);
+                filtered = filtered.filter(x => !isClusterSizeAlias(x));
+                if (v.startsWith('+') && filtered.length == 0 && aliasFiltered.length > 0) {
+                    return;
+                }
+                const ramFiltered = filtered
+                    .map(x => machine_to_ram_aliases[x])
+                    .filter(x => x && Object.hasOwn(selectors.ram, x));
+                if (ramFiltered.length > 0 && !decoded.ram) {
+                    decoded.ram = {};
+                    Object.keys(selectors.ram).forEach(x => {
+                        decoded.ram[x] = v.startsWith('+') ? ramFiltered.includes(x) : !ramFiltered.includes(x);
+                    });
+                }
+                filtered = filtered.map(x => machine_aliases[x] || x);
+            }
 
             if (v.startsWith('+')) {
                 Object.keys(selectors[k]).forEach(x => {
@@ -1337,32 +1580,74 @@ function updateHistory() {
 
 window.onpopstate = function(event) {
     if (!event.state) { return; }
-    selectors = event.state;
-    if (!selectors.opensource) {
-        selectors.opensource = {"yes": true, "no": false};
-    }
-    if (!selectors.hardware) {
-        selectors.hardware = {"cpu": true, "gpu": false};
-    }
-    if (!selectors.tuned) {
-        selectors.tuned = {"no": true, "yes": false};
-    }
+    selectors = normalizeSelectorState(event.state);
     updateSelectors();
     render();
 };
 
+function normalizeSelectorState(state) {
+    const normalizedState = {...state};
+    if (normalizedState.system && !normalizedState.database) {
+        normalizedState.database = normalizedState.system;
+    }
+    if (normalizedState.type && !normalizedState.tags) {
+        normalizedState.tags = normalizedState.type;
+    }
+    delete normalizedState.system;
+    delete normalizedState.type;
+
+    if (normalizedState.database) {
+        const normalizedDatabase = {};
+        Object.keys(selectors.database).forEach(database => {
+            normalizedDatabase[database] = selectors.database[database];
+        });
+        Object.entries(normalizedState.database).forEach(([database, selected]) => {
+            const normalizedName = database_aliases[database] || normalizeDatabase(database);
+            if (Object.hasOwn(selectors.database, normalizedName)) {
+                normalizedDatabase[normalizedName] = selected;
+            }
+        });
+        normalizedState.database = normalizedDatabase;
+    }
+
+    if (normalizedState.machine) {
+        const normalizedMachine = {};
+        const normalizedRam = normalizedState.ram ? {...normalizedState.ram} : {...selectors.ram};
+        Object.keys(selectors.machine).forEach(machine => {
+            normalizedMachine[machine] = selectors.machine[machine];
+        });
+        Object.entries(normalizedState.machine).forEach(([machine, selected]) => {
+            const normalizedName = machine_aliases[machine] || machine;
+            if (Object.hasOwn(selectors.machine, normalizedName)) {
+                normalizedMachine[normalizedName] = selected;
+            }
+
+            const ramValue = machine_to_ram_aliases[machine];
+            if (ramValue && Object.hasOwn(selectors.ram, ramValue)) {
+                if (selected && !normalizedState.ram) {
+                    Object.keys(normalizedRam).forEach(value => {
+                        normalizedRam[value] = false;
+                    });
+                }
+                normalizedRam[ramValue] = selected;
+            }
+        });
+        normalizedState.machine = normalizedMachine;
+        normalizedState.ram = normalizedRam;
+    }
+
+    return {
+        ...selectors,
+        ...normalizedState,
+        opensource: normalizedState.opensource || selectors.opensource || {"yes": true, "no": false},
+        hardware: normalizedState.hardware || selectors.hardware || {"cpu": true, "gpu": false},
+        tuned: normalizedState.tuned || selectors.tuned || {"no": true, "yes": false},
+    };
+}
+
 if (window.location.hash) {
     try {
-        selectors = decodeState(decodeURIComponent(window.location.hash.substring(1)));
-        if (!selectors.opensource) {
-            selectors.opensource = {"yes": true, "no": false};
-        }
-        if (!selectors.hardware) {
-            selectors.hardware = {"cpu": true, "gpu": false};
-        }
-        if (!selectors.tuned) {
-            selectors.tuned = {"no": true, "yes": false};
-        }
+        selectors = normalizeSelectorState(decodeState(decodeURIComponent(window.location.hash.substring(1))));
     } catch {}
 }
 
