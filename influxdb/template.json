@@ -1,0 +1,12 @@
+{
+  "system": "InfluxDB",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "time-series",
+    "lukewarm-cold-run"
+  ]
+}

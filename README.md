@@ -306,7 +306,6 @@ Please help us add more systems and run the benchmarks on more types of VMs:
 - [ ] Hive
 - [ ] Hydrolix
 - [ ] Impala
-- [ ] InfluxDB
 - [ ] LocustDB
 - [ ] Manticore Search
 - [ ] MS SQL Server with Column Store Index (without publishing)
