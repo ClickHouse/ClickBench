@@ -1,0 +1,12 @@
+{
+  "system": "pg_deltax",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "PostgreSQL compatible",
+    "column-oriented",
+    "time-series"
+  ]
+}

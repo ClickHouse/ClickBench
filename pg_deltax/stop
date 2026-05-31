@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Bound the stop so we never wedge cloud-init: postgresql@.service has
+# TimeoutStopSec=infinity, and the concurrent-QPS test can leave the
+# postmaster waiting on backend children that were SIGKILLed by earlyoom.
+# After 60s of orderly shutdown, escalate to SIGKILL via `systemctl kill`.
+PGVERSION=${PGVERSION:-18}
+sudo timeout 60 systemctl stop postgresql@$PGVERSION-main || \
+    sudo systemctl kill -s SIGKILL postgresql@$PGVERSION-main || true

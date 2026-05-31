@@ -1,0 +1,74 @@
+#!/bin/bash
+# Install PostgreSQL 18, Rust + cargo-pgrx, build and install the pg_deltax
+# extension from source, and wire it into shared_preload_libraries. Idempotent.
+set -eu
+
+PGVERSION=${PGVERSION:-18}
+PG_DELTAX_REPO=${PG_DELTAX_REPO:-https://github.com/xataio/deltax.git}
+# Empty by default: don't touch git state. Set to a tag/branch/sha to force
+# a checkout. Avoids clobbering local iteration when ~/pg_deltax is either a
+# git checkout on a feature branch or a non-git rsync from `make deploy`.
+PG_DELTAX_REF=${PG_DELTAX_REF:-}
+PG_CONFIG=/usr/lib/postgresql/$PGVERSION/bin/pg_config
+
+# PostgreSQL 18
+export DEBIAN_FRONTEND=noninteractive
+sudo apt-get update -y
+sudo apt-get install -y gnupg postgresql-common apt-transport-https lsb-release wget git
+sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+sudo apt-get update -y
+sudo apt-get install -y postgresql-$PGVERSION postgresql-client-$PGVERSION postgresql-server-dev-$PGVERSION
+
+# Tune PostgreSQL the same way the vanilla postgresql/ benchmark does.
+memory=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+threads=$(nproc)
+cpus=$((threads / 2))
+shared_buffers=$((memory / 4))
+effective_cache_size=$((memory - memory / 4))
+max_worker_processes=$((threads + 15))
+
+sudo tee /etc/postgresql/$PGVERSION/main/conf.d/clickbench.conf <<EOF
+shared_buffers=${shared_buffers}kB
+max_worker_processes=${max_worker_processes}
+max_parallel_workers=${threads}
+max_parallel_maintenance_workers=${cpus}
+max_parallel_workers_per_gather=${cpus}
+max_wal_size=32GB
+work_mem=64MB
+effective_cache_size=${effective_cache_size}kB
+EOF
+
+# pg_deltax must be preloaded.
+if ! sudo grep -q "shared_preload_libraries.*pg_deltax" /etc/postgresql/$PGVERSION/main/postgresql.conf; then
+    sudo bash -c "echo \"shared_preload_libraries = 'pg_deltax'\" >> /etc/postgresql/$PGVERSION/main/postgresql.conf"
+fi
+
+# Rust toolchain (idempotent: rustup is a no-op if already installed).
+if ! command -v cargo >/dev/null 2>&1; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+fi
+# shellcheck disable=SC1091
+source "$HOME/.cargo/env"
+
+sudo apt-get install -y pkg-config libssl-dev libclang-dev clang
+
+cargo install --locked cargo-pgrx --version 0.17.0
+
+# Build and install pg_deltax against this PG.
+# - Fresh box: clone the public repo.
+# - Existing git checkout: leave it alone unless PG_DELTAX_REF is set.
+# - Existing non-git dir (e.g. rsync'd by `make deploy`): just build whatever
+#   is there. Don't try to `git fetch` — it would fail.
+if [ ! -d "$HOME/pg_deltax" ]; then
+    git clone "$PG_DELTAX_REPO" "$HOME/pg_deltax"
+fi
+cd "$HOME/pg_deltax"
+if [ -n "$PG_DELTAX_REF" ] && [ -d .git ]; then
+    git fetch --tags origin
+    git checkout "$PG_DELTAX_REF"
+fi
+cargo pgrx init --pg$PGVERSION "$PG_CONFIG"
+sudo env "PATH=$PATH" "RUSTUP_HOME=${RUSTUP_HOME:-$HOME/.rustup}" "CARGO_HOME=${CARGO_HOME:-$HOME/.cargo}" "PGRX_HOME=$HOME/.pgrx" \
+    cargo pgrx install --pg-config "$PG_CONFIG" --release
+
+sudo systemctl restart postgresql@$PGVERSION-main
