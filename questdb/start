@@ -17,7 +17,7 @@ done
 # Tweak config (idempotent — sed -i with same value is safe).
 mkdir -p ~/.questdb/conf
 if [ -f ~/.questdb/conf/server.conf ]; then
-    sed -i 's/query.timeout.sec=60/query.timeout.sec=500/' ~/.questdb/conf/server.conf
+    sed -i 's/query.timeout=1m/query.timeout=10m/' ~/.questdb/conf/server.conf
     sed -i "s|cairo.sql.copy.root=import|cairo.sql.copy.root=$PWD|" ~/.questdb/conf/server.conf
     questdb/bin/questdb.sh stop
     sleep 2
