@@ -1,0 +1,10 @@
+{
+  "system": "MS SQL Server",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented"
+  ]
+}

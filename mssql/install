@@ -1,0 +1,7 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io
+
+sudo docker pull mcr.microsoft.com/mssql/server:2025-latest

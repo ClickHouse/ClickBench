@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# Splayed table: every column lives in ./hits/<colname>, plus a ./sym file
+# for enumerated symbol values. Sum the lot.
+du -sb hits sym 2>/dev/null | awk '{ s += $1 } END { print s }'

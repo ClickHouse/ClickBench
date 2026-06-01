@@ -1,0 +1,7 @@
+#!/bin/bash
+# Reads a query index (1..43) from stdin, runs the matching BQN query
+# from queries.bqn, prints the result to stdout, and writes the
+# wall-clock runtime in fractional seconds on the last line of stderr.
+set -e
+
+BQN query.bqn

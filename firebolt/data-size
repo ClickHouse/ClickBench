@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# Firebolt-core writes its database state under /firebolt-core/volume
+# inside the container, which we bind-mount to ./fb-volume on the host.
+du -bcs fb-volume 2>/dev/null | awk '/total$/ { print $1 }'

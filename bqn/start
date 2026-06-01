@@ -1,0 +1,3 @@
+#!/bin/bash
+# BQN is an embedded CLI — no daemon to start.
+exit 0

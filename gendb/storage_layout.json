@@ -1,0 +1,127 @@
+{
+  "_comment": "Per-column binary storage layout for the ClickBench `hits` table. Each fixed-width column is a single mmap-able file of raw little-endian values. Each TEXT column is two files: <col>_off.bin (uint64 offsets, length n+1) and <col>_data.bin (concatenated UTF-8 bytes). Column files live under <gendb_dir>/hits/. EventDate is stored as int16 (days since 1970-01-01 fits \u2014 Yandex hits range is 2013-07-02..2013-07-31 \u2248 15890-15917) but we keep int32 for safety. EventTime/ClientEventTime/LocalEventTime stored as int32 (epoch seconds fits in uint32 until 2106; signed int32 is safer for arithmetic). HitColor is a single char stored as int8. SMALLINT columns stored as int16 \u2014 many are 0/1 bitmaps but we keep them honest. URLHash/RefererHash require int64.",
+  "row_count": 99997497,
+  "table": "hits",
+  "columns": [
+    {
+      "name": "WatchID",
+      "type": "int64",
+      "bytes": 8
+    },
+    {
+      "name": "Title",
+      "type": "string"
+    },
+    {
+      "name": "EventTime",
+      "type": "int32",
+      "bytes": 4
+    },
+    {
+      "name": "EventDate",
+      "type": "int32",
+      "bytes": 4
+    },
+    {
+      "name": "CounterID",
+      "type": "int32",
+      "bytes": 4
+    },
+    {
+      "name": "ClientIP",
+      "type": "int32",
+      "bytes": 4
+    },
+    {
+      "name": "RegionID",
+      "type": "int32",
+      "bytes": 4
+    },
+    {
+      "name": "UserID",
+      "type": "int64",
+      "bytes": 8
+    },
+    {
+      "name": "URL",
+      "type": "string"
+    },
+    {
+      "name": "Referer",
+      "type": "string"
+    },
+    {
+      "name": "IsRefresh",
+      "type": "int16",
+      "bytes": 2
+    },
+    {
+      "name": "ResolutionWidth",
+      "type": "int16",
+      "bytes": 2
+    },
+    {
+      "name": "MobilePhone",
+      "type": "int16",
+      "bytes": 2
+    },
+    {
+      "name": "MobilePhoneModel",
+      "type": "string"
+    },
+    {
+      "name": "TraficSourceID",
+      "type": "int16",
+      "bytes": 2
+    },
+    {
+      "name": "SearchEngineID",
+      "type": "int16",
+      "bytes": 2
+    },
+    {
+      "name": "SearchPhrase",
+      "type": "string"
+    },
+    {
+      "name": "AdvEngineID",
+      "type": "int16",
+      "bytes": 2
+    },
+    {
+      "name": "WindowClientWidth",
+      "type": "int16",
+      "bytes": 2
+    },
+    {
+      "name": "WindowClientHeight",
+      "type": "int16",
+      "bytes": 2
+    },
+    {
+      "name": "IsLink",
+      "type": "int16",
+      "bytes": 2
+    },
+    {
+      "name": "IsDownload",
+      "type": "int16",
+      "bytes": 2
+    },
+    {
+      "name": "DontCountHits",
+      "type": "int16",
+      "bytes": 2
+    },
+    {
+      "name": "RefererHash",
+      "type": "int64",
+      "bytes": 8
+    },
+    {
+      "name": "URLHash",
+      "type": "int64",
+      "bytes": 8
+    }
+  ]
+}

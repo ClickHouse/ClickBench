@@ -1,0 +1,43 @@
+#!/bin/bash
+set -eu
+
+PASSWORD=${MSSQL_SA_PASSWORD:-YourStr0ngPa55w0rd!}
+DATA_DIR="$(pwd)"
+
+# Idempotent: if a running container already answers, exit clean.
+if sudo docker ps --format '{{.Names}}' | grep -qx mssql1; then
+    if sudo docker exec mssql1 /opt/mssql-tools18/bin/sqlcmd \
+        -S localhost -U sa -P "$PASSWORD" -C -Q 'SELECT 1' >/dev/null 2>&1; then
+        exit 0
+    fi
+fi
+
+if ! sudo docker ps -a --format '{{.Names}}' | grep -qx mssql1; then
+    # Bind-mount the host's working dir at /clickbench so the in-container
+    # bcp can read hits.tsv without a separate `docker cp` round-trip (that
+    # would double disk usage during load: ~75 GB on the host + the copy in
+    # the container's writable layer). The mssql process runs as UID 10001
+    # in the container, so ./load chmods hits.tsv to 644 before bcp runs.
+    sudo docker run -d --name mssql1 \
+        -e 'ACCEPT_EULA=Y' \
+        -e "MSSQL_SA_PASSWORD=$PASSWORD" \
+        -e 'MSSQL_PID=Developer' \
+        -p 1433:1433 \
+        -v "$DATA_DIR":/clickbench \
+        mcr.microsoft.com/mssql/server:2025-latest >/dev/null
+else
+    sudo docker start mssql1 >/dev/null
+fi
+
+# SQL Server takes several seconds to accept connections after the container
+# starts. Wait until sqlcmd succeeds (or give up after 120s).
+for _ in $(seq 1 120); do
+    if sudo docker exec mssql1 /opt/mssql-tools18/bin/sqlcmd \
+        -S localhost -U sa -P "$PASSWORD" -C -Q 'SELECT 1' >/dev/null 2>&1; then
+        exit 0
+    fi
+    sleep 1
+done
+
+echo "mssql: did not become ready within 120s" >&2
+exit 1

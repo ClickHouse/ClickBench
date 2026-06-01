@@ -1,0 +1,14 @@
+# Downloaded source data and the per-column binary store are recreated
+# from scratch by ./install + ./load. Keep them out of git so the
+# integration is one .git checkout, not a 60 GB clone.
+hits.parquet
+hits.parquet.*
+db/
+# Compiled per-query binaries — generated/q1, generated/q2, … —
+# are rebuilt by ./install from the committed .cpp sources next to them.
+generated/q
+generated/q[0-9]
+generated/q[0-9][0-9]
+# Build logs and any stray .o files from manual compiles.
+*.o
+*.log
