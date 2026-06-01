@@ -1,0 +1,95 @@
+<clickhouse>
+    <logger>
+        <level>warning</level>
+        <log>__SERVER_LOG_FILE__</log>
+        <errorlog>__SERVER_ERROR_LOG_FILE__</errorlog>
+        <console>false</console>
+    </logger>
+
+    <display_name>bytehouse_clickbench</display_name>
+    <listen_host>__SERVER_HOST__</listen_host>
+    <http_port>__SERVER_HTTP_PORT__</http_port>
+    <tcp_port>__SERVER_PORT__</tcp_port>
+    <mysql_port>__SERVER_MYSQL_PORT__</mysql_port>
+    <ha_tcp_port>__SERVER_HA_TCP_PORT__</ha_tcp_port>
+    <exchange_status_port>__SERVER_EXCHANGE_STATUS_PORT__</exchange_status_port>
+    <exchange_port>__SERVER_EXCHANGE_PORT__</exchange_port>
+    <interserver_http_port>__SERVER_INTERSERVER_HTTP_PORT__</interserver_http_port>
+    <interserver_http_host>__SERVER_HOST__</interserver_http_host>
+
+    <path>__SERVER_DATA_DIR__/</path>
+    <tmp_path>__SERVER_TMP_DIR__/</tmp_path>
+    <user_files_path>__SERVER_USER_FILES_DIR__/</user_files_path>
+    <format_schema_path>__SERVER_FORMAT_SCHEMA_DIR__/</format_schema_path>
+
+    <users>
+        <default>
+            <no_password/>
+            <networks>
+                <ip>::/0</ip>
+            </networks>
+            <profile>default</profile>
+            <quota>default</quota>
+            <access_management>1</access_management>
+        </default>
+    </users>
+
+    <profiles>
+        <default/>
+    </profiles>
+
+    <quotas>
+        <default/>
+    </quotas>
+
+    <remote_servers>
+        <__CLUSTER_NAME__>
+            <shard>
+                <replica>
+                    <host>__SERVER_HOST__</host>
+                    <port>__SERVER_PORT__</port>
+                    <http_port>__SERVER_HTTP_PORT__</http_port>
+                    <exchange_status_port>__SERVER_EXCHANGE_STATUS_PORT__</exchange_status_port>
+                    <exchange_port>__SERVER_EXCHANGE_PORT__</exchange_port>
+                    <ha_tcp_port>__SERVER_HA_TCP_PORT__</ha_tcp_port>
+                    <interserver_http_host>__SERVER_HOST__</interserver_http_host>
+                </replica>
+            </shard>
+        </__CLUSTER_NAME__>
+    </remote_servers>
+
+    <keeper_server>
+        <tcp_port>__SERVER_KEEPER_TCP_PORT__</tcp_port>
+        <server_id>1</server_id>
+        <log_storage_path>__SERVER_KEEPER_LOG_DIR__</log_storage_path>
+        <snapshot_storage_path>__SERVER_KEEPER_SNAPSHOT_DIR__</snapshot_storage_path>
+        <raft_configuration>
+            <server>
+                <id>1</id>
+                <hostname>__SERVER_HOST__</hostname>
+                <port>__SERVER_KEEPER_RAFT_PORT__</port>
+            </server>
+        </raft_configuration>
+        <coordination_settings>
+            <operation_timeout_ms>10000</operation_timeout_ms>
+            <session_timeout_ms>30000</session_timeout_ms>
+        </coordination_settings>
+    </keeper_server>
+
+    <zookeeper>
+        <node>
+            <host>__SERVER_HOST__</host>
+            <port>__SERVER_KEEPER_TCP_PORT__</port>
+        </node>
+    </zookeeper>
+
+    <users_config>__SERVER_USERS_FILE__</users_config>
+
+    <macros>
+        <shard>shard_0</shard>
+        <shard_count>1</shard_count>
+        <shard_index>0</shard_index>
+        <replica>__SERVER_HOST__</replica>
+        <replica_num>1</replica_num>
+    </macros>
+</clickhouse>
