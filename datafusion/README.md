@@ -25,7 +25,7 @@ All with no EBS optimization and no instance store.
 2. Wait for the status checks to pass, then ssh to EC2: `ssh ubuntu@{ip}`
 3. `git clone https://github.com/ClickHouse/ClickBench`
 4. `cd ClickBench/datafusion`
-5. `vi benchmark.sh` and modify the following line to target the DataFusion version
+5. `vi install` and modify the following line to target the DataFusion version
 
     ```bash
     git checkout 53.1.0
