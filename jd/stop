@@ -1,0 +1,3 @@
+#!/bin/bash
+# Jd is embedded in the J runtime — no daemon to stop.
+exit 0
