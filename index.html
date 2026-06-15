@@ -926,6 +926,33 @@ function nameToColor(str) {
     return 60 + Math.abs(x % 240);
 }
 
+/// Whether a system is excluded from a given metric. Single source of truth
+/// shared by the top-level metric filter (render) and the per-run baseline
+/// used inside the Combined metric (renderSummary) so the two never drift.
+function metricExcludes(elem, metric) {
+    const tags = elem.tags || [];
+    switch (metric) {
+        case 'size':
+            /// Can't rank a system that didn't report a data size.
+            return !(elem.data_size > 1e9);
+        case 'load':
+            /// Needs a real load step: skip trivially-fast loads and
+            /// stateless / in-memory engines that don't persist data.
+            return !(elem.load_time >= 5) || tags.includes('stateless') || tags.includes('in-memory');
+        case 'cold':
+            /// True cold-cache reads only: in-memory engines have nothing to
+            /// read from storage, and lukewarm runs never flush engine caches.
+            return tags.includes('in-memory') || tags.includes('lukewarm-cold-run');
+        case 'combined':
+            /// Combined still scores lukewarm systems (with the cold component
+            /// dropped, see below), but in-memory engines are excluded.
+            return tags.includes('in-memory');
+        case 'hot':
+        default:
+            return false;
+    }
+}
+
 function renderSummary(filtered_data) {
     let table = document.getElementById('summary');
     clearElement(table);
@@ -941,10 +968,18 @@ function renderSummary(filtered_data) {
 
     const baseline_data = [...filtered_data[0].result.keys()].map(query_num =>
         [...Array(3).keys()].map(run_num =>
-            Math.min(...filtered_data.filter(elem => !elem.fake).map(elem => elem.result[query_num]?.[run_num]).filter(x => x != null))));
+            Math.min(...filtered_data.filter(elem => !elem.fake)
+                // Apply the same per-metric exclusions to the baseline that the
+                // standalone metric uses: run 0 is the cold run, runs 1/2 are
+                // hot. This keeps lukewarm/in-memory systems out of the cold
+                // baseline so they can't depress the per-query minimum and
+                // inflate every true-cold system's cold ratio in Combined. In
+                // the standalone Cold Run metric they're already filtered out.
+                .filter(elem => !metricExcludes(elem, run_num === 0 ? 'cold' : 'hot'))
+                .map(elem => elem.result[query_num]?.[run_num]).filter(x => x != null))));
 
-    const min_load_time = Math.min(...filtered_data.map(elem => elem.load_time).filter(x => x && x > 5));
-    const min_data_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x && x > 1e9));
+    const min_load_time = Math.min(...filtered_data.filter(elem => !metricExcludes(elem, 'load')).map(elem => elem.load_time));
+    const min_data_size = Math.min(...filtered_data.filter(elem => !metricExcludes(elem, 'size')).map(elem => elem.data_size));
 
     let summaries;
     if (selectors.metric == 'load') {
@@ -957,11 +992,39 @@ function renderSummary(filtered_data) {
         summaries = filtered_data.map(elem => relativeQueryTime(num_queries, baseline_data, elem, selectors.metric));
         document.getElementById('time-or-size').innerText = 'time';
     } else if (selectors.metric == 'combined') {
-        summaries = filtered_data.map(elem => Math.exp(
-            combined_load_time_share * Math.log(elem.load_time >= 5 ? (elem.load_time / min_load_time) : 1) +
-            combined_data_size_share * Math.log(elem.data_size >= 1e9 ? (elem.data_size / min_data_size) : 2) +
-            combined_cold_share * Math.log(relativeQueryTime(num_queries, baseline_data, elem, 'cold')) +
-            combined_hot_share * Math.log(relativeQueryTime(num_queries, baseline_data, elem, 'hot'))));
+        summaries = filtered_data.map(elem => {
+            // Exclude metrics that are not applicable to this system from the combined score,
+            // and reweight the rest so the final score is still on a similar scale. For example,
+            // lukewarm systems that don't have a true cold run get their cold weight folded
+            // into hot, so they can still be compared against true cold systems on the hot
+            // performance they do have without being penalized for the cold performance they
+            // can't have.
+            const exclude_cold = metricExcludes(elem, 'cold');
+            const exclude_load = metricExcludes(elem, 'load');
+            const exclude_size = metricExcludes(elem, 'size');
+
+            const hot_share = exclude_cold ? combined_cold_share + combined_hot_share : combined_hot_share;
+            let log_sum = hot_share * Math.log(relativeQueryTime(num_queries, baseline_data, elem, 'hot'));
+
+            if (!exclude_cold) {
+                log_sum += combined_cold_share * Math.log(relativeQueryTime(num_queries, baseline_data, elem, 'cold'));
+            }
+
+            if (!exclude_load) {
+                log_sum += combined_load_time_share * Math.log(elem.load_time / min_load_time);
+            }
+
+            if (!exclude_size) {
+                log_sum += combined_data_size_share * Math.log(elem.data_size / min_data_size);
+            }
+
+            if (exclude_load || exclude_size) {
+                const correction = 1 - (exclude_load ? combined_load_time_share : 0) - (exclude_size ? combined_data_size_share : 0);
+                log_sum = log_sum / correction;
+            }
+
+            return Math.exp(log_sum);
+        });
         document.getElementById('time-or-size').innerText = 'time and data size';
     }
 
@@ -1130,16 +1193,9 @@ function render() {
         ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu"))
         );
 
-    /// Filter out unreasonable entries
-    if (selectors.metric == 'size') {
-        filtered_data = filtered_data.filter(elem => elem.data_size);
-    }
-    if (selectors.metric == 'load') {
-        filtered_data = filtered_data.filter(elem => elem.load_time >= 5 && !elem.tags.includes('stateless'));
-    }
-    if (selectors.metric == 'cold' || selectors.metric == 'combined' || selectors.metric == 'load') {
-        filtered_data = filtered_data.filter(elem => !elem.tags.includes('in-memory'));
-    }
+    /// Filter out entries that can't be ranked under the selected metric
+    /// (see metricExcludes for the per-metric rules).
+    filtered_data = filtered_data.filter(elem => !metricExcludes(elem, selectors.metric));
 
     let nothing_selected_elem = document.getElementById('nothing-selected');
     if (filtered_data.length == 0) {
