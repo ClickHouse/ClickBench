@@ -1086,8 +1086,26 @@ function renderSummary(filtered_data) {
 
         const text = selectors.metric == 'load' ? (elem.load_time ? `${Math.round(elem.load_time)}s (×${ratio.toFixed(2)})` : 'stateless')
             :  selectors.metric == 'size' ? `${(elem.data_size / 1024 / 1024 / 1024).toFixed(2)} GiB (×${ratio.toFixed(2)})`
+            :  selectors.metric == 'combined' ? (() => {
+                    /// Break the combined score into the components it's built
+                    /// from (hot, cold, load, storage) as the relative "×N"
+                    /// ratios that feed the weighted score. Pad each to a fixed
+                    /// width so the columns line up in the monospace cell.
+                    const fmt = (v, n) => ((v == null || !isFinite(v)) ? 'n/a' : `×${v.toFixed(2)}`).padStart(n, ' ');
+                    const hot = fmt(relativeQueryTime(num_queries, baseline_data, elem, 'hot'), 6);
+                    const cold = fmt(metricExcludes(elem, 'cold') ? null : relativeQueryTime(num_queries, baseline_data, elem, 'cold'), 6);
+                    const load = fmt(metricExcludes(elem, 'load') ? null : elem.load_time / min_load_time, 6);
+                    const size = fmt(metricExcludes(elem, 'size') ? null : elem.data_size / min_data_size, 5);
+                    return `  (hot ${hot}, cold ${cold}, load ${load}, storage ${size})`;
+                })()
             : `×${ratio.toFixed(2)}`;
 
+        // Combined shows a bold overall score followed by the (plain) breakdown.
+        if (selectors.metric == 'combined') {
+            let score = document.createElement('strong');
+            score.appendChild(document.createTextNode(`×${ratio.toFixed(2)}`));
+            td_number.appendChild(score);
+        }
         td_number.appendChild(document.createTextNode(text));
 
         let td_bar = document.createElement('td');
