@@ -10,7 +10,8 @@
         "serverless",
         "column-oriented",
         "gcp",
-        "managed"
+        "managed",
+        "lukewarm-cold-run"
     ],
     "load_time": 777,
     "data_size": 8760000000,

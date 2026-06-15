@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","MPP","column-oriented","stateless"],
+    "tags": ["C++","MPP","column-oriented","stateless", "lukewarm-cold-run"],
     "load_time": 46,
     "data_size": 14779976446,
     "concurrent_qps": 0.988,

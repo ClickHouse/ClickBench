@@ -12,7 +12,8 @@
         "column-oriented",
         "PostgreSQL compatible",
         "managed",
-        "gcp"
+        "gcp",
+        "lukewarm-cold-run"
     ],
     "load_time": 1543,
     "data_size": 9941379875,

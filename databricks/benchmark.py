@@ -351,7 +351,7 @@ if __name__ == "__main__":
         "cluster_size": "<Lookup here: https://docs.databricks.com/aws/en/compute/sql-warehouse/warehouse-behavior>",
         "proprietary": "yes",
         "tuned": "no",
-        "tags": ["managed", "column-oriented"],
+        "tags": ["managed", "column-oriented", "lukewarm-cold-run"],
     }
 
     load_data(run_metadata)

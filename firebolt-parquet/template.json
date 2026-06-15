@@ -8,6 +8,7 @@
     "column-oriented",
     "PostgreSQL compatible",
     "ClickHouse derivative",
-    "stateless"
+    "stateless",
+    "lukewarm-cold-run"
   ]
 }
