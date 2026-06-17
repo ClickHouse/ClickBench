@@ -2,7 +2,7 @@
 set -eu
 
 mkdir -p data
-mv hits.tsv data/
+mv hits.parquet data/
 chmod -R 777 data
 
 # Diagnostic: attach strace to umbra-server before COPY so the failing
@@ -53,14 +53,14 @@ fi
 # partial table on memory-constrained hosts (16 GB c6a.4xlarge can't
 # hold the full mmap working set), letting the benchmark proceed and
 # producing implausibly fast warm timings on the surviving subset.
-# ClickBench's hits dataset is 99,997,497 rows; allow a small margin.
+# ClickBench's hits dataset is exactly 99,997,497 rows.
 expected=99997497
 got=$(PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -tAq \
     -c 'SELECT count(*) FROM hits')
-if [ "$got" -lt $((expected - 100)) ]; then
-    echo "umbra/load: hits has $got rows, expected ~$expected — partial load" >&2
+if [ "$got" -ne "$expected" ]; then
+    echo "umbra/load: hits has $got rows, expected $expected — partial load" >&2
     exit 1
 fi
 
-rm -f data/hits.tsv
+rm -f data/hits.parquet
 sync

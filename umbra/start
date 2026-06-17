@@ -5,81 +5,14 @@ if PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -c 'SELECT 1' >/dev
     exit 0
 fi
 
-sudo docker stop umbradb >/dev/null 2>&1 || true
-sudo docker rm umbradb >/dev/null 2>&1 || true
-
-# Umbra's working set during the ClickBench COPY blows well past the
-# guest VM's 16 GiB RAM. The agent has already mkswap'd + swapon'd a
-# 256 GiB swap.raw block device, so what we need is:
-#   - vm.overcommit_memory=1 so the kernel doesn't refuse a single
-#     huge mmap (default heuristic mode rejects allocations that
-#     would exceed physical RAM + swap by a wide margin).
-#   - vm.swappiness=100 to bias the kernel toward paging anonymous
-#     memory out as soon as we exceed physical RAM (default 60 is
-#     too conservative — Umbra ENOMEMs before the kernel reclaims
-#     enough).
-#   - vm.max_map_count raised. Umbra issues a large number of small
-#     mmaps; the 65530 default is easy to hit on a 100 M-row COPY.
-#   - NO docker memory cgroup. cgroup v2 silently discards
-#     --memory-swappiness, and any --memory cap creates a hard
-#     ceiling that the kernel will OOM on regardless of how much
-#     swap is available. Let the host kernel manage memory.
-sudo sysctl -wq vm.overcommit_memory=1 vm.swappiness=100 \
-    vm.max_map_count=1048576 || true
-
+# Disable asynchronous IO, the EBS GP2 device provides only 250 MiB/s. Therefore,
+# async IO is not needed to exploit the full bandwidth.
 sudo docker run -d --name umbradb \
     -v "$(pwd)/db:/var/db" \
     -v "$(pwd)/data:/data" \
     -p 5432:5432 \
+    --privileged \
     --ulimit nofile=1048576:1048576 \
     --ulimit memlock=-1:-1 \
-    -e MALLOC_CONF="oversize_threshold:0,muzzy_decay_ms:-1,dirty_decay_ms:-1,xmalloc:false" \
+    -e ASYNCIO=0 \
     umbradb/umbra:latest >/dev/null
-
-# umbra-server links jemalloc; MALLOC_CONF above:
-#   oversize_threshold:0  no special "huge alloc" arena; one path
-#   muzzy_decay_ms:-1     don't purge muzzy pages (keep around)
-#   dirty_decay_ms:-1     don't purge dirty pages
-#   xmalloc:false         never abort on OOM (allocator returns NULL)
-# Goal: get jemalloc to hold onto memory rather than aggressively
-# returning to the kernel via madvise(DONTNEED), which the previous
-# strace showed it doing constantly during COPY.
-
-# Container needs a moment before psql can connect.
-for _ in $(seq 1 60); do
-    if PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres \
-            -c 'SELECT 1' >/dev/null 2>&1; then
-        # Diagnostic dump so a future OOM during load lands with the
-        # memory/swap state of the VM in the provision log. Previously
-        # silent — every "unable to allocate memory" failure looked
-        # the same and we couldn't tell whether the agent's mkswap+
-        # swapon ran, whether the container saw the swap, or whether
-        # the sysctl tweaks above stuck.
-        echo "=== umbra: VM memory state ==="
-        free -h || true
-        echo "=== umbra: swap state ==="
-        swapon --show=NAME,SIZE,USED,PRIO --bytes || true
-        echo "=== umbra: sysctl ==="
-        for k in vm.overcommit_memory vm.swappiness vm.max_map_count \
-                vm.overcommit_ratio; do
-            echo "  $k = $(sysctl -n $k 2>/dev/null)"
-        done
-        echo "=== umbra: container memory cgroup ==="
-        sudo docker inspect umbradb --format \
-            'memory={{.HostConfig.Memory}} memory-swap={{.HostConfig.MemorySwap}}' || true
-        echo "=== umbra: container memlock ulimit ==="
-        sudo docker exec umbradb sh -c 'ulimit -l' 2>&1 || true
-        cgpath=$(sudo docker inspect umbradb --format '{{.State.Pid}}' 2>/dev/null | \
-            xargs -I{} cat /proc/{}/cgroup 2>/dev/null | awk -F: '{print $NF}')
-        if [ -n "$cgpath" ]; then
-            for f in memory.max memory.swap.max memory.swap.current; do
-                p="/sys/fs/cgroup${cgpath}/$f"
-                [ -r "$p" ] && echo "  $f = $(cat "$p")"
-            done
-        fi
-        echo "=== umbra: container procs ==="
-        sudo docker top umbradb -eo pid,vsz,rss,comm 2>&1 | head -10
-        exit 0
-    fi
-    sleep 1
-done

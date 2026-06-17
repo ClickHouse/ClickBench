@@ -1,3 +1,4 @@
 #!/bin/bash
 
 sudo docker stop umbradb >/dev/null 2>&1 || true
+sudo docker rm umbradb >/dev/null 2>&1 || true
