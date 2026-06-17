@@ -1,0 +1,35 @@
+#!/bin/bash
+set -eu
+
+# Tear down the S3 bucket create-bucket provisioned: empty it, delete it, and
+# remove the local .s3-env. Uses the credentials recorded in .s3-env. No IAM
+# resources are touched (create-bucket doesn't create any). Idempotent: a
+# missing bucket is a no-op.
+here="$(cd "$(dirname "$0")" && pwd)"
+envfile="$here/.s3-env"
+
+# Pull bucket/region/credentials from .s3-env if present.
+# shellcheck disable=SC1090
+[ -f "$envfile" ] && . "$envfile"
+
+: "${UMBRA_S3_BUCKET:?no .s3-env found — nothing to delete}"
+region="${UMBRA_S3_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}"
+
+if ! command -v aws >/dev/null 2>&1; then
+    echo "delete-bucket: aws CLI not installed — nothing to do" >&2
+    exit 0
+fi
+
+[ -n "${UMBRA_S3_ACCESS_KEY_ID:-}" ] && export AWS_ACCESS_KEY_ID="$UMBRA_S3_ACCESS_KEY_ID"
+[ -n "${UMBRA_S3_ACCESS_KEY:-}" ] && export AWS_SECRET_ACCESS_KEY="$UMBRA_S3_ACCESS_KEY"
+export AWS_DEFAULT_REGION="$region"
+
+if aws s3api head-bucket --bucket "$UMBRA_S3_BUCKET" >/dev/null 2>&1; then
+    aws s3 rb "s3://$UMBRA_S3_BUCKET" --force
+    echo "delete-bucket: deleted s3://$UMBRA_S3_BUCKET"
+else
+    echo "delete-bucket: s3://$UMBRA_S3_BUCKET does not exist"
+fi
+
+rm -f "$envfile"
+echo "delete-bucket: done"

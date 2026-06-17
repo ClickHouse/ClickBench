@@ -1,0 +1,36 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via psql against Umbra.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# psql's `\timing` "Time: <ms> ms" output).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+raw=$(PGPASSWORD=postgres timeout 300s psql -p 5432 -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -t -c '\timing' -c "$query" 2>&1) && exit_code=0 || exit_code=$?
+
+# Match more failure shapes than just `^ERROR`: PostgreSQL/Umbra also emit
+# FATAL: (server-side fatal), PANIC: (Umbra's panic prefix observed in
+# `unable to allocate buffer pool`-style failures), and `psql: error`
+# (client-side, e.g. connection lost).
+#
+# Caveat: Umbra silently returns a NULL row for unimplemented functions
+# (e.g. regexp_substr) without emitting any error or warning. None of the
+# 43 ClickBench queries hit that path, but if a future query does, the
+# caller will see a microsecond timing for a "successful" query that
+# didn't actually compute anything.
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$raw" | grep -qE '^(ERROR|FATAL|PANIC):|psql: error'; then
+    printf '%s\n' "$raw" >&2
+    exit 1
+fi
+
+printf '%s\n' "$raw" | grep -v '^Time:'
+
+ms=$(printf '%s\n' "$raw" | grep -oP 'Time:\s*\K[0-9.]+' | tail -n1)
+if [ -z "$ms" ]; then
+    echo "no Time: in psql output" >&2
+    exit 1
+fi
+
+awk -v m="$ms" 'BEGIN { printf "%.3f\n", m / 1000 }' >&2

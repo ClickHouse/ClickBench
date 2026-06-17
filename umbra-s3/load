@@ -1,0 +1,52 @@
+#!/bin/bash
+set -eu
+
+mkdir -p data
+mv hits.parquet data/
+chmod -R 777 data
+
+# S3 remote storage credentials for the create remote storage statement in
+# create.sql. create-bucket writes these to .s3-env; source it if present and
+# the caller hasn't already exported them. Kept out of the SQL so the secret
+# access key isn't checked in; fail early with a clear message if any missing.
+here="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+[ -z "${UMBRA_S3_ACCESS_KEY_ID:-}" ] && [ -f "$here/.s3-env" ] && . "$here/.s3-env"
+
+# The create scripts set the full storage URI in .s3-env as UMBRA_S3_URI:
+# create-bucket the AWS s3://<bucket>:<region>/<path> form, create-minio the
+# local minio://<endpoint>/<bucket>:<region> form (s3:// always resolves to real
+# AWS, so MinIO needs the minio:// scheme).
+: "${UMBRA_S3_URI:?set UMBRA_S3_URI (run create-bucket or create-minio first)}"
+: "${UMBRA_S3_ACCESS_KEY_ID:?set UMBRA_S3_ACCESS_KEY_ID}"
+: "${UMBRA_S3_ACCESS_KEY:?set UMBRA_S3_ACCESS_KEY}"
+
+s3_uri="$UMBRA_S3_URI"
+
+# create.sql for umbra registers the S3 remote storage, creates the
+# (backend=cloud) table, and ingests via the parquetview INSERT. Use
+# ON_ERROR_STOP=1 so a mid-load failure (e.g. the box runs out of memory
+# and Umbra survives but the transaction errored) bubbles up instead of
+# leaving a half-loaded table.
+PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres \
+    -v ON_ERROR_STOP=1 \
+    -v s3_bucket="$s3_uri" \
+    -v s3_access_key_id="$UMBRA_S3_ACCESS_KEY_ID" \
+    -v s3_access_key="$UMBRA_S3_ACCESS_KEY" \
+    -f create.sql
+
+# Belt-and-braces row-count check. Umbra has been observed to leave a
+# partial table on memory-constrained hosts (16 GB c6a.4xlarge can't
+# hold the full mmap working set), letting the benchmark proceed and
+# producing implausibly fast warm timings on the surviving subset.
+# ClickBench's hits dataset is exactly 99,997,497 rows.
+expected=99997497
+got=$(PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -tAq \
+    -c 'SELECT count(*) FROM hits')
+if [ "$got" -ne "$expected" ]; then
+    echo "umbra/load: hits has $got rows, expected $expected — partial load" >&2
+    exit 1
+fi
+
+rm -f data/hits.parquet
+sync

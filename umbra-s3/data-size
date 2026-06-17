@@ -1,0 +1,28 @@
+#!/bin/bash
+set -eu
+
+# Total on-disk footprint of the loaded database. With backend=cloud the table
+# data lives in S3, so report the local db dir (catalog, WAL, anything not
+# offloaded) plus the bytes stored under the bucket's path prefix.
+here="$(cd "$(dirname "$0")" && pwd)"
+envfile="$here/.s3-env"
+
+sudo chmod -R 777 db 2>/dev/null || true
+db_bytes=$(du -bcs db | grep total | awk '{print $1}')
+
+s3_bytes=0
+# shellcheck disable=SC1090
+if [ -f "$envfile" ] && command -v aws >/dev/null 2>&1; then
+    . "$envfile"
+    [ -n "${UMBRA_S3_ACCESS_KEY_ID:-}" ] && export AWS_ACCESS_KEY_ID="$UMBRA_S3_ACCESS_KEY_ID"
+    [ -n "${UMBRA_S3_ACCESS_KEY:-}" ] && export AWS_SECRET_ACCESS_KEY="$UMBRA_S3_ACCESS_KEY"
+    export AWS_DEFAULT_REGION="${UMBRA_S3_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}"
+    path="${UMBRA_S3_PATH:-umbra}"
+    # --recursive --summarize paginates over all objects and prints a
+    # "Total Size: <bytes>" line; empty/missing prefix yields no such line.
+    s3_bytes=$(aws s3 ls "s3://$UMBRA_S3_BUCKET/$path" --recursive --summarize \
+        2>/dev/null | awk '/Total Size:/ {print $3}')
+    [ -z "$s3_bytes" ] && s3_bytes=0
+fi
+
+echo $((db_bytes + s3_bytes))
