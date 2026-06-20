@@ -32,3 +32,4 @@ use the auto mode to make sure all the files are read.
 # Querying the data
 
 Once the data is inserted you can create the endpoints needed to run the benchmark using pipes. `run.sh` will iterate through each endpoint.
+Set `TINYBIRD_TOKEN` to a Tinybird token with read access before running the script.
