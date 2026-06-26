@@ -1,0 +1,77 @@
+#!/bin/bash
+# Launch one long-lived Hyper server (hyperd) and publish its connection
+# descriptor to server.endpoint. Every ./query invocation then connects to
+# this single persistent process instead of spawning its own.
+#
+# Unlike the earlier temp-external-table approach, the data is exposed through
+# a persistent external table in hits_parquet.hyper (created by ./load). The
+# supervisor holds a keep-alive connection that keeps that catalog attached for
+# the server lifetime. This mirrors hyper/ (native): without the keep-alive the
+# catalog is destroyed the moment a ./query process exits.
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# Already running? The pidfile + a live process is authoritative.
+if [ -f server.pid ] && kill -0 "$(cat server.pid 2>/dev/null)" 2>/dev/null; then
+    exit 0
+fi
+
+# Clean up stale artifacts from a previous (possibly crashed) server.
+rm -f server.pid server.endpoint
+
+# Background a supervisor that opens HyperProcess, writes the descriptor,
+# attaches hits_parquet.hyper (if present) to keep its catalog + plans warm,
+# then blocks until ./stop signals it.
+nohup python3 - >server.log 2>&1 <<'PY' &
+import os
+import signal
+import sys
+from tableauhyperapi import HyperProcess, Telemetry, Connection, CreateMode
+
+
+def _terminate(*_):
+    sys.exit(0)
+
+
+signal.signal(signal.SIGTERM, _terminate)
+signal.signal(signal.SIGINT, _terminate)
+
+with HyperProcess(
+    telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU,
+    parameters={"experimental_persisted_external_tables": "on"},
+) as hyper:
+    # Keep-alive: hold hits_parquet.hyper attached for the server lifetime so
+    # its external-table catalog (and the plan-cache entries depending on it)
+    # are not torn down between per-try ./query processes. Skipped on the
+    # pre-load ./start (file not yet created); established by the next
+    # cold-cycle ./start once ./load has created it. Done BEFORE publishing the
+    # endpoint so ./check never sees a "ready" server still mid-attach.
+    keepalive = None
+    if os.path.exists("hits_parquet.hyper"):
+        keepalive = Connection(hyper.endpoint, "hits_parquet.hyper", CreateMode.NONE)
+
+    with open("server.endpoint.tmp", "w") as f:
+        f.write(hyper.endpoint.connection_descriptor)
+    os.replace("server.endpoint.tmp", "server.endpoint")
+
+    try:
+        while True:
+            signal.pause()
+    finally:
+        if keepalive is not None:
+            keepalive.close()
+PY
+echo $! > server.pid
+
+# Give the supervisor a moment to publish the endpoint.
+for _ in $(seq 1 60); do
+    if [ -s server.endpoint ]; then
+        exit 0
+    fi
+    sleep 1
+done
+
+echo "hyper-parquet: server did not publish server.endpoint within 60s" >&2
+exit 1

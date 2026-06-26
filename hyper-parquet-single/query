@@ -1,0 +1,37 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it once against the PERSISTENT external
+# table in hits_parquet.hyper on the long-lived Hyper server started by ./start
+# (descriptor in server.endpoint).
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+query_file=$(mktemp)
+trap 'rm -f "$query_file"' EXIT
+cat > "$query_file"
+
+python3 - "$query_file" <<'PY'
+import sys
+import timeit
+from tableauhyperapi import Connection, Endpoint
+
+with open(sys.argv[1]) as f:
+    query = f.read()
+
+with open("server.endpoint") as f:
+    descriptor = f.read().strip()
+
+endpoint = Endpoint(connection_descriptor=descriptor, user_agent="clickbench")
+with Connection(endpoint, "hits_parquet.hyper") as connection:
+    start = timeit.default_timer()
+    rows = connection.execute_list_query(query)
+    end = timeit.default_timer()
+
+for r in rows:
+    print(r)
+
+print(f"{end - start:.3f}", file=sys.stderr)
+PY
