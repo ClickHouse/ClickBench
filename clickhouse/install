@@ -33,3 +33,13 @@ merge_tree:
   primary_key_lazy_load: 0
   columns_and_secondary_indices_sizes_lazy_calculation: 0
 EOF
+
+# Use ZSTD level 3 as the default column compression instead of LZ4. The empty
+# <case> (no min_part_size / min_part_size_ratio conditions) makes it the
+# default for every part, so columns without an explicit CODEC inherit it.
+sudo tee /etc/clickhouse-server/config.d/compression.yaml >/dev/null <<'EOF'
+compression:
+  case:
+    method: zstd
+    level: 3
+EOF
