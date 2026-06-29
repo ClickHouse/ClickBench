@@ -2,7 +2,10 @@
 set -e
 
 if [ ! -x /usr/bin/clickhouse ]; then
-    curl https://clickhouse.com/ | sh
+    # Custom ARM build from PR #108049 (optimized ZSTD decompression) instead
+    # of the released binary, to pair with the ZSTD-by-default config below.
+    curl -O 'https://clickhouse-builds.s3.amazonaws.com/PRs/108049/4007e1ae67c0d725cafe30faaa669b50326445cc/build_arm_binary/clickhouse'
+    chmod +x ./clickhouse
     sudo ./clickhouse install --noninteractive
 fi
 
