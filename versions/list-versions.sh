@@ -142,12 +142,17 @@ emit() {  # version date  -> resolve provider and print the line
         printf '%s\tclickhouse-built:%s\t%s\n' "${bv}" "${bv}" "${BUILT_DATE[$bv]}"
     done
 
-    # Prehistoric monthly builds (2012-04 .. 2016-02), reconstructed from source and
-    # labeled by month; skip the pre-server months that could not be built.
+    # Prehistoric monthly builds (2012-06 .. 2016-02), reconstructed from source and
+    # labeled by month. Skipped:
+    #  * pre-server months (2012-01..03): no server binary at all.
+    #  * 2012-04/05: the server boots but the era's client has no --query and its
+    #    interactive/HTTP paths can't be scripted, so no query can run -- not benchmarkable.
+    #    (2012-06 is the first month with a --query-capable client.)
     if [ -f "${MONTHLY_BUILT}" ]; then
         while IFS=$'\t' read -r m _sha note; do
             [ -z "${m}" ] && continue
             case "${note}" in pre-server*) continue ;; esac   # no server binary -> not runnable
+            [[ "${m}" < "2012-06-01" ]] && continue           # no scriptable client -> not benchmarkable
             printf '%s\tclickhouse-built:%s\t%s\n' "${m}" "${m}" "${MONTH_DATE[$m]:-${m}}"
         done < "${MONTHLY_BUILT}"
     fi
