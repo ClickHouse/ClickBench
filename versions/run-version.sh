@@ -38,6 +38,20 @@ PHASE="${3:-all}"
 [ -z "${IMAGE}" ] && IMAGE="$(./list-versions.sh | awk -v v="${VERSION}" '$1==v{print $2}')"
 [ -z "${IMAGE}" ] && { echo "no image for ${VERSION}" >&2; exit 1; }
 
+# Prehistoric monthly reconstructions (date-labeled YYYY-MM-DD) can't meaningfully run the
+# big/complex datasets -- the large multi-way joins (job, tpcds, tpch), the 600M-row SSB
+# lineorder_flat, and the 500M-row coffeeshop fact -- which would only waste load time or
+# crash. Never load those for prehistoric versions; their queries are recorded null as usual.
+if [[ "${VERSION}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    _keep=""
+    for _ds in ${LOAD_DATASETS}; do
+        case "${_ds}" in ssb|tpch|tpcds|coffeeshop|job) continue ;; esac
+        _keep+="${_ds} "
+    done
+    LOAD_DATASETS="${_keep% }"
+    echo "prehistoric ${VERSION}: loading only [${LOAD_DATASETS}]; skipping ssb/tpch/tpcds/coffeeshop/job" >&2
+fi
+
 CONTAINER="chver_${VERSION//[^0-9A-Za-z]/_}"
 OUT="${HERE}/results/${VERSION}.json"
 # Per-table load timings, written during the load phase and read by the bench
