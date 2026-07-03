@@ -30,6 +30,7 @@ TABLE="${3:?usage: create.sh <version> <dataset> <table>}"
 # on supports it. Older 1.1.x builds get the legacy positional engine.
 new_syntax() {
     local major minor patch
+    [ "$VERSION" = "master" ] && return 0   # dev build: modern custom-partitioning syntax
     IFS=. read -r major minor patch _ <<<"$VERSION"
     if [[ "$VERSION" =~ ^[0-9]+$ ]]; then
         # Bare build number (earliest 2016 releases, e.g. 53973..54011): custom

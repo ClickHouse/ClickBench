@@ -7,3 +7,4 @@ logs/
 
 # Rendered per-version cloud-init files
 cloud-init.*.sh
+.local-server/

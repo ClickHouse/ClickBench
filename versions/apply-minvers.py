@@ -31,6 +31,8 @@ def minver_lines(ds):
 # Version key mirroring run-version.sh's version_key: a bare build number is a 1.1.<n>
 # snapshot; dotted versions use their components (missing -> 0).
 def vkey(v):
+    if v == "master":            # the dev build is the newest
+        return (999999, 0, 0, 0)
     if re.fullmatch(r"\d+", v):
         return (1, 1, int(v), 0)
     parts = v.split(".")

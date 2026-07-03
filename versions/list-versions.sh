@@ -116,6 +116,11 @@ emit() {  # version date  -> resolve provider and print the line
 }
 
 {
+    # The development build: no Docker image -- the "local" provider installs it on the host
+    # with curl https://clickhouse.com/ | sh (see run-version.sh). Undated (the tip), it
+    # sorts by its server-reported version once benchmarked.
+    printf 'master\tlocal\t\n'
+
     # All 1.1.x are kept (including the handful with no image, so they are at
     # least listed/"found").
     grep -E $'^1\\.1\\.' <<<"${NORM}" | while IFS=$'\t' read -r v date; do

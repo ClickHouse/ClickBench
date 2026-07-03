@@ -38,6 +38,14 @@ PHASE="${3:-all}"
 [ -z "${IMAGE}" ] && IMAGE="$(./list-versions.sh | awk -v v="${VERSION}" '$1==v{print $2}')"
 [ -z "${IMAGE}" ] && { echo "no image for ${VERSION}" >&2; exit 1; }
 
+# "local" provider (used for the master/dev build): no Docker -- install ClickHouse on the
+# host with the official one-line installer (curl https://clickhouse.com/ | sh) and run the
+# server as a background process out of LOCAL_DIR (which then holds its data). Loading,
+# queries and sizing are otherwise identical to the Docker path.
+LOCAL=""; [ "${IMAGE}" = "local" ] && LOCAL=1
+LOCAL_DIR="${HERE}/.local-server"
+LOCAL_BIN="${LOCAL_DIR}/clickhouse"
+
 CONTAINER="chver_${VERSION//[^0-9A-Za-z]/_}"
 OUT="${HERE}/results/${VERSION}.json"
 # Per-table load timings, written during the load phase and read by the bench
@@ -69,7 +77,14 @@ declare -A TABLES=(
 # late crash can't take down the earlier datasets' results as collateral.
 QUERY_ORDER="mgbench ssb hits uk ontime taxi coffeeshop tpch tpcds job"
 
-cleanup() { sudo docker rm -f "${CONTAINER}" >/dev/null 2>&1; }
+cleanup() {
+    if [ -n "${LOCAL}" ]; then
+        [ -f "${LOCAL_DIR}/server.pid" ] && kill "$(cat "${LOCAL_DIR}/server.pid")" 2>/dev/null
+        pkill -f "${LOCAL_BIN} server" 2>/dev/null
+        return 0
+    fi
+    sudo docker rm -f "${CONTAINER}" >/dev/null 2>&1
+}
 # The load phase must leave the container running for the later bench phase;
 # all/bench tear it down on exit.
 [ "${PHASE}" != "load" ] && trap cleanup EXIT
@@ -100,8 +115,11 @@ exec_client()    { sudo ${CH_TIMEOUT:+timeout ${CH_TIMEOUT}} docker exec -i -e H
 sidecar_client() { sudo ${CH_TIMEOUT:+timeout ${CH_TIMEOUT}} docker run --rm -i -e HOME=/tmp -e TZ=UTC \
                        -v /usr/share/zoneinfo:/usr/share/zoneinfo:ro \
                        --network "container:${CONTAINER}" "${CLIENT_IMAGE}" "$@"; }
+# local provider: the installed binary, connecting to the host server over TCP.
+local_client()   { ${CH_TIMEOUT:+timeout ${CH_TIMEOUT}} env HOME=/tmp TZ=UTC "${LOCAL_BIN}" client "$@"; }
 client() {
     case "${CLIENT_MODE}" in
+        local)   local_client "$@" ;;
         sidecar) sidecar_client "$@" ;;
         *)       exec_client "$@" ;;
     esac
@@ -161,6 +179,24 @@ ensure_built_image() {
 
 start_server() {
     cleanup
+    if [ -n "${LOCAL}" ]; then
+        # No Docker: install with the official one-liner (once) and run the server on the
+        # host, out of LOCAL_DIR so its data lands there.
+        echo "starting ${VERSION} via the local installer (curl https://clickhouse.com/ | sh)" >&2
+        mkdir -p "${LOCAL_DIR}"
+        [ -x "${LOCAL_BIN}" ] || ( cd "${LOCAL_DIR}" && curl -fsSL https://clickhouse.com/ | sh ) >&2
+        [ -x "${LOCAL_BIN}" ] || { echo "local install failed: ${LOCAL_BIN} missing" >&2; return 1; }
+        ( cd "${LOCAL_DIR}" && HOME=/tmp TZ=UTC nohup ./clickhouse server > server.log 2>&1 & echo $! > server.pid )
+        CLIENT_MODE=local
+        local i
+        for i in $(seq 1 "${READY_TIMEOUT:-90}"); do
+            local_client --query "SELECT 1" >/dev/null 2>&1 && return 0
+            sleep 1
+        done
+        echo "local server ${VERSION} did not become ready; last log lines:" >&2
+        tail -20 "${LOCAL_DIR}/server.log" >&2 2>&1 || true
+        return 1
+    fi
     if [ "${IMAGE}" = "package" ]; then
         # Fallback provider: install the .deb release into a stock Ubuntu image.
         echo "starting ${VERSION} via package-in-ubuntu fallback" >&2
@@ -368,6 +404,13 @@ launch_daemon_in_container() {
 }
 wait_alive() { local i; for i in $(seq 1 "${1:-180}"); do server_alive && return 0; sleep 1; done; return 1; }
 revive_server() {
+    if [ -n "${LOCAL}" ]; then
+        echo "${VERSION}: relaunching local server; recent log:" >&2
+        tail -8 "${LOCAL_DIR}/server.log" 2>&1 | sed 's/^/      | /' >&2 || true
+        ( cd "${LOCAL_DIR}" && HOME=/tmp TZ=UTC nohup ./clickhouse server >> server.log 2>&1 & echo $! > server.pid )
+        wait_alive "${REVIVE_TIMEOUT:-180}" && { echo "${VERSION}: local server back up" >&2; return 0; }
+        echo "${VERSION}: local server did not come back" >&2; return 1
+    fi
     local running
     running="$(sudo docker inspect -f '{{.State.Running}}' "${CONTAINER}" 2>/dev/null)"
     echo "${VERSION}: reviving server (container running=${running:-unknown}); recent container logs:" >&2
@@ -403,7 +446,7 @@ report_sizes() {
     # The benchmark tables live in per-dataset databases; exclude the server's
     # own system databases.
     out=$(client --query "SELECT database, table, sum(bytes_on_disk) AS size FROM system.parts WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA') GROUP BY database, table ORDER BY database, table FORMAT TabSeparated" </dev/null 2>/dev/null)
-    if [ -n "${out}" ]; then
+    if [ -n "${out}" ] || [ -n "${LOCAL}" ]; then
         printf '%s\n' "${out}"
     else
         echo "(system.parts unavailable — measuring the data directory)"
@@ -424,6 +467,7 @@ fmt_err() { printf '%s' "$1" | tr '\n\t' '  ' | sed 's/  */ /g; s/^ //' | cut -c
 # so 1.1.54378 and the bare 53982 both sort *below* any calendar release.
 version_key() {
     local v="$1" a b c d
+    [ "$v" = "master" ] && { echo "999999 0 0 0"; return; }   # the dev build is the newest
     if [[ "$v" =~ ^[0-9]+$ ]]; then echo "1 1 $v 0"; return; fi
     IFS='.' read -r a b c d _ <<<"$v"
     echo "${a:-0} ${b:-0} ${c:-0} ${d:-0}"
@@ -516,6 +560,12 @@ run_query() {
 # Attach to an already-running, already-loaded container (bench phase): detect
 # the client mode without (re)starting or wiping the container.
 detect_client() {
+    if [ -n "${LOCAL}" ]; then
+        CLIENT_MODE=local
+        local i
+        for i in $(seq 1 30); do local_client --query "SELECT 1" >/dev/null 2>&1 && return 0; sleep 1; done
+        echo "local server for ${VERSION} not answering" >&2; return 1
+    fi
     sudo docker ps -q -f "name=^${CONTAINER}$" | grep -q . || { echo "container ${CONTAINER} not running" >&2; return 1; }
     [ "${IMAGE}" != "package" ] && [ -n "${CLIENT_IMAGE}" ] && sudo docker pull "${CLIENT_IMAGE}" >/dev/null 2>&1
     local i
@@ -547,7 +597,7 @@ emit_load_time_json() {
 emit_data_size_json() {
     local out loaded=" ${1:-} "
     out=$(client --query "SELECT database, sum(bytes_on_disk) FROM system.parts WHERE active AND database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA') GROUP BY database FORMAT TabSeparated" </dev/null 2>/dev/null)
-    if [ -z "${out}" ]; then
+    if [ -z "${out}" ] && [ -z "${LOCAL}" ]; then
         # No system.parts: sum the byte size of each dataset's data directory in the
         # container (works for both Log and MergeTree; -L follows the store/ symlinks).
         out=$(sudo docker exec "${CONTAINER}" sh -c '
@@ -579,7 +629,7 @@ release_date() {
 server_version() {
     local v rev
     v=$(client --query "SELECT version()" 2>/dev/null | tr -d '\r')
-    if [ -z "${v}" ]; then
+    if [ -z "${v}" ] && [ -z "${LOCAL}" ]; then
         rev=$(sudo docker exec "${CONTAINER}" cat /clickhouse-revision 2>/dev/null | tr -d '\r\n ')
         [ -n "${rev}" ] && v="0.0.${rev}"
     fi
