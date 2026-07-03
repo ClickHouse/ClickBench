@@ -68,6 +68,17 @@ image="$(cut -f2 <<<"${line}")"
 [ "${image}" = "unavailable" ] && { echo "${VERSION} is unavailable (no image/package/source)" >&2; exit 1; }
 echo "resolved to ${VERSION} (${image})"
 
+# Prehistoric (date-labeled) and pre-Docker (revision < 53991) versions can't run the
+# big/complex datasets (the large joins job/tpcds/tpch, the 600M-row SSB lineorder_flat and
+# the 500M-row coffeeshop fact) -- loading them only wastes time or crashes. Drop them from
+# the dataset list so the VM neither downloads nor loads them (run-version.sh applies the
+# same skip as a safety net). numkey: bare N -> N; 1.1.N -> N; calver (major>=18) -> huge.
+if [[ "${VERSION}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] \
+   || [ "$(awk -v v="${VERSION}" 'BEGIN{n=split(v,a,"."); print (n==1? a[1] : (a[1]==1? a[3] : 1000000))}')" -lt 53991 ] 2>/dev/null; then
+    datasets="$(printf '%s' "${datasets}" | tr ' ' '\n' | grep -vxE 'ssb|tpch|tpcds|coffeeshop|job' | tr '\n' ' ' | xargs)"
+    echo "pre-Docker/prehistoric ${VERSION}: datasets reduced to [${datasets}]" >&2
+fi
+
 # For source-built versions, get the tag and required GCC from versions.txt (the tagged /
 # bare-number builds). The prehistoric monthly reconstructions live in monthly.tsv instead
 # and are rebuilt from their commit + revision by run-version.sh's ensure_built_image on the
