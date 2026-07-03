@@ -17,7 +17,11 @@ cd "${HERE}"
 VERSION="${1:?usage: run-benchmark.sh <version>}"
 machine="${machine:=c7a.4xlarge}"
 repo="${repo:=ClickHouse/ClickBench}"
-branch="${branch:=main}"
+# The VM clones this branch and runs its run-version.sh. The versions-benchmark rework
+# (from-source reconstruction, the master/local provider, per-query minvers, dataset skips)
+# lives here and is not yet merged to main -- so the VM must use it, else e.g. `master`
+# fails ("docker run local"). Switch back to main once this branch is merged.
+branch="${branch:=versions-benchmark-rework-2}"
 datasets="${datasets:=hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi}"   # each loads into its own database
 tries="${tries:=6}"   # 1 cold + 5 hot runs
 timeout="${timeout:-18000}"                 # load + (optional source build) + queries
