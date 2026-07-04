@@ -83,10 +83,10 @@ if [ "${system}" != clickhouse ]; then
     ami=$(aws_retry aws ec2 describe-images --owners amazon --filters "Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04*" "Name=architecture,Values=${arch}" "Name=state,Values=available" --query 'sort_by(Images, &CreationDate) | [-1].[ImageId]' --output text)
 
     ci="cloud-init.${system}.${VERSION}.sh"
-    awk -v repo="$repo" -v branch="$branch" -v system="$system" -v version="$VERSION" \
+    awk -v repo="$repo" -v branch="$branch" -v sys="$system" -v version="$VERSION" \
         -v image="$image" -v datasets="$datasets" -v tries="$tries" -v t="$timeout" -v extra="$extra_pkgs" '
     {
-        gsub(/@repo@/, repo); gsub(/@branch@/, branch); gsub(/@system@/, system); gsub(/@version@/, version)
+        gsub(/@repo@/, repo); gsub(/@branch@/, branch); gsub(/@system@/, sys); gsub(/@version@/, version)
         gsub(/@image@/, image); gsub(/@datasets@/, datasets); gsub(/@tries@/, tries)
         gsub(/@timeout@/, t); gsub(/@extra_pkgs@/, extra)
         print
