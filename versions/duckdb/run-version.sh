@@ -140,9 +140,17 @@ run_query() {
     script=".timer on"$'\n'
     for i in $(seq 1 "${TRIES}"); do script+="${query};"$'\n'; done
     out=$(printf '%s' "${script}" | timeout "${QUERY_TIMEOUT}" "${BIN}" "${DBFILE}" 2>&1)
+    # A query that errors is unsupported -> null the whole row. The old (<=0.2) CLI still
+    # prints "Run Time: real X" for a failed statement, so we must NOT trust those timings:
+    # if any error surfaced, discard them all. (Deterministic queries either always run or
+    # always fail, so one error means the query doesn't work on this version.)
+    if printf '%s' "${out}" | grep -qiE 'error|exception'; then
+        echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oiE '(error|exception)[^.]*' | head -1 | cut -c1-160)" >&2
+        null_row; return
+    fi
     mapfile -t reals < <(printf '%s' "${out}" | grep -oiE 'real[[:space:]]+[0-9.]+' | grep -oE '[0-9.]+')
     if [ "${#reals[@]}" -eq 0 ]; then
-        echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oiE 'Error:.*' | cut -c1-160)" >&2
+        echo "${label}: FAILED: (no timing)" >&2
     fi
     local res="["
     for i in $(seq 1 "${TRIES}"); do
