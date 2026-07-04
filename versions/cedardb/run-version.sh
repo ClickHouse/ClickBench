@@ -65,7 +65,7 @@ start_server() {
     local waited=0
     until PG 'SELECT 1' 2>/dev/null | grep -q '^1$'; do
         sleep 3; waited=$((waited + 3))
-        [ "${waited}" -gt 180 ] && { echo "CedarDB did not come up in 180s" >&2; return 1; }
+        [ "${waited}" -gt 300 ] && { echo "CedarDB did not come up in 300s" >&2; return 1; }
     done
     echo "CedarDB up ($(PG 'SELECT version()' 2>/dev/null | head -1))" >&2
 }

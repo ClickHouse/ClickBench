@@ -24,7 +24,9 @@ for eng in ${ENGINES}; do
             echo "SKIP ${eng} ${ver} (result exists)"; continue
         fi
         echo "=== $(date -u +%FT%TZ) ${eng} ${ver} ==="
-        timeout "${PER_VERSION_TIMEOUT}" bash "${HERE}/${eng}/run-version.sh" "${ver}" \
+        # </dev/null: the providers use `docker exec -i` / `docker run -i`, which would
+        # otherwise consume this loop's stdin (versions.tsv) and end the loop after one version.
+        timeout "${PER_VERSION_TIMEOUT}" bash "${HERE}/${eng}/run-version.sh" "${ver}" </dev/null \
             > "${HERE}/${eng}/logs/sweep-${ver}.log" 2>&1 \
             && echo "  done ${eng} ${ver}" \
             || echo "  ${eng} ${ver} exited $? (see logs/sweep-${ver}.log)"
