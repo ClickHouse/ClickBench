@@ -227,6 +227,7 @@ def translate(sql, eng):
         lambda a: f"REGEXP_REPLACE({a[0]}, '^https?://(?:www\\.)?([^/]+)/.*$', '{E['domain_bref']}')")
     s = re.sub(r'\bFloat32\b', E["f32"], s, flags=re.IGNORECASE)          # CAST AS Float32/Float64
     s = re.sub(r'\bFloat64\b', E["f64"], s, flags=re.IGNORECASE)
+    s = re.sub(r'(?i)\bUSING\s+([A-Za-z_]\w*)', r'USING (\1)', s)         # USING col -> USING (col); all engines
     if E.get("rollup"):    s = rollup_to_fn(s)                           # WITH ROLLUP -> ROLLUP()
     if E.get("backtick"):  s = s.replace('`', '"')                       # `id` -> "id" (not StarRocks)
     if E.get("interval_quote"):                                          # INTERVAL 3 MONTH -> INTERVAL '3' MONTH
@@ -243,7 +244,6 @@ def translate(sql, eng):
     if E.get("std_dialect"):
         s = transform_calls(s, "replaceOne", lambda a: f"replace({a[0]}, {a[1]}, {a[2]})")
         s = transform_calls(s, "position",   lambda a: E["pos"](a) if len(a) == 2 else f"__position__({', '.join(a)})")
-        s = re.sub(r'(?i)\bUSING\s+([A-Za-z_]\w*)', r'USING (\1)', s)     # USING col -> USING (col)
         s = add_subquery_aliases(s)
     if E.get("ifnull_coalesce"):
         s = transform_calls(s, "ifNull", lambda a: f"coalesce({', '.join(a)})")
