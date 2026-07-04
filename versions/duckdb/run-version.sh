@@ -35,7 +35,12 @@ esac
 WORK="${HERE}/.duckdb"; mkdir -p "${WORK}" "${HERE}/logs"
 SSL_LIBS="${WORK}/ssl-compat"
 BIN="${WORK}/duckdb-${VERSION}"
-DBFILE="${WORK}/db-${VERSION}.duckdb"
+# One DB file per dataset: TPC-H and TPC-DS both have a `customer` table, so a single shared
+# namespace would collide. Per-dataset files also work on every version without needing
+# schema support. DBFILE is set to the current dataset's file before each load/query; for
+# meta queries (version()) it stays :memory:. db_of gives a dataset's file path.
+db_of() { printf '%s/db-%s-%s.duckdb' "${WORK}" "${VERSION}" "$1"; }
+DBFILE=":memory:"
 OUT="${HERE}/results/${VERSION}.json"
 
 # Each dataset's tables -> the Parquet basename to load it from (same stems the ClickHouse
@@ -99,7 +104,8 @@ parquet_of() { printf '%s/%s.parquet' "${PARQUET}" "$1"; }
 # CHECKPOINT after, and record (dataset, seconds, bytes-added-to-db-file).
 load_one_dataset() {
     local ds="$1" pair table pq t0 before after ok=1
-    before=$(stat -c%s "${DBFILE}" 2>/dev/null || echo 0)
+    DBFILE="$(db_of "${ds}")"; rm -f "${DBFILE}"
+    before=0
     t0=${SECONDS}
     for pair in ${TABLES[$ds]}; do
         table="${pair%%:*}"; pq="$(parquet_of "${pair##*:}")"
@@ -120,6 +126,7 @@ load_one_dataset() {
 # True if every table of the dataset exists and is non-empty.
 dataset_fully_loaded() {
     local ds="$1" pair table cnt
+    DBFILE="$(db_of "${ds}")"
     for pair in ${TABLES[$ds]}; do
         table="${pair%%:*}"
         cnt=$(scalar "SELECT count(*) FROM \"${table}\";" | tr -cd '0-9')
@@ -194,6 +201,7 @@ run_benchmark() {
         for ds in ${QUERY_ORDER}; do
             [ -f "${HERE}/queries/${ds}.sql" ] || continue   # only datasets with a query set (yet)
             case " ${FULLY_LOADED} " in *" ${ds} "*) ds_loaded=1 ;; *) ds_loaded=0 ;; esac
+            DBFILE="$(db_of "${ds}")"
             while IFS= read -r query <&3; do
                 [ -z "${query}" ] && continue
                 query="${query%;}"; qnum=$((qnum + 1))
@@ -211,7 +219,7 @@ run_benchmark() {
 # ---- run ----
 ensure_ssl_compat
 ensure_binary || { echo "cannot obtain DuckDB ${VERSION}" >&2; exit 1; }
-rm -f "${DBFILE}"; : > "${LOAD_STATS}"
+rm -f "${WORK}"/db-"${VERSION}"-*.duckdb; : > "${LOAD_STATS}"
 # 0.1.x needs the Nullable+snappy Parquet; generate any missing variants (idempotent).
 if [ "${NEEDS_NULLABLE}" = 1 ]; then
     bases=""

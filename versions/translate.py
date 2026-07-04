@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-# Generate DuckDB query sets from the ClickHouse query sets (../queries/<ds>.sql), applying
-# ONLY the translations DuckDB actually needs -- everything else is copied verbatim. Run:
-#   ./translate.py            # regenerate queries/<ds>.sql for every dataset
-# Keeping this as a script documents exactly which constructs were changed and why.
+# Generate per-engine query sets from the ClickHouse query sets (versions/queries/<ds>.sql),
+# applying ONLY the translations each engine needs -- everything else is copied verbatim.
+#
+#   ./translate.py [duckdb|starrocks|cedardb ...]     # default: all three
+#
+# Output goes to versions/<engine>/queries/<ds>.sql. Keeping this as a script documents
+# exactly which constructs were changed per engine and why. tpch and job are standard SQL
+# and come out unchanged on every engine.
 import os, re, sys
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-SRC  = os.path.join(HERE, "..", "queries")
-DST  = os.path.join(HERE, "queries")
+ROOT = os.path.dirname(os.path.abspath(__file__))          # versions/
+SRC  = os.path.join(ROOT, "queries")
 DATASETS = ["mgbench","ssb","hits","uk","ontime","taxi","coffeeshop","tpch","tpcds","job"]
 
 def split_args(s):
@@ -56,42 +59,59 @@ def multiif(args):
     els = args[i] if i < len(args) else "NULL"
     return "CASE " + " ".join(parts) + f" ELSE {els} END"
 
-def translate(sql):
+# Per-engine knobs for the few constructs that actually differ across dialects.
+ENGINES = {
+    "duckdb": {
+        "timestamp": "TIMESTAMP",                                        # CAST target for toDateTime
+        "uniq":      lambda a: f"approx_count_distinct({a[0]})",
+        "dow":       lambda a: f"isodow({a[0]})",                         # toDayOfWeek
+        "relweek":   lambda a: f"datediff('week', DATE '1970-01-01', {a[0]})",
+    },
+    "starrocks": {
+        "timestamp": "DATETIME",
+        "uniq":      lambda a: f"approx_count_distinct({a[0]})",
+        "dow":       lambda a: f"dayofweek({a[0]})",                      # 1=Sun..7=Sat
+        "relweek":   lambda a: f"floor(datediff({a[0]}, '1970-01-01') / 7)",
+    },
+    "cedardb": {                                                         # PostgreSQL dialect
+        "timestamp": "TIMESTAMP",
+        "uniq":      lambda a: f"count(DISTINCT {a[0]})",                 # no approx in PG
+        "dow":       lambda a: f"EXTRACT(ISODOW FROM {a[0]})",
+        "relweek":   lambda a: f"floor((CAST({a[0]} AS DATE) - DATE '1970-01-01') / 7)",
+    },
+}
+
+def translate(sql, eng):
+    E = ENGINES[eng]
     s = sql
-    # multiIf -> CASE (tpcds); if(c,t,f) is native in DuckDB so leave it
-    s = transform_calls(s, "multiIf", multiif)
-    # date-part extractors -> DuckDB scalar funcs (same 1-arg shape)
+    s = transform_calls(s, "multiIf", multiif)                           # -> CASE (tpcds); if() stays native
     for a, b in [("toYear","year"),("toMonth","month"),("toDayOfMonth","day"),
                  ("toHour","hour"),("toMinute","minute"),("toSecond","second")]:
         s = transform_calls(s, a, (lambda B: (lambda ar: f"{B}({ar[0]})"))(b))
-    s = transform_calls(s, "toDayOfWeek", lambda ar: f"isodow({ar[0]})")
+    s = transform_calls(s, "toDayOfWeek", E["dow"])
     s = transform_calls(s, "toYYYYMM",   lambda ar: f"(year({ar[0]})*100 + month({ar[0]}))")
-    # start-of-period -> date_trunc
     for a, unit in [("toStartOfYear","year"),("toStartOfQuarter","quarter"),
                     ("toStartOfMonth","month"),("toStartOfWeek","week"),("toStartOfDay","day"),
                     ("toStartOfHour","hour"),("toStartOfMinute","minute")]:
         s = transform_calls(s, a, (lambda U: (lambda ar: f"date_trunc('{U}', {ar[0]})"))(unit))
-    # week-since-epoch (mgbench) approximated with datediff on weeks
-    s = transform_calls(s, "toRelativeWeekNum", lambda ar: f"datediff('week', DATE '1970-01-01', {ar[0]})")
-    # casts: toDate/toDateTime(x) -> CAST(x AS DATE/TIMESTAMP)
-    s = transform_calls(s, "toDateTime", lambda ar: f"CAST({ar[0]} AS TIMESTAMP)")
+    s = transform_calls(s, "toRelativeWeekNum", E["relweek"])
+    s = transform_calls(s, "toDateTime", (lambda T: (lambda ar: f"CAST({ar[0]} AS {T})"))(E["timestamp"]))
     s = transform_calls(s, "toDate",     lambda ar: f"CAST({ar[0]} AS DATE)")
-    # distinct counts: uniq (approx in CH) -> approx_count_distinct; uniqExact -> exact
-    s = transform_calls(s, "uniqExact", lambda ar: f"count(DISTINCT {ar[0]})")
-    s = transform_calls(s, "uniq",      lambda ar: f"approx_count_distinct({ar[0]})")
-    # count() -> count(*)
-    s = re.sub(r'\bcount\(\s*\)', 'count(*)', s, flags=re.IGNORECASE)
+    s = transform_calls(s, "uniqExact",  lambda ar: f"count(DISTINCT {ar[0]})")
+    s = transform_calls(s, "uniq",       E["uniq"])
+    s = re.sub(r'\bcount\(\s*\)', 'count(*)', s, flags=re.IGNORECASE)     # count() -> count(*)
     return s
 
-os.makedirs(DST, exist_ok=True)
-changed = 0
-for ds in DATASETS:
-    src = os.path.join(SRC, f"{ds}.sql")
-    if not os.path.exists(src): continue
-    lines = [l.rstrip("\n") for l in open(src) if l.strip()]
-    out = [translate(l) for l in lines]
-    open(os.path.join(DST, f"{ds}.sql"), "w").write("\n".join(out) + "\n")
-    diff = sum(1 for a, b in zip(lines, out) if a != b)
-    changed += diff
-    print(f"{ds}: {len(out)} queries, {diff} translated")
-print(f"total translated lines: {changed}")
+targets = sys.argv[1:] or list(ENGINES)
+for eng in targets:
+    if eng not in ENGINES: sys.exit(f"unknown engine: {eng}")
+    dst = os.path.join(ROOT, eng, "queries"); os.makedirs(dst, exist_ok=True)
+    changed = 0
+    for ds in DATASETS:
+        src = os.path.join(SRC, f"{ds}.sql")
+        if not os.path.exists(src): continue
+        lines = [l.rstrip("\n") for l in open(src) if l.strip()]
+        out = [translate(l, eng) for l in lines]
+        open(os.path.join(dst, f"{ds}.sql"), "w").write("\n".join(out) + "\n")
+        changed += sum(1 for a, b in zip(lines, out) if a != b)
+    print(f"{eng}: wrote {dst} ({changed} lines translated)")
