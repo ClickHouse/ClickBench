@@ -16,7 +16,7 @@ SELECT SearchEngineID, SearchPhrase, count(*) AS c FROM hits WHERE SearchPhrase 
 SELECT UserID, count(*) FROM hits GROUP BY UserID ORDER BY count(*) DESC LIMIT 10
 SELECT UserID, SearchPhrase, count(*) FROM hits GROUP BY UserID, SearchPhrase ORDER BY count(*) DESC LIMIT 10
 SELECT UserID, SearchPhrase, count(*) FROM hits GROUP BY UserID, SearchPhrase LIMIT 10
-SELECT UserID, minute(EventTime) AS m, SearchPhrase, count(*) FROM hits GROUP BY UserID, m, SearchPhrase ORDER BY count(*) DESC LIMIT 10
+SELECT UserID, EXTRACT(MINUTE FROM EventTime) AS m, SearchPhrase, count(*) FROM hits GROUP BY UserID, m, SearchPhrase ORDER BY count(*) DESC LIMIT 10
 SELECT UserID FROM hits WHERE UserID = 12345678901234567890
 SELECT count(*) FROM hits WHERE URL LIKE '%metrika%'
 SELECT SearchPhrase, any(URL), count(*) AS c FROM hits WHERE URL LIKE '%metrika%' AND SearchPhrase != '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10

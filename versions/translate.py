@@ -60,21 +60,26 @@ def multiif(args):
     return "CASE " + " ".join(parts) + f" ELSE {els} END"
 
 # Per-engine knobs for the few constructs that actually differ across dialects.
+# datepart(unit, expr): DuckDB/StarRocks have scalar year()/month()/...; PostgreSQL (CedarDB)
+# uses EXTRACT(unit FROM expr).
 ENGINES = {
     "duckdb": {
         "timestamp": "TIMESTAMP",                                        # CAST target for toDateTime
+        "datepart":  lambda u, e: f"{u}({e})",
         "uniq":      lambda a: f"approx_count_distinct({a[0]})",
         "dow":       lambda a: f"isodow({a[0]})",                         # toDayOfWeek
         "relweek":   lambda a: f"datediff('week', DATE '1970-01-01', {a[0]})",
     },
     "starrocks": {
         "timestamp": "DATETIME",
+        "datepart":  lambda u, e: f"{u}({e})",
         "uniq":      lambda a: f"approx_count_distinct({a[0]})",
         "dow":       lambda a: f"dayofweek({a[0]})",                      # 1=Sun..7=Sat
         "relweek":   lambda a: f"floor(datediff({a[0]}, '1970-01-01') / 7)",
     },
     "cedardb": {                                                         # PostgreSQL dialect
         "timestamp": "TIMESTAMP",
+        "datepart":  lambda u, e: f"EXTRACT({u.upper()} FROM {e})",
         "uniq":      lambda a: f"count(DISTINCT {a[0]})",                 # no approx in PG
         "dow":       lambda a: f"EXTRACT(ISODOW FROM {a[0]})",
         "relweek":   lambda a: f"floor((CAST({a[0]} AS DATE) - DATE '1970-01-01') / 7)",
@@ -85,11 +90,11 @@ def translate(sql, eng):
     E = ENGINES[eng]
     s = sql
     s = transform_calls(s, "multiIf", multiif)                           # -> CASE (tpcds); if() stays native
-    for a, b in [("toYear","year"),("toMonth","month"),("toDayOfMonth","day"),
-                 ("toHour","hour"),("toMinute","minute"),("toSecond","second")]:
-        s = transform_calls(s, a, (lambda B: (lambda ar: f"{B}({ar[0]})"))(b))
+    for a, unit in [("toYear","year"),("toMonth","month"),("toDayOfMonth","day"),
+                    ("toHour","hour"),("toMinute","minute"),("toSecond","second")]:
+        s = transform_calls(s, a, (lambda U: (lambda ar: E["datepart"](U, ar[0])))(unit))
     s = transform_calls(s, "toDayOfWeek", E["dow"])
-    s = transform_calls(s, "toYYYYMM",   lambda ar: f"(year({ar[0]})*100 + month({ar[0]}))")
+    s = transform_calls(s, "toYYYYMM",   lambda ar: f"({E['datepart']('year', ar[0])}*100 + {E['datepart']('month', ar[0])})")
     for a, unit in [("toStartOfYear","year"),("toStartOfQuarter","quarter"),
                     ("toStartOfMonth","month"),("toStartOfWeek","week"),("toStartOfDay","day"),
                     ("toStartOfHour","hour"),("toStartOfMinute","minute")]:
