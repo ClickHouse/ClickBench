@@ -89,6 +89,21 @@ def add_subquery_aliases(s):
             s = s[:j+1] + alias + s[j+1:]; i = j + 1 + len(alias)
     return s
 
+def rollup_to_fn(s):
+    """`GROUP BY a, b WITH ROLLUP` (ClickHouse/MySQL) -> `GROUP BY ROLLUP(a, b)` (SQL standard).
+    The group list has no parens in our queries, so [^()] safely bounds it to one clause."""
+    return re.sub(r'(?i)GROUP BY ([^()]+?) WITH ROLLUP',
+                  lambda m: f"GROUP BY ROLLUP({m.group(1).strip()})", s)
+
+_NOT_KW = {"like","in","exists","null","between","any","all","not","true","false"}
+def not_int_to_bool(s):
+    """PostgreSQL requires a boolean for NOT; ClickHouse allows an int column (0/1). Rewrite
+    `NOT <col>` (not NOT LIKE/IN/EXISTS/NULL/...) to `NOT (<col> <> 0)`."""
+    def repl(m):
+        w = m.group(1)
+        return m.group(0) if w.lower() in _NOT_KW else f"NOT ({w} <> 0)"
+    return re.sub(r'\bNOT\s+([A-Za-z_]\w*)', repl, s, flags=re.IGNORECASE)
+
 def inline_having_aliases(s):
     """PostgreSQL forbids output aliases in HAVING. Replace alias references there with the
     defining expression, built from `<func>(...) AS <alias>` occurrences in the query."""
@@ -113,6 +128,8 @@ ENGINES = {
         "uniq":      lambda a: f"approx_count_distinct({a[0]})",
         "dow":       lambda a: f"isodow({a[0]})",                         # toDayOfWeek
         "relweek":   lambda a: f"datediff('week', DATE '1970-01-01', {a[0]})",
+        "f32": "FLOAT", "f64": "DOUBLE",                                  # CAST AS Float32/Float64
+        "rollup": True, "backtick": True,                                # WITH ROLLUP, `id` -> "id"
     },
     "starrocks": {
         "timestamp": "DATETIME",
@@ -122,6 +139,8 @@ ENGINES = {
         "relweek":   lambda a: f"floor(datediff({a[0]}, '1970-01-01') / 7)",
         "std_dialect": True,                                             # aliased subqueries, USING(), etc.
         "pos":       lambda a: f"instr({a[0]}, {a[1]})",                 # CH position(haystack, needle)
+        "f32": "FLOAT", "f64": "DOUBLE",
+        "rollup": True,                                                  # ROLLUP() works; keep `backticks`
     },
     "cedardb": {                                                         # PostgreSQL dialect
         "timestamp": "TIMESTAMP",
@@ -133,6 +152,10 @@ ENGINES = {
         "ifnull_coalesce": True,                                         # ifnull is type-strict
         "having_inline": True,                                          # no output aliases in HAVING
         "pos":       lambda a: f"strpos({a[0]}, {a[1]})",               # CH position(haystack, needle)
+        "f32": "REAL", "f64": "DOUBLE PRECISION",
+        "rollup": True, "backtick": True,
+        "interval_quote": True,                                         # INTERVAL '3' MONTH
+        "not_bool": True,                                               # NOT <intcol> -> NOT (<intcol> <> 0)
     },
 }
 
@@ -155,6 +178,16 @@ def translate(sql, eng):
     s = transform_calls(s, "uniqExact",  lambda ar: f"count(DISTINCT {ar[0]})")
     s = transform_calls(s, "uniq",       E["uniq"])
     s = re.sub(r'\bcount\(\s*\)', 'count(*)', s, flags=re.IGNORECASE)     # count() -> count(*)
+    # Constructs every engine needs adjusted from the ClickHouse form:
+    s = transform_calls(s, "any", lambda a: f"any_value({a[0]})")        # any() aggregate
+    s = re.sub(r'\bFloat32\b', E["f32"], s, flags=re.IGNORECASE)          # CAST AS Float32/Float64
+    s = re.sub(r'\bFloat64\b', E["f64"], s, flags=re.IGNORECASE)
+    if E.get("rollup"):    s = rollup_to_fn(s)                           # WITH ROLLUP -> ROLLUP()
+    if E.get("backtick"):  s = s.replace('`', '"')                       # `id` -> "id" (not StarRocks)
+    if E.get("interval_quote"):                                          # INTERVAL 3 MONTH -> INTERVAL '3' MONTH
+        s = re.sub(r'(?i)\bINTERVAL\s+([0-9]+)\s+(DAY|MONTH|YEAR|WEEK|HOUR|MINUTE|SECOND)S?\b',
+                   lambda m: f"INTERVAL '{m.group(1)}' {m.group(2).upper()}", s)
+    if E.get("not_bool"):  s = not_int_to_bool(s)
     # MySQL/PostgreSQL dialect adjustments (DuckDB accepts the ClickHouse forms as-is).
     if E.get("std_dialect"):
         s = transform_calls(s, "replaceOne", lambda a: f"replace({a[0]}, {a[1]}, {a[2]})")

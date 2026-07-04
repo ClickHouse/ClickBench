@@ -81,7 +81,7 @@ load_one_dataset() {
         table="${pair%%:*}"; uri="$(parquet_uri "${pair##*:}")"
         echo "=== CREATE ${db}.${table} FROM ${pair##*:}.parquet ===" >&2
         out=$(Mq "CREATE TABLE ${db}.\`${table}\` AS SELECT * FROM FILES('path'='${uri}','format'='parquet');" 2>&1)
-        if printf '%s' "${out}" | grep -qiE 'error|fail'; then
+        if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
             echo "LOAD ${ds}.${table} FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
         fi
     done
@@ -132,8 +132,9 @@ run_query() {
         [ "${i}" = 1 ] && drop_caches
         out=$(timeout "${QUERY_TIMEOUT}" docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N \
               -e "SET enable_profile=true; USE ${db}; ${query}; SHOW PROFILELIST LIMIT 1;" 2>&1)
-        if printf '%s' "${out}" | grep -qiE 'error|exception'; then
-            echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oiE '(error|exception)[^.]*' | head -1 | cut -c1-160)" >&2
+        # Match MySQL's error signature ("ERROR <code> (SQLSTATE)"), not "error" in result data.
+        if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
+            echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oE 'ERROR [0-9].*' | head -1 | cut -c1-160)" >&2
             reals=(); break
         fi
         # last line = the PROFILELIST row: QueryId <tab> StartTime <tab> Time <tab> State <tab> Statement

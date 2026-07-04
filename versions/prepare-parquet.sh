@@ -20,10 +20,13 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA="${DATA:-${HERE}/prepare-data/data}"
 NULLABLE="${NULLABLE:-}"
 CEDAR="${CEDAR:-}"
+DUCK="${DUCK:-}"
 if [ -n "${NULLABLE}" ]; then
     PARQUET="${PARQUET:-${HERE}/prepare-data/parquet-nullable}"
 elif [ -n "${CEDAR}" ]; then
     PARQUET="${PARQUET:-${HERE}/prepare-data/parquet-cedar}"
+elif [ -n "${DUCK}" ]; then
+    PARQUET="${PARQUET:-${HERE}/prepare-data/parquet-duck}"
 else
     PARQUET="${PARQUET:-${HERE}/prepare-data/parquet}"
 fi
@@ -75,6 +78,17 @@ for f in "${files[@]}"; do
                 if (nul) t="Nullable(" t ")";
                 printf "%s`%s` %s", (NR>1?", ":""), n, t}')"
         "${CHL}" local --query "SELECT * FROM file('${f}', Native, '${schema}') INTO OUTFILE '${out}.tmp' FORMAT Parquet" \
+            && mv "${out}.tmp" "${out}" \
+            || { echo "FAILED converting ${base}" >&2; rm -f "${out}.tmp"; }
+    elif [ -n "${DUCK}" ]; then
+        # DuckDB: FixedString -> String (its Parquet reader surfaces fixed byte arrays as BLOB,
+        # breaking substr/LIKE) and toValidUTF8 on all string columns (read_parquet rejects
+        # invalid UTF-8, which the obfuscated hits strings contain). Column case preserved.
+        exprs="$("${CHL}" local --query "DESCRIBE TABLE file('${f}', Native) FORMAT TSV" \
+            | awk -F'\t' '{n=$1; t=$2;
+                if (t ~ /String/) printf "%stoValidUTF8(CAST(`%s` AS String)) AS `%s`", (NR>1?", ":""), n, n;
+                else printf "%s`%s`", (NR>1?", ":""), n}')"
+        "${CHL}" local --query "SELECT ${exprs} FROM file('${f}', Native) INTO OUTFILE '${out}.tmp' FORMAT Parquet" \
             && mv "${out}.tmp" "${out}" \
             || { echo "FAILED converting ${base}" >&2; rm -f "${out}.tmp"; }
     else

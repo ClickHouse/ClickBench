@@ -80,7 +80,7 @@ load_one_dataset() {
         table="${pair%%:*}"; pq="$(parquet_path "${pair##*:}")"
         echo "=== CREATE ${ds}.${table} FROM ${pair##*:}.parquet ===" >&2
         out=$(PG "CREATE TABLE \"${ds}\".\"${table}\" AS SELECT * FROM '${pq}';")
-        if printf '%s' "${out}" | grep -qiE 'error|fail'; then
+        if printf '%s' "${out}" | grep -qE 'ERROR:|FATAL:'; then
             echo "LOAD ${ds}.${table} FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
         fi
     done
@@ -117,8 +117,9 @@ run_query() {
     for i in $(seq 1 "${TRIES}"); do script+="${query};"$'\n'; done
     out=$(printf '%s' "${script}" | timeout "${QUERY_TIMEOUT}" docker run --rm -i --network host \
           -e PGPASSWORD="${PASSWORD}" "${PSQL_IMAGE}" psql -h127.0.0.1 -p5432 -U postgres -d postgres 2>&1)
-    if printf '%s' "${out}" | grep -qiE 'error|fatal'; then
-        echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oiE '(error|fatal)[^.]*' | head -1 | cut -c1-160)" >&2
+    # Match psql's error prefix ("ERROR:"/"FATAL:"), not "error" in result data.
+    if printf '%s' "${out}" | grep -qE 'ERROR:|FATAL:'; then
+        echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oE '(ERROR|FATAL):[^|]*' | head -1 | cut -c1-160)" >&2
         null_row; return
     fi
     mapfile -t reals < <(printf '%s' "${out}" | grep -oiE 'Time:[[:space:]]+[0-9.]+[[:space:]]*ms' | grep -oE '[0-9.]+')

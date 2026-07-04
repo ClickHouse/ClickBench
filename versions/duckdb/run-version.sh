@@ -26,10 +26,15 @@ PHASE="${3:-all}"
 # snappy/uncompressed, so 0.1.x loads a Nullable + snappy variant (prepare-parquet.sh
 # NULLABLE=1, written to parquet-nullable/). It also surfaces DATE/TIMESTAMP columns as
 # integers, so any date-function query errors out and becomes null -- non-date queries run.
+# 0.2+ loads the DuckDB variant (parquet-duck): FixedString->String (fixed byte arrays read as
+# BLOB otherwise, breaking substr/LIKE) and toValidUTF8 (read_parquet rejects the invalid UTF-8
+# in the obfuscated hits strings). 0.1.x instead needs the Nullable+snappy variant (its reader
+# rejects REQUIRED fields / non-snappy codecs and reads DATE as integer). Both auto-generated.
 NULLABLE_PARQUET="${ROOT}/prepare-data/parquet-nullable"
+DUCK_PARQUET="${ROOT}/prepare-data/parquet-duck"
 case "${VERSION}" in
-    0.1.*) PARQUET="${NULLABLE_PARQUET}"; NEEDS_NULLABLE=1 ;;
-    *)     NEEDS_NULLABLE=0 ;;
+    0.1.*) PARQUET="${NULLABLE_PARQUET}"; VARIANT=nullable ;;
+    *)     PARQUET="${DUCK_PARQUET}";     VARIANT=duck ;;
 esac
 
 WORK="${HERE}/.duckdb"; mkdir -p "${WORK}" "${HERE}/logs"
@@ -112,7 +117,7 @@ load_one_dataset() {
         [ -f "${pq}" ] || { echo "SKIP ${ds}.${table}: ${pq} missing" >&2; ok=0; continue; }
         echo "=== CREATE ${ds}.${table} FROM ${pq##*/} ===" >&2
         out=$(run_sql "DROP TABLE IF EXISTS \"${table}\"; CREATE TABLE \"${table}\" AS SELECT * FROM read_parquet('${pq}');")
-        if printf '%s' "${out}" | grep -qiE 'error|exception'; then
+        if printf '%s' "${out}" | grep -q 'Error:'; then
             echo "LOAD ${ds}.${table} FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
         fi
     done
@@ -151,8 +156,9 @@ run_query() {
     # prints "Run Time: real X" for a failed statement, so we must NOT trust those timings:
     # if any error surfaced, discard them all. (Deterministic queries either always run or
     # always fail, so one error means the query doesn't work on this version.)
-    if printf '%s' "${out}" | grep -qiE 'error|exception'; then
-        echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oiE '(error|exception)[^.]*' | head -1 | cut -c1-160)" >&2
+    # Match DuckDB's actual error prefix ("Error:"), not the word "error" in result data.
+    if printf '%s' "${out}" | grep -q 'Error:'; then
+        echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oE 'Error:[^|]*' | head -1 | cut -c1-160)" >&2
         null_row; return
     fi
     mapfile -t reals < <(printf '%s' "${out}" | grep -oiE 'real[[:space:]]+[0-9.]+' | grep -oE '[0-9.]+')
@@ -220,14 +226,16 @@ run_benchmark() {
 ensure_ssl_compat
 ensure_binary || { echo "cannot obtain DuckDB ${VERSION}" >&2; exit 1; }
 rm -f "${WORK}"/db-"${VERSION}"-*.duckdb; : > "${LOAD_STATS}"
-# 0.1.x needs the Nullable+snappy Parquet; generate any missing variants (idempotent).
-if [ "${NEEDS_NULLABLE}" = 1 ]; then
-    bases=""
-    for ds in ${LOAD_DATASETS}; do
-        [ -f "${HERE}/queries/${ds}.sql" ] || continue
-        for pair in ${TABLES[$ds]}; do bases+=" ${pair##*:}"; done
-    done
+# Generate any missing Parquet for this version's variant (idempotent).
+bases=""
+for ds in ${LOAD_DATASETS}; do
+    [ -f "${HERE}/queries/${ds}.sql" ] || continue
+    for pair in ${TABLES[$ds]}; do bases+=" ${pair##*:}"; done
+done
+if [ "${VARIANT}" = nullable ]; then
     NULLABLE=1 PARQUET="${NULLABLE_PARQUET}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
+else
+    DUCK=1 PARQUET="${DUCK_PARQUET}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
 fi
 for ds in ${LOAD_DATASETS}; do
     [ -f "${HERE}/queries/${ds}.sql" ] || continue     # only datasets we have queries for
