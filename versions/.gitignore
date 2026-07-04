@@ -9,6 +9,7 @@ logs/
 cloud-init.*.sh
 .local-server/
 prepare-data/parquet/
+prepare-data/parquet-nullable/
 .chlocal/
 duckdb/.duckdb/
 duckdb/logs/

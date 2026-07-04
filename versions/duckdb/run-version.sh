@@ -22,6 +22,16 @@ PHASE="${3:-all}"
 [ -z "${CLI_URL}" ] && CLI_URL="$(awk -F'\t' -v v="${VERSION}" '$1==v{print $2}' "${HERE}/versions.tsv")"
 [ -z "${CLI_URL}" ] && { echo "no CLI url for DuckDB ${VERSION} in versions.tsv" >&2; exit 1; }
 
+# DuckDB 0.1.x's Parquet reader rejects REQUIRED (non-null) fields and only understands
+# snappy/uncompressed, so 0.1.x loads a Nullable + snappy variant (prepare-parquet.sh
+# NULLABLE=1, written to parquet-nullable/). It also surfaces DATE/TIMESTAMP columns as
+# integers, so any date-function query errors out and becomes null -- non-date queries run.
+NULLABLE_PARQUET="${ROOT}/prepare-data/parquet-nullable"
+case "${VERSION}" in
+    0.1.*) PARQUET="${NULLABLE_PARQUET}"; NEEDS_NULLABLE=1 ;;
+    *)     NEEDS_NULLABLE=0 ;;
+esac
+
 WORK="${HERE}/.duckdb"; mkdir -p "${WORK}" "${HERE}/logs"
 SSL_LIBS="${WORK}/ssl-compat"
 BIN="${WORK}/duckdb-${VERSION}"
@@ -75,8 +85,11 @@ ensure_binary() {
     [ -x "${BIN}" ]
 }
 
-# Run SQL non-interactively against the db file; args after the SQL go to the CLI.
-duck() { "${BIN}" "${DBFILE}" "$@"; }
+# All SQL goes over stdin -- works across every DuckDB CLI, including pre-0.3 releases that
+# lack the `-c` flag. run_sql: run statement(s), return combined output. scalar: read one
+# value cleanly (`.mode list` + no headers -> the bare value on the last non-empty line).
+run_sql() { printf '%s\n' "$1" | "${BIN}" "${DBFILE}" 2>&1; }
+scalar()  { printf '.mode list\n.headers off\n%s\n' "$1" | "${BIN}" "${DBFILE}" 2>/dev/null | grep -v '^$' | tail -1; }
 
 drop_caches() { sync; echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null 2>&1; }
 
@@ -92,11 +105,12 @@ load_one_dataset() {
         table="${pair%%:*}"; pq="$(parquet_of "${pair##*:}")"
         [ -f "${pq}" ] || { echo "SKIP ${ds}.${table}: ${pq} missing" >&2; ok=0; continue; }
         echo "=== CREATE ${ds}.${table} FROM ${pq##*/} ===" >&2
-        if ! duck -c "CREATE OR REPLACE TABLE \"${table}\" AS SELECT * FROM read_parquet('${pq}');" >&2 2>&1; then
-            echo "LOAD ${ds}.${table} FAILED" >&2; ok=0
+        out=$(run_sql "DROP TABLE IF EXISTS \"${table}\"; CREATE TABLE \"${table}\" AS SELECT * FROM read_parquet('${pq}');")
+        if printf '%s' "${out}" | grep -qiE 'error|exception'; then
+            echo "LOAD ${ds}.${table} FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
         fi
     done
-    duck -c "CHECKPOINT;" >/dev/null 2>&1
+    run_sql "CHECKPOINT;" >/dev/null 2>&1
     after=$(stat -c%s "${DBFILE}" 2>/dev/null || echo 0)
     if [ "${ok}" = 1 ]; then
         printf '%s\t%s\t%s\n' "${ds}" "$((SECONDS - t0))" "$((after - before))" >> "${LOAD_STATS}"
@@ -108,7 +122,7 @@ dataset_fully_loaded() {
     local ds="$1" pair table cnt
     for pair in ${TABLES[$ds]}; do
         table="${pair%%:*}"
-        cnt=$("${BIN}" "${DBFILE}" -csv -noheader -c "SELECT count(*) FROM \"${table}\";" 2>/dev/null | tr -d '[:space:]')
+        cnt=$(scalar "SELECT count(*) FROM \"${table}\";" | tr -cd '0-9')
         [ -n "${cnt}" ] && [ "${cnt}" != "0" ] || return 1
     done
     return 0
@@ -137,7 +151,11 @@ run_query() {
     echo "${res}]"
 }
 
-actual_version() { "${BIN}" "${DBFILE}" -csv -noheader -c "SELECT version();" 2>/dev/null | tr -d '"[:space:]'; }
+# version() exists from 0.2.x; 0.1.x lacks it -> fall back to the tag we were given.
+actual_version() {
+    local v; v="$(scalar "SELECT version();" | tr -d '"[:space:]')"
+    case "${v}" in v[0-9]*) printf '%s' "${v}" ;; *) printf 'v%s' "${VERSION}" ;; esac
+}
 release_date()   { awk -F'\t' -v v="${VERSION}" '$1==v{print $3; exit}' "${HERE}/versions.tsv"; }
 
 emit_load_time_json() {  # $1 = fully-loaded datasets
@@ -186,6 +204,15 @@ run_benchmark() {
 ensure_ssl_compat
 ensure_binary || { echo "cannot obtain DuckDB ${VERSION}" >&2; exit 1; }
 rm -f "${DBFILE}"; : > "${LOAD_STATS}"
+# 0.1.x needs the Nullable+snappy Parquet; generate any missing variants (idempotent).
+if [ "${NEEDS_NULLABLE}" = 1 ]; then
+    bases=""
+    for ds in ${LOAD_DATASETS}; do
+        [ -f "${HERE}/queries/${ds}.sql" ] || continue
+        for pair in ${TABLES[$ds]}; do bases+=" ${pair##*:}"; done
+    done
+    NULLABLE=1 PARQUET="${NULLABLE_PARQUET}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
+fi
 for ds in ${LOAD_DATASETS}; do
     [ -f "${HERE}/queries/${ds}.sql" ] || continue     # only datasets we have queries for
     load_one_dataset "${ds}"
