@@ -137,7 +137,7 @@ ENGINES = {
         "relweek":   lambda a: f"datediff('week', DATE '1970-01-01', {a[0]})",
         "f32": "FLOAT", "f64": "DOUBLE",                                  # CAST AS Float32/Float64
         "rollup": True, "backtick": True,                                # WITH ROLLUP, `id` -> "id"
-        "quote_at": True,                                                # `at` is a reserved word
+        "reserved": ["at"], "qchar": '"',                               # `at` reserved -> "at"
     },
     "starrocks": {
         "timestamp": "DATETIME",
@@ -150,6 +150,7 @@ ENGINES = {
         "f32": "FLOAT", "f64": "DOUBLE",
         "rollup": True,                                                  # ROLLUP() works; keep `backticks`
         "cast_op": True,                                                 # no :: operator; needs CAST()
+        "reserved": ["character"], "qchar": "`",                         # reserved alias -> `character`
     },
     "cedardb": {                                                         # PostgreSQL dialect
         "timestamp": "TIMESTAMP",
@@ -165,7 +166,7 @@ ENGINES = {
         "rollup": True, "backtick": True,
         "interval_quote": True,                                         # INTERVAL '3' MONTH
         "not_bool": True,                                               # NOT <intcol> -> NOT (<intcol> <> 0)
-        "quote_at": True,
+        "reserved": ["at"], "qchar": '"',
     },
 }
 
@@ -185,6 +186,7 @@ def translate(sql, eng):
     s = transform_calls(s, "toRelativeWeekNum", E["relweek"])
     s = transform_calls(s, "toDateTime", (lambda T: (lambda ar: f"CAST({ar[0]} AS {T})"))(E["timestamp"]))
     s = transform_calls(s, "toDate",     lambda ar: f"CAST({ar[0]} AS DATE)")
+    s = transform_calls(s, "countDistinct", lambda ar: f"count(DISTINCT {ar[0]})")
     s = transform_calls(s, "uniqExact",  lambda ar: f"count(DISTINCT {ar[0]})")
     s = transform_calls(s, "uniq",       E["uniq"])
     s = re.sub(r'\bcount\(\s*\)', 'count(*)', s, flags=re.IGNORECASE)     # count() -> count(*)
@@ -208,8 +210,10 @@ def translate(sql, eng):
     if E.get("not_bool"):  s = not_int_to_bool(s)
     if E.get("cast_op"):                                                 # expr::Type -> CAST(expr AS Type)
         s = re.sub(r"([\w.]+|'[^']*')::([A-Za-z]\w*(?:\([0-9, ]*\))?)", r"CAST(\1 AS \2)", s)
-    if E.get("quote_at"):                                                # `at` reserved: alias -> "at"
-        s = re.sub(r'\bAS at\b', 'AS "at"', s); s = re.sub(r'\bat\.', '"at".', s)
+    for w in E.get("reserved", []):                                      # reserved words used as aliases
+        q = E["qchar"]
+        s = re.sub(r'\bAS ' + w + r'\b', f'AS {q}{w}{q}', s)
+        s = re.sub(r'\b' + w + r'\.', f'{q}{w}{q}.', s)
     # MySQL/PostgreSQL dialect adjustments (DuckDB accepts the ClickHouse forms as-is).
     if E.get("std_dialect"):
         s = transform_calls(s, "replaceOne", lambda a: f"replace({a[0]}, {a[1]}, {a[2]})")

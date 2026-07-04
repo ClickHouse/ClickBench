@@ -194,6 +194,13 @@ run_benchmark() {
 
 # ---- run ----
 trap stop_server EXIT
+# Generate any missing standard Parquet for the datasets we will load (idempotent).
+bases=""
+for ds in ${LOAD_DATASETS}; do
+    [ -f "${HERE}/queries/${ds}.sql" ] || continue
+    for pair in ${TABLES[$ds]}; do bases+=" ${pair##*:}"; done
+done
+PARQUET="${PARQUET}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
 start_server || { echo "cannot start StarRocks ${VERSION}" >&2; exit 1; }
 : > "${LOAD_STATS}"
 for ds in ${LOAD_DATASETS}; do
