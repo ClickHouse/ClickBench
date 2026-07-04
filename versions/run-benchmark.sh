@@ -1,20 +1,32 @@
-#!/bin/bash -x
+#!/bin/bash
 
-# Launch a fresh VM that benchmarks ONE ClickHouse version unattended and sends
-# the result to the sink (see cloud-init.sh.in), then self-terminates.
+# Launch a fresh VM that benchmarks ONE version of ONE system unattended and sends
+# the result to the sink, then self-terminates.
 #
-#   ./run-benchmark.sh <version>
+#   ./run-benchmark.sh <version>                       # ClickHouse (default system)
+#   system=duckdb    ./run-benchmark.sh 1.5.4          # a DuckDB version
+#   system=starrocks ./run-benchmark.sh 3.5.19
+#   system=cedardb   ./run-benchmark.sh v2026-06-23
 #   machine=c6a.metal datasets="hits ssb mgbench" ./run-benchmark.sh 1.1.54378
 #
-# version is resolved against list-versions.sh to find its image; for versions
-# built from source (clickhouse-built:<v>) the git tag and required GCC are read
-# from build-from-source/versions.txt and the VM builds the image itself.
+# The system is chosen with the `system=` env var (like the other options below);
+# list versions with `./list-versions.sh <system>`. <version> is resolved against
+# list-versions.sh to its image/CLI. For ClickHouse versions built from source
+# (clickhouse-built:<v>) the git tag/GCC come from build-from-source/versions.txt.
+#
+# Other env options: machine, repo, branch, datasets, tries, timeout, volume, iops, throughput.
 
-set -e
+case "${1:-}" in
+    -h|--help|'')
+        sed -n '3,18p' "$0" | sed 's/^#\( \|$\)//'
+        exit 0 ;;
+esac
+
+set -ex        # -x: trace the launch (this is an operator tool); help above stays untraced
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${HERE}"
 
-VERSION="${1:?usage: run-benchmark.sh <version>}"
+VERSION="$1"
 system="${system:=clickhouse}"           # clickhouse | duckdb | starrocks | cedardb
 machine="${machine:=c7a.4xlarge}"
 repo="${repo:=ClickHouse/ClickBench}"
