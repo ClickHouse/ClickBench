@@ -15,6 +15,5 @@ duckdb/.duckdb/
 duckdb/logs/
 starrocks/logs/
 cedardb/logs/
-duckdb/results/
-starrocks/results/
-cedardb/results/
+prepare-data/parquet-cedar/
+prepare-data/parquet-duck/
