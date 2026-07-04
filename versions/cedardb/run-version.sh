@@ -192,11 +192,29 @@ emit_data_size_json() {
 }
 
 run_benchmark() {
-    local ACTUAL RELEASE ds query FIRST=1 qnum=0 row ds_loaded FULLY_LOADED=""
+    local ACTUAL RELEASE ds query qnum=0 row ds_loaded FULLY_LOADED=""
+    local rows="${HERE}/logs/${VERSION}.rows"; : > "${rows}"
     ACTUAL="$(actual_version)"; RELEASE="$(release_date)"
     echo "benchmarking CedarDB ${VERSION} (reports ${ACTUAL:-unknown}, released ${RELEASE:-unknown})" >&2
-    for ds in ${QUERY_ORDER}; do dataset_fully_loaded "${ds}" && FULLY_LOADED+=" ${ds}" \
-        || echo "=== ${ds}: not fully loaded; skipping ===" >&2; done
+    # CedarDB Community Edition caps total DB size (64 GB), so process one dataset at a time:
+    # load it, run its queries, then DROP it to free space before the next.
+    for ds in ${QUERY_ORDER}; do
+        [ -f "${HERE}/queries/${ds}.sql" ] || continue
+        ds_loaded=0
+        case " ${LOAD_DATASETS} " in *" ${ds} "*)
+            load_one_dataset "${ds}"
+            if dataset_fully_loaded "${ds}"; then ds_loaded=1; FULLY_LOADED+=" ${ds}"
+            else echo "=== ${ds}: not fully loaded; skipping ===" >&2; fi ;;
+        esac
+        while IFS= read -r query <&3; do
+            [ -z "${query}" ] && continue
+            query="${query%;}"; qnum=$((qnum + 1))
+            if [ "${ds_loaded}" = 0 ]; then row="$(null_row)"
+            else row="$(run_query "${ds}" "${query}" "q${qnum} [${ds}]")"; echo "q${qnum} [${ds}]: ${row}" >&2; fi
+            printf '%s\n' "${row}" >> "${rows}"
+        done 3< "${HERE}/queries/${ds}.sql"
+        PG "DROP SCHEMA IF EXISTS \"${ds}\" CASCADE;" >/dev/null 2>&1   # free space for the next dataset
+    done
     {
         echo '{'
         echo "    \"system\": \"CedarDB\","
@@ -207,20 +225,10 @@ run_benchmark() {
         echo "    \"data_size\": $(emit_data_size_json "${FULLY_LOADED}"),"
         echo '    "result":'
         echo '    ['
-        for ds in ${QUERY_ORDER}; do
-            [ -f "${HERE}/queries/${ds}.sql" ] || continue
-            case " ${FULLY_LOADED} " in *" ${ds} "*) ds_loaded=1 ;; *) ds_loaded=0 ;; esac
-            while IFS= read -r query <&3; do
-                [ -z "${query}" ] && continue
-                query="${query%;}"; qnum=$((qnum + 1))
-                if [ "${ds_loaded}" = 0 ]; then row="$(null_row)"
-                else row="$(run_query "${ds}" "${query}" "q${qnum} [${ds}]")"; echo "q${qnum} [${ds}]: ${row}" >&2; fi
-                [ "${FIRST}" = 0 ] && echo ','; FIRST=0
-                printf '%s' "${row}"
-            done 3< "${HERE}/queries/${ds}.sql"
-        done
-        echo; echo '    ]'; echo '}'
+        awk 'NR>1{printf ",\n"} {printf "%s", $0} END{if(NR) print ""}' "${rows}"
+        echo '    ]'; echo '}'
     } > "${OUT}"
+    rm -f "${rows}"
     echo "wrote ${OUT}" >&2; cat "${OUT}"
 }
 
@@ -237,9 +245,4 @@ start_server || { echo "cannot start CedarDB ${VERSION}" >&2; exit 1; }
 detect_parquet
 : > "${LOAD_STATS}"
 SIZE_LIMIT_HIT=0
-for ds in ${LOAD_DATASETS}; do
-    [ -f "${HERE}/queries/${ds}.sql" ] || continue
-    load_one_dataset "${ds}"
-    [ "${SIZE_LIMIT_HIT}" = 1 ] && { echo "stopping loads after CE size limit" >&2; break; }
-done
-run_benchmark
+run_benchmark      # loads, benchmarks, and drops each dataset in turn (CE 64 GB cap)
