@@ -55,11 +55,16 @@ else
     files=("${DATA}"/*.native.zst)
 fi
 
-for f in "${files[@]}"; do
-    [ -f "${f}" ] || { echo "SKIP (missing): ${f}" >&2; continue; }
+# Convert one Native file to the selected variant. Run in parallel (up to JOBS at a time);
+# each clickhouse-local invocation is itself multi-threaded, so keep JOBS modest to bound peak
+# RAM when several large files (ssb, taxi, coffeeshop) convert at once.
+JOBS="${JOBS:-4}"
+convert_one() {
+    local f="$1" base out schema exprs
+    [ -f "${f}" ] || { echo "SKIP (missing): ${f}" >&2; return; }
     base="$(basename "${f}" .native.zst)"
     out="${PARQUET}/${base}.${EXT}"
-    [ -f "${out}" ] && { echo "skip ${base} (${EXT} exists)"; continue; }
+    [ -f "${out}" ] && { echo "skip ${base} (${EXT} exists)"; return; }
     echo "converting ${base}.native.zst -> ${base}.${EXT}${NULLABLE:+ (nullable+snappy)}${CEDAR:+ (cedar-typed)}${CSV:+ (csv)}"
     # tmp+mv so an interrupted run never leaves a half-written file that a later run skips.
     if [ -n "${CSV}" ]; then
@@ -108,5 +113,10 @@ for f in "${files[@]}"; do
             && mv "${out}.tmp" "${out}" \
             || { echo "FAILED converting ${base}" >&2; rm -f "${out}.tmp"; }
     fi
-done
+}
+export -f convert_one
+export CHL PARQUET EXT NULLABLE CEDAR DUCK CSV
+
+# Convert all selected files in parallel (JOBS at a time), then report.
+printf '%s\n' "${files[@]}" | xargs -r -P "${JOBS}" -I{} bash -c 'convert_one "$1"' _ {}
 echo "${EXT} files in ${PARQUET}: $(ls "${PARQUET}"/*."${EXT}" 2>/dev/null | wc -l)"
