@@ -1,0 +1,95 @@
+#!/bin/bash -x
+
+# Cloud-init for the Versions Benchmark, non-ClickHouse engines (DuckDB, StarRocks, CedarDB):
+# benchmark ONE version of ONE engine on a fresh VM, unattended, send the result to the sink
+# (sink.data on play.clickhouse.com), then terminate. Rendered from this template by
+# run-benchmark.sh (placeholders @system@ etc. substituted there).
+#
+# Flow: install Docker (+ build tools for DuckDB source builds) -> download the prepared
+# Native files -> <system>/run-version.sh (which installs clickhouse-local via curl|sh and
+# converts the Native files to the engine's Parquet/CSV variant on the fly, then loads &
+# benchmarks) -> POST the result JSON + log to the sink -> shutdown.
+
+export HOME="${HOME:-/root}"
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+# earlyoom: CedarDB loads in memory and heavy joins can exhaust RAM; kill the offender early
+# instead of thrashing the whole VM. build-essential/cmake/unzip: the DuckDB provider builds
+# pre-0.1.9 versions from source and unzips published CLIs. Docker: StarRocks/CedarDB servers.
+apt-get install -y docker.io git wget curl jq zstd pv aria2 earlyoom unzip @extra_pkgs@
+systemctl enable --now docker
+systemctl enable --now earlyoom
+
+git clone --depth 1 'https://github.com/@repo@.git' --branch '@branch@' ClickBench
+cd ClickBench/versions
+
+SYSTEM='@system@'
+VERSION='@version@'
+IMAGE='@image@'
+DATASETS='@datasets@'
+export TRIES='@tries@'
+export LOAD_DATASETS="${DATASETS}"
+
+DATADIR=prepare-data/data
+mkdir -p "${DATADIR}"
+BUCKET='https://clickhouse-public-datasets.s3.amazonaws.com/versions-benchmark'
+
+# Download the Native files for the datasets we will load, in parallel (same set + method as
+# the ClickHouse cloud-init). The engine provider converts them to its Parquet/CSV variant.
+FILES=""
+for ds in ${DATASETS}; do
+    case "${ds}" in
+        hits)    FILES="${FILES} hits.native.zst" ;;
+        ssb)     FILES="${FILES} ssb.native.zst" ;;
+        mgbench) FILES="${FILES} mgbench1.native.zst mgbench2.native.zst mgbench3.native.zst" ;;
+        tpch)    FILES="${FILES} tpch_nation.native.zst tpch_region.native.zst tpch_part.native.zst tpch_supplier.native.zst tpch_partsupp.native.zst tpch_customer.native.zst tpch_orders.native.zst tpch_lineitem.native.zst" ;;
+        tpcds)   FILES="${FILES} tpcds_call_center.native.zst tpcds_catalog_page.native.zst tpcds_catalog_returns.native.zst tpcds_catalog_sales.native.zst tpcds_customer_address.native.zst tpcds_customer_demographics.native.zst tpcds_customer.native.zst tpcds_date_dim.native.zst tpcds_household_demographics.native.zst tpcds_income_band.native.zst tpcds_inventory.native.zst tpcds_item.native.zst tpcds_promotion.native.zst tpcds_reason.native.zst tpcds_ship_mode.native.zst tpcds_store_returns.native.zst tpcds_store_sales.native.zst tpcds_store.native.zst tpcds_time_dim.native.zst tpcds_warehouse.native.zst tpcds_web_page.native.zst tpcds_web_returns.native.zst tpcds_web_sales.native.zst tpcds_web_site.native.zst" ;;
+        coffeeshop) FILES="${FILES} coffeeshop_fact_sales.native.zst coffeeshop_dim_locations.native.zst coffeeshop_dim_products.native.zst" ;;
+        ontime)  FILES="${FILES} ontime.native.zst" ;;
+        uk)      FILES="${FILES} uk_price_paid.native.zst" ;;
+        job)     FILES="${FILES} job_aka_name.native.zst job_aka_title.native.zst job_cast_info.native.zst job_char_name.native.zst job_comp_cast_type.native.zst job_company_name.native.zst job_company_type.native.zst job_complete_cast.native.zst job_info_type.native.zst job_keyword.native.zst job_kind_type.native.zst job_link_type.native.zst job_movie_companies.native.zst job_movie_info.native.zst job_movie_info_idx.native.zst job_movie_keyword.native.zst job_movie_link.native.zst job_name.native.zst job_person_info.native.zst job_role_type.native.zst job_title.native.zst" ;;
+        taxi)    FILES="${FILES} taxi.native.zst" ;;
+    esac
+done
+echo "downloading in parallel:${FILES}"
+if command -v aria2c >/dev/null 2>&1; then
+    echo ${FILES} | tr ' ' '\n' | grep . | xargs -P 4 -I{} \
+        aria2c --continue=true --allow-overwrite=true --auto-file-renaming=false \
+            -x16 -s16 --min-split-size=20M --summary-interval=15 \
+            -d "${DATADIR}" "${BUCKET}/{}"
+else
+    echo ${FILES} | tr ' ' '\n' | grep . | \
+        xargs -P 8 -I{} wget --continue --progress=dot:giga -P "${DATADIR}" "${BUCKET}/{}"
+fi
+
+echo "=== benchmarking ${SYSTEM} ${VERSION} (image ${IMAGE:-none}, datasets: ${DATASETS}) ==="
+# The provider installs clickhouse-local (curl|sh) and converts to its Parquet/CSV variant,
+# then loads & benchmarks; it writes <system>/results/<version>.json.
+timeout @timeout@ ./"${SYSTEM}"/run-version.sh "${VERSION}" "${IMAGE}" all 2>&1 | tee -a log
+
+MACHINE=$(curl -sS -H "X-aws-ec2-metadata-token: $(curl -X PUT 'http://169.254.169.254/latest/api/token' -sS -H 'X-aws-ec2-metadata-token-ttl-seconds: 21600')" 'http://169.254.169.254/latest/meta-data/instance-type')
+echo "machine: ${MACHINE}, total time: ${SECONDS}s" | tee -a log
+
+# Send the result JSON (already carries "system": "<Engine>") enriched with run metadata.
+RESULTS_URL='https://play.clickhouse.com/?user=sink&query=INSERT+INTO+data+FORMAT+RawBLOB'
+if [ -f "${SYSTEM}/results/${VERSION}.json" ]; then
+    jq -c --arg machine "${MACHINE}" --arg kind 'versions-benchmark' \
+        '. + {kind: $kind, machine: $machine}' "${SYSTEM}/results/${VERSION}.json" \
+        | curl "${RESULTS_URL}" --data-binary @-
+fi
+
+send_log() {
+    local f="$1" size
+    size=$(stat -c%s "$f" 2>/dev/null || echo 0)
+    if [ "$size" -le 1000000 ]; then
+        curl "${RESULTS_URL}" --data-binary @"$f"
+    else
+        { head -c 100000 "$f"
+          printf '\n...[%d bytes truncated]...\n' "$((size - 1000000))"
+          tail -c 900000 "$f"; } | curl "${RESULTS_URL}" --data-binary @-
+    fi
+}
+send_log log
+send_log /var/log/cloud-init-output.log
+
+shutdown now

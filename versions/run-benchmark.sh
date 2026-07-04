@@ -15,6 +15,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${HERE}"
 
 VERSION="${1:?usage: run-benchmark.sh <version>}"
+system="${system:=clickhouse}"           # clickhouse | duckdb | starrocks | cedardb
 machine="${machine:=c7a.4xlarge}"
 repo="${repo:=ClickHouse/ClickBench}"
 branch="${branch:=main}"
@@ -52,6 +53,41 @@ aws_retry() {
         printf '%s\n' "${out}" >&2; return "${rc}"   # different error — don't loop
     done
 }
+
+# --- non-ClickHouse engines (DuckDB / StarRocks / CedarDB) --------------------------------
+# Their versions + images/CLI-URLs live in <system>/versions.tsv; the per-engine provider
+# (<system>/run-version.sh) does all the format conversion & loading on the VM. Render the
+# shared DB cloud-init and launch, then we're done -- the ClickHouse-specific resolution below
+# is skipped.
+if [ "${system}" != clickhouse ]; then
+    tsv="${HERE}/${system}/versions.tsv"
+    [ -f "${tsv}" ] || { echo "unknown system: ${system} (no ${tsv})" >&2; exit 1; }
+    line="$(awk -F'\t' -v v="${VERSION}" '$1==v' "${tsv}")"
+    [ -z "${line}" ] && { echo "unknown ${system} version: ${VERSION}" >&2; exit 1; }
+    image="$(cut -f2 <<<"${line}")"                     # docker image (sr/cedar) or CLI zip URL (duckdb)
+    extra_pkgs=""; [ "${system}" = duckdb ] && extra_pkgs="build-essential cmake"   # DuckDB source builds
+    echo "resolved to ${system} ${VERSION} (${image})"
+
+    arch=$(aws_retry aws ec2 describe-instance-types --instance-types "$machine" --query 'InstanceTypes[0].ProcessorInfo.SupportedArchitectures' --output text)
+    ami=$(aws_retry aws ec2 describe-images --owners amazon --filters "Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04*" "Name=architecture,Values=${arch}" "Name=state,Values=available" --query 'sort_by(Images, &CreationDate) | [-1].[ImageId]' --output text)
+
+    ci="cloud-init.${system}.${VERSION}.sh"
+    awk -v repo="$repo" -v branch="$branch" -v system="$system" -v version="$VERSION" \
+        -v image="$image" -v datasets="$datasets" -v tries="$tries" -v t="$timeout" -v extra="$extra_pkgs" '
+    {
+        gsub(/@repo@/, repo); gsub(/@branch@/, branch); gsub(/@system@/, system); gsub(/@version@/, version)
+        gsub(/@image@/, image); gsub(/@datasets@/, datasets); gsub(/@tries@/, tries)
+        gsub(/@timeout@/, t); gsub(/@extra_pkgs@/, extra)
+        print
+    }' cloud-init-db.sh.in > "${ci}"
+
+    aws_retry aws ec2 run-instances --image-id "$ami" --instance-type "$machine" \
+        --block-device-mappings "DeviceName=/dev/sda1,Ebs={DeleteOnTermination=true,VolumeSize=${volume},VolumeType=gp3,Iops=${iops},Throughput=${throughput}}" \
+        --instance-initiated-shutdown-behavior terminate \
+        --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=clickbench-versions-${system}-${VERSION}}]" \
+        --user-data "file://${ci}"
+    exit 0
+fi
 
 # Resolve the version against list-versions.sh: accept an exact version
 # (26.6.1.1193, 1.1.54378, 53973) or a prefix at a dot boundary, choosing the
