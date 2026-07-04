@@ -22,6 +22,18 @@
 
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Optional first arg selects the system. The non-ClickHouse engines keep their (already
+# resolved) version list in <system>/versions.tsv, in the same columns this script emits
+# (version<TAB>image_or_cli_url<TAB>date) -- so just print it (skipping blanks/comments).
+SYSTEM="${1:-clickhouse}"
+if [ "${SYSTEM}" != clickhouse ]; then
+    tsv="${HERE}/${SYSTEM}/versions.tsv"
+    [ -f "${tsv}" ] || { echo "unknown system: ${SYSTEM} (no ${tsv})" >&2; exit 1; }
+    awk -F'\t' 'NF && $1 !~ /^#/' "${tsv}"
+    exit 0
+fi
+
 CACHE="${HERE}/prepare-data/data"
 mkdir -p "${CACHE}"
 

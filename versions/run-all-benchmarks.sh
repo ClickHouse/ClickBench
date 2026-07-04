@@ -21,10 +21,8 @@ export system
 
 if [ "$#" -gt 0 ]; then
     versions=("$@")
-elif [ "${system}" = clickhouse ]; then
-    mapfile -t versions < <(./list-versions.sh | awk -F'\t' '$2!="unavailable"{print $1}')
 else
-    mapfile -t versions < <(awk -F'\t' 'NF && $1!~/^#/{print $1}' "${system}/versions.tsv")
+    mapfile -t versions < <(./list-versions.sh "${system}" | awk -F'\t' '$2!="unavailable"{print $1}')
 fi
 
 for v in "${versions[@]}"; do
