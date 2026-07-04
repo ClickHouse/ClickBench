@@ -60,9 +60,8 @@ aws_retry() {
 # shared DB cloud-init and launch, then we're done -- the ClickHouse-specific resolution below
 # is skipped.
 if [ "${system}" != clickhouse ]; then
-    tsv="${HERE}/${system}/versions.tsv"
-    [ -f "${tsv}" ] || { echo "unknown system: ${system} (no ${tsv})" >&2; exit 1; }
-    line="$(awk -F'\t' -v v="${VERSION}" '$1==v' "${tsv}")"
+    line="$(./list-versions.sh "${system}" | awk -F'\t' -v v="${VERSION}" '$1==v')" \
+        || { echo "unknown system: ${system}" >&2; exit 1; }
     [ -z "${line}" ] && { echo "unknown ${system} version: ${VERSION}" >&2; exit 1; }
     image="$(cut -f2 <<<"${line}")"                     # docker image (sr/cedar) or CLI zip URL (duckdb)
     extra_pkgs=""; [ "${system}" = duckdb ] && extra_pkgs="build-essential cmake"   # DuckDB source builds
