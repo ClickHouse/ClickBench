@@ -12,7 +12,9 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "${HERE}/.." && pwd)"                      # versions/
-PARQUET="${PARQUET:-${ROOT}/prepare-data/parquet}"
+# CedarDB reads a dedicated Parquet variant (FixedString->String, UInt*->signed Int): its
+# reader rejects char(N) and its unsigned aggregation overflows. Auto-generated below.
+PARQUET="${PARQUET:-${ROOT}/prepare-data/parquet-cedar}"
 TRIES="${TRIES:-6}"                                    # 1 cold + 5 hot
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-120}"
 LOAD_DATASETS="${LOAD_DATASETS:-hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi}"
@@ -90,10 +92,14 @@ load_one_dataset() {
 }
 
 dataset_fully_loaded() {
-    local ds="$1" pair table cnt
+    local ds="$1" pair table out cnt
     for pair in ${TABLES[$ds]}; do
         table="${pair%%:*}"
-        cnt=$(PG "SELECT count(*) FROM \"${ds}\".\"${table}\";" 2>/dev/null | tr -cd '0-9')
+        # PG() merges stderr, so a missing table yields an error whose text ("logs1") contains
+        # digits -- extract only a line that is purely a number, and bail on any error.
+        out=$(PG "SELECT count(*) FROM \"${ds}\".\"${table}\";")
+        printf '%s' "${out}" | grep -qiE 'error|does not exist' && return 1
+        cnt=$(printf '%s' "${out}" | grep -oxE '[0-9]+' | head -1)
         [ -n "${cnt}" ] && [ "${cnt}" != "0" ] || return 1
     done
     return 0
@@ -172,6 +178,13 @@ run_benchmark() {
 
 # ---- run ----
 trap stop_server EXIT
+# Generate any missing CedarDB-typed Parquet for the datasets we will load (idempotent).
+bases=""
+for ds in ${LOAD_DATASETS}; do
+    [ -f "${HERE}/queries/${ds}.sql" ] || continue
+    for pair in ${TABLES[$ds]}; do bases+=" ${pair##*:}"; done
+done
+CEDAR=1 PARQUET="${PARQUET}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
 start_server || { echo "cannot start CedarDB ${VERSION}" >&2; exit 1; }
 : > "${LOAD_STATS}"
 for ds in ${LOAD_DATASETS}; do

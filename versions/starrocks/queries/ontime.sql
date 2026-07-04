@@ -1,10 +1,10 @@
-SELECT avg(c1) FROM (SELECT Year, Month, count(*) AS c1 FROM ontime GROUP BY Year, Month)
+SELECT avg(c1) FROM (SELECT Year, Month, count(*) AS c1 FROM ontime GROUP BY Year, Month) AS _sub1
 SELECT DayOfWeek, count(*) AS c FROM ontime WHERE Year>=2000 AND Year<=2008 GROUP BY DayOfWeek ORDER BY c DESC
 SELECT DayOfWeek, count(*) AS c FROM ontime WHERE DepDelay>10 AND Year>=2000 AND Year<=2008 GROUP BY DayOfWeek ORDER BY c DESC
 SELECT Origin, count(*) AS c FROM ontime WHERE DepDelay>10 AND Year>=2000 AND Year<=2008 GROUP BY Origin ORDER BY c DESC LIMIT 10
 SELECT IATA_CODE_Reporting_Airline AS Carrier, count(*) FROM ontime WHERE DepDelay>10 AND Year=2007 GROUP BY Carrier ORDER BY count(*) DESC
-SELECT Carrier, c, c2, c*100/c2 AS c3 FROM (SELECT IATA_CODE_Reporting_Airline AS Carrier, count(*) AS c FROM ontime WHERE DepDelay>10 AND Year=2007 GROUP BY Carrier) q JOIN (SELECT IATA_CODE_Reporting_Airline AS Carrier, count(*) AS c2 FROM ontime WHERE Year=2007 GROUP BY Carrier) qq USING Carrier ORDER BY c3 DESC
-SELECT Carrier, c, c2, c*100/c2 AS c3 FROM (SELECT IATA_CODE_Reporting_Airline AS Carrier, count(*) AS c FROM ontime WHERE DepDelay>10 AND Year>=2000 AND Year<=2008 GROUP BY Carrier) q JOIN (SELECT IATA_CODE_Reporting_Airline AS Carrier, count(*) AS c2 FROM ontime WHERE Year>=2000 AND Year<=2008 GROUP BY Carrier) qq USING Carrier ORDER BY c3 DESC
+SELECT Carrier, c, c2, c*100/c2 AS c3 FROM (SELECT IATA_CODE_Reporting_Airline AS Carrier, count(*) AS c FROM ontime WHERE DepDelay>10 AND Year=2007 GROUP BY Carrier) q JOIN (SELECT IATA_CODE_Reporting_Airline AS Carrier, count(*) AS c2 FROM ontime WHERE Year=2007 GROUP BY Carrier) qq USING (Carrier) ORDER BY c3 DESC
+SELECT Carrier, c, c2, c*100/c2 AS c3 FROM (SELECT IATA_CODE_Reporting_Airline AS Carrier, count(*) AS c FROM ontime WHERE DepDelay>10 AND Year>=2000 AND Year<=2008 GROUP BY Carrier) q JOIN (SELECT IATA_CODE_Reporting_Airline AS Carrier, count(*) AS c2 FROM ontime WHERE Year>=2000 AND Year<=2008 GROUP BY Carrier) qq USING (Carrier) ORDER BY c3 DESC
 SELECT Year, c1/c2 FROM (SELECT Year, count(*)*100 AS c1 FROM ontime WHERE DepDelay>10 GROUP BY Year) q JOIN (SELECT Year, count(*) AS c2 FROM ontime GROUP BY Year) qq USING (Year) ORDER BY Year
 SELECT DestCityName, count(DISTINCT OriginCityName) AS u FROM ontime WHERE Year >= 2000 AND Year <= 2010 GROUP BY DestCityName ORDER BY u DESC LIMIT 10
 SELECT Year, count(*) AS c1 FROM ontime GROUP BY Year

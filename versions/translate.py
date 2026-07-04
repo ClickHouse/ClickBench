@@ -59,6 +59,50 @@ def multiif(args):
     els = args[i] if i < len(args) else "NULL"
     return "CASE " + " ".join(parts) + f" ELSE {els} END"
 
+_CLAUSE_KW = {"where","group","order","limit","on","using","join","left","right","inner",
+              "full","cross","union","having","offset","fetch","except","intersect"}
+
+def add_subquery_aliases(s):
+    """MySQL & PostgreSQL require every FROM/JOIN derived table to be named. Insert `AS _subN`
+    after any FROM/JOIN (SELECT ...) whose matching ) is not already followed by an alias."""
+    pat = re.compile(r'(?i)(\bFROM\b|\bJOIN\b)\s*\(\s*SELECT\b')
+    i = n = 0
+    while True:
+        m = pat.search(s, i)
+        if not m: break
+        popen = s.index('(', m.start())
+        depth, j = 0, popen
+        while j < len(s):
+            if s[j] == '(': depth += 1
+            elif s[j] == ')':
+                depth -= 1
+                if depth == 0: break
+            j += 1
+        k = j + 1
+        while k < len(s) and s[k].isspace(): k += 1
+        nxt = re.match(r'[A-Za-z_]\w*', s[k:]) if k < len(s) else None
+        aliased = bool(nxt) and (nxt.group(0).lower() == "as" or nxt.group(0).lower() not in _CLAUSE_KW)
+        if aliased:
+            i = j + 1
+        else:
+            n += 1; alias = f" AS _sub{n}"
+            s = s[:j+1] + alias + s[j+1:]; i = j + 1 + len(alias)
+    return s
+
+def inline_having_aliases(s):
+    """PostgreSQL forbids output aliases in HAVING. Replace alias references there with the
+    defining expression, built from `<func>(...) AS <alias>` occurrences in the query."""
+    aliases = {}
+    for m in re.finditer(r'([A-Za-z_]\w*\s*\((?:[^()]|\([^()]*\))*\))\s+AS\s+([A-Za-z_]\w*)', s):
+        aliases[m.group(2)] = m.group(1)
+    if not aliases: return s
+    def repl(mm):
+        clause = mm.group(0)
+        for al, expr in aliases.items():
+            clause = re.sub(r'\b' + re.escape(al) + r'\b', expr, clause)
+        return clause
+    return re.sub(r'(?is)\bHAVING\b.*?(?=\bORDER\s+BY\b|\bLIMIT\b|\)|$)', repl, s)
+
 # Per-engine knobs for the few constructs that actually differ across dialects.
 # datepart(unit, expr): DuckDB/StarRocks have scalar year()/month()/...; PostgreSQL (CedarDB)
 # uses EXTRACT(unit FROM expr).
@@ -76,6 +120,8 @@ ENGINES = {
         "uniq":      lambda a: f"approx_count_distinct({a[0]})",
         "dow":       lambda a: f"dayofweek({a[0]})",                      # 1=Sun..7=Sat
         "relweek":   lambda a: f"floor(datediff({a[0]}, '1970-01-01') / 7)",
+        "std_dialect": True,                                             # aliased subqueries, USING(), etc.
+        "pos":       lambda a: f"instr({a[0]}, {a[1]})",                 # CH position(haystack, needle)
     },
     "cedardb": {                                                         # PostgreSQL dialect
         "timestamp": "TIMESTAMP",
@@ -83,6 +129,10 @@ ENGINES = {
         "uniq":      lambda a: f"count(DISTINCT {a[0]})",                 # no approx in PG
         "dow":       lambda a: f"EXTRACT(ISODOW FROM {a[0]})",
         "relweek":   lambda a: f"floor((CAST({a[0]} AS DATE) - DATE '1970-01-01') / 7)",
+        "std_dialect": True,
+        "ifnull_coalesce": True,                                         # ifnull is type-strict
+        "having_inline": True,                                          # no output aliases in HAVING
+        "pos":       lambda a: f"strpos({a[0]}, {a[1]})",               # CH position(haystack, needle)
     },
 }
 
@@ -105,6 +155,16 @@ def translate(sql, eng):
     s = transform_calls(s, "uniqExact",  lambda ar: f"count(DISTINCT {ar[0]})")
     s = transform_calls(s, "uniq",       E["uniq"])
     s = re.sub(r'\bcount\(\s*\)', 'count(*)', s, flags=re.IGNORECASE)     # count() -> count(*)
+    # MySQL/PostgreSQL dialect adjustments (DuckDB accepts the ClickHouse forms as-is).
+    if E.get("std_dialect"):
+        s = transform_calls(s, "replaceOne", lambda a: f"replace({a[0]}, {a[1]}, {a[2]})")
+        s = transform_calls(s, "position",   lambda a: E["pos"](a) if len(a) == 2 else f"__position__({', '.join(a)})")
+        s = re.sub(r'(?i)\bUSING\s+([A-Za-z_]\w*)', r'USING (\1)', s)     # USING col -> USING (col)
+        s = add_subquery_aliases(s)
+    if E.get("ifnull_coalesce"):
+        s = transform_calls(s, "ifNull", lambda a: f"coalesce({', '.join(a)})")
+    if E.get("having_inline"):
+        s = inline_having_aliases(s)
     return s
 
 targets = sys.argv[1:] or list(ENGINES)
