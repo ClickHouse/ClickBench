@@ -43,7 +43,7 @@ case "${VERSION}" in
     *)      PARQUET="${DUCK_PARQUET}";     VARIANT=duck ;;
 esac
 
-WORK="${HERE}/.duckdb"; mkdir -p "${WORK}" "${HERE}/logs"
+WORK="${HERE}/.duckdb"; mkdir -p "${WORK}" "${HERE}/logs" "${HERE}/results"
 SSL_LIBS="${WORK}/ssl-compat"
 BIN="${WORK}/duckdb-${VERSION}"
 # One DB file per dataset: TPC-H and TPC-DS both have a `customer` table, so a single shared
