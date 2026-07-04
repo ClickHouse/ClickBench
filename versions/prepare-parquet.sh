@@ -47,6 +47,10 @@ if [ ! -x "${CHL}" ]; then
     ( cd "${CHL_DIR}" && curl -fsSL https://clickhouse.com/ | sh ) >&2
 fi
 [ -x "${CHL}" ] || { echo "failed to install clickhouse-local at ${CHL}" >&2; exit 1; }
+# The standalone binary self-decompresses in place on its FIRST run; trigger that once here,
+# serially, so the parallel conversions below don't race on decompressing it (which corrupts
+# the binary -> "Error happened during decompression" / "open: Is a directory").
+"${CHL}" local --query "SELECT 1" >/dev/null 2>&1 || true
 
 # Which files: the given basenames, else everything present.
 if [ "$#" -gt 0 ]; then
