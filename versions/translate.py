@@ -89,6 +89,13 @@ def add_subquery_aliases(s):
             s = s[:j+1] + alias + s[j+1:]; i = j + 1 + len(alias)
     return s
 
+def cast_comma(a):
+    # ClickHouse CAST(expr, 'type') -> standard CAST(expr AS type). The AS-form is one arg and
+    # passes through. A placeholder avoids transform_calls re-matching the emitted CAST(.
+    if len(a) >= 2 and re.match(r"^\s*'.*'\s*$", a[-1], re.S):
+        return f"__CAST__({', '.join(a[:-1])} AS {a[-1].strip().strip(chr(39))})"
+    return f"__CAST__({', '.join(a)})"
+
 def rollup_to_fn(s):
     """`GROUP BY a, b WITH ROLLUP` (ClickHouse/MySQL) -> `GROUP BY ROLLUP(a, b)` (SQL standard).
     The group list has no parens in our queries, so [^()] safely bounds it to one clause."""
@@ -130,6 +137,7 @@ ENGINES = {
         "relweek":   lambda a: f"datediff('week', DATE '1970-01-01', {a[0]})",
         "f32": "FLOAT", "f64": "DOUBLE",                                  # CAST AS Float32/Float64
         "rollup": True, "backtick": True,                                # WITH ROLLUP, `id` -> "id"
+        "quote_at": True,                                                # `at` is a reserved word
     },
     "starrocks": {
         "timestamp": "DATETIME",
@@ -141,6 +149,7 @@ ENGINES = {
         "pos":       lambda a: f"instr({a[0]}, {a[1]})",                 # CH position(haystack, needle)
         "f32": "FLOAT", "f64": "DOUBLE",
         "rollup": True,                                                  # ROLLUP() works; keep `backticks`
+        "cast_op": True,                                                 # no :: operator; needs CAST()
     },
     "cedardb": {                                                         # PostgreSQL dialect
         "timestamp": "TIMESTAMP",
@@ -156,6 +165,7 @@ ENGINES = {
         "rollup": True, "backtick": True,
         "interval_quote": True,                                         # INTERVAL '3' MONTH
         "not_bool": True,                                               # NOT <intcol> -> NOT (<intcol> <> 0)
+        "quote_at": True,
     },
 }
 
@@ -179,6 +189,14 @@ def translate(sql, eng):
     s = transform_calls(s, "uniq",       E["uniq"])
     s = re.sub(r'\bcount\(\s*\)', 'count(*)', s, flags=re.IGNORECASE)     # count() -> count(*)
     # Constructs every engine needs adjusted from the ClickHouse form:
+    s = transform_calls(s, "Nullable", lambda a: a[0])                   # CAST AS Nullable(T) -> T
+    s = transform_calls(s, "CAST", cast_comma); s = s.replace("__CAST__", "CAST")  # CAST(x,'t')->CAST(x AS t)
+    s = re.sub(r'(?i)\bsubstring\(\s*([^()]+?)\s+FROM\s+([^()]+?)\s+FOR\s+([^()]+?)\s*\)', r'substring(\1, \2, \3)', s)
+    s = re.sub(r'(?i)\bsubstring\(\s*([^()]+?)\s+FROM\s+([^()]+?)\s*\)', r'substring(\1, \2)', s)
+    s = transform_calls(s, "notEmpty", lambda a: f"({a[0]} <> '')")
+    s = transform_calls(s, "empty",    lambda a: f"({a[0]} = '')")
+    s = re.sub(r"\(([^()?]+)\)\s*\?\s*([^:?]+?)\s*:\s*('[^']*'|[\w.]+)",   # (cond) ? a : b -> CASE
+               r"CASE WHEN (\1) THEN \2 ELSE \3 END", s)
     s = transform_calls(s, "any", lambda a: f"any_value({a[0]})")        # any() aggregate
     s = re.sub(r'\bFloat32\b', E["f32"], s, flags=re.IGNORECASE)          # CAST AS Float32/Float64
     s = re.sub(r'\bFloat64\b', E["f64"], s, flags=re.IGNORECASE)
@@ -188,6 +206,10 @@ def translate(sql, eng):
         s = re.sub(r'(?i)\bINTERVAL\s+([0-9]+)\s+(DAY|MONTH|YEAR|WEEK|HOUR|MINUTE|SECOND)S?\b',
                    lambda m: f"INTERVAL '{m.group(1)}' {m.group(2).upper()}", s)
     if E.get("not_bool"):  s = not_int_to_bool(s)
+    if E.get("cast_op"):                                                 # expr::Type -> CAST(expr AS Type)
+        s = re.sub(r"([\w.]+|'[^']*')::([A-Za-z]\w*(?:\([0-9, ]*\))?)", r"CAST(\1 AS \2)", s)
+    if E.get("quote_at"):                                                # `at` reserved: alias -> "at"
+        s = re.sub(r'\bAS at\b', 'AS "at"', s); s = re.sub(r'\bat\.', '"at".', s)
     # MySQL/PostgreSQL dialect adjustments (DuckDB accepts the ClickHouse forms as-is).
     if E.get("std_dialect"):
         s = transform_calls(s, "replaceOne", lambda a: f"replace({a[0]}, {a[1]}, {a[2]})")
