@@ -80,6 +80,12 @@ load_one_dataset() {
         table="${pair%%:*}"; pq="$(parquet_path "${pair##*:}")"
         echo "=== CREATE ${ds}.${table} FROM ${pair##*:}.parquet ===" >&2
         out=$(PG "CREATE TABLE \"${ds}\".\"${table}\" AS SELECT * FROM '${pq}';")
+        # CedarDB Community Edition caps total data size; exceeding it puts the DB in readonly
+        # mode. Flag it so the run loop stops loading (already-loaded data stays queryable).
+        if printf '%s' "${out}" | grep -qiE 'size limit|readonly'; then
+            echo "LOAD ${ds}.${table}: CedarDB CE size limit reached; stopping further loads" >&2
+            ok=0; SIZE_LIMIT_HIT=1; break
+        fi
         if printf '%s' "${out}" | grep -qE 'ERROR:|FATAL:'; then
             echo "LOAD ${ds}.${table} FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
         fi
@@ -188,8 +194,10 @@ done
 CEDAR=1 PARQUET="${PARQUET}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
 start_server || { echo "cannot start CedarDB ${VERSION}" >&2; exit 1; }
 : > "${LOAD_STATS}"
+SIZE_LIMIT_HIT=0
 for ds in ${LOAD_DATASETS}; do
     [ -f "${HERE}/queries/${ds}.sql" ] || continue
     load_one_dataset "${ds}"
+    [ "${SIZE_LIMIT_HIT}" = 1 ] && { echo "stopping loads after CE size limit" >&2; break; }
 done
 run_benchmark

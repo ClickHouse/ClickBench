@@ -111,19 +111,33 @@ def not_int_to_bool(s):
         return m.group(0) if w.lower() in _NOT_KW else f"NOT ({w} <> 0)"
     return re.sub(r'\bNOT\s+([A-Za-z_]\w*)', repl, s, flags=re.IGNORECASE)
 
-def inline_having_aliases(s):
-    """PostgreSQL forbids output aliases in HAVING. Replace alias references there with the
-    defining expression, built from `<func>(...) AS <alias>` occurrences in the query."""
+def inline_where_having(s):
+    """MySQL & PostgreSQL don't resolve SELECT output aliases in WHERE/HAVING (ClickHouse and
+    DuckDB do). Replace alias references in those clauses with the defining expression. Aliases
+    may be a column (F_YEAR AS year) or a function (sum(x) AS revenue).
+
+    Only applied to single-block queries: in a CTE/subquery query an alias is a legitimate
+    cross-scope column reference, and blindly inlining it (or pushing an aggregate into WHERE)
+    would corrupt the query. Those queries don't have the alias-in-WHERE problem anyway."""
+    if re.search(r'\bWITH\b', s, re.I) or re.search(r'\(\s*SELECT\b', s, re.I):
+        return s
+    # Collect aliases only from the SELECT projection (before FROM) -- table aliases live after
+    # FROM (e.g. date_dim AS d1) and must NOT be inlined, or self-joins break.
+    proj = re.search(r'(?is)\bSELECT\b(.*?)\bFROM\b', s)
+    if not proj: return s
     aliases = {}
-    for m in re.finditer(r'([A-Za-z_]\w*\s*\((?:[^()]|\([^()]*\))*\))\s+AS\s+([A-Za-z_]\w*)', s):
-        aliases[m.group(2)] = m.group(1)
+    for m in re.finditer(r'([A-Za-z_][\w.]*(?:\s*\((?:[^()]|\([^()]*\))*\))?)\s+AS\s+([A-Za-z_]\w*)', proj.group(1)):
+        if m.group(2).lower() not in _CLAUSE_KW:
+            aliases[m.group(2)] = m.group(1)
     if not aliases: return s
     def repl(mm):
         clause = mm.group(0)
         for al, expr in aliases.items():
             clause = re.sub(r'\b' + re.escape(al) + r'\b', expr, clause)
         return clause
-    return re.sub(r'(?is)\bHAVING\b.*?(?=\bORDER\s+BY\b|\bLIMIT\b|\)|$)', repl, s)
+    s = re.sub(r'(?is)\bWHERE\b.*?(?=\bGROUP\s+BY\b|\bHAVING\b|\bORDER\s+BY\b|\bLIMIT\b|\bUNION\b|\)|$)', repl, s)
+    s = re.sub(r'(?is)\bHAVING\b.*?(?=\bORDER\s+BY\b|\bLIMIT\b|\bUNION\b|\)|$)', repl, s)
+    return s
 
 # Per-engine knobs for the few constructs that actually differ across dialects.
 # datepart(unit, expr): DuckDB/StarRocks have scalar year()/month()/...; PostgreSQL (CedarDB)
@@ -200,6 +214,8 @@ def translate(sql, eng):
     s = re.sub(r"\(([^()?]+)\)\s*\?\s*([^:?]+?)\s*:\s*('[^']*'|[\w.]+)",   # (cond) ? a : b -> CASE
                r"CASE WHEN (\1) THEN \2 ELSE \3 END", s)
     s = transform_calls(s, "any", lambda a: f"any_value({a[0]})")        # any() aggregate
+    s = transform_calls(s, "lagInFrame",  lambda a: f"lag({', '.join(a)})")   # window funcs
+    s = transform_calls(s, "leadInFrame", lambda a: f"lead({', '.join(a)})")
     s = re.sub(r'\bFloat32\b', E["f32"], s, flags=re.IGNORECASE)          # CAST AS Float32/Float64
     s = re.sub(r'\bFloat64\b', E["f64"], s, flags=re.IGNORECASE)
     if E.get("rollup"):    s = rollup_to_fn(s)                           # WITH ROLLUP -> ROLLUP()
@@ -222,8 +238,8 @@ def translate(sql, eng):
         s = add_subquery_aliases(s)
     if E.get("ifnull_coalesce"):
         s = transform_calls(s, "ifNull", lambda a: f"coalesce({', '.join(a)})")
-    if E.get("having_inline"):
-        s = inline_having_aliases(s)
+    if E.get("std_dialect"):
+        s = inline_where_having(s)
     return s
 
 targets = sys.argv[1:] or list(ENGINES)
