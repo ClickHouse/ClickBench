@@ -133,7 +133,9 @@ def inline_where_having(s):
     def repl(mm):
         clause = mm.group(0)
         for al, expr in aliases.items():
-            clause = re.sub(r'\b' + re.escape(al) + r'\b', expr, clause)
+            # function replacement: insert expr literally (it may contain \1 etc. from a
+            # REGEXP_REPLACE backref, which a string replacement would treat as a group ref).
+            clause = re.sub(r'\b' + re.escape(al) + r'\b', lambda _m, e=expr: e, clause)
         return clause
     s = re.sub(r'(?is)\bWHERE\b.*?(?=\bGROUP\s+BY\b|\bHAVING\b|\bORDER\s+BY\b|\bLIMIT\b|\bUNION\b|\)|$)', repl, s)
     s = re.sub(r'(?is)\bHAVING\b.*?(?=\bORDER\s+BY\b|\bLIMIT\b|\bUNION\b|\)|$)', repl, s)
@@ -152,6 +154,7 @@ ENGINES = {
         "f32": "FLOAT", "f64": "DOUBLE",                                  # CAST AS Float32/Float64
         "rollup": True, "backtick": True,                                # WITH ROLLUP, `id` -> "id"
         "reserved": ["at"], "qchar": '"',                               # `at` reserved -> "at"
+        "domain_bref": r"\1",                                           # domainWithoutWWW backref
     },
     "starrocks": {
         "timestamp": "DATETIME",
@@ -165,6 +168,7 @@ ENGINES = {
         "rollup": True,                                                  # ROLLUP() works; keep `backticks`
         "cast_op": True,                                                 # no :: operator; needs CAST()
         "reserved": ["character"], "qchar": "`",                         # reserved alias -> `character`
+        "domain_bref": r"\\1",                                         # StarRocks: \\ -> \ in string literal
     },
     "cedardb": {                                                         # PostgreSQL dialect
         "timestamp": "TIMESTAMP",
@@ -181,6 +185,7 @@ ENGINES = {
         "interval_quote": True,                                         # INTERVAL '3' MONTH
         "not_bool": True,                                               # NOT <intcol> -> NOT (<intcol> <> 0)
         "reserved": ["at"], "qchar": '"',
+        "domain_bref": r"\1",
     },
 }
 
@@ -216,6 +221,10 @@ def translate(sql, eng):
     s = transform_calls(s, "any", lambda a: f"any_value({a[0]})")        # any() aggregate
     s = transform_calls(s, "lagInFrame",  lambda a: f"lag({', '.join(a)})")   # window funcs
     s = transform_calls(s, "leadInFrame", lambda a: f"lead({', '.join(a)})")
+    # domainWithoutWWW(url): extract host, strip leading www (as the main ClickBench does for
+    # these engines) -- REGEXP_REPLACE keeping the captured host. Backref differs by dialect.
+    s = transform_calls(s, "domainWithoutWWW",
+        lambda a: f"REGEXP_REPLACE({a[0]}, '^https?://(?:www\\.)?([^/]+)/.*$', '{E['domain_bref']}')")
     s = re.sub(r'\bFloat32\b', E["f32"], s, flags=re.IGNORECASE)          # CAST AS Float32/Float64
     s = re.sub(r'\bFloat64\b', E["f64"], s, flags=re.IGNORECASE)
     if E.get("rollup"):    s = rollup_to_fn(s)                           # WITH ROLLUP -> ROLLUP()
