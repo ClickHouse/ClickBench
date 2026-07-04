@@ -32,9 +32,15 @@ PHASE="${3:-all}"
 # rejects REQUIRED fields / non-snappy codecs and reads DATE as integer). Both auto-generated.
 NULLABLE_PARQUET="${ROOT}/prepare-data/parquet-nullable"
 DUCK_PARQUET="${ROOT}/prepare-data/parquet-duck"
+CSVDIR="${ROOT}/prepare-data/csv"
+DATA="${ROOT}/prepare-data/data"
+CHL="${ROOT}/.chlocal/clickhouse"
+# 0.1.0-0.1.8 (source-built, no Parquet reader at all) load via a typed table + COPY from CSV;
+# 0.1.9 needs the Nullable+snappy Parquet; 0.2+ use the DuckDB (parquet-duck) variant.
 case "${VERSION}" in
-    0.1.*) PARQUET="${NULLABLE_PARQUET}"; VARIANT=nullable ;;
-    *)     PARQUET="${DUCK_PARQUET}";     VARIANT=duck ;;
+    0.1.9)  PARQUET="${NULLABLE_PARQUET}"; VARIANT=nullable ;;
+    0.1.*)  VARIANT=csv ;;
+    *)      PARQUET="${DUCK_PARQUET}";     VARIANT=duck ;;
 esac
 
 WORK="${HERE}/.duckdb"; mkdir -p "${WORK}" "${HERE}/logs"
@@ -84,9 +90,13 @@ ensure_ssl_compat() {
     return 0
 }
 
-# Download + unpack the release CLI binary for this version (cached).
+# Obtain the CLI binary for this version (cached): build from source when versions.tsv marks
+# it "source" (pre-0.1.9 have no published Linux binary), else download + unpack the release.
 ensure_binary() {
     [ -x "${BIN}" ] && return 0
+    if [ "${CLI_URL}" = source ]; then
+        bash "${HERE}/build-from-source.sh" "${VERSION}" "${BIN}"; return $?
+    fi
     local zip="${WORK}/duckdb-${VERSION}.zip"
     echo "downloading DuckDB ${VERSION} CLI: ${CLI_URL}" >&2
     curl -fsSL "${CLI_URL}" -o "${zip}" || { echo "download failed" >&2; return 1; }
@@ -105,18 +115,39 @@ drop_caches() { sync; echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null 2>&1
 
 parquet_of() { printf '%s/%s.parquet' "${PARQUET}" "$1"; }
 
-# Load one dataset: CREATE TABLE <t> AS SELECT * FROM read_parquet(<file>) for each table.
-# CHECKPOINT after, and record (dataset, seconds, bytes-added-to-db-file).
+# DuckDB column DDL for a table's basename, from the Native schema (unsigned ints widened to
+# signed; FixedString/String -> VARCHAR) -- used by the CSV load path on pre-0.1.9 (no Parquet).
+duckdb_ddl() {
+    "${CHL}" local --query "DESCRIBE TABLE file('${DATA}/$1.native.zst', Native) FORMAT TSV" 2>/dev/null \
+      | awk -F'\t' '{n=tolower($1); t=$2; gsub(/^Nullable\(/,"",t); sub(/\)$/,"",t);
+          if (t ~ /^FixedString/ || t=="String") dt="VARCHAR";
+          else if (t=="UInt8"||t=="Int8"||t=="Int16"||t=="UInt16") dt="SMALLINT";
+          else if (t=="UInt32"||t=="Int32") dt="INTEGER";
+          else if (t=="UInt64"||t=="Int64") dt="BIGINT";
+          else if (t=="Float32") dt="REAL"; else if (t=="Float64") dt="DOUBLE";
+          else if (t=="Date") dt="DATE"; else if (t=="DateTime") dt="TIMESTAMP"; else dt="VARCHAR";
+          printf "%s\"%s\" %s", (NR>1?", ":""), n, dt}'
+}
+
+# Load one dataset. Parquet CTAS (read_parquet) where supported; on pre-0.1.9 (no Parquet
+# reader) a typed CREATE TABLE + COPY from CSV. CHECKPOINT after; record (dataset, s, bytes).
 load_one_dataset() {
-    local ds="$1" pair table pq t0 before after ok=1
+    local ds="$1" pair table pq base csv t0 before after ok=1
     DBFILE="$(db_of "${ds}")"; rm -f "${DBFILE}"
     before=0
     t0=${SECONDS}
     for pair in ${TABLES[$ds]}; do
-        table="${pair%%:*}"; pq="$(parquet_of "${pair##*:}")"
-        [ -f "${pq}" ] || { echo "SKIP ${ds}.${table}: ${pq} missing" >&2; ok=0; continue; }
-        echo "=== CREATE ${ds}.${table} FROM ${pq##*/} ===" >&2
-        out=$(run_sql "DROP TABLE IF EXISTS \"${table}\"; CREATE TABLE \"${table}\" AS SELECT * FROM read_parquet('${pq}');")
+        table="${pair%%:*}"; base="${pair##*:}"; pq="$(parquet_of "${base}")"
+        if [ "${VARIANT}" = csv ]; then
+            csv="${CSVDIR}/${base}.csv"
+            [ -f "${csv}" ] || { echo "SKIP ${ds}.${table}: ${csv} missing" >&2; ok=0; continue; }
+            echo "=== CREATE ${ds}.${table} + COPY ${base}.csv ===" >&2
+            out=$(run_sql "DROP TABLE IF EXISTS \"${table}\"; CREATE TABLE \"${table}\" ($(duckdb_ddl "${base}")); COPY \"${table}\" FROM '${csv}';")
+        else
+            [ -f "${pq}" ] || { echo "SKIP ${ds}.${table}: ${pq} missing" >&2; ok=0; continue; }
+            echo "=== CREATE ${ds}.${table} FROM ${pq##*/} ===" >&2
+            out=$(run_sql "DROP TABLE IF EXISTS \"${table}\"; CREATE TABLE \"${table}\" AS SELECT * FROM read_parquet('${pq}');")
+        fi
         if printf '%s' "${out}" | grep -q 'Error:'; then
             echo "LOAD ${ds}.${table} FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
         fi
@@ -234,6 +265,8 @@ for ds in ${LOAD_DATASETS}; do
 done
 if [ "${VARIANT}" = nullable ]; then
     NULLABLE=1 PARQUET="${NULLABLE_PARQUET}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
+elif [ "${VARIANT}" = csv ]; then
+    CSV=1 PARQUET="${CSVDIR}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
 else
     DUCK=1 PARQUET="${DUCK_PARQUET}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
 fi
