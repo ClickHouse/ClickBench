@@ -15,6 +15,12 @@ ROOT="$(cd "${HERE}/.." && pwd)"                      # versions/
 # CedarDB reads a dedicated Parquet variant (FixedString->String, UInt*->signed Int): its
 # reader rejects char(N) and its unsigned aggregation overflows. Auto-generated below.
 PARQUET="${PARQUET:-${ROOT}/prepare-data/parquet-cedar}"
+# Older CedarDB versions can't read Parquet at all ("handling parquet files is not supported
+# yet"); for those we fall back to typed CREATE TABLE + COPY FROM a plain CSV.
+CSVDIR="${ROOT}/prepare-data/csv"
+DATA="${ROOT}/prepare-data/data"
+CHL="${ROOT}/.chlocal/clickhouse"
+USE_CSV=0                       # set by detect_parquet(): 1 => load via CSV instead of Parquet
 TRIES="${TRIES:-6}"                                    # 1 cold + 5 hot
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-120}"
 LOAD_DATASETS="${LOAD_DATASETS:-hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi}"
@@ -61,7 +67,7 @@ start_server() {
     docker rm -f "${CONTAINER}" >/dev/null 2>&1
     echo "starting CedarDB ${VERSION} (${IMAGE})" >&2
     docker run -d --name "${CONTAINER}" -e CEDAR_PASSWORD="${PASSWORD}" -p 5432:5432 \
-        -v "${PARQUET}:${CPARQUET}:ro" "${IMAGE}" >/dev/null || return 1
+        -v "${PARQUET}:${CPARQUET}:ro" -v "${CSVDIR}:/csv:ro" "${IMAGE}" >/dev/null || return 1
     local waited=0
     until PG 'SELECT 1' 2>/dev/null | grep -q '^1$'; do
         sleep 3; waited=$((waited + 3))
@@ -71,15 +77,50 @@ start_server() {
 }
 stop_server() { docker rm -f "${CONTAINER}" >/dev/null 2>&1; }
 
-# Load one dataset: a schema per dataset, each table via CREATE TABLE AS SELECT FROM '<file>'.
+# Postgres column DDL for a table's Parquet basename, derived from the Native schema (names
+# lowercased to match; unsigned ints widened to signed; FixedString/String -> text).
+pg_ddl() {
+    "${CHL}" local --query "DESCRIBE TABLE file('${DATA}/$1.native.zst', Native) FORMAT TSV" 2>/dev/null \
+      | awk -F'\t' '{n=tolower($1); t=$2; gsub(/^Nullable\(/,"",t); sub(/\)$/,"",t);
+          if (t ~ /^FixedString/ || t=="String") pt="text";
+          else if (t=="UInt8"||t=="Int8"||t=="Int16"||t=="UInt16") pt="integer";
+          else if (t=="UInt32"||t=="Int32"||t=="UInt64"||t=="Int64") pt="bigint";
+          else if (t=="Float32") pt="real"; else if (t=="Float64") pt="double precision";
+          else if (t=="Date") pt="date"; else if (t=="DateTime") pt="timestamp"; else pt="text";
+          printf "%s%s %s", (NR>1?", ":""), n, pt}'
+}
+
+# Decide once whether this CedarDB version can read Parquet; if not, generate the CSVs we'll need.
+detect_parquet() {
+    local probe; probe="$(parquet_path uk_price_paid)"
+    local out; out=$(PG "SELECT count(*) FROM '${probe}';")
+    if printf '%s' "${out}" | grep -qi 'not supported'; then
+        USE_CSV=1
+        echo "CedarDB ${VERSION}: Parquet unsupported -> loading via CSV" >&2
+        local ds pair bases=""
+        for ds in ${LOAD_DATASETS}; do
+            [ -f "${HERE}/queries/${ds}.sql" ] || continue
+            for pair in ${TABLES[$ds]}; do bases+=" ${pair##*:}"; done
+        done
+        CSV=1 PARQUET="${CSVDIR}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
+    fi
+}
+
+# Load one dataset: a schema per dataset. Parquet CTAS where supported, else typed table + COPY CSV.
 load_one_dataset() {
-    local ds="$1" pair table pq out t0 ok=1
+    local ds="$1" pair table pq base out t0 ok=1
     PG "DROP SCHEMA IF EXISTS \"${ds}\" CASCADE; CREATE SCHEMA \"${ds}\";" >/dev/null 2>&1
     t0=${SECONDS}
     for pair in ${TABLES[$ds]}; do
-        table="${pair%%:*}"; pq="$(parquet_path "${pair##*:}")"
-        echo "=== CREATE ${ds}.${table} FROM ${pair##*:}.parquet ===" >&2
-        out=$(PG "CREATE TABLE \"${ds}\".\"${table}\" AS SELECT * FROM '${pq}';")
+        table="${pair%%:*}"; base="${pair##*:}"; pq="$(parquet_path "${base}")"
+        if [ "${USE_CSV}" = 1 ]; then
+            echo "=== CREATE ${ds}.${table} + COPY /csv/${base}.csv ===" >&2
+            out=$(PG "CREATE TABLE \"${ds}\".\"${table}\" ($(pg_ddl "${base}"));"; \
+                  PG "COPY \"${ds}\".\"${table}\" FROM '/csv/${base}.csv' WITH (FORMAT csv);")
+        else
+            echo "=== CREATE ${ds}.${table} FROM ${base}.parquet ===" >&2
+            out=$(PG "CREATE TABLE \"${ds}\".\"${table}\" AS SELECT * FROM '${pq}';")
+        fi
         # CedarDB Community Edition caps total data size; exceeding it puts the DB in readonly
         # mode. Flag it so the run loop stops loading (already-loaded data stays queryable).
         if printf '%s' "${out}" | grep -qiE 'size limit|readonly'; then
@@ -193,6 +234,7 @@ for ds in ${LOAD_DATASETS}; do
 done
 CEDAR=1 PARQUET="${PARQUET}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
 start_server || { echo "cannot start CedarDB ${VERSION}" >&2; exit 1; }
+detect_parquet
 : > "${LOAD_STATS}"
 SIZE_LIMIT_HIT=0
 for ds in ${LOAD_DATASETS}; do

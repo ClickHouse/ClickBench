@@ -21,7 +21,13 @@ DATA="${DATA:-${HERE}/prepare-data/data}"
 NULLABLE="${NULLABLE:-}"
 CEDAR="${CEDAR:-}"
 DUCK="${DUCK:-}"
-if [ -n "${NULLABLE}" ]; then
+CSV="${CSV:-}"                 # plain CSV output (for Stream Load / COPY on engines/versions
+                              # whose parquet reader is missing or broken); types come from the
+                              # loader's table DDL, so the CSV data itself needs no type mapping.
+EXT="parquet"
+if [ -n "${CSV}" ]; then
+    PARQUET="${PARQUET:-${HERE}/prepare-data/csv}"; EXT="csv"
+elif [ -n "${NULLABLE}" ]; then
     PARQUET="${PARQUET:-${HERE}/prepare-data/parquet-nullable}"
 elif [ -n "${CEDAR}" ]; then
     PARQUET="${PARQUET:-${HERE}/prepare-data/parquet-cedar}"
@@ -52,11 +58,15 @@ fi
 for f in "${files[@]}"; do
     [ -f "${f}" ] || { echo "SKIP (missing): ${f}" >&2; continue; }
     base="$(basename "${f}" .native.zst)"
-    out="${PARQUET}/${base}.parquet"
-    [ -f "${out}" ] && { echo "skip ${base} (parquet exists)"; continue; }
-    echo "converting ${base}.native.zst -> ${base}.parquet${NULLABLE:+ (nullable+snappy)}${CEDAR:+ (cedar-typed)}"
-    # tmp+mv so an interrupted run never leaves a half-written parquet that a later run skips.
-    if [ -n "${NULLABLE}" ]; then
+    out="${PARQUET}/${base}.${EXT}"
+    [ -f "${out}" ] && { echo "skip ${base} (${EXT} exists)"; continue; }
+    echo "converting ${base}.native.zst -> ${base}.${EXT}${NULLABLE:+ (nullable+snappy)}${CEDAR:+ (cedar-typed)}${CSV:+ (csv)}"
+    # tmp+mv so an interrupted run never leaves a half-written file that a later run skips.
+    if [ -n "${CSV}" ]; then
+        "${CHL}" local --query "SELECT * FROM file('${f}', Native) INTO OUTFILE '${out}.tmp' FORMAT CSV" \
+            && mv "${out}.tmp" "${out}" \
+            || { echo "FAILED converting ${base}" >&2; rm -f "${out}.tmp"; }
+    elif [ -n "${NULLABLE}" ]; then
         # Wrap every column in Nullable (-> OPTIONAL fields) via a schema override on file(),
         # and force snappy -- the two things DuckDB 0.1.x's Parquet reader requires.
         schema="$("${CHL}" local --query "DESCRIBE TABLE file('${f}', Native) FORMAT TSV" \
@@ -97,4 +107,4 @@ for f in "${files[@]}"; do
             || { echo "FAILED converting ${base}" >&2; rm -f "${out}.tmp"; }
     fi
 done
-echo "parquet files in ${PARQUET}: $(ls "${PARQUET}"/*.parquet 2>/dev/null | wc -l)"
+echo "${EXT} files in ${PARQUET}: $(ls "${PARQUET}"/*."${EXT}" 2>/dev/null | wc -l)"
