@@ -155,6 +155,7 @@ ENGINES = {
         "rollup": True, "backtick": True,                                # WITH ROLLUP, `id` -> "id"
         "reserved": ["at"], "qchar": '"',                               # `at` reserved -> "at"
         "domain_bref": r"\1",                                           # domainWithoutWWW backref
+        "pos":       lambda a: f"strpos({a[0]}, {a[1]})",               # CH position(haystack, needle)
     },
     "starrocks": {
         "timestamp": "DATETIME",
@@ -228,6 +229,8 @@ def translate(sql, eng):
     s = re.sub(r'\bFloat32\b', E["f32"], s, flags=re.IGNORECASE)          # CAST AS Float32/Float64
     s = re.sub(r'\bFloat64\b', E["f64"], s, flags=re.IGNORECASE)
     s = re.sub(r'(?i)\bUSING\s+([A-Za-z_]\w*)', r'USING (\1)', s)         # USING col -> USING (col); all engines
+    s = transform_calls(s, "replaceOne", lambda a: f"replace({a[0]}, {a[1]}, {a[2]})")   # no replaceOne anywhere
+    s = transform_calls(s, "position",   lambda a: E["pos"](a) if len(a) == 2 else f"__position__({', '.join(a)})")
     if E.get("rollup"):    s = rollup_to_fn(s)                           # WITH ROLLUP -> ROLLUP()
     if E.get("backtick"):  s = s.replace('`', '"')                       # `id` -> "id" (not StarRocks)
     if E.get("interval_quote"):                                          # INTERVAL 3 MONTH -> INTERVAL '3' MONTH
@@ -242,8 +245,6 @@ def translate(sql, eng):
         s = re.sub(r'\b' + w + r'\.', f'{q}{w}{q}.', s)
     # MySQL/PostgreSQL dialect adjustments (DuckDB accepts the ClickHouse forms as-is).
     if E.get("std_dialect"):
-        s = transform_calls(s, "replaceOne", lambda a: f"replace({a[0]}, {a[1]}, {a[2]})")
-        s = transform_calls(s, "position",   lambda a: E["pos"](a) if len(a) == 2 else f"__position__({', '.join(a)})")
         s = add_subquery_aliases(s)
     if E.get("ifnull_coalesce"):
         s = transform_calls(s, "ifNull", lambda a: f"coalesce({', '.join(a)})")
