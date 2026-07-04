@@ -116,7 +116,7 @@ load_one_dataset() {
         if [ "${USE_CSV}" = 1 ]; then
             echo "=== CREATE ${ds}.${table} + COPY /csv/${base}.csv ===" >&2
             out=$(PG "CREATE TABLE \"${ds}\".\"${table}\" ($(pg_ddl "${base}"));"; \
-                  PG "COPY \"${ds}\".\"${table}\" FROM '/csv/${base}.csv' WITH (FORMAT csv);")
+                  PG "COPY \"${ds}\".\"${table}\" FROM '/csv/${base}.csv' WITH (FORMAT csv, NULL '\\N');")
         else
             echo "=== CREATE ${ds}.${table} FROM ${base}.parquet ===" >&2
             out=$(PG "CREATE TABLE \"${ds}\".\"${table}\" AS SELECT * FROM '${pq}';")

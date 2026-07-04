@@ -25,6 +25,12 @@ PHASE="${3:-all}"
 
 CONTAINER="sr-${VERSION}"
 CPARQUET="/parquet"                                    # where PARQUET is mounted in the container
+# FILES() (read local Parquet) is missing on <3.1 and broken on some 3.2-3.4 builds; those fall
+# back to a typed CREATE TABLE + Stream Load from CSV (works on every StarRocks version).
+CSVDIR="${ROOT}/prepare-data/csv"
+DATA="${ROOT}/prepare-data/data"
+CHL="${ROOT}/.chlocal/clickhouse"
+USE_STREAM=0
 OUT="${HERE}/results/${VERSION}.json"
 LOAD_STATS="${HERE}/logs/${VERSION}.loadtimes.tsv"
 mkdir -p "${HERE}/logs" "${HERE}/results"
@@ -56,7 +62,7 @@ start_server() {
     docker rm -f "${CONTAINER}" >/dev/null 2>&1
     echo "starting StarRocks ${VERSION} (${IMAGE})" >&2
     docker run -d --name "${CONTAINER}" -p 9030:9030 -p 8030:8030 -p 8040:8040 \
-        -v "${PARQUET}:${CPARQUET}:ro" "${IMAGE}" >/dev/null || return 1
+        -v "${PARQUET}:${CPARQUET}:ro" -v "${CSVDIR}:/csv:ro" "${IMAGE}" >/dev/null || return 1
     local waited=0
     until Mq 'SELECT 1' >/dev/null 2>&1; do
         sleep 5; waited=$((waited + 5))
@@ -71,18 +77,75 @@ start_server() {
 }
 stop_server() { docker rm -f "${CONTAINER}" >/dev/null 2>&1; }
 
-# Load one dataset: a database per dataset, each table via CREATE TABLE AS SELECT FROM FILES().
+# StarRocks column DDL + a valid key column for a table's basename, from the Native schema.
+# Emits "cols|key": unsigned ints widened to signed; FixedString/String -> STRING (VARCHAR max).
+# Key = the first non-STRING column (STRING can't be a sort key); fallback to the first column.
+sr_ddl() {
+    "${CHL}" local --query "DESCRIBE TABLE file('${DATA}/$1.native.zst', Native) FORMAT TSV" 2>/dev/null \
+      | awk -F'\t' '{n=tolower($1); t=$2; gsub(/^Nullable\(/,"",t); sub(/\)$/,"",t);
+          if (t ~ /^FixedString/ || t=="String") st="STRING";
+          else if (t=="UInt8"||t=="Int8"||t=="Int16"||t=="UInt16") st="SMALLINT";
+          else if (t=="UInt32"||t=="Int32") st="INT";
+          else if (t=="UInt64"||t=="Int64") st="BIGINT";
+          else if (t=="Float32") st="FLOAT"; else if (t=="Float64") st="DOUBLE";
+          else if (t=="Date") st="DATE"; else if (t=="DateTime") st="DATETIME"; else st="STRING";
+          cols = cols (NR>1?", ":"") "`" n "` " st;
+          if (key=="" && st!="STRING") key=n; if (first=="") first=n }
+        END { print cols "|" (key==""?first:key) }'
+}
+
+# Stream Load a CSV into an (already-created) table via curl inside the container (the FE
+# redirects to the BE's internal address, reachable only from inside). \N is the null marker.
+stream_load() {
+    local db="$1" table="$2" csv="$3"
+    docker exec "${CONTAINER}" curl -s --location-trusted -u root: \
+        -H "format:CSV" -H "column_separator:," -H "enclose:\"" -H "trim_double_quotes:true" \
+        -H "max_filter_ratio:0.01" -T "/csv/${csv}" \
+        "http://127.0.0.1:8030/api/${db}/${table}/_stream_load" 2>&1
+}
+
+# Decide once whether this StarRocks version can read local Parquet via FILES(); if not,
+# generate the CSVs we'll need and load via Stream Load instead.
+detect_files() {
+    local out; out=$(Mq "DESC FILES('path'='$(parquet_uri uk_price_paid)','format'='parquet');" 2>&1)
+    if printf '%s' "${out}" | grep -qiE 'ERROR|not found|no viable'; then
+        USE_STREAM=1
+        echo "StarRocks ${VERSION}: FILES() unavailable -> loading via CSV Stream Load" >&2
+        local ds pair bases=""
+        for ds in ${LOAD_DATASETS}; do
+            [ -f "${HERE}/queries/${ds}.sql" ] || continue
+            for pair in ${TABLES[$ds]}; do bases+=" ${pair##*:}"; done
+        done
+        CSV=1 PARQUET="${CSVDIR}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
+    fi
+}
+
+# Load one dataset: a database per dataset. FILES() CTAS where supported, else typed table +
+# Stream Load from CSV.
 load_one_dataset() {
-    local ds="$1" db pair table uri out t0 ok=1
+    local ds="$1" db pair table uri base out t0 ok=1 ddl key
     db="$(db_of "${ds}")"
     Mq "DROP DATABASE IF EXISTS ${db}; CREATE DATABASE ${db};" >/dev/null 2>&1
     t0=${SECONDS}
     for pair in ${TABLES[$ds]}; do
-        table="${pair%%:*}"; uri="$(parquet_uri "${pair##*:}")"
-        echo "=== CREATE ${db}.${table} FROM ${pair##*:}.parquet ===" >&2
-        out=$(Mq "CREATE TABLE ${db}.\`${table}\` AS SELECT * FROM FILES('path'='${uri}','format'='parquet');" 2>&1)
-        if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
-            echo "LOAD ${ds}.${table} FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
+        table="${pair%%:*}"; base="${pair##*:}"; uri="$(parquet_uri "${base}")"
+        if [ "${USE_STREAM}" = 1 ]; then
+            echo "=== CREATE ${db}.${table} + Stream Load ${base}.csv ===" >&2
+            ddl="$(sr_ddl "${base}")"; key="${ddl##*|}"; ddl="${ddl%|*}"
+            out=$(Mq "CREATE TABLE ${db}.\`${table}\` (${ddl}) ENGINE=OLAP DUPLICATE KEY(\`${key}\`) DISTRIBUTED BY HASH(\`${key}\`) BUCKETS 8 PROPERTIES('replication_num'='1');" 2>&1)
+            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
+                echo "LOAD ${ds}.${table} CREATE FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0; continue
+            fi
+            out=$(stream_load "${db}" "${table}" "${base}.csv")
+            if ! printf '%s' "${out}" | grep -q '"Status": "Success"'; then
+                echo "LOAD ${ds}.${table} STREAM FAILED: $(printf '%s' "${out}" | grep -oE '"(Status|Message)": "[^"]*"' | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
+            fi
+        else
+            echo "=== CREATE ${db}.${table} FROM ${base}.parquet ===" >&2
+            out=$(Mq "CREATE TABLE ${db}.\`${table}\` AS SELECT * FROM FILES('path'='${uri}','format'='parquet');" 2>&1)
+            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
+                echo "LOAD ${ds}.${table} FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
+            fi
         fi
     done
     if [ "${ok}" = 1 ]; then
@@ -202,6 +265,7 @@ for ds in ${LOAD_DATASETS}; do
 done
 PARQUET="${PARQUET}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
 start_server || { echo "cannot start StarRocks ${VERSION}" >&2; exit 1; }
+detect_files
 : > "${LOAD_STATS}"
 for ds in ${LOAD_DATASETS}; do
     [ -f "${HERE}/queries/${ds}.sql" ] || continue

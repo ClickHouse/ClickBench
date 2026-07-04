@@ -63,7 +63,9 @@ for f in "${files[@]}"; do
     echo "converting ${base}.native.zst -> ${base}.${EXT}${NULLABLE:+ (nullable+snappy)}${CEDAR:+ (cedar-typed)}${CSV:+ (csv)}"
     # tmp+mv so an interrupted run never leaves a half-written file that a later run skips.
     if [ -n "${CSV}" ]; then
-        "${CHL}" local --query "SELECT * FROM file('${f}', Native) INTO OUTFILE '${out}.tmp' FORMAT CSV" \
+        # NULL -> \N (not empty) so a genuine null is distinguishable from an empty string across
+        # all loaders (StarRocks Stream Load default, CedarDB COPY NULL '\N', DuckDB COPY nullstr).
+        "${CHL}" local --query "SELECT * FROM file('${f}', Native) INTO OUTFILE '${out}.tmp' FORMAT CSV SETTINGS format_csv_null_representation='\\N'" \
             && mv "${out}.tmp" "${out}" \
             || { echo "FAILED converting ${base}" >&2; rm -f "${out}.tmp"; }
     elif [ -n "${NULLABLE}" ]; then
