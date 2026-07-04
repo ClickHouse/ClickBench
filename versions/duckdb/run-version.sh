@@ -23,6 +23,7 @@ PHASE="${3:-all}"
 [ -z "${CLI_URL}" ] && { echo "no CLI url for DuckDB ${VERSION} in versions.tsv" >&2; exit 1; }
 
 WORK="${HERE}/.duckdb"; mkdir -p "${WORK}" "${HERE}/logs"
+SSL_LIBS="${WORK}/ssl-compat"
 BIN="${WORK}/duckdb-${VERSION}"
 DBFILE="${WORK}/db-${VERSION}.duckdb"
 OUT="${HERE}/results/${VERSION}.json"
@@ -43,6 +44,25 @@ declare -A TABLES=(
 )
 
 LOAD_STATS="${HERE}/logs/${VERSION}.loadtimes.tsv"
+
+# Early DuckDB (<= 0.8) dynamically links OpenSSL 1.1, which modern distros (Ubuntu 24.04)
+# no longer ship. Provide libssl.so.1.1 / libcrypto.so.1.1 (from the Ubuntu 20.04 package)
+# on LD_LIBRARY_PATH. Best effort and cached; newer versions don't need it and ignore it.
+ensure_ssl_compat() {
+    if [ ! -f "${SSL_LIBS}/libssl.so.1.1" ]; then
+        mkdir -p "${SSL_LIBS}"
+        local deb="${SSL_LIBS}/ssl.deb" u
+        for u in \
+            "http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.24_amd64.deb" \
+            "http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb"; do
+            curl -fsSL "${u}" -o "${deb}" 2>/dev/null && break
+        done
+        [ -f "${deb}" ] && ( cd "${SSL_LIBS}" && dpkg-deb -x ssl.deb x 2>/dev/null \
+            && cp x/usr/lib/x86_64-linux-gnu/lib{ssl,crypto}.so.1.1 . 2>/dev/null; rm -rf x ssl.deb )
+    fi
+    [ -f "${SSL_LIBS}/libssl.so.1.1" ] && export LD_LIBRARY_PATH="${SSL_LIBS}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+    return 0
+}
 
 # Download + unpack the release CLI binary for this version (cached).
 ensure_binary() {
@@ -163,6 +183,7 @@ run_benchmark() {
 }
 
 # ---- run ----
+ensure_ssl_compat
 ensure_binary || { echo "cannot obtain DuckDB ${VERSION}" >&2; exit 1; }
 rm -f "${DBFILE}"; : > "${LOAD_STATS}"
 for ds in ${LOAD_DATASETS}; do
