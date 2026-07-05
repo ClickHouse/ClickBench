@@ -75,22 +75,36 @@ declare -A TABLES=(
 
 LOAD_STATS="${HERE}/logs/${VERSION}.loadtimes.tsv"
 
-# Early DuckDB (<= 0.8) dynamically links OpenSSL 1.1, which modern distros (Ubuntu 24.04)
-# no longer ship. Provide libssl.so.1.1 / libcrypto.so.1.1 (from the Ubuntu 20.04 package)
-# on LD_LIBRARY_PATH. Best effort and cached; newer versions don't need it and ignore it.
+# Early DuckDB dynamically links an old OpenSSL that modern distros (Ubuntu 24.04) no longer
+# ship. Different releases need different sonames: <=0.8 want libssl.so.1.1 (Ubuntu 20.04's
+# libssl1.1), while 0.2.5/0.2.6/0.3.0 want libssl.so.1.0.0 (Ubuntu 18.04's libssl1.0.0) -- if
+# it's missing the binary won't even start ("error while loading shared libraries") and NOTHING
+# loads. Provide BOTH on LD_LIBRARY_PATH. Best effort and cached; newer versions ignore them.
 ensure_ssl_compat() {
+    mkdir -p "${SSL_LIBS}"
+    # OpenSSL 1.1 (Ubuntu 20.04)
     if [ ! -f "${SSL_LIBS}/libssl.so.1.1" ]; then
-        mkdir -p "${SSL_LIBS}"
-        local deb="${SSL_LIBS}/ssl.deb" u
+        local deb="${SSL_LIBS}/ssl11.deb" u
         for u in \
             "http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.24_amd64.deb" \
             "http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb"; do
             curl -fsSL "${u}" -o "${deb}" 2>/dev/null && break
         done
-        [ -f "${deb}" ] && ( cd "${SSL_LIBS}" && dpkg-deb -x ssl.deb x 2>/dev/null \
-            && cp x/usr/lib/x86_64-linux-gnu/lib{ssl,crypto}.so.1.1 . 2>/dev/null; rm -rf x ssl.deb )
+        [ -f "${deb}" ] && ( cd "${SSL_LIBS}" && dpkg-deb -x ssl11.deb x 2>/dev/null \
+            && cp x/usr/lib/x86_64-linux-gnu/lib{ssl,crypto}.so.1.1 . 2>/dev/null; rm -rf x ssl11.deb )
     fi
-    [ -f "${SSL_LIBS}/libssl.so.1.1" ] && export LD_LIBRARY_PATH="${SSL_LIBS}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+    # OpenSSL 1.0.0 (Ubuntu 18.04) -- for 0.2.5/0.2.6/0.3.0
+    if [ ! -f "${SSL_LIBS}/libssl.so.1.0.0" ]; then
+        local deb="${SSL_LIBS}/ssl10.deb" u
+        for u in \
+            "http://security.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.13_amd64.deb" \
+            "http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5_amd64.deb"; do
+            curl -fsSL "${u}" -o "${deb}" 2>/dev/null && break
+        done
+        [ -f "${deb}" ] && ( cd "${SSL_LIBS}" && dpkg-deb -x ssl10.deb x 2>/dev/null \
+            && find x -name 'libssl.so.1.0.0' -o -name 'libcrypto.so.1.0.0' | xargs -I{} cp {} . 2>/dev/null; rm -rf x ssl10.deb )
+    fi
+    export LD_LIBRARY_PATH="${SSL_LIBS}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
     return 0
 }
 
