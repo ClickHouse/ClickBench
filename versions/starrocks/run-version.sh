@@ -28,10 +28,11 @@ PHASE="${3:-all}"
 CONTAINER="sr-${VERSION}"
 CPARQUET="/parquet"                                    # where PARQUET is mounted in the container
 # FILES() (read local Parquet) is missing on <3.1 (2.5/3.0). Those fall back to a typed
-# CREATE TABLE + JSON Stream Load: parquet Stream Load isn't supported that far back, and CSV
-# Stream Load mis-parses ClickHouse's quoted CSV (the enclose/trim options are newer), so JSON
-# (one object per line, mapped by column name) is the portable bulk-load alternative.
-JSONDIR="${ROOT}/prepare-data/json"
+# CREATE TABLE + TSV Stream Load: parquet Stream Load isn't supported that far back, and CSV
+# Stream Load mis-parses ClickHouse's QUOTED CSV (the enclose/trim options are newer). TSV is
+# unquoted (loads correctly) and, unlike JSON Stream Load's 100 MB/batch cap, streams GB-scale
+# files via the large CSV body limit -- the portable bulk-load alternative.
+TSVDIR="${ROOT}/prepare-data/tsv"
 DATA="${ROOT}/prepare-data/data"
 CHL="${ROOT}/.chlocal/clickhouse"
 USE_STREAM=0
@@ -68,7 +69,7 @@ start_server() {
     docker rm -f "${CONTAINER}" >/dev/null 2>&1
     echo "starting StarRocks ${VERSION} (${IMAGE})" >&2
     docker run -d --name "${CONTAINER}" -p 9030:9030 -p 8030:8030 -p 8040:8040 \
-        -v "${PARQUET}:${CPARQUET}:ro" -v "${JSONDIR}:/json:ro" "${IMAGE}" >/dev/null || return 1
+        -v "${PARQUET}:${CPARQUET}:ro" -v "${TSVDIR}:/tsv:ro" "${IMAGE}" >/dev/null || return 1
     local waited=0
     until Mq 'SELECT 1' >/dev/null 2>&1; do
         sleep 5; waited=$((waited + 5))
@@ -100,29 +101,30 @@ sr_ddl() {
         END { print cols "|" (key==""?first:key) }'
 }
 
-# Stream Load a JSON file (one object per line) into an (already-created) table via curl inside
-# the container (the FE redirects to the BE's internal address, reachable only from inside).
-# format:json with column mapping by key name; nulls/special chars are encoded by JSON itself.
+# Stream Load a TSV file into an (already-created) table via curl inside the container (the FE
+# redirects to the BE's internal address, reachable only from inside). format:CSV with a TAB
+# separator over unquoted TabSeparated data; \N is the null marker. Columns are positional (in
+# the same order sr_ddl built the table). The tab must reach curl literally, so use $'\t'.
 stream_load() {
-    local db="$1" table="$2" json="$3"
+    local db="$1" table="$2" tsv="$3"
     timeout -k 10 "$((LOAD_TIMEOUT + 60))" docker exec "${CONTAINER}" curl -s --max-time "${LOAD_TIMEOUT}" --location-trusted -u root: \
-        -H "format:json" -H "max_filter_ratio:0.01" -T "/json/${json}" \
+        -H "format:CSV" -H "column_separator:$(printf '\t')" -H "max_filter_ratio:0.01" -T "/tsv/${tsv}" \
         "http://127.0.0.1:8030/api/${db}/${table}/_stream_load" 2>&1
 }
 
 # Decide once whether this StarRocks version can read local Parquet via FILES(); if not,
-# generate the JSON we'll need and load via Stream Load instead.
+# generate the TSV we'll need and load via Stream Load instead.
 detect_files() {
     local out; out=$(Mq "DESC FILES('path'='$(parquet_uri uk_price_paid)','format'='parquet');" 2>&1)
     if printf '%s' "${out}" | grep -qiE 'ERROR|not found|no viable'; then
         USE_STREAM=1
-        echo "StarRocks ${VERSION}: FILES() unavailable -> loading via JSON Stream Load" >&2
+        echo "StarRocks ${VERSION}: FILES() unavailable -> loading via TSV Stream Load" >&2
         local ds pair bases=""
         for ds in ${LOAD_DATASETS}; do
             [ -f "${HERE}/queries/${ds}.sql" ] || continue
             for pair in ${TABLES[$ds]}; do bases+=" ${pair##*:}"; done
         done
-        JSON=1 PARQUET="${JSONDIR}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
+        TSV=1 PARQUET="${TSVDIR}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
     fi
 }
 
@@ -136,13 +138,13 @@ load_one_dataset() {
     for pair in ${TABLES[$ds]}; do
         table="${pair%%:*}"; base="${pair##*:}"; uri="$(parquet_uri "${base}")"
         if [ "${USE_STREAM}" = 1 ]; then
-            echo "=== CREATE ${db}.${table} + JSON Stream Load ${base}.json ===" >&2
+            echo "=== CREATE ${db}.${table} + TSV Stream Load ${base}.tsv ===" >&2
             ddl="$(sr_ddl "${base}")"; key="${ddl##*|}"; ddl="${ddl%|*}"
             out=$(Mq "CREATE TABLE ${db}.\`${table}\` (${ddl}) ENGINE=OLAP DUPLICATE KEY(\`${key}\`) DISTRIBUTED BY HASH(\`${key}\`) BUCKETS 8 PROPERTIES('replication_num'='1');" 2>&1)
             if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
                 echo "LOAD ${ds}.${table} CREATE FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0; continue
             fi
-            out=$(stream_load "${db}" "${table}" "${base}.json")
+            out=$(stream_load "${db}" "${table}" "${base}.tsv")
             if ! printf '%s' "${out}" | grep -q '"Status": "Success"'; then
                 echo "LOAD ${ds}.${table} STREAM FAILED: $(printf '%s' "${out}" | grep -oE '"(Status|Message)": "[^"]*"' | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
             fi
@@ -207,8 +209,11 @@ time_to_sec() {
 # Older StarRocks (2.5/3.0) has no SHOW PROFILELIST, so server-side profile timing is impossible
 # there -> fall back to wall-clock timing. Probe once and measure the connect/exec baseline.
 detect_profile() {
-    if docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N -e "SHOW PROFILELIST LIMIT 1;" 2>&1 \
-         | grep -qiE 'ERROR [0-9]+ \(|syntax'; then
+    # Capture then grep (NOT `docker exec | grep`): under `set -o pipefail` the mysql error exit
+    # would mask grep's match and leave USE_PROFILE=1. "not supported"/"Unknown" cover older msgs.
+    local probe
+    probe=$(docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N -e "SHOW PROFILELIST LIMIT 1;" 2>&1)
+    if grep -qiE 'ERROR [0-9]+ \(|syntax|not supported|unknown' <<<"${probe}"; then
         USE_PROFILE=0
         local j t0 t1 best=99
         for j in 1 2 3 4 5; do
@@ -321,6 +326,9 @@ for ds in ${LOAD_DATASETS}; do
     for pair in ${TABLES[$ds]}; do bases+=" ${pair##*:}"; done
 done
 PARQUET="${PARQUET}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
+# Create the JSON dir BEFORE start_server mounts it: Docker auto-creates a missing bind-mount
+# source as root, which would then block the (non-root) JSON generation in detect_files.
+mkdir -p "${TSVDIR}"
 start_server || { echo "cannot start StarRocks ${VERSION}" >&2; exit 1; }
 detect_files
 detect_profile
