@@ -47,10 +47,15 @@ reldate() {
     printf '%s' "${d}"
 }
 
+# ClickHouse rows only: its payloads carry an empty system (the field predates the other
+# engines) or "ClickHouse"; the DuckDB/StarRocks/CedarDB rows (fetched by fetch-db-results.sh)
+# must not land in results/.
+CH_WHERE="JSONExtractString(content, 'kind') = 'versions-benchmark'
+      AND JSONExtractString(content, 'system') IN ('', 'ClickHouse')"
 mapfile -t VERSIONS < <(CH --query "
     SELECT DISTINCT JSONExtractString(content, 'version') AS v
     FROM sink.data
-    WHERE JSONExtractString(content, 'kind') = 'versions-benchmark' AND v != ''
+    WHERE ${CH_WHERE} AND v != ''
       AND length(JSONExtractArrayRaw(content, 'result')) = 344
     ORDER BY v
     FORMAT TSV")
@@ -62,7 +67,7 @@ for v in "${VERSIONS[@]}"; do
     # argMax over time keeps the most recent run for this version.
     CH --query "
         SELECT argMax(content, time) FROM sink.data
-        WHERE JSONExtractString(content, 'kind') = 'versions-benchmark'
+        WHERE ${CH_WHERE}
           AND JSONExtractString(content, 'version') = '${v}'
           AND length(JSONExtractArrayRaw(content, 'result')) = 344
         FORMAT TSVRaw" > /tmp/vb-content.json
@@ -84,7 +89,7 @@ for v in "${VERSIONS[@]}"; do
     # payload release_date (what run-version.sh writes when it couldn't resolve a date) must
     # be handled explicitly -- else it would shadow the value we just resolved here.
     jq -cS --arg rd "${rd}" \
-        '. + {system: (.system // "ClickHouse"),
+        '. + {system: (if (.system // "") == "" then "ClickHouse" else .system end),
               release_date: (if (.release_date // "") != "" then .release_date
                              elif $rd != "" then $rd else null end)}' \
         /tmp/vb-content.json > "results/${v}.json"
