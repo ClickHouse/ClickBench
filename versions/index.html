@@ -778,7 +778,12 @@ function renderSummary(filtered_data, baseline_data) {
             for (let i = 0; i < num_queries; ++i) {
                 if (!any_enabled || queryEnabled(i)) {
                     const base = selectRun(baseline_data[i]), cur = selectRun(elem.result[i]);
-                    if (base !== null && cur !== null) { sacc += Math.log(cur / base); ++sn; }
+                    /// Use the same constant_time_add floor as the main ratio below: some engines
+                    /// (e.g. DuckDB) report a sub-millisecond query as exactly 0, so a raw cur/base
+                    /// would divide by zero -> Infinity/NaN once such a version is in the selection.
+                    if (base !== null && cur !== null) {
+                        sacc += Math.log((constant_time_add + cur) / (constant_time_add + base)); ++sn;
+                    }
                 }
             }
             const slowdown = sn ? Math.exp(sacc / sn) : 1;
