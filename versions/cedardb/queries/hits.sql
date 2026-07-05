@@ -33,7 +33,7 @@ SELECT WatchID, ClientIP, count(*) AS c, sum(Refresh), avg(ResolutionWidth) FROM
 SELECT WatchID, ClientIP, count(*) AS c, sum(Refresh), avg(ResolutionWidth) FROM hits GROUP BY WatchID, ClientIP ORDER BY c DESC LIMIT 10
 SELECT URL, count(*) AS c FROM hits GROUP BY URL ORDER BY c DESC LIMIT 10
 SELECT 1, URL, count(*) AS c FROM hits GROUP BY 1, URL ORDER BY c DESC LIMIT 10
-SELECT ClientIP AS x, x - 1, x - 2, x - 3, count(*) AS c FROM hits GROUP BY x, x - 1, x - 2, x - 3 ORDER BY c DESC LIMIT 10
+SELECT ClientIP AS x, ClientIP - 1, ClientIP - 2, ClientIP - 3, count(*) AS c FROM hits GROUP BY ClientIP, ClientIP - 1, ClientIP - 2, ClientIP - 3 ORDER BY c DESC LIMIT 10
 SELECT URL, count(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= CAST('2013-07-01' AS DATE) AND EventDate <= CAST('2013-07-31' AS DATE) AND NOT (DontCountHits <> 0) AND NOT (Refresh <> 0) AND (URL <> '') GROUP BY URL ORDER BY PageViews DESC LIMIT 10
 SELECT Title, count(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= CAST('2013-07-01' AS DATE) AND EventDate <= CAST('2013-07-31' AS DATE) AND NOT (DontCountHits <> 0) AND NOT (Refresh <> 0) AND (Title <> '') GROUP BY Title ORDER BY PageViews DESC LIMIT 10
 SELECT URL, count(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= CAST('2013-07-01' AS DATE) AND EventDate <= CAST('2013-07-31' AS DATE) AND NOT (Refresh <> 0) AND IsLink AND NOT (IsDownload <> 0) GROUP BY URL ORDER BY PageViews DESC LIMIT 1000
