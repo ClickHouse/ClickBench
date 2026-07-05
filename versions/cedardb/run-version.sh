@@ -75,6 +75,21 @@ start_server() {
     done
     echo "CedarDB up ($(PG 'SELECT version()' 2>/dev/null | head -1))" >&2
 }
+
+# A heavy query can crash/OOM the CedarDB server (the container exits); without recovery every
+# later query -- and dataset -- just fails to connect and returns null. Detect a down server and
+# restart it: `docker start` first (recovers the persisted data dir), else a fresh start_server.
+ensure_up() {
+    PG 'SELECT 1' 2>/dev/null | grep -q '^1$' && return 0
+    echo "CedarDB ${VERSION} unreachable -- restarting the container" >&2
+    docker start "${CONTAINER}" >/dev/null 2>&1
+    local waited=0
+    until PG 'SELECT 1' 2>/dev/null | grep -q '^1$'; do
+        sleep 3; waited=$((waited + 3))
+        [ "${waited}" -gt 120 ] && { echo "restart failed; recreating" >&2; start_server; return $?; }
+    done
+    return 0
+}
 stop_server() { docker rm -f "${CONTAINER}" >/dev/null 2>&1; }
 
 # Postgres column DDL for a table's Parquet basename, derived from the Native schema (names
@@ -109,6 +124,7 @@ detect_parquet() {
 # Load one dataset: a schema per dataset. Parquet CTAS where supported, else typed table + COPY CSV.
 load_one_dataset() {
     local ds="$1" pair table pq base out t0 ok=1
+    ensure_up || { echo "LOAD ${ds}: server unavailable" >&2; return 1; }   # revive after a prior crash
     PG "DROP SCHEMA IF EXISTS \"${ds}\" CASCADE; CREATE SCHEMA \"${ds}\";" >/dev/null 2>&1
     t0=${SECONDS}
     for pair in ${TABLES[$ds]}; do
@@ -170,6 +186,12 @@ run_query() {
         null_row; return
     fi
     mapfile -t reals < <(printf '%s' "${out}" | grep -oiE 'Time:[[:space:]]+[0-9.]+[[:space:]]*ms' | grep -oE '[0-9.]+')
+    # No timings at all usually means the query crashed the server (connection dropped, which
+    # doesn't print "ERROR:"). Revive it so the rest of the run isn't lost to a dead server.
+    if [ "${#reals[@]}" -eq 0 ]; then
+        echo "${label}: no timing (server may have crashed)" >&2
+        ensure_up || true
+    fi
     local res="[" v
     for i in $(seq 1 "${TRIES}"); do
         v="${reals[$((i-1))]:-}"
