@@ -224,7 +224,19 @@ run_benchmark() {
         [ -f "${HERE}/queries/${ds}.sql" ] || continue
         ds_loaded=0
         case " ${LOAD_DATASETS} " in *" ${ds} "*)
+            # DROP doesn't reclaim CedarDB's CE size budget, so it accumulates and eventually
+            # trips the 64 GB cap -> the DB goes read-only and later CREATE SCHEMA/TABLE fail.
+            # Recover by recreating the container fresh (empty, read-write 64 GB). If a prior
+            # dataset left it read-only, recreate before loading; if THIS load trips the cap,
+            # recreate and retry once (handles accumulation; a dataset that alone exceeds 64 GB
+            # stays null but no longer breaks the ones after it).
+            [ "${SIZE_LIMIT_HIT}" = 1 ] && { echo "recreating CedarDB (fresh 64 GB)" >&2; start_server; }
+            SIZE_LIMIT_HIT=0
             load_one_dataset "${ds}"
+            if [ "${SIZE_LIMIT_HIT}" = 1 ]; then
+                echo "=== ${ds}: hit CE cap; recreating fresh and retrying ===" >&2
+                start_server; SIZE_LIMIT_HIT=0; load_one_dataset "${ds}"
+            fi
             if dataset_fully_loaded "${ds}"; then ds_loaded=1; FULLY_LOADED+=" ${ds}"
             else echo "=== ${ds}: not fully loaded; skipping ===" >&2; fi ;;
         esac
