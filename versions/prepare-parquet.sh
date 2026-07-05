@@ -24,8 +24,14 @@ DUCK="${DUCK:-}"
 CSV="${CSV:-}"                 # plain CSV output (for Stream Load / COPY on engines/versions
                               # whose parquet reader is missing or broken); types come from the
                               # loader's table DDL, so the CSV data itself needs no type mapping.
+JSON="${JSON:-}"              # JSONEachRow output (one object per line). The load fallback for
+                              # StarRocks <3.1 (no FILES(), parquet Stream Load unsupported, and
+                              # CSV Stream Load mis-parses ClickHouse's quoted CSV): JSON encodes
+                              # values/nulls/special chars unambiguously so it loads faithfully.
 EXT="parquet"
-if [ -n "${CSV}" ]; then
+if [ -n "${JSON}" ]; then
+    PARQUET="${PARQUET:-${HERE}/prepare-data/json}"; EXT="json"
+elif [ -n "${CSV}" ]; then
     PARQUET="${PARQUET:-${HERE}/prepare-data/csv}"; EXT="csv"
 elif [ -n "${NULLABLE}" ]; then
     PARQUET="${PARQUET:-${HERE}/prepare-data/parquet-nullable}"
@@ -71,7 +77,16 @@ convert_one() {
     [ -f "${out}" ] && { echo "skip ${base} (${EXT} exists)"; return; }
     echo "converting ${base}.native.zst -> ${base}.${EXT}${NULLABLE:+ (nullable+snappy)}${CEDAR:+ (cedar-typed)}${CSV:+ (csv)}"
     # tmp+mv so an interrupted run never leaves a half-written file that a later run skips.
-    if [ -n "${CSV}" ]; then
+    if [ -n "${JSON}" ]; then
+        # One JSON object per line (column name -> value); nulls, special chars and NUL bytes are
+        # encoded unambiguously, so StarRocks JSON Stream Load loads it faithfully (column mapping
+        # by key). Column names are lowercased to match the loader's DDL (sr_ddl lowercases).
+        cols="$("${CHL}" local --query "DESCRIBE TABLE file('${f}', Native) FORMAT TSV" \
+            | awk -F'\t' '{printf "%s`%s` AS `%s`", (NR>1?", ":""), $1, tolower($1)}')"
+        "${CHL}" local --query "SELECT ${cols} FROM file('${f}', Native) INTO OUTFILE '${out}.tmp' FORMAT JSONEachRow" \
+            && mv "${out}.tmp" "${out}" \
+            || { echo "FAILED converting ${base}" >&2; rm -f "${out}.tmp"; }
+    elif [ -n "${CSV}" ]; then
         # NULL -> \N (not empty) so a genuine null is distinguishable from an empty string across
         # all loaders (StarRocks Stream Load default, CedarDB COPY NULL '\N', DuckDB COPY nullstr).
         "${CHL}" local --query "SELECT * FROM file('${f}', Native) INTO OUTFILE '${out}.tmp' FORMAT CSV SETTINGS format_csv_null_representation='\\N'" \
@@ -119,7 +134,7 @@ convert_one() {
     fi
 }
 export -f convert_one
-export CHL PARQUET EXT NULLABLE CEDAR DUCK CSV
+export CHL PARQUET EXT NULLABLE CEDAR DUCK CSV JSON
 
 # Convert all selected files in parallel (JOBS at a time), then report.
 printf '%s\n' "${files[@]}" | xargs -r -P "${JOBS}" -I{} bash -c 'convert_one "$1"' _ {}

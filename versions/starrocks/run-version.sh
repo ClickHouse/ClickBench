@@ -27,12 +27,16 @@ PHASE="${3:-all}"
 
 CONTAINER="sr-${VERSION}"
 CPARQUET="/parquet"                                    # where PARQUET is mounted in the container
-# FILES() (read local Parquet) is missing on <3.1 and broken on some 3.2-3.4 builds; those fall
-# back to a typed CREATE TABLE + Stream Load from CSV (works on every StarRocks version).
-CSVDIR="${ROOT}/prepare-data/csv"
+# FILES() (read local Parquet) is missing on <3.1 (2.5/3.0). Those fall back to a typed
+# CREATE TABLE + JSON Stream Load: parquet Stream Load isn't supported that far back, and CSV
+# Stream Load mis-parses ClickHouse's quoted CSV (the enclose/trim options are newer), so JSON
+# (one object per line, mapped by column name) is the portable bulk-load alternative.
+JSONDIR="${ROOT}/prepare-data/json"
 DATA="${ROOT}/prepare-data/data"
 CHL="${ROOT}/.chlocal/clickhouse"
 USE_STREAM=0
+USE_PROFILE=1               # 1: read server-side time from the query profile (3.1+); 0: wall clock
+BASE_OVERHEAD=0             # measured docker-exec+connect overhead to subtract in wall-clock mode
 OUT="${HERE}/results/${VERSION}.json"
 LOAD_STATS="${HERE}/logs/${VERSION}.loadtimes.tsv"
 mkdir -p "${HERE}/logs" "${HERE}/results"
@@ -64,7 +68,7 @@ start_server() {
     docker rm -f "${CONTAINER}" >/dev/null 2>&1
     echo "starting StarRocks ${VERSION} (${IMAGE})" >&2
     docker run -d --name "${CONTAINER}" -p 9030:9030 -p 8030:8030 -p 8040:8040 \
-        -v "${PARQUET}:${CPARQUET}:ro" -v "${CSVDIR}:/csv:ro" "${IMAGE}" >/dev/null || return 1
+        -v "${PARQUET}:${CPARQUET}:ro" -v "${JSONDIR}:/json:ro" "${IMAGE}" >/dev/null || return 1
     local waited=0
     until Mq 'SELECT 1' >/dev/null 2>&1; do
         sleep 5; waited=$((waited + 5))
@@ -96,29 +100,29 @@ sr_ddl() {
         END { print cols "|" (key==""?first:key) }'
 }
 
-# Stream Load a CSV into an (already-created) table via curl inside the container (the FE
-# redirects to the BE's internal address, reachable only from inside). \N is the null marker.
+# Stream Load a JSON file (one object per line) into an (already-created) table via curl inside
+# the container (the FE redirects to the BE's internal address, reachable only from inside).
+# format:json with column mapping by key name; nulls/special chars are encoded by JSON itself.
 stream_load() {
-    local db="$1" table="$2" csv="$3"
+    local db="$1" table="$2" json="$3"
     timeout -k 10 "$((LOAD_TIMEOUT + 60))" docker exec "${CONTAINER}" curl -s --max-time "${LOAD_TIMEOUT}" --location-trusted -u root: \
-        -H "format:CSV" -H "column_separator:," -H "enclose:\"" -H "trim_double_quotes:true" \
-        -H "max_filter_ratio:0.01" -T "/csv/${csv}" \
+        -H "format:json" -H "max_filter_ratio:0.01" -T "/json/${json}" \
         "http://127.0.0.1:8030/api/${db}/${table}/_stream_load" 2>&1
 }
 
 # Decide once whether this StarRocks version can read local Parquet via FILES(); if not,
-# generate the CSVs we'll need and load via Stream Load instead.
+# generate the JSON we'll need and load via Stream Load instead.
 detect_files() {
     local out; out=$(Mq "DESC FILES('path'='$(parquet_uri uk_price_paid)','format'='parquet');" 2>&1)
     if printf '%s' "${out}" | grep -qiE 'ERROR|not found|no viable'; then
         USE_STREAM=1
-        echo "StarRocks ${VERSION}: FILES() unavailable -> loading via CSV Stream Load" >&2
+        echo "StarRocks ${VERSION}: FILES() unavailable -> loading via JSON Stream Load" >&2
         local ds pair bases=""
         for ds in ${LOAD_DATASETS}; do
             [ -f "${HERE}/queries/${ds}.sql" ] || continue
             for pair in ${TABLES[$ds]}; do bases+=" ${pair##*:}"; done
         done
-        CSV=1 PARQUET="${CSVDIR}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
+        JSON=1 PARQUET="${JSONDIR}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
     fi
 }
 
@@ -132,13 +136,13 @@ load_one_dataset() {
     for pair in ${TABLES[$ds]}; do
         table="${pair%%:*}"; base="${pair##*:}"; uri="$(parquet_uri "${base}")"
         if [ "${USE_STREAM}" = 1 ]; then
-            echo "=== CREATE ${db}.${table} + Stream Load ${base}.csv ===" >&2
+            echo "=== CREATE ${db}.${table} + JSON Stream Load ${base}.json ===" >&2
             ddl="$(sr_ddl "${base}")"; key="${ddl##*|}"; ddl="${ddl%|*}"
             out=$(Mq "CREATE TABLE ${db}.\`${table}\` (${ddl}) ENGINE=OLAP DUPLICATE KEY(\`${key}\`) DISTRIBUTED BY HASH(\`${key}\`) BUCKETS 8 PROPERTIES('replication_num'='1');" 2>&1)
             if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
                 echo "LOAD ${ds}.${table} CREATE FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0; continue
             fi
-            out=$(stream_load "${db}" "${table}" "${base}.csv")
+            out=$(stream_load "${db}" "${table}" "${base}.json")
             if ! printf '%s' "${out}" | grep -q '"Status": "Success"'; then
                 echo "LOAD ${ds}.${table} STREAM FAILED: $(printf '%s' "${out}" | grep -oE '"(Status|Message)": "[^"]*"' | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
             fi
@@ -200,18 +204,33 @@ time_to_sec() {
     }'
 }
 
-# Run one query TRIES times. StarRocks caches data in the BE, so the profile Time is the
-# server-side execution; the first run after load is the cold-ish one. We read the time from
-# the query profile (enable_profile) rather than wall clock, to exclude client/connect cost.
-#
-# Identify the query's profile row by its query_id (last_query_id()), NOT by "SHOW PROFILELIST
-# LIMIT 1": the profile list orders by StartTime at 1-second granularity, so the benchmark query
-# ties with the batch's own SET/USE(->SELECT DATABASE()) statements and LIMIT 1 nondeterministically
-# returned a trivial ~2 ms statement instead of the query (this is what made 3.1/3.2 all report ~0).
-# A freshly-run query isn't in the profile list within the same session yet, so look it up in a
-# SECOND connection (the gap lets the profile flush).
+# Older StarRocks (2.5/3.0) has no SHOW PROFILELIST, so server-side profile timing is impossible
+# there -> fall back to wall-clock timing. Probe once and measure the connect/exec baseline.
+detect_profile() {
+    if docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N -e "SHOW PROFILELIST LIMIT 1;" 2>&1 \
+         | grep -qiE 'ERROR [0-9]+ \(|syntax'; then
+        USE_PROFILE=0
+        local j t0 t1 best=99
+        for j in 1 2 3 4 5; do
+            t0=$(date +%s.%N)
+            docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N -e "SELECT 1;" >/dev/null 2>&1
+            t1=$(date +%s.%N)
+            best=$(awk -v a="${t0}" -v b="${t1}" -v m="${best}" 'BEGIN{d=b-a; print (d<m?d:m)}')
+        done
+        BASE_OVERHEAD="${best}"
+        echo "StarRocks ${VERSION}: no SHOW PROFILELIST -> wall-clock timing (baseline ${BASE_OVERHEAD}s)" >&2
+    fi
+}
+
+# Run one query TRIES times. Two timing methods:
+#  - profile (3.1+): server-side execution time, robust to client/connect cost. Identify the row
+#    by query_id (last_query_id()), NOT "SHOW PROFILELIST LIMIT 1": the list orders by StartTime at
+#    1-second granularity, so the query ties with the batch's SET/USE statements and LIMIT 1 returned
+#    a trivial ~2 ms row (this made 3.1/3.2 all report ~0). A freshly-run query isn't in the list
+#    within its own session yet, so look it up from a SECOND connection (the gap lets it flush).
+#  - wall clock (2.5/3.0, no profile): elapsed around the query minus the measured connect baseline.
 run_query() {
-    local ds="$1" query="$2" label="${3:-query}" db i out qid t reals=()
+    local ds="$1" query="$2" label="${3:-query}" db i out qid t t0 t1 reals=()
     db="$(db_of "${ds}")"
     for i in $(seq 1 "${TRIES}"); do
         [ "${i}" = 1 ] && drop_caches
@@ -219,18 +238,28 @@ run_query() {
         # only kills the docker-exec client -- the query keeps running and zombie queries pile up,
         # saturating the BE). The client-side timeout (with -k to SIGKILL) is a backstop, set a bit
         # longer than the server so the server fires first and we get a clean error -> null.
-        out=$(timeout -k 10 "$((QUERY_TIMEOUT + 30))" docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N --connect-timeout=30 \
-              -e "SET enable_profile=true; SET query_timeout=${QUERY_TIMEOUT}; USE ${db}; ${query}; SELECT concat('__QID__:', last_query_id());" 2>&1)
-        # Match MySQL's error signature ("ERROR <code> (SQLSTATE)"), not "error" in result data.
-        if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
-            echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oE 'ERROR [0-9].*' | head -1 | cut -c1-160)" >&2
-            reals=(); break
+        if [ "${USE_PROFILE}" = 1 ]; then
+            out=$(timeout -k 10 "$((QUERY_TIMEOUT + 30))" docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N --connect-timeout=30 \
+                  -e "SET enable_profile=true; SET query_timeout=${QUERY_TIMEOUT}; USE ${db}; ${query}; SELECT concat('__QID__:', last_query_id());" 2>&1)
+            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
+                echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oE 'ERROR [0-9].*' | head -1 | cut -c1-160)" >&2
+                reals=(); break
+            fi
+            qid=$(printf '%s' "${out}" | grep -oE '__QID__:[a-f0-9-]+' | head -1 | cut -d: -f2)
+            t=$(docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N -e "SHOW PROFILELIST LIMIT 100;" 2>/dev/null \
+                  | awk -F'\t' -v id="${qid}" '$1==id{print $3; exit}')
+            if [ -n "${t}" ]; then reals+=("$(time_to_sec "${t}")"); else reals+=("null"); fi
+        else
+            t0=$(date +%s.%N)
+            out=$(timeout -k 10 "$((QUERY_TIMEOUT + 30))" docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N --connect-timeout=30 -D "${db}" \
+                  -e "SET query_timeout=${QUERY_TIMEOUT}; ${query};" 2>&1)
+            t1=$(date +%s.%N)
+            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
+                echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oE 'ERROR [0-9].*' | head -1 | cut -c1-160)" >&2
+                reals=(); break
+            fi
+            reals+=("$(awk -v a="${t0}" -v b="${t1}" -v o="${BASE_OVERHEAD}" 'BEGIN{d=b-a-o; if(d<0)d=0; printf "%.3f", d}')")
         fi
-        qid=$(printf '%s' "${out}" | grep -oE '__QID__:[a-f0-9-]+' | head -1 | cut -d: -f2)
-        # Second connection: find this query_id's Time in the profile list.
-        t=$(docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N -e "SHOW PROFILELIST LIMIT 100;" 2>/dev/null \
-              | awk -F'\t' -v id="${qid}" '$1==id{print $3; exit}')
-        if [ -n "${t}" ]; then reals+=("$(time_to_sec "${t}")"); else reals+=("null"); fi
     done
     if [ "${#reals[@]}" -eq 0 ]; then null_row; return; fi
     local res="["
@@ -294,6 +323,7 @@ done
 PARQUET="${PARQUET}" bash "${ROOT}/prepare-parquet.sh" ${bases} >&2 || true
 start_server || { echo "cannot start StarRocks ${VERSION}" >&2; exit 1; }
 detect_files
+detect_profile
 : > "${LOAD_STATS}"
 for ds in ${LOAD_DATASETS}; do
     [ -f "${HERE}/queries/${ds}.sql" ] || continue
