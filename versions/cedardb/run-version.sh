@@ -23,6 +23,7 @@ CHL="${ROOT}/.chlocal/clickhouse"
 USE_CSV=0                       # set by detect_parquet(): 1 => load via CSV instead of Parquet
 TRIES="${TRIES:-6}"                                    # 1 cold + 5 hot
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-120}"
+LOAD_TIMEOUT="${LOAD_TIMEOUT:-1200}"                   # per-table load cap (server-side + client backstop)
 LOAD_DATASETS="${LOAD_DATASETS:-hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi}"
 QUERY_ORDER="mgbench ssb hits uk ontime taxi coffeeshop tpch tpcds job"
 PSQL_IMAGE="${PSQL_IMAGE:-postgres:16-alpine}"
@@ -59,6 +60,12 @@ PG()       { docker run --rm -i --network host -e PGPASSWORD="${PASSWORD}" "${PS
                 psql -h127.0.0.1 -p5432 -U postgres -d postgres -v ON_ERROR_STOP=0 -tAc "$1" 2>&1; }
 PGscript() { docker run --rm -i --network host -e PGPASSWORD="${PASSWORD}" "${PSQL_IMAGE}" \
                 psql -h127.0.0.1 -p5432 -U postgres -d postgres 2>&1; }
+# PGload: a load statement bounded server-side (statement_timeout) and by a client backstop, so a
+# stuck load can't hang the whole run. A timed-out load emits "ERROR: canceled" (server) or exits
+# 124 (client) -- both treated as a load failure by the caller (dataset -> not loaded -> null).
+PGload() { timeout -k 10 "$((LOAD_TIMEOUT + 60))" docker run --rm -i --network host -e PGPASSWORD="${PASSWORD}" \
+                "${PSQL_IMAGE}" psql -h127.0.0.1 -p5432 -U postgres -d postgres -v ON_ERROR_STOP=0 \
+                -tAc "SET statement_timeout=${LOAD_TIMEOUT}000; $1" 2>&1; }
 
 drop_caches() { sync; echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null 2>&1; }
 parquet_path() { printf '%s/%s.parquet' "${CPARQUET}" "$1"; }
@@ -129,13 +136,14 @@ load_one_dataset() {
     t0=${SECONDS}
     for pair in ${TABLES[$ds]}; do
         table="${pair%%:*}"; base="${pair##*:}"; pq="$(parquet_path "${base}")"
+        local rc
         if [ "${USE_CSV}" = 1 ]; then
             echo "=== CREATE ${ds}.${table} + COPY /csv/${base}.csv ===" >&2
-            out=$(PG "CREATE TABLE \"${ds}\".\"${table}\" ($(pg_ddl "${base}"));"; \
-                  PG "COPY \"${ds}\".\"${table}\" FROM '/csv/${base}.csv' WITH (FORMAT csv, NULL '\\N');")
+            out=$(PGload "CREATE TABLE \"${ds}\".\"${table}\" ($(pg_ddl "${base}"));"; \
+                  PGload "COPY \"${ds}\".\"${table}\" FROM '/csv/${base}.csv' WITH (FORMAT csv, NULL '\\N');"); rc=$?
         else
             echo "=== CREATE ${ds}.${table} FROM ${base}.parquet ===" >&2
-            out=$(PG "CREATE TABLE \"${ds}\".\"${table}\" AS SELECT * FROM '${pq}';")
+            out=$(PGload "CREATE TABLE \"${ds}\".\"${table}\" AS SELECT * FROM '${pq}';"); rc=$?
         fi
         # CedarDB Community Edition caps total data size; exceeding it puts the DB in readonly
         # mode. Flag it so the run loop stops loading (already-loaded data stays queryable).
@@ -143,7 +151,9 @@ load_one_dataset() {
             echo "LOAD ${ds}.${table}: CedarDB CE size limit reached; stopping further loads" >&2
             ok=0; SIZE_LIMIT_HIT=1; break
         fi
-        if printf '%s' "${out}" | grep -qE 'ERROR:|FATAL:'; then
+        if [ "${rc}" -eq 124 ]; then
+            echo "LOAD ${ds}.${table} TIMED OUT after ${LOAD_TIMEOUT}s -> dataset skipped" >&2; ok=0
+        elif printf '%s' "${out}" | grep -qE 'ERROR:|FATAL:'; then
             echo "LOAD ${ds}.${table} FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
         fi
     done
@@ -176,9 +186,13 @@ null_row() { local i out="["; for i in $(seq 1 "${TRIES}"); do out+="null"; [ "$
 run_query() {
     local ds="$1" query="$2" label="${3:-query}" i script out reals
     drop_caches
-    script="SET search_path TO \"${ds}\";"$'\n'"\\timing on"$'\n'
+    # Server-side statement_timeout aborts a hung query INSIDE CedarDB (a client-side `timeout`
+    # only kills the throwaway psql client -- the query keeps running on the server and blocks
+    # everything after it). Set before \timing so it isn't itself timed. The client-side timeout
+    # (with -k to SIGKILL) is a backstop covering the whole TRIES session.
+    script="SET search_path TO \"${ds}\";"$'\n'"SET statement_timeout=${QUERY_TIMEOUT}000;"$'\n'"\\timing on"$'\n'
     for i in $(seq 1 "${TRIES}"); do script+="${query};"$'\n'; done
-    out=$(printf '%s' "${script}" | timeout "${QUERY_TIMEOUT}" docker run --rm -i --network host \
+    out=$(printf '%s' "${script}" | timeout -k 10 "$((QUERY_TIMEOUT * TRIES + 60))" docker run --rm -i --network host \
           -e PGPASSWORD="${PASSWORD}" "${PSQL_IMAGE}" psql -h127.0.0.1 -p5432 -U postgres -d postgres 2>&1)
     # Match psql's error prefix ("ERROR:"/"FATAL:"), not "error" in result data.
     if printf '%s' "${out}" | grep -qE 'ERROR:|FATAL:'; then

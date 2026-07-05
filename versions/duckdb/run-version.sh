@@ -13,6 +13,10 @@ ROOT="$(cd "${HERE}/.." && pwd)"          # versions/
 PARQUET="${PARQUET:-${ROOT}/prepare-data/parquet}"
 TRIES="${TRIES:-6}"                        # 1 cold + 5 hot
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-120}"
+# Cap each table's load: old DuckDB (<=0.5) can hang or crawl for hours loading the biggest
+# Parquet (taxi is ~12 GB); without a cap one stuck load burns the whole per-version budget.
+# A load that exceeds this is treated as failed (that dataset -> not loaded -> its queries null).
+LOAD_TIMEOUT="${LOAD_TIMEOUT:-1200}"
 LOAD_DATASETS="${LOAD_DATASETS:-hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi}"
 QUERY_ORDER="mgbench ssb hits uk ontime taxi coffeeshop tpch tpcds job"
 
@@ -138,21 +142,24 @@ load_one_dataset() {
     t0=${SECONDS}
     for pair in ${TABLES[$ds]}; do
         table="${pair%%:*}"; base="${pair##*:}"; pq="$(parquet_of "${base}")"
+        local rc
         if [ "${VARIANT}" = csv ]; then
             csv="${CSVDIR}/${base}.csv"
             [ -f "${csv}" ] || { echo "SKIP ${ds}.${table}: ${csv} missing" >&2; ok=0; continue; }
             echo "=== CREATE ${ds}.${table} + COPY ${base}.csv ===" >&2
-            out=$(run_sql "DROP TABLE IF EXISTS \"${table}\"; CREATE TABLE \"${table}\" ($(duckdb_ddl "${base}")); COPY \"${table}\" FROM '${csv}';")
+            out=$(printf '%s\n' "DROP TABLE IF EXISTS \"${table}\"; CREATE TABLE \"${table}\" ($(duckdb_ddl "${base}")); COPY \"${table}\" FROM '${csv}';" | timeout "${LOAD_TIMEOUT}" "${BIN}" "${DBFILE}" 2>&1); rc=$?
         else
             [ -f "${pq}" ] || { echo "SKIP ${ds}.${table}: ${pq} missing" >&2; ok=0; continue; }
             echo "=== CREATE ${ds}.${table} FROM ${pq##*/} ===" >&2
-            out=$(run_sql "DROP TABLE IF EXISTS \"${table}\"; CREATE TABLE \"${table}\" AS SELECT * FROM read_parquet('${pq}');")
+            out=$(printf '%s\n' "DROP TABLE IF EXISTS \"${table}\"; CREATE TABLE \"${table}\" AS SELECT * FROM read_parquet('${pq}');" | timeout "${LOAD_TIMEOUT}" "${BIN}" "${DBFILE}" 2>&1); rc=$?
         fi
-        if printf '%s' "${out}" | grep -q 'Error:'; then
+        if [ "${rc}" -eq 124 ]; then
+            echo "LOAD ${ds}.${table} TIMED OUT after ${LOAD_TIMEOUT}s -> dataset skipped" >&2; ok=0
+        elif printf '%s' "${out}" | grep -q 'Error:'; then
             echo "LOAD ${ds}.${table} FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
         fi
     done
-    run_sql "CHECKPOINT;" >/dev/null 2>&1
+    printf 'CHECKPOINT;\n' | timeout "${LOAD_TIMEOUT}" "${BIN}" "${DBFILE}" >/dev/null 2>&1
     after=$(stat -c%s "${DBFILE}" 2>/dev/null || echo 0)
     if [ "${ok}" = 1 ]; then
         printf '%s\t%s\t%s\n' "${ds}" "$((SECONDS - t0))" "$((after - before))" >> "${LOAD_STATS}"

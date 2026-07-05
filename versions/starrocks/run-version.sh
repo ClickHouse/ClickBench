@@ -14,6 +14,8 @@ ROOT="$(cd "${HERE}/.." && pwd)"                      # versions/
 PARQUET="${PARQUET:-${ROOT}/prepare-data/parquet}"
 TRIES="${TRIES:-6}"                                    # 1 cold + 5 hot
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-120}"
+# Loads (CTAS FROM FILES) on the biggest tables can crawl; cap them server-side too.
+LOAD_TIMEOUT="${LOAD_TIMEOUT:-1200}"
 LOAD_DATASETS="${LOAD_DATASETS:-hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi}"
 QUERY_ORDER="mgbench ssb hits uk ontime taxi coffeeshop tpch tpcds job"
 
@@ -98,7 +100,7 @@ sr_ddl() {
 # redirects to the BE's internal address, reachable only from inside). \N is the null marker.
 stream_load() {
     local db="$1" table="$2" csv="$3"
-    docker exec "${CONTAINER}" curl -s --location-trusted -u root: \
+    timeout -k 10 "$((LOAD_TIMEOUT + 60))" docker exec "${CONTAINER}" curl -s --max-time "${LOAD_TIMEOUT}" --location-trusted -u root: \
         -H "format:CSV" -H "column_separator:," -H "enclose:\"" -H "trim_double_quotes:true" \
         -H "max_filter_ratio:0.01" -T "/csv/${csv}" \
         "http://127.0.0.1:8030/api/${db}/${table}/_stream_load" 2>&1
@@ -123,7 +125,7 @@ detect_files() {
 # Load one dataset: a database per dataset. FILES() CTAS where supported, else typed table +
 # Stream Load from CSV.
 load_one_dataset() {
-    local ds="$1" db pair table uri base out t0 ok=1 ddl key
+    local ds="$1" db pair table uri base out t0 ok=1 ddl key rc
     db="$(db_of "${ds}")"
     Mq "DROP DATABASE IF EXISTS ${db}; CREATE DATABASE ${db};" >/dev/null 2>&1
     t0=${SECONDS}
@@ -142,8 +144,11 @@ load_one_dataset() {
             fi
         else
             echo "=== CREATE ${db}.${table} FROM ${base}.parquet ===" >&2
-            out=$(Mq "CREATE TABLE ${db}.\`${table}\` AS SELECT * FROM FILES('path'='${uri}','format'='parquet');" 2>&1)
-            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
+            out=$(timeout -k 10 "$((LOAD_TIMEOUT + 60))" docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N --connect-timeout=30 \
+                  -e "SET query_timeout=${LOAD_TIMEOUT}; CREATE TABLE ${db}.\`${table}\` AS SELECT * FROM FILES('path'='${uri}','format'='parquet');" 2>&1); rc=$?
+            if [ "${rc}" -eq 124 ]; then
+                echo "LOAD ${ds}.${table} TIMED OUT after ${LOAD_TIMEOUT}s -> dataset skipped" >&2; ok=0
+            elif printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
                 echo "LOAD ${ds}.${table} FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | cut -c1-160)" >&2; ok=0
             fi
         fi
@@ -193,8 +198,12 @@ run_query() {
     db="$(db_of "${ds}")"
     for i in $(seq 1 "${TRIES}"); do
         [ "${i}" = 1 ] && drop_caches
-        out=$(timeout "${QUERY_TIMEOUT}" docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N \
-              -e "SET enable_profile=true; USE ${db}; ${query}; SHOW PROFILELIST LIMIT 1;" 2>&1)
+        # Server-side query_timeout aborts a hung query INSIDE StarRocks (a client-side `timeout`
+        # only kills the docker-exec client -- the query keeps running and zombie queries pile up,
+        # saturating the BE). The client-side timeout (with -k to SIGKILL) is a backstop, set a bit
+        # longer than the server so the server fires first and we get a clean error -> null.
+        out=$(timeout -k 10 "$((QUERY_TIMEOUT + 30))" docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N --connect-timeout=30 \
+              -e "SET enable_profile=true; SET query_timeout=${QUERY_TIMEOUT}; USE ${db}; ${query}; SHOW PROFILELIST LIMIT 1;" 2>&1)
         # Match MySQL's error signature ("ERROR <code> (SQLSTATE)"), not "error" in result data.
         if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
             echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oE 'ERROR [0-9].*' | head -1 | cut -c1-160)" >&2

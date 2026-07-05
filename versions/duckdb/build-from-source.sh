@@ -22,12 +22,14 @@ trap 'rm -rf "${SRC}"' EXIT
 echo "building DuckDB ${VERSION} from source (v${VERSION})..." >&2
 git clone -q --branch "v${VERSION}" --depth 1 https://github.com/duckdb/duckdb "${SRC}" \
     || { echo "git clone of v${VERSION} failed" >&2; exit 1; }
+# Bound the build so a flaky/stuck old build can't burn the sweep's whole per-version budget.
+BUILD_TIMEOUT="${BUILD_TIMEOUT:-2400}"           # 40 min
 mkdir -p "${SRC}/build" && cd "${SRC}/build"
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHELL=1 \
+timeout "${BUILD_TIMEOUT}" cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHELL=1 \
       -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
       -DCMAKE_CXX_FLAGS="-include cstdint -include cstddef" .. >/dev/null 2>&1 \
-    || { echo "cmake failed for ${VERSION}" >&2; exit 1; }
-make -j"$(nproc)" shell >/dev/null 2>&1 || { echo "make failed for ${VERSION}" >&2; exit 1; }
+    || { echo "cmake failed/timed out for ${VERSION}" >&2; exit 1; }
+timeout "${BUILD_TIMEOUT}" make -j"$(nproc)" shell >/dev/null 2>&1 || { echo "make failed/timed out for ${VERSION}" >&2; exit 1; }
 
 # Old builds name the CLI `duckdb_cli`; newer ones `duckdb`. Take whichever exists.
 bin="$(find . -maxdepth 3 -type f -executable \( -name duckdb_cli -o -name duckdb \) | head -1)"
