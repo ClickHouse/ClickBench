@@ -154,11 +154,21 @@ load_one_dataset() {
         fi
     done
     if [ "${ok}" = 1 ]; then
-        # data size: sum of on-disk data length for the database's tables
-        local bytes
-        bytes=$(Mq "SELECT IFNULL(SUM(DATA_LENGTH),0) FROM information_schema.tables WHERE TABLE_SCHEMA='${db}';" 2>/dev/null | tr -cd '0-9')
-        printf '%s\t%s\t%s\n' "${ds}" "$((SECONDS - t0))" "${bytes:-0}" >> "${LOAD_STATS}"
+        printf '%s\t%s\t%s\n' "${ds}" "$((SECONDS - t0))" "$(sr_data_size "${db}")" >> "${LOAD_STATS}"
     fi
+}
+
+# On-disk data size of a database, in bytes. information_schema.tables.DATA_LENGTH is 0 until
+# background compaction runs (so a freshly-loaded table reports 0); SHOW DATA reports the real
+# tablet size immediately. Its "Total" row is a human-readable size ("13.324 GB") -> bytes.
+sr_data_size() {
+    local db="$1"
+    Mq "USE ${db}; SHOW DATA;" 2>/dev/null | awk -F'\t' '
+        $1=="Total" { n=split($2, a, " "); v=a[1]+0; u=(n>1?a[2]:"B");
+            m=1; if(u=="KB")m=1024; else if(u=="MB")m=1024^2; else if(u=="GB")m=1024^3;
+                 else if(u=="TB")m=1024^4; else if(u=="PB")m=1024^5;
+            printf "%d", v*m; found=1; exit }
+        END { if(!found) print 0 }'
 }
 
 dataset_fully_loaded() {

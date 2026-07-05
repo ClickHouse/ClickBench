@@ -766,9 +766,15 @@ function renderSummary(filtered_data, baseline_data) {
         const key = selectors.metric === 'load' ? 'load_time' : 'data_size';
         const fmt = selectors.metric === 'load' ? formatTime : formatSize;
         metric_noun = selectors.metric === 'load' ? 'load time' : 'data size';
+        /// A total is only comparable when every enabled dataset has a value. For data size a
+        /// 0 means "unmeasured" (StarRocks' information_schema DATA_LENGTH is 0 until compaction),
+        /// so require a positive size; a load time of 0 is a legitimately fast load.
+        const hasVal = selectors.metric === 'size'
+            ? (e, d) => e.data_size && e.data_size[d.name] > 0
+            : (e, d) => e.load_time && e.load_time[d.name] != null;
         const totals = filtered_data.map(e =>
-            (e[key] && e.load_time && enabled_datasets.every(d => e.load_time[d.name] != null))
-                ? enabled_datasets.reduce((s, d) => s + (e[key][d.name] ?? 0), 0) : null);
+            enabled_datasets.every(d => hasVal(e, d))
+                ? enabled_datasets.reduce((s, d) => s + e[key][d.name], 0) : null);
         const min = Math.min(...totals.filter(x => x != null && x > 0));
         summaries = totals.map(t => (t != null && isFinite(min) && min > 0) ? t / min : null);
         value_text = idx => totals[idx] == null ? '—' : `${fmt(totals[idx])} (×${summaries[idx].toFixed(2)})`;
@@ -1068,9 +1074,12 @@ function render() {
         const e = filtered_data[idx];
         return fullyLoaded(e) ? enabled_datasets.reduce((s, d) => s + e.load_time[d.name], 0) : null;
     }), formatTime);
+    /// Data-size total needs a positive size for every enabled dataset (a 0/missing size means
+    /// unmeasured -- StarRocks reports 0 until compaction -- not zero bytes), else show "—".
+    const sizeKnown = e => e.data_size && enabled_datasets.every(d => e.data_size[d.name] > 0);
     metricRow('Data size', sorted_indices.map(idx => {
         const e = filtered_data[idx];
-        return fullyLoaded(e) ? enabled_datasets.reduce((s, d) => s + (e.data_size ? e.data_size[d.name] : 0), 0) : null;
+        return sizeKnown(e) ? enabled_datasets.reduce((s, d) => s + e.data_size[d.name], 0) : null;
     }), formatSize);
 
     /// Per-dataset sections: a header/separator row (its checkbox toggles that dataset's
@@ -1083,11 +1092,11 @@ function render() {
             render(); updateHistory();
         });
         metricRow('Load time', sorted_indices.map(idx => (filtered_data[idx].load_time || {})[d.name] ?? null), formatTime);
-        /// If the dataset has no load time it was not loaded, so treat its data size as
-        /// null too (an empty/partial directory would otherwise report a bogus size).
+        /// Show a data size only when it's a positive measured value; 0/missing (StarRocks
+        /// reports 0 until compaction) reads as "—" rather than "0 B".
         metricRow('Data size', sorted_indices.map(idx => {
-            const e = filtered_data[idx];
-            return (e.load_time && e.load_time[d.name] != null && e.data_size) ? (e.data_size[d.name] ?? null) : null;
+            const sz = (filtered_data[idx].data_size || {})[d.name];
+            return sz > 0 ? sz : null;
         }), formatSize);
 
         for (let query_num = start; query_num < end; ++query_num) {
