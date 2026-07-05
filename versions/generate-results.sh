@@ -62,6 +62,16 @@ def aligned_date(system, version, release_date):
             return f"{year:04d}-{month:02d}-15"
     return release_date or ""
 
+# QUERY_ORDER + per-dataset query counts -> each dataset's [start,end) span in result[].
+QUERY_ORDER = "mgbench ssb hits uk ontime taxi coffeeshop tpch tpcds job".split()
+span = {}; off = 0
+for ds in QUERY_ORDER:
+    try:
+        n = sum(1 for l in open(f"queries/{ds}.sql") if l.strip())
+    except FileNotFoundError:
+        continue
+    span[ds] = (off, off + n); off += n
+
 entries = []
 for d, default_system in DIRS:
     for f in sorted(glob.glob(d + "/*.json")):
@@ -74,6 +84,40 @@ for d, default_system in DIRS:
         obj["source"] = f
         obj["date"] = aligned_date(obj["system"], obj.get("version",""), obj.get("release_date"))
         entries.append(obj)
+
+# Drop datasets that loaded only a tiny fraction of their real size -- a partial load left
+# behind after an engine hit a size cap mid-load (e.g. CedarDB Community Edition's 64 GB limit
+# on the 73 GB ssb). Its tables pass a count>0 check so the queries "run", but on a fragment,
+# in sub-millisecond time -- meaningless numbers that would slot in as the fastest results.
+# Reference = ClickHouse's median size per dataset (it fully loads everything); a reported size
+# below 1% of that is a broken load (real partial loads seen at 0.01-0.19%, legit loads all
+# >=4%, a 20x gap). Only a STRICTLY POSITIVE reported size counts: StarRocks reports 0 for a
+# fully-loaded dataset (columnar size not yet accounted), so 0/absent means "unknown, keep";
+# a small nonzero size (CedarDB's fragment) means "partial, drop". Null the dataset's query
+# rows and drop its load_time/data_size so it reads as "not loaded" rather than "fastest".
+ch_sizes = {}
+for o in entries:
+    if o["system"] == "ClickHouse":
+        for ds, sz in (o.get("data_size") or {}).items():
+            if (o.get("load_time") or {}).get(ds) and sz:
+                ch_sizes.setdefault(ds, []).append(sz)
+ch_ref = {ds: sorted(v)[len(v)//2] for ds, v in ch_sizes.items()}   # median
+INCOMPLETE_FRAC = 0.01
+dropped = {}
+for o in entries:
+    ds_sizes = o.get("data_size") or {}
+    for ds, (start, end) in span.items():
+        ref = ch_ref.get(ds)
+        sz = ds_sizes.get(ds)
+        if ref and sz and sz < INCOMPLETE_FRAC * ref:
+            width = len(o["result"][start]) if start < len(o["result"]) and o["result"][start] else 6
+            for i in range(start, min(end, len(o["result"]))):
+                o["result"][i] = [None] * width
+            (o.get("load_time") or {}).pop(ds, None)
+            (o.get("data_size") or {}).pop(ds, None)
+            dropped.setdefault(f'{o["system"]} {o.get("version")}', []).append(ds)
+for k, v in sorted(dropped.items()):
+    print(f"  incomplete-load dropped: {k}: {', '.join(v)}", file=sys.stderr)
 
 # Oldest first; a missing date sorts last. Tie-break by system then version (numeric-aware-ish).
 def ver_key(v): return [int(t) if t.isdigit() else t for t in re.split(r'(\d+)', v or "")]
