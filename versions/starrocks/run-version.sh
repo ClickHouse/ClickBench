@@ -203,8 +203,15 @@ time_to_sec() {
 # Run one query TRIES times. StarRocks caches data in the BE, so the profile Time is the
 # server-side execution; the first run after load is the cold-ish one. We read the time from
 # the query profile (enable_profile) rather than wall clock, to exclude client/connect cost.
+#
+# Identify the query's profile row by its query_id (last_query_id()), NOT by "SHOW PROFILELIST
+# LIMIT 1": the profile list orders by StartTime at 1-second granularity, so the benchmark query
+# ties with the batch's own SET/USE(->SELECT DATABASE()) statements and LIMIT 1 nondeterministically
+# returned a trivial ~2 ms statement instead of the query (this is what made 3.1/3.2 all report ~0).
+# A freshly-run query isn't in the profile list within the same session yet, so look it up in a
+# SECOND connection (the gap lets the profile flush).
 run_query() {
-    local ds="$1" query="$2" label="${3:-query}" db i out t reals=()
+    local ds="$1" query="$2" label="${3:-query}" db i out qid t reals=()
     db="$(db_of "${ds}")"
     for i in $(seq 1 "${TRIES}"); do
         [ "${i}" = 1 ] && drop_caches
@@ -213,15 +220,17 @@ run_query() {
         # saturating the BE). The client-side timeout (with -k to SIGKILL) is a backstop, set a bit
         # longer than the server so the server fires first and we get a clean error -> null.
         out=$(timeout -k 10 "$((QUERY_TIMEOUT + 30))" docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N --connect-timeout=30 \
-              -e "SET enable_profile=true; SET query_timeout=${QUERY_TIMEOUT}; USE ${db}; ${query}; SHOW PROFILELIST LIMIT 1;" 2>&1)
+              -e "SET enable_profile=true; SET query_timeout=${QUERY_TIMEOUT}; USE ${db}; ${query}; SELECT concat('__QID__:', last_query_id());" 2>&1)
         # Match MySQL's error signature ("ERROR <code> (SQLSTATE)"), not "error" in result data.
         if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
             echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oE 'ERROR [0-9].*' | head -1 | cut -c1-160)" >&2
             reals=(); break
         fi
-        # last line = the PROFILELIST row: QueryId <tab> StartTime <tab> Time <tab> State <tab> Statement
-        t=$(printf '%s' "${out}" | tail -1 | awk -F'\t' '{print $3}')
-        reals+=("$(time_to_sec "${t}")")
+        qid=$(printf '%s' "${out}" | grep -oE '__QID__:[a-f0-9-]+' | head -1 | cut -d: -f2)
+        # Second connection: find this query_id's Time in the profile list.
+        t=$(docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N -e "SHOW PROFILELIST LIMIT 100;" 2>/dev/null \
+              | awk -F'\t' -v id="${qid}" '$1==id{print $3; exit}')
+        if [ -n "${t}" ]; then reals+=("$(time_to_sec "${t}")"); else reals+=("null"); fi
     done
     if [ "${#reals[@]}" -eq 0 ]; then null_row; return; fi
     local res="["
