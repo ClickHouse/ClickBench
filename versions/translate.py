@@ -137,8 +137,10 @@ def inline_where_having(s):
             # REGEXP_REPLACE backref, which a string replacement would treat as a group ref).
             clause = re.sub(r'\b' + re.escape(al) + r'\b', lambda _m, e=expr: e, clause)
         return clause
-    s = re.sub(r'(?is)\bWHERE\b.*?(?=\bGROUP\s+BY\b|\bHAVING\b|\bORDER\s+BY\b|\bLIMIT\b|\bUNION\b|\)|$)', repl, s)
-    s = re.sub(r'(?is)\bHAVING\b.*?(?=\bORDER\s+BY\b|\bLIMIT\b|\bUNION\b|\)|$)', repl, s)
+    # No ')' in the lookahead: this only runs on single-block queries (no enclosing subquery),
+    # so a ')' is an inner expression paren (e.g. WHERE (a OR b) AND ...) that must NOT end the clause.
+    s = re.sub(r'(?is)\bWHERE\b.*?(?=\bGROUP\s+BY\b|\bHAVING\b|\bORDER\s+BY\b|\bLIMIT\b|\bUNION\b|$)', repl, s)
+    s = re.sub(r'(?is)\bHAVING\b.*?(?=\bORDER\s+BY\b|\bLIMIT\b|\bUNION\b|$)', repl, s)
     return s
 
 # Per-engine knobs for the few constructs that actually differ across dialects.
