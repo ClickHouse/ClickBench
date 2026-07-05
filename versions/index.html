@@ -611,6 +611,19 @@ function toggleSystem(e, s) {
     updateHistory();
 }
 
+/// Toggle every version of one system (its "All" chip): if fewer than half are selected,
+/// select all; otherwise clear them. Makes isolating a single version easy -- click All to
+/// clear the system, then click the one version you want.
+function toggleAllSystem(e, s) {
+    const ids = versions_by_system[s].map(en => en.id);
+    const new_value = ids.filter(id => selectors.version[id]).length * 2 < ids.length;
+    ids.forEach(id => { selectors.version[id] = new_value; });
+    [...version_rows[s].querySelectorAll('a')].forEach(a => {
+        a.className = new_value ? 'selector selector-active' : 'selector'; });
+    render();
+    updateHistory();
+}
+
 function hiliteVersion(id) {
     [...document.querySelectorAll('.summary-row')].map(row => {
         row.className = row.dataset.id == id ? 'summary-row summary-row-hilite' : 'summary-row' });
@@ -639,6 +652,13 @@ systems.forEach(s => {
     let th = document.createElement('th');
     th.appendChild(document.createTextNode(s + ': '));
     let td = document.createElement('td');
+    /// "All" chip for this system (select/clear all its versions at once).
+    let all_chip = document.createElement('a');
+    all_chip.dataset.systemAll = s;
+    all_chip.className = versions_by_system[s].every(en => selectors.version[en.id]) ? 'selector selector-active' : 'selector';
+    all_chip.appendChild(document.createTextNode('All'));
+    all_chip.addEventListener('click', e => toggleAllSystem(e, s));
+    td.appendChild(all_chip);
     versions_by_system[s].forEach(elem => {
         let selector = document.createElement('a');
         selector.className = selectors.version[elem.id] ? 'selector selector-active' : 'selector';
@@ -678,6 +698,9 @@ function updateSelectors() {
     systems.forEach(s => { if (version_rows[s]) version_rows[s].style.display = selectors.system[s] ? '' : 'none'; });
     [...document.querySelectorAll('#selectors_table a[data-id]')].map(elem => {
         elem.className = selectors.version[elem.dataset.id] ? 'selector selector-active' : 'selector' });
+    [...document.querySelectorAll('#selectors_table a[data-system-all]')].map(elem => {
+        const s = elem.dataset.systemAll;
+        elem.className = versions_by_system[s].every(en => selectors.version[en.id]) ? 'selector selector-active' : 'selector' });
     [...datasets_elem.querySelectorAll('a')].filter(e => e.id != 'select-all-datasets').map(elem => {
         elem.className = selectors.dataset[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
