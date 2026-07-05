@@ -62,14 +62,18 @@ def multiif(args):
 _CLAUSE_KW = {"where","group","order","limit","on","using","join","left","right","inner",
               "full","cross","union","having","offset","fetch","except","intersect"}
 
+_SCALAR_SUFFIX = re.compile(r'[<>=!+\-*/%~|&]|(?:AND|OR|IS|IN|NOT|LIKE|BETWEEN|THEN|ELSE|END|WHEN|ASC|DESC)\b', re.I)
 def add_subquery_aliases(s):
     """MySQL & PostgreSQL require every FROM/JOIN derived table to be named. Insert `AS _subN`
-    after any FROM/JOIN (SELECT ...) whose matching ) is not already followed by an alias."""
-    pat = re.compile(r'(?i)(\bFROM\b|\bJOIN\b)\s*\(\s*SELECT\b')
+    after a FROM/JOIN/comma (SELECT ...) whose matching ) is not already followed by an alias.
+    A comma-preceded subquery followed by an operator is a scalar subquery expression (e.g.
+    `(SELECT ...) > 74129` in a SELECT list), not a derived table -- leave those alone."""
+    pat = re.compile(r'(?i)(\bFROM\b|\bJOIN\b|,)\s*\(\s*SELECT\b')
     i = n = 0
     while True:
         m = pat.search(s, i)
         if not m: break
+        comma = s[m.start()] == ','
         popen = s.index('(', m.start())
         depth, j = 0, popen
         while j < len(s):
@@ -80,7 +84,10 @@ def add_subquery_aliases(s):
             j += 1
         k = j + 1
         while k < len(s) and s[k].isspace(): k += 1
-        nxt = re.match(r'[A-Za-z_]\w*', s[k:]) if k < len(s) else None
+        rest = s[k:]
+        if comma and _SCALAR_SUFFIX.match(rest):     # scalar subquery expression, not a derived table
+            i = j + 1; continue
+        nxt = re.match(r'[A-Za-z_]\w*', rest)
         aliased = bool(nxt) and (nxt.group(0).lower() == "as" or nxt.group(0).lower() not in _CLAUSE_KW)
         if aliased:
             i = j + 1
