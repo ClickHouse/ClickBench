@@ -119,6 +119,29 @@ for o in entries:
 for k, v in sorted(dropped.items()):
     print(f"  incomplete-load dropped: {k}: {', '.join(v)}", file=sys.stderr)
 
+# Null query timings for versions with degenerate timing measurement. StarRocks 3.1/3.2 read the
+# time from the server query profile, which on those versions records a near-constant ~2 ms for
+# every query regardless of complexity (it works on 3.3+). Signal: a loaded dataset of >=8 queries
+# whose MAXIMUM hot time is under 10 ms -- impossible for real work (e.g. all 113 job queries at
+# 2 ms). No legitimate (system, version, dataset) anywhere matches this. The load itself happened,
+# so keep load_time/data_size; only the timings are untrustworthy -> null every query row.
+def _hot(row):
+    h = [x for x in row[1:] if x is not None]
+    return min(h) if h else None
+degenerate = []
+for o in entries:
+    r = o["result"]
+    bad = any(
+        (lambda hs: len(hs) >= 8 and max(hs) < 0.01)(
+            [_hot(r[i]) for i in range(start, min(end, len(r))) if _hot(r[i]) is not None])
+        for ds, (start, end) in span.items())
+    if bad:
+        width = next((len(row) for row in r if row), 6)
+        o["result"] = [[None] * width for _ in r]
+        degenerate.append(f'{o["system"]} {o.get("version")}')
+for k in sorted(degenerate):
+    print(f"  degenerate-timing nulled: {k}", file=sys.stderr)
+
 # Oldest first; a missing date sorts last. Tie-break by system then version (numeric-aware-ish).
 def ver_key(v): return [int(t) if t.isdigit() else t for t in re.split(r'(\d+)', v or "")]
 entries.sort(key=lambda o: (o["date"] or "9999-99-99", o["system"], ver_key(o.get("version",""))))
