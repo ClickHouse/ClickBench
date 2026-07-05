@@ -187,6 +187,7 @@ ENGINES = {
         "rollup": True, "backtick": True,
         "interval_quote": True,                                         # INTERVAL '3' MONTH
         "not_bool": True,                                               # NOT <intcol> -> NOT (<intcol> <> 0)
+        "pg_funcs": True,                                               # year()/date()/if() -> PG equivalents
         "reserved": ["at"], "qchar": '"',
         "domain_bref": r"\1",
     },
@@ -239,6 +240,11 @@ def translate(sql, eng):
         s = re.sub(r'(?i)\bINTERVAL\s+([0-9]+)\s+(DAY|MONTH|YEAR|WEEK|HOUR|MINUTE|SECOND)S?\b',
                    lambda m: f"INTERVAL '{m.group(1)}' {m.group(2).upper()}", s)
     if E.get("not_bool"):  s = not_int_to_bool(s)
+    if E.get("pg_funcs"):   # MySQL/DuckDB scalar funcs PostgreSQL (CedarDB) lacks
+        s = transform_calls(s, "date", lambda a: f"CAST({a[0]} AS DATE)")            # date(x) -> CAST
+        for u in ("year","month","day","hour","minute","second","quarter"):
+            s = transform_calls(s, u, (lambda U: (lambda a: f"EXTRACT({U} FROM {a[0]})"))(u.upper()))
+        s = transform_calls(s, "if", lambda a: f"CASE WHEN {a[0]} THEN {a[1]} ELSE {a[2]} END")
     if E.get("cast_op"):                                                 # expr::Type -> CAST(expr AS Type)
         s = re.sub(r"([\w.]+|'[^']*')::([A-Za-z]\w*(?:\([0-9, ]*\))?)", r"CAST(\1 AS \2)", s)
     for w in E.get("reserved", []):                                      # reserved words used as aliases
