@@ -37,24 +37,51 @@ OUT=data.generated.js
     echo '];'
     echo ''
 
-    # data: one entry per version, oldest release first (ties broken by version).
-    echo -n 'const data = ['
-    first=1
-    while IFS=$'\t' read -r _rd file; do
-        [ -z "${file}" ] && continue
-        >&2 echo "processing ${file}"
-        [ "${first}" = 0 ] && echo -n ','
-        first=0
-        jq --compact-output ". += {\"source\": \"${file}\"}" "${file}"
-    done < <(
-        for f in results/*.json; do
-            # A missing OR empty release_date must still yield a non-empty sort key: an empty
-            # first field makes the line start with a tab, which `read -r _rd file` then strips
-            # as leading IFS whitespace, shifting the filename into _rd and dropping the entry.
-            printf '%s\t%s\n' "$(jq -r 'if (.release_date // "") == "" then "9999-99-99" else .release_date end' "${f}")" "${f}"
-        done | sort -t$'\t' -k1,1 -k2,2V
-    )
-    echo ''
+    # data: one entry per (system, version). Each entry gets:
+    #   system  -- the engine (results/ are ClickHouse; the <engine>/results/ dirs carry it).
+    #   source  -- path to the result file, for the "view source" link.
+    #   date    -- an aligned timeline date so the systems interleave on one axis: for a
+    #              ClickHouse calendar version (major>=18, e.g. 24.3) it is 20YY-MM-15 (the
+    #              15th of the release month, not the specific patch's date, which can be a
+    #              year later); for older ClickHouse and for the other systems it is the real
+    #              release_date. Sorted oldest first (the page re-sorts anyway).
+    echo 'const data = ['
+    python3 - <<'PY'
+import json, glob, re, sys
+DIRS = [("results", "ClickHouse"),          # ClickHouse (system injected if absent)
+        ("duckdb/results", None),
+        ("starrocks/results", None),
+        ("cedardb/results", None)]
+
+def aligned_date(system, version, release_date):
+    if system == "ClickHouse":
+        m = re.match(r'^(\d+)\.(\d+)\.', version or "")
+        if m and int(m.group(1)) >= 18:            # YY.minor calendar version -> 20YY-MM-15
+            year = 2000 + int(m.group(1))
+            month = min(max(int(m.group(2)), 1), 12)
+            return f"{year:04d}-{month:02d}-15"
+    return release_date or ""
+
+entries = []
+for d, default_system in DIRS:
+    for f in sorted(glob.glob(d + "/*.json")):
+        try:
+            obj = json.load(open(f))
+        except Exception as e:
+            print(f"skip {f}: {e}", file=sys.stderr); continue
+        if not obj.get("system"):
+            obj["system"] = default_system or "Unknown"
+        obj["source"] = f
+        obj["date"] = aligned_date(obj["system"], obj.get("version",""), obj.get("release_date"))
+        entries.append(obj)
+
+# Oldest first; a missing date sorts last. Tie-break by system then version (numeric-aware-ish).
+def ver_key(v): return [int(t) if t.isdigit() else t for t in re.split(r'(\d+)', v or "")]
+entries.sort(key=lambda o: (o["date"] or "9999-99-99", o["system"], ver_key(o.get("version",""))))
+
+print(",\n".join(json.dumps(o, separators=(",", ":"), sort_keys=True) for o in entries))
+print(f"emitted {len(entries)} entries", file=sys.stderr)
+PY
     echo '];'
 } > "${OUT}"
 

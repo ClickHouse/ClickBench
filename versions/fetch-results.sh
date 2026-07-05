@@ -84,7 +84,8 @@ for v in "${VERSIONS[@]}"; do
     # payload release_date (what run-version.sh writes when it couldn't resolve a date) must
     # be handled explicitly -- else it would shadow the value we just resolved here.
     jq -cS --arg rd "${rd}" \
-        '. + {release_date: (if (.release_date // "") != "" then .release_date
+        '. + {system: (.system // "ClickHouse"),
+              release_date: (if (.release_date // "") != "" then .release_date
                              elif $rd != "" then $rd else null end)}' \
         /tmp/vb-content.json > "results/${v}.json"
     echo "  results/${v}.json (released ${rd:-unknown})" >&2

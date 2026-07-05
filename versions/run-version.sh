@@ -670,6 +670,7 @@ run_benchmark() {
     done
     {
         echo '{'
+        echo "    \"system\": \"ClickHouse\","
         echo "    \"version\": \"${VERSION}\","
         echo "    \"actual_version\": \"${ACTUAL}\","
         echo "    \"release_date\": \"${RELEASE}\","

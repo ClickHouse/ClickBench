@@ -417,13 +417,13 @@
     <a href="https://github.com/ClickHouse/ClickBench/tree/main/versions">Source</a> | <a href="https://github.com/ClickHouse/ClickBench/issues">Report Mistake</a> | <a href="https://benchmark.clickhouse.com/">Benchmark For Analytical DBMS</a> | <a href="https://benchmark.clickhouse.com/hardware">Hardware Benchmark</a>
 </div>
 
-<table class="selectors-container stick-left">
-    <tr>
-        <th>Version: </th>
-        <td id="selectors_version">
-            <a id="select-all-versions" class="selector selector-active">All</a>
-        </td>
+<table class="selectors-container stick-left" id="selectors_table">
+    <tr id="row_system">
+        <th>System: </th>
+        <td id="selectors_system"></td>
     </tr>
+    <!-- One version row per system is inserted here by JS, right after the System row.
+         A system toggle shows/hides its version row (and selects all its versions on enable). -->
     <tr>
         <th>Dataset: </th>
         <td id="selectors_dataset">
@@ -445,7 +445,7 @@
     <thead>
         <tr>
             <th class="summary-name">
-                version
+                system / version
             </th>
             <th colspan="2">
                 Relative <span id="metric-noun">query time</span> (lower is better).<br/>
@@ -520,11 +520,16 @@ let dataset_range = {}; // dataset_range[name] = { start, end }
 const num_queries = query_meta.length;
 
 let selectors = {
+    "system": {},
     "version": {},
     "dataset": {},
     "metric": "hot",
     "queries": [],
 };
+
+/// Each result belongs to a (system, version). Key selection by a unique id so versions
+/// that happen to share a number across systems never collide.
+data.forEach(e => { e.id = e.system + '/' + e.version; });
 
 let theme = 'light';
 
@@ -551,18 +556,29 @@ if (stored_theme) {
 
 /// Selectors
 
-let versions_elem = document.getElementById('selectors_version');
 let datasets_elem = document.getElementById('selectors_dataset');
 
-/// Order the selector by version number, latest first -- the same key the chart and
-/// table sort by (server-reported actual_version, falling back to the label, numeric-aware
-/// with a label tie-break), so the three views stay in lockstep.
-let actual_of = {};
-data.forEach(e => { actual_of[e.version] = e.actual_version || e.version; });
-let unique_versions = [...new Set(data.map(elem => elem.version))].sort((a, b) => {
-    const c = (actual_of[b] || b).localeCompare(actual_of[a] || a, undefined, { numeric: true });
-    return c != 0 ? c : b.localeCompare(a, undefined, { numeric: true });
+/// Systems in a friendly order (ClickHouse first, then the others), plus any not listed.
+const SYSTEM_ORDER = ['ClickHouse', 'DuckDB', 'StarRocks', 'CedarDB'];
+let systems = [...new Set(data.map(e => e.system))].sort((a, b) => {
+    let ia = SYSTEM_ORDER.indexOf(a), ib = SYSTEM_ORDER.indexOf(b);
+    if (ia < 0) ia = 99; if (ib < 0) ib = 99;
+    return ia - ib || a.localeCompare(b);
 });
+
+/// Each system's versions, newest first (aligned timeline date desc, then version desc) --
+/// the same key the chart and table sort by, so the views stay in lockstep.
+function versionCmpDesc(a, b) {
+    const c = (b.date || '').localeCompare(a.date || '');
+    return c != 0 ? c : b.version.localeCompare(a.version, undefined, { numeric: true });
+}
+let versions_by_system = {};
+systems.forEach(s => { versions_by_system[s] = data.filter(e => e.system === s).sort(versionCmpDesc); });
+
+/// Defaults: ClickHouse shown+selected, the other systems off (their version rows hidden)
+/// until toggled on. Toggling a system on selects all its versions.
+systems.forEach(s => { if (!(s in selectors.system)) selectors.system[s] = (s === 'ClickHouse'); });
+data.forEach(e => { if (!(e.id in selectors.version)) selectors.version[e.id] = selectors.system[e.system]; });
 
 function toggle(e, elem, selectors_map) {
     selectors_map[elem] = !selectors_map[elem];
@@ -580,30 +596,64 @@ function toggleAll(e, selectors_map) {
     updateHistory();
 }
 
-unique_versions.map(elem => {
-    let selector = document.createElement('a');
-    selector.className = 'selector selector-active';
-    /// Show the short calendar version (major.minor, no patch) as on the chart/table;
-    /// keep the full version on the element for the selection lookup below.
-    selector.dataset.version = elem;
-    selector.appendChild(document.createTextNode(displayVersion(elem)));
-    versions_elem.appendChild(selector);
-    if (!(elem in selectors.version)) { selectors.version[elem] = true; }
-    selector.addEventListener('click', e => toggle(e, elem, selectors.version));
+/// Toggle a whole system: hide/show its version row, and on enable select all its versions.
+let version_rows = {};   // system -> its <tr> of version selectors
+function toggleSystem(e, s) {
+    const on = !selectors.system[s];
+    selectors.system[s] = on;
+    e.target.className = on ? 'selector selector-active' : 'selector';
+    version_rows[s].style.display = on ? '' : 'none';
+    if (on) {
+        versions_by_system[s].forEach(en => { selectors.version[en.id] = true; });
+        [...version_rows[s].querySelectorAll('a')].forEach(a => { a.className = 'selector selector-active'; });
+    }
+    render();
+    updateHistory();
+}
 
-    /// Highlight the matching summary row and details column when hovering a version.
-    selector.addEventListener('mouseover', e => {
-        [...document.querySelectorAll('.summary-row')].map(row => {
-            row.className = row.dataset.version == elem ? 'summary-row summary-row-hilite' : 'summary-row' });
-        [...document.querySelectorAll('.th-entry')].map(th => {
-            th.className = th.dataset.version == elem ? 'th-entry th-entry-hilite' : 'th-entry' });
+function hiliteVersion(id) {
+    [...document.querySelectorAll('.summary-row')].map(row => {
+        row.className = row.dataset.id == id ? 'summary-row summary-row-hilite' : 'summary-row' });
+    [...document.querySelectorAll('.th-entry')].map(th => {
+        th.className = th.dataset.id == id ? 'th-entry th-entry-hilite' : 'th-entry' });
+}
+function unhiliteVersion() {
+    [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
+    [...document.querySelectorAll('.th-entry')].map(row => { row.className = 'th-entry' });
+}
+
+/// Build the System toggle row and, right after it, one version row per system.
+let system_elem = document.getElementById('selectors_system');
+let row_system = document.getElementById('row_system');
+const version_row_anchor = row_system.nextSibling;   // insert version rows before the Dataset row
+systems.forEach(s => {
+    let sel = document.createElement('a');
+    sel.className = selectors.system[s] ? 'selector selector-active' : 'selector';
+    sel.appendChild(document.createTextNode(s));
+    system_elem.appendChild(sel);
+    sel.addEventListener('click', e => toggleSystem(e, s));
+
+    let tr = document.createElement('tr');
+    tr.dataset.system = s;
+    tr.style.display = selectors.system[s] ? '' : 'none';
+    let th = document.createElement('th');
+    th.appendChild(document.createTextNode(s + ': '));
+    let td = document.createElement('td');
+    versions_by_system[s].forEach(elem => {
+        let selector = document.createElement('a');
+        selector.className = selectors.version[elem.id] ? 'selector selector-active' : 'selector';
+        selector.dataset.id = elem.id;
+        selector.appendChild(document.createTextNode(displayVersion(elem.version)));
+        selector.addEventListener('click', e => toggle(e, elem.id, selectors.version));
+        selector.addEventListener('mouseover', e => hiliteVersion(elem.id));
+        selector.addEventListener('mouseout', e => unhiliteVersion());
+        td.appendChild(selector);
     });
-    selector.addEventListener('mouseout', e => {
-        [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
-        [...document.querySelectorAll('.th-entry')].map(row => { row.className = 'th-entry' });
-    });
+    tr.appendChild(th);
+    tr.appendChild(td);
+    row_system.parentNode.insertBefore(tr, version_row_anchor);
+    version_rows[s] = tr;
 });
-document.getElementById('select-all-versions').addEventListener('click', e => toggleAll(e, selectors.version));
 
 datasets.map(d => {
     let selector = document.createElement('a');
@@ -623,8 +673,11 @@ document.getElementById('selector-metric-size').addEventListener('click', e => {
 if (!selectors.queries.length) { selectors.queries = query_meta.map(() => true); }
 
 function updateSelectors() {
-    [...versions_elem.querySelectorAll('a')].filter(e => e.id != 'select-all-versions').map(elem => {
-        elem.className = selectors.version[elem.dataset.version] ? 'selector selector-active' : 'selector' });
+    [...system_elem.querySelectorAll('a')].map(elem => {
+        elem.className = selectors.system[elem.innerText] ? 'selector selector-active' : 'selector' });
+    systems.forEach(s => { if (version_rows[s]) version_rows[s].style.display = selectors.system[s] ? '' : 'none'; });
+    [...document.querySelectorAll('#selectors_table a[data-id]')].map(elem => {
+        elem.className = selectors.version[elem.dataset.id] ? 'selector selector-active' : 'selector' });
     [...datasets_elem.querySelectorAll('a')].filter(e => e.id != 'select-all-datasets').map(elem => {
         elem.className = selectors.dataset[elem.innerText] ? 'selector selector-active' : 'selector' });
     [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
@@ -755,27 +808,18 @@ function renderSummary(filtered_data, baseline_data) {
     const noun_el = document.getElementById('metric-noun');
     if (noun_el) { noun_el.textContent = metric_noun; }
 
-    /// Both the summary chart and the details table are ordered by version number, latest
-    /// first (not by result, and not by date -- versions released close together, or sharing
-    /// a calendar-version group date, still order deterministically). We compare the
-    /// server-reported actual_version (e.g. the 1.1.539xx/540xx tag builds), falling back to
-    /// the label, with numeric-aware comparison so 1.1.53974 < 1.1.54394 < 18.x < 26.6.
-    /// max_ratio still scales the horizon bars to the slowest.
-    const sorted_indices = [...filtered_data.keys()].sort((a, b) => {
-        const va = filtered_data[a].actual_version || filtered_data[a].version;
-        const vb = filtered_data[b].actual_version || filtered_data[b].version;
-        const c = vb.localeCompare(va, undefined, { numeric: true });
-        /// Several consecutive tag builds can report the same compiled-in revision (the
-        /// version wasn't bumped every commit), so break ties by the tag label.
-        return c != 0 ? c : filtered_data[b].version.localeCompare(filtered_data[a].version, undefined, { numeric: true });
-    });
+    /// Both the summary chart and the details table are ordered by the aligned timeline date,
+    /// latest first, so ClickHouse and the other systems interleave chronologically; ties break
+    /// by version then system so rows stay deterministic. max_ratio scales the horizon bars.
+    const sorted_indices = [...filtered_data.keys()].sort((a, b) =>
+        entryCmpDesc(filtered_data[a], filtered_data[b]));
     const max_ratio = Math.max(...summaries.filter((x, i) => x != null && !no_data[i]));
 
     sorted_indices.map(idx => {
         const elem = filtered_data[idx];
         let tr = document.createElement('tr');
         tr.className = 'summary-row';
-        tr.dataset.version = elem.version;
+        tr.dataset.id = elem.id;
 
         let td_name = document.createElement('td');
         td_name.className = 'summary-name';
@@ -788,13 +832,13 @@ function renderSummary(filtered_data, baseline_data) {
         remove.title = 'Remove this version from the selection';
         remove.addEventListener('click', e => {
             e.preventDefault(); e.stopPropagation();
-            selectors.version[elem.version] = false;
+            selectors.version[elem.id] = false;
             render(); updateSelectors(); updateHistory();
         });
         td_name.appendChild(remove);
 
         let link = document.createElement('a');
-        link.appendChild(document.createTextNode(displayVersion(elem.version)));
+        link.appendChild(document.createTextNode(displayLabel(elem)));
         link.href = "https://github.com/ClickHouse/ClickBench/blob/main/versions/" + elem.source;
         td_name.appendChild(link);
         td_name.appendChild(document.createTextNode(': '));
@@ -830,11 +874,13 @@ function renderSummary(filtered_data, baseline_data) {
         }
         td_bar.appendChild(bar);
 
-        /// Release date shown over the bar, as on the main ClickBench page.
-        if (elem.release_date) {
+        /// Aligned timeline date shown over the bar (calver-derived for ClickHouse, real
+        /// release date otherwise), as on the main ClickBench page.
+        const shown_date = elem.date || elem.release_date;
+        if (shown_date) {
             let date_span = document.createElement('span');
             date_span.className = 'summary-date';
-            date_span.textContent = elem.release_date;
+            date_span.textContent = shown_date;
             td_bar.appendChild(date_span);
         }
 
@@ -868,13 +914,26 @@ function displayVersion(v) {
     return (m && +m[1] >= 18) ? `${m[1]}.${m[2]}` : v;
 }
 
+/// The chart/table label for an entry: the system name plus the (short) version.
+function displayLabel(e) { return `${e.system} ${displayVersion(e.version)}`; }
+
+/// Chart/table order: newest first on the aligned timeline date (so systems interleave),
+/// tie-broken by version then system, so rows are deterministic.
+function entryCmpDesc(a, b) {
+    let c = (b.date || '').localeCompare(a.date || '');
+    if (c != 0) return c;
+    c = b.version.localeCompare(a.version, undefined, { numeric: true });
+    if (c != 0) return c;
+    return a.system.localeCompare(b.system);
+}
+
 function render() {
     let details_head = document.getElementById('details_head');
     let details_body = document.getElementById('details_body');
     clearElement(details_head);
     clearElement(details_body);
 
-    let filtered_data = data.filter(elem => selectors.version[elem.version]);
+    let filtered_data = data.filter(elem => selectors.system[elem.system] && selectors.version[elem.id]);
 
     let nothing = document.getElementById('nothing-selected');
     if (filtered_data.length == 0) {
@@ -900,14 +959,18 @@ function render() {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
         th.className = 'th-entry';
-        th.dataset.version = elem.version;
+        th.dataset.id = elem.id;
+        let sysname = document.createElement('div');
+        sysname.textContent = elem.system;
+        th.appendChild(sysname);
         let name = document.createElement('div');
         name.appendChild(document.createTextNode(displayVersion(elem.version)));
         th.appendChild(name);
-        if (elem.release_date) {
+        const th_date = elem.date || elem.release_date;
+        if (th_date) {
             let d = document.createElement('div');
             d.className = 'th-date';
-            d.appendChild(document.createTextNode(elem.release_date));
+            d.appendChild(document.createTextNode(th_date));
             th.appendChild(d);
         }
         details_head.appendChild(th);
