@@ -560,6 +560,8 @@ let datasets_elem = document.getElementById('selectors_dataset');
 
 /// Systems in a friendly order (ClickHouse first, then the others), plus any not listed.
 const SYSTEM_ORDER = ['ClickHouse', 'DuckDB', 'StarRocks', 'CedarDB'];
+/// Per-system hue for colouring the chart/table/selectors (used by sysHue/systemColor/systemBands).
+const SYSTEM_HUE = { ClickHouse: 75, DuckDB: 255, StarRocks: 152, CedarDB: 330 };
 let systems = [...new Set(data.map(e => e.system))].sort((a, b) => {
     let ia = SYSTEM_ORDER.indexOf(a), ib = SYSTEM_ORDER.indexOf(b);
     if (ia < 0) ia = 99; if (ib < 0) ib = 99;
@@ -642,6 +644,11 @@ const version_row_anchor = row_system.nextSibling;   // insert version rows befo
 systems.forEach(s => {
     let sel = document.createElement('a');
     sel.className = selectors.system[s] ? 'selector selector-active' : 'selector';
+    /// Colour dot (theme-neutral hue) so the System row doubles as the colour legend.
+    let dot = document.createElement('span');
+    dot.textContent = '● ';
+    dot.style.color = `oklch(0.62 0.17 ${sysHue(s)})`;
+    sel.appendChild(dot);
     sel.appendChild(document.createTextNode(s));
     system_elem.appendChild(sel);
     sel.addEventListener('click', e => toggleSystem(e, s));
@@ -871,9 +878,15 @@ function renderSummary(filtered_data, baseline_data) {
         });
         td_name.appendChild(remove);
 
+        /// Colour swatch + system-hued label so each system is identifiable in the interleaved list.
+        let swatch = document.createElement('span');
+        swatch.textContent = '● ';   // ●
+        swatch.style.color = systemColor(elem.system);
+        td_name.appendChild(swatch);
         let link = document.createElement('a');
         link.appendChild(document.createTextNode(displayLabel(elem)));
         link.href = "https://github.com/ClickHouse/ClickBench/blob/main/versions/" + elem.source;
+        link.style.color = systemColor(elem.system);
         td_name.appendChild(link);
         td_name.appendChild(document.createTextNode(': '));
 
@@ -894,15 +907,17 @@ function renderSummary(filtered_data, baseline_data) {
             /// No successful run in this selection: a solid black bar (paired with the skull).
             bar.style.background = 'black';
         } else {
+            /// Horizon bands in this row's system hue, so systems are distinguishable at a glance.
+            const [c1, c2, c3, c4] = systemBands(elem.system);
             bar.style.background = `linear-gradient(to right,
-                var(--bar-color1) 0%,
-                var(--bar-color1) ${Math.min(100, percentage)}%,
-                var(--bar-color2) ${Math.min(100, percentage)}%,
-                var(--bar-color2) ${Math.min(100, percentage * 4)}%,
-                var(--bar-color3) ${Math.min(100, percentage * 4)}%,
-                var(--bar-color3) ${Math.min(100, percentage * 16)}%,
-                var(--bar-color4) ${Math.min(100, percentage * 16)}%,
-                var(--bar-color4) ${Math.min(100, percentage * 64)}%,
+                ${c1} 0%,
+                ${c1} ${Math.min(100, percentage)}%,
+                ${c2} ${Math.min(100, percentage)}%,
+                ${c2} ${Math.min(100, percentage * 4)}%,
+                ${c3} ${Math.min(100, percentage * 4)}%,
+                ${c3} ${Math.min(100, percentage * 16)}%,
+                ${c4} ${Math.min(100, percentage * 16)}%,
+                ${c4} ${Math.min(100, percentage * 64)}%,
                 transparent ${Math.min(100, percentage * 64)}%,
                 transparent 100%)`;
         }
@@ -951,6 +966,23 @@ function displayVersion(v) {
 /// The chart/table label for an entry: the system name plus the (short) version.
 function displayLabel(e) { return `${e.system} ${displayVersion(e.version)}`; }
 
+/// Per-system colour helpers (SYSTEM_HUE is defined earlier, near SYSTEM_ORDER, because the
+/// selector build below uses it). Each system gets its own hue so it's identifiable in the
+/// interleaved chart/table (ClickHouse keeps the warm/orange of the single-system page).
+function sysHue(s) { return SYSTEM_HUE[s] ?? 210; }
+function systemColor(s) {
+    const h = sysHue(s);
+    return theme === 'dark' ? `oklch(0.80 0.15 ${h})` : `oklch(0.55 0.17 ${h})`;
+}
+/// Four horizon bands (1x/4x/16x/64x) in the system's hue, contrasting with the theme background
+/// (dark band on light theme, light band on dark theme), lightening outward like the original.
+function systemBands(s) {
+    const h = sysHue(s);
+    return theme === 'dark'
+        ? [`oklch(0.86 0.13 ${h})`, `oklch(0.72 0.15 ${h})`, `oklch(0.60 0.15 ${h})`, `oklch(0.49 0.12 ${h})`]
+        : [`oklch(0.52 0.16 ${h})`, `oklch(0.67 0.15 ${h})`, `oklch(0.80 0.12 ${h})`, `oklch(0.89 0.09 ${h})`];
+}
+
 /// Chart/table order: newest first on the aligned timeline date (so systems interleave),
 /// tie-broken by version then system, so rows are deterministic.
 function entryCmpDesc(a, b) {
@@ -996,6 +1028,8 @@ function render() {
         th.dataset.id = elem.id;
         let sysname = document.createElement('div');
         sysname.textContent = elem.system;
+        sysname.style.color = systemColor(elem.system);
+        sysname.style.fontWeight = 'bold';
         th.appendChild(sysname);
         let name = document.createElement('div');
         name.appendChild(document.createTextNode(displayVersion(elem.version)));
