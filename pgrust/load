@@ -1,0 +1,40 @@
+#!/bin/bash
+set -eu
+
+# pgrust v0.1 has a COPY input-buffer bug: encoding verification fails
+# whenever its 64 KiB raw-buffer refill boundary falls inside a multi-byte
+# UTF-8 character, rejecting valid UTF-8 input ("invalid byte sequence for
+# encoding UTF8"). Inputs of at most 64 KiB are processed in a single buffer
+# fill and are unaffected, so the TSV is split into line-aligned <=64 KiB
+# pieces, each loaded with its own COPY statement (single session, single
+# transaction). The data itself is not modified.
+mkdir -p data/pieces
+split -C 64k -a 5 hits.tsv data/pieces/p
+rm -f hits.tsv
+chmod -R 777 data
+
+# Drop+create the table so this is idempotent.
+PGPASSWORD=test psql -h localhost -U postgres -v ON_ERROR_STOP=1 -t -c 'DROP TABLE IF EXISTS hits'
+PGPASSWORD=test psql -h localhost -U postgres -v ON_ERROR_STOP=1 -t < create.sql
+
+# TRUNCATE and COPY FREEZE in a single transaction. Postgres requires the
+# table to be created or truncated in the current subtransaction for COPY
+# FREEZE to be allowed. The pieces are read server-side from the /data mount
+# inside the container. ON_ERROR_STOP makes psql exit non-zero on data errors
+# so set -e in this script catches them.
+{
+    echo "BEGIN;"
+    echo "TRUNCATE TABLE hits;"
+    for f in data/pieces/p*; do
+        echo "COPY hits FROM '/$f' WITH (FREEZE);"
+    done
+    echo "COMMIT;"
+} > load_pieces.sql
+
+PGPASSWORD=test psql -h localhost -U postgres -v ON_ERROR_STOP=1 -q -f load_pieces.sql
+
+PGPASSWORD=test psql -h localhost -U postgres -v ON_ERROR_STOP=1 -t -c 'VACUUM ANALYZE hits'
+
+# Only remove inputs once load completes successfully.
+rm -rf data/pieces load_pieces.sql
+sync

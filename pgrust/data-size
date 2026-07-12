@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+# PGDATA is bind-mounted from ./db, so du includes indexes and WAL.
+sudo du -bcs db/ | grep total | awk '{print $1}'
