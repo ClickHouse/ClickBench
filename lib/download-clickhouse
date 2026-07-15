@@ -1,0 +1,94 @@
+#!/bin/bash
+# Put the `clickhouse` universal binary in the current directory.
+#
+# Default: download the latest stable build from clickhouse.com — exactly what
+# every clickhouse* install script did inline (`curl https://clickhouse.com/ |
+# sh`) before this helper existed.
+#
+# Override: when the `clickhouse_pr` environment variable names a
+# ClickHouse/ClickHouse pull-request number, fetch that PR's CI release build
+# instead of the stable one. This is how an operator benchmarks an unreleased
+# binary straight from a PR:
+#
+#     clickhouse_pr=81944 system=clickhouse ./run-benchmark.sh
+#
+# `clickhouse_pr` is set on the operator side, threaded to the VM through
+# cloud-init, and consumed ONLY here — so only the clickhouse* systems react to
+# it; every other system ignores it.
+#
+# "The binary from the PR" is resolved as: the newest commit in the PR whose
+# release-build CI job for THIS machine's architecture finished successfully,
+# then the raw self-extracting binary that job uploaded to S3. Walking from the
+# newest commit backwards (rather than pinning the tip) means a tip commit whose
+# build is still running, failed, or was skipped (e.g. a docs-only commit) falls
+# back to the last commit that does have a finished build.
+set -euo pipefail
+
+# No PR requested: the historical default path.
+if [ -z "${clickhouse_pr:-}" ]; then
+    curl https://clickhouse.com/ | sh
+    exit 0
+fi
+
+pr="$clickhouse_pr"
+api="https://api.github.com/repos/ClickHouse/ClickHouse"
+
+# ClickHouse names its release builds by short arch (amd / arm). Map this
+# machine's architecture onto that; reject targets that have no release build.
+case "$(uname -m)" in
+    x86_64 | amd64)  arch=amd ;;
+    aarch64 | arm64) arch=arm ;;
+    *)
+        echo "clickhouse_pr: no release build for architecture '$(uname -m)'" >&2
+        exit 1
+        ;;
+esac
+check_name="Build (${arch}_release)"   # CI check-run name for the release build
+build_dir="build_${arch}_release"      # S3 folder that build uploads into
+
+# GitHub's anonymous API limit is 60 requests/hour; if the operator exported a
+# GITHUB_TOKEN, use it to lift the limit (helps when many machines launch at
+# once and each makes a handful of calls).
+gh() {
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+        curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" "$@"
+    else
+        curl -fsSL -H "Accept: application/vnd.github+json" "$@"
+    fi
+}
+
+# Candidate commits, newest first: the PR head (the usual answer) followed by
+# the rest of the PR's commits newest->oldest as a fallback. The PR-commits
+# endpoint returns oldest->newest, so `tac` flips it; awk drops blanks and the
+# duplicate head. (For a PR with >100 commits only the first page's commits act
+# as fallback, but the head — checked first — covers the normal case.)
+head_sha=$(gh "${api}/pulls/${pr}" | jq -r '.head.sha')
+rest=$(gh "${api}/pulls/${pr}/commits?per_page=100" | jq -r '.[].sha' | tac)
+candidates=$(printf '%s\n%s\n' "$head_sha" "$rest" | awk 'NF && !seen[$0]++')
+
+echo "clickhouse_pr=${pr}: looking for a successful '${check_name}' build..." >&2
+sha=""
+while IFS= read -r commit; do
+    [ -z "$commit" ] && continue
+    # Filter server-side by check name so we don't have to page through the
+    # ~170 check-runs a ClickHouse commit accumulates.
+    if gh -G --data-urlencode "check_name=${check_name}" \
+            "${api}/commits/${commit}/check-runs" \
+            | jq -e 'any(.check_runs[]; .conclusion == "success")' >/dev/null; then
+        sha="$commit"
+        break
+    fi
+done <<< "$candidates"
+
+if [ -z "$sha" ]; then
+    echo "clickhouse_pr=${pr}: found no commit with a successful '${check_name}'." >&2
+    echo "clickhouse_pr=${pr}: is CI still running, or did the release build fail?" >&2
+    exit 1
+fi
+
+url="https://clickhouse-builds.s3.amazonaws.com/PRs/${pr}/${sha}/${build_dir}/clickhouse"
+echo "clickhouse_pr=${pr}: commit ${sha}" >&2
+echo "clickhouse_pr=${pr}: downloading ${url}" >&2
+wget --continue --progress=dot:giga "$url" -O clickhouse
+chmod +x clickhouse

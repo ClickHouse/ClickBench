@@ -2,5 +2,5 @@
 set -e
 
 if [ ! -x ./clickhouse ]; then
-    curl https://clickhouse.com/ | sh
+    ../lib/download-clickhouse
 fi

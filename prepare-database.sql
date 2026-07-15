@@ -17,6 +17,9 @@ CREATE TABLE sink.results
     proprietary String,
     tuned String,
     tags String,
+    -- ClickHouse/ClickHouse PR number when the run benchmarked a PR build
+    -- (clickhouse_pr override, clickhouse* systems only); empty otherwise.
+    clickhouse_pr String,
     total_time UInt64,
     disk_space_diff UInt64,
     load_time Float64,
@@ -43,6 +46,7 @@ WITH
     extract(content, 'Proprietary: ([^\n]+)') AS proprietary,
     extract(content, 'Tuned: ([^\n]+)') AS tuned,
     extract(content, 'Tags: ([^\n]+)') AS tags,
+    extract(content, 'ClickHouse PR: ([^\n]+)') AS clickhouse_pr,
 
     toUInt64OrZero(extract(content, 'Disk usage after: (\d+)')) - toUInt64OrZero(extract(content, 'Disk usage before: (\d+)')) AS disk_space_diff,
     toUInt64OrZero(extract(content, 'Total time: (\d+)')) AS total_time,
@@ -65,7 +69,7 @@ WITH
     load_time IS NOT NULL AND length(runtimes) = 43 AND data_size >= 5000000000
         AND arrayExists(x -> arrayExists(y -> toFloat64OrZero(y) > 0.1, x), runtimes) AS good
 
-SELECT time, system, machine, system_name, proprietary, tuned, tags, total_time, disk_space_diff, load_time, data_size, length(runtimes) AS num_results, runtimes, runtimes_formatted,
+SELECT time, system, machine, system_name, proprietary, tuned, tags, clickhouse_pr, total_time, disk_space_diff, load_time, data_size, length(runtimes) AS num_results, runtimes, runtimes_formatted,
     concurrent_qps, concurrent_error_ratio,
 '{
     "system": "' || system_name || '",
