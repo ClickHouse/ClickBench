@@ -24,7 +24,7 @@
 # back to the last commit that does have a finished build.
 set -euo pipefail
 
-# No PR requested: the historical default path.
+# No PR requested: the default path.
 if [ -z "${clickhouse_pr:-}" ]; then
     curl https://clickhouse.com/ | sh
     exit 0
