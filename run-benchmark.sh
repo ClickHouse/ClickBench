@@ -5,6 +5,12 @@ system=${system:=clickhouse}
 repo=${repo:=ClickHouse/ClickBench}
 branch=${branch:=main}
 
+# Optional ClickHouse/ClickHouse PR number. When set, the clickhouse* systems
+# benchmark that PR's CI release build instead of the latest stable one; every
+# other system ignores it. Threaded to the VM below and resolved there by
+# lib/download-clickhouse.
+clickhouse_pr=${clickhouse_pr:-}
+
 arch=$(aws ec2 describe-instance-types --instance-types $machine --query 'InstanceTypes[0].ProcessorInfo.SupportedArchitectures' --output text)
 ami=$(aws ec2 describe-images --owners amazon --filters "Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04*" "Name=architecture,Values=${arch}" "Name=state,Values=available" --query 'sort_by(Images, &CreationDate) | [-1].[ImageId]' --output text)
 
@@ -12,12 +18,13 @@ ami=$(aws ec2 describe-images --owners amazon --filters "Name=name,Values=ubuntu
 # Default keeps the 10h cap that worked for the slowest OLTP systems.
 timeout="${timeout:-36000}"
 
-awk -v sys="$system" -v repo="$repo" -v branch="$branch" -v t="$timeout" '
+awk -v sys="$system" -v repo="$repo" -v branch="$branch" -v t="$timeout" -v chpr="$clickhouse_pr" '
 {
     gsub(/@system@/, sys)
     gsub(/@repo@/, repo)
     gsub(/@branch@/, branch)
     gsub(/@timeout@/, t)
+    gsub(/@clickhouse_pr@/, chpr)
     print
 }' cloud-init.sh.in > cloud-init.sh
 

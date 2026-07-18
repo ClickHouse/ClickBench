@@ -2,7 +2,7 @@
 set -e
 
 if [ ! -x ./clickhouse ]; then
-    curl https://clickhouse.com/ | sh
+    ../lib/download-clickhouse
 fi
 
 # Use a userspace page cache sized to ~80% of RAM for S3 object reads.

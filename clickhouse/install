@@ -2,7 +2,7 @@
 set -e
 
 if [ ! -x /usr/bin/clickhouse ]; then
-    curl https://clickhouse.com/ | sh
+    ../lib/download-clickhouse
     sudo ./clickhouse install --noninteractive
 fi
 

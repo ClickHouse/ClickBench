@@ -6,7 +6,7 @@ set -e
 # over HTTP from a public ClickHouse-hosted dataset.
 
 if [ ! -x /usr/bin/clickhouse ]; then
-    curl https://clickhouse.com/ | sh
+    ../lib/download-clickhouse
     sudo ./clickhouse install --noninteractive
 fi
 

@@ -9,6 +9,12 @@
 # once here so every per-system install/start/load/query inherits it.
 export HOME="${HOME:-/root}"
 
+# Optional ClickHouse PR override (see run-benchmark.sh / lib/download-clickhouse).
+# Exported for every system but only consumed by the clickhouse* install
+# scripts; empty for a normal run. Single-quoted; PR numbers are digits so
+# there is nothing to escape.
+export clickhouse_pr='@clickhouse_pr@'
+
 # c6a.4xlarge has 32 GB RAM with no swap. Loading the 75 GB hits.tsv into
 # row-oriented databases (mysql, mariadb, postgres, mongodb, cratedb) and
 # in-process Python servers (pandas/polars/duckdb-dataframe) fills RAM
@@ -42,6 +48,11 @@ echo -n 'Tuned: ' | tee -a log
 jq -r '.tuned' template.json | tee -a log
 echo -n 'Tags: ' | tee -a log
 jq -c -r '.tags' template.json | tee -a log
+
+# Record the ClickHouse PR override (empty on a normal run) so PR-build results
+# can be filtered apart later. sink.parser extracts this into the
+# results.clickhouse_pr column; see prepare-database.sql.
+echo "ClickHouse PR: ${clickhouse_pr}" | tee -a log
 
 echo -n 'Disk usage before: ' | tee -a log
 df -B1 / | tail -n1 | awk '{ print $3 }' | tee -a log
