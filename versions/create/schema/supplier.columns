@@ -1,0 +1,8 @@
+synth_date Date,
+s_suppkey UInt32,
+s_name FixedString(25),
+s_address String,
+s_nationkey UInt32,
+s_phone FixedString(15),
+s_acctbal Float64,
+s_comment String

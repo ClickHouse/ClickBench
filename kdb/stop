@@ -1,0 +1,3 @@
+#!/bin/bash
+# kdb-x is invoked as an embedded CLI per query — no daemon to stop.
+exit 0

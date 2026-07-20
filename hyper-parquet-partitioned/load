@@ -1,0 +1,35 @@
+#!/bin/bash
+# Create hits_parquet.hyper holding a peristent external table over the
+# single parquet file. The data stays in the parquet file; this .hyper
+# DB only persists the external table *catalog* so its compiled query plans
+# survive across the per-try connections the benchmark driver opens (./query).
+# Without a persistent catalog kept attached, every connection close tears the
+# catalog down and evicts its plan-cache entries.2s recompile on every try.
+#
+# Loading through the already-running server (descriptor in server.endpoint)
+# avoids briefly running two hyperd instances. BENCH_DURABLE=yes, so this runs
+# once (not per query); the file persists across the cold-cycle restarts and
+# ./start re-attaches it via a keep-alive connection after each restart.
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+rm -f hits_parquet.hyper
+
+python3 - <<'PY'
+from tableauhyperapi import Connection, Endpoint, CreateMode
+
+with open("server.endpoint") as f:
+    descriptor = f.read().strip()
+
+# experimental_persisted_external_tables must already be on for the server
+# (set as a HyperProcess startup parameter in ./start); creating/opening a
+# persistent external table otherwise errors with "Persisted external tables
+# are disabled".
+endpoint = Endpoint(connection_descriptor=descriptor, user_agent="clickbench")
+with Connection(endpoint, "hits_parquet.hyper", CreateMode.CREATE_AND_REPLACE) as connection:
+    connection.execute_command(open("create.sql").read())
+PY
+
+sync

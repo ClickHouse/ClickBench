@@ -1,0 +1,5 @@
+synth_date Date,
+n_nationkey UInt32,
+n_name FixedString(25),
+n_regionkey UInt32,
+n_comment String

@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Size of the on-disk database directory (data files + WAL + manifests).
+du -sb db 2>/dev/null | awk '{print $1}'

@@ -2,6 +2,24 @@
 
 machine=${machine:=c6a.4xlarge}
 system=${system:=clickhouse}
+clickbench_pr=${clickbench_pr:=}
+
+# When launched for a pull request and no explicit repo/branch are given,
+# benchmark the PR's own head repository and branch. GH_TOKEN is optional:
+# unauthenticated GitHub API calls are rate-limited per IP, which bites on
+# the shared IPs of GitHub-hosted runners.
+if [ -n "$clickbench_pr" ] && { [ -z "$repo" ] || [ -z "$branch" ]; }; then
+    auth=()
+    [ -n "$GH_TOKEN" ] && auth=(-H "Authorization: Bearer $GH_TOKEN")
+    pr_head=$(curl -sSf "${auth[@]}" "https://api.github.com/repos/ClickHouse/ClickBench/pulls/${clickbench_pr}")
+    repo=${repo:-$(jq -r '.head.repo.full_name' <<< "$pr_head")}
+    branch=${branch:-$(jq -r '.head.ref' <<< "$pr_head")}
+    if [ -z "$repo" ] || [ "$repo" = "null" ] || [ -z "$branch" ] || [ "$branch" = "null" ]; then
+        echo "Cannot resolve the head repository and branch of PR #${clickbench_pr}" >&2
+        exit 1
+    fi
+fi
+
 repo=${repo:=ClickHouse/ClickBench}
 branch=${branch:=main}
 
@@ -12,12 +30,13 @@ ami=$(aws ec2 describe-images --owners amazon --filters "Name=name,Values=ubuntu
 # Default keeps the 10h cap that worked for the slowest OLTP systems.
 timeout="${timeout:-36000}"
 
-awk -v sys="$system" -v repo="$repo" -v branch="$branch" -v t="$timeout" '
+awk -v sys="$system" -v repo="$repo" -v branch="$branch" -v t="$timeout" -v pr="$clickbench_pr" '
 {
     gsub(/@system@/, sys)
     gsub(/@repo@/, repo)
     gsub(/@branch@/, branch)
     gsub(/@timeout@/, t)
+    gsub(/@clickbench_pr@/, pr)
     print
 }' cloud-init.sh.in > cloud-init.sh
 

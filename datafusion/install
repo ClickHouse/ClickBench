@@ -31,7 +31,7 @@ if [ ! -x arrow-datafusion/target/release/datafusion-cli ]; then
         git clone https://github.com/apache/arrow-datafusion.git
     fi
     cd arrow-datafusion
-    git checkout 53.1.0
+    git checkout 54.0.0
     CARGO_PROFILE_RELEASE_LTO=true RUSTFLAGS="-C codegen-units=1" \
         cargo build --release --package datafusion-cli --bin datafusion-cli
 fi

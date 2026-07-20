@@ -1,4 +1,8 @@
 #!/bin/bash
+# Create hits.hyper and COPY hits.csv into it, using the PERSISTENT Hyper
+# server started by ./start (descriptor in server.endpoint). Loading through
+# the already-running server avoids briefly running two hyperd instances
+# (each of which would try to claim up to 80% of RAM) during the heavy COPY.
 set -e
 
 # shellcheck disable=SC1091
@@ -8,12 +12,15 @@ source myenv/bin/activate
 rm -f hits.hyper
 
 python3 - <<'PY'
-from tableauhyperapi import HyperProcess, Telemetry, Connection, CreateMode
+from tableauhyperapi import Connection, Endpoint, CreateMode
 
-with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU) as hyper:
-    with Connection(hyper.endpoint, 'hits.hyper', CreateMode.CREATE_AND_REPLACE) as connection:
-        connection.execute_command(open("create.sql").read())
-        connection.execute_command("copy hits from 'hits.csv' with (format csv)")
+with open("server.endpoint") as f:
+    descriptor = f.read().strip()
+
+endpoint = Endpoint(connection_descriptor=descriptor, user_agent="clickbench")
+with Connection(endpoint, 'hits.hyper', CreateMode.CREATE_AND_REPLACE) as connection:
+    connection.execute_command(open("create.sql").read())
+    connection.execute_command("copy hits from 'hits.csv' with (format csv)")
 PY
 
 rm -f hits.csv

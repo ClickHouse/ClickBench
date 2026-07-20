@@ -12,7 +12,9 @@ FIRST=1
 
 # Build "<system>/<basename> <full-path>" lines, then keep the last (latest)
 # row per key — sorted ascending by date, since YYYYMMDD sorts lexically.
-LANG="" ls -1 */results/*/*.json \
+# Use `find` rather than `ls */results/*/*.json`: to avoid overflowing ARG_MAX
+# (clickhouse-cloud alone has tens of thousands of files)
+LANG="" find */results -mindepth 2 -maxdepth 2 -name '*.json' \
     | grep -Ev '^(hardware|versions|gravitons)/' \
     | sort \
     | awk -F/ '{ print $1"/"$NF" "$0 }' \

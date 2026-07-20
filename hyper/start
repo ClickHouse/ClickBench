@@ -1,2 +1,86 @@
 #!/bin/bash
-exit 0
+# Launch ONE long-lived Hyper server (hyperd) and publish its connection
+# descriptor to server.endpoint. Every ./query invocation then connects to
+# this single persistent process instead of spawning its own.
+#
+# To keep the buffer pool warm across the SEPARATE processes that each ./query
+# spawns, the supervisor also holds a keep-alive connection that keeps
+# hits.hyper attached for the server's whole lifetime. Without it, hits.hyper
+# would be detached the moment a per-try ./query process exits and its pages
+# evicted, so tries 2..N would re-read from a cold pool. (On the very first
+# ./start, before ./load has created hits.hyper, there is nothing to attach;
+# the keep-alive is established by the next cold-cycle ./start once the file
+# exists.)
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# Already running? The pidfile + a live process is authoritative.
+if [ -f server.pid ] && kill -0 "$(cat server.pid 2>/dev/null)" 2>/dev/null; then
+    exit 0
+fi
+
+# Clean up stale artifacts from a previous (possibly crashed) server.
+rm -f server.pid server.endpoint
+
+# Background a supervisor that opens HyperProcess, writes the descriptor,
+# attaches hits.hyper (if present) to keep it warm, then blocks until ./stop
+# signals it. nohup so it survives this script exiting; $! is the supervisor
+# PID we kill in ./stop.
+nohup python3 - >server.log 2>&1 <<'PY' &
+import os
+import signal
+import sys
+from tableauhyperapi import HyperProcess, Telemetry, Connection, CreateMode
+
+
+def _terminate(*_):
+    # Raise SystemExit so the `with HyperProcess` block exits cleanly and
+    # hyperd is shut down with us (it is terminated when its controlling
+    # process exits).
+    sys.exit(0)
+
+
+signal.signal(signal.SIGTERM, _terminate)
+signal.signal(signal.SIGINT, _terminate)
+
+with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU) as hyper:
+    # Keep-alive: hold hits.hyper attached for the server's lifetime so its
+    # buffer pool isn't torn down between per-try ./query processes. Skipped
+    # on the pre-load ./start (file not yet created). Established BEFORE
+    # publishing the endpoint so ./check never sees a "ready" server that is
+    # actually still mid-attach (or about to die on a bad attach).
+    keepalive = None
+    if os.path.exists("hits.hyper"):
+        keepalive = Connection(hyper.endpoint, "hits.hyper", CreateMode.NONE)
+
+    # Publish the descriptor atomically so ./check and ./query never read a
+    # half-written file.
+    with open("server.endpoint.tmp", "w") as f:
+        f.write(hyper.endpoint.connection_descriptor)
+    os.replace("server.endpoint.tmp", "server.endpoint")
+
+    try:
+        # Block until a signal arrives; loop so a stray signal can't tear the
+        # server down (only the handler's sys.exit does).
+        while True:
+            signal.pause()
+    finally:
+        if keepalive is not None:
+            keepalive.close()
+PY
+echo $! > server.pid
+
+# Give the supervisor a moment to publish the endpoint. The benchmark driver
+# also runs ./check in a loop afterwards, so this is just a fast-path / clean
+# error rather than the authoritative readiness gate.
+for _ in $(seq 1 60); do
+    if [ -s server.endpoint ]; then
+        exit 0
+    fi
+    sleep 1
+done
+
+echo "hyper: server did not publish server.endpoint within 60s" >&2
+exit 1

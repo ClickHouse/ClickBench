@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# The container bind-mounts /var/lib/eventql to /var/lib/clickbench-eventql
+# on the host, so we read it directly from there.
+sudo du -sb /var/lib/clickbench-eventql 2>/dev/null | awk '{print $1}'

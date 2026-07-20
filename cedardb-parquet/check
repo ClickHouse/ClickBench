@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-PGPASSWORD=test psql -h localhost -U postgres -c 'SELECT 1' >/dev/null
+psql -c 'SELECT 1' >/dev/null

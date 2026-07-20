@@ -2,6 +2,9 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-07-03
+The [versions benchmark](https://benchmark.clickhouse.com/versions/) is reworked. Now it contains 10 datasets and runs every ClickHouse version since [ten years of open source](https://clickhouse.com/blog/open-source-10) and even early historical builds. The visualization was also improved.
+
 ### 2026-05-11
 Unified benchmark scripts for different systems by providing a common interface in a set of scripts: `install`, `start`, `check`, `stop`, `load`, `query`, and `data-size`. Make the dataset download scripts common as well. Use a general benchmark runner in `lib/` to ensure different systems get equal treatment. This makes it easier to add more ways of testing, different datasets, and scenarios to the benchmark, and simplifies support of all 88 systems presented. Note: for embedded systems, such as pandas, polars, and the Python duckdb module, wrap them into a Python HTTP server, so that the benchmark can run each query separately.
 

@@ -1,0 +1,28 @@
+#!/bin/bash
+# Load hits.csv into the on-disk LocustDB at ./db, as table `hits`.
+#
+# LocustDB's `repl` binary is the only entrypoint. There's no headless
+# "load and exit" subcommand, so we run it interactively with stdin
+# closed: after the load completes, rustyline's readline hits EOF and
+# the process exits cleanly.
+#
+# Limits worth knowing about (kept as defaults below):
+#  - upstream's default `--partition-size 65536` triggers the
+#    `stringpack.rs:91` panic on the hits dataset (see README.md).
+#    A smaller partition size keeps each StringPacker block under the
+#    65536-element ceiling that's hit at scan time.
+#  - the legacy `enable_rocksdb` feature is gone; the storage path is
+#    now native, so no special build flag is needed for persistence.
+set -e
+
+rm -rf db
+
+LocustDB/target/release/repl \
+    --db-path db \
+    --table hits \
+    --partition-size 16384 \
+    --load hits.csv \
+    < /dev/null
+
+rm -f hits.csv
+sync

@@ -1,0 +1,6 @@
+synth_date Date,
+id Int32,
+person_id Int32,
+info_type_id Int32,
+info String,
+note String

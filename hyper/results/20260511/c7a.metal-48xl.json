@@ -9,8 +9,8 @@
     "tags": ["C++","column-oriented"],
     "load_time": 356,
     "data_size": 18959040512,
-    "concurrent_qps": 2.01,
-    "concurrent_error_ratio": 0.963,
+    "concurrent_qps": null,
+    "concurrent_error_ratio": null,
     "result": [
         [0.04, 0.011, 0.012],
         [0.083, 0.026, 0.025],

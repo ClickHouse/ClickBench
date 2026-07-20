@@ -9,8 +9,8 @@
     "tags": ["C++","column-oriented","DuckDB derivative","embedded","stateless"],
     "load_time": 0,
     "data_size": 14779976446,
-    "concurrent_qps": 0.018,
-    "concurrent_error_ratio": 1,
+    "concurrent_qps": null,
+    "concurrent_error_ratio": null,
     "result": [
         [0.145, 0.114, 0.114],
         [0.473, 0.301, 0.304],

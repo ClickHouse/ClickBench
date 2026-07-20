@@ -9,8 +9,8 @@
     "tags": ["Zig","column-oriented","embedded","parquet","tuned"],
     "load_time": 86,
     "data_size": 10907660070,
-    "concurrent_qps": 3.71,
-    "concurrent_error_ratio": 0,
+    "concurrent_qps": null,
+    "concurrent_error_ratio": null,
     "result": [
         [0.003, 0, 0],
         [0.626, 0.017, 0.017],

@@ -1,0 +1,12 @@
+Year UInt16,
+Month UInt8,
+DayOfWeek UInt8,
+FlightDate Date,
+IATA_CODE_Reporting_Airline String,
+Origin FixedString(5),
+OriginCityName String,
+OriginState FixedString(2),
+DestCityName String,
+DestState FixedString(2),
+DepDelay Int32,
+ArrDelayMinutes Int32

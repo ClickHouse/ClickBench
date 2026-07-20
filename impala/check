@@ -1,0 +1,36 @@
+#!/bin/bash
+# Impala's coordinator exposes its web UI on 25000. /healthz returns
+# 200 "OK" once the daemon has finished registering with statestored
+# and catalogd — i.e. the cluster is actually ready to accept queries,
+# not just listening on the SQL ports. While the stack is stopped the
+# port is closed and curl fails as it should.
+#
+# On failure dump container status to stderr — bench_check_loop captures
+# the last call's stderr and prints it after a readiness timeout, so this
+# turns "did not succeed within 300s" into something actionable
+# (which container is missing/crashed) without spamming the run log
+# on every iteration.
+out=$(curl -sSf -m 5 http://localhost:25000/healthz 2>&1) || {
+    {
+        printf 'impala/check: /healthz unreachable: %s\n' "$out"
+        sudo docker ps -a --filter 'name=impala-' \
+            --format '  {{.Names}}: {{.Status}}'
+        # Dump the tail of every impala container regardless of state.
+        # Exited containers tell us *why* a daemon died (SIGSEGV, OOM,
+        # config error); running containers tell us about server-side
+        # exceptions like "Internal error processing
+        # get_current_notificationEventId" that the client only sees as
+        # a generic TApplicationException — the actual stack trace is
+        # only in the HMS container's log.
+        for c in $(sudo docker ps -a --filter 'name=impala-' \
+                       --format '{{.Names}}'); do
+            echo "--- $c (last 50 log lines) ---"
+            sudo docker logs --tail 50 "$c" 2>&1 | sed 's/^/  /'
+        done
+    } >&2
+    exit 1
+}
+[ "$out" = "OK" ] || {
+    echo "impala/check: /healthz returned: $out" >&2
+    exit 1
+}

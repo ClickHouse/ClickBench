@@ -1,0 +1,20 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via impala-shell in the running
+# coordinator container.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+start=$(date +%s.%N)
+# `< /dev/null`: see impala/load — keep docker exec from forwarding
+# whatever the caller's stdin is. bench_run_query already pipes the
+# query via `printf | ./query` so $(cat) drains stdin above, but make
+# the docker-exec stdin source explicit so the script stays safe if
+# anyone runs it outside that wrapper.
+sudo docker exec -i impala-client impala-shell -i impalad-1:21050 -d clickbench -B --quiet -q "$query" < /dev/null
+end=$(date +%s.%N)
+
+awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2

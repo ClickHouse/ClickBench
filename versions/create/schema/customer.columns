@@ -1,0 +1,9 @@
+synth_date Date,
+c_custkey UInt32,
+c_name String,
+c_address String,
+c_nationkey UInt32,
+c_phone FixedString(15),
+c_acctbal Float64,
+c_mktsegment FixedString(10),
+c_comment String

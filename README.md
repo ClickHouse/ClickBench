@@ -76,6 +76,7 @@ Tl;dr: *All Benchmarks Are ~~Bastards~~ Liars*.
 To add a new entry, copy-paste one of the existing directories and edit the files accordingly:
 
 - `benchmark.sh`: this is the main script which runs the benchmark on a fresh VM; Ubuntu 24.04 or newer should be used by default. For databases that can be installed locally, the script should be able to run in a fully automated manner so it can be used in the benchmark automation (cloud-init). It should output the results in the following format: - one or more lines `Load time: 1234` with the time in seconds; - a line `Data size: 1234567890` with the data size in bytes; the data size should include indexes and transaction logs if applicable; - 43 consecutive lines in the form of `[1.234, 5.678, 9.012],` for the runtimes of every query; - the output may include other lines with the logs, that are not used for the report. For managed databases, if the setup requires clicking in a UI, write a `README.md` instead.
+- `check`, `data-size`, `install`, `load`, `query`, `start`, `stop`: These scripts perform sub-tasks during benchmarking, see `lib/benchmark-common.sh` for an overview.
 - `README.md`: contains comments and observations if needed. For managed databases, it can describe the setup procedure to be used instead of a shell script.
 - `create.sql`: a CREATE TABLE statement. If it's a NoSQL system, another file like `wtf.json` can be used instead.
 - `queries.sql`: contains 43 ClickBench queries to run;
@@ -88,6 +89,8 @@ To introduce a new result for an existing system with a different usage scenario
 
 `index.html` can be re-generated using `./generate-results.sh`.
 The CI (GitHub Actions) does this automatically, this step is optional.
+
+The shared driver (`lib/benchmark-common.sh`) runs a supplementary concurrent-QPS test (`BENCH_CONCURRENT_CONNECTIONS` workers for `BENCH_CONCURRENT_DURATION` seconds) after the main sweep. Single-process engines must set `BENCH_CONCURRENT_DURATION=0` in their `benchmark.sh` to skip it: each query forks a fresh full-machine process with no shared scheduler, so concurrent connections only oversubscribe RAM (and can OOM the run) instead of measuring throughput. Rule of thumb — skip when `./start` launches no shared server (the embedded CLIs and Spark variants); keep it for daemons and the in-process server wrappers (pandas/polars/`*-dataframe`), which share one process. See issue #946.
 
 All tests were originally run on AWS c6a.4xlarge EC2 VMs with 500 GB gp2 disks.
 With better automation, more EC2 machines were added later: c6a.2xlarge, c6a.metal, c8g.4xlarge, c6a.xlarge, c7a.metal-48xl, c6a.large, c8g.metal-48xl, and t3a.small.
@@ -288,6 +291,7 @@ In addition, there are also systems where the code to run the benchmark is provi
 Currently, this includes
 
 - Vertica
+- kdb (KDB-X Community Edition)
 
 Please help us add more systems and run the benchmarks on more types of VMs:
 

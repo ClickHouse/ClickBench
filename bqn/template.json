@@ -1,0 +1,11 @@
+{
+  "system": "BQN",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C",
+    "embedded",
+    "array language"
+  ]
+}

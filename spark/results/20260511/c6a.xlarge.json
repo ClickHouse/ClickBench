@@ -9,8 +9,8 @@
     "tags": ["Java","column-oriented","stateless","Spark derivative"],
     "load_time": 1,
     "data_size": 14779976446,
-    "concurrent_qps": 0.013,
-    "concurrent_error_ratio": 0.2,
+    "concurrent_qps": null,
+    "concurrent_error_ratio": null,
     "result": [
         [5.962, 5.576, 5.768],
         [6.188, 6.054, 6.545],

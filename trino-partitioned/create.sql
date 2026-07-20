@@ -6,7 +6,7 @@ CREATE TABLE hive.clickbench.hits_raw (
     Title varchar,
     GoodEvent smallint,
     EventTime bigint,
-    EventDate integer,
+    EventDate date,
     CounterID integer,
     ClientIP integer,
     RegionID integer,
@@ -112,14 +112,13 @@ WITH (
     format = 'PARQUET'
 );
 
--- The Parquet files store EventTime/ClientEventTime/LocalEventTime as Unix epoch seconds
--- and EventDate as a UINT16 day-count from 1970-01-01. The view exposes the canonical
--- ClickBench column types so queries.sql matches the standard text.
+-- The Parquet files store EventTime/ClientEventTime/LocalEventTime as Unix epoch seconds.
+-- The view converts those columns to TIMESTAMP so queries.sql matches the standard text.
 CREATE VIEW hive.clickbench.hits AS
 SELECT
     WatchID, JavaEnable, Title, GoodEvent,
     from_unixtime(EventTime) AS EventTime,
-    date_add('day', EventDate, DATE '1970-01-01') AS EventDate,
+    EventDate,
     CounterID, ClientIP, RegionID, UserID, CounterClass, OS, UserAgent,
     URL, Referer, IsRefresh, RefererCategoryID, RefererRegionID,
     URLCategoryID, URLRegionID, ResolutionWidth, ResolutionHeight,

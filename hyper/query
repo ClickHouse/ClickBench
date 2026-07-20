@@ -1,8 +1,13 @@
 #!/bin/bash
-# Reads a SQL query from stdin, runs it via tableau hyperapi against
-# hits.hyper.
+# Reads a SQL query from stdin, runs it once against hits.hyper on the
+# PERSISTENT Hyper server started by ./start (descriptor in server.endpoint).
 # Stdout: query result.
 # Stderr: query runtime in fractional seconds on the last line.
+#
+# The benchmark driver calls this once per try (BENCH_TRIES). Because every
+# call connects to the SAME long-lived server, the buffer pool stays warm
+# across tries: try 1 (right after the driver's stop/drop_caches/start cold
+# cycle) is cold, tries 2..N are genuinely hot. See issue #936.
 set -e
 
 # shellcheck disable=SC1091
@@ -17,16 +22,19 @@ cat > "$query_file"
 python3 - "$query_file" <<'PY'
 import sys
 import timeit
-from tableauhyperapi import HyperProcess, Telemetry, Connection, CreateMode
+from tableauhyperapi import Connection, Endpoint
 
 with open(sys.argv[1]) as f:
     query = f.read()
 
-with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU) as hyper:
-    with Connection(hyper.endpoint, 'hits.hyper', CreateMode.NONE) as connection:
-        start = timeit.default_timer()
-        rows = connection.execute_list_query(query)
-        end = timeit.default_timer()
+with open("server.endpoint") as f:
+    descriptor = f.read().strip()
+
+endpoint = Endpoint(connection_descriptor=descriptor, user_agent="clickbench")
+with Connection(endpoint, 'hits.hyper') as connection:
+    start = timeit.default_timer()
+    rows = connection.execute_list_query(query)
+    end = timeit.default_timer()
 
 for r in rows:
     print(r)

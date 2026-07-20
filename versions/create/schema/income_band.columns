@@ -1,0 +1,4 @@
+synth_date Date,
+ib_income_band_sk Int64,
+ib_lower_bound Int64,
+ib_upper_bound Int64

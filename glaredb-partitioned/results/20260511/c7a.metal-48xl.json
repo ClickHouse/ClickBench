@@ -9,8 +9,8 @@
     "tags": ["Rust","stateless"],
     "load_time": 40,
     "data_size": 14737666736,
-    "concurrent_qps": 1.987,
-    "concurrent_error_ratio": 0,
+    "concurrent_qps": null,
+    "concurrent_error_ratio": null,
     "result": [
         [0.065, 0.06, 0.068],
         [0.082, 0.072, 0.081],

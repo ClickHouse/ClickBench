@@ -1,0 +1,6 @@
+synth_date Date,
+id Int32,
+movie_id Int32,
+company_id Int32,
+company_type_id Int32,
+note String

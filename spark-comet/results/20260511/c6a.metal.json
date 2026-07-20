@@ -9,8 +9,8 @@
     "tags": ["Java","Rust","column-oriented","Spark derivative","stateless"],
     "load_time": 5,
     "data_size": 14779976446,
-    "concurrent_qps": 0.3,
-    "concurrent_error_ratio": 0,
+    "concurrent_qps": null,
+    "concurrent_error_ratio": null,
     "result": [
         [5.209, 5.429, 5.368],
         [5.248, 5.338, 5.354],

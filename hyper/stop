@@ -1,2 +1,24 @@
 #!/bin/bash
+# Stop the persistent Hyper server started by ./start. SIGTERM the supervisor
+# (see ./start); its handler exits the `with HyperProcess` block, which shuts
+# down hyperd. Idempotent: a missing/stale pidfile is not an error.
+set -e
+
+if [ -f server.pid ]; then
+    pid="$(cat server.pid 2>/dev/null || true)"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" 2>/dev/null || true
+        # Wait for the supervisor (and thus hyperd) to actually exit so the
+        # benchmark driver's drop_caches isn't defeated by pages still pinned
+        # by a live mmap.
+        for _ in $(seq 1 60); do
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 1
+        done
+        # Still alive after 60s? Force it.
+        kill -9 "$pid" 2>/dev/null || true
+    fi
+fi
+
+rm -f server.pid server.endpoint
 exit 0

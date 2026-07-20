@@ -9,8 +9,8 @@
     "tags": ["Rust","column-oriented","DuckDB derivative","embedded","stateless"],
     "load_time": 148,
     "data_size": 15731820628,
-    "concurrent_qps": 0.913,
-    "concurrent_error_ratio": 0.998,
+    "concurrent_qps": null,
+    "concurrent_error_ratio": null,
     "result": [
         [0.037, 0.024, 0.025],
         [0.06, 0.046, 0.04],

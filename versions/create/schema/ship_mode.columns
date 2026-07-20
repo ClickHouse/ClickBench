@@ -1,0 +1,7 @@
+synth_date Date,
+sm_ship_mode_sk Int64,
+sm_ship_mode_id FixedString(16),
+sm_type FixedString(30),
+sm_code FixedString(10),
+sm_carrier FixedString(20),
+sm_contract FixedString(20)

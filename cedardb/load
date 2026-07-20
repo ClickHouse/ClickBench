@@ -1,13 +1,12 @@
 #!/bin/bash
 set -eu
 
-mkdir -p data
-mv hits.tsv data/
-chmod -R 777 data
+psql -f create.sql
+{
+    # CedarDB would like to have ~4 GB of memory per parallel worker for parquet import to be efficient, so set the number of workers accordingly.
+    echo "SET debug.parallel = $(( $(grep MemTotal /proc/meminfo | awk '{print $2}') / (4 * 1024 * 1024) ));"
+    sed "s|'hits\.parquet'|'$PWD/hits.parquet'|" load.sql
+} | psql
 
-PGPASSWORD=test psql -h localhost -U postgres -t < create.sql
-
-PGPASSWORD=test psql -h localhost -U postgres -q -t -c "COPY hits FROM '/data/hits.tsv';"
-
-rm -f data/hits.tsv
+rm -f hits.parquet
 sync

@@ -1,0 +1,5 @@
+synth_date Date,
+inv_date_sk UInt32,
+inv_item_sk Int64,
+inv_warehouse_sk Int64,
+inv_quantity_on_hand Int64

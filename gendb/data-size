@@ -1,0 +1,7 @@
+#!/bin/bash
+# Total size of the on-disk binary column store. ClickBench's "Data size"
+# field expects a byte count; we sum every per-column file under db/hits/.
+set -e
+
+cd "$(dirname "$0")"
+du -bs db/hits 2>/dev/null | awk '{ print $1 }'

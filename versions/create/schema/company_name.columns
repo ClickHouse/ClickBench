@@ -1,0 +1,8 @@
+synth_date Date,
+id Int32,
+name String,
+country_code String,
+imdb_id Int32,
+name_pcode_nf String,
+name_pcode_sf String,
+md5sum String

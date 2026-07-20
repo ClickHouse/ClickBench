@@ -1,0 +1,169 @@
+#!/bin/bash
+# Open-GPDB ships an Ubuntu 22.04 .deb (greenplum-db-6_<ver>_amd64.deb) but
+# cluster init still requires kernel tuning, sshd, and the gpadmin user.
+# Run everything inside a privileged ubuntu:22.04 container instead; the
+# other scripts (start/stop/check/load/query) docker-exec into it.
+#
+# Idempotent: re-running this script after a successful install does nothing.
+set -eu
+
+NAME=clickbench-opengpdb
+IMAGE=ubuntu:22.04
+OG_VERSION=6.29.8
+DEB_FILE="greenplum-db-6_${OG_VERSION}-1-yandex.54453.5ad8245cbc_amd64.deb"
+DEB_URL="https://github.com/open-gpdb/gpdb/releases/download/${OG_VERSION}/${DEB_FILE}"
+
+# 1. Make sure docker is installed and the daemon is up.
+if ! command -v docker >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update -y
+        sudo apt-get install -y docker.io
+    elif command -v yum >/dev/null 2>&1; then
+        sudo yum install -y docker
+    else
+        echo "opengpdb/install: install docker manually first" >&2
+        exit 1
+    fi
+fi
+sudo systemctl start docker 2>/dev/null || sudo service docker start || true
+
+# 2. Skip if the container is already created and the cluster is initialized.
+if sudo docker container inspect "$NAME" >/dev/null 2>&1; then
+    if sudo docker exec "$NAME" test -d /data0/coordinator/gpseg-1 2>/dev/null; then
+        echo "opengpdb: container '$NAME' already initialized; nothing to do" >&2
+        exit 0
+    fi
+fi
+
+sudo docker pull "$IMAGE"
+
+# 3. Long-lived privileged container. Bridge mode + --hostname localhost so
+# gpinitsystem's ssh-to-localhost lands on the container's own sshd.
+if ! sudo docker container inspect "$NAME" >/dev/null 2>&1; then
+    sudo docker run -d --privileged --hostname localhost -p 5432:5432 \
+        --name "$NAME" "$IMAGE" sleep infinity
+fi
+
+# 4. Inside the container: install the .deb, kernel tuning, sshd setup.
+# The .deb's preinst creates the gpadmin user; we still need passwordless
+# ssh and the kernel knobs gpinitsystem checks.
+sudo docker exec -i "$NAME" bash -s <<EOF
+set -eu
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y curl ca-certificates sudo openssh-server openssh-client \
+    iproute2 iputils-ping less net-tools rsync zip libcap2-bin procps \
+    locales
+
+# gpinitsystem defaults its locale to en_US.utf8 and refuses to continue
+# if it isn't present; the minimal ubuntu:22.04 image ships only C/POSIX.
+locale-gen en_US.UTF-8
+update-locale LANG=en_US.UTF-8
+
+# OpenGPDB 6 requires Python 2: gpinitsystem invokes bare \`python\` and
+# bails with "/usr/bin/env: 'python': No such file" near the end of init
+# if it can't find one. python-is-python2 has been silently failing to
+# create /usr/bin/python here; install python2 and make a symlink in
+# /usr/local/bin so the dpkg /usr/bin slot stays clean and we don't depend
+# on the universe package's postinst.
+apt-get install -y python2 python2.7
+ln -sf /usr/bin/python2 /usr/local/bin/python
+
+# gpstart/gpstop import psutil (process management) and \`builtins\` from
+# the \`future\` package (Py2/3 compat shim). Ubuntu 22.04 dropped both
+# from its repos; bootstrap pip for Python 2 from pypa.io's 2.7 endpoint
+# and pip-install them. Without this, gpinitsystem's final
+# "Restart in production mode" step crashes with ImportError and the
+# cluster never comes up despite all 14 segments having been built.
+curl -fsSL https://bootstrap.pypa.io/pip/2.7/get-pip.py -o /tmp/get-pip.py
+python2 /tmp/get-pip.py
+pip2 install psutil future
+rm -f /tmp/get-pip.py
+
+curl -fsSL -o /tmp/opengpdb.deb "${DEB_URL}"
+apt-get install -y /tmp/opengpdb.deb
+rm -f /tmp/opengpdb.deb
+
+# Kernel tuning. --privileged means these affect the host kernel;
+# gpinitsystem checks them so they must be set.
+SHMALL=\$(expr \$(getconf _PHYS_PAGES) / 2)
+SHMAX=\$(expr \$(getconf _PHYS_PAGES) / 2 \* \$(getconf PAGE_SIZE))
+sysctl -w kernel.shmall=\$SHMALL >/dev/null
+sysctl -w kernel.shmmax=\$SHMAX >/dev/null
+sysctl -w kernel.shmmni=4096 >/dev/null
+sysctl -w vm.overcommit_memory=2 >/dev/null
+sysctl -w vm.overcommit_ratio=95 >/dev/null
+sysctl -w net.ipv4.ip_local_port_range="10000 65535" >/dev/null
+sysctl -w kernel.sem="250 2048000 200 8192" >/dev/null
+
+cat > /etc/security/limits.d/99-gpadmin.conf <<LIMITS
+* soft nofile 524288
+* hard nofile 524288
+* soft nproc 131072
+* hard nproc 131072
+LIMITS
+
+# The .deb's preinst already created gpadmin. Make sure it has a shell
+# and passwordless ssh to localhost.
+id -u gpadmin >/dev/null 2>&1 || useradd gpadmin -m -g gpadmin -s /bin/bash
+chsh -s /bin/bash gpadmin || true
+echo "gpadmin ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gpadmin
+sudo -u gpadmin bash -c '
+    set -e
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+    [ -f ~/.ssh/id_rsa ] || ssh-keygen -t rsa -b 4096 -N "" -f ~/.ssh/id_rsa
+    cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+'
+
+# /bin/ping in this image has no caps. gpinitsystem pings localhost.
+setcap cap_net_raw+ep /bin/ping
+[ -e /bin/ping6 ] && setcap cap_net_raw+ep /bin/ping6 || true
+
+# sshd setup.
+ssh-keygen -A
+mkdir -p /run/sshd
+echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
+echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
+/usr/sbin/sshd
+
+# Data dirs and gpadmin shell env. Write to .bash_profile, not .bashrc:
+# the start/stop/install commands all run as `bash -lc <cmd>`, which is a
+# non-interactive login shell. Login shells read .bash_profile (or .profile
+# if absent), but the default Ubuntu .bashrc short-circuits on
+# non-interactive shells, so PATH additions placed in .bashrc never load
+# and gpinitsystem/gpstart/gpstop come back "command not found".
+mkdir -p /data0/primary /data0/coordinator
+chown -R gpadmin:gpadmin /data0
+cat > /home/gpadmin/.bash_profile <<'PROFILE'
+source /opt/greenplum-db-6/greenplum_path.sh
+# OpenGPDB 6 is a Greenplum 6 fork; gpstart/gpstop look up
+# MASTER_DATA_DIRECTORY, not the Greenplum 7+ COORDINATOR_DATA_DIRECTORY.
+export MASTER_DATA_DIRECTORY=/data0/coordinator/gpseg-1
+PROFILE
+chown gpadmin:gpadmin /home/gpadmin/.bash_profile
+
+echo localhost > /home/gpadmin/hosts
+chown gpadmin:gpadmin /home/gpadmin/hosts
+EOF
+
+# 5. Drop gpinitsystem_config in and run gpinitsystem.
+sudo docker cp "$(dirname "$0")/gpinitsystem_config" \
+    "$NAME":/home/gpadmin/gpinitsystem_config
+sudo docker exec "$NAME" chown gpadmin:gpadmin /home/gpadmin/gpinitsystem_config
+
+# gpinitsystem returns non-zero (typically 2) whenever its post-init
+# log scan finds any WARN/ERROR line, even harmless ones (e.g.
+# "CHECK_POINT_SEGMENTS variable not set, will set to default value",
+# "Detected a single host GPDB array build"). The cluster itself comes
+# up cleanly — "Database successfully started" / "Greenplum Database
+# instance successfully created" both run before the exit. Tolerate the
+# exit code and use gpstate -s as the authoritative health check.
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc \
+    'gpinitsystem -a -c gpinitsystem_config -h hosts' || true
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc 'gpstate -s' >/dev/null || {
+    echo "opengpdb/install: cluster not running after gpinitsystem" >&2
+    exit 1
+}

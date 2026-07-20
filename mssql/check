@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+PASSWORD=${MSSQL_SA_PASSWORD:-YourStr0ngPa55w0rd!}
+sudo docker exec mssql1 /opt/mssql-tools18/bin/sqlcmd \
+    -S localhost -U sa -P "$PASSWORD" -C -Q 'SELECT 1' >/dev/null

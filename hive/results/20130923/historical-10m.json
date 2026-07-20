@@ -10,7 +10,8 @@
     "tags": [
         "Java",
         "MapReduce",
-        "historical"
+        "historical",
+        "stateless"
     ],
     "load_time": 0,
     "data_size": 0,

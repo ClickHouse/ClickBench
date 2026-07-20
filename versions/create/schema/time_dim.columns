@@ -1,0 +1,11 @@
+synth_date Date,
+t_time_sk UInt32,
+t_time_id FixedString(16),
+t_time Int64,
+t_hour Int64,
+t_minute Int64,
+t_second Int64,
+t_am_pm FixedString(2),
+t_shift FixedString(20),
+t_sub_shift FixedString(20),
+t_meal_time FixedString(20)

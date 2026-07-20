@@ -9,8 +9,8 @@
     "tags": ["Rust","column-oriented","embedded","stateless"],
     "load_time": 45,
     "data_size": 14737666736,
-    "concurrent_qps": 6.498,
-    "concurrent_error_ratio": 0,
+    "concurrent_qps": null,
+    "concurrent_error_ratio": null,
     "result": [
         [0.013, 0.002, 0.002],
         [0.058, 0.018, 0.019],

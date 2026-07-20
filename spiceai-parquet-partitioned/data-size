@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+wc -c hits_*.parquet | tail -n1 | awk '{print $1}'

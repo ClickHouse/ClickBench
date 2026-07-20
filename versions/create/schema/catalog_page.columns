@@ -1,0 +1,10 @@
+synth_date Date,
+cp_catalog_page_sk Int64,
+cp_catalog_page_id FixedString(16),
+cp_start_date_sk UInt32,
+cp_end_date_sk UInt32,
+cp_department String,
+cp_catalog_number Int64,
+cp_catalog_page_number Int64,
+cp_description String,
+cp_type String

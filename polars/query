@@ -1,6 +1,7 @@
 #!/bin/bash
-# Reads a SQL query from stdin, dispatches to the running polars server.
-# Stdout: server response JSON.
+# Reads a polars expression from stdin, dispatches to the running
+# polars server.
+# Stdout: rendered result (the eval'd value as a string).
 # Stderr: query runtime in fractional seconds on the last line.
 # Exit non-zero on error.
 set -e
@@ -19,5 +20,14 @@ if [ "$status" != "200" ]; then
     exit 1
 fi
 
-echo "$body"
-echo "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["elapsed"])' >&2
+# Server returns {"elapsed": <seconds>, "result": "<rendered value>"}.
+# Print the rendered result to stdout, elapsed to stderr.
+printf '%s\n' "$body" | python3 -c '
+import json, sys
+o = json.load(sys.stdin)
+r = o.get("result", "")
+sys.stdout.write(r)
+if r and not r.endswith("\n"):
+    sys.stdout.write("\n")
+sys.stderr.write(str(o["elapsed"]) + "\n")
+'

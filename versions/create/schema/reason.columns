@@ -1,0 +1,4 @@
+synth_date Date,
+r_reason_sk Int64,
+r_reason_id FixedString(16),
+r_reason_desc FixedString(100)

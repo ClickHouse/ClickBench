@@ -1,4 +1,9 @@
 #!/bin/bash
+# The cluster's data lives inside the container under /data0, not on the
+# host. Run du inside the container so we see the actual bytes.
 set -eu
 
-sudo du -bcs /data0 2>/dev/null | grep total | awk '{print $1}'
+NAME=clickbench-cloudberry
+
+sudo docker exec "$NAME" du -bcs /data0 2>/dev/null | \
+    awk '/total$/ { print $1 }'

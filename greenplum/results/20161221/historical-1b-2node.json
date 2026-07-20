@@ -11,7 +11,8 @@
         "C",
         "column-oriented",
         "PostgreSQL compatible",
-        "historical"
+        "historical",
+        "Greenplum derivative"
     ],
     "load_time": 0,
     "data_size": 0,

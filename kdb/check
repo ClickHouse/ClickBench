@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Smoke test that q still launches under the installed license.
+echo 'show 1+1; exit 0' | q -s 0 >/dev/null

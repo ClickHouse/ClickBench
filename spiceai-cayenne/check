@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+
+# The driver starts the system before the dataset is downloaded; until
+# hits.parquet exists the dataset cannot load (the runtime stays up and
+# retries), so gate on process liveness only. Afterwards gate on
+# /v1/ready, which returns 200 only once the accelerated dataset is
+# ready to serve queries.
+if [ -e hits.parquet ]; then
+    curl -fsS http://localhost:8090/v1/ready >/dev/null
+else
+    curl -fsS http://localhost:8090/health >/dev/null
+fi

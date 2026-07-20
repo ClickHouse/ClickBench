@@ -9,8 +9,8 @@
     "tags": ["stateless","column-oriented","embedded"],
     "load_time": 10,
     "data_size": 14737666736,
-    "concurrent_qps": 0.035,
-    "concurrent_error_ratio": 0.087,
+    "concurrent_qps": null,
+    "concurrent_error_ratio": null,
     "result": [
         [0.628, 0.497, 0.499],
         [1.18, 0.723, 0.728],

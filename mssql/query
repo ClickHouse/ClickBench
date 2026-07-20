@@ -1,0 +1,66 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via sqlcmd inside the mssql1
+# container.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+#         `SET STATISTICS TIME ON`'s "elapsed time" message).
+# Exit non-zero on error.
+set -e
+
+PASSWORD=${MSSQL_SA_PASSWORD:-YourStr0ngPa55w0rd!}
+query=$(cat)
+
+# SET STATISTICS TIME prints "SQL Server Execution Times: ... elapsed time
+# = N ms" once per statement; the LAST one is the elapsed time of the
+# benchmarked query. Shell-side timing would also include docker-exec
+# startup + sqlcmd connect (~80–150 ms), which would dominate the
+# sub-second queries.
+#
+# `-t 0` disables the per-query timeout (some Q's run for minutes),
+# `-l 0` disables the login timeout, `-h -1` suppresses headers and
+# `-w 65535` keeps wide rows on a single line for clean stdout.
+#
+# Why no -y / -W: mssql-tools18's sqlcmd rejects -y combined with -W
+# AND with -h ("Sqlcmd: The y and the W options are mutually
+# exclusive", "Sqlcmd: The -h and the -y 0 options are mutually
+# exclusive"). It exits before running any SQL — every query in the
+# 22:22 and 05:16 runs returned [null,null,null] because of this.
+# Drop both -W and -y; we keep -h -1 because we care about clean
+# stdout, and the timing parser reads `elapsed time = N ms` from
+# STATISTICS TIME, which isn't affected by column-width truncation.
+sql=$(printf 'SET NOCOUNT ON;\nSET STATISTICS TIME ON;\n%s\n' "$query")
+
+raw=$(printf '%s\n' "$sql" | sudo docker exec -i mssql1 \
+    /opt/mssql-tools18/bin/sqlcmd \
+    -S localhost -U sa -P "$PASSWORD" -C -d clickbench \
+    -h -1 -w 65535 -b -t 0 -l 0 2>&1) && exit_code=0 || exit_code=$?
+
+# sqlcmd reports T-SQL errors as "Msg NNNNN, Level ...". With -b set,
+# sqlcmd also exits non-zero, but be defensive in case batch errors leak
+# through.
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$raw" | grep -qE '^Msg [0-9]+,|^Sqlcmd: Error'; then
+    printf '%s\n' "$raw" >&2
+    exit 1
+fi
+
+# Stdout: the result body. Strip the STATISTICS TIME chatter so the
+# downstream "tail-the-last-numeric-line" logic in benchmark-common.sh
+# can't pick up a CPU-time number by accident.
+printf '%s\n' "$raw" \
+    | grep -vE '^SQL Server (parse and compile|Execution) Times:' \
+    | grep -vE 'CPU time = [0-9]+ ms,\s*elapsed time = [0-9]+ ms'
+
+# Stderr: take the last "elapsed time = N ms" and convert to seconds.
+# Parse and compile time appears first; execution time appears last —
+# tail -n1 picks the latter.
+elapsed_ms=$(printf '%s\n' "$raw" \
+    | grep -oE 'elapsed time = [0-9]+ ms' \
+    | grep -oE '[0-9]+' \
+    | tail -n1)
+
+if [ -z "$elapsed_ms" ]; then
+    echo "mssql: no STATISTICS TIME output found" >&2
+    exit 1
+fi
+
+awk -v ms="$elapsed_ms" 'BEGIN { printf "%.3f\n", ms / 1000 }' >&2

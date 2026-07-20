@@ -1,0 +1,10 @@
+synth_date Date,
+cd_demo_sk Int64,
+cd_gender FixedString(1),
+cd_marital_status FixedString(1),
+cd_education_status FixedString(20),
+cd_purchase_estimate Int64,
+cd_credit_rating FixedString(10),
+cd_dep_count Int64,
+cd_dep_employed_count Int64,
+cd_dep_college_count Int64

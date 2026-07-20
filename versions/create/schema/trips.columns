@@ -1,0 +1,5 @@
+pickup_date Date,
+cab_type String,
+passenger_count UInt8,
+trip_distance Float64,
+total_amount Float32

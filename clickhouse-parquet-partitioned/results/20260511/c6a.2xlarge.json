@@ -9,8 +9,8 @@
     "tags": ["C++","column-oriented","embedded","stateless","ClickHouse derivative"],
     "load_time": 9,
     "data_size": 14737666736,
-    "concurrent_qps": 0.048,
-    "concurrent_error_ratio": 0.237,
+    "concurrent_qps": null,
+    "concurrent_error_ratio": null,
     "result": [
         [0.061, 0.015, 0.015],
         [0.136, 0.045, 0.043],

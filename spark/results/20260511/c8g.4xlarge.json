@@ -10,7 +10,7 @@
     "load_time": 1,
     "data_size": 14779976446,
     "concurrent_qps": null,
-    "concurrent_error_ratio": 1,
+    "concurrent_error_ratio": null,
     "result": [
         [2.517, 2.265, 2.269],
         [2.867, 2.517, 2.554],

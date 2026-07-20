@@ -1,0 +1,13 @@
+#!/bin/bash
+set -eu
+
+PASSWORD=${MSSQL_SA_PASSWORD:-YourStr0ngPa55w0rd!}
+
+# Sum reserved_page_count*8192 across the hits table — this counts data
+# pages, columnstore segments, dictionaries, and delete-bitmap pages, but
+# not log files or unrelated DB objects. Matches the "compressed on-disk
+# footprint of the benchmark table" interpretation other systems report.
+sudo docker exec mssql1 /opt/mssql-tools18/bin/sqlcmd \
+    -S localhost -U sa -P "$PASSWORD" -C -d clickbench -h -1 -W \
+    -Q "SET NOCOUNT ON; SELECT SUM(reserved_page_count) * 8192 FROM sys.dm_db_partition_stats WHERE object_id = OBJECT_ID('hits');" \
+    | grep -E '^[0-9]+$' | head -n 1

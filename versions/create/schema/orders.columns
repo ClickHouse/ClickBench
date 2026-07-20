@@ -1,0 +1,9 @@
+o_orderkey UInt32,
+o_custkey UInt32,
+o_orderstatus FixedString(1),
+o_totalprice Float64,
+o_orderdate Date,
+o_orderpriority FixedString(15),
+o_clerk FixedString(15),
+o_shippriority Int32,
+o_comment String
