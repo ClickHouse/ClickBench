@@ -1,0 +1,72 @@
+name: "Benchmark pull request"
+
+# pull_request_target: the workflow and the launcher scripts are always taken
+# from the trusted base branch, and the OIDC token is available for PRs from
+# forks. Code from the PR never runs on the runner - it only runs on the
+# disposable benchmark machines, which clone the PR's repository and branch.
+on:
+  pull_request_target:
+
+permissions:
+  contents: read
+
+# A new push supersedes queued runs, including ones still waiting for approval.
+concurrency:
+  group: benchmark-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: Detect changed systems
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      systems: ${{ steps.changed.outputs.systems }}
+    steps:
+      - id: changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # A system should be benchmarked if the PR touches files in its
+          # directory - except results and documentation - and the directory
+          # contains benchmark.sh at the PR head, so that added systems are
+          # included and deleted ones are not.
+          systems=""
+          if [ -n "$HEAD_REPO" ]; then
+              dirs=$(gh api "repos/$BASE_REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename' \
+                  | grep -v -E '(^|/)results/|\.md$' \
+                  | awk -F/ 'NF > 1 { print $1 }' | sort -u || true)
+              for dir in $dirs; do
+                  if gh api --silent "repos/$HEAD_REPO/contents/$dir/benchmark.sh?ref=$HEAD_SHA" 2>/dev/null; then
+                      systems="$systems $dir"
+                  fi
+              done
+          fi
+          systems="${systems# }"
+          echo "Systems to benchmark: $systems"
+          echo "systems=$systems" >> "$GITHUB_OUTPUT"
+
+  launch:
+    needs: detect
+    if: needs.detect.outputs.systems != ''
+    runs-on: ubuntu-latest
+    # Launching machines for PR code costs money and the code is untrusted:
+    # this environment must be configured with required reviewers.
+    environment: benchmark-approval
+    permissions:
+      id-token: write  # To assume the federated IAM role.
+      contents: read
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4  # The base branch: trusted launcher scripts.
+      - uses: ./.github/actions/launch-benchmark
+        with:
+          systems: ${{ needs.detect.outputs.systems }}
+          # The head repository and branch to benchmark are derived from the
+          # PR number by run-benchmark.sh.
+          pr: ${{ github.event.pull_request.number }}

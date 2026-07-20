@@ -1,0 +1,3 @@
+#!/bin/bash
+# Drop the ClickHouse filesystem cache so the cold try is really cold.
+rm -rf /dev/shm/clickhouse

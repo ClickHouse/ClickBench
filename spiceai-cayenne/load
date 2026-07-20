@@ -1,0 +1,21 @@
+#!/bin/bash
+set -e
+
+# Idempotent: drop any prior acceleration state and restart the runtime so
+# the Cayenne acceleration performs a full ingest of hits.parquet.
+./stop >/dev/null 2>&1 || true
+rm -rf .spice spiced.log
+./start
+
+# /v1/ready returns 200 once the initial refresh has completed and the
+# dataset is queryable from the acceleration.
+for _ in $(seq 1 7200); do
+    if curl -fsS http://localhost:8090/v1/ready >/dev/null 2>&1; then
+        exit 0
+    fi
+    sleep 1
+done
+
+echo "load: dataset did not become ready within 7200s" >&2
+tail -n 50 spiced.log >&2
+exit 1

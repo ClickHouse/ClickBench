@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+# No acceleration: queries scan hits_*.parquet directly, so there is
+# nothing to ingest. Spice's file connector globs a directory for files
+# matching file_format (a literal `hits_*.parquet` path is not expanded
+# as a glob), so symlink the downloaded partitions into ./data rather
+# than copying them.
+rm -rf data
+mkdir -p data
+for f in hits_*.parquet; do
+    ln -sf "$PWD/$f" "data/$f"
+done
+
+./stop >/dev/null 2>&1 || true
+rm -f spiced.log
+./start
+
+for _ in $(seq 1 300); do
+    if curl -fsS http://localhost:8090/v1/ready >/dev/null 2>&1; then
+        exit 0
+    fi
+    sleep 1
+done
+
+echo "load: dataset did not become ready within 300s" >&2
+tail -n 50 spiced.log >&2
+exit 1

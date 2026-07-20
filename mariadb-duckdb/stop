@@ -1,2 +1,2 @@
 #!/bin/bash
-sudo systemctl stop mariadb || true
+/usr/bin/mariadb-admin shutdown

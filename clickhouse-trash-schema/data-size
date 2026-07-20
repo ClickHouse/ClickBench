@@ -1,4 +1,0 @@
-#!/bin/bash
-set -e
-
-clickhouse-client --query "SELECT sum(total_bytes) FROM system.tables WHERE database = 'default' AND name LIKE 'hits\_%'"

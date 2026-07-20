@@ -1,0 +1,10 @@
+{
+  "system": "Spice.ai OSS (Cayenne)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented"
+  ]
+}

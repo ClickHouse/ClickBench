@@ -13,22 +13,26 @@ sudo mariadb -e "DROP DATABASE IF EXISTS test"
 sudo mariadb -e "CREATE DATABASE test"
 sudo mariadb test < create.sql
 
-# Load via DuckDB's native vectorized CSV reader (12x faster than LOAD DATA LOCAL
+# Load via DuckDB's native vectorized parquet reader (faster than LOAD DATA LOCAL
 # INFILE which routes every row through MariaDB's single-threaded write_row path).
-# hits.tsv is tab-delimited with datetime strings in TIMESTAMP columns, matching
-# the table schema — no type conversion needed.
 #
 # DuckDB glob expander requires read permission on all parent directories.
 # /home/ubuntu is mode 751 (o+x only) so DuckDB can traverse but not list it,
 # causing "No files found" errors. Hardlink to /var/lib/mysql/ (mysql-owned,
-# mode 755) resolves this instantly without copying 70 GB.
-HITS_LINK=/var/lib/mysql/hits_load.tsv
-sudo ln "$(realpath hits.tsv)" "$HITS_LINK"
-sudo chmod 644 "$HITS_LINK"
-# NULLSTR '\N' matches MySQL/MariaDB convention: only \N is NULL, empty fields → ''.
-# Without this, DuckDB treats every empty TSV field as NULL → NOT NULL violations.
-duck "COPY test.hits FROM '$HITS_LINK' (FORMAT CSV, DELIMITER '\t', NULLSTR '\N')"
+# mode 755) resolves this instantly without copying 14 GB.
+HITS_LINK=/var/lib/mysql/hits.parquet
+if [ ! -f "$HITS_LINK" ]; then
+    sudo ln "$(realpath hits.parquet)" "$HITS_LINK"
+    sudo chmod 644 "$HITS_LINK"
+fi
+duck "INSERT INTO test.hits
+SELECT * REPLACE (
+    make_date(EventDate) AS EventDate,
+    epoch_ms(EventTime * 1000) AS EventTime,
+    epoch_ms(ClientEventTime * 1000) AS ClientEventTime,
+    epoch_ms(LocalEventTime * 1000) AS LocalEventTime)
+FROM read_parquet('$HITS_LINK', binary_as_string=True);"
 
 sudo rm -f "$HITS_LINK"
-rm -f hits.tsv
+rm -f hits.parquet
 sync

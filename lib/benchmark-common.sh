@@ -132,6 +132,10 @@ bench_wait_stopped() {
 bench_flush_caches() {
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
+    # Per-system hook for caches the kernel can't drop.
+    if [ -x ./flush-caches ]; then
+        ./flush-caches >/dev/null 2>&1 || true
+    fi
 }
 
 bench_install() {

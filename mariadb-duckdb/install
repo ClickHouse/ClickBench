@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-CI_SOURCES_URL="https://ci.mariadb.org/68929/amd64-ubuntu-2404-deb-autobake/mariadb.sources"
+CI_SOURCES_URL="https://ci.mariadb.org/70621/amd64-ubuntu-2404-deb-autobake/mariadb.sources"
 
 # Idempotent: if DuckDB plugin is already active, nothing to do.
 if sudo mariadb -e "SELECT PLUGIN_STATUS FROM information_schema.PLUGINS WHERE PLUGIN_NAME='DuckDB';" 2>/dev/null | grep -q 'ACTIVE'; then
@@ -19,19 +19,16 @@ if dpkg -l | grep -qE '^ii\s+(mariadb-server|mysql-server)'; then
     sudo rm -rf /var/lib/mysql /etc/mysql
 fi
 
-# Add MariaDB CI build as apt source (Trusted: yes — unsigned CI packages, testing only).
 sudo wget -q -O /etc/apt/sources.list.d/mariadb-duckdb-ci.sources "$CI_SOURCES_URL"
-
 sudo apt-get update -y
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    mariadb-server mariadb-client
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server mariadb-client
 
-# Configure the DuckDB storage engine plugin (from mariadb.org article defaults).
 sudo tee /etc/mysql/mariadb.conf.d/duckdb.cnf >/dev/null <<'EOF'
 [mysqld]
 plugin-maturity=alpha
 plugin-load-add=ha_duckdb.so
 duckdb-memory-limit=24G
+duckdb-allow-run-in-duckdb=ON
 EOF
 
 sudo systemctl enable mariadb
