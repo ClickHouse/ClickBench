@@ -6,7 +6,10 @@ used only to launch: it assumes a federated IAM role and runs
 clones the repository, runs `<system>/benchmark.sh` under cloud-init (see
 `cloud-init.sh.in`), sends its log to the results sink at play.clickhouse.com,
 and shuts down. Collecting the results back into `<system>/results/` is a
-separate process, implemented separately.
+separate process, implemented separately. Runs launched for a pull request
+carry the PR number in the log (the `ClickBench PR:` line), which the sink
+parses into the `clickbench_pr` column of `sink.results`, so they can be told
+apart from the runs of main and are excluded by `collect-results.sh`.
 
 | Workflow | Trigger | What it launches |
 |----------|---------|------------------|

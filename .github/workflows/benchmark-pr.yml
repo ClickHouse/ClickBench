@@ -67,5 +67,6 @@ jobs:
       - uses: ./.github/actions/launch-benchmark
         with:
           systems: ${{ needs.detect.outputs.systems }}
-          repo: ${{ github.event.pull_request.head.repo.full_name }}
-          branch: ${{ github.event.pull_request.head.ref }}
+          # The head repository and branch to benchmark are derived from the
+          # PR number by run-benchmark.sh.
+          pr: ${{ github.event.pull_request.number }}

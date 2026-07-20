@@ -43,6 +43,10 @@ jq -r '.tuned' template.json | tee -a log
 echo -n 'Tags: ' | tee -a log
 jq -c -r '.tags' template.json | tee -a log
 
+# The pull request number when launched by the PR workflow, empty otherwise,
+# so that results of PR runs can be told apart from the runs of main.
+echo 'ClickBench PR: @clickbench_pr@' | tee -a log
+
 echo -n 'Disk usage before: ' | tee -a log
 df -B1 / | tail -n1 | awk '{ print $3 }' | tee -a log
 

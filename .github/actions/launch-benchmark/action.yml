@@ -15,14 +15,21 @@ inputs:
     description: "EC2 instance types, space-separated"
     default: "c6a.4xlarge"
   repo:
-    description: "GitHub repository (owner/name) the machine will clone"
-    default: "ClickHouse/ClickBench"
+    description: "GitHub repository (owner/name) the machine will clone.
+      Empty: the PR's head repository if pr is given, else ClickHouse/ClickBench."
+    default: ""
   branch:
-    description: "Branch of that repository to clone"
-    default: "main"
+    description: "Branch of that repository to clone.
+      Empty: the PR's head branch if pr is given, else main."
+    default: ""
   timeout:
     description: "Time limit for benchmark.sh on the machine, seconds"
     default: "36000"
+  pr:
+    description: "Pull request number that launched the run, if any. Recorded
+      in the log and parsed into the clickbench_pr column of sink.results, so
+      that results of PR runs can be told apart from the runs of main."
+    default: ""
   aws-region:
     description: "AWS region to launch the machine in"
     default: "us-east-1"
@@ -45,6 +52,8 @@ runs:
         repo: ${{ inputs.repo }}
         branch: ${{ inputs.branch }}
         timeout: ${{ inputs.timeout }}
+        clickbench_pr: ${{ inputs.pr }}
+        GH_TOKEN: ${{ github.token }}
       run: |
         failed=""
         for m in $machines; do
