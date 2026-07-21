@@ -1,0 +1,57 @@
+#!/bin/bash
+set -eu
+
+# ./load runs on every cold cycle (BENCH_DURABLE=no). The first call turns
+# hits.csv into an encoded binary snapshot (data/hits.bin); every call then
+# imports that snapshot into the freshly started server.
+#
+# Why not one big `COPY hits FROM '/data/hits.csv'`: Hyrise's CSV import
+# reads the entire file into a single std::string and materializes every
+# column as unencoded ValueSegments before dictionary-encoding them —
+# roughly 200 GB peak for the 75 GB hits.csv. `COPY ... FROM` into an
+# existing table appends chunks, so importing 5M-row pieces sequentially
+# caps the transient overhead at one piece on top of the growing encoded
+# table. The pieces are imported in file order, which keeps the original
+# EventTime ordering and thus meaningful chunk-pruning statistics.
+#
+# Why the snapshot is written by hyriseConsole and not by SQL `COPY TO`:
+# a server-side SQL statement wraps the stored table in an MVCC Validate
+# operator, and BinaryWriter materializes the resulting ReferenceSegments
+# as unencoded value segments — the snapshot would be raw-sized and would
+# re-import unencoded (binary imports skip the encoding pass). The
+# console's `export` command reads the table via GetTable without
+# validation, so the dictionary-encoded segments are written — and later
+# re-imported, chunk by chunk — as-is. The console is a separate process
+# with its own catalog, so it performs the piecewise CSV import itself;
+# the server never sees the pieces, only the snapshot. Importing the
+# snapshot regenerates full-table statistics on add_table.
+if [ ! -f data/hits.bin ]; then
+    # hits.csv was delivered into cwd by download-hits-csv. Guarded so a
+    # retry after a partial first load resumes from the existing pieces.
+    if [ -f hits.csv ]; then
+        split -l 5000000 --numeric-suffixes=1 --additional-suffix=.csv \
+            hits.csv data/hits_part_
+        rm hits.csv
+    fi
+
+    # Each piece needs its own CSV meta file: Hyrise resolves it as
+    # "<filename>.json" next to the data file.
+    for piece in data/hits_part_*.csv; do
+        cp hits.csv.json "${piece}.json"
+        echo "COPY hits FROM '/data/$(basename "$piece")' WITH (FORMAT CSV);"
+    done > data/make_snapshot.script
+    echo "export hits /data/hits.bin" >> data/make_snapshot.script
+
+    # The console exits 0 even when the script aborts on an error, so the
+    # snapshot file itself is the success signal.
+    sudo docker exec hyrise hyriseConsole /data/make_snapshot.script
+    if [ ! -f data/hits.bin ]; then
+        echo "hyriseConsole did not produce data/hits.bin" >&2
+        exit 1
+    fi
+    rm -f data/hits_part_*.csv data/hits_part_*.csv.json data/make_snapshot.script
+fi
+
+psql -h 127.0.0.1 -p 5432 -U postgres -v ON_ERROR_STOP=1 -q \
+    -c "COPY hits FROM '/data/hits.bin' WITH (FORMAT BINARY);"
+sync

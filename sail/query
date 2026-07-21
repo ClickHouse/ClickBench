@@ -24,7 +24,6 @@ import timeit
 
 os.environ["SAIL_PARQUET__BINARY_AS_STRING"] = "true"
 os.environ["SAIL_PARQUET__REORDER_FILTERS"] = "true"
-os.environ["SAIL_OPTIMIZER__ENABLE_JOIN_REORDER"] = "true"
 
 from pysail.spark import SparkConnectServer
 from pyspark.sql import SparkSession
@@ -41,7 +40,6 @@ _, port = server.listening_address
 spark = SparkSession.builder.remote(f"sc://localhost:{port}").getOrCreate()
 
 df = spark.read.parquet("hits.parquet")
-df = df.withColumn("EventTime", F.col("EventTime").cast("timestamp"))
 df = df.withColumn("EventDate", F.col("EventDate").cast("int").cast("date"))
 df.createOrReplaceTempView("hits")
 

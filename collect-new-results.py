@@ -21,6 +21,13 @@ Reads the database as the read-only `clickbench` user (password in the
 CLICKBENCH_DB_PASSWORD environment variable / GitHub secret) and talks to
 GitHub through `gh` (GH_TOKEN). Requires a checkout of the repository as the
 working directory. Set DRY_RUN=1 to print actions instead of performing them.
+
+The workflow's GITHUB_TOKEN cannot push to forks, so results for fork PRs
+are posted as paste links — unless CLICKBENCH_FORK_PUSH_TOKEN holds a classic
+PAT of a user with write access to this repository: GitHub grants the "allow
+edits from maintainers" push permission to such user accounts (not to App
+installation tokens like GITHUB_TOKEN), so with the token the script commits
+results to fork PRs whose author left maintainer edits enabled.
 """
 
 import json
@@ -38,6 +45,7 @@ DB_USER = os.environ.get("CLICKBENCH_DB_USER") or "clickbench"
 DB_PASSWORD = os.environ.get("CLICKBENCH_DB_PASSWORD") or ""
 PASTILA_DB_URL = "https://uzg8q0g12h.eu-central-1.aws.clickhouse.cloud/?user=paste"
 REPO = os.environ.get("GITHUB_REPOSITORY") or "ClickHouse/ClickBench"
+FORK_PUSH_TOKEN = os.environ.get("CLICKBENCH_FORK_PUSH_TOKEN") or ""
 DRY_RUN = bool(os.environ.get("DRY_RUN"))
 BOT_NAME = "github-actions[bot]"
 BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"
@@ -309,8 +317,9 @@ def log_links(run_row):
 
 # === git ===
 
-def fetch_branch(ref, depth=200):
-    run("git", "fetch", "-q", f"--depth={depth}", "origin", f"+refs/heads/{ref}")
+def fetch_branch(ref, remote="origin", depth=200):
+    """Fetch a branch from origin or from a fork's public URL."""
+    run("git", "fetch", "-q", f"--depth={depth}", remote, f"+refs/heads/{ref}")
     return run("git", "rev-parse", "FETCH_HEAD")
 
 
@@ -324,7 +333,8 @@ def result_path(run_row):
     return "{system}/results/{date}/{machine}.json".format(**run_row)
 
 
-def commit_results(base_sha, rows, removals, message, push_ref, force=False):
+def commit_results(base_sha, rows, removals, message, push_ref, force=False,
+                   remote="origin"):
     """Create a commit with the result files on top of base_sha and push it.
     Returns the short commit hash, or None if there was nothing to change."""
     worktree = os.path.join(tempfile.mkdtemp(prefix="clickbench-results-"), "wt")
@@ -343,11 +353,25 @@ def commit_results(base_sha, rows, removals, message, push_ref, force=False):
         run("git", "-C", worktree, "-c", f"user.name={BOT_NAME}",
             "-c", f"user.email={BOT_EMAIL}", "commit", "-q", "-m", message)
         sha = run("git", "-C", worktree, "rev-parse", "HEAD")
+        auth = []
+        if remote != "origin":
+            # A push to a fork authenticates with the fork-push token. Two
+            # subtleties: actions/checkout stores the workflow's GITHUB_TOKEN
+            # as an http.<url>.extraheader in the local git config, which
+            # would be sent to the fork too (and rejected), so it is cleared
+            # for this push; and the token is handed over through an inline
+            # credential helper that reads the environment variable, so it
+            # never appears in a command line or in an error message.
+            auth = ["-c", "http.https://github.com/.extraheader=",
+                    "-c", "credential.helper=",
+                    "-c", "credential.helper=!f() { echo username=x-access-token;"
+                          ' echo "password=${CLICKBENCH_FORK_PUSH_TOKEN}"; }; f']
         if DRY_RUN:
-            print(f"DRY_RUN: would push {sha} to {push_ref}")
+            print(f"DRY_RUN: would push {sha} to {remote} {push_ref}")
         else:
-            run("git", "-C", worktree, "push", "-q", *(["--force"] if force else []),
-                "origin", f"HEAD:refs/heads/{push_ref}")
+            run("git", *auth, "-C", worktree, "push", "-q",
+                *(["--force"] if force else []),
+                remote, f"HEAD:refs/heads/{push_ref}")
         return sha[:10]
     finally:
         run("git", "worktree", "remove", "--force", worktree, check=False)
@@ -389,20 +413,39 @@ def process_pr(pr_number, rows):
 
     head_repo = (meta.get("head") or {}).get("repo") or {}
     same_repo = head_repo.get("full_name") == REPO
-    can_commit = good and meta["state"] == "open" and same_repo
+    # Forks are writable only with the fork-push token (see the module
+    # docstring) and only while the PR author allows maintainer edits —
+    # which GitHub does not offer at all for organization-owned forks.
+    fork_push = (bool(FORK_PUSH_TOKEN) and not same_repo
+                 and bool(head_repo.get("full_name"))
+                 and bool(meta.get("maintainer_can_modify")))
+    can_commit = bool(good) and meta["state"] == "open" and (same_repo or fork_push)
 
     commit = None
     removals = []
     if can_commit:
         head_ref = meta["head"]["ref"]
-        base_sha = fetch_branch(head_ref)
+        remote = ("origin" if same_repo
+                  else f"https://github.com/{head_repo['full_name']}.git")
+        base_sha = fetch_branch(head_ref, remote=remote)
         systems = sorted({r["system"] for r in good})
         bot_paths = {result_path(r) for r in good}
         removals = manual_result_files(pr_number, systems, bot_paths)
         machines = ", ".join(sorted({r["machine"] for r in good}))
-        commit = commit_results(base_sha, good, removals,
-                                f"Add benchmark results for {', '.join(systems)} ({machines})",
-                                head_ref)
+        try:
+            commit = commit_results(base_sha, good, removals,
+                                    f"Add benchmark results for {', '.join(systems)} ({machines})",
+                                    head_ref, remote=remote)
+        except RuntimeError as e:
+            # A fork push can fail even though maintainer_can_modify said
+            # yes: the author may have unticked it meanwhile, the branch may
+            # have moved, or the fork may protect it. Fall back to posting
+            # paste links instead of failing the whole PR.
+            if same_repo:
+                raise
+            note(f"PR #{pr_number}: pushing to the fork failed: {e}")
+            can_commit = False
+            removals = []
 
     lines = []
     if good:
@@ -421,6 +464,9 @@ def process_pr(pr_number, rows):
                 url = pastila_post(r["output"])
                 lines.append(f"This pull request is from a fork, so the automation cannot "
                              f"push to it; save [this result]({url}) as `{result_path(r)}`.")
+            if FORK_PUSH_TOKEN and not meta.get("maintainer_can_modify"):
+                lines.append('Tick "Allow edits by maintainers" on the pull request '
+                             "to let the automation commit the results itself.")
         if removals:
             lines.append("Removed manually added result files: "
                          + ", ".join(f"`{path}`" for path in removals) + ".")

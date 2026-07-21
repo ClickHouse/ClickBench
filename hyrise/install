@@ -1,0 +1,17 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client gzip
+
+# Hyrise has no upstream binary distribution and the build requires a
+# recent toolchain (gcc-15 / clang-20). Build inside Docker on top of
+# Ubuntu 25.04, then ship just the binary and its runtime libs in a slim
+# image.
+sudo docker build -t clickbench-hyrise .
+
+# The bind-mounted /data dir must exist before docker run (created here
+# instead of in ./load so ./start can be called before the first ./load
+# without erroring on a missing mount source).
+mkdir -p data
+chmod 777 data

@@ -1,8 +1,5 @@
 #!/bin/bash
 set -e
 
-# Stateless system — confirm datafusion-cli (the playground's query
-# driver) is built. The vortex bench binary (used by benchmark.sh,
-# not by ./query) was renamed from `clickbench` to `query_bench`
-# upstream, so the old check would always fail post-install.
-command -v datafusion-cli >/dev/null
+DF=vortex-datafusion-cli/target/release/vortex-datafusion-cli
+"$DF" -q -c "SELECT 1" >/dev/null

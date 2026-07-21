@@ -15,7 +15,7 @@ apart from the runs of main and are excluded by `collect-results.sh`.
 |----------|---------|------------------|
 | `benchmark-daily.yml` | daily, 02:00 UTC | the ClickHouse variants, each on the whole set of machine types, from main |
 | `benchmark-manual.yml` | manual | any systems, machines, repository and branch |
-| `benchmark-pr.yml` | pull requests | the systems whose directories the PR changes (results and *.md files don't count), from the PR's repository and branch, after manual approval |
+| `benchmark-pr.yml` | pull requests | the systems whose directories the PR changes (results and *.md files don't count), from the PR's repository and branch, after manual approval. A `machine:<ec2-type>` label overrides the default c6a.4xlarge (one run per label; `machine:all`, `machine:all-amd` and `machine:all-arm` expand to the daily-run machine sets); adding such a label relaunches the benchmark |
 | `collect-results.yml` | every 30 minutes | nothing - it collects the runs of the last day from the sink database (`collect-new-results.py`): commits result files and posts pastila.nl log links to the corresponding PR, or maintains one automated results PR per system for the runs of main |
 
 ## Setup
@@ -53,3 +53,19 @@ apart from the runs of main and are excluded by `collect-results.sh`.
    systems. `run-benchmark.sh` waits and retries while the quota or the
    capacity is exhausted, but only within the job's 55-minute limit; what
    could not be launched by then is reported as failed.
+
+4. For committing results to fork PRs, `collect-results.yml` uses the
+   org-level `ROBOT_CLICKHOUSE_COMMIT_TOKEN` secret — a **classic** PAT of
+   the `robot-clickhouse` machine account, which must have **write access
+   to this repository** (GitHub grants the "allow edits from maintainers"
+   push permission to user accounts with write access to the base repo).
+   With that in place, the collector commits result files directly to fork
+   PRs whose author allows maintainer edits. Otherwise (no token, no write
+   access, the author unticked "Allow edits by maintainers", or the fork is
+   organization-owned, where GitHub does not offer maintainer edits), fork
+   results are posted as pastila.nl links for the author to commit. The
+   workflow's own `GITHUB_TOKEN` can never push to forks: the maintainer-edit
+   push permission is granted only to user accounts, not to App installation
+   tokens. A fine-grained PAT does not work either — it is bound to an
+   explicit repository list, which cannot include arbitrary contributors'
+   forks.

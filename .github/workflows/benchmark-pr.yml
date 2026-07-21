@@ -6,6 +6,10 @@ name: "Benchmark pull request"
 # disposable benchmark machines, which clone the PR's repository and branch.
 on:
   pull_request_target:
+    # `labeled` lets a maintainer relaunch the benchmark on a different
+    # machine by adding a "machine:<ec2-type>" label; the detect job filters
+    # out all other labels so they don't relaunch anything.
+    types: [opened, synchronize, reopened, labeled]
 
 permissions:
   contents: read
@@ -18,11 +22,17 @@ concurrency:
 jobs:
   detect:
     name: Detect changed systems
+    # Unlike the other trigger types, `labeled` can also fire on a closed PR,
+    # hence the state guard.
+    if: >-
+      github.event.pull_request.state == 'open' &&
+      (github.event.action != 'labeled' || startsWith(github.event.label.name, 'machine:'))
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
     outputs:
       systems: ${{ steps.changed.outputs.systems }}
+      machines: ${{ steps.changed.outputs.machines }}
     steps:
       - id: changed
         env:
@@ -51,6 +61,34 @@ jobs:
           echo "Systems to benchmark: $systems"
           echo "systems=$systems" >> "$GITHUB_OUTPUT"
 
+          # "machine:<ec2-type>" labels override the default machine, e.g.
+          # machine:c6a.metal for systems that don't fit in the 32 GB of
+          # c6a.4xlarge. Multiple labels launch one run per machine, and
+          # machine:all, machine:all-amd and machine:all-arm expand to the
+          # machine sets of the daily runs (keep in sync with
+          # benchmark-daily.yml). Labels can only be set by users with
+          # triage access, and the launch is still gated by the
+          # benchmark-approval environment.
+          amd="t3a.small c6a.large c6a.xlarge c6a.2xlarge c6a.4xlarge c6a.metal c7a.metal-48xl"
+          arm="c8g.4xlarge c8g.metal-48xl"
+          labels=$(jq -r '[.pull_request.labels[].name
+              | select(startswith("machine:")) | ltrimstr("machine:")]
+              | join(" ")' "$GITHUB_EVENT_PATH")
+          machines=""
+          for label in $labels; do
+              case "$label" in
+                  all)     machines="$machines $amd $arm";;
+                  all-amd) machines="$machines $amd";;
+                  all-arm) machines="$machines $arm";;
+                  *)       machines="$machines $label";;
+              esac
+          done
+          machines=$(printf '%s\n' $machines | awk '!seen[$0]++' | tr '\n' ' ')
+          machines="${machines% }"
+          machines="${machines:-c6a.4xlarge}"
+          echo "Machines: $machines"
+          echo "machines=$machines" >> "$GITHUB_OUTPUT"
+
   launch:
     needs: detect
     if: needs.detect.outputs.systems != ''
@@ -67,6 +105,7 @@ jobs:
       - uses: ./.github/actions/launch-benchmark
         with:
           systems: ${{ needs.detect.outputs.systems }}
+          machines: ${{ needs.detect.outputs.machines }}
           # The head repository and branch to benchmark are derived from the
           # PR number by run-benchmark.sh.
           pr: ${{ github.event.pull_request.number }}

@@ -1,0 +1,10 @@
+#!/bin/bash
+set -eu
+
+# Hyrise has no on-disk persistence; report the total in-memory segment
+# size from meta_segments. Strip any whitespace so the driver's strict
+# digits-only regex check passes.
+psql -h 127.0.0.1 -p 5432 -U postgres -t -A \
+    -c "SELECT SUM(estimated_size_in_bytes) FROM meta_segments WHERE table_name = 'hits';" \
+    | tr -d '[:space:]'
+echo
