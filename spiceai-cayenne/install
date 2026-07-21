@@ -6,9 +6,7 @@ set -e
 if [ ! -x "$HOME/.spice/bin/spice" ]; then
     curl https://install.spiceai.org | /bin/bash
 fi
-if [ ! -x "$HOME/.spice/bin/spiced" ]; then
-    "$HOME/.spice/bin/spice" install >/dev/null 2>&1
-fi
+"$HOME/.spice/bin/spice" install v2.1.1 --force >/dev/null 2>&1
 
 # Symlink into /usr/local/bin so sibling scripts (check, load, query,
 # start) find them unconditionally.
