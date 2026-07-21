@@ -43,6 +43,7 @@ result = {
     "date": date,
     "machine": machine,
     "cluster_size": 1,
+    "comment": "v2.1.1 (1140e2a8)",
     "proprietary": template["proprietary"],
     "hardware": template["hardware"],
     "tuned": template["tuned"],
