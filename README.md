@@ -332,7 +332,7 @@ Systems that have been identified to have known limitations or issues and could 
 
 ## Bonus
 
-You can run every system from ClickBench in the [online Playground](https://clickbench-playground.clickhouse.com/).
+You can run every system from ClickBench in the [online Playground](https://benchmark.clickhouse.com/playground/).
 
 ## Similar Projects
 

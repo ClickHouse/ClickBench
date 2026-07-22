@@ -3,7 +3,7 @@
 Changes in the benchmark methodology or presentation, as well as major news.
 
 ### 2026-07-22
-Introducing [ClickBench Playground](https://clickbench-playground.clickhouse.com/), which allows you to run arbitrary SQL queries on 90+ databases using a pre-loaded ClickBench dataset.
+Introducing [ClickBench Playground](https://benchmark.clickhouse.com/playground/), which allows you to run arbitrary SQL queries on 90+ databases using a pre-loaded ClickBench dataset.
 
 ### 2026-07-03
 The [versions benchmark](https://benchmark.clickhouse.com/versions/) is reworked. Now it contains 10 datasets and runs every ClickHouse version since [ten years of open source](https://clickhouse.com/blog/open-source-10) and even early historical builds. The visualization was also improved.
