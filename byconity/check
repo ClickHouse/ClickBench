@@ -1,5 +1,27 @@
 #!/bin/bash
 set -e
 
+# Server-local SELECT 1 (always works once the server container is up,
+# but DOESN'T validate worker reachability).
 docker compose exec -T server clickhouse-client --port 52145 \
     --query "SELECT 1" >/dev/null
+
+# If hits exists (post-load), force a worker-touching query so we
+# refuse to declare 'ready' until the server-to-worker BRPC connection
+# has actually re-established. Without this gate the first /query
+# after snapshot-restore lands on a half-broken cluster and returns
+#   Code: 2008. ... 112:[E111]Fail to connect Socket{...}:30605 ...
+#   Not connected to 172.18.0.X:30605 yet, server_id=...
+# from the cnch-worker reconnection path.
+#
+# We avoid running the query unconditionally because during the
+# initial-provision phase (between ./start and ./load) hits doesn't
+# exist yet; relying on `EXISTS TABLE` keeps the check usable in
+# both phases.
+exists=$(docker compose exec -T server clickhouse-client --port 52145 \
+    --query "EXISTS TABLE hits" 2>/dev/null || echo 0)
+if [ "$exists" = "1" ]; then
+    docker compose exec -T server clickhouse-client --port 52145 \
+        --query "SELECT count() FROM hits WHERE AdvEngineID <> 0 LIMIT 1" \
+        >/dev/null
+fi

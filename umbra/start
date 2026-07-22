@@ -33,7 +33,17 @@ sudo docker run -d --name umbradb \
     -p 5432:5432 \
     --ulimit nofile=1048576:1048576 \
     --ulimit memlock=-1:-1 \
+    -e MALLOC_CONF="oversize_threshold:0,muzzy_decay_ms:-1,dirty_decay_ms:-1,xmalloc:false" \
     umbradb/umbra:latest >/dev/null
+
+# umbra-server links jemalloc; MALLOC_CONF above:
+#   oversize_threshold:0  no special "huge alloc" arena; one path
+#   muzzy_decay_ms:-1     don't purge muzzy pages (keep around)
+#   dirty_decay_ms:-1     don't purge dirty pages
+#   xmalloc:false         never abort on OOM (allocator returns NULL)
+# Goal: get jemalloc to hold onto memory rather than aggressively
+# returning to the kernel via madvise(DONTNEED), which the previous
+# strace showed it doing constantly during COPY.
 
 # Container needs a moment before psql can connect.
 for _ in $(seq 1 60); do

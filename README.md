@@ -304,18 +304,14 @@ Please help us add more systems and run the benchmarks on more types of VMs:
 - [ ] CockroachDB Serverless
 - [ ] DolphinDB
 - [ ] Dremio (without publishing)
-- [ ] EventQL
 - [ ] Exasol
-- [ ] Hive
 - [ ] Hydrolix
-- [ ] Impala
 - [ ] InfluxDB
 - [ ] LocustDB
 - [ ] Manticore Search
 - [ ] MS SQL Server with Column Store Index (without publishing)
 - [ ] OceanBase
 - [ ] Planetscale (without publishing)
-- [x] Quickwit
 - [ ] Redshift Spectrum
 - [ ] Seafowl
 - [ ] ShitholeDB
@@ -333,6 +329,10 @@ Systems that have been identified to have known limitations or issues and could 
 - LoctusDB (see [README](https://github.com/ClickHouse/ClickBench/tree/main/locustdb))
 - ScyllaDB (see [discussion](https://github.com/ClickHouse/ClickBench/issues/384))
 - S3 select command in AWS (see [README](https://github.com/ClickHouse/ClickBench/tree/main/s3select))
+
+## Bonus
+
+You can run every system from ClickBench in the [online Playground](https://clickbench-playground.clickhouse.com/).
 
 ## Similar Projects
 
