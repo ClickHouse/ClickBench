@@ -15,13 +15,18 @@ GLUTEN_VERSION=v1.4.0
 SPARK_PROFILE=spark-3.5
 
 # Build prerequisites:
-#  - Java 8 to build Gluten via Maven (Gluten's pom requires JDK 8)
-#  - Java 17 to run Spark (selected in ./query via JAVA_HOME)
+#  - Java 8 (headless) to build Gluten via Maven (Gluten's pom requires JDK 8).
+#  - Java 17, the FULL jdk (not -headless), to run Spark AND to satisfy the
+#    libch.so build's JNI/AWT dependency: ClickHouse's extern-local-engine
+#    links against jawt.h/libjawt.so, which the -headless packages omit, so
+#    its cmake fails with `Could NOT find JNI (missing: AWT)` /
+#    `JAVA_AWT_INCLUDE_PATH-NOTFOUND`. openjdk-17-jdk ships jawt.h and pulls
+#    in the non-headless JRE that ships libjawt.so.
 #  - Clang 19, cmake, ninja, etc. to build libch.so (Gluten v1.4.0's CH
 #    backend requires Clang 19; see get-started/ClickHouse.md).
 sudo apt-get update -y
 sudo apt-get install -y python3-pip python3-venv \
-    openjdk-8-jdk-headless openjdk-17-jdk-headless \
+    openjdk-8-jdk-headless openjdk-17-jdk \
     maven git cmake ccache ninja-build nasm yasm gawk \
     lsb-release wget software-properties-common gnupg
 
@@ -32,6 +37,8 @@ fi
 
 export CC=clang-19
 export CXX=clang++-19
+
+ARCH=$(dpkg --print-architecture)
 
 # pyspark venv.
 if [ ! -d myenv ]; then
@@ -59,11 +66,14 @@ if [ ! -d "$CH_DIR" ]; then
         "https://github.com/${CH_ORG}/ClickHouse.git" "$CH_DIR"
 fi
 
-# Build libch.so via Gluten's own wrapper, which cmakes cpp-ch into
-# cpp-ch/build_ch and builds the build_ch target. Honors the CC/CXX exported
-# above. The artifact lands under cpp-ch/build_ch/.../extern-local-engine/;
-# glob for it rather than hardcoding the path (Gluten's prose docs still say
-# build/, but the v1.4.0 script builds into build_ch/).
+# Build libch.so via Gluten's own wrapper. It cmakes cpp-ch into
+# cpp-ch/build_ch, whose build_ch target drives an inner ClickHouse cmake that
+# builds `--target libch` into cpp-ch/build/, so the artifact lands under
+# cpp-ch/build/.../extern-local-engine/. Glob for it rather than hardcoding —
+# the two build dirs (build_ch wrapper vs build inner) are easy to confuse.
+# Honors the CC/CXX exported above; JAVA_HOME points cmake's FindJNI at the
+# full JDK 17 so it locates jawt.h/libjawt.so (see the JDK note above).
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-${ARCH}"
 LIBCH_SO=$(find "$GLUTEN_DIR/cpp-ch" -name libch.so -type f 2>/dev/null | head -n1)
 if [ -z "$LIBCH_SO" ]; then
     bash "$GLUTEN_DIR/ep/build-clickhouse/src/build_clickhouse.sh"
@@ -77,7 +87,7 @@ fi
 # Build the Gluten Spark plugin against the CH backend. JDK 8 is required at
 # compile time per Gluten's pom; Spark itself runs under JDK 17 in ./query.
 # pyspark wheels ship Scala 2.12 jars, so build with scala-2.12 to match.
-JAVA_HOME_8="/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)"
+JAVA_HOME_8="/usr/lib/jvm/java-8-openjdk-${ARCH}"
 GLUTEN_JAR=$(ls "$GLUTEN_DIR"/backends-clickhouse/target/gluten-*-spark-3.5-jar-with-dependencies.jar 2>/dev/null | head -n1)
 if [ -z "$GLUTEN_JAR" ]; then
     (
