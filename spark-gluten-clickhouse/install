@@ -1,0 +1,101 @@
+#!/bin/bash
+set -e
+
+# Spark + Apache Gluten with the ClickHouse backend ('ch'). Unlike the Velox
+# backend, no pre-built bundle is published for the CH backend, so we build
+# both libch.so (a ClickHouse fork) and the Gluten Spark plugin from source.
+#
+# The libch.so compile is essentially a ClickHouse build: RAM-hungry (Gluten's
+# docs recommend >= 64 GB) and slow. Run on c6a.8xlarge or larger; c6a.4xlarge
+# (32 GB) may OOM.
+#
+# Note: Keep in sync with spark-*/install (see README-accelerators.md).
+
+GLUTEN_VERSION=v1.4.0
+SPARK_PROFILE=spark-3.5
+
+# Build prerequisites:
+#  - Java 8 to build Gluten via Maven (Gluten's pom requires JDK 8)
+#  - Java 17 to run Spark (selected in ./query via JAVA_HOME)
+#  - Clang 19, cmake, ninja, etc. to build libch.so (Gluten v1.4.0's CH
+#    backend requires Clang 19; see get-started/ClickHouse.md).
+sudo apt-get update -y
+sudo apt-get install -y python3-pip python3-venv \
+    openjdk-8-jdk-headless openjdk-17-jdk-headless \
+    maven git cmake ccache ninja-build nasm yasm gawk \
+    lsb-release wget software-properties-common gnupg
+
+# Install Clang 19 via apt.llvm.org.
+if ! command -v clang-19 >/dev/null 2>&1; then
+    wget -O - https://apt.llvm.org/llvm.sh | sudo bash -s -- 19
+fi
+
+export CC=clang-19
+export CXX=clang++-19
+
+# pyspark venv.
+if [ ! -d myenv ]; then
+    python3 -m venv myenv
+fi
+# shellcheck disable=SC1091
+source myenv/bin/activate
+pip install -q pyspark==3.5.2 psutil
+
+# Clone Gluten and the Kyligence ClickHouse fork that the CH backend wraps.
+# The CH fork org/branch/commit are pinned in Gluten's cpp-ch/clickhouse.version.
+GLUTEN_DIR="$PWD/gluten"
+if [ ! -d "$GLUTEN_DIR" ]; then
+    git clone --depth 1 --branch "$GLUTEN_VERSION" \
+        https://github.com/apache/incubator-gluten.git "$GLUTEN_DIR"
+fi
+
+CH_VERSION_FILE="$GLUTEN_DIR/cpp-ch/clickhouse.version"
+CH_ORG=$(grep '^CH_ORG=' "$CH_VERSION_FILE" | cut -d= -f2)
+CH_BRANCH=$(grep '^CH_BRANCH=' "$CH_VERSION_FILE" | cut -d= -f2)
+CH_DIR="$GLUTEN_DIR/cpp-ch/ClickHouse"
+if [ ! -d "$CH_DIR" ]; then
+    git clone --recursive --shallow-submodules \
+        --branch "$CH_BRANCH" \
+        "https://github.com/${CH_ORG}/ClickHouse.git" "$CH_DIR"
+fi
+
+# Build libch.so via Gluten's own wrapper, which cmakes cpp-ch into
+# cpp-ch/build_ch and builds the build_ch target. Honors the CC/CXX exported
+# above. The artifact lands under cpp-ch/build_ch/.../extern-local-engine/;
+# glob for it rather than hardcoding the path (Gluten's prose docs still say
+# build/, but the v1.4.0 script builds into build_ch/).
+LIBCH_SO=$(find "$GLUTEN_DIR/cpp-ch" -name libch.so -type f 2>/dev/null | head -n1)
+if [ -z "$LIBCH_SO" ]; then
+    bash "$GLUTEN_DIR/ep/build-clickhouse/src/build_clickhouse.sh"
+    LIBCH_SO=$(find "$GLUTEN_DIR/cpp-ch" -name libch.so -type f 2>/dev/null | head -n1)
+fi
+if [ -z "$LIBCH_SO" ]; then
+    echo "ERROR: libch.so not found after build" >&2
+    exit 1
+fi
+
+# Build the Gluten Spark plugin against the CH backend. JDK 8 is required at
+# compile time per Gluten's pom; Spark itself runs under JDK 17 in ./query.
+# pyspark wheels ship Scala 2.12 jars, so build with scala-2.12 to match.
+JAVA_HOME_8="/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)"
+GLUTEN_JAR=$(ls "$GLUTEN_DIR"/backends-clickhouse/target/gluten-*-spark-3.5-jar-with-dependencies.jar 2>/dev/null | head -n1)
+if [ -z "$GLUTEN_JAR" ]; then
+    (
+        cd "$GLUTEN_DIR"
+        export MAVEN_OPTS="-Xmx8g -XX:ReservedCodeCacheSize=2g"
+        JAVA_HOME="$JAVA_HOME_8" PATH="$JAVA_HOME_8/bin:$PATH" \
+            mvn -B clean package \
+                -Pbackends-clickhouse -P"$SPARK_PROFILE" -Pscala-2.12 \
+                -DskipTests -Dcheckstyle.skip
+    )
+    GLUTEN_JAR=$(ls "$GLUTEN_DIR"/backends-clickhouse/target/gluten-*-spark-3.5-jar-with-dependencies.jar 2>/dev/null | head -n1)
+fi
+if [ -z "$GLUTEN_JAR" ]; then
+    echo "ERROR: could not locate built Gluten CH-backend jar" >&2
+    ls "$GLUTEN_DIR/backends-clickhouse/target/" >&2 || true
+    exit 1
+fi
+
+# query.py expects the jar and native library as ./gluten.jar and ./libch.so.
+ln -sf "$GLUTEN_JAR" gluten.jar
+ln -sf "$LIBCH_SO" libch.so

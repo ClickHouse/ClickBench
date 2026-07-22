@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# Spark runs under JDK 17; Gluten was built under JDK 8 in ./install.
+arch=$(dpkg --print-architecture)
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-${arch}"
+export PATH="$JAVA_HOME/bin:$PATH"
+
+query=$(cat)
+printf '%s' "$query" | python3 query.py
