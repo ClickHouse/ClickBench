@@ -1,0 +1,38 @@
+#!/bin/bash
+# Reads a SQL/YQL query from stdin, runs it via the ydb CLI's yql subcommand.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# `--stats basic` "total_duration_us:" output).
+# Exit non-zero on error.
+set -e
+
+source benchmark_variables.sh
+START_DIR=$(pwd)
+export YDB_PASSWORD=password
+
+cert_dir=$(find "$START_DIR/ydb-ansible-examples/TLS/CA/certs" -maxdepth 1 -type d -not -path "." -printf "%T@ %p\n" \
+    | sort -n | tail -n 1 | cut -d' ' -f2-)
+
+YDB_BIN="$START_DIR/ydb-ansible-examples/3-nodes-mirror-3-dc/files/ydb"
+
+query=$(cat)
+
+raw=$(echo "$YDB_PASSWORD" | "$YDB_BIN" \
+    -e "grpcs://$host1$host_suffix:2135" -d /Root/database \
+    --ca-file "$cert_dir/ca.crt" --user root \
+    yql -s "$query" --stats basic 2>&1) && exit_code=0 || exit_code=$?
+
+if [ "$exit_code" -ne 0 ]; then
+    printf '%s\n' "$raw" >&2
+    exit "$exit_code"
+fi
+
+printf '%s\n' "$raw"
+
+us=$(printf '%s\n' "$raw" | grep -oP 'total_duration_us:\s*\K[0-9]+' | tail -n1)
+if [ -z "$us" ]; then
+    echo "no total_duration_us in ydb output" >&2
+    exit 1
+fi
+
+awk -v u="$us" 'BEGIN { printf "%.6f\n", u / 1000000 }' >&2

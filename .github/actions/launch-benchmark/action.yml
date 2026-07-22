@@ -1,0 +1,67 @@
+name: "Launch benchmark"
+description: >
+  Assume the federated AWS IAM role and launch EC2 machines that run
+  benchmarks unattended: one machine for every (machine type, system) pair.
+  The runner only launches: run-benchmark.sh renders cloud-init.sh.in and
+  calls ec2 run-instances; each machine clones the repository, runs
+  <system>/benchmark.sh, sends its log to the results sink and terminates
+  itself.
+
+inputs:
+  systems:
+    description: "Systems to benchmark: directory names, space-separated"
+    required: true
+  machines:
+    description: "EC2 instance types, space-separated"
+    default: "c6a.4xlarge"
+  repo:
+    description: "GitHub repository (owner/name) the machine will clone.
+      Empty: the PR's head repository if pr is given, else ClickHouse/ClickBench."
+    default: ""
+  branch:
+    description: "Branch of that repository to clone.
+      Empty: the PR's head branch if pr is given, else main."
+    default: ""
+  timeout:
+    description: "Time limit for benchmark.sh on the machine, seconds"
+    default: "36000"
+  pr:
+    description: "Pull request number that launched the run, if any. Recorded
+      in the log and parsed into the clickbench_pr column of sink.results, so
+      that results of PR runs can be told apart from the runs of main."
+    default: ""
+  aws-region:
+    description: "AWS region to launch the machine in"
+    default: "us-east-1"
+
+runs:
+  using: "composite"
+  steps:
+    # The role's trust policy only admits workflow runs of this repository,
+    # so assuming it fails everywhere else, including forks.
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::264113785604:role/ClickBenchLauncher
+        aws-region: ${{ inputs.aws-region }}
+        role-session-name: clickbench-${{ github.run_id }}
+
+    - shell: bash
+      env:
+        systems: ${{ inputs.systems }}
+        machines: ${{ inputs.machines }}
+        repo: ${{ inputs.repo }}
+        branch: ${{ inputs.branch }}
+        timeout: ${{ inputs.timeout }}
+        clickbench_pr: ${{ inputs.pr }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        failed=""
+        for m in $machines; do
+            for s in $systems; do
+                machine="$m" system="$s" ./run-benchmark.sh || failed="$failed $s/$m"
+            done
+        done
+        if [ -n "$failed" ]; then
+            echo "Failed to launch:$failed"
+            exit 1
+        fi

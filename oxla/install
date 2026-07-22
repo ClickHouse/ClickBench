@@ -1,0 +1,9 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client curl wget \
+    apt-transport-https ca-certificates software-properties-common gnupg2 parallel
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential
+
+sudo docker pull public.ecr.aws/oxla/release:1.53.0-beta

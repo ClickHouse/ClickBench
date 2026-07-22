@@ -1,0 +1,25 @@
+#!/bin/bash
+set -eu
+
+# setup-dev-ubuntu.sh installs docker, java (for kisql), and ripgrep.
+./setup-dev-ubuntu.sh
+
+if [ ! -x ./kinetica ]; then
+    curl https://files.kinetica.com/install/kinetica.sh -o kinetica
+    chmod u+x kinetica
+fi
+
+# Bring Kinetica up via the install/start script (idempotent inside).
+export KINETICA_ADMIN_PASSWORD=admin
+sudo -E ./kinetica start
+
+# Fetch the SQL CLI. The v7.1.7.2 GitHub release was deleted upstream
+# and newer source tags ship no compiled artifacts, but the kisql binary
+# is committed directly to the repo root as a self-extracting bash+jar
+# launcher — fetch it via raw.githubusercontent.com instead.
+KISQL_TAG=${KISQL_TAG:-v7.2.3.17}
+if [ ! -x ./kisql ]; then
+    wget --continue --progress=dot:giga -O kisql \
+        "https://raw.githubusercontent.com/kineticadb/kisql/$KISQL_TAG/kisql"
+    chmod u+x ./kisql
+fi

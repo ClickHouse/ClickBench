@@ -1,0 +1,10 @@
+#!/bin/bash
+# Best-effort stop of the YDB systemd services on each node.
+source benchmark_variables.sh
+hosts=( "$host1$host_suffix" "$host2$host_suffix" "$host3$host_suffix" )
+
+for host in "${hosts[@]}"; do
+    ssh -o StrictHostKeyChecking=no -l "$ydb_host_user_name" -o BatchMode=yes "$host" \
+        "sudo systemctl list-units --type=service --all | grep ydb | awk '{print \$1}' | xargs -r sudo systemctl stop" \
+        2>/dev/null || true
+done

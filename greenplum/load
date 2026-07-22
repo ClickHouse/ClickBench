@@ -1,0 +1,21 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-greenplum}
+export PGPASSWORD='gparray'
+
+# Schema is created from the host (psql via the mapped port).
+psql -h localhost -p 5432 -U gpadmin -d demo -v ON_ERROR_STOP=1 -f create.sql
+
+# Move the source TSV into the container and load via COPY (the previous
+# gpfdist-based load relied on a native install layout that no longer
+# exists in the containerized cluster).
+sudo docker cp hits.tsv "$CONTAINER_NAME":/tmp/hits.tsv
+psql -h localhost -p 5432 -U gpadmin -d demo -v ON_ERROR_STOP=1 -t \
+    -c "COPY hits FROM '/tmp/hits.tsv' WITH (FORMAT text);"
+psql -h localhost -p 5432 -U gpadmin -d demo -v ON_ERROR_STOP=1 -t \
+    -c "ANALYZE hits;"
+
+sudo docker exec "$CONTAINER_NAME" rm -f /tmp/hits.tsv
+rm -f hits.tsv
+sync

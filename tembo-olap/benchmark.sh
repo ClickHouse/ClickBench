@@ -6,7 +6,7 @@ PASSWORD="<password>"
 sudo apt-get update -y
 sudo apt-get install -y postgresql-client
 
-../download-hits-tsv
+../lib/download-hits-tsv
 chmod 777 ~ hits.tsv
 
 psql postgresql://postgres:$PASSWORD@$HOSTNAME:5432 -t -c 'CREATE DATABASE test'

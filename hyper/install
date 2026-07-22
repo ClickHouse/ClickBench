@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+# tableauhyperapi only publishes Linux wheels for x86_64 (manylinux2014).
+# On arm64 (c8g.*) pip would fail with "Could not find a version that
+# satisfies the requirement tableauhyperapi" after a long apt update.
+# Fail fast with a clear message so the run aborts in seconds instead.
+if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "amd64" ]; then
+    echo "hyper: tableauhyperapi has no Linux $(uname -m) wheel; skipping" >&2
+    exit 1
+fi
+
+sudo apt-get update -y
+sudo apt-get install -y python3-pip python3-venv
+
+if [ ! -d myenv ]; then
+    python3 -m venv myenv
+fi
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+pip install --upgrade pip
+pip install tableauhyperapi

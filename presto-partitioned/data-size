@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+du -bcs data/hits/hits_*.parquet | tail -n1 | cut -f1

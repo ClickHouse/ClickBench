@@ -24,6 +24,16 @@ CREATE TABLE sink.results
     num_results UInt64,
     runtimes String,
     runtimes_formatted String,
+    -- Sustained-throughput test that runs after the cold/warm sweep.
+    -- concurrent_qps is NULL when the engine died and the watchdog never
+    -- got it back up to serve a single query; concurrent_error_ratio is
+    -- NULL only if zero queries were attempted (shouldn't happen unless
+    -- BENCH_CONCURRENT_DURATION was set to 0).
+    concurrent_qps Nullable(Float64),
+    concurrent_error_ratio Nullable(Float64),
+    -- The pull request number when the run was launched by the PR workflow;
+    -- 0 for runs of main and for logs predating this column.
+    clickbench_pr UInt32,
     output String,
 )
 ENGINE = ReplicatedMergeTree('/clickhouse/tables/sink/results/{shard}', '{replica}') ORDER BY (time);
@@ -46,10 +56,25 @@ WITH
     extractAllGroups(content, '\n *\[([\d\.]+|null),\s*([\d\.]+|null),\s*([\d\.]+|null)\]') AS runtimes,
     '[\n' || arrayStringConcat(arrayMap(x -> '        [' || arrayStringConcat(arrayMap(v -> v == 'null' ? v : round(v::Float64, 3)::String, x), ', ') || ']', runtimes), ',\n') || '\n]' AS runtimes_formatted,
 
+    -- Concurrent QPS test (lib/benchmark-common.sh bench_concurrent_qps).
+    -- The bench emits "Concurrent QPS: <num|null>" and
+    -- "Concurrent error ratio: <num|null>" at the end of the log.
+    -- toFloat64OrNull treats the literal "null" string as NULL, so
+    -- "Concurrent QPS: null" (engine never recovered during the window)
+    -- ends up as a NULL in the column.
+    toFloat64OrNull(extract(content, 'Concurrent QPS: ([0-9.]+|null)')) AS concurrent_qps,
+    toFloat64OrNull(extract(content, 'Concurrent error ratio: ([0-9.]+|null)')) AS concurrent_error_ratio,
+
+    -- \d* rather than \d+: the header line is 'ClickBench PR: ' with no number
+    -- for runs of main, and the empty match there stops the search before any
+    -- 'ClickBench PR: <number>' that may occur later in untrusted bench output.
+    toUInt32OrZero(extract(content, 'ClickBench PR: (\d*)')) AS clickbench_pr,
+
     load_time IS NOT NULL AND length(runtimes) = 43 AND data_size >= 5000000000
         AND arrayExists(x -> arrayExists(y -> toFloat64OrZero(y) > 0.1, x), runtimes) AS good
 
 SELECT time, system, machine, system_name, proprietary, tuned, tags, total_time, disk_space_diff, load_time, data_size, length(runtimes) AS num_results, runtimes, runtimes_formatted,
+    concurrent_qps, concurrent_error_ratio, clickbench_pr,
 '{
     "system": "' || system_name || '",
     "date": "' || time::Date || '",
@@ -61,11 +86,22 @@ SELECT time, system, machine, system_name, proprietary, tuned, tags, total_time,
     "tags": ' || tags || ',
     "load_time": ' || load_time || ',
     "data_size": ' || data_size || ',
+    "concurrent_qps": ' || ifNull(toString(concurrent_qps), 'null') || ',
+    "concurrent_error_ratio": ' || ifNull(toString(concurrent_error_ratio), 'null') || ',
     "result": ' || runtimes_formatted || '
 }
 ' AS output
 FROM sink.data
 WHERE time >= yesterday() AND content NOT LIKE 'Cloud-init%' AND good;
+
+-- Read-only user for the results collection automation
+-- (collect-new-results.py). The password is in the CLICKBENCH_DB_PASSWORD
+-- GitHub secret of ClickHouse/ClickBench.
+CREATE USER clickbench IDENTIFIED WITH sha256_password BY '<password>'
+SETTINGS readonly = 1;
+
+GRANT SELECT ON sink.data TO clickbench;
+GRANT SELECT ON sink.results TO clickbench;
 
 CREATE USER sink IDENTIFIED WITH no_password
 DEFAULT DATABASE sink

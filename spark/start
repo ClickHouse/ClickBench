@@ -1,0 +1,3 @@
+#!/bin/bash
+# PySpark runs in-process per query — nothing to start.
+exit 0

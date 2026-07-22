@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+: "${YT_PROXY:?YT_PROXY is required}"
+: "${CHYT_ALIAS:=*ch_public}"
+
+yt clickhouse execute "SELECT 1" --alias "$CHYT_ALIAS" --proxy "$YT_PROXY" >/dev/null

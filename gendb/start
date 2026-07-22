@@ -1,0 +1,3 @@
+#!/bin/bash
+# GenDB binaries are embedded CLIs — no daemon to start.
+exit 0

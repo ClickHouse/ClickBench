@@ -1,5 +1,6 @@
 {
   "system": "Timescale ☁️",
+  "date": "2025-12-10",
   "machine": "64GiB",
   "cluster_size": 1,
   "tags": ["C", "PostgreSQL compatible", "column-oriented", "time-series", "managed"],

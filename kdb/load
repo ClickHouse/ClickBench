@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+# Discard any prior load.
+rm -rf hits sym
+
+q load.q -s 0
+
+# The source parquet is no longer needed once the splayed table is on disk.
+rm -f hits.parquet
+sync

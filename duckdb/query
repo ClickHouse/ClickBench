@@ -1,0 +1,25 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via duckdb against hits.db.
+# Stdout: query result (boxed format).
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+# duckdb writes both the result and the `Run Time (s): real X.XXX` line to
+# stdout; capture, split, redirect timing to stderr.
+out=$(duckdb hits.db -c ".timer on" -c "$query" 2>/tmp/duckdb.err.$$) && status=0 || status=$?
+
+if [ "$status" -ne 0 ]; then
+    cat /tmp/duckdb.err.$$ >&2
+    rm -f /tmp/duckdb.err.$$
+    exit "$status"
+fi
+rm -f /tmp/duckdb.err.$$
+
+# Stdout: everything except the Run Time line.
+printf '%s\n' "$out" | grep -v '^Run Time '
+
+# Stderr: the timing in seconds.
+printf '%s\n' "$out" | awk '/^Run Time/ { print $5 }' | tail -n1 >&2

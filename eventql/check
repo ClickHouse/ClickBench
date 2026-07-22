@@ -1,0 +1,10 @@
+#!/bin/bash
+# Confirm evqld's HTTP listener is up. GET / returns 302 (redirect to
+# the bundled web UI) once the server is fully bootstrapped, so we
+# treat any HTTP status as success and only fail on a connect error.
+# (-f would reject the 302; --fail-with-body / --silent isn't enough.)
+set -e
+
+status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
+    http://127.0.0.1:9175/ || echo "000")
+[ "$status" != "000" ]

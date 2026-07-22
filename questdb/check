@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+curl -sSf -G --data-urlencode 'query=SELECT 1' 'http://localhost:9000/exec' >/dev/null

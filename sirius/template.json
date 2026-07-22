@@ -6,6 +6,8 @@
   "tags": [
     "C++",
     "column-oriented",
-    "embedded"
+    "DuckDB derivative",
+    "embedded",
+    "in-memory"
   ]
 }

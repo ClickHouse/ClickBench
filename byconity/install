@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e
+
+# Install Docker (required by byconity's compose stack). Idempotent.
+#
+# Two checks: the `docker` CLI itself, and the v2 `docker compose` plugin.
+# Ubuntu's `docker.io` ships docker without the compose plugin, so a box can
+# satisfy `command -v docker` but still fail `docker compose up`.
+
+if ! command -v docker >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y ca-certificates curl gnupg
+    sudo install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+        | sudo gpg --yes --dearmor -o /etc/apt/keyrings/docker.gpg
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    {
+        echo -n "deb [arch=$(dpkg --print-architecture) "
+        echo -n "signed-by=/etc/apt/keyrings/docker.gpg] "
+        echo -n "https://download.docker.com/linux/ubuntu "
+        echo "$(. /etc/os-release && echo "$VERSION_CODENAME") stable"
+    } | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+
+    sudo apt-get update -y
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io \
+        docker-buildx-plugin docker-compose-plugin
+elif ! docker compose version >/dev/null 2>&1; then
+    sudo apt-get update -y
+    # Docker.com's apt repo ships the plugin as `docker-compose-plugin`;
+    # Ubuntu's own repo (24.04+) ships it as `docker-compose-v2`. Try both.
+    sudo apt-get install -y docker-compose-plugin \
+        || sudo apt-get install -y docker-compose-v2
+fi
+
+sudo systemctl start docker

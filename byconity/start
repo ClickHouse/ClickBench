@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+# Bring the byconity stack up. Idempotent: if the server already responds,
+# do nothing.
+if docker compose exec -T server clickhouse-client --port 52145 \
+        --query "SELECT 1" >/dev/null 2>&1; then
+    exit 0
+fi
+
+docker compose up -d
+
+# HDFS user setup runs in load (after ./check confirms the stack is up
+# — hdfs-namenode is a dependency of server, so when SELECT 1 works,
+# namenode has been ready long enough to accept dfs commands too). Doing
+# it here racing the bring-up was failing on cold instances when sleep 5
+# wasn't long enough.

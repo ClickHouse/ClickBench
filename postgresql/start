@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+PGVERSION=${PGVERSION:-17}
+sudo systemctl start postgresql@$PGVERSION-main

@@ -1,0 +1,16 @@
+#!/bin/bash
+# Ready iff HTTP is up AND the `hits` index has at least one active
+# shard. The previous version only checked HTTP, which let post-restore
+# queries hit a still-recovering cluster and return
+#   no_shard_available_action_exception (status 503).
+set -e
+
+curl -sSf 'http://localhost:9200' >/dev/null
+
+# `hits` may not exist yet on a freshly provisioned VM (load hasn't
+# run). In that case HTTP up is enough.
+if curl -sSf 'http://localhost:9200/hits' >/dev/null 2>&1; then
+    body=$(curl -sS 'http://localhost:9200/_cluster/health/hits' 2>/dev/null)
+    printf '%s' "$body" | grep -Eq '"status":"(yellow|green)"'
+    printf '%s' "$body" | grep -Eq '"active_shards":[1-9]'
+fi

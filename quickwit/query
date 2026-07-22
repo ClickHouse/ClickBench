@@ -1,0 +1,42 @@
+#!/bin/bash
+# Reads one query line from stdin (an Elasticsearch-format JSON object, or
+# the literal "null" for queries not expressible in Quickwit).
+# Stdout: raw JSON response from /_elastic/hits/_search.
+# Stderr: query runtime in fractional seconds on the last line, parsed
+#         from .took (engine-internal latency, milliseconds).
+# Exit non-zero on error or when the query is "null".
+set -e
+
+query=$(cat)
+
+if [ "$query" = "null" ] || [ -z "$query" ]; then
+    echo "query not expressible in Quickwit" >&2
+    exit 1
+fi
+
+resp=$(curl -sS -X POST \
+    -H 'Content-Type: application/json' \
+    -d "$query" \
+    http://localhost:7280/api/v1/_elastic/hits/_search)
+
+# Treat the response as an error if it carries any of the known
+# error keys (.error / .status / .message) OR if it has no .took
+# at all. The previous check looked only at .error/.status — a
+# malformed-body response like
+#   {"message":"expected value at line 1 column 1"}
+# slipped through as success.
+err=$(printf '%s' "$resp" | jq -r '
+    if has("error")    then "error: "   + (.error|tostring)
+    elif has("status") then "status: "  + (.status|tostring)
+    elif has("message") then "message: " + (.message|tostring)
+    elif (.took // null) == null then "no .took in response"
+    else empty end')
+if [ -n "$err" ]; then
+    printf '%s\n' "$resp" >&2
+    exit 1
+fi
+took=$(printf '%s' "$resp" | jq -r '.took')
+
+printf '%s\n' "$resp"
+
+awk -v ms="$took" 'BEGIN { printf "%.4f\n", ms / 1000 }' >&2

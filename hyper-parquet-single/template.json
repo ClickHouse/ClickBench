@@ -1,0 +1,11 @@
+{
+  "system": "Salesforce Hyper (Parquet, single)",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "stateless"
+  ]
+}

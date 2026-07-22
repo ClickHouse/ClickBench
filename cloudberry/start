@@ -1,0 +1,13 @@
+#!/bin/bash
+set -eu
+
+NAME=clickbench-cloudberry
+
+# Bring the docker container up if it isn't already.
+sudo docker start "$NAME" >/dev/null
+
+# sshd doesn't auto-start in the container; gpinitsystem/gpstart need ssh
+# to localhost. Then bring the cluster up. gpstart is a no-op if it's
+# already running.
+sudo docker exec "$NAME" bash -c 'pgrep sshd >/dev/null || /usr/sbin/sshd'
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc 'gpstart -a' || true

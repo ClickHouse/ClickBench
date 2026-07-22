@@ -9,7 +9,8 @@
         "managed",
         "column-oriented",
         "ClickHouse derivative",
-        "C++"
+        "C++",
+        "historical"
     ],
     "load_time": 745,
     "data_size": 27190000000,
@@ -229,5 +230,6 @@
             null,
             null
         ]
-    ]
+    ],
+    "comment": "Historical: ByteHouse cloud (bytehouse.cloud) result; the service is no longer reachable from outside the China region."
 }

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# `down` removes the containers but keeps the named volume (the HMS
+# Derby store), so the metastore catalog survives a cold cycle and the
+# next ./start does not need to re-CREATE the external table.
+sudo docker compose -f docker-compose.yml down 2>/dev/null || true
+exit 0

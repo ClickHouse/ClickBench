@@ -9,6 +9,7 @@
     "tags": [
         "C++",
         "column-oriented",
+        "DuckDB derivative",
         "embedded"
     ],
     "load_time": 416,

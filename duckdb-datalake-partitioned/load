@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+# create.sql installs httpfs and defines a VIEW directly over S3 partitioned
+# parquet — no local data is loaded. Persist the view in hits.db.
+rm -f hits.db
+duckdb hits.db -f create.sql
+sync

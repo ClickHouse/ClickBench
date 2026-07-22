@@ -1,0 +1,12 @@
+{
+  "system": "Impala (Parquet, single)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "MPP",
+    "column-oriented",
+    "stateless"
+  ]
+}

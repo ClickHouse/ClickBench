@@ -1,0 +1,14 @@
+version: v2
+kind: Spicepod
+name: spiceai-parquet-clickbench
+
+runtime:
+  caching:
+    # The SQL results cache is enabled by default; the benchmark rules
+    # require query result caches to be disabled.
+    sql_results:
+      enabled: false
+
+datasets:
+  - from: file:hits.parquet
+    name: hits

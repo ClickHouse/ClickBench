@@ -1,0 +1,12 @@
+#!/bin/bash
+set -eu
+
+VSQL="sudo docker exec vertica_ce /opt/vertica/bin/vsql -U dbadmin"
+
+$VSQL -c "DROP TABLE IF EXISTS hits CASCADE;"
+$VSQL -c "$(cat create.sql)"
+
+$VSQL -c "COPY hits FROM LOCAL '/workdir/hits.tsv' DELIMITER E'\t' NULL E'\001' DIRECT"
+
+rm -f hits.tsv
+sync

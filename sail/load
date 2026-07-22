@@ -1,0 +1,5 @@
+#!/bin/bash
+# sail reads hits.parquet directly via Spark's parquet reader. No persistent
+# DB to load.
+set -e
+sync

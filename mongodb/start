@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+sudo systemctl start mongod || true
+
+# Wait up to ~3 minutes for mongod to accept connections. mongod can take a
+# while on cold start (oplog init, etc.). If it never comes up, dump the
+# unit status and log tail so the failure is actionable.
+ok=0
+for _ in $(seq 1 180); do
+    if mongosh --quiet --eval "db.runCommand('ping').ok" >/dev/null 2>&1; then
+        ok=1
+        break
+    fi
+    sleep 1
+done
+
+if [ "$ok" != 1 ]; then
+    echo "mongod did not become reachable on 127.0.0.1:27017 after 180 s" >&2
+    sudo systemctl status mongod --no-pager -l 2>&1 | tail -30 >&2 || true
+    echo "---mongod log tail---" >&2
+    sudo tail -60 /var/log/mongodb/mongod.log 2>&1 >&2 || true
+    exit 1
+fi
+
+# Enable the planner option used by ClickBench (covered whole-index scans).
+# Runtime parameter — resets on each restart so we re-apply.
+mongosh --quiet --eval 'db.adminCommand({setParameter: 1, internalQueryPlannerGenerateCoveredWholeIndexScans: true});' >/dev/null

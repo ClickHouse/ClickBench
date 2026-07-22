@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+DORIS_HOME=$(cat .doris_home)
+find "$DORIS_HOME/be/" -name 'hits_*.parquet' -printf '%s\n' \
+    | awk '{ s += $1 } END { print s+0 }'

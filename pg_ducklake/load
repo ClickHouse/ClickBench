@@ -1,0 +1,23 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-pgduck}
+
+# Move parquet file into the container at /tmp/hits.parquet (path used by create.sql).
+sudo docker cp hits.parquet "$CONTAINER_NAME":/tmp/hits.parquet
+
+psql postgres://postgres:duckdb@localhost:5432/postgres -v ON_ERROR_STOP=1 -t -c "DROP TABLE IF EXISTS hits;" || true
+
+# pgducklake's embedded DuckDB defaults duckdb.memory_limit to 4 GB.
+# CTAS over the 14 GB hits.parquet then OOMs mid-load with
+# "failed to allocate data of size 256 KiB (4.0 GiB/4.0 GiB used)",
+# even on c8g.metal-48xl (384 GB host RAM). Raise the limit to 80 % of
+# host memory and pass it inline so the SET and the CTAS run in the
+# same session.
+mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+duckdb_mem_mb=$(( mem_kb * 8 / 10 / 1024 ))
+{ printf "SET duckdb.memory_limit = '%sMB';\n" "$duckdb_mem_mb"; cat create.sql; } \
+    | psql postgres://postgres:duckdb@localhost:5432/postgres -v ON_ERROR_STOP=1
+
+rm -f hits.parquet
+sync

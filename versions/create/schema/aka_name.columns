@@ -1,0 +1,9 @@
+synth_date Date,
+id Int32,
+person_id Int32,
+name String,
+imdb_index String,
+name_pcode_cf String,
+name_pcode_nf String,
+surname_pcode String,
+md5sum String

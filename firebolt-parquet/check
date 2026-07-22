@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+# Firebolt-core's HTTP port answers immediately but may return a
+# cluster-not-ready JSON error at HTTP 200. Test for an actual result.
+curl -sSf --max-time 5 'http://localhost:3473/' \
+    --data-binary 'SELECT 1;' 2>/dev/null | grep -q '^1'

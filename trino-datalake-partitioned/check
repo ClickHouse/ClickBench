@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+out=$(curl -sf http://localhost:8080/v1/info)
+echo "$out" | grep -q '"starting":false'

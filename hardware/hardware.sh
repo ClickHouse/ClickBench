@@ -8,7 +8,7 @@ pushd clickhouse-benchmark
 
 # Download the binary
 if [[ ! -x clickhouse ]]; then
-    curl https://clickhouse.com/ | sh
+    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ | sh
 fi
 
 if [[ ! -f $QUERIES_FILE ]]; then

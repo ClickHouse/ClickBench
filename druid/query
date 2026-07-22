@@ -1,0 +1,40 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via Druid's SQL HTTP endpoint.
+# Stdout: query result JSON.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+# Druid uses __time and dislikes trailing semicolons.
+query=$(printf '%s' "$query" | sed -e 's EventTime __time g' | tr -d ';')
+
+# Build JSON request safely.
+req=$(printf '%s' "$query" | python3 -c '
+import json, sys
+q = sys.stdin.read()
+print(json.dumps({"query": q, "context": {"timeout": 1000000}}))
+')
+
+tmp_body=$(mktemp)
+trap 'rm -f "$tmp_body"' EXIT
+
+# -w prints time_total and http_code on the last line. -o sends body to file.
+status_line=$(curl -s -o "$tmp_body" \
+    -w '%{http_code} %{time_total}\n' \
+    -XPOST -H'Content-Type: application/json' \
+    http://localhost:8888/druid/v2/sql/ \
+    --data-binary "$req")
+
+http_code=$(echo "$status_line" | awk '{print $1}')
+time_total=$(echo "$status_line" | awk '{print $2}')
+
+cat "$tmp_body"
+
+if [ "$http_code" != "200" ]; then
+    echo "druid query failed: HTTP $http_code" >&2
+    exit 1
+fi
+
+# Print runtime in fractional seconds as the last stderr line.
+printf '%s\n' "$time_total" >&2

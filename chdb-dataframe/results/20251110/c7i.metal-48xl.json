@@ -12,7 +12,6 @@
         "ClickHouse derivative",
         "embedded",
         "stateless",
-        "serverless",
         "Python",
         "dataframe",
         "in-memory",

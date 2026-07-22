@@ -9,7 +9,9 @@
     "tags": [
         "C++",
         "column-oriented",
-        "embedded"
+        "DuckDB derivative",
+        "embedded",
+        "in-memory"
     ],
     "load_time": 25,
     "data_size": 26887598080,

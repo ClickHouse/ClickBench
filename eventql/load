@@ -1,0 +1,21 @@
+#!/bin/bash
+# 1) CREATE TABLE via /api/v1/sql — the `clickbench` database is
+#    materialised implicitly on first reference (there's no separate
+#    `create_database` endpoint that works; the documented one 404s on
+#    this build).
+# 2) Stream hits.tsv into the daemon via loader.py (parallel
+#    JSON-over-HTTP inserts — see loader.py for the why).
+set -e
+
+sql=$(cat create.sql)
+jq -Rn --arg q "$sql" '{database:"clickbench", query:$q}' \
+  | curl -fsS -X POST -H 'Content-Type: application/json' \
+        --data-binary @- \
+        http://127.0.0.1:9175/api/v1/sql \
+  >/dev/null
+
+EVQL_DB=clickbench EVQL_TABLE=hits \
+    python3 loader.py < hits.tsv
+
+rm -f hits.tsv
+sync

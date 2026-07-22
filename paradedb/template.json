@@ -1,11 +1,11 @@
 {
-  "system": "ParadeDB (Parquet, single)",
+  "system": "ParadeDB",
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
   "tags": [
     "Rust",
-    "column-oriented",
+    "row-oriented",
     "search",
     "PostgreSQL compatible",
     "lukewarm-cold-run"

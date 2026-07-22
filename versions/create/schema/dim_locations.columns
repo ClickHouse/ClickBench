@@ -1,0 +1,7 @@
+synth_date Date,
+record_id String,
+location_id String,
+city String,
+state String,
+country String,
+region String

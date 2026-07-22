@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+# Report the timescaledb hypertable's logical size in bytes.
+sudo -u postgres psql test -A -t -c "SELECT hypertable_size('hits');"

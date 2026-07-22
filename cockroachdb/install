@@ -1,0 +1,18 @@
+#!/bin/bash
+set -eu
+
+CRDBVERSION=${CRDBVERSION:-25.1.6}
+
+sudo apt-get update -y
+# expect-dev provides `unbuffer` (used in query script).
+sudo apt-get install -y expect-dev wget bc
+
+if [ ! -x /usr/local/bin/cockroach ]; then
+    arch=$(dpkg --print-architecture)
+    wget --continue --progress=dot:giga \
+        "https://binaries.cockroachdb.com/cockroach-v${CRDBVERSION}.linux-${arch}.tgz"
+    tar -xvzf "cockroach-v${CRDBVERSION}.linux-${arch}.tgz"
+    sudo cp -r "cockroach-v${CRDBVERSION}.linux-${arch}/"* /usr/local/bin/
+fi
+
+sudo mkdir -p /var/lib/cockroach-data

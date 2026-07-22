@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+# Trivial: ensure the venv has pyspark importable.
+# shellcheck disable=SC1091
+source myenv/bin/activate
+python3 -c 'import pyspark' >/dev/null 2>&1

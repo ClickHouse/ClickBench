@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+
+# Convert source parquet to Vortex format.
+duckdb -c "LOAD vortex; COPY 'hits.parquet' TO 'hits.vortex' (FORMAT vortex);"
+
+# Create the persistent VIEW (over hits.vortex) in hits.db.
+rm -f hits.db
+duckdb hits.db -f create.sql
+
+# Source parquet no longer needed.
+rm -f hits.parquet
+sync

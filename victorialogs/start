@@ -1,0 +1,14 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: if already serving, do nothing.
+if curl -sSf --get \
+    --data-urlencode 'query=_time:2100-01-01Z' \
+    'http://localhost:9428/select/logsql/query' >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Detach from this script so it doesn't keep the daemon as a child.
+nohup ./victoria-logs-prod -loggerOutput=stdout -retentionPeriod=20y \
+    -search.maxQueryDuration=5m > server.log 2>&1 &
+disown

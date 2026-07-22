@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+: "${YT_PROXY:?YT_PROXY is required}"
+
+# Report the byte size of the //home/hits table on the YT cluster.
+yt get "//home/hits/@uncompressed_data_size" --proxy "$YT_PROXY"

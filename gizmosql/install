@@ -1,0 +1,57 @@
+#!/bin/bash
+set -eu
+
+# The gizmosql one-line installer is `sh -u`, and its line 32 reads
+#     PREFIX="${HOME}/.local/bin"
+# unconditionally. cloud-init exports HOME for us, but operators
+# launching ./benchmark.sh by hand from a checkout that predates the
+# HOME fix end up with HOME unset and the run dies in 21 s with
+#     sh: 32: HOME: parameter not set
+# Pin a default and pass it into the piped sh explicitly so the
+# installer is insulated from whatever the parent env looked like.
+HOME="${HOME:-/root}"
+export HOME
+
+sudo apt-get update -y
+sudo apt-get install -y curl unzip netcat-openbsd
+
+# Install gizmosql_server + gizmosql_client via the official one-line
+# installer (https://install.gizmosql.com). It handles arch/OS detection
+# and installs to ~/.local/bin.
+if ! command -v gizmosql_server >/dev/null 2>&1; then
+    curl -fsSL https://install.gizmosql.com/install.sh | HOME="$HOME" sh
+    if [ -d "$HOME/.local/bin" ]; then
+        sudo install -m 0755 "$HOME/.local/bin/gizmosql_server" "$HOME/.local/bin/gizmosql_client" /usr/local/bin/
+    fi
+fi
+
+# gizmosql v1.26+ links against GLIBC_2.38; Ubuntu 22.04 ships 2.35
+# and the server dies silently on startup with
+#   gizmosql_server: /lib/x86_64-linux-gnu/libm.so.6:
+#     version `GLIBC_2.38' not found
+# Wrap the binary so it loads via Ubuntu noble's loader, same trick
+# used for arc.
+HAVE_GLIBC=$(ldd --version | head -1 | awk '{print $NF}')
+if dpkg --compare-versions "$HAVE_GLIBC" lt 2.38; then
+    NOBLE_DIR=/opt/glibc-noble
+    if [ ! -x "$NOBLE_DIR/usr/lib64/ld-linux-x86-64.so.2" ]; then
+        LIBC_URL="https://launchpad.net/ubuntu/+archive/primary/+files/libc6_2.39-0ubuntu8.6_amd64.deb"
+        sudo mkdir -p "$NOBLE_DIR"
+        tmp=$(mktemp --suffix=.deb)
+        curl -fsSL "$LIBC_URL" -o "$tmp"
+        sudo dpkg-deb -x "$tmp" "$NOBLE_DIR"
+        rm -f "$tmp"
+    fi
+    for bin in gizmosql_server gizmosql_client; do
+        if [ -f "/usr/local/bin/$bin" ] && [ ! -f "/usr/local/bin/${bin}.bin" ]; then
+            sudo mv "/usr/local/bin/$bin" "/usr/local/bin/${bin}.bin"
+            sudo tee "/usr/local/bin/$bin" >/dev/null <<EOF
+#!/bin/bash
+exec ${NOBLE_DIR}/usr/lib64/ld-linux-x86-64.so.2 \\
+    --library-path ${NOBLE_DIR}/usr/lib/x86_64-linux-gnu:${NOBLE_DIR}/usr/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu \\
+    /usr/local/bin/${bin}.bin "\$@"
+EOF
+            sudo chmod +x "/usr/local/bin/$bin"
+        fi
+    done
+fi

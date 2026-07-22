@@ -1,0 +1,6 @@
+bin/
+hits_part_*
+hits.tsv
+load_out.txt
+log_queries_*.txt
+result_queries_*.txt

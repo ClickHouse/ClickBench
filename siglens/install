@@ -1,0 +1,41 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y git pigz python3 python3-pip jq bc curl
+
+# siglens 1.0.54's go.mod declares "go 1.21". Ubuntu 22.04's
+# `golang` package ships 1.18, which fails tidy/build with
+#   "go.mod indicates go 1.21, but maximum version supported by tidy is 1.18"
+# Install a recent Go from the official tarball into /usr/local/go.
+GO_VERSION=1.22.7
+if ! /usr/local/go/bin/go version 2>/dev/null | grep -q "go${GO_VERSION}"; then
+    arch=$(dpkg --print-architecture)
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${arch}.tar.gz" \
+        -o /tmp/go.tar.gz
+    sudo rm -rf /usr/local/go
+    sudo tar -C /usr/local -xzf /tmp/go.tar.gz
+    rm -f /tmp/go.tar.gz
+fi
+export PATH=/usr/local/go/bin:$PATH
+
+# go mod / go build require GOPATH (and writable GOMODCACHE). With cloud-init
+# running as root and HOME unset, `go mod tidy` errors with
+# `module cache not found: neither GOMODCACHE nor GOPATH is set`. Set both
+# defensively even if cloud-init.sh.in already exports HOME.
+export HOME=${HOME:-/root}
+export GOPATH=${GOPATH:-$HOME/go}
+mkdir -p "$GOPATH"
+
+if [ ! -d siglens ]; then
+    git clone https://github.com/siglens/siglens.git --branch 1.0.54
+fi
+
+cd siglens
+go mod tidy
+if [ ! -x ./siglens ]; then
+    go build -o siglens cmd/siglens/main.go
+fi
+
+# load script uses requests.
+pip3 install --quiet --break-system-packages requests || pip3 install --quiet requests

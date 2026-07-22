@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+if ! command -v docker >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y docker.io
+fi
+
+# Pre-pull the apache/drill image so query timing isn't dominated by image
+# pull on the first run.
+sudo docker pull apache/drill

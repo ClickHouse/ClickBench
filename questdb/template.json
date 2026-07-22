@@ -5,7 +5,6 @@
   "tuned": "no",
   "tags": [
     "Java",
-    "time-series",
-    "lukewarm-cold-run"
+    "time-series"
   ]
 }

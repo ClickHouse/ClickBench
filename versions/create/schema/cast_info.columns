@@ -1,0 +1,8 @@
+synth_date Date,
+id Int32,
+person_id Int32,
+movie_id Int32,
+person_role_id Int32,
+note String,
+nr_order Int32,
+role_id Int32

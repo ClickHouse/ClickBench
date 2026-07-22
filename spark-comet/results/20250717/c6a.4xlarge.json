@@ -10,7 +10,8 @@
         "Java",
         "Rust",
         "column-oriented",
-        "Spark derivative"
+        "Spark derivative",
+        "stateless"
     ],
     "load_time": 0,
     "data_size": 14779976446,

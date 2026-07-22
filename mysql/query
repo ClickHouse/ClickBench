@@ -1,0 +1,35 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via `mysql -vvv` against the `test` DB.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# mysql's "N rows in set (X.XX sec)" footer).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+out=$(sudo mysql test -vvv -e "$query" 2>&1) && exit_code=0 || exit_code=$?
+
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$out" | grep -q '^ERROR'; then
+    printf '%s\n' "$out" >&2
+    exit 1
+fi
+
+printf '%s\n' "$out"
+
+# Parse "(X.XX sec)" or "(N min Y.YY sec)" from the footer line.
+timing=$(printf '%s\n' "$out" \
+    | grep -P 'rows? in set|Empty set|Query OK' \
+    | tail -n1 \
+    | sed -r 's/^.*?\((([0-9.]+) min )?([0-9.]+) sec\).*?$/\2 \3/')
+
+if [ -z "$timing" ]; then
+    echo "no timing in mysql output" >&2
+    exit 1
+fi
+
+awk -v t="$timing" 'BEGIN {
+    n = split(t, a, " ")
+    if (n == 2 && a[1] != "") { printf "%.3f\n", a[1] * 60 + a[2] }
+    else { printf "%.3f\n", a[n] }
+}' >&2

@@ -1,0 +1,14 @@
+#!/bin/bash
+set -eu
+
+# DuckDB engine stores all data in a single duckdb.db file in the MariaDB data
+# directory. information_schema.TABLES does not report DuckDB storage size, so
+# we measure the file directly.
+DUCKDB_FILE="/var/lib/mysql/duckdb.db"
+
+if [ ! -f "$DUCKDB_FILE" ]; then
+    echo "0"
+    exit 0
+fi
+
+du -sb "$DUCKDB_FILE" | awk '{print $1}'

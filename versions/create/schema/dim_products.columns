@@ -1,0 +1,10 @@
+synth_date Date,
+record_id String,
+product_id String,
+name String,
+category String,
+subcategory String,
+standard_cost Float64,
+standard_price Float64,
+from_date Date,
+to_date Date

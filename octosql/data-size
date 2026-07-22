@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+wc -c < hits.parquet

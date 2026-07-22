@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+sudo docker run --rm --network host mysql:5 \
+    mysql --host 127.0.0.1 --port 5029 --user=root --password=mypass \
+    -e "SELECT 1" >/dev/null 2>&1

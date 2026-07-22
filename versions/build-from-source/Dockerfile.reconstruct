@@ -1,0 +1,185 @@
+# Reconstruct a pre-2016-03 ClickHouse snapshot that has no public build system.
+#
+# The public repo only became self-contained (root CMakeLists.txt + contrib/) at
+# 2016-03. Earlier commits carry the source but not the build files or vendored
+# libraries. We overlay a donor commit's build system + contrib/ (DONOR, default
+# the 2016-03 snapshot) onto the target source (TAG, a raw commit SHA), reconcile
+# them with reconstruct.sh, supply the vendored libs the donor no longer ships
+# (QuickLZ stub, system tcmalloc), and build clickhouse-server / clickhouse-client.
+#
+#   docker build -f Dockerfile.reconstruct \
+#     --build-arg TAG=<target-sha> --build-arg REVISION=<n> -t clickhouse-built:<date> .
+#
+# The result behaves like the official server images (see Dockerfile.ubuntu1604).
+
+# Ubuntu 14.04 is the era-correct base for these pre-2016-03 snapshots: gcc-5
+# (from the toolchain PPA) defaults to the old libstdc++ ABI here, and trusty's
+# system boost is old-ABI too — so both clickhouse-server AND clickhouse-client
+# link (16.04's new-ABI boost breaks the client's boost::program_options).
+FROM ubuntu:14.04
+
+ARG GCC=5
+# Trusty is still on archive.ubuntu.com (in ESM), so keep the base sources; its
+# Release is expired (Check-Valid-Until=false) and gcc-5 comes from the
+# ubuntu-toolchain-r PPA ([trusted=yes] skips the GPG dance). liblz4/libzstd/
+# double-conversion come from the vendored contrib/, not the (older) system.
+RUN set -eu; \
+    echo 'deb [trusted=yes] http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu trusty main' > /etc/apt/sources.list.d/toolchain.list; \
+    apt-get -o Acquire::Check-Valid-Until=false update; \
+    apt-get install -y --no-install-recommends --allow-unauthenticated \
+        git ca-certificates cmake make pkg-config bash python3 "gcc-${GCC}" "g++-${GCC}" \
+        libicu-dev libreadline-dev libssl-dev unixodbc-dev libglib2.0-dev \
+        libboost-dev libboost-thread-dev libboost-program-options-dev \
+        libboost-system-dev libboost-regex-dev libboost-filesystem-dev \
+        zlib1g-dev liblz4-dev libsparsehash-dev libmysqlclient-dev \
+        libzookeeper-mt-dev libgoogle-perftools-dev tzdata \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV CC=gcc-${GCC} CXX=g++-${GCC}
+
+# DONOR: the earliest self-contained snapshot (2016-03-01), whose build system
+# and contrib/ we transplant. TAG: the target snapshot's commit SHA.
+ARG DONOR=5360c78806e043d0d2bf3de15a363f87fbdaf5f4
+# PATCH_REF: the last cleanly-building month (2015-12). A handful of files in the
+# older trees use C++14 that this era's gcc-5 accepted but a modern gcc-5 rejects
+# (recursive generic lambdas etc.); by 2015-12 they had been rewritten. We overlay
+# those specific files from PATCH_REF ("an equivalent from a slightly newer
+# version"). PATCH_FILES is the space-separated allowlist, extended as new
+# gcc-hostile files surface while sweeping backwards.
+ARG PATCH_REF=a7387d9ce431a1f288d1a4898fa0c0c36c765abc
+# Two overlay sets from PATCH_REF, applied only to targets older than it:
+#   PATCH_COND_* — CONDITIONAL OVERWRITE. SummingSortedBlockInputStream: only the
+#     ~2015-06..2015-11 copies use a recursive generic lambda (decltype(auto)) that a
+#     modern gcc-5 rejects; older and newer copies compile as-is and match their own
+#     era's caller (the ctor signature differs across eras). So overwrite it from
+#     PATCH_REF only when the target's own copy actually contains that construct.
+#   PATCH_FILL   — FILL, only when ABSENT in the target. The statdaemons-library
+#     components (Stopwatch, pools, HLL, Increment, the uniq/quantile algorithms,
+#     …) that pre-2015-11 trees pulled from the external <statdaemons/*>; they were
+#     inlined in-repo at the 2015-10 -> 2015-11 boundary. Filling only-if-missing
+#     means newer, self-contained trees keep their own copies (no downgrade).
+#     reconstruct.sh forwards the old <statdaemons/...> paths to them.
+ARG PATCH_COND_H=dbms/include/DB/DataStreams/SummingSortedBlockInputStream.h
+ARG PATCH_COND_CPP=dbms/src/DataStreams/SummingSortedBlockInputStream.cpp
+ARG PATCH_FILL="dbms/include/DB/AggregateFunctions/UniquesHashSet.h dbms/include/DB/AggregateFunctions/ReservoirSampler.h dbms/include/DB/AggregateFunctions/ReservoirSamplerDeterministic.h dbms/include/DB/Common/Stopwatch.h dbms/include/DB/Common/ConfigProcessor.h dbms/include/DB/Common/PoolBase.h dbms/include/DB/Common/PoolWithFailoverBase.h dbms/include/DB/Common/OptimizedRegularExpression.h dbms/include/DB/Common/OptimizedRegularExpression.inl dbms/include/DB/Common/HTMLForm.h dbms/include/DB/Common/AIO.h dbms/include/DB/Common/HyperLogLogCounter.h dbms/include/DB/Common/HyperLogLogBiasEstimator.h dbms/include/DB/Common/CompactArray.h dbms/include/DB/Common/NetException.h dbms/src/Common/ConfigProcessor.cpp libs/libcommon/include/common/threadpool.hpp dbms/include/DB/Common/Increment.h dbms/include/DB/Common/CounterInFile.h dbms/include/DB/Common/SimpleCache.h"
+ARG TAG
+RUN git init -q /src && cd /src \
+ && git config advice.detachedHead false \
+ && git remote add origin https://github.com/ClickHouse/ClickHouse.git \
+ && git fetch -q --depth 1 origin "${TAG}"  && git checkout -q --detach FETCH_HEAD \
+ && git fetch -q --depth 1 origin "${DONOR}" \
+ && git checkout FETCH_HEAD -- contrib \
+ && git checkout FETCH_HEAD -- $(git ls-tree -r --name-only FETCH_HEAD | grep -E 'CMakeLists.txt$|\.cmake$') \
+ && (git checkout FETCH_HEAD -- dbms/include/DB/Dictionaries/Embedded 2>/dev/null || true) \
+ && (git checkout FETCH_HEAD -- libs/libdaemon 2>/dev/null || true) \
+ && (git checkout FETCH_HEAD -- libs/libcommon 2>/dev/null || true) \
+ && if [ "${PATCH_REF}" != "${TAG}" ]; then \
+        git fetch -q --depth 1 origin "${PATCH_REF}"; \
+        for f in ${PATCH_FILL};  do [ -e "$f" ] || (git checkout FETCH_HEAD -- "$f" 2>/dev/null || true); done; \
+        if grep -q 'decltype(auto)' "${PATCH_COND_H}" 2>/dev/null; then \
+            git checkout FETCH_HEAD -- "${PATCH_COND_H}" "${PATCH_COND_CPP}" 2>/dev/null || true; \
+        fi; \
+    fi
+
+# Reconcile the donor build system with the older source (globs, stubs, shims).
+COPY reconstruct.sh /reconstruct.sh
+RUN bash /reconstruct.sh
+
+# Configure, then build. re2/re2_st must be built (and put on the linker search
+# path) before the server links; revision.h is generated directly (the donor's
+# generator does a git-fetch that hangs on a shallow checkout).
+#
+# Revision: the caller passes REVISION -- the per-month value interpolated in
+# monthly.tsv between the dates the DBMS_MIN_REVISION_WITH_* protocol defines were
+# introduced (those constants are the real SVN revisions where each protocol feature
+# landed). We then clamp it up to this snapshot's own protocol FLOOR: the maximum
+# DBMS_MIN_REVISION_WITH_* constant in Core/Defines.h. The floor matters because those
+# defines control the wire protocol -- the compiled-in revision must be >= every
+# threshold the in-image client checks at handshake, or the client rejects its own
+# server ("Server revision is too old ... at least 34482"). The resulting value is
+# what the server reports (0.0.<rev>) and is written to /clickhouse-revision so
+# run-version.sh reports the same on the oldest builds, which have no SELECT version().
+# With no REVISION passed it falls back to the floor, then to 53400.
+ARG REVISION=
+WORKDIR /src/build
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DTESTS=NO \
+        -DCMAKE_C_COMPILER="gcc-${GCC}" -DCMAKE_CXX_COMPILER="g++-${GCC}" \
+ && make -j"$(nproc)" re2 && make -j"$(nproc)" re2_st \
+ && cp "$(find . -name libre2.a | head -1)" /usr/lib/ \
+ && cp "$(find . -name libre2_st.a | head -1)" /usr/lib/ \
+ && mkdir -p /src/build/libs/libcommon/src \
+ && { FLOOR=$(grep -hoE 'DBMS_MIN_REVISION_WITH_[A-Z_]+[[:space:]]+[0-9]+' $(find /src -path '*/Core/Defines.h' 2>/dev/null) 2>/dev/null | grep -oE '[0-9]+$' | sort -n | tail -1); \
+      REV=${REVISION:-${FLOOR}}; \
+      if [ -n "${FLOOR}" ] && [ "${REV:-0}" -lt "${FLOOR}" ] 2>/dev/null; then REV=${FLOOR}; fi; \
+      REV=${REV:-53400}; \
+      echo "reconstruct: using revision ${REV} (protocol floor ${FLOOR:-none})"; \
+      printf '%s' "${REV}" > /clickhouse-revision; \
+      printf '#ifndef REVISION\n#define REVISION %s\n#endif\n#ifndef SVN_REVISION\n#define SVN_REVISION %s\n#endif\n' "${REV}" "${REV}" > /src/build/libs/libcommon/src/revision.h; } \
+ && make -j"$(nproc)" clickhouse-server && make -j"$(nproc)" clickhouse-client
+
+# Install binaries + a multi-call shim + a minimal IPv4 config (this era ships
+# no default config.xml in the tree).
+RUN set -eu; \
+    SRV=$(find /src/build -type f -executable -name clickhouse-server | head -1); \
+    CLI=$(find /src/build -type f -executable -name clickhouse-client | head -1); \
+    cp "$SRV" /usr/bin/clickhouse-server; cp "$CLI" /usr/bin/clickhouse-client; \
+    printf '#!/bin/sh\ncmd="$1"; shift\nexec "/usr/bin/clickhouse-$cmd" "$@"\n' > /usr/bin/clickhouse; \
+    chmod +x /usr/bin/clickhouse; \
+    mkdir -p /etc/clickhouse-server /var/log/clickhouse-server \
+             /opt/clickhouse/metadata/default /opt/clickhouse/data/default /opt/clickhouse/tmp
+RUN cat > /etc/clickhouse-server/config.xml <<'EOF'
+<yandex>
+    <logger><level>error</level><log>/var/log/clickhouse-server/clickhouse-server.log</log><errorlog>/var/log/clickhouse-server/err.log</errorlog><size>100M</size><count>1</count></logger>
+    <listen_host>0.0.0.0</listen_host>
+    <tcp_port>9000</tcp_port>
+    <http_port>8123</http_port>
+    <path>/opt/clickhouse/</path>
+    <tmp_path>/opt/clickhouse/tmp/</tmp_path>
+    <!-- 1 GiB each: the oldest snapshots (pre-2014-05) parse these cache sizes as a
+         signed 32-bit int and reject anything over 2^31 ("Not a valid integer") at
+         boot, so keep both under that ceiling. Still ample for hot-run caching of
+         these datasets, and the same value is used across the whole reconstructed
+         sweep (each version is rebuilt from source with this config), so cache size
+         stays consistent between versions. -->
+    <mark_cache_size>1073741824</mark_cache_size>
+    <uncompressed_cache_size>1073741824</uncompressed_cache_size>
+    <users_config>users.xml</users_config>
+    <default_profile>default</default_profile>
+    <default_database>default</default_database>
+    <!-- profiles/users/quotas are ALSO embedded here (not only in users.xml) for the
+         very oldest snapshots (pre-2014-05): they have no users_config support and
+         read these directly from the main config. Newer eras load a separate users
+         config object from users.xml and ignore this copy, so there is no conflict.
+         See users.xml below for why max_block_size is the chosen minimal setting. -->
+    <profiles><default><max_block_size>65536</max_block_size></default></profiles>
+    <users><default>
+        <password></password>
+        <networks><ip>::/0</ip></networks>
+        <profile>default</profile>
+        <quota>default</quota>
+    </default></users>
+    <quotas><default></default></quotas>
+</yandex>
+EOF
+RUN cat > /etc/clickhouse-server/users.xml <<'EOF'
+<yandex>
+    <!-- Minimal default profile: the oldest snapshots predate settings like
+         max_memory_usage and reject unknown settings in users.xml at boot, but the
+         very oldest (pre-2014-03) also reject an *empty* profile ("no profile
+         'default'"). max_block_size is a fundamental setting present in every era, so
+         it keeps the profile non-empty without tripping the unknown-setting check.
+         The runner sets a per-query memory limit where the version supports it. -->
+    <profiles><default><max_block_size>65536</max_block_size></default></profiles>
+    <users><default>
+        <password></password>
+        <networks><ip>::/0</ip></networks>
+        <profile>default</profile>
+        <quota>default</quota>
+    </default></users>
+    <quotas><default></default></quotas>
+</yandex>
+EOF
+
+EXPOSE 8123 9000
+WORKDIR /
+ENTRYPOINT ["/usr/bin/clickhouse-server", "--config-file=/etc/clickhouse-server/config.xml"]

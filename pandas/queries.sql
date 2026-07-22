@@ -1,0 +1,43 @@
+hits.count()
+hits[hits['AdvEngineID'] != 0].count()
+(hits['AdvEngineID'].sum(), hits.shape[0], hits['ResolutionWidth'].mean())
+hits['UserID'].mean()
+hits['UserID'].nunique()
+hits['SearchPhrase'].nunique()
+(hits['EventDate'].min(), hits['EventDate'].max())
+hits[hits['AdvEngineID'] != 0].groupby('AdvEngineID').size().sort_values(ascending=False)
+hits.groupby('RegionID')['UserID'].nunique().nlargest(10)
+hits.groupby('RegionID').agg({'AdvEngineID': 'sum', 'ResolutionWidth': 'mean', 'UserID': 'nunique'}).nlargest(10, 'AdvEngineID')
+hits[hits['MobilePhoneModel'] != ''].groupby('MobilePhoneModel')['UserID'].nunique().nlargest(10)
+hits[hits['MobilePhoneModel'] != ''].groupby(['MobilePhone', 'MobilePhoneModel'])['UserID'].nunique().nlargest(10)
+hits[hits['SearchPhrase'] != ''].groupby('SearchPhrase').size().nlargest(10)
+hits[hits['SearchPhrase'] != ''].groupby('SearchPhrase')['UserID'].nunique().nlargest(10)
+hits[hits['SearchPhrase'] != ''].groupby(['SearchEngineID', 'SearchPhrase']).size().nlargest(10)
+hits.groupby('UserID').size().nlargest(10)
+hits.groupby(['UserID', 'SearchPhrase']).size().nlargest(10)
+hits.groupby(['UserID', 'SearchPhrase']).size().head(10)
+hits.groupby([hits['UserID'], hits['EventTime'].dt.minute, 'SearchPhrase']).size().nlargest(10)
+hits[hits['UserID'] == 435090932899640449]
+hits[hits['URL'].str.contains('google')].shape[0]
+hits[hits['URL'].str.contains('google') & (hits['SearchPhrase'] != '')].groupby('SearchPhrase').agg({'URL': 'min', 'SearchPhrase': 'size'}).nlargest(10, 'SearchPhrase')
+hits[hits['Title'].str.contains('Google') & ~hits['URL'].str.contains('.google.') & (hits['SearchPhrase'] != '')].groupby('SearchPhrase').agg({'URL': 'min', 'Title': 'min', 'SearchPhrase': 'size', 'UserID': 'nunique'}).nlargest(10, 'SearchPhrase')
+hits[hits['URL'].str.contains('google')].sort_values(by='EventTime').head(10)
+hits[hits['SearchPhrase'] != ''].sort_values(by='EventTime')[['SearchPhrase']].head(10)
+hits[hits['SearchPhrase'] != ''].sort_values(by='SearchPhrase')[['SearchPhrase']].head(10)
+hits[hits['SearchPhrase'] != ''].sort_values(by=['EventTime', 'SearchPhrase'])[['SearchPhrase']].head(10)
+hits[hits['URL'] != ''].groupby('CounterID').filter(lambda g: g['URL'].count() > 100000).agg({'URL': lambda url: url.str.len().mean(), 'CounterID': 'size'}).sort_values().head(25)
+hits[hits['Referer'] != ''].assign(k=hits['Referer'].str.extract('^https?://(?:www\\.)?([^/]+)/.*$')[0]).groupby('k').filter(lambda g: g['Referer'].count() > 100000).agg(min_referer=('Referer', 'min'), average_length=('Referer', lambda r: r.str.len().mean())).head(25)
+sum((hits['ResolutionWidth'].shift(i).sum() for i in range(90)))
+hits[hits['SearchPhrase'] != ''].groupby(['SearchEngineID', 'ClientIP']).agg(c=('SearchEngineID', 'size'), IsRefreshSum=('IsRefresh', 'sum'), AvgResolutionWidth=('ResolutionWidth', 'mean')).nlargest(10, 'c')
+hits[hits['SearchPhrase'] != ''].groupby(['WatchID', 'ClientIP']).agg(c=('WatchID', 'size'), IsRefreshSum=('IsRefresh', 'sum'), AvgResolutionWidth=('ResolutionWidth', 'mean')).nlargest(10, 'c')
+hits.groupby(['WatchID', 'ClientIP']).agg(c=('WatchID', 'size'), IsRefreshSum=('IsRefresh', 'sum'), AvgResolutionWidth=('ResolutionWidth', 'mean')).nlargest(10, 'c')
+hits.groupby('URL').size().nlargest(10).reset_index(name='c')
+hits.groupby(['URL']).size().nlargest(10).reset_index(name='c')
+hits.assign(**{f'ClientIP_minus_{i}': hits['ClientIP'] - i for i in range(1, 4)}).groupby(['ClientIP', 'ClientIP_minus_1', 'ClientIP_minus_2', 'ClientIP_minus_3']).size().nlargest(10).reset_index(name='c')
+hits[(hits['CounterID'] == 62) & (hits['EventDate'] >= '2013-07-01') & (hits['EventDate'] <= '2013-07-31') & (hits['DontCountHits'] == 0) & (hits['IsRefresh'] == 0) & (hits['URL'] != '')].groupby('URL').size().nlargest(10)
+hits[(hits['CounterID'] == 62) & (hits['EventDate'] >= '2013-07-01') & (hits['EventDate'] <= '2013-07-31') & (hits['DontCountHits'] == 0) & (hits['IsRefresh'] == 0) & (hits['Title'] != '')].groupby('Title').size().nlargest(10)
+hits[(hits['CounterID'] == 62) & (hits['EventDate'] >= '2013-07-01') & (hits['EventDate'] <= '2013-07-31') & (hits['IsRefresh'] == 0) & (hits['IsLink'] != 0) & (hits['IsDownload'] == 0)].groupby('URL').size().nlargest(10).reset_index(name='PageViews').iloc[1000:1010]
+hits[(hits['CounterID'] == 62) & (hits['EventDate'] >= '2013-07-01') & (hits['EventDate'] <= '2013-07-31') & (hits['IsRefresh'] == 0)].groupby(['TraficSourceID', 'SearchEngineID', 'AdvEngineID', 'Referer', 'URL']).size().nlargest(10).reset_index(name='PageViews').iloc[1000:1010]
+hits[(hits['CounterID'] == 62) & (hits['EventDate'] >= '2013-07-01') & (hits['EventDate'] <= '2013-07-31') & (hits['IsRefresh'] == 0) & hits['TraficSourceID'].isin([-1, 6]) & (hits['RefererHash'] == 3594120000172545465)].groupby(['URLHash', 'EventDate']).size().nlargest(10).reset_index(name='PageViews').iloc[100:110]
+hits[(hits['CounterID'] == 62) & (hits['EventDate'] >= '2013-07-01') & (hits['EventDate'] <= '2013-07-31') & (hits['IsRefresh'] == 0) & (hits['DontCountHits'] == 0) & (hits['URLHash'] == 2868770270353813622)].groupby(['WindowClientWidth', 'WindowClientHeight']).size().nlargest(10).reset_index(name='PageViews').iloc[10000:10010]
+hits[(hits['CounterID'] == 62) & (hits['EventDate'] >= '2013-07-14') & (hits['EventDate'] <= '2013-07-15') & (hits['IsRefresh'] == 0) & (hits['DontCountHits'] == 0)].groupby(pd.Grouper(key='EventTime', freq='min')).size().reset_index(name='PageViews').iloc[1000:1010]

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+sudo -u postgres psql nocolumnstore -A -t -c "SELECT hypertable_size('hits');"

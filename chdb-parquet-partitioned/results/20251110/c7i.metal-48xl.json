@@ -6,7 +6,7 @@
     "proprietary":  "no",
     "hardware": "cpu",
     "tuned":  "no",
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "embedded", "stateless", "serverless", "historical"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "embedded", "stateless", "historical"],
     "load_time": 0,
     "data_size": 14737666736,
     "result": [

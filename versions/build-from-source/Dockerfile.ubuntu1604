@@ -1,0 +1,101 @@
+# Reproducible build of early ClickHouse (the 1.1.x era, 2016-2018) from source.
+#
+# These versions were never published as a Docker image or package, so we
+# compile them in their contemporary environment: Ubuntu 16.04 + GCC 5, the
+# toolchain named in doc/build.md of that era. The 1.1.x tags carry no git
+# submodules (contrib is vendored in the tree), so a shallow tag checkout is
+# self-contained.
+#
+#   docker build --build-arg TAG=v1.1.54011-stable -t clickhouse-built:1.1.54011 \
+#                -f Dockerfile.ubuntu1604 .
+#
+# The result behaves like the official server images: `clickhouse-server`
+# entrypoint, a `clickhouse` multi-call shim so `clickhouse client` works, and
+# IPv4 listening so it boots on hosts with IPv6 disabled.
+
+FROM ubuntu:16.04
+
+# GCC version: the 2016 tags build with gcc-5; the later 1.1.x (>= ~54318,
+# Dec 2017) require gcc >= 6, pulled from the ubuntu-toolchain-r PPA.
+# ARG GCC is declared before apt so its layer is keyed on the compiler (one
+# cached apt layer per GCC), but ARG TAG comes after so apt is shared across tags.
+ARG GCC=5
+
+# archive.ubuntu.com still serves xenial (16.04), so the default mirror works.
+RUN set -eu; \
+    if [ "${GCC}" != "5" ]; then \
+        apt-get update && apt-get install -y --no-install-recommends software-properties-common && \
+        add-apt-repository -y ppa:ubuntu-toolchain-r/test; \
+    fi; \
+    apt-get update && apt-get install -y --no-install-recommends \
+        git ca-certificates cmake make pkg-config bash "gcc-${GCC}" "g++-${GCC}" \
+        libicu-dev libreadline-dev libssl-dev unixodbc-dev libglib2.0-dev \
+        libboost-dev libboost-thread-dev libboost-program-options-dev \
+        libboost-system-dev libboost-regex-dev libboost-filesystem-dev \
+        zlib1g-dev liblz4-dev libzstd-dev libdouble-conversion-dev \
+        libsparsehash-dev libmysqlclient-dev libzookeeper-mt-dev tzdata \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV CC=gcc-${GCC} CXX=g++-${GCC} DISABLE_MONGODB=1
+# TAG may be a tag (v1.1.54318-stable), a bare tag (53973) or a raw commit SHA
+# (for the untagged monthly snapshots). Fetch it by ref/SHA rather than clone
+# --branch, which only accepts named refs.
+ARG TAG
+# The 2016 tree vendors contrib (no submodules). The later 1.1.x (>= ~54318,
+# Dec 2017) use git submodules, and one of them (contrib/zookeeper at the dead
+# ClickHouse-Extras/zookeeper.git) 404s today. Init submodules one-by-one and
+# tolerate the dead one — cmake's find_zookeeper.cmake then falls back to the
+# system libzookeeper-mt-dev automatically.
+RUN git init -q /src && cd /src \
+ && git remote add origin https://github.com/ClickHouse/ClickHouse.git \
+ && git fetch --depth 1 origin "${TAG}" \
+ && git checkout -q --detach FETCH_HEAD \
+ && if [ -f .gitmodules ]; then \
+        git config -f .gitmodules --get-regexp '\.path$' | awk '{print $2}' | while read -r p; do \
+            git submodule update --init --recursive "$p" 2>/dev/null || echo "WARN: skipping unavailable submodule $p"; \
+        done; \
+    fi
+
+# The 2016 tree hardcodes -Werror in CMAKE_CXX_FLAGS and also leaks clang-only
+# -Wno-* flags into the GCC build, which then fail under -Werror. Strip -Werror
+# from the project's cmake so warnings (incl. unrecognised options) stay non-fatal.
+# Also drop add_subdirectory(private): the 2016-06..08 tags reference a
+# Yandex-internal Metrica directory ("private") that was never open-sourced, so
+# the reference is a fatal cmake configure error in the public tree.
+RUN find /src -name CMakeLists.txt -o -name '*.cmake' | xargs -r sed -i 's/-Werror//g' \
+ && find /src -name CMakeLists.txt | xargs -r sed -i '/add_subdirectory *( *private *)/d'
+
+WORKDIR /src/build
+# Build just the server and client. Fall back to the default target set if those
+# names differ in a given revision.
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_C_COMPILER="gcc-${GCC}" -DCMAKE_CXX_COMPILER="g++-${GCC}" \
+ && ( make -j"$(nproc)" clickhouse-server clickhouse-client \
+      || make -j"$(nproc)" clickhouse \
+      || make -j"$(nproc)" )
+
+# Install the binaries, a multi-call shim, and an IPv4 server config.
+RUN set -eu; \
+    SRV=$(find /src/build -type f -executable -name 'clickhouse-server' | head -1); \
+    CLI=$(find /src/build -type f -executable -name 'clickhouse-client' | head -1); \
+    MULTI=$(find /src/build -type f -executable -name 'clickhouse' | head -1); \
+    if [ -n "$SRV" ]; then cp "$SRV" /usr/bin/clickhouse-server; fi; \
+    if [ -n "$CLI" ]; then cp "$CLI" /usr/bin/clickhouse-client; fi; \
+    if [ -n "$MULTI" ]; then cp "$MULTI" /usr/bin/clickhouse; \
+        ln -sf /usr/bin/clickhouse /usr/bin/clickhouse-server; \
+        ln -sf /usr/bin/clickhouse /usr/bin/clickhouse-client; \
+    else \
+        printf '#!/bin/sh\ncmd="$1"; shift\nexec "/usr/bin/clickhouse-$cmd" "$@"\n' > /usr/bin/clickhouse; \
+        chmod +x /usr/bin/clickhouse; \
+    fi; \
+    mkdir -p /etc/clickhouse-server /var/log/clickhouse-server; \
+    cp /src/dbms/src/Server/config.xml /etc/clickhouse-server/config.xml; \
+    cp /src/dbms/src/Server/users.xml  /etc/clickhouse-server/users.xml; \
+    sed -i 's|<listen_host>::</listen_host>|<listen_host>0.0.0.0</listen_host>|' /etc/clickhouse-server/config.xml; \
+    DATAPATH=$(sed -n 's@.*<path>\(.*\)</path>.*@\1@p' /etc/clickhouse-server/config.xml | head -1); \
+    DATAPATH=${DATAPATH:-/opt/clickhouse/}; \
+    mkdir -p "${DATAPATH}/metadata/default" "${DATAPATH}/data/default" "${DATAPATH}/tmp"
+
+EXPOSE 8123 9000
+WORKDIR /
+ENTRYPOINT ["/usr/bin/clickhouse-server", "--config-file=/etc/clickhouse-server/config.xml"]

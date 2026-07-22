@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Parquet file is read directly by Spark — nothing to load.
+sync

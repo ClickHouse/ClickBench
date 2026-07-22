@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+# Match the pre-refactor heavysql incantation: no positional db arg, the
+# default `omnisci` is implicit. Some 5.10.2 builds of omnisql treat the
+# trailing positional arg as a script path rather than a db name.
+CONTAINER_NAME=${CONTAINER_NAME:-heavyai}
+# omnisql 5.10.2 needs a trailing ';' on every statement it reads from
+# stdin — without it the input is parsed as incomplete and the tool
+# exits with "Missing semicolon at end of SQL command." while never
+# actually contacting the daemon. The agent's check loop then spins
+# for the full timeout.
+sudo docker exec -i "$CONTAINER_NAME" /omnisci/bin/omnisql \
+    -p HyperInteractive -q -t <<< 'SELECT 1;' >/dev/null 2>&1

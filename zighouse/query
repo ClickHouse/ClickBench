@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+query=$(cat)
+start=$(date +%s.%N)
+ZIGHOUSE_CLICKBENCH_SUBMIT=1 ./zighouse query zighouse-store hits "$query" >/dev/null
+end=$(date +%s.%N)
+awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2

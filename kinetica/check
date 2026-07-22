@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+export KI_PWD=admin
+./kisql --host localhost --user admin --sql 'SELECT 1' >/dev/null 2>&1

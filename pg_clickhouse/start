@@ -1,0 +1,10 @@
+#!/bin/bash
+set -eu
+
+PGVERSION=${PGVERSION:-17}
+
+# Start ClickHouse server.
+sudo clickhouse start || true
+
+# Start PostgreSQL.
+sudo systemctl start postgresql@$PGVERSION-main

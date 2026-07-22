@@ -1,0 +1,13 @@
+synth_date Date,
+id Int32,
+movie_id Int32,
+title String,
+imdb_index String,
+kind_id Int32,
+production_year Int32,
+phonetic_code String,
+episode_of_id Int32,
+season_nr Int32,
+episode_nr Int32,
+note String,
+md5sum String

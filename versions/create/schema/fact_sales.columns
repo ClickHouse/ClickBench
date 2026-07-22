@@ -1,0 +1,12 @@
+order_id String,
+order_date Date,
+time_of_day String,
+season String,
+month Int32,
+location_id String,
+region String,
+product_name String,
+quantity Int32,
+sales_amount Float64,
+discount_percentage Int32,
+product_id String

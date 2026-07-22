@@ -1,0 +1,28 @@
+#!/bin/bash
+# Launch evqld in a detached container. /var/lib/clickbench-eventql on
+# the host is bind-mounted at /var/lib/eventql in the container so the
+# data dir survives stop/start cycles and ./data-size can read it
+# directly.
+set -e
+
+# Already running?
+if sudo docker ps --format '{{.Names}}' | grep -qx clickbench-eventql; then
+    exit 0
+fi
+
+# Remove any prior stopped container with the same name so `docker run`
+# below doesn't fail with "name already in use".
+sudo docker rm -f clickbench-eventql >/dev/null 2>&1 || true
+
+# Bind mount overlays the Dockerfile's pre-created subdirs, so we
+# re-create them on the host side. evqld's standalone bootstrap won't
+# initialise these and the garbage-collection thread will spam errors
+# (and block the metadata service) without them.
+sudo mkdir -p /var/lib/clickbench-eventql/trash /var/lib/clickbench-eventql/data
+sudo chmod -R 777 /var/lib/clickbench-eventql
+
+sudo docker run -d \
+    --name clickbench-eventql \
+    --network host \
+    -v /var/lib/clickbench-eventql:/var/lib/eventql \
+    clickbench-eventql >/dev/null

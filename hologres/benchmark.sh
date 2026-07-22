@@ -8,10 +8,38 @@ PORT=$4
 
 DATABASE="hits"
 
-# Install dependencies
-sudo yum update -y
-sudo yum install postgresql-server -y
-sudo yum install postgresql-contrib -y
+# Install dependencies. Hologres is a managed cloud service, so all this
+# host needs is a psql client. Pull a postgres docker image once and run
+# psql out of it — works on Ubuntu/Debian/Amazon Linux/RHEL alike.
+PSQL_IMAGE="postgres:17-alpine"
+if ! command -v docker >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update -y
+        sudo apt-get install -y docker.io
+    elif command -v yum >/dev/null 2>&1; then
+        sudo yum install -y docker
+    else
+        echo "hologres: install docker manually first" >&2
+        exit 1
+    fi
+fi
+sudo systemctl start docker 2>/dev/null || sudo service docker start || true
+sudo docker pull "$PSQL_IMAGE"
+
+# Drop a `psql` shim into ./bin/ that wraps `docker run`. Adding the dir to
+# PATH lets the rest of this script and run.sh call `psql ...` normally —
+# including `command time -f '%e' psql ...`, which would skip a bash
+# function but does pick up shims found on PATH.
+mkdir -p bin
+cat > bin/psql <<EOF
+#!/bin/bash
+exec sudo docker run --rm -i --network host \\
+    -e PGUSER -e PGPASSWORD \\
+    -v "\$PWD":"\$PWD" -v /tmp:/tmp -w "\$PWD" \\
+    "$PSQL_IMAGE" psql "\$@"
+EOF
+chmod +x bin/psql
+export PATH="$PWD/bin:$PATH"
 
 # Set the file name and download link
 FILENAME="hits.tsv"
@@ -19,7 +47,7 @@ FILENAME="hits.tsv"
 # Check if the file exists
 if [ ! -f "$FILENAME" ]; then
     echo "The file $FILENAME does not exist. Starting to download..."
-    ../download-hits-tsv
+    ../lib/download-hits-tsv
     chmod 777 ~ hits.tsv
     if [ $? -eq 0 ]; then
         echo "File download completed!"

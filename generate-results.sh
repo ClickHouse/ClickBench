@@ -4,13 +4,17 @@
 # For the website we keep only the latest dated copy per (system, basename),
 # and we skip entries tagged "historical" — those are kept in the repo
 # as archival data but are not displayed on the dashboard.
+# Entries of the form {"error": "..."} are also skipped: the latest run for a
+# (system, machine) failed, so the system is omitted from the report.
 
 echo "const data = [" > data.generated.js.new
 FIRST=1
 
 # Build "<system>/<basename> <full-path>" lines, then keep the last (latest)
 # row per key — sorted ascending by date, since YYYYMMDD sorts lexically.
-LANG="" ls -1 */results/*/*.json \
+# Use `find` rather than `ls */results/*/*.json`: to avoid overflowing ARG_MAX
+# (clickhouse-cloud alone has tens of thousands of files)
+LANG="" find */results -mindepth 2 -maxdepth 2 -name '*.json' \
     | grep -Ev '^(hardware|versions|gravitons)/' \
     | sort \
     | awk -F/ '{ print $1"/"$NF" "$0 }' \
@@ -18,8 +22,12 @@ LANG="" ls -1 */results/*/*.json \
     | sort \
     | while read -r file
 do
-    if ! entry=$(jq --compact-output --arg src "$file" \
-        'select((.tags // []) | index("historical") | not) | . + {"source": $src}' \
+    # Derive the date from the YYYYMMDD directory name (3rd path segment) so we
+    # can fall back to it when the JSON itself omits .date.
+    date_dir=$(echo "$file" | awk -F/ '{print $3}')
+    date_iso="${date_dir:0:4}-${date_dir:4:2}-${date_dir:6:2}"
+    if ! entry=$(jq --compact-output --arg src "$file" --arg date "$date_iso" \
+        'select(.error == null) | select((.tags // []) | index("historical") | not) | (if (.date // "") == "" then .date = $date else . end) | . + {"source": $src}' \
         "$file"); then
         echo "Error in $file — skipping" >&2
         continue

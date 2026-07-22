@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Data is read from S3 on demand; published partitioned size is ~14.7 GB.
+echo 14737666736

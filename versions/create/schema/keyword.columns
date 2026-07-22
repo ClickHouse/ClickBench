@@ -1,0 +1,4 @@
+synth_date Date,
+id Int32,
+keyword String,
+phonetic_code String

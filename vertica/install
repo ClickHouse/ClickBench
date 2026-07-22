@@ -1,0 +1,15 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io
+
+sudo docker pull vertica/vertica-ce
+
+# Create container only if missing.
+if ! sudo docker inspect vertica_ce >/dev/null 2>&1; then
+    sudo docker run -d -p 5433:5433 -p 5444:5444 \
+        --volume "$(pwd):/workdir" \
+        --mount type=volume,source=vertica-data,target=/data \
+        --name vertica_ce vertica/vertica-ce
+fi

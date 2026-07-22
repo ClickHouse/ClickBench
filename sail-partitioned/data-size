@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+du -bcs partitioned/hits_*.parquet | awk '/total$/ { print $1 }'

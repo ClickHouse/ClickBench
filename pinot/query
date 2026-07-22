@@ -1,0 +1,37 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via Pinot broker HTTP API.
+# Stdout: query result JSON.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+# Pinot doesn't accept trailing semicolons.
+query=$(printf '%s' "$query" | tr -d ';')
+
+req=$(printf '%s' "$query" | python3 -c '
+import json, sys
+q = sys.stdin.read()
+print(json.dumps({"sql": q + "  option(timeoutMs=300000)"}))
+')
+
+resp=$(curl -sS -XPOST -H'Content-Type: application/json' \
+    http://localhost:8000/query/sql/ \
+    --data-binary "$req")
+
+echo "$resp"
+
+# Detect failure: Pinot returns a JSON object always; non-empty exceptions
+# array means failure.
+if echo "$resp" | jq -e '.exceptions | length > 0' >/dev/null 2>&1; then
+    echo "pinot query failed" >&2
+    exit 1
+fi
+
+# timeUsedMs in JSON; convert to seconds.
+secs=$(echo "$resp" | jq -r '.timeUsedMs / 1000')
+if [ -z "$secs" ] || [ "$secs" = "null" ]; then
+    echo "no timing in pinot response" >&2
+    exit 1
+fi
+printf '%s\n' "$secs" >&2

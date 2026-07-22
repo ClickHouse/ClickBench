@@ -1,0 +1,26 @@
+#!/bin/bash
+# Convert the downloaded hits.parquet into raw per-column binary files
+# under db/hits/, the storage format the generated query binaries
+# expect. This is the runtime equivalent of GenDB's storage-designer
+# pass: instead of an LLM emitting an ingest.cpp at run time, we ship a
+# Python+DuckDB ingester that does the same job deterministically.
+#
+# Idempotent: skips columns whose .bin files already exist.
+set -e
+
+cd "$(dirname "$0")"
+
+# Defense: hits.parquet must be present (download-hits-parquet-single
+# in benchmark.sh placed it here).
+if [ ! -f hits.parquet ]; then
+    echo "load: hits.parquet missing — did the download step run?" >&2
+    exit 1
+fi
+
+mkdir -p db/hits
+python3 ingest.py --parquet hits.parquet --gendb-dir db --layout storage_layout.json
+
+# Done — clear the parquet source. The benchmark driver also removes it
+# for non-durable systems; we're durable, so do it explicitly.
+rm -f hits.parquet
+sync

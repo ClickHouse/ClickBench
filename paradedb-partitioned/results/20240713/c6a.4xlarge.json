@@ -6,8 +6,8 @@
     "proprietary": "no",
     "hardware": "cpu",
   "tuned": "no",
-  "comment": "",
-  "tags": ["Rust", "column-oriented", "search", "PostgreSQL compatible", "lukewarm-cold-run"],
+  "comment": "Historical result. ParadeDB's pg_lakehouse / parquet_fdw extension (which made the partitioned-parquet variant possible) was discontinued by upstream after the 0.10.x line, and no current ParadeDB release can reproduce this benchmark. Kept for reference only.",
+  "tags": ["Rust", "column-oriented", "search", "PostgreSQL compatible", "lukewarm-cold-run", "historical"],
   "load_time": 0,
   "data_size": 14779976446,
 

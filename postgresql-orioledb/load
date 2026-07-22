@@ -1,0 +1,22 @@
+#!/bin/bash
+set -eu
+
+# Move the downloaded hits.tsv into the container-shared volume.
+if [ -f hits.tsv ]; then
+    mkdir -p /tmp/data
+    mv -f hits.tsv /tmp/data/hits.tsv
+fi
+
+psql -h localhost -p 5432 -U postgres -c "DROP DATABASE IF EXISTS test;"
+psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE test;"
+psql -h localhost -p 5432 -U postgres -d test -c "CREATE EXTENSION IF NOT EXISTS orioledb;"
+psql -h localhost -p 5432 -U postgres -d test -v ON_ERROR_STOP=1 < create.sql
+
+psql -h localhost -p 5432 -U postgres -d test -v ON_ERROR_STOP=1 <<'EOF'
+\copy hits FROM '/tmp/data/hits.tsv';
+EOF
+
+# Note: ANALYZE on orioledb currently fails (upstream issue 535), skip.
+
+rm -f /tmp/data/hits.tsv
+sync

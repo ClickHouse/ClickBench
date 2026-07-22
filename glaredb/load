@@ -1,0 +1,8 @@
+#!/bin/bash
+# glaredb's create.sql references ./data/hits.parquet, so move the parquet
+# file into the expected subdir.
+set -e
+
+mkdir -p data
+mv hits.parquet data/ 2>/dev/null || true
+sync

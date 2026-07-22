@@ -1,0 +1,9 @@
+log_date Date,
+log_time DateTime,
+device_id String,
+device_name String,
+device_type String,
+device_floor UInt8,
+event_type String,
+event_unit String,
+event_value Nullable(Float64)

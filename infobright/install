@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io
+
+# Pull images up-front so install captures all setup work.
+sudo docker pull flolas/infobright
+sudo docker pull mysql:5
+
+mkdir -p infobright
+
+# (Re)create the container only if missing.
+if ! sudo docker inspect mysql_ib >/dev/null 2>&1; then
+    sudo docker run --name mysql_ib \
+        -e MYSQL_ROOT_PASSWORD=mypass \
+        -v "$(pwd)/infobright:/mnt/mysql_data" \
+        -p 5029:5029 -p 5555 \
+        -d flolas/infobright
+fi

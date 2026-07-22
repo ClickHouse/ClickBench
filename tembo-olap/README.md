@@ -1,3 +1,10 @@
+## Status
+
+Tembo's OLAP cloud stack has been discontinued — `cloud.tembo.io` no
+longer resolves. The result under `results/20240209/` is preserved as a
+historical data point and tagged `"historical"`; this benchmark cannot be
+re-run as written. The instructions below are kept for reference.
+
 # Instantiation
 
 1) Create Account and Login to https://cloud.tembo.io

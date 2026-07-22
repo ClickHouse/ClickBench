@@ -1,0 +1,26 @@
+#!/bin/bash
+set -eu
+
+NAME=clickbench-opengpdb
+
+# Stream hits.tsv and create.sql into the container via tar so host-side
+# symlinks are dereferenced (docker cp would pass them through).
+tar -ch hits.tsv create.sql | \
+    sudo docker exec -i "$NAME" tar -xC /home/gpadmin
+sudo docker exec "$NAME" chown gpadmin:gpadmin \
+    /home/gpadmin/hits.tsv /home/gpadmin/create.sql
+
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc \
+    'psql -d postgres -v ON_ERROR_STOP=1 -f /home/gpadmin/create.sql'
+
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc \
+    'pgrep -u gpadmin gpfdist || nohup gpfdist -d /home/gpadmin >/tmp/gpfdist.log 2>&1 &'
+
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc \
+    'psql -d postgres -v ON_ERROR_STOP=1 -t -c "INSERT INTO hits SELECT * FROM hits_ext;"'
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc \
+    'psql -d postgres -v ON_ERROR_STOP=1 -t -c "ANALYZE hits;"'
+
+sudo docker exec "$NAME" rm -f /home/gpadmin/hits.tsv
+rm -f hits.tsv
+sync

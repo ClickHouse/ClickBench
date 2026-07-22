@@ -1,0 +1,19 @@
+#!/bin/bash
+set -eu
+
+DB_NAME=test
+TABLE_NAME=hits
+
+MYSQL="mysql --host 127.0.0.1 --port 4000 -u root --silent --skip-column-names"
+
+# TiKV storage (always present).
+tikv_size=$($MYSQL test -e \
+    "SELECT (DATA_LENGTH + INDEX_LENGTH) FROM information_schema.tables \
+     WHERE table_schema = '$DB_NAME' AND table_name = '$TABLE_NAME';")
+
+# Optional TiFlash storage (may not exist if mode is tikv-only).
+tiflash_size=$($MYSQL test -e \
+    "SELECT IFNULL(SUM(TOTAL_SIZE), 0) FROM information_schema.tiflash_tables \
+     WHERE TIDB_DATABASE = '$DB_NAME' AND TIDB_TABLE = '$TABLE_NAME';" 2>/dev/null || echo 0)
+
+awk -v a="$tikv_size" -v b="$tiflash_size" 'BEGIN { printf "%d\n", a + b }'

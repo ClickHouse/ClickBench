@@ -12,7 +12,6 @@
         "column-oriented",
         "embedded",
         "stateless",
-        "serverless",
         "dataframe",
         "in-memory",
         "lukewarm-cold-run"

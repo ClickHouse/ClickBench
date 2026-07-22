@@ -19,5 +19,6 @@ LANG=C ls -1 "$dir"/results/*/*.json 2>/dev/null \
   machine="${filename%.*}"
 
   echo '-----------------------------------------'
-  ./run-benchmark.sh "$machine" "$dir"
+  export system=$dir machine=$machine
+  ./run-benchmark.sh
 done

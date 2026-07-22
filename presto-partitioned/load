@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+for f in hits_*.parquet; do
+    ln -f "$f" "data/hits/$f"
+done
+
+java -jar presto-cli.jar --server http://localhost:8081 --file create.sql
+
+rm -f hits_*.parquet
+sync

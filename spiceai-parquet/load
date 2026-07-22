@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+# No acceleration: queries scan hits.parquet directly, so there is nothing
+# to ingest. Restart the runtime so it (re)registers the dataset now that
+# the file exists; /v1/ready returns 200 once the dataset is queryable.
+./stop >/dev/null 2>&1 || true
+rm -f spiced.log
+./start
+
+for _ in $(seq 1 300); do
+    if curl -fsS http://localhost:8090/v1/ready >/dev/null 2>&1; then
+        exit 0
+    fi
+    sleep 1
+done
+
+echo "load: dataset did not become ready within 300s" >&2
+tail -n 50 spiced.log >&2
+exit 1

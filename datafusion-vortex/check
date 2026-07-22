@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+DF=vortex-datafusion-cli/target/release/vortex-datafusion-cli
+"$DF" -q -c "SELECT 1" >/dev/null

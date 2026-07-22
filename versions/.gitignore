@@ -1,0 +1,10 @@
+# Prepared Native data files and cached Docker tag lists — large / regenerable.
+prepare-data/data/
+
+# Per-version build/run logs (artifacts)
+build-from-source/logs/
+logs/
+
+# Rendered per-version cloud-init files
+cloud-init.*.sh
+.local-server/

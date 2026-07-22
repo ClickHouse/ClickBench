@@ -1,0 +1,8 @@
+#!/bin/bash
+# sail-partitioned reads partitioned/*.parquet via Spark. Move the
+# downloaded files into the expected subdir.
+set -e
+
+mkdir -p partitioned
+mv hits_*.parquet partitioned/ 2>/dev/null || true
+sync

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -eu
+
+NAME=clickbench-warehousepg
+
+sudo docker start "$NAME" >/dev/null
+
+sudo docker exec "$NAME" bash -c 'pgrep sshd >/dev/null || /usr/sbin/sshd'
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc 'gpstart -a' || true

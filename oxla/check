@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+PGPASSWORD=oxla psql -h localhost -U oxla -t -c 'SELECT 1' >/dev/null

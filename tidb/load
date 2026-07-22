@@ -1,0 +1,50 @@
+#!/bin/bash
+set -eu
+
+TIDB_MODE=${TIDB_MODE:-tikv}
+DB_NAME=test
+TABLE_NAME=hits
+DATA_DIR=/tmp/data
+
+TIUP_HOME=$(pwd)
+export TIUP_HOME
+PATH="$TIUP_HOME/bin/:$PATH"
+export PATH
+
+MYSQL="mysql --host 127.0.0.1 --port 4000 --connect-timeout 10800 -u root"
+
+# Stage data file where TiDB Lightning expects it: <db>.<table>.csv
+rm -rf $DATA_DIR
+mkdir $DATA_DIR
+mv hits.csv "$DATA_DIR/$DB_NAME.$TABLE_NAME.csv"
+chmod 444 "$DATA_DIR/$DB_NAME.$TABLE_NAME.csv"
+
+$MYSQL -e "DROP DATABASE IF EXISTS $DB_NAME;"
+$MYSQL -e "CREATE DATABASE $DB_NAME;"
+$MYSQL test < create.sql
+
+if [[ $TIDB_MODE == "tiflash" || $TIDB_MODE == "tikv-tiflash" ]]; then
+    $MYSQL test -e "ALTER TABLE $TABLE_NAME SET TIFLASH REPLICA 1;"
+fi
+
+rm -rf /tmp/sorted-kv-dir
+mkdir /tmp/sorted-kv-dir
+rm -f tidb-lightning.log
+nohup tiup tidb-lightning -config ./config/tidb-lightning.toml > tiup-tidb-lightning.out 2>&1 &
+while [ ! -f tidb-lightning.log ]; do sleep 1; done
+
+while ! grep -q 'the whole procedure completed' tidb-lightning.log; do
+    if grep -q 'tidb lightning exit.*finished=false' tidb-lightning.log || grep -q 'ERROR' tidb-lightning.log; then
+        echo "Error during import:" >&2
+        cat tiup-tidb-lightning.out >&2
+        cat tidb-lightning.log >&2
+        exit 1
+    fi
+    grep 'progress.*total' tidb-lightning.log | tail -n 1 || true
+    sleep 10
+done
+
+$MYSQL test -e "ANALYZE TABLE $TABLE_NAME;"
+
+rm -rf $DATA_DIR
+sync

@@ -1,0 +1,8 @@
+#!/bin/bash
+# opteryx queries `FROM hits` and resolves it to ./hits/*.parquet, so move
+# the partitioned files into the expected subdir.
+set -e
+
+mkdir -p hits
+mv hits_*.parquet hits/ 2>/dev/null || true
+sync

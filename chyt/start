@@ -1,0 +1,3 @@
+#!/bin/bash
+# CHYT runs on a remote YT cluster ($YT_PROXY); nothing to start locally.
+exit 0

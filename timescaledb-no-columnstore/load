@@ -1,0 +1,22 @@
+#!/bin/bash
+set -eu
+
+sudo chmod og+rX ~
+chmod 777 hits.tsv
+
+sudo -u postgres psql -t -c "DROP DATABASE IF EXISTS nocolumnstore"
+sudo -u postgres psql -t -c "CREATE DATABASE nocolumnstore"
+sudo -u postgres psql nocolumnstore -c "CREATE EXTENSION IF NOT EXISTS timescaledb;"
+
+sudo -u postgres psql -v ON_ERROR_STOP=1 nocolumnstore < create.sql
+
+sudo -u postgres psql -v ON_ERROR_STOP=1 nocolumnstore -q -c "SELECT create_hypertable('hits', 'eventtime', chunk_time_interval => interval '3 day')"
+sudo -u postgres psql -v ON_ERROR_STOP=1 nocolumnstore -q -c "CREATE INDEX ix_counterid ON hits (counterid)"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER DATABASE nocolumnstore SET work_mem TO '1GB';"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER DATABASE nocolumnstore SET min_parallel_table_scan_size TO '0';"
+
+sudo -u postgres psql -v ON_ERROR_STOP=1 nocolumnstore -q -t -c "\\copy hits FROM 'hits.tsv'"
+sudo -u postgres psql -v ON_ERROR_STOP=1 nocolumnstore -q -t -c "vacuum freeze analyze hits;"
+
+rm -f hits.tsv
+sync

@@ -1,0 +1,13 @@
+#!/bin/bash
+set -eu
+
+# pg_duckdb-motherduck: pgduckdb container talks to MotherDuck cloud.
+# Requires MOTHERDUCK_TOKEN to be exported on the operator side
+# (forwarded into cloud-init.sh by run-benchmark.sh's runtime_env loop
+# if it's set in the operator's shell).
+: "${MOTHERDUCK_TOKEN:?MOTHERDUCK_TOKEN is required (sign up + create database 'pgclick' first)}"
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client
+
+sudo docker pull pgduckdb/pgduckdb:17-v1.0.0

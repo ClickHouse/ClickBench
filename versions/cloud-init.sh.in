@@ -1,0 +1,111 @@
+#!/bin/bash -x
+
+# Cloud-init for the Versions Benchmark: benchmark ONE ClickHouse version on a
+# fresh VM, unattended, and send the result to the sink (sink.data on
+# play.clickhouse.com), then terminate. Rendered from this template by
+# run-benchmark.sh (placeholders @version@ etc. are substituted there).
+#
+# Flow: install Docker -> download the prepared Native files from the public
+# bucket -> (build the image from source if this version has no published one)
+# -> run-version.sh -> POST the result JSON + log to the sink -> shutdown.
+
+export HOME="${HOME:-/root}"
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+# docker-buildx: run-version.sh builds unpublished (clickhouse-built:*) versions
+# from source with `docker buildx` (the legacy builder hangs on recent engines).
+# earlyoom: loading all datasets in parallel (and heavy joins on old, less
+# memory-efficient versions) can exhaust RAM; without it the kernel thrashes and
+# the whole VM gets stuck (never terminating, wasting the instance). earlyoom kills
+# the offending process early instead — the server crash is then recovered by
+# run-version.sh's revive_server, or the query is just recorded null. Same as the
+# main ClickBench cloud-init.
+apt-get install -y docker.io docker-buildx git wget curl jq zstd pv aria2 earlyoom
+systemctl enable --now docker
+systemctl enable --now earlyoom
+
+git clone --depth 1 'https://github.com/@repo@.git' --branch '@branch@' ClickBench
+cd ClickBench/versions
+
+VERSION='@version@'
+IMAGE='@image@'
+TAG='@tag@'
+GCC='@gcc@'
+DATASETS='@datasets@'
+export TRIES='@tries@'
+export LOAD_DATASETS="${DATASETS}"
+
+DATADIR=prepare-data/data
+mkdir -p "${DATADIR}"
+BUCKET='https://clickhouse-public-datasets.s3.amazonaws.com/versions-benchmark'
+
+# Download the files for the datasets we will load, in parallel. A missing file
+# (e.g. ssb/taxi not uploaded yet) just fails its own wget and is skipped, so
+# run-version.sh reports that dataset's queries as null rather than failing.
+FILES=""
+for ds in ${DATASETS}; do
+    case "${ds}" in
+        hits)    FILES="${FILES} hits.native.zst" ;;
+        ssb)     FILES="${FILES} ssb.native.zst" ;;
+        mgbench) FILES="${FILES} mgbench1.native.zst mgbench2.native.zst mgbench3.native.zst" ;;
+        tpch)    FILES="${FILES} tpch_nation.native.zst tpch_region.native.zst tpch_part.native.zst tpch_supplier.native.zst tpch_partsupp.native.zst tpch_customer.native.zst tpch_orders.native.zst tpch_lineitem.native.zst" ;;
+        tpcds)   FILES="${FILES} tpcds_call_center.native.zst tpcds_catalog_page.native.zst tpcds_catalog_returns.native.zst tpcds_catalog_sales.native.zst tpcds_customer_address.native.zst tpcds_customer_demographics.native.zst tpcds_customer.native.zst tpcds_date_dim.native.zst tpcds_household_demographics.native.zst tpcds_income_band.native.zst tpcds_inventory.native.zst tpcds_item.native.zst tpcds_promotion.native.zst tpcds_reason.native.zst tpcds_ship_mode.native.zst tpcds_store_returns.native.zst tpcds_store_sales.native.zst tpcds_store.native.zst tpcds_time_dim.native.zst tpcds_warehouse.native.zst tpcds_web_page.native.zst tpcds_web_returns.native.zst tpcds_web_sales.native.zst tpcds_web_site.native.zst" ;;
+        coffeeshop) FILES="${FILES} coffeeshop_fact_sales.native.zst coffeeshop_dim_locations.native.zst coffeeshop_dim_products.native.zst" ;;
+        ontime)  FILES="${FILES} ontime.native.zst" ;;
+        uk)      FILES="${FILES} uk_price_paid.native.zst" ;;
+        job)     FILES="${FILES} job_aka_name.native.zst job_aka_title.native.zst job_cast_info.native.zst job_char_name.native.zst job_comp_cast_type.native.zst job_company_name.native.zst job_company_type.native.zst job_complete_cast.native.zst job_info_type.native.zst job_keyword.native.zst job_kind_type.native.zst job_link_type.native.zst job_movie_companies.native.zst job_movie_info.native.zst job_movie_info_idx.native.zst job_movie_keyword.native.zst job_movie_link.native.zst job_name.native.zst job_person_info.native.zst job_role_type.native.zst job_title.native.zst" ;;
+        taxi)    FILES="${FILES} taxi.native.zst" ;;
+    esac
+done
+echo "downloading in parallel:${FILES}"
+if command -v aria2c >/dev/null 2>&1; then
+    # One aria2c per file, run several at once with xargs -P. Each splits its
+    # file into 16 parallel byte-range segments (S3 supports Range), so the huge
+    # taxi file isn't one slow stream. Per-file invocation avoids aria2's -j
+    # cross-file size accounting; --allow-overwrite re-fetches a pre-existing
+    # file it can't resume instead of erroring; a missing file is skipped.
+    echo ${FILES} | tr ' ' '\n' | grep . | xargs -P 4 -I{} \
+        aria2c --continue=true --allow-overwrite=true --auto-file-renaming=false \
+            -x16 -s16 --min-split-size=20M --summary-interval=15 \
+            -d "${DATADIR}" "${BUCKET}/{}"
+else
+    echo ${FILES} | tr ' ' '\n' | grep . | \
+        xargs -P 8 -I{} wget --continue --progress=dot:giga -P "${DATADIR}" "${BUCKET}/{}"
+fi
+
+# Versions with no published Docker image (clickhouse-built:*) are built from
+# source on the fly by run-version.sh itself (it looks up the recipe in
+# build-from-source/versions.txt or monthly.tsv), so nothing to do here.
+
+echo "=== benchmarking ${VERSION} (image ${IMAGE}, datasets: ${DATASETS}) ==="
+timeout @timeout@ ./run-version.sh "${VERSION}" "${IMAGE}" all 2>&1 | tee -a log
+
+MACHINE=$(curl -sS -H "X-aws-ec2-metadata-token: $(curl -X PUT 'http://169.254.169.254/latest/api/token' -sS -H 'X-aws-ec2-metadata-token-ttl-seconds: 21600')" 'http://169.254.169.254/latest/meta-data/instance-type')
+echo "machine: ${MACHINE}, total time: ${SECONDS}s" | tee -a log
+
+# Build the result payload: the version's result JSON enriched with run metadata,
+# as one compact line, and send it to the sink (sink.data). A server-side MV
+# parses these into the versions report, mirroring the main ClickBench sink.
+RESULTS_URL='https://play.clickhouse.com/?user=sink&query=INSERT+INTO+data+FORMAT+RawBLOB'
+if [ -f "results/${VERSION}.json" ]; then
+    jq -c --arg machine "${MACHINE}" --arg kind 'versions-benchmark' \
+        '. + {kind: $kind, machine: $machine}' "results/${VERSION}.json" \
+        | curl "${RESULTS_URL}" --data-binary @-
+fi
+
+# Also send the (truncated) log for diagnostics, as the main benchmark does.
+send_log() {
+    local f="$1" size
+    size=$(stat -c%s "$f" 2>/dev/null || echo 0)
+    if [ "$size" -le 1000000 ]; then
+        curl "${RESULTS_URL}" --data-binary @"$f"
+    else
+        { head -c 100000 "$f"
+          printf '\n...[%d bytes truncated]...\n' "$((size - 1000000))"
+          tail -c 900000 "$f"; } | curl "${RESULTS_URL}" --data-binary @-
+    fi
+}
+send_log log
+send_log /var/log/cloud-init-output.log
+
+shutdown now

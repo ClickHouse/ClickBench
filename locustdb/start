@@ -1,0 +1,30 @@
+#!/bin/bash
+# Launch the LocustDB HTTP query daemon (it's the same `repl` binary
+# with `--server`). Pinned to 127.0.0.1:8123 to keep it out of the way
+# of any system already on 8080.
+#
+# A PID file under ./run/ is the authority for "is the daemon up". We
+# avoid pgrep-against-cmdline both because it's slow at scale and
+# because the cmdline match can collide with anything else that has
+# "release/repl" in its argv (cargo invocations, debuggers, etc.).
+set -e
+
+mkdir -p logs run
+
+if [ -s run/server.pid ] && kill -0 "$(cat run/server.pid)" 2>/dev/null; then
+    exit 0
+fi
+# Stale or missing PID file — clean it up so the new write below isn't
+# misread by a later concurrent invocation.
+rm -f run/server.pid
+
+nohup LocustDB/target/release/repl \
+    --server \
+    --addrs 127.0.0.1:8123 \
+    --db-path db \
+    > logs/server.log 2>&1 &
+echo $! > run/server.pid
+
+# Give actix-web a moment to bind. The bench harness will then call
+# ./check in a loop until it succeeds.
+sleep 1

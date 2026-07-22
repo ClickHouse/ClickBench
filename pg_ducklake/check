@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+psql postgres://postgres:duckdb@localhost:5432/postgres -t -c 'SELECT 1' >/dev/null

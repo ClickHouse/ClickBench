@@ -1,0 +1,30 @@
+#!/bin/bash
+set -e
+
+# Indexes are created BEFORE import so each document is indexed once during
+# load (re-indexing after the fact re-reads everything). The set of indexes
+# was selected per-query in the original benchmark.sh.
+mongosh --quiet test <<'EOF'
+db.hits.createIndex({"EventDate": 1});
+db.hits.createIndex({"MobilePhoneModel": 1});
+db.hits.createIndex({"Referer": 1});
+db.hits.createIndex({"RefererHash": 1});
+db.hits.createIndex({"URLHash": 1});
+db.hits.createIndex({"UserID": 1});
+db.hits.createIndex({"AdvEngineID": 1, "ResolutionWidth": 1, "RegionID": 1});
+db.hits.createIndex({"RegionID": 1, "UserID": 1});
+db.hits.createIndex({"SearchPhrase": 1, "SearchEngineID": 1});
+db.hits.createIndex({"SearchPhrase": 1, "UserID": 1, "EventTime": 1});
+db.hits.createIndex({"SearchPhrase": 1, "URL": 1, "Title": 1});
+db.hits.createIndex({"CounterID": 1, "EventDate": 1, "URL": 1});
+db.hits.createIndex({"CounterID": 1, "IsRefresh": 1, "EventDate": 1});
+db.hits.createIndex({"URL": 1, "CounterID": 1});
+db.hits.createIndex({"ClientIP": 1, "WatchID": 1, "ResolutionWidth": 1, "IsRefresh": 1});
+EOF
+
+# Single-threaded import is faster on c6a.4xlarge per the original benchmark.sh.
+mongoimport --db test --collection hits --type tsv hits.tsv \
+    --fieldFile=create.txt --columnsHaveTypes
+
+rm -f hits.tsv
+sync

@@ -1,0 +1,34 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via psql against the `test` DB.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# psql's `\timing` output).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+# Capture output, then parse Time: line into seconds.
+# psql writes the result to stdout and the `\timing` line to stdout too;
+# we direct it through awk to split.
+out=$(printf '\\timing\n%s\n' "$query" | sudo -u postgres psql test -t 2>&1)
+status=$?
+
+# psql may print "ERROR:" on a failed query but exit 0 with -t. Detect.
+if printf '%s\n' "$out" | grep -q '^ERROR\|psql: error'; then
+    printf '%s\n' "$out" >&2
+    exit 1
+fi
+
+# Print everything except the Time: line to stdout.
+printf '%s\n' "$out" | grep -v '^Time:'
+
+# Extract last "Time: NNN.NNN ms" line and emit seconds on stderr.
+time_ms=$(printf '%s\n' "$out" | grep -oP 'Time:\s+\K[0-9]+\.[0-9]+' | tail -n1)
+if [ -z "$time_ms" ]; then
+    echo "no timing in psql output" >&2
+    exit 1
+fi
+awk -v ms="$time_ms" 'BEGIN { printf "%.3f\n", ms / 1000 }' >&2
+
+exit "$status"

@@ -1,0 +1,3 @@
+#!/bin/bash
+# PySpark is in-process — nothing to stop.
+exit 0

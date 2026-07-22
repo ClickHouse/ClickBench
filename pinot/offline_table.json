@@ -4,7 +4,7 @@
   "segmentsConfig": {
     "segmentPushType": "APPEND",
     "segmentAssignmentStrategy": "BalanceNumSegmentAssignmentStrategy",
-    "schemaName": "hitsSchema",
+    "schemaName": "hits",
     "replication": "1"
   },
   "tableIndexConfig":{},

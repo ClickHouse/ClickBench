@@ -1,0 +1,29 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via QuestDB HTTP /exec?timings=true.
+# Stdout: query result (JSON).
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# the "timings.execute" field, in nanoseconds).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+raw=$(curl -sS --max-time 600 -G --data-urlencode "query=${query}" \
+    'http://localhost:9000/exec?timings=true' 2>&1)
+
+if printf '%s\n' "$raw" | grep -q '"error"'; then
+    printf '%s\n' "$raw" >&2
+    exit 1
+fi
+
+printf '%s\n' "$raw"
+
+# Parse "execute":<ns> from the timings JSON object.
+ns=$(printf '%s\n' "$raw" | grep -oP '"execute":\s*\K[0-9]+' | tail -n1)
+
+if [ -z "$ns" ]; then
+    echo "no timings.execute in questdb response" >&2
+    exit 1
+fi
+
+awk -v n="$ns" 'BEGIN { printf "%.3f\n", n / 1000000000 }' >&2

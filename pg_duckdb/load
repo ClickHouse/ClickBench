@@ -1,0 +1,26 @@
+#!/bin/bash
+set -eu
+
+export PGUSER=postgres
+export PGPASSWORD=duckdb
+CONNECTION=postgres://postgres:duckdb@127.0.0.1:5432/postgres
+
+psql "$CONNECTION" -v ON_ERROR_STOP=1 -t < create.sql
+
+# COPY FREEZE requires the table to be created or truncated in the same
+# subtransaction; wrap the truncate + copy in a single transaction.
+psql "$CONNECTION" -v ON_ERROR_STOP=1 -q <<'EOF'
+BEGIN;
+TRUNCATE TABLE hits;
+\copy hits FROM 'hits.tsv' WITH FREEZE;
+COMMIT;
+EOF
+
+psql "$CONNECTION" -v ON_ERROR_STOP=1 -q -t -c 'VACUUM ANALYZE hits'
+
+# Make every query in this database execute via the duckdb engine.
+psql "$CONNECTION" -v ON_ERROR_STOP=1 -c \
+    "ALTER DATABASE postgres SET duckdb.force_execution = true;"
+
+rm -f hits.tsv
+sync

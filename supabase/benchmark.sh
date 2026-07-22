@@ -12,7 +12,7 @@ sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
 sudo apt-get update -y
 sudo apt-get install -y postgresql-$PGVERSION
 
-../download-hits-tsv
+../lib/download-hits-tsv
 
 psql ${SUPABASE_CONNECTION_STRING} -c 'CREATE DATABASE test'
 psql ${SUPABASE_CONNECTION_STRING} -t <create.sql 2>&1 | tee load_out.txt

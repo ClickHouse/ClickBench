@@ -1,0 +1,31 @@
+name: "Collect benchmark results"
+
+on:
+  workflow_dispatch:  # This allows manual trigger from the UI
+  schedule:
+    - cron: '7,37 * * * *'
+
+permissions:
+  contents: write       # To push result files to branches.
+  pull-requests: write  # To comment and open automated PRs.
+
+# Two overlapping runs could post the same results twice.
+concurrency:
+  group: collect-results
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          CLICKBENCH_DB_PASSWORD: ${{ secrets.CLICKBENCH_DB_PASSWORD }}
+          # Classic PAT of a user with write access to this repository:
+          # enables committing results to fork PRs that allow maintainer
+          # edits (GITHUB_TOKEN cannot push to forks). The org-level
+          # robot-clickhouse token is used; the robot needs write access
+          # here, or fork results fall back to paste links. See the README.
+          CLICKBENCH_FORK_PUSH_TOKEN: ${{ secrets.ROBOT_CLICKHOUSE_COMMIT_TOKEN }}
+        run: python3 collect-new-results.py

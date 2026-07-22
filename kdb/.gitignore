@@ -1,0 +1,6 @@
+# The KX Community Edition License Agreement contains a DeWitt clause:
+# "You will not disclose any benchmark, test or performance information or
+# any report which contains a competitive analysis regarding the Software
+# to any third party except as explicitly authorized in advance by us in
+# writing." Don't accidentally publish kdb result JSON to this repo.
+results/

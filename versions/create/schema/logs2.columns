@@ -1,0 +1,6 @@
+log_date Date,
+log_time DateTime,
+client_ip String,
+request String,
+status_code UInt16,
+object_size UInt64

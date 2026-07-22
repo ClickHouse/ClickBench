@@ -1,0 +1,10 @@
+synth_date Date,
+p_partkey UInt32,
+p_name String,
+p_mfgr FixedString(25),
+p_brand FixedString(10),
+p_type String,
+p_size Int32,
+p_container FixedString(10),
+p_retailprice Float64,
+p_comment String

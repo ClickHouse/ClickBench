@@ -1,0 +1,9 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via the q binary against the
+# splayed hits table. Stdout: query result. Stderr: query runtime in
+# fractional seconds on the last line. Exit non-zero on error.
+set -e
+
+# -s 0 keeps q on a single thread for deterministic timing; bump if the
+# benchmark configuration calls for parallel execution.
+q query.q -s 0

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+CONTAINER_NAME=${CONTAINER_NAME:-pgpro_tam}
+sudo docker stop "$CONTAINER_NAME" 2>/dev/null || true

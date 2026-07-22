@@ -1,0 +1,4 @@
+#!/bin/bash
+
+export KINETICA_ADMIN_PASSWORD=admin
+sudo -E ./kinetica stop || true

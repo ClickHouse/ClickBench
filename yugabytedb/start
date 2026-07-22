@@ -1,0 +1,17 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: if ysqlsh can connect, nothing to do.
+if ./yugabyte/bin/ysqlsh -U yugabyte -c 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+./yugabyte/bin/yugabyted start \
+    --advertise_address 127.0.0.1 \
+    --ui false \
+    --background true
+
+for _ in $(seq 1 120); do
+    ./yugabyte/bin/ysqlsh -U yugabyte -c 'SELECT 1' >/dev/null 2>&1 && exit 0
+    sleep 1
+done

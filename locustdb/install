@@ -1,0 +1,29 @@
+#!/bin/bash
+set -e
+
+# Idempotent: skip rebuild if the binary is already present.
+if [ -x LocustDB/target/release/repl ]; then
+    exit 0
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
+    bash rust-init.sh -y
+fi
+export HOME=${HOME:=~}
+# shellcheck disable=SC1091
+source "$HOME/.cargo/env"
+
+sudo apt-get update -y
+# capnproto: build-time codegen used by LocustDB's wire format.
+# clang + libclang-dev: required by the bindgen step in the rocksdb crate
+# (still pulled in transitively even though the `enable_rocksdb` cargo
+# feature was removed upstream).
+sudo apt-get install -y g++ clang libclang-dev capnproto pkg-config git curl
+
+if [ ! -d LocustDB ]; then
+    git clone --depth 1 https://github.com/cswinter/LocustDB.git
+fi
+
+cd LocustDB
+cargo build --release --bin repl

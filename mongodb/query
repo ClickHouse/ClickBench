@@ -1,0 +1,28 @@
+#!/bin/bash
+# Reads a MongoDB aggregation pipeline (Extended JSON, single line) from
+# stdin and runs it against the `hits` collection in the `test` DB.
+# Stdout: query result (as printed by mongosh).
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+#
+# This system uses MongoDB aggregation pipelines instead of SQL. The
+# canonical pipelines (one per line) live in queries.txt; the shared driver
+# is configured to read that file via BENCH_QUERIES_FILE.
+set -e
+
+pipeline=$(cat)
+
+# mongosh routes console.error() through its own log formatter rather
+# than to process.stderr the way Node REPL does, so the elapsed time
+# we used to emit there never reached the agent's
+# _extract_script_timing(stderr) parser — and the UI's "Time:"
+# column stayed at —. Time the mongosh invocation from bash and
+# emit the seconds to stderr ourselves.
+t1=$(date +%s.%N)
+PIPELINE_JSON="$pipeline" mongosh --quiet test --eval '
+const pipeline = EJSON.parse(process.env.PIPELINE_JSON);
+const result = db.hits.aggregate(pipeline, {allowDiskUse: true}).toArray();
+print(EJSON.stringify(result));
+'
+t2=$(date +%s.%N)
+awk -v a="$t1" -v b="$t2" 'BEGIN { printf "%.6f\n", b - a }' >&2

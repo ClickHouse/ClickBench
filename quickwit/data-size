@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+sudo du -sb qwdata | awk '{print $1}'

@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-pgpro_tam}
+sudo docker exec -i "$CONTAINER_NAME" du -bcs /var/lib/postgresql/data/base | grep total | awk '{print $1}'

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+CONTAINER_NAME=${CONTAINER_NAME:-pg_mooncake}
+sudo docker stop "$CONTAINER_NAME" 2>/dev/null || true

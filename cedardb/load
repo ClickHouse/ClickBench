@@ -1,0 +1,12 @@
+#!/bin/bash
+set -eu
+
+psql -f create.sql
+{
+    # CedarDB would like to have ~4 GB of memory per parallel worker for parquet import to be efficient, so set the number of workers accordingly.
+    echo "SET debug.parallel = $(( $(grep MemTotal /proc/meminfo | awk '{print $2}') / (4 * 1024 * 1024) ));"
+    sed "s|'hits\.parquet'|'$PWD/hits.parquet'|" load.sql
+} | psql
+
+rm -f hits.parquet
+sync

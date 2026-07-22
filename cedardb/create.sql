@@ -103,7 +103,6 @@ create table hits (
     hasgclid              smallint     not null,
     refererhash           bigint       not null,
     urlhash               bigint       not null,
-    clid                  integer      not null,
-    primary key (counterid, eventdate, userid, eventtime, watchid)
+    clid                  integer      not null
 );
 

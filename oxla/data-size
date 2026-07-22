@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+PGPASSWORD=oxla psql -h localhost -U oxla -q -t -A -c "SELECT pg_total_relation_size('hits');"

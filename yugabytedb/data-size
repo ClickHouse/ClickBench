@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+./yugabyte/bin/ysqlsh -U yugabyte -d test -tAq \
+    -c "SELECT pg_total_relation_size('public.hits');"

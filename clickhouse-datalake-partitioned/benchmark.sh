@@ -1,19 +1,10 @@
 #!/bin/bash
-
-# Install
-
-curl https://clickhouse.com/ | sh
-
-# Configure
-
-RAM=$(awk '/MemTotal/ {print int($2 * 0.8 * 1024)}' /proc/meminfo)
-> clickhouse-local.yaml echo "
-page_cache_max_size: ${RAM}
-"
-
-# Run the queries
-
-./run.sh
-
-echo "Load time: 0"
-echo "Data size: 14737666736"
+# Data is read directly from S3, no local download.
+export BENCH_DOWNLOAD_SCRIPT=""
+export BENCH_RESTARTABLE=no
+# Single-process engine: each query forks a fresh full-machine process with no
+# shared scheduler across connections, so the concurrent-QPS test only
+# oversubscribes RAM rather than measuring throughput. Skip it by default;
+# override BENCH_CONCURRENT_DURATION to re-enable. See issue #946.
+export BENCH_CONCURRENT_DURATION="${BENCH_CONCURRENT_DURATION:-0}"
+exec ../lib/benchmark-common.sh

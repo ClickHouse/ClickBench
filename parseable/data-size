@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+du -bcs local-store | grep total | awk '{print $1}'

@@ -1,0 +1,3 @@
+#!/bin/bash
+set -e
+BQN -p '1+1' >/dev/null

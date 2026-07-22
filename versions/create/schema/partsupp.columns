@@ -1,0 +1,6 @@
+synth_date Date,
+ps_partkey UInt32,
+ps_suppkey UInt32,
+ps_availqty Int32,
+ps_supplycost Float64,
+ps_comment String

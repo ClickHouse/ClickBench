@@ -1,0 +1,18 @@
+#!/bin/bash
+set -eu
+
+YDBVERSION=${YDBVERSION:-2.25.2.0}
+YDBBUILD=${YDBBUILD:-b359}
+
+sudo apt-get update -y
+# yugabyted's python tooling expects a UTF-8 locale.
+sudo apt-get install -y python3 locales
+sudo locale-gen en_US.UTF-8
+
+if [ ! -d ./yugabyte ]; then
+    wget --continue --progress=dot:giga \
+        "https://software.yugabyte.com/releases/$YDBVERSION/yugabyte-$YDBVERSION-$YDBBUILD-linux-x86_64.tar.gz"
+    tar xfz "yugabyte-$YDBVERSION-$YDBBUILD-linux-x86_64.tar.gz"
+    mv "./yugabyte-$YDBVERSION" ./yugabyte
+    ./yugabyte/bin/post_install.sh
+fi

@@ -1,0 +1,7 @@
+#!/bin/bash
+# Report the on-disk size of the database files (tables + indexes + TOAST)
+# by measuring the base/ directory directly.
+set -eu
+
+PGVERSION=${PGVERSION:-18}
+sudo du -bcs /var/lib/postgresql/$PGVERSION/main/base | grep total | awk '{print $1}'

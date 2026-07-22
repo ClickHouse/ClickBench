@@ -1,0 +1,21 @@
+#!/bin/bash
+set -eu
+
+if PGPASSWORD=duckdb psql -h 127.0.0.1 -U postgres -c 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+if ! sudo docker ps -a --format '{{.Names}}' | grep -qx pgduck; then
+    sudo docker run -d --name pgduck -p 5432:5432 \
+        -e POSTGRES_PASSWORD=duckdb \
+        -v "$(pwd)/hits.parquet:/tmp/hits.parquet:ro" \
+        pgduckdb/pgduckdb:17-v1.0.0 \
+        -c duckdb.max_memory=10GB >/dev/null
+else
+    sudo docker start pgduck >/dev/null
+fi
+
+for _ in $(seq 1 60); do
+    PGPASSWORD=duckdb psql -h 127.0.0.1 -U postgres -c 'SELECT 1' >/dev/null 2>&1 && exit 0
+    sleep 1
+done

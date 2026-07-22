@@ -1,0 +1,15 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: if ursa is already responsive, nothing to do.
+if ./ursa client --query "SELECT 1" >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Spawn the server, redirect logs, detach.
+nohup ./ursa server > server.log 2>&1 &
+
+for _ in $(seq 1 300); do
+    ./ursa client --query "SELECT 1" >/dev/null 2>&1 && exit 0
+    sleep 1
+done

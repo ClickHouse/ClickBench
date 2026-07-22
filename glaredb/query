@@ -1,0 +1,19 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via glaredb with create.sql as init.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+set -e
+
+query=$(cat)
+
+out=$(./glaredb --init create.sql -c ".timer on" -c "$query" 2>&1) && status=0 || status=$?
+
+if [ "$status" -ne 0 ]; then
+    printf '%s\n' "$out" >&2
+    exit "$status"
+fi
+
+# glaredb prints "Execution duration (s): X.YYY"; everything else is result.
+printf '%s\n' "$out" | grep -v '^Execution duration' || true
+
+printf '%s\n' "$out" | awk -F': ' '/^Execution duration/ { printf "%.3f\n", $2 }' | tail -n1 >&2

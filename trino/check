@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# Trino exposes /v1/info. The "starting" field flips to false when ready.
+out=$(curl -sf http://localhost:8080/v1/info)
+echo "$out" | grep -q '"starting":false'

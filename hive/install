@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+HIVE_VERSION=4.0.1
+
+# Hive's official image bundles its own JRE; only Docker is needed.
+if ! command -v docker >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y docker.io
+fi
+sudo apt-get install -y curl
+
+sudo docker pull apache/hive:${HIVE_VERSION}
+
+# Hive's external-table LOCATION points at /clickbench/hits inside the
+# container; that path is the bind mount target for ./data on the host.
+# Create the directory now so ./start can mount it before the first
+# ./load.
+mkdir -p data/hits
+# apache/hive runs as uid 1000 ("hive") and writes the embedded Derby
+# metastore + warehouse dirs under /opt/hive; the container also reads
+# /clickbench/hits to list its external table. Make sure that uid can
+# both read and write the bind-mount even when cloud-init runs as root.
+sudo chown -R 1000:1000 data

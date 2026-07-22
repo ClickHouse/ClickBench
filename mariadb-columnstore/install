@@ -1,0 +1,7 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io mariadb-client
+
+sudo docker pull mariadb/columnstore

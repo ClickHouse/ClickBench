@@ -1,0 +1,11 @@
+{
+  "system": "EventQL",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "discontinued"
+  ]
+}

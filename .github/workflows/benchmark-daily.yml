@@ -1,0 +1,39 @@
+name: "Daily benchmarks: ClickHouse"
+
+on:
+  workflow_dispatch:  # This allows manual trigger from the UI
+  schedule:
+    - cron: '0 2 * * *'
+
+permissions:
+  id-token: write  # To assume the federated IAM role.
+  contents: read
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    # Machines are launched one by one, and run-benchmark.sh retries while
+    # the vCPU quota or the capacity is exhausted, so cap the job before the
+    # hour-long AWS session expires.
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/launch-benchmark
+        with:
+          systems: >-
+            clickhouse
+            clickhouse-web
+            clickhouse-parquet
+            clickhouse-parquet-partitioned
+            clickhouse-datalake
+            clickhouse-datalake-partitioned
+          machines: >-
+            c6a.4xlarge
+            c6a.2xlarge
+            c6a.xlarge
+            c6a.large
+            t3a.small
+            c6a.metal
+            c8g.4xlarge
+            c8g.metal-48xl
+            c7a.metal-48xl

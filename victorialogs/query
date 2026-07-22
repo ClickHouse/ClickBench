@@ -1,0 +1,23 @@
+#!/bin/bash
+# Reads a LogsQL query from stdin, runs it via victorialogs HTTP API.
+# Stdout: query result (NDJSON).
+# Stderr: query runtime in fractional seconds on the last line (wall-clock).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+t1=$(date +%s%3N)
+out=$(curl -sS --fail --get --data-urlencode "query=$query" \
+    'http://localhost:9428/select/logsql/query') && exit_code=0 || exit_code=$?
+t2=$(date +%s%3N)
+
+if [ "$exit_code" -ne 0 ]; then
+    printf '%s\n' "$out" >&2
+    exit "$exit_code"
+fi
+
+printf '%s\n' "$out"
+
+duration=$((t2 - t1))
+awk -v d="$duration" 'BEGIN { printf "%.3f\n", d / 1000 }' >&2

@@ -1,0 +1,36 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via vsql inside the vertica_ce container.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# vsql's `\timing` "All rows formatted: <ms> ms" output).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+raw=$(sudo docker exec vertica_ce /opt/vertica/bin/vsql -U dbadmin \
+    -c '\timing' -c "$query" 2>&1) && exit_code=0 || exit_code=$?
+
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$raw" | grep -qE '^ERROR|^ROLLBACK'; then
+    printf '%s\n' "$raw" >&2
+    exit 1
+fi
+
+# Pass through the result, then parse the timing footer.
+printf '%s\n' "$raw"
+
+ms=$(printf '%s\n' "$raw" \
+    | grep -oP 'All rows formatted:\s*\K[0-9.]+(?=\s*ms)' \
+    | tail -n1)
+
+if [ -z "$ms" ]; then
+    # Fallback: vsql also prints "Time: <ms> ms" on \timing.
+    ms=$(printf '%s\n' "$raw" | grep -oP 'Time:\s*\K[0-9.]+(?=\s*ms)' | tail -n1)
+fi
+
+if [ -z "$ms" ]; then
+    echo "no timing in vsql output" >&2
+    exit 1
+fi
+
+awk -v m="$ms" 'BEGIN { printf "%.3f\n", m / 1000 }' >&2

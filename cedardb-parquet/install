@@ -1,0 +1,16 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y postgresql-client
+
+# Stop any running instance before reinstalling
+./stop || true
+
+# Delete potential previously created database
+rm -rf ./db
+
+curl https://get.cedardb.com | bash -s -- -y \
+    --install-dir "$PWD" \
+    --db-dir "$PWD/db" \
+    --with-systemd=system

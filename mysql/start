@@ -1,0 +1,8 @@
+#!/bin/bash
+set -eu
+
+# Idempotent: if already up, do nothing.
+if sudo mysql -e "SELECT 1" >/dev/null 2>&1; then
+    exit 0
+fi
+sudo service mysql start

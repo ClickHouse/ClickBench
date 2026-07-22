@@ -1,0 +1,2 @@
+#!/bin/bash
+killall ursa 2>/dev/null || true

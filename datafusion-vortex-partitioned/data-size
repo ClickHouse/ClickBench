@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+find vortex -name '*.vortex' -printf '%s\n' | awk '{s+=$1} END {print s+0}'

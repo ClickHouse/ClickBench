@@ -9,6 +9,7 @@
     "tags": [
         "managed",
         "column-oriented",
+        "DuckDB derivative",
         "PostgreSQL compatible",
         "serverless",
         "lukewarm-cold-run"

@@ -1,0 +1,38 @@
+#!/bin/bash
+set -eu
+
+# Helper: run a DuckDB SQL statement through MariaDB's run_in_duckdb UDF.
+# Single quotes inside $1 are doubled so they survive the MariaDB string literal.
+duck() {
+    local esc
+    esc=$(printf '%s' "$1" | sed "s/'/''/g")
+    sudo mariadb -N -e "SELECT run_in_duckdb('$esc')"
+}
+
+sudo mariadb -e "DROP DATABASE IF EXISTS test"
+sudo mariadb -e "CREATE DATABASE test"
+sudo mariadb test < create.sql
+
+# Load via DuckDB's native vectorized parquet reader (faster than LOAD DATA LOCAL
+# INFILE which routes every row through MariaDB's single-threaded write_row path).
+#
+# DuckDB glob expander requires read permission on all parent directories.
+# /home/ubuntu is mode 751 (o+x only) so DuckDB can traverse but not list it,
+# causing "No files found" errors. Hardlink to /var/lib/mysql/ (mysql-owned,
+# mode 755) resolves this instantly without copying 14 GB.
+HITS_LINK=/var/lib/mysql/hits.parquet
+if [ ! -f "$HITS_LINK" ]; then
+    sudo ln "$(realpath hits.parquet)" "$HITS_LINK"
+    sudo chmod 644 "$HITS_LINK"
+fi
+duck "INSERT INTO test.hits
+SELECT * REPLACE (
+    make_date(EventDate) AS EventDate,
+    epoch_ms(EventTime * 1000) AS EventTime,
+    epoch_ms(ClientEventTime * 1000) AS ClientEventTime,
+    epoch_ms(LocalEventTime * 1000) AS LocalEventTime)
+FROM read_parquet('$HITS_LINK', binary_as_string=True);"
+
+sudo rm -f "$HITS_LINK"
+rm -f hits.parquet
+sync

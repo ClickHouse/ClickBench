@@ -6,7 +6,7 @@
     "proprietary":   "no",
     "hardware": "cpu",
     "tuned":   "no",
-    "tags": ["column-oriented", "dataframe", "lukewarm-cold-run", "historical"],
+    "tags": ["column-oriented", "dataframe", "lukewarm-cold-run", "historical", "in-memory"],
     "load_time": 410,
     "data_size": 7457083392,
     "result": [

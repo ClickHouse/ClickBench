@@ -1,0 +1,29 @@
+#!/bin/bash
+set -eu
+
+source benchmark_variables.sh
+START_DIR=$(pwd)
+export YDB_PASSWORD=password
+
+cert_dir=$(find "$START_DIR/ydb-ansible-examples/TLS/CA/certs" -maxdepth 1 -type d -not -path "." -printf "%T@ %p\n" \
+    | sort -n | tail -n 1 | cut -d' ' -f2-)
+
+YDB_BIN="$START_DIR/ydb-ansible-examples/3-nodes-mirror-3-dc/files/ydb"
+COMMON_ARGS=(-e "grpcs://$host1$host_suffix:2135" -d /Root/database --ca-file "$cert_dir/ca.crt" --user root)
+
+if [ ! -f "hits.csv" ]; then
+    if [ ! -f "hits.csv.gz" ]; then
+        wget --continue --progress=dot:giga \
+            'https://datasets.clickhouse.com/hits_compatible/hits.csv.gz'
+    fi
+    gzip -d -f -k hits.csv.gz
+fi
+
+echo "$YDB_PASSWORD" | "$YDB_BIN" "${COMMON_ARGS[@]}" \
+    workload clickbench init --datetime --store column
+
+echo "$YDB_PASSWORD" | "$YDB_BIN" "${COMMON_ARGS[@]}" \
+    import file csv hits.csv -p clickbench/hits
+
+rm -f hits.csv hits.csv.gz
+sync

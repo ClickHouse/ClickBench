@@ -1,0 +1,45 @@
+#!/bin/bash
+set -eu
+
+CI_SOURCES_URL="https://ci.mariadb.org/70621/amd64-ubuntu-2404-deb-autobake/mariadb.sources"
+
+# Idempotent: if DuckDB plugin is already active, nothing to do.
+if sudo mariadb -e "SELECT PLUGIN_STATUS FROM information_schema.PLUGINS WHERE PLUGIN_NAME='DuckDB';" 2>/dev/null | grep -q 'ACTIVE'; then
+    echo "MariaDB with DuckDB engine already installed and active."
+    exit 0
+fi
+
+# Remove any conflicting MariaDB/MySQL installation to avoid package conflicts.
+# On a fresh EC2 instance Ubuntu 24.04 may ship with mariadb stubs.
+if dpkg -l | grep -qE '^ii\s+(mariadb-server|mysql-server)'; then
+    echo "Removing existing MariaDB/MySQL installation..."
+    sudo systemctl stop mariadb mysql 2>/dev/null || true
+    sudo apt-get purge -y 'mariadb-server*' 'mariadb-client*' 'mariadb-common*' \
+        'mysql-server*' 'mysql-client*' 'libmariadb*' 'libmysqlclient*' 2>/dev/null || true
+    sudo rm -rf /var/lib/mysql /etc/mysql
+fi
+
+sudo wget -q -O /etc/apt/sources.list.d/mariadb-duckdb-ci.sources "$CI_SOURCES_URL"
+sudo apt-get update -y
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server mariadb-client
+
+sudo tee /etc/mysql/mariadb.conf.d/duckdb.cnf >/dev/null <<'EOF'
+[mysqld]
+plugin-maturity=alpha
+plugin-load-add=ha_duckdb.so
+duckdb-memory-limit=24G
+duckdb-allow-run-in-duckdb=ON
+EOF
+
+sudo systemctl enable mariadb
+sudo systemctl restart mariadb
+
+# Smoke-test: DuckDB plugin must be ACTIVE.
+sudo mariadb -e "SELECT PLUGIN_STATUS FROM information_schema.PLUGINS WHERE PLUGIN_NAME='DuckDB';" \
+    | grep -q 'ACTIVE' || { echo "ERROR: DuckDB plugin not active after restart" >&2; exit 1; }
+
+# Allow the mysql user (which runs DuckDB embedded) to traverse the home
+# directory so COPY FROM can read dataset files anywhere under ~.
+sudo chmod o+x /home/ubuntu
+
+echo "MariaDB with DuckDB engine installed and ready."

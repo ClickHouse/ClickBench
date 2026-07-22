@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+# Schema-only load: Parquet data is read directly from S3 on demand.
+sudo docker cp create.sql trino:/tmp/create.sql
+sudo docker exec -i trino trino --file /tmp/create.sql
+
+sync

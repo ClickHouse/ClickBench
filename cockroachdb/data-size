@@ -1,0 +1,6 @@
+#!/bin/bash
+set -eu
+
+cockroach sql --insecure --host=localhost --database=test --format=tsv \
+    --execute="SELECT SUM(range_size) FROM [SHOW RANGES FROM TABLE hits WITH DETAILS];" \
+    | tail -n1

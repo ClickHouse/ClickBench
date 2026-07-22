@@ -1,0 +1,16 @@
+#!/bin/bash
+# YDB install — builds ydbd/ydb/ydb-dstool from source and provisions a
+# 3-node mirror-3-dc cluster via ansible. The original benchmark.sh contains
+# all the setup logic; we delegate to it via an env flag that stops short of
+# loading data and running queries.
+#
+# This is a best-effort port: the cluster setup is host-specific (it expects
+# three reachable peers defined in benchmark_variables.sh) and is not
+# idempotent in any meaningful sense. Re-running may re-bootstrap state.
+set -e
+
+# The original script does install + load + run all in one. We only execute
+# the install phases here; ./load handles importing data, ./query runs SQL.
+# To avoid duplicating that long script we keep the original logic in a
+# helper file.
+exec ./install-impl.sh

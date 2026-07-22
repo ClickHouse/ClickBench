@@ -1,0 +1,8 @@
+#!/bin/bash
+set -eu
+
+# Substitute the absolute path so CedarDB can find the file regardless of
+# its working directory.
+sed "s|'hits\.parquet'|'$PWD/hits.parquet'|" create.sql | psql
+
+sync

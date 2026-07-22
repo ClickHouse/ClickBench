@@ -1,0 +1,66 @@
+#!/bin/bash
+set -e
+
+# Install Arc from a .deb release. Idempotent.
+if dpkg -l arc 2>/dev/null | grep -q '^ii '; then
+    exit 0
+fi
+
+ARC_VERSION=$(curl -s https://api.github.com/repos/Basekick-Labs/arc/releases/latest \
+    | grep -oP '"tag_name": "v\K[^"]+')
+if [ -z "$ARC_VERSION" ]; then
+    echo "Error: Could not fetch latest Arc version from GitHub" >&2
+    exit 1
+fi
+
+ARCH=$(uname -m)
+if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+    DEB_FILE="arc_${ARC_VERSION}_arm64.deb"
+else
+    DEB_FILE="arc_${ARC_VERSION}_amd64.deb"
+fi
+DEB_URL="https://github.com/Basekick-Labs/arc/releases/download/v${ARC_VERSION}/${DEB_FILE}"
+
+if [ ! -f "$DEB_FILE" ]; then
+    wget -q "$DEB_URL" -O "$DEB_FILE"
+fi
+
+sudo dpkg -i "$DEB_FILE" || sudo apt-get install -f -y
+
+# Arc 25.12+ links against GLIBC_2.38 (Debian/Ubuntu 24.04+ build
+# environment); on a 22.04 host (glibc 2.35) the daemon dies with
+# "libm.so.6: version `GLIBC_2.38' not found". Pull a newer libc6
+# into a sysroot and wrap /usr/bin/arc so it boots via that loader,
+# instead of bumping the whole base image to noble.
+HAVE_GLIBC=$(ldd --version | head -1 | awk '{print $NF}')
+if dpkg --compare-versions "$HAVE_GLIBC" lt 2.38; then
+    NOBLE_DIR=/opt/glibc-noble
+    if [ ! -x "$NOBLE_DIR/lib64/ld-linux-x86-64.so.2" ]; then
+        # Noble's libc6, statically pinned. Source URL: launchpad mirror.
+        # Plain `pool.ubuntu.com` redirects via HTTPS and works with
+        # curl --location.
+        LIBC_URL="https://launchpad.net/ubuntu/+archive/primary/+files/libc6_2.39-0ubuntu8.6_amd64.deb"
+        sudo mkdir -p "$NOBLE_DIR"
+        tmp=$(mktemp --suffix=.deb)
+        curl -fsSL "$LIBC_URL" -o "$tmp"
+        sudo dpkg-deb -x "$tmp" "$NOBLE_DIR"
+        rm -f "$tmp"
+    fi
+    if [ ! -f /usr/bin/arc.bin ]; then
+        sudo mv /usr/bin/arc /usr/bin/arc.bin
+        # dpkg-deb -x preserves the package's internal paths under
+        # $NOBLE_DIR, i.e. NOBLE_DIR/usr/lib64/ld-linux-x86-64.so.2
+        # (NOT NOBLE_DIR/lib64/...).
+        sudo tee /usr/bin/arc >/dev/null <<EOF
+#!/bin/bash
+# Launch arc.bin via noble's ld-linux + libc, leaving the rest of the
+# system unchanged. --library-path scopes the override to this
+# invocation only.
+exec ${NOBLE_DIR}/usr/lib64/ld-linux-x86-64.so.2 \\
+    --library-path ${NOBLE_DIR}/usr/lib/x86_64-linux-gnu:${NOBLE_DIR}/usr/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu \\
+    /usr/bin/arc.bin "\$@"
+EOF
+        sudo chmod +x /usr/bin/arc
+    fi
+    sudo systemctl daemon-reload
+fi

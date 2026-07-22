@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+# Trivial query against the Druid SQL endpoint.
+RES=$(curl -sf -o /dev/null -w '%{http_code}' \
+    -XPOST -H'Content-Type: application/json' \
+    http://localhost:8888/druid/v2/sql/ \
+    -d '{"query": "SELECT 1"}')
+
+[ "$RES" = "200" ]

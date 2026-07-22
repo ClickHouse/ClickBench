@@ -1,0 +1,18 @@
+#!/bin/bash
+set -eu
+
+export PGPASSWORD=${PGPASSWORD:-mypass}
+
+psql -U postgres -h localhost -d postgres -t -c "DROP DATABASE IF EXISTS test"
+psql -U postgres -h localhost -d postgres -t -c "CREATE DATABASE test"
+
+# create.sql for citus relies on the columnar access method, which the citus
+# extension provides. Ensure it's enabled in the test DB.
+psql -U postgres -h localhost -d test -t -c "CREATE EXTENSION IF NOT EXISTS citus"
+psql -U postgres -h localhost -d test -v ON_ERROR_STOP=1 -t < create.sql
+
+psql -U postgres -h localhost -d test -v ON_ERROR_STOP=1 -t -c "\\copy hits FROM 'hits.tsv'"
+psql -U postgres -h localhost -d test -v ON_ERROR_STOP=1 -t -c 'VACUUM ANALYZE hits'
+
+rm -f hits.tsv
+sync

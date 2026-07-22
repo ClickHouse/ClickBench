@@ -1,0 +1,24 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via `yt clickhouse execute` against a
+# remote CHYT clique. Stdout: query result. Stderr: query runtime in fractional
+# seconds on the last line (extracted from the JSON `statistics.elapsed`).
+# Exit non-zero on error.
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+: "${YT_PROXY:?YT_PROXY is required}"
+: "${CHYT_ALIAS:=*ch_public}"
+
+query=$(cat)
+
+# `yt clickhouse execute --format JSON` returns a JSON envelope with timing
+# info. We need to capture both data (stdout) and elapsed (stderr).
+out=$(yt clickhouse execute "$query" --alias "$CHYT_ALIAS" --proxy "$YT_PROXY" --format JSON)
+
+# Result body to stdout.
+printf '%s\n' "$out"
+
+# elapsed seconds → stderr.
+printf '%s\n' "$out" | jq -r '.statistics.elapsed' >&2

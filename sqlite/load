@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+# Idempotent: blow away any prior DB.
+rm -f mydb
+
+sqlite3 mydb < create.sql
+sqlite3 mydb '.import --csv hits.csv hits'
+
+rm -f hits.csv
+sync

@@ -1,0 +1,49 @@
+#!/bin/bash
+# Reads a SQL query from stdin, POSTs it to Arc's HTTP API.
+# Stdout: query response body (JSON).
+# Stderr: query runtime in fractional seconds on the last line (extracted
+#         from Arc's journal log line `execution_time_ms=N`).
+# Exit non-zero on error.
+set -e
+
+ARC_URL="${ARC_URL:-http://localhost:8000}"
+ARC_API_KEY="${ARC_API_KEY:-$(cat arc_token.txt 2>/dev/null)}"
+
+query=$(cat)
+
+# Build JSON payload with proper escaping.
+JSON_PAYLOAD=$(jq -Rs '{sql: .}' <<<"$query")
+
+# Mark journal position so we can locate the matching execution_time_ms entry.
+LOG_MARKER=$(date -u +"%Y-%m-%dT%H:%M:%S")
+
+RESPONSE=$(curl -s -w "\n%{http_code}" \
+    -X POST "$ARC_URL/api/v1/query" \
+    -H "x-api-key: $ARC_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "$JSON_PAYLOAD" \
+    --max-time 300)
+
+HTTP_CODE=$(printf '%s\n' "$RESPONSE" | tail -1)
+BODY=$(printf '%s\n' "$RESPONSE" | head -n -1)
+
+if [ "$HTTP_CODE" != "200" ]; then
+    printf 'arc query failed: HTTP %s\n%s\n' "$HTTP_CODE" "$BODY" >&2
+    exit 1
+fi
+
+# Result body to stdout.
+printf '%s\n' "$BODY"
+
+# Extract execution_time_ms from Arc's journal — give it a moment to flush.
+sleep 0.1
+EXEC_MS=$(sudo journalctl -u arc --since="$LOG_MARKER" --no-pager 2>/dev/null \
+    | grep -oP 'execution_time_ms=\K[0-9]+' | tail -1)
+
+if [ -z "$EXEC_MS" ]; then
+    echo "Could not extract execution_time_ms from arc journal" >&2
+    exit 1
+fi
+
+# Convert ms -> seconds and emit on stderr.
+awk -v ms="$EXEC_MS" 'BEGIN { printf "%.4f\n", ms / 1000 }' >&2

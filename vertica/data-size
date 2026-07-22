@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+sudo docker exec vertica_ce du -bcs /data/vertica/VMart | grep total | awk '{print $1}'

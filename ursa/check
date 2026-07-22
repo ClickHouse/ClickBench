@@ -1,0 +1,3 @@
+#!/bin/bash
+set -e
+./ursa client --query "SELECT 1" >/dev/null

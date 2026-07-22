@@ -1,0 +1,38 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via `mariadb -vvv` against the `test` DB.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# mariadb's "N rows in set (X.XX sec)" footer; days/hours/min/sec all handled).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+out=$(sudo mariadb test -vvv -e "$query" 2>&1) && exit_code=0 || exit_code=$?
+
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$out" | grep -q '^ERROR'; then
+    printf '%s\n' "$out" >&2
+    exit 1
+fi
+
+printf '%s\n' "$out"
+
+# mariadb may print "(2 days 3 hours 4 min 5.6 sec)" or any subset.
+parsed=$(printf '%s\n' "$out" \
+    | grep -P 'rows? in set|Empty set|Query OK' \
+    | tail -n1 \
+    | sed -r 's/^.*?\((([0-9.]+) days? )?(([0-9.]+) hours? )?(([0-9.]+) min )?([0-9.]+) sec\).*?$/\2,\4,\6,\7/')
+
+if [ -z "$parsed" ]; then
+    echo "no timing in mariadb output" >&2
+    exit 1
+fi
+
+awk -F, -v p="$parsed" 'BEGIN {
+    n = split(p, a, ",")
+    d = (a[1] == "") ? 0 : a[1]
+    h = (a[2] == "") ? 0 : a[2]
+    m = (a[3] == "") ? 0 : a[3]
+    s = (a[4] == "") ? 0 : a[4]
+    printf "%.3f\n", d * 86400 + h * 3600 + m * 60 + s
+}' >&2

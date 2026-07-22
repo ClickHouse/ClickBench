@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+sudo docker image inspect apache/drill >/dev/null

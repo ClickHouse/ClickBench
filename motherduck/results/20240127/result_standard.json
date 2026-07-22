@@ -6,6 +6,7 @@
     "tags": [
         "C++",
         "column-oriented",
+        "DuckDB derivative",
         "serverless"
     ],
     "load_time": 4122,

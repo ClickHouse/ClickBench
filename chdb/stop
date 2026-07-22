@@ -1,0 +1,3 @@
+#!/bin/bash
+# chdb is an embedded library — no daemon to stop.
+exit 0

@@ -1,0 +1,6 @@
+synth_date Date,
+hd_demo_sk Int64,
+hd_income_band_sk Int64,
+hd_buy_potential FixedString(15),
+hd_dep_count Int64,
+hd_vehicle_count Int64

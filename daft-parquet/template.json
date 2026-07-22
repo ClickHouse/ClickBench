@@ -6,7 +6,7 @@
   "tags": [
     "Rust",
     "stateless",
-    "serverless",
-    "embedded"
+    "embedded",
+    "in-memory"
   ]
 }

@@ -1,0 +1,7 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client
+
+sudo docker pull pgduckdb/pgduckdb:17-v1.0.0

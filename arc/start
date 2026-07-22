@@ -1,0 +1,52 @@
+#!/bin/bash
+set -e
+
+ARC_URL="${ARC_URL:-http://localhost:8000}"
+
+# Idempotent: if already up and we have a working token, do nothing.
+if [ -f arc_token.txt ]; then
+    TOKEN=$(cat arc_token.txt)
+    if curl -sf "$ARC_URL/health" -H "x-api-key: $TOKEN" >/dev/null 2>&1; then
+        exit 0
+    fi
+fi
+
+sudo systemctl start arc
+
+# Wait for the HTTP endpoint to come up before we try to read the token.
+for _ in $(seq 1 60); do
+    if curl -sf "$ARC_URL/health" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+# On first start, Arc prints its admin token to its journal; capture it.
+# The log line has drifted between releases ("Initial admin API token:",
+# "Admin API token:", "API token:", ...) and journald can lag behind
+# /health, so we retry with a broader regex over ~60 s.
+if [ ! -f arc_token.txt ] || \
+   ! curl -sf "$ARC_URL/health" -H "x-api-key: $(cat arc_token.txt)" >/dev/null 2>&1; then
+    TOKEN=""
+    for _ in $(seq 1 60); do
+        sudo journalctl --sync >/dev/null 2>&1 || true
+        JOURNAL=$(sudo journalctl -u arc --no-pager 2>/dev/null || true)
+        TOKEN=$(printf '%s\n' "$JOURNAL" \
+            | grep -oP '(?:[Ii]nitial[[:space:]]+)?[Aa]dmin[[:space:]]+(?:API[[:space:]]+)?[Tt]oken[[:space:]]*[:=][[:space:]]*\K[^[:space:],]+' \
+            | head -1)
+        if [ -z "$TOKEN" ]; then
+            TOKEN=$(printf '%s\n' "$JOURNAL" \
+                | grep -oP '(?:API[[:space:]]+)?[Tt]oken[[:space:]]*[:=][[:space:]]*\K[A-Za-z0-9_.\-]{16,}' \
+                | head -1)
+        fi
+        if [ -n "$TOKEN" ]; then break; fi
+        sleep 1
+    done
+    if [ -z "$TOKEN" ]; then
+        echo "Error: Could not extract Arc admin API token from journal" >&2
+        echo "---journal tail---" >&2
+        sudo journalctl -u arc --no-pager 2>&1 | tail -50 >&2
+        exit 1
+    fi
+    echo "$TOKEN" > arc_token.txt
+fi

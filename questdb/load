@@ -1,0 +1,26 @@
+#!/bin/bash
+set -eu
+
+curl -sS -G --data-urlencode "query=$(cat create.sql)" 'http://localhost:9000/exec' >/dev/null
+
+if [[ "$(nproc)" -ge 96 ]]; then
+    # SQL COPY works best on metal instances.
+    curl -sS -G --data-urlencode "query=copy hits from 'hits.csv' with timestamp 'EventTime' format 'yyyy-MM-dd HH:mm:ss';" \
+        'http://localhost:9000/exec' >/dev/null
+
+    until [ "$(curl -sS -G --data-urlencode "query=select * from sys.text_import_log where phase is null and status='finished';" \
+        'http://localhost:9000/exec' | grep -c '"count":1')" -ge 1 ]; do
+        sleep 5
+    done
+else
+    # Smaller instances: HTTP /imp endpoint.
+    curl -sS -F data=@hits.csv 'http://localhost:9000/imp?name=hits&maxUncommittedRows=5000000' >/dev/null
+
+    until [ "$(curl -sS -G --data-urlencode "query=select 1 from (select count() c from hits) where c = 99997497;" \
+        'http://localhost:9000/exec' | grep -c '"count":1')" -ge 1 ]; do
+        sleep 5
+    done
+fi
+
+rm -f hits.csv
+sync

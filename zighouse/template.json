@@ -1,0 +1,11 @@
+{
+  "system": "ZigHouse",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Zig",
+    "column-oriented",
+    "ClickHouse-compatible"
+  ]
+}

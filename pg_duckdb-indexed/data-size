@@ -1,0 +1,3 @@
+#!/bin/bash
+set -eu
+sudo docker exec pgduck du -bcs /var/lib/postgresql/data | grep total | awk '{print $1}'

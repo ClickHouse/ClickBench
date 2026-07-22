@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+
+# Idempotent: blow away any prior per-column files.
+rm -rf cols
+mkdir -p cols
+
+# python3-pyarrow is installed by ./install; if a caller skipped that
+# step, fall back to pip.
+python3 -c 'import pyarrow' 2>/dev/null \
+    || pip3 install --quiet --break-system-packages pyarrow numpy
+
+# Convert hits.parquet to per-column binary files. The preprocessor is
+# Python only because BQN doesn't have a parquet reader; the queries
+# themselves are pure BQN (see queries.bqn).
+python3 prep.py hits.parquet cols
+
+rm -f hits.parquet
+sync

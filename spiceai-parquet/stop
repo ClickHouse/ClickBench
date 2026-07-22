@@ -1,0 +1,10 @@
+#!/bin/bash
+
+pkill spiced || exit 0
+
+# Wait for graceful shutdown, then escalate.
+for _ in $(seq 1 30); do
+    pgrep spiced >/dev/null || exit 0
+    sleep 1
+done
+pkill -9 spiced || true

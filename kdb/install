@@ -1,0 +1,56 @@
+#!/bin/bash
+# Installs KDB-X Community Edition.
+#
+# KX requires registration at https://developer.kx.com/products/kdb-x/install
+# to obtain a base64-encoded license. Pass it via:
+#   KDB_B64LIC      — base64-encoded kc.lic from the Developer Center
+# (Use KDB_K4_B64LIC instead if you have a legacy k4.lic; the installer
+# accepts --k4b64lic for that variant.)
+#
+# An OAuth bearer token can optionally be supplied via KDB_AUTH_TOKEN; the
+# installer download is currently public but the Developer Center may
+# require the token for telemetry purposes.
+set -e
+
+if ! command -v q >/dev/null 2>&1; then
+    : "${KDB_B64LIC:?KDB_B64LIC is required — register at https://developer.kx.com/products/kdb-x/install to obtain a base64-encoded kc.lic}"
+
+    sudo apt-get update
+    sudo apt-get install -y curl unzip
+
+    if [ -n "${KDB_AUTH_TOKEN:-}" ]; then
+        curl -sSLO --fail-with-body --oauth2-bearer "$KDB_AUTH_TOKEN" \
+            https://portal.dl.kx.com/assets/raw/kdb-x/install_kdb/~latest~/install_kdb.sh
+    else
+        curl -sSLO --fail-with-body \
+            https://portal.dl.kx.com/assets/raw/kdb-x/install_kdb/~latest~/install_kdb.sh
+    fi
+    bash install_kdb.sh -y --b64lic "$KDB_B64LIC"
+
+    # install_kdb.sh appends a PATH export to the user's profile but does
+    # not expose q in the current shell; symlink so sibling scripts find
+    # it.
+    if [ -x "$HOME/.kx/bin/q" ]; then
+        sudo ln -sf "$HOME/.kx/bin/q" /usr/local/bin/q
+    fi
+fi
+
+# The KDB-X installer occasionally drops the SQL module silently (the
+# download succeeds but the extraction step prints "Continuing without
+# SQL module" and moves on). The ClickBench queries depend on .s.e, so
+# fetch sql.k_ directly if it's missing — this also covers the case
+# where q is already installed but the SQL module isn't.
+if [ ! -f "$HOME/.kx/mod/kx/sql.k_" ]; then
+    sudo apt-get install -y unzip
+    tmp=$(mktemp -d)
+    (
+        cd "$tmp"
+        curl -sSLO --fail-with-body \
+            https://portal.dl.kx.com/assets/raw/kdb-x/modules/sql/~latest~/l64-sql.zip
+        unzip -q l64-sql.zip
+        cp sql.k_ "$HOME/.kx/mod/kx/"
+    )
+    rm -rf "$tmp"
+fi
+
+echo 'show .z.K; exit 0' | q -s 0 >/dev/null

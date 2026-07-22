@@ -1,0 +1,3 @@
+synth_date Date,
+id Int32,
+role String

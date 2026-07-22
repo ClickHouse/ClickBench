@@ -1,0 +1,7 @@
+#!/bin/bash
+# stop without --volumes — anonymous volumes hold the HDFS namenode
+# data and the bench database. The playground snapshots the VM after
+# ./stop and restores it on every query, so we need the data to outlive
+# the stop.
+
+docker compose stop || true

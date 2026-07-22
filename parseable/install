@@ -1,0 +1,19 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y parallel pigz pv
+
+if [ ! -x ./parseable ]; then
+    # v2.5.12 has an Arrow type-inference bug under static-schema mode:
+    # bare JSON numbers get inferred as Float64, so every ingest of a
+    # row with an Int64-declared field returns 400 with "Fail to merge
+    # schema field 'X' because the from data_type = Float64 does not
+    # equal Int64". Net effect: 0 rows loaded, every query returns 0.
+    # v2.7.2 fixes the inference; verified locally end-to-end against
+    # the bundled static_schema.json and hits.json.
+    wget --continue --progress=dot:giga \
+        https://github.com/parseablehq/parseable/releases/download/v2.7.2/Parseable_OSS_x86_64-unknown-linux-gnu
+    mv Parseable_OSS_x86_64-unknown-linux-gnu parseable
+    chmod +x parseable
+fi

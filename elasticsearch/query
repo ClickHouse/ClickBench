@@ -1,0 +1,42 @@
+#!/bin/bash
+# Reads a SQL query from stdin, translates it to Elasticsearch DSL via the
+# /_sql/translate endpoint, then runs it against /_search.
+#
+# Stdout: ES JSON response.
+# Stderr: query runtime in fractional seconds on the last line (the "took"
+# field from the search response, in milliseconds).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+# Clear query cache to keep tries comparable.
+curl -sS -X POST 'http://localhost:9200/hits/_cache/clear' >/dev/null 2>&1 || true
+
+# Translate SQL -> DSL.
+sql_json=$(jq -nc --arg q "$query" '{query: $q}')
+dsl=$(curl -sS -X POST 'http://localhost:9200/_sql/translate' \
+    -H 'Content-Type: application/json' -d "$sql_json")
+
+if printf '%s\n' "$dsl" | jq -e 'has("error")' >/dev/null 2>&1; then
+    printf '%s\n' "$dsl" >&2
+    exit 1
+fi
+
+resp=$(curl -sS -X GET 'http://localhost:9200/hits/_search' \
+    -H 'Content-Type: application/json' -d "$dsl")
+
+if printf '%s\n' "$resp" | jq -e 'has("error")' >/dev/null 2>&1; then
+    printf '%s\n' "$resp" >&2
+    exit 1
+fi
+
+printf '%s\n' "$resp"
+
+took_ms=$(printf '%s\n' "$resp" | jq -r '.took // empty')
+if [ -z "$took_ms" ] || [ "$took_ms" = "null" ]; then
+    echo "no .took in elasticsearch response" >&2
+    exit 1
+fi
+
+awk -v m="$took_ms" 'BEGIN { printf "%.3f\n", m / 1000 }' >&2

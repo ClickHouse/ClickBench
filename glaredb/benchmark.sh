@@ -1,32 +1,9 @@
-#!/usr/bin/env bash
-
-set -e
-
-repo_root=$(git rev-parse --show-toplevel)
-script_dir=$(dirname "$0")
-
-if [[ "$(basename "$repo_root")" == "glaredb" ]]; then
-    # Inside glaredb repo, build from source.
-    cargo build --release --bin glaredb
-    cp "${repo_root}/target/release/glaredb" "${script_dir}/glaredb"
-else
-    # Not in glaredb repo, use prebuilt binary.
-    export GLAREDB_INSTALL_DIR="${script_dir}"
-    export GLAREDB_VERSION="v25.5.11"
-    curl -fsSL https://glaredb.com/install.sh | sh
-fi
-
-# Get the data.
-"${script_dir}/../download-hits-parquet-single" "${script_dir}/data"
-pushd "${script_dir}/data"
-echo "Data size: $(du -bcs hits*.parquet | grep total)"
-popd
-
-# Ensure working directory is the script dir. The view that gets created uses a
-# relative path.
-pushd "${script_dir}"
-
-./run.sh single
-cat results.json
-
-echo "Load time: 0"
+#!/bin/bash
+export BENCH_DOWNLOAD_SCRIPT="download-hits-parquet-single"
+export BENCH_RESTARTABLE=no
+# Single-process engine: each query forks a fresh full-machine process with no
+# shared scheduler across connections, so the concurrent-QPS test only
+# oversubscribes RAM rather than measuring throughput. Skip it by default;
+# override BENCH_CONCURRENT_DURATION to re-enable. See issue #946.
+export BENCH_CONCURRENT_DURATION="${BENCH_CONCURRENT_DURATION:-0}"
+exec ../lib/benchmark-common.sh

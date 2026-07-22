@@ -6,7 +6,7 @@ PASSWORD="<tablespace-db-password>"
 sudo apt-get update -y
 sudo apt-get install -y postgresql-client
 
-../download-hits-tsv
+../lib/download-hits-tsv
 chmod 777 ~ hits.tsv
 
 psql "host=$HOSTNAME port=5432 dbname=csdb user=csuser password=$PASSWORD sslmode=require" < create.sql 2>&1 | tee load_out.txt

@@ -6,7 +6,6 @@
   "tags": [
     "Rust",
     "column-oriented",
-    "ClickHouse derivative",
-    "lukewarm-cold-run"
+    "ClickHouse derivative"
   ]
 }

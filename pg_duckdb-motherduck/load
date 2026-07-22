@@ -1,0 +1,13 @@
+#!/bin/bash
+set -eu
+
+# create.sql has REPLACE_SCHEMA / REPLACE_PARQUET_FILE placeholders;
+# substitute the MotherDuck database name and the canonical ClickBench
+# parquet URL so the CTAS reads directly from S3.
+DATABASE='ddb$pgclick'
+PARQUET_FILE='https://datasets.clickhouse.com/hits_compatible/hits.parquet'
+
+sed -e "s=REPLACE_SCHEMA=$DATABASE=g" -e "s=REPLACE_PARQUET_FILE=$PARQUET_FILE=g" create.sql \
+    | PGPASSWORD=duckdb psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 --no-psqlrc --tuples-only
+
+sync

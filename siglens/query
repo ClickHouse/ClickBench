@@ -1,0 +1,39 @@
+#!/bin/bash
+# Reads a SigLens SPL/Splunk QL query from stdin, runs it via the search API.
+# Stdout: query response (JSON).
+# Stderr: query runtime in fractional seconds on the last line (wall-clock).
+# Exit non-zero on error.
+set -e
+
+querytxt=$(cat)
+
+# A "null" query in queries.sql means "not supported"; emit null timing.
+if [ "$querytxt" = "null" ]; then
+    echo "{}"
+    echo "null" >&2
+    exit 0
+fi
+
+JSON=$(jq -nc --arg q "$querytxt" '{
+    state: "query",
+    searchText: $q,
+    startEpoch: "now-9000d",
+    endEpoch: "now",
+    indexName: "hits",
+    from: 0,
+    queryLanguage: "Splunk QL"
+}')
+
+t1=$(date +%s.%N)
+resp=$(curl -sS -k -X POST 'http://localhost:5122/api/search' \
+    -H 'Content-Type: application/json' -d "$JSON")
+t2=$(date +%s.%N)
+
+if [ "$(jq 'has("error")' <<<"$resp")" = "true" ]; then
+    printf '%s\n' "$resp" >&2
+    exit 1
+fi
+
+printf '%s\n' "$resp"
+
+awk -v a="$t1" -v b="$t2" 'BEGIN { printf "%.3f\n", b - a }' >&2

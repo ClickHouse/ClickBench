@@ -1,0 +1,3 @@
+CREATE EXTERNAL TABLE hits
+STORED AS VORTEX
+LOCATION 'vortex/hits.vortex';

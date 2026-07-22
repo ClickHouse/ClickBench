@@ -1,0 +1,3 @@
+#!/bin/bash
+set -e
+sudo mariadb -e "SELECT 1" >/dev/null

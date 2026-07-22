@@ -433,5 +433,5 @@
     "granularity": "1:DAYS"
   }
   ],
-  "schemaName": "hitsSchema"
+  "schemaName": "hits"
 }

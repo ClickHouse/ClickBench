@@ -1,0 +1,156 @@
+#!/bin/bash
+# WarehousePG (a Greenplum 7 fork) only documents a RHEL/Rocky build path
+# and ships no prebuilt binaries. To make the benchmark portable, run
+# everything inside a Rocky 9 container; the other scripts (start/stop/
+# check/load/query) docker-exec into this container.
+#
+# Idempotent: re-running this script after a successful install does nothing.
+set -eu
+
+NAME=clickbench-warehousepg
+IMAGE=rockylinux:9
+WHPG_VERSION=7.4.0-WHPG
+
+# 1. Make sure docker is installed and the daemon is up.
+if ! command -v docker >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update -y
+        sudo apt-get install -y docker.io
+    elif command -v yum >/dev/null 2>&1; then
+        sudo yum install -y docker
+    else
+        echo "warehousepg/install: install docker manually first" >&2
+        exit 1
+    fi
+fi
+sudo systemctl start docker 2>/dev/null || sudo service docker start || true
+
+# 2. Skip if the container is already created and the cluster is initialized.
+if sudo docker container inspect "$NAME" >/dev/null 2>&1; then
+    if sudo docker exec "$NAME" test -d /data0/coordinator/gpseg-1 2>/dev/null; then
+        echo "warehousepg: container '$NAME' already initialized; nothing to do" >&2
+        exit 0
+    fi
+fi
+
+sudo docker pull "$IMAGE"
+
+# 3. Long-lived privileged container. Bridge mode + --hostname localhost so
+# gpinitsystem's ssh-to-localhost lands on the container's own sshd.
+if ! sudo docker container inspect "$NAME" >/dev/null 2>&1; then
+    sudo docker run -d --privileged --hostname localhost -p 5432:5432 \
+        --name "$NAME" "$IMAGE" sleep infinity
+fi
+
+# 4. Inside the container: install build deps, kernel tuning, gpadmin
+# user, sshd, build WarehousePG from source, init a single-segment
+# cluster. The dep list mirrors WHPG's own README.RHEL-Rocky.bash.
+sudo docker exec -i "$NAME" bash -s <<EOF
+set -eu
+
+yum install -y epel-release dnf-plugins-core
+yum config-manager --set-enabled crb || true
+
+yum install -y --allowerasing libcurl libcurl-devel
+
+yum install -y gcc gcc-c++ git make cmake \
+    apr-devel bison bzip2 bzip2-devel \
+    flex iproute iputils krb5-devel \
+    less libevent libevent-devel \
+    libxml2 libxml2-devel libyaml libyaml-devel \
+    libzstd libzstd-devel \
+    openldap openssh openssh-clients openssh-server \
+    openssl openssl-devel openssl-libs \
+    perl perl-ExtUtils-Embed perl-ExtUtils-MakeMaker \
+    python3-devel python3-pip python3-psutil python3-pyyaml python3-psycopg2 \
+    readline readline-devel \
+    rsync sudo tar wget which zip zlib zlib-devel \
+    xerces-c-devel procps-ng jq
+
+# Kernel tuning — affects host kernel under --privileged.
+SHMALL=\$(expr \$(getconf _PHYS_PAGES) / 2)
+SHMAX=\$(expr \$(getconf _PHYS_PAGES) / 2 \* \$(getconf PAGE_SIZE))
+sysctl -w kernel.shmall=\$SHMALL >/dev/null
+sysctl -w kernel.shmmax=\$SHMAX >/dev/null
+sysctl -w kernel.shmmni=4096 >/dev/null
+sysctl -w vm.overcommit_memory=2 >/dev/null
+sysctl -w vm.overcommit_ratio=95 >/dev/null
+sysctl -w net.ipv4.ip_local_port_range="10000 65535" >/dev/null
+sysctl -w kernel.sem="250 2048000 200 8192" >/dev/null
+
+cat > /etc/security/limits.d/99-gpadmin.conf <<LIMITS
+* soft nofile 524288
+* hard nofile 524288
+* soft nproc 131072
+* hard nproc 131072
+LIMITS
+
+# gpadmin user with passwordless ssh to localhost (gpinitsystem requirement).
+groupadd -f gpadmin
+id -u gpadmin >/dev/null 2>&1 || useradd gpadmin -m -g gpadmin
+echo "gpadmin ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gpadmin
+sudo -u gpadmin bash -c '
+    set -e
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+    [ -f ~/.ssh/id_rsa ] || ssh-keygen -t rsa -b 4096 -N "" -f ~/.ssh/id_rsa
+    cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+'
+
+# /bin/ping in rockylinux:9 has no caps; gpinitsystem pings localhost.
+setcap cap_net_raw+ep /bin/ping
+[ -e /bin/ping6 ] && setcap cap_net_raw+ep /bin/ping6 || true
+
+# sshd setup.
+ssh-keygen -A
+mkdir -p /run/sshd
+echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
+echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
+/usr/sbin/sshd
+
+# Build WarehousePG from source if not already built.
+if [ ! -x /usr/local/whpg/bin/postgres ]; then
+    cd /tmp
+    if [ ! -f whpg-${WHPG_VERSION}.tar.gz ]; then
+        curl -fsSL -o whpg-${WHPG_VERSION}.tar.gz \
+            https://github.com/warehouse-pg/warehouse-pg/archive/refs/tags/${WHPG_VERSION}.tar.gz
+    fi
+    rm -rf warehouse-pg-${WHPG_VERSION}
+    tar -xzf whpg-${WHPG_VERSION}.tar.gz
+    cd warehouse-pg-${WHPG_VERSION}
+    echo -e "/usr/local/lib\n/usr/local/lib64" >> /etc/ld.so.conf
+    ldconfig
+    ./configure --with-perl --with-python --with-libxml --with-gssapi \
+        --prefix=/usr/local/whpg
+    # Cap parallelism — the link phase eats several GB per worker.
+    JOBS=\$(nproc); JOBS=\$(( JOBS > 16 ? 16 : JOBS ))
+    make -j\$JOBS
+    make install
+    chown -R gpadmin:gpadmin /usr/local/whpg
+fi
+
+# gpstart/gpstop import the python pgdb (PygreSQL) module. Build it
+# against whpg's pg_config so the right libpq is linked.
+source /usr/local/whpg/greenplum_path.sh
+pip3 install --quiet 'PygreSQL==5.2.5' psutil
+
+# Data dirs and gpadmin shell env.
+mkdir -p /data0/primary /data0/coordinator
+chown -R gpadmin:gpadmin /data0
+grep -q greenplum_path /home/gpadmin/.bashrc 2>/dev/null || \
+    echo "source /usr/local/whpg/greenplum_path.sh" >> /home/gpadmin/.bashrc
+grep -q COORDINATOR_DATA_DIRECTORY /home/gpadmin/.bashrc 2>/dev/null || \
+    echo "export COORDINATOR_DATA_DIRECTORY=/data0/coordinator/gpseg-1" >> /home/gpadmin/.bashrc
+
+echo localhost > /home/gpadmin/hosts
+chown gpadmin:gpadmin /home/gpadmin/hosts
+EOF
+
+# 5. Drop gpinitsystem_config in and run gpinitsystem.
+sudo docker cp "$(dirname "$0")/gpinitsystem_config" \
+    "$NAME":/home/gpadmin/gpinitsystem_config
+sudo docker exec "$NAME" chown gpadmin:gpadmin /home/gpadmin/gpinitsystem_config
+
+sudo docker exec "$NAME" sudo -iu gpadmin bash -lc \
+    'gpinitsystem -a -c gpinitsystem_config -h hosts'

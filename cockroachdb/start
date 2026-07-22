@@ -1,0 +1,16 @@
+#!/bin/bash
+set -eu
+
+CRDBDATADIR=/var/lib/cockroach-data
+
+if cockroach sql --insecure --host=localhost -e 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Cache=25% per CockroachDB production tuning recommendations.
+sudo cockroach start-single-node --insecure --listen-addr=localhost --background \
+    --store="$CRDBDATADIR" --cache=.25 --pid-file=crdb.pid
+
+# Disable plan cache to keep timings honest run-over-run.
+cockroach sql --insecure --host=localhost \
+    --execute='SET CLUSTER SETTING sql.query_cache.enabled = false;'

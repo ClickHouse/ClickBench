@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+export HOME=${HOME:=~}
+# shellcheck disable=SC1091
+source "$HOME/.turso/env"
+
+tursodb :memory: 'SELECT 1' >/dev/null

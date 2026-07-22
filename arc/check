@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+ARC_URL="${ARC_URL:-http://localhost:8000}"
+TOKEN=$(cat arc_token.txt 2>/dev/null || true)
+
+if [ -n "$TOKEN" ]; then
+    curl -sf "$ARC_URL/health" -H "x-api-key: $TOKEN" >/dev/null
+else
+    curl -sf "$ARC_URL/health" >/dev/null
+fi

@@ -1,0 +1,31 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via psql against pg_duckdb in
+# MotherDuck mode. The hits table lives in the ddb$pgclick MotherDuck
+# database, so we set search_path before each query.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+export PGUSER=postgres
+export PGPASSWORD=duckdb
+DATABASE='ddb$pgclick'
+query=$(cat)
+
+raw=$(psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -t \
+    -c "set search_path=$DATABASE;" -c '\timing' -c "$query" 2>&1) \
+    && exit_code=0 || exit_code=$?
+
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$raw" | grep -qE '^(ERROR|FATAL):|psql: error'; then
+    printf '%s\n' "$raw" >&2
+    exit 1
+fi
+
+printf '%s\n' "$raw" | grep -v '^Time:'
+
+ms=$(printf '%s\n' "$raw" | grep -oP 'Time:\s*\K[0-9.]+' | tail -n1)
+if [ -z "$ms" ]; then
+    echo "no Time: in psql output" >&2
+    exit 1
+fi
+awk -v m="$ms" 'BEGIN { printf "%.3f\n", m / 1000 }' >&2

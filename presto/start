@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+PRESTO_VERSION=0.297
+
+if sudo docker ps --format '{{.Names}}' | grep -qx presto; then
+    exit 0
+fi
+if sudo docker ps -a --format '{{.Names}}' | grep -qx presto; then
+    sudo docker start presto
+    exit 0
+fi
+
+sudo docker run -d --name presto \
+    -p 8081:8080 \
+    -v "$PWD/etc/catalog/hive.properties:/opt/presto-server/etc/catalog/hive.properties:ro" \
+    -v "$PWD/etc/jvm.config:/opt/presto-server/etc/jvm.config:ro" \
+    -v "$PWD/etc/config.properties:/opt/presto-server/etc/config.properties:ro" \
+    -v "$PWD/data:/clickbench" \
+    prestodb/presto:${PRESTO_VERSION}

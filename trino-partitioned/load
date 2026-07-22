@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+# Hardlink the 100 partitioned Parquet files into the Hive
+# external_location directory; the Trino container reads /clickbench/hits.
+for f in hits_*.parquet; do
+    ln -f "$f" "data/hits/$f"
+done
+sudo chown -R 1000:1000 data
+
+sudo docker cp create.sql trino:/tmp/create.sql
+sudo docker exec -i trino trino --file /tmp/create.sql
+
+rm -f hits_*.parquet
+sync

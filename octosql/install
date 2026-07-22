@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+# Pick the matching arch — octosql ships separate amd64/arm64 tarballs
+# and the hardcoded amd64 one made every c8g.* run die immediately with
+# "cannot execute binary file: Exec format error".
+case "$(uname -m)" in
+    x86_64|amd64)  arch=amd64 ;;
+    aarch64|arm64) arch=arm64 ;;
+    *) echo "octosql: unsupported arch $(uname -m)" >&2; exit 1 ;;
+esac
+tarball="octosql_0.13.0_linux_${arch}.tar.gz"
+
+if [ ! -x ./octosql ]; then
+    wget --continue --progress=dot:giga \
+        "https://github.com/cube2222/octosql/releases/download/v0.13.0/${tarball}"
+    tar xf "${tarball}" octosql
+fi

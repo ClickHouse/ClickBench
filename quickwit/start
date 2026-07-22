@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+QW_IMAGE="quickwit/quickwit:v0.9.0-rc"
+
+if sudo docker ps --format '{{.Names}}' | grep -qx qw; then
+    exit 0
+fi
+if sudo docker ps -a --format '{{.Names}}' | grep -qx qw; then
+    sudo docker start qw
+    exit 0
+fi
+
+# Quickwit defaults: REST on 7280, gRPC on 7281. node-config.yaml bumps
+# searcher timeouts (defaults are 30s, too low for the high-cardinality
+# aggregations on the full 100M-row dataset).
+sudo docker run -d --name qw --network host \
+    -v "$PWD/qwdata":/quickwit/qwdata \
+    -v "$PWD/node-config.yaml":/quickwit/config/quickwit.yaml \
+    "$QW_IMAGE" run

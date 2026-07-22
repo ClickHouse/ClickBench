@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+du -bcs data | awk '/total$/ { print $1 }'

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# create.sql defines a VIEW over hits.parquet — no ingestion happens, the
+# parquet file is read in place at query time. We persist the view in
+# hits.db so subsequent query invocations see it.
+rm -f hits.db
+duckdb hits.db -f create.sql
+sync

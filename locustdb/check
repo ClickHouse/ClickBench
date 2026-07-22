@@ -1,0 +1,5 @@
+#!/bin/bash
+# Probe the LocustDB HTTP daemon. /tables returns 200 once actix-web is up.
+set -e
+
+curl -fsS -o /dev/null --max-time 5 http://127.0.0.1:8123/tables

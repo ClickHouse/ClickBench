@@ -1,0 +1,37 @@
+#!/bin/bash
+set -eu
+
+# CrateDB has two schemas (default vs tuned); MODE env selects.
+MODE=${CRATEDB_MODE:-default}
+if [[ $MODE == "tuned" ]]; then
+    CREATE_FILE="create-tuned.sql"
+    EMPTY_STRING_AS_NULL=TRUE
+else
+    CREATE_FILE="create.sql"
+    EMPTY_STRING_AS_NULL=FALSE
+fi
+
+# Stage data into a known location.
+mv hits.tsv /tmp/hits.tsv
+chmod 444 /tmp/hits.tsv
+
+psql -U crate -h localhost --no-password -t < "$CREATE_FILE"
+
+psql -U crate -h localhost --no-password -q -t -c "
+  COPY hits
+  FROM 'file:///tmp/hits.tsv'
+  WITH
+  (
+    \"delimiter\"=e'\t',
+    \"format\"='csv',
+    \"header\"=false,
+    \"empty_string_as_null\"=${EMPTY_STRING_AS_NULL}
+  )
+  RETURN SUMMARY;"
+
+if [[ $MODE == "tuned" ]]; then
+    psql -U crate -h localhost --no-password -t -c "REFRESH TABLE hits; OPTIMIZE TABLE hits;"
+fi
+
+rm -f /tmp/hits.tsv
+sync

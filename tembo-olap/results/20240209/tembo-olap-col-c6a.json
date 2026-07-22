@@ -6,9 +6,9 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "comment": "",
+    "comment": "Historical: cloud.tembo.io is no longer operational; the OLAP stack on Tembo Cloud was discontinued.",
 
-    "tags": ["C", "PostgreSQL compatible", "column-oriented", "lukewarm-cold-run"],
+    "tags": ["C", "PostgreSQL compatible", "column-oriented", "lukewarm-cold-run", "historical"],
 
     "load_time": 4903,
     "data_size": 33864704000,

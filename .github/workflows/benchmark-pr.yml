@@ -1,0 +1,111 @@
+name: "Benchmark pull request"
+
+# pull_request_target: the workflow and the launcher scripts are always taken
+# from the trusted base branch, and the OIDC token is available for PRs from
+# forks. Code from the PR never runs on the runner - it only runs on the
+# disposable benchmark machines, which clone the PR's repository and branch.
+on:
+  pull_request_target:
+    # `labeled` lets a maintainer relaunch the benchmark on a different
+    # machine by adding a "machine:<ec2-type>" label; the detect job filters
+    # out all other labels so they don't relaunch anything.
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+
+# A new push supersedes queued runs, including ones still waiting for approval.
+concurrency:
+  group: benchmark-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: Detect changed systems
+    # Unlike the other trigger types, `labeled` can also fire on a closed PR,
+    # hence the state guard.
+    if: >-
+      github.event.pull_request.state == 'open' &&
+      (github.event.action != 'labeled' || startsWith(github.event.label.name, 'machine:'))
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      systems: ${{ steps.changed.outputs.systems }}
+      machines: ${{ steps.changed.outputs.machines }}
+    steps:
+      - id: changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # A system should be benchmarked if the PR touches files in its
+          # directory - except results and documentation - and the directory
+          # contains benchmark.sh at the PR head, so that added systems are
+          # included and deleted ones are not.
+          systems=""
+          if [ -n "$HEAD_REPO" ]; then
+              dirs=$(gh api "repos/$BASE_REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename' \
+                  | grep -v -E '(^|/)results/|\.md$' \
+                  | awk -F/ 'NF > 1 { print $1 }' | sort -u || true)
+              for dir in $dirs; do
+                  if gh api --silent "repos/$HEAD_REPO/contents/$dir/benchmark.sh?ref=$HEAD_SHA" 2>/dev/null; then
+                      systems="$systems $dir"
+                  fi
+              done
+          fi
+          systems="${systems# }"
+          echo "Systems to benchmark: $systems"
+          echo "systems=$systems" >> "$GITHUB_OUTPUT"
+
+          # "machine:<ec2-type>" labels override the default machine, e.g.
+          # machine:c6a.metal for systems that don't fit in the 32 GB of
+          # c6a.4xlarge. Multiple labels launch one run per machine, and
+          # machine:all, machine:all-amd and machine:all-arm expand to the
+          # machine sets of the daily runs (keep in sync with
+          # benchmark-daily.yml). Labels can only be set by users with
+          # triage access, and the launch is still gated by the
+          # benchmark-approval environment.
+          amd="t3a.small c6a.large c6a.xlarge c6a.2xlarge c6a.4xlarge c6a.metal c7a.metal-48xl"
+          arm="c8g.4xlarge c8g.metal-48xl"
+          labels=$(jq -r '[.pull_request.labels[].name
+              | select(startswith("machine:")) | ltrimstr("machine:")]
+              | join(" ")' "$GITHUB_EVENT_PATH")
+          machines=""
+          for label in $labels; do
+              case "$label" in
+                  all)     machines="$machines $amd $arm";;
+                  all-amd) machines="$machines $amd";;
+                  all-arm) machines="$machines $arm";;
+                  *)       machines="$machines $label";;
+              esac
+          done
+          machines=$(printf '%s\n' $machines | awk '!seen[$0]++' | tr '\n' ' ')
+          machines="${machines% }"
+          machines="${machines:-c6a.4xlarge}"
+          echo "Machines: $machines"
+          echo "machines=$machines" >> "$GITHUB_OUTPUT"
+
+  launch:
+    needs: detect
+    if: needs.detect.outputs.systems != ''
+    runs-on: ubuntu-latest
+    # Launching machines for PR code costs money and the code is untrusted:
+    # this environment must be configured with required reviewers.
+    environment: benchmark-approval
+    permissions:
+      id-token: write  # To assume the federated IAM role.
+      contents: read
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4  # The base branch: trusted launcher scripts.
+      - uses: ./.github/actions/launch-benchmark
+        with:
+          systems: ${{ needs.detect.outputs.systems }}
+          machines: ${{ needs.detect.outputs.machines }}
+          # The head repository and branch to benchmark are derived from the
+          # PR number by run-benchmark.sh.
+          pr: ${{ github.event.pull_request.number }}

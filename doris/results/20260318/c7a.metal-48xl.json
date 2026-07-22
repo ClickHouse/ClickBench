@@ -1,5 +1,5 @@
 {
-    "system":  "Apache Doris",
+    "system":  "Doris",
     "date": "2026-03-18",
     "machine": "c7a.metal-48xl",
     "cluster_size": 1,

@@ -1,3 +1,15 @@
 Cloudberry DB is a fork of Greenplum DB, based on PG 14.
 
-To run the test, put all files in a single directory and run benchmark.sh under root user, then follow the instructions (you will need to run the script multiple times with different options).
+The benchmark runs Cloudberry inside a privileged Rocky 9 docker container,
+so the host can be Ubuntu/Debian/RHEL/anything that runs docker. The install
+script builds Cloudberry from source inside the container (~10–20 min on
+first install) and initializes a single-segment cluster via gpinitsystem.
+
+The other scripts (start/stop/check/load/query) `docker exec` into the
+running container.
+
+To run the test:
+
+```
+./benchmark.sh
+```

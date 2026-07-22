@@ -1,0 +1,28 @@
+#!/bin/bash
+set -eu
+
+CONTAINER_NAME=${CONTAINER_NAME:-paradedb}
+# Track ParadeDB's current Postgres-17 build. The 0.10.0 pin (when this
+# benchmark exercised pg_lakehouse / parquet_fdw) was rotated out of
+# Docker Hub, and pg_lakehouse itself was dropped from ParadeDB after
+# the 0.10.x line. The benchmark now uses pg_search instead — see
+# create.sql.
+PARADEDB_VERSION=${PARADEDB_VERSION:-latest-pg17}
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client
+
+sudo docker pull "paradedb/paradedb:$PARADEDB_VERSION"
+
+if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    sudo docker rm -f "$CONTAINER_NAME" >/dev/null
+fi
+
+sudo docker run -d \
+    --name "$CONTAINER_NAME" \
+    -e POSTGRESQL_USERNAME=myuser \
+    -e POSTGRESQL_PASSWORD=mypassword \
+    -e POSTGRESQL_DATABASE=mydb \
+    -e POSTGRES_PASSWORD=postgres \
+    -p 5432:5432 \
+    "paradedb/paradedb:$PARADEDB_VERSION"

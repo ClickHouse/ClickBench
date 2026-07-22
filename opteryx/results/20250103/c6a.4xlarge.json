@@ -9,7 +9,6 @@
     "tags": [
         "stateless",
         "column-oriented",
-        "serverless",
         "embedded"
     ],
     "load_time": null,
