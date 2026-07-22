@@ -1,0 +1,13 @@
+#!/bin/bash
+# Stop the BemiDB server (leave the staging PostgreSQL alone).
+
+if [ -f server.pid ]; then
+    kill "$(cat server.pid)" 2>/dev/null || true
+    rm -f server.pid
+fi
+
+# Fallback in case the pid file is missing or stale: match the `start`
+# subcommand only, so an in-flight `bemidb ... sync` is never touched.
+pkill -f 'bemidb .* start' 2>/dev/null || true
+
+exit 0
