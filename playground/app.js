@@ -9,11 +9,18 @@
 //      /api/query?system=<name> and render output as plain text in a <pre>.
 
 const $ = (sel) => document.querySelector(sel);
-// When the page is served by the playground over HTTP, relative URLs
-// work. When it's opened from disk (file://), relative fetches resolve
-// against file:// and fail; rewrite to an absolute localhost URL.
-// CORS is handled by the server's middleware (Access-Control-Allow-Origin: *).
-const API = location.protocol === "file:" ? "http://localhost:8000" : "";
+// API base URL selection:
+//   - clickbench-playground.clickhouse.com (default hosting) → same-origin,
+//     use relative paths so responses stay path-transparent.
+//   - Anywhere else on http/https (e.g. benchmark.clickhouse.com/playground/,
+//     a mirror, a local build served via GitHub Pages) → absolute URL to
+//     the live playground; CORS is open (Access-Control-Allow-Origin: *
+//     is set by the server's middleware).
+//   - file:// → localhost dev instance.
+const API =
+    location.hostname === "clickbench-playground.clickhouse.com" ? "" :
+    location.protocol === "file:" ? "http://localhost:8000" :
+    "https://clickbench-playground.clickhouse.com";
 
 const listEl = $("#system-list");
 const queryEl = $("#query");

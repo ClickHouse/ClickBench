@@ -2,8 +2,8 @@
 
 Endpoints:
 
-    GET  /                     redirects to /ui/
-    GET  /ui/...               static-serves files from ../web/
+    GET  /                     serves the UI page
+    GET  /app.js, /style.css   static UI assets
     GET  /api/systems          JSON list of all playground-eligible systems
     GET  /api/state            JSON snapshot of every VM's state
     GET  /api/system/{name}    detail for a single system
@@ -491,21 +491,33 @@ def build_app() -> web.Application:
     app.router.add_post("/api/query", obj.handle_query)
     app.router.add_get("/api/saved/{b64}", obj.handle_saved)
 
-    # Static UI
-    web_dir = Path(__file__).resolve().parent.parent / "web"
-
-    async def root_redirect(_r: web.Request) -> web.Response:
-        raise web.HTTPFound("/ui/")
+    # Static UI. Files live at playground/{index.html,app.js,style.css}
+    # (not playground/web/) so that GitHub Pages serves the same page
+    # verbatim at https://benchmark.clickhouse.com/playground/, without
+    # a duplicate copy. Served at the URL root (/) so URL layouts match
+    # between the two hosts (no /ui/ prefix on either).
+    playground_dir = Path(__file__).resolve().parent.parent
 
     async def ui_index(_r: web.Request) -> web.FileResponse:
-        resp = web.FileResponse(web_dir / "index.html")
+        resp = web.FileResponse(playground_dir / "index.html")
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
+    def _serve_asset(name: str):
+        # Whitelist the two static assets the app references. Serving
+        # the whole playground_dir would expose README.md / INSTALL.md
+        # / docs/ / server/ / agent/ at the URL root, which we don't
+        # want.
+        async def _handler(_r: web.Request) -> web.FileResponse:
+            resp = web.FileResponse(playground_dir / name)
+            resp.headers["Cache-Control"] = "no-store"
+            return resp
+        return _handler
 
     @web.middleware
     async def no_cache_static(request: web.Request, handler):
         resp = await handler(request)
-        if request.path.startswith("/ui/"):
+        if request.path in ("/", "/app.js", "/style.css"):
             resp.headers["Cache-Control"] = "no-store"
         return resp
 
@@ -536,13 +548,9 @@ def build_app() -> web.Application:
 
     app.middlewares.append(no_cache_static)
     app.middlewares.append(cors)
-    app.router.add_get("/", root_redirect)
-    app.router.add_get("/ui/", ui_index)
-    app.router.add_get("/ui", ui_index)
-    # follow_symlinks=False — GHSA-5h86-8mv2-jq9f covers a path-traversal
-    # in aiohttp's static handler that's only reachable when symlinks are
-    # followed. The repo's web/ tree has no symlinks anyway.
-    app.router.add_static("/ui/", path=str(web_dir), show_index=False)
+    app.router.add_get("/", ui_index)
+    app.router.add_get("/app.js", _serve_asset("app.js"))
+    app.router.add_get("/style.css", _serve_asset("style.css"))
 
     return app
 
