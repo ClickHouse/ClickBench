@@ -15,7 +15,7 @@ source (no pre-built bundle is published for the CH backend).
 The CH backend is not part of Apache Gluten's release tarball — only the Velox bundle is published. As a result `install` builds two things from source:
 
 1. **`libch.so`** — built from [Kyligence/ClickHouse](https://github.com/Kyligence/ClickHouse) at the org/branch/commit pinned in `gluten/cpp-ch/clickhouse.version`. The build uses Clang 19 / cmake / ninja (Gluten v1.4.0's CH backend requires Clang 19). Its `extern-local-engine` module links against JNI **including AWT**, so `install` uses the full `openjdk-17-jdk` (not `-headless`, which omits `jawt.h`/`libjawt.so` and makes cmake fail with `Could NOT find JNI (missing: AWT)`).
-2. **The Gluten Spark plugin** — built via Maven with `-Pbackends-clickhouse -Pspark-3.5 -Pscala-2.12`. JDK 8 is required at compile time (Gluten's POM); Spark itself runs under JDK 17 (see `./query`).
+2. **The Gluten Spark plugin** — built via Maven with `-Pbackends-clickhouse -Pspark-3.5 -Pscala-2.12 -Pdelta`. The `delta` profile is required by the `backends-clickhouse` module's enforcer; `spark-3.5` pins the matching Delta version (3.2.0). JDK 8 is required at compile time (Gluten's POM); Spark itself runs under JDK 17 (see `./query`).
 
 Building libch.so essentially compiles ClickHouse from source: it is **memory-hungry** (Gluten's docs note that 64 GB RAM is recommended). On a c6a.4xlarge (32 GB RAM) the compile may OOM; use c6a.8xlarge or larger for a clean run.
 

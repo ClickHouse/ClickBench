@@ -87,6 +87,11 @@ fi
 # Build the Gluten Spark plugin against the CH backend. JDK 8 is required at
 # compile time per Gluten's pom; Spark itself runs under JDK 17 in ./query.
 # pyspark wheels ship Scala 2.12 jars, so build with scala-2.12 to match.
+# The delta profile is mandatory: backends-clickhouse's pom carries an
+# `enforce-delta-profile` enforcer rule that fails the build with
+# `"-P delta" must be set when building Gluten with ClickHouse backend` unless
+# it is active. The spark-3.5 profile pins the matching delta.version (3.2.0),
+# so -Pdelta needs no extra version flag.
 JAVA_HOME_8="/usr/lib/jvm/java-8-openjdk-${ARCH}"
 GLUTEN_JAR=$(ls "$GLUTEN_DIR"/backends-clickhouse/target/gluten-*-spark-3.5-jar-with-dependencies.jar 2>/dev/null | head -n1)
 if [ -z "$GLUTEN_JAR" ]; then
@@ -95,7 +100,7 @@ if [ -z "$GLUTEN_JAR" ]; then
         export MAVEN_OPTS="-Xmx8g -XX:ReservedCodeCacheSize=2g"
         JAVA_HOME="$JAVA_HOME_8" PATH="$JAVA_HOME_8/bin:$PATH" \
             mvn -B clean package \
-                -Pbackends-clickhouse -P"$SPARK_PROFILE" -Pscala-2.12 \
+                -Pbackends-clickhouse -P"$SPARK_PROFILE" -Pscala-2.12 -Pdelta \
                 -DskipTests -Dcheckstyle.skip
     )
     GLUTEN_JAR=$(ls "$GLUTEN_DIR"/backends-clickhouse/target/gluten-*-spark-3.5-jar-with-dependencies.jar 2>/dev/null | head -n1)
