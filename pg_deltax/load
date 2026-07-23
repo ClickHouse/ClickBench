@@ -24,11 +24,20 @@ sudo chmod 644 "$PARQUET_DIR"/*.parquet 2>/dev/null || true
 sudo -u postgres psql -v ON_ERROR_STOP=1 -t -c "DROP DATABASE IF EXISTS test"
 sudo -u postgres psql -v ON_ERROR_STOP=1 -t -c "CREATE DATABASE test"
 
-# Bump work_mem for the load only. Direct backfill sorts each segment before
-# compressing; 1GB keeps larger segments in memory and shaves load time.
-# Reset before the query phase so the concurrent-QPS test (10 connections
-# each spawning parallel-scan workers) doesn't multiply this up to OOM.
-sudo -u postgres psql -v ON_ERROR_STOP=1 -t -c "ALTER DATABASE test SET work_mem TO '1GB'"
+# Bump work_mem for the load only. Direct backfill sorts each segment
+# before compressing; larger keeps more segments in memory and shaves
+# load time. Reset before the query phase so the concurrent-QPS test
+# (10 connections each spawning parallel-scan workers) doesn't multiply
+# this up to OOM. Scale to guest RAM: 1 GB was fine on 32 GB benchmark
+# hosts but crashed pg_deltax's compression pipeline mid-load on the
+# 16 GiB playground VM ("server closed the connection unexpectedly"
+# after ~5 min). Cap at MemTotal / 32 so 4× parallel workers + shared
+# buffers still leaves headroom.
+load_wm_mb=$(awk '/MemTotal/{ printf "%d", $2/1024/32 }' /proc/meminfo)
+[ "$load_wm_mb" -lt 128 ] && load_wm_mb=128
+[ "$load_wm_mb" -gt 1024 ] && load_wm_mb=1024
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t \
+    -c "ALTER DATABASE test SET work_mem TO '${load_wm_mb}MB'"
 
 sudo -u postgres psql -v ON_ERROR_STOP=1 -t test -c "CREATE EXTENSION pg_deltax"
 
