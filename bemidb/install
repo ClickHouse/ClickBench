@@ -1,0 +1,60 @@
+#!/bin/bash
+set -eu
+
+# BemiDB is a single Go binary that embeds DuckDB and exposes the PostgreSQL
+# wire protocol, serving analytical queries from Iceberg (Parquet) storage.
+# Its only ingestion path is syncing from a source PostgreSQL database, so we
+# install PostgreSQL as a staging source (torn down before the query phase)
+# plus the psql client used to talk to both PostgreSQL and BemiDB.
+#
+# We pin the last v0.x release: it is the self-contained single-binary,
+# local-storage design. v1.x pivoted to a multi-container setup that mandates
+# S3 object storage and a separate catalog database, which doesn't fit a
+# single-VM reproducible benchmark.
+BEMIDB_VERSION="${BEMIDB_VERSION:-0.51.1}"
+PGVERSION="${PGVERSION:-17}"
+
+# --- PostgreSQL (staging source) ---
+# Source: https://wiki.postgresql.org/wiki/Apt
+sudo apt-get update -y
+sudo apt-get install -y postgresql-common curl
+sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+
+sudo apt-get update -y
+sudo apt-get install -y postgresql-$PGVERSION
+
+# Tune the staging PostgreSQL for a fast bulk load and a fast sequential-scan
+# sync. This only affects how quickly data gets into BemiDB; the query numbers
+# are produced by BemiDB, which reads its own Iceberg storage.
+memory=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+threads=$(nproc)
+cpus=$(($threads / 2))
+shared_buffers=$(($memory / 4))
+effective_cache_size=$(($memory - ($memory / 4)))
+max_worker_processes=$(($threads + 15))
+
+sudo tee /etc/postgresql/$PGVERSION/main/conf.d/clickbench.conf <<EOF
+shared_buffers=${shared_buffers}kB
+max_worker_processes=${max_worker_processes}
+max_parallel_workers=${threads}
+max_parallel_maintenance_workers=${cpus}
+max_parallel_workers_per_gather=${cpus}
+max_wal_size=32GB
+work_mem=64MB
+effective_cache_size = ${effective_cache_size}kB
+EOF
+
+sudo systemctl restart postgresql@$PGVERSION-main
+
+# --- BemiDB single binary ---
+ARCH=$(uname -m)
+case "$ARCH" in
+    x86_64|amd64) ARCH=amd64 ;;
+    aarch64|arm64) ARCH=arm64 ;;
+    *) echo "Unsupported architecture: $ARCH" >&2; exit 1 ;;
+esac
+
+curl -fsSL "https://github.com/BemiHQ/BemiDB/releases/download/v${BEMIDB_VERSION}/bemidb-linux-${ARCH}" -o bemidb
+chmod +x bemidb
+
+./bemidb version

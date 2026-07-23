@@ -27,5 +27,9 @@ hits*.hyper
 hits.vortex
 *.vortex
 
+# BemiDB single binary and local Iceberg storage
+bemidb/bemidb
+bemidb/iceberg
+
 # Python venvs created by install scripts
 myenv
