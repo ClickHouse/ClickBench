@@ -30,13 +30,25 @@ sudo -u postgres psql -v ON_ERROR_STOP=1 -t -c "CREATE DATABASE test"
 # (10 connections each spawning parallel-scan workers) doesn't multiply
 # this up to OOM. Scale to guest RAM: 1 GB was fine on 32 GB benchmark
 # hosts but crashed pg_deltax's compression pipeline mid-load on the
-# 16 GiB playground VM. Cap at MemTotal/64 so pg_deltax's ~5 background
-# workers × work_mem still leaves headroom for shared_buffers + kernel.
+# 16 GiB playground VM. Cap at MemTotal/64 so pg_deltax's decoder pool
+# × work_mem still leaves headroom for shared_buffers + kernel.
 load_wm_mb=$(awk '/MemTotal/{ printf "%d", $2/1024/64 }' /proc/meminfo)
 [ "$load_wm_mb" -lt 64 ] && load_wm_mb=64
 [ "$load_wm_mb" -gt 1024 ] && load_wm_mb=1024
 sudo -u postgres psql -v ON_ERROR_STOP=1 -t \
     -c "ALTER DATABASE test SET work_mem TO '${load_wm_mb}MB'"
+
+# pg_deltax.parallel_workers=0 (default) uses num_cpus (capped at 16), so
+# 4-vCPU / 16 GiB VMs end up with 4 decoders + 1 compressor. Each decoder
+# accumulates ~250 MB of blob buffers before flush → ~1.5 GB of transient
+# state that OOM-kills the backend ("server closed the connection
+# unexpectedly" after 4-6 partition flushes). Cap decoders on
+# memory-constrained hosts. Skip on hosts with ≥24 GiB RAM.
+mem_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo)
+if [ "$mem_kb" -lt $((24 * 1024 * 1024)) ]; then
+    sudo -u postgres psql -v ON_ERROR_STOP=1 -t \
+        -c "ALTER DATABASE test SET pg_deltax.parallel_workers TO 2"
+fi
 
 sudo -u postgres psql -v ON_ERROR_STOP=1 -t test -c "CREATE EXTENSION pg_deltax"
 
