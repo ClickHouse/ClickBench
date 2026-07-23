@@ -24,6 +24,7 @@ Building libch.so essentially compiles ClickHouse from source: it is **memory-hu
 - `spark.gluten.sql.columnar.backend.lib=ch` selects the ClickHouse backend over Velox.
 - `spark.gluten.sql.columnar.libpath=<libch.so>` points to the native library. Gluten's wrapper cmakes into `gluten/cpp-ch/build_ch`, which drives an inner ClickHouse cmake that builds `libch.so` under `gluten/cpp-ch/build/.../extern-local-engine/`; `install` globs for it under `cpp-ch/` and symlinks it as `libch.so` in the entry directory.
 - Memory is split 50/50 between Spark heap and Gluten off-heap, identical to the Velox entry — the CH backend also runs off-heap via JNI.
+- `libch.so` is preloaded into the JVM via `LD_PRELOAD` (set in `query.py`). Because the library carries initial-exec-model TLS, a lazy `dlopen` from the running JVM otherwise fails with `cannot allocate memory in static TLS block`; preloading it at JVM startup — while the static TLS block still has room — avoids this. Gluten's docs use `spark.executorEnv.LD_PRELOAD` for this, but in `local[*]` mode the driver JVM is the executor and launches before that config is read, so the preload is done through the JVM's environment instead.
 - Queries use ClickHouse-style regex backreferences (`\1`) rather than Spark's `$1`, since the regex evaluation happens inside libch.so. See the discussion in [`spark-gluten/README.md`](../spark-gluten/README.md) and [Gluten issue #7545](https://github.com/apache/incubator-gluten/issues/7545).
 
 ### Links

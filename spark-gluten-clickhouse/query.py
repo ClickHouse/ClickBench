@@ -50,7 +50,26 @@ builder = (
     .config("spark.memory.offHeap.enabled", "true")
     .config("spark.memory.offHeap.size", f"{off_heap}m")
     .config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true")
+
+    # Cluster-mode equivalent of the LD_PRELOAD below; a no-op in local[*] but
+    # kept so the config is correct if this is ever run on real executors.
+    .config("spark.executorEnv.LD_PRELOAD", os.path.abspath("libch.so"))
 )
+
+# Gluten's CH backend loads libch.so into the JVM via JNI (System.load). The
+# library carries initial-exec-model TLS (from its statically linked deps), so
+# a lazy dlopen from the already-running JVM fails with
+#   java.lang.UnsatisfiedLinkError: libch.so: cannot allocate memory in static
+#   TLS block
+# because the static TLS block is sized at process startup. Gluten's docs work
+# around this with spark.executorEnv.LD_PRELOAD=<libch.so>, but in local[*] mode
+# the driver JVM *is* the executor and is launched (by pyspark below) before any
+# Spark config is read, so executorEnv never applies. Instead, preload it via
+# the driver JVM's environment: setting LD_PRELOAD here does not affect this
+# already-started Python process, but pyspark's launcher copies os.environ into
+# the JVM it spawns, so the JVM preloads libch.so at startup while the static
+# TLS block still has room. System.load() then reuses the already-loaded lib.
+os.environ["LD_PRELOAD"] = os.path.abspath("libch.so")
 
 spark = builder.getOrCreate()
 
