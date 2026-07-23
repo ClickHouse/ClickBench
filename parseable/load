@@ -45,12 +45,19 @@ fi
 # because parallel runs jobs via /bin/sh by default, and a bash
 # `export -f`'d function isn't visible in that shell — the previous
 # version silently no-op'd every chunk and load wrote 0 rows.
-LINES_PER_CHUNK=2500
-INGEST_JOBS=6
+# In the 16 GiB playground VM parseable's incoming-batch queue fills
+# fast when we push 6 concurrent 2500-line batches (~75 MB/s in
+# flight) — the endpoint then starts returning HTTP 408 and every
+# subsequent chunk fails. 3 × 1000 lines is ~4x lower peak pressure
+# and empirically clears without 408s. curl --retry survives short
+# stalls so a briefly-saturated parseable doesn't fail the load.
+LINES_PER_CHUNK=1000
+INGEST_JOBS=3
 pv hits.json | parallel --pipe -N$LINES_PER_CHUNK --block 10M \
     --jobs "$INGEST_JOBS" --halt-on-error 0 '
         awk "BEGIN{print \"[\"} NR>1{print prev \",\"} {prev=\$0} END{if (prev) print prev; print \"]\"}" |
-        curl --silent --show-error --fail \
+        curl --silent --show-error --fail --retry 5 --retry-delay 2 \
+            --retry-all-errors --max-time 120 \
             -H "Content-Type: application/json" \
             -H "X-P-Stream: hits" \
             -k -XPOST -u "admin:admin" \
