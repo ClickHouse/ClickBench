@@ -35,7 +35,7 @@ if [ ! -f data/hits.bin ]; then
     lines_per_piece=5000000
     mem_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo)
     if [ "$mem_kb" -lt $((24 * 1024 * 1024)) ]; then
-        lines_per_piece=2000000
+        lines_per_piece=1000000
     fi
     if [ -f hits.csv ]; then
         split -l "$lines_per_piece" --numeric-suffixes=1 --additional-suffix=.csv \

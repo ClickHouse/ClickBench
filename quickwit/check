@@ -1,4 +1,15 @@
 #!/bin/bash
 set -e
 
+# The REST server responds to /version well before the searcher has
+# registered with the (single-node) gossip cluster. Snapshotting at
+# that point leaves the restored VM in a state where the very first
+# /query returns
+#   "no available searcher nodes in the cluster"
+# from quickwit's job dispatcher. Gate on a real search request — it
+# only succeeds once the searcher has joined and the `hits` index
+# manifest is loaded.
 curl -sS -f http://localhost:7280/api/v1/version >/dev/null
+curl -sS -f -X POST -H 'Content-Type: application/json' \
+    -d '{"query":"*","max_hits":0}' \
+    http://localhost:7280/api/v1/hits/search >/dev/null
