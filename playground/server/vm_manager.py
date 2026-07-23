@@ -443,8 +443,17 @@ class VMManager:
             # If config fails partway, the firecracker process still owns the
             # TAP fd; without reaping it, the next attempt sees "Resource
             # busy" because the kernel hasn't released the TAP. Kill +
-            # wait() before propagating.
-            await self._shutdown(vm)
+            # wait() before propagating. Also delete the TAP interface
+            # itself — kernel-level opens can linger past the process
+            # exit in some paths (observed as retry attempts hitting
+            # "Open tap device failed: … Resource busy (os error 16)"
+            # even after the prior fc process was SIGKILL-reaped). A
+            # clean tuntap del + re-add on the next ensure_tap avoids
+            # that class of race entirely.
+            with contextlib.suppress(Exception):
+                await self._shutdown(vm)
+            with contextlib.suppress(Exception):
+                await net.teardown_tap(vm.slot)
             raise
 
     async def _configure_boot(self, vm: VM, *, restore_snapshot: bool) -> None:

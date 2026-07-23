@@ -82,6 +82,7 @@ class Monitor:
 
         # Host-wide checks
         await self._check_host_pressure()
+        await self._check_max_ready_vms()
 
     def _sample_cpu(self, name: str, pid: int) -> float | None:
         """Return ratio of CPU used since last sample, normalized by vcpu count."""
@@ -199,6 +200,33 @@ class Monitor:
                            f"largest is {target.system.name} ({target.rootfs_used_bytes/1e9:.1f}G)",
                 )
                 await self.vmm.kick(target.system.name, "host-disk-pressure")
+
+    async def _check_max_ready_vms(self) -> None:
+        """Enforce the cap on concurrent ready VMs. Evict oldest-idle
+        when exceeded. Only touches VMs in state=='ready' that haven't
+        been used in a bit (2 s grace) so we don't evict a VM
+        milliseconds into its first query."""
+        cap = self.cfg.max_ready_vms
+        if cap <= 0:
+            return
+        ready = [v for v in self.vmm.vms.values() if v.state == "ready"]
+        if len(ready) <= cap:
+            return
+        # Pick the ones idle the longest, skipping anything used in the
+        # last 2 s to avoid racing an in-flight query dispatch.
+        now = time.time()
+        candidates = [v for v in ready if now - v.last_used >= 2.0]
+        if not candidates:
+            return
+        candidates.sort(key=lambda v: v.last_used)
+        excess = len(ready) - cap
+        for vm in candidates[:excess]:
+            self.sink.write_event(
+                system=vm.system.name, kind="max-ready-cap",
+                detail=f"ready={len(ready)} > cap={cap}; "
+                       f"idle for {int(now - vm.last_used)}s",
+            )
+            await self.vmm.kick(vm.system.name, "max-ready-cap")
 
     def _largest_running(self, *, by: str) -> VM | None:
         running = [v for v in self.vmm.vms.values()

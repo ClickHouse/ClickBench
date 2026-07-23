@@ -23,11 +23,18 @@ sudo wget -q -O /etc/apt/sources.list.d/mariadb-duckdb-ci.sources "$CI_SOURCES_U
 sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server mariadb-client
 
-sudo tee /etc/mysql/mariadb.conf.d/duckdb.cnf >/dev/null <<'EOF'
+# Scale duckdb-memory-limit to guest RAM. The upstream default of 24G
+# was fine on the 32 GB c6a.4xlarge benchmark host, but blows past a
+# 16 GiB playground VM's total memory and OOM-crashes mariadb-server
+# mid-load (visible as `TLS/SSL error: unexpected eof while reading`
+# from the client). Cap at ~50 % of MemTotal.
+mem_g=$(awk '/MemTotal/{ printf "%d", $2/1024/1024/2 }' /proc/meminfo)
+[ "$mem_g" -lt 4 ] && mem_g=4
+sudo tee /etc/mysql/mariadb.conf.d/duckdb.cnf >/dev/null <<EOF
 [mysqld]
 plugin-maturity=alpha
 plugin-load-add=ha_duckdb.so
-duckdb-memory-limit=24G
+duckdb-memory-limit=${mem_g}G
 duckdb-allow-run-in-duckdb=ON
 EOF
 
@@ -40,6 +47,9 @@ sudo mariadb -e "SELECT PLUGIN_STATUS FROM information_schema.PLUGINS WHERE PLUG
 
 # Allow the mysql user (which runs DuckDB embedded) to traverse the home
 # directory so COPY FROM can read dataset files anywhere under ~.
-sudo chmod o+x /home/ubuntu
+# The playground VM has no /home/ubuntu (the agent runs as root and cwd
+# is /opt/clickbench/system) — skip when the dir doesn't exist so this
+# doesn't abort a set -eu install.
+[ -d /home/ubuntu ] && sudo chmod o+x /home/ubuntu || true
 
 echo "MariaDB with DuckDB engine installed and ready."
