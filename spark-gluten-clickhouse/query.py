@@ -11,13 +11,98 @@ in fractional seconds as the LAST line on stderr.
 Note: Keep in sync with spark-*/query.py (see README-accelerators.md for details).
 """
 
+import faulthandler
 import os
+import signal
 import sys
+import threading
+import time
 import timeit
 
 import psutil
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
+
+
+# --- Diagnostic scaffolding (temporary) --------------------------------------
+# The CH backend is built + loaded remotely on c6a.metal and cannot be
+# reproduced on the (aarch64) dev box, so each iteration costs a ~1h build.
+# The harness sends query stdout to /dev/null and only surfaces stderr when a
+# query *exits non-zero*; a hang therefore produces no output and burns the
+# full 10h job timeout. These helpers make a hang fail fast and loud instead:
+#   * STEP markers on stderr pinpoint how far we got before wedging.
+#   * A watchdog forces a JVM thread dump (SIGQUIT) then kills the JVM so the
+#     captured-stderr pipe closes and the invocation exits non-zero.
+#   * A sentinel file short-circuits the remaining tries/queries once one hang
+#     is observed, so a fully-wedged backend costs one timeout, not 43x3.
+# Remove once queries run cleanly.
+# Generous per-query cap: any real ClickBench query finishes in well under this
+# on c6a.metal, and the sentinel means a total hang costs only ONE timeout (not
+# 43x3), so a large value is safe and won't false-trip a slow-but-valid query.
+QUERY_TIMEOUT = int(os.environ.get("QUERY_TIMEOUT", "600"))
+HANG_SENTINEL = "query_hang.sentinel"
+
+
+def mark(msg):
+    print(f"=== STEP: {msg} ===", file=sys.stderr, flush=True)
+
+
+def _dump_and_die():
+    print(
+        f"\n=== WATCHDOG: query.py exceeded {QUERY_TIMEOUT}s; dumping stacks ===",
+        file=sys.stderr,
+        flush=True,
+    )
+    jvms = []
+    try:
+        for child in psutil.Process().children(recursive=True):
+            try:
+                if "java" in child.name().lower():
+                    jvms.append(child)
+                    print(
+                        f"=== sending SIGQUIT to JVM pid {child.pid} for thread dump ===",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    child.send_signal(signal.SIGQUIT)
+            except Exception as exc:  # noqa: BLE001
+                print(f"watchdog: {exc}", file=sys.stderr, flush=True)
+    except Exception as exc:  # noqa: BLE001
+        print(f"watchdog: could not enumerate children: {exc}", file=sys.stderr, flush=True)
+
+    time.sleep(10)  # let the JVM flush its thread dump to our stderr
+
+    print("=== Python stacks ===", file=sys.stderr, flush=True)
+    faulthandler.dump_traceback(file=sys.stderr)
+    sys.stderr.flush()
+
+    # Kill the JVM so the pipe the harness reads from (2>&1) closes and the
+    # command substitution capturing our stderr returns instead of blocking.
+    for child in jvms:
+        try:
+            child.kill()
+        except Exception:  # noqa: BLE001
+            pass
+
+    try:
+        open(HANG_SENTINEL, "w").close()
+    except Exception:  # noqa: BLE001
+        pass
+    os._exit(1)
+
+
+if os.path.exists(HANG_SENTINEL):
+    print(
+        "=== a prior query hung (see earlier thread dump); fast-failing ===",
+        file=sys.stderr,
+        flush=True,
+    )
+    sys.exit(1)
+
+watchdog = threading.Timer(QUERY_TIMEOUT, _dump_and_die)
+watchdog.daemon = True
+watchdog.start()
+# -----------------------------------------------------------------------------
 
 
 query = sys.stdin.read()
@@ -31,6 +116,28 @@ ram = int(round(psutil.virtual_memory().available / (1024 ** 2) * 0.7))
 heap = ram // 2
 off_heap = ram - heap
 print(f"SparkSession will use {heap} MB of heap and {off_heap} MB of off-heap memory (total {ram} MB)")
+
+# Gluten's CH backend loads libch.so into the JVM lazily via JNI (System.load,
+# from CHListenerApi.initialize). libch.so carries initial-exec-model TLS (from
+# its statically linked deps), and glibc sizes the static TLS block at process
+# startup, leaving only a small surplus — so a lazy dlopen from the running JVM
+# fails with:
+#   java.lang.UnsatisfiedLinkError: libch.so: cannot allocate memory in static
+#   TLS block
+# Gluten's docs suggest LD_PRELOAD=<libch.so>, but preloading forces libch.so's
+# global constructors and (statically linked) allocator onto the whole JVM from
+# process start, which deadlocked JVM startup here (query never returned). The
+# cleaner fix is glibc's `rtld.optional_static_tls` tunable: it enlarges the
+# per-thread static-TLS surplus reserved at startup, so the *lazy* System.load
+# succeeds without preloading anything. It must be in the environment before
+# the dynamic loader runs, i.e. before the JVM starts; setting it here does not
+# affect this already-running Python process, but pyspark's launcher copies
+# os.environ into the JVM it spawns, so the JVM starts with the enlarged
+# surplus. 16 MiB is generous (libch.so's real IE-TLS footprint is far smaller)
+# but cheap next to a wasted ~1h remote build; lower if per-thread TLS memory
+# becomes a concern.
+_TLS_SURPLUS = "glibc.rtld.optional_static_tls=16777216"
+os.environ["GLIBC_TUNABLES"] = _TLS_SURPLUS
 
 builder = (
     SparkSession
@@ -51,42 +158,34 @@ builder = (
     .config("spark.memory.offHeap.size", f"{off_heap}m")
     .config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true")
 
-    # Cluster-mode equivalent of the LD_PRELOAD below; a no-op in local[*] but
-    # kept so the config is correct if this is ever run on real executors.
-    .config("spark.executorEnv.LD_PRELOAD", os.path.abspath("libch.so"))
+    # Cluster-mode equivalent of the GLIBC_TUNABLES above: a no-op in local[*]
+    # (the driver JVM is the executor and already inherits os.environ) but kept
+    # so real executors get the same enlarged static-TLS surplus.
+    .config("spark.executorEnv.GLIBC_TUNABLES", _TLS_SURPLUS)
 )
 
-# Gluten's CH backend loads libch.so into the JVM via JNI (System.load). The
-# library carries initial-exec-model TLS (from its statically linked deps), so
-# a lazy dlopen from the already-running JVM fails with
-#   java.lang.UnsatisfiedLinkError: libch.so: cannot allocate memory in static
-#   TLS block
-# because the static TLS block is sized at process startup. Gluten's docs work
-# around this with spark.executorEnv.LD_PRELOAD=<libch.so>, but in local[*] mode
-# the driver JVM *is* the executor and is launched (by pyspark below) before any
-# Spark config is read, so executorEnv never applies. Instead, preload it via
-# the driver JVM's environment: setting LD_PRELOAD here does not affect this
-# already-started Python process, but pyspark's launcher copies os.environ into
-# the JVM it spawns, so the JVM preloads libch.so at startup while the static
-# TLS block still has room. System.load() then reuses the already-loaded lib.
-os.environ["LD_PRELOAD"] = os.path.abspath("libch.so")
-
+mark("building SparkSession (JVM launch + libch.so load)")
 spark = builder.getOrCreate()
 
+mark("SparkSession ready; reading hits.parquet")
 df = spark.read.parquet("hits.parquet")
 df = df.withColumn("EventTime", F.col("EventTime").cast("timestamp"))
 df = df.withColumn("EventDate", F.date_add(F.lit("1970-01-01"), F.col("EventDate")))
 df.createOrReplaceTempView("hits")
 
+mark("temp view created; executing query")
 try:
     start = timeit.default_timer()
     result = spark.sql(query)
     result.show(100)
     end = timeit.default_timer()
     elapsed = end - start
+    mark("query complete")
     print(f"Time: {elapsed}")
     print(f"{elapsed:.6f}", file=sys.stderr)
 except Exception as e:
     print(e, file=sys.stderr)
     print("Failure!", file=sys.stderr)
     sys.exit(1)
+finally:
+    watchdog.cancel()
