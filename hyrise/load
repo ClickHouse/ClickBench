@@ -28,8 +28,17 @@ set -eu
 if [ ! -f data/hits.bin ]; then
     # hits.csv was delivered into cwd by download-hits-csv. Guarded so a
     # retry after a partial first load resumes from the existing pieces.
+    # Piece size scaled to guest RAM: on the 16 GiB playground VM,
+    # 5M-row pieces cross the OOM ceiling once the growing encoded
+    # table reaches ~10 GB (load rc=137 SIGKILL after 156 s). 2M-row
+    # pieces cap the transient unencoded materialisation at ~2 GB.
+    lines_per_piece=5000000
+    mem_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo)
+    if [ "$mem_kb" -lt $((24 * 1024 * 1024)) ]; then
+        lines_per_piece=2000000
+    fi
     if [ -f hits.csv ]; then
-        split -l 5000000 --numeric-suffixes=1 --additional-suffix=.csv \
+        split -l "$lines_per_piece" --numeric-suffixes=1 --additional-suffix=.csv \
             hits.csv data/hits_part_
         rm hits.csv
     fi
