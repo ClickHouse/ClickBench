@@ -10,7 +10,13 @@ PARQUET_DIR=/tmp/hits_parquet
 sudo rm -rf "$PARQUET_DIR"
 sudo mkdir -p "$PARQUET_DIR"
 sudo mv hits_*.parquet "$PARQUET_DIR/"
-sudo chmod 644 "$PARQUET_DIR"/*.parquet
+# When the source parquet files are symlinks into a read-only dataset
+# mount (the playground layout), chmod --dereference blows up on every
+# file with "Read-only file system". The mount already publishes them
+# world-readable (0664), so postgres can read them via the "other"
+# bits — soft-fail this chmod, keep the strict behaviour for setups
+# where hits_*.parquet are copies rather than symlinks.
+sudo chmod 644 "$PARQUET_DIR"/*.parquet 2>/dev/null || true
 
 # Recreate the DB so this script is idempotent. DROP wipes any prior
 # ALTER DATABASE settings so we start from postgresql.conf defaults

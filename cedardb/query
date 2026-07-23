@@ -6,6 +6,9 @@
 # Exit non-zero on error.
 set -e
 
+# CedarDB listens on /tmp/.s.PGSQL.5432; see ./check for context.
+export PGHOST=${PGHOST:-/tmp}
+
 query=$(cat)
 
 raw=$(psql -t -c '\timing' -c "$query" 2>&1) && exit_code=0 || exit_code=$?
