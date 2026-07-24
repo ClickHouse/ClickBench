@@ -133,10 +133,18 @@ print(f"SparkSession will use {heap} MB of heap and {off_heap} MB of off-heap me
 # the dynamic loader runs, i.e. before the JVM starts; setting it here does not
 # affect this already-running Python process, but pyspark's launcher copies
 # os.environ into the JVM it spawns, so the JVM starts with the enlarged
-# surplus. 16 MiB is generous (libch.so's real IE-TLS footprint is far smaller)
-# but cheap next to a wasted ~1h remote build; lower if per-thread TLS memory
-# becomes a concern.
-_TLS_SURPLUS = "glibc.rtld.optional_static_tls=16777216"
+# surplus.
+#
+# Value matters: an over-large surplus makes glibc *segfault* every
+# multi-threaded process at thread creation (measured threshold ~7 MiB on
+# glibc 2.43; 8 MiB crashes, 6 MiB is fine). A 16 MiB attempt crashed pyspark's
+# own launcher JVM (`org.apache.spark.launcher.Main`), which surfaced as
+# `spark-class: line 97: CMD: bad array subscript` +
+# `[JAVA_GATEWAY_EXITED] Java gateway process exited before sending its port
+# number`. 2 MiB is ~1260x the failing glibc default (1664 B) — comfortably
+# more than libch.so's real IE-TLS footprint — while staying well under the
+# crash threshold on both glibc 2.39 (noble) and 2.43.
+_TLS_SURPLUS = "glibc.rtld.optional_static_tls=2097152"
 os.environ["GLIBC_TUNABLES"] = _TLS_SURPLUS
 
 builder = (
