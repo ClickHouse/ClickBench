@@ -436,6 +436,16 @@ class App:
                 if attempt == 1:
                     self.sink.write_event(system=system_name, kind="ensure-failed",
                                           detail=f"attempt {attempt}: {e!r}")
+                    # Belt-and-suspenders: even though vm_manager's
+                    # _restore_snapshot + _boot except handlers reap
+                    # their own fc process on failure, corners we don't
+                    # yet cover (e.g. a network-level ServerDisconnect
+                    # while waiting for the guest agent) can still
+                    # leave an fc process alive holding fc-tap-<slot>.
+                    # Force a clean teardown before the second attempt
+                    # so ensure_tap can recreate the TAP.
+                    with contextlib.suppress(Exception):
+                        await self.vmm.kick(system_name, "ensure-failed-retry")
                     await asyncio.sleep(0.5)
                     continue
                 raise
