@@ -135,16 +135,23 @@ print(f"SparkSession will use {heap} MB of heap and {off_heap} MB of off-heap me
 # os.environ into the JVM it spawns, so the JVM starts with the enlarged
 # surplus.
 #
-# Value matters: an over-large surplus makes glibc *segfault* every
-# multi-threaded process at thread creation (measured threshold ~7 MiB on
-# glibc 2.43; 8 MiB crashes, 6 MiB is fine). A 16 MiB attempt crashed pyspark's
-# own launcher JVM (`org.apache.spark.launcher.Main`), which surfaced as
-# `spark-class: line 97: CMD: bad array subscript` +
-# `[JAVA_GATEWAY_EXITED] Java gateway process exited before sending its port
-# number`. 2 MiB is ~1260x the failing glibc default (1664 B) — comfortably
-# more than libch.so's real IE-TLS footprint — while staying well under the
-# crash threshold on both glibc 2.39 (noble) and 2.43.
-_TLS_SURPLUS = "glibc.rtld.optional_static_tls=2097152"
+# Value matters, and the safe window is narrow. The surplus is reserved as
+# native memory in *every* JVM the env touches — including pyspark's own tiny
+# launcher JVM (`org.apache.spark.launcher.Main`, run at -Xmx128m by
+# spark-class to build the real command). Too large and the JVM dies at
+# startup with "Cannot create worker GC thread. Out of system resources"
+# (native TLS collides with the compressed-oops heap region); because
+# spark-class runs the launcher inside a process substitution, bash swallows
+# the crash and it surfaces only as `spark-class: line 97: CMD: bad array
+# subscript` -> `[JAVA_GATEWAY_EXITED] Java gateway process exited before
+# sending its port number`, so all queries return null. Measured locally
+# (OpenJDK 17, 192 GC threads to mimic c6a.metal): the cliff is sharp and
+# machine-independent — every value <= 1 MiB starts 5/5 for both the -Xmx128m
+# launcher and a big-heap (-Xmx64g) gateway JVM, and 2 MiB fails 5/5 (which is
+# exactly what killed the prior run). 512 KiB sits 4x under that cliff yet is
+# 315x the failing glibc default (1664 B) — well clear of libch.so's small
+# IE-model TLS footprint.
+_TLS_SURPLUS = "glibc.rtld.optional_static_tls=524288"
 os.environ["GLIBC_TUNABLES"] = _TLS_SURPLUS
 
 builder = (
