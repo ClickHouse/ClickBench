@@ -9,5 +9,12 @@ arch=$(dpkg --print-architecture)
 export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-${arch}"
 export PATH="$JAVA_HOME/bin:$PATH"
 
+# libch.so plus Spark spin up many threads on a 192-core box; the default
+# per-process limits are too low and SparkContext init dies with
+# `OutOfMemoryError: unable to create native thread`. Raise the soft limits to
+# the hard max (./install also bumps the kernel-wide sysctls).
+ulimit -u unlimited 2>/dev/null || ulimit -u "$(ulimit -Hu)" 2>/dev/null || true
+ulimit -n 1048576 2>/dev/null || ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
+
 query=$(cat)
 printf '%s' "$query" | python3 query.py

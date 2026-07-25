@@ -11,7 +11,11 @@ set -e
 #
 # Note: Keep in sync with spark-*/install (see README-accelerators.md).
 
-GLUTEN_VERSION=v1.4.0
+# Track Gluten main, not a release tag: the CH backend's pinned ClickHouse fork
+# is only rebased forward on main, so release tags carry an old ClickHouse. This
+# commit pulls ClickHouse 25.12.10.7 (cpp-ch/clickhouse.version =>
+# Kyligence rebase_ch/20260425-25.12.10.7); v1.4.0 was on a ~2-year-old fork.
+GLUTEN_COMMIT=8b701473f465e4d7eb05335b0529bad9327db8b3  # apache/gluten main @ 2026-07-24
 SPARK_PROFILE=spark-3.5
 
 # Build prerequisites:
@@ -22,13 +26,21 @@ SPARK_PROFILE=spark-3.5
 #    its cmake fails with `Could NOT find JNI (missing: AWT)` /
 #    `JAVA_AWT_INCLUDE_PATH-NOTFOUND`. openjdk-17-jdk ships jawt.h and pulls
 #    in the non-headless JRE that ships libjawt.so.
-#  - Clang 19, cmake, ninja, etc. to build libch.so (Gluten v1.4.0's CH
-#    backend requires Clang 19; see get-started/ClickHouse.md).
+#  - Clang 19, cmake, ninja, etc. to build libch.so (Gluten's CH backend
+#    requires Clang 19; see get-started/ClickHouse.md).
 sudo apt-get update -y
 sudo apt-get install -y python3-pip python3-venv \
     openjdk-8-jdk-headless openjdk-17-jdk \
     maven git cmake ccache ninja-build nasm yasm gawk \
     lsb-release wget software-properties-common gnupg
+
+# ClickHouse (libch.so) starts core-scaled thread pools at init; on a 192-core
+# box the process needs far more threads and memory-map areas than the defaults
+# allow, and JavaSparkContext init otherwise dies with `OutOfMemoryError:
+# unable to create native thread`. Raise the kernel ceilings once here
+# (best-effort; ./query also raises the matching per-process ulimits).
+sudo sysctl -w kernel.threads-max=4000000 kernel.pid_max=4000000 \
+    vm.max_map_count=2000000 >/dev/null 2>&1 || true
 
 # Install Clang 19 via apt.llvm.org.
 if ! command -v clang-19 >/dev/null 2>&1; then
@@ -46,14 +58,20 @@ if [ ! -d myenv ]; then
 fi
 # shellcheck disable=SC1091
 source myenv/bin/activate
-pip install -q pyspark==3.5.2 psutil
+# pyspark matches the spark-3.5 profile Gluten is built against below (Spark
+# 3.5.5), so the plugin jar's Spark APIs line up with the runtime.
+pip install -q pyspark==3.5.5 psutil
 
 # Clone Gluten and the Kyligence ClickHouse fork that the CH backend wraps.
 # The CH fork org/branch/commit are pinned in Gluten's cpp-ch/clickhouse.version.
 GLUTEN_DIR="$PWD/gluten"
 if [ ! -d "$GLUTEN_DIR" ]; then
-    git clone --depth 1 --branch "$GLUTEN_VERSION" \
-        https://github.com/apache/incubator-gluten.git "$GLUTEN_DIR"
+    # Shallow-fetch the pinned commit. `git clone --branch` accepts only refs,
+    # not SHAs, so init + fetch-by-SHA (GitHub allows reachable-SHA fetches).
+    git init -q "$GLUTEN_DIR"
+    git -C "$GLUTEN_DIR" remote add origin https://github.com/apache/gluten.git
+    git -C "$GLUTEN_DIR" fetch -q --depth 1 origin "$GLUTEN_COMMIT"
+    git -C "$GLUTEN_DIR" checkout -q FETCH_HEAD
 fi
 
 CH_VERSION_FILE="$GLUTEN_DIR/cpp-ch/clickhouse.version"
@@ -110,8 +128,8 @@ fi
 # The delta profile is mandatory: backends-clickhouse's pom carries an
 # `enforce-delta-profile` enforcer rule that fails the build with
 # `"-P delta" must be set when building Gluten with ClickHouse backend` unless
-# it is active. The spark-3.5 profile pins the matching delta.version (3.2.0),
-# so -Pdelta needs no extra version flag.
+# it is active. The spark-3.5 profile pins the matching delta.version (3.3.2 on
+# current main), so -Pdelta needs no extra version flag.
 JAVA_HOME_8="/usr/lib/jvm/java-8-openjdk-${ARCH}"
 GLUTEN_JAR=$(ls "$GLUTEN_DIR"/backends-clickhouse/target/gluten-*-spark-3.5-jar-with-dependencies.jar 2>/dev/null | head -n1)
 if [ -z "$GLUTEN_JAR" ]; then

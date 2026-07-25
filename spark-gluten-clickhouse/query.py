@@ -182,11 +182,16 @@ builder = (
     .config("spark.gluten.sql.columnar.libpath", os.path.abspath("libch.so"))
     .config("spark.memory.offHeap.enabled", "true")
     .config("spark.memory.offHeap.size", f"{off_heap}m")
+    # Cap the JVM's helper threads: on 192 cores it otherwise spawns ~150
+    # GC+JIT threads which, on top of ClickHouse's native pools, exhaust the
+    # process thread limit during SparkContext init (OutOfMemoryError: unable
+    # to create native thread). These do NOT limit local[*] task parallelism.
     # -XX:ErrorFile pins any JVM crash log to cwd so the except handler below
     # can surface it (temporary; part of the init-crash diagnosis).
     .config("spark.driver.extraJavaOptions",
             "-Dio.netty.tryReflectionSetAccessible=true "
-            "-XX:ErrorFile=./hs_err_pid%p.log")
+            "-XX:ErrorFile=./hs_err_pid%p.log "
+            "-XX:ParallelGCThreads=8 -XX:ConcGCThreads=2 -XX:CICompilerCount=4")
 
     # Cluster-mode equivalent of the GLIBC_TUNABLES above: a no-op in local[*]
     # (the driver JVM is the executor and already inherits os.environ) but kept
