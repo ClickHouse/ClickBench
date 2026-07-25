@@ -66,6 +66,26 @@ if [ ! -d "$CH_DIR" ]; then
         "https://github.com/${CH_ORG}/ClickHouse.git" "$CH_DIR"
 fi
 
+# Build libch.so WITHOUT jemalloc. ClickHouse enables jemalloc by default and
+# Gluten hardcodes -DENABLE_JEMALLOC=ON for the inner ClickHouse cmake in
+# cpp-ch/CMakeLists.txt (there is no env hook to override it). jemalloc is only
+# safe when it interposes malloc/free process-wide, which requires preloading
+# libch.so. We load it lazily (System.load in query.py, via the static-TLS
+# tunable) rather than LD_PRELOAD, so jemalloc does NOT interpose: the first
+# time ClickHouse frees a pointer the system/JVM allocator made, jemalloc's
+# radix tree has no metadata for it and SIGSEGVs in rtree_metadata_read during
+# the CH backend's native init (CHListenerApi.initialize -> nativeInitNative).
+# Building without jemalloc makes ClickHouse use the system allocator uniformly,
+# removing the cross-allocator boundary. Patch + verify so a future Gluten bump
+# that changes the flag fails loudly instead of silently re-enabling jemalloc.
+CH_CMAKELISTS="$GLUTEN_DIR/cpp-ch/CMakeLists.txt"
+sed -i 's/-DENABLE_JEMALLOC=ON/-DENABLE_JEMALLOC=OFF/g' "$CH_CMAKELISTS"
+if grep -q -- '-DENABLE_JEMALLOC=ON' "$CH_CMAKELISTS" \
+   || ! grep -q -- '-DENABLE_JEMALLOC=OFF' "$CH_CMAKELISTS"; then
+    echo "ERROR: could not disable jemalloc in $CH_CMAKELISTS" >&2
+    exit 1
+fi
+
 # Build libch.so via Gluten's own wrapper. It cmakes cpp-ch into
 # cpp-ch/build_ch, whose build_ch target drives an inner ClickHouse cmake that
 # builds `--target libch` into cpp-ch/build/, so the artifact lands under
