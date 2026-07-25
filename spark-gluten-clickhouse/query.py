@@ -93,7 +93,8 @@ def _dump_and_die():
 
 if os.path.exists(HANG_SENTINEL):
     print(
-        "=== a prior query hung (see earlier thread dump); fast-failing ===",
+        "=== a prior query hung or crashed at init (see earlier diagnostics); "
+        "fast-failing ===",
         file=sys.stderr,
         flush=True,
     )
@@ -112,10 +113,20 @@ print(query)
 # The CH backend runs off-heap (via JNI into libch.so), so split available
 # memory between Spark's JVM heap and the off-heap pool the same way the
 # Velox backend does.
-ram = int(round(psutil.virtual_memory().available / (1024 ** 2) * 0.7))
-heap = ram // 2
-off_heap = ram - heap
-print(f"SparkSession will use {heap} MB of heap and {off_heap} MB of off-heap memory (total {ram} MB)")
+#
+# DIAGNOSTIC (temporary): the Velox sibling uses 0.7*available (half heap /
+# half off-heap) and survives on c6a.metal, but the CH backend's JVM dies
+# during JavaSparkContext construction (where libch.so initializes) with no
+# hs_err banner on stderr — consistent with an external SIGKILL (earlyoom is
+# enabled on the runner) if the CH engine eagerly commits its off-heap arena.
+# Cap heap+off-heap far below available so an OOM kill can't be the cause; if
+# this run's queries execute, the 0.7 split needs revisiting. Restore it once
+# the init crash is understood.
+avail_mb = int(psutil.virtual_memory().available / (1024 ** 2))
+heap = min(avail_mb // 2, 24576)         # <= 24 GiB driver heap
+off_heap = min(avail_mb - heap, 49152)   # <= 48 GiB off-heap for the CH engine
+print(f"avail={avail_mb} MB -> heap={heap} MB, off_heap={off_heap} MB", file=sys.stderr, flush=True)
+print(f"SparkSession will use {heap} MB of heap and {off_heap} MB of off-heap memory")
 
 # Gluten's CH backend loads libch.so into the JVM lazily via JNI (System.load,
 # from CHListenerApi.initialize). libch.so carries initial-exec-model TLS (from
@@ -171,7 +182,11 @@ builder = (
     .config("spark.gluten.sql.columnar.libpath", os.path.abspath("libch.so"))
     .config("spark.memory.offHeap.enabled", "true")
     .config("spark.memory.offHeap.size", f"{off_heap}m")
-    .config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true")
+    # -XX:ErrorFile pins any JVM crash log to cwd so the except handler below
+    # can surface it (temporary; part of the init-crash diagnosis).
+    .config("spark.driver.extraJavaOptions",
+            "-Dio.netty.tryReflectionSetAccessible=true "
+            "-XX:ErrorFile=./hs_err_pid%p.log")
 
     # Cluster-mode equivalent of the GLIBC_TUNABLES above: a no-op in local[*]
     # (the driver JVM is the executor and already inherits os.environ) but kept
@@ -179,8 +194,47 @@ builder = (
     .config("spark.executorEnv.GLIBC_TUNABLES", _TLS_SURPLUS)
 )
 
+
+def _dump_crash_artifacts():
+    """Surface a JVM crash log if one exists; its absence implies SIGKILL (OOM)."""
+    import glob
+    files = sorted(glob.glob("hs_err_pid*.log") + glob.glob("/tmp/hs_err_pid*.log"))
+    if not files:
+        print(
+            "=== no hs_err file: JVM was SIGKILLed, not a caught crash "
+            "(points to earlyoom/OOM, not a native SIGSEGV) ===",
+            file=sys.stderr, flush=True,
+        )
+        return
+    newest = files[-1]
+    print(f"=== JVM crash log {newest} (first 90 lines) ===", file=sys.stderr, flush=True)
+    try:
+        with open(newest) as fh:
+            for i, line in enumerate(fh):
+                if i >= 90:
+                    break
+                print(line.rstrip(), file=sys.stderr)
+    except OSError as exc:
+        print(f"  (could not read {newest}: {exc})", file=sys.stderr)
+    sys.stderr.flush()
+
+
 mark("building SparkSession (JVM launch + libch.so load)")
-spark = builder.getOrCreate()
+try:
+    spark = builder.getOrCreate()
+except BaseException:
+    watchdog.cancel()
+    print("=== getOrCreate() failed; scanning for JVM crash artifacts ===",
+          file=sys.stderr, flush=True)
+    _dump_crash_artifacts()
+    # One init crash means every subsequent query will crash identically; drop
+    # the sentinel so the remaining invocations fast-fail instead of each
+    # rebuilding a doomed JVM (bounds the run, and one crash dump is enough).
+    try:
+        open(HANG_SENTINEL, "w").close()
+    except OSError:
+        pass
+    raise
 
 mark("SparkSession ready; reading hits.parquet")
 df = spark.read.parquet("hits.parquet")
