@@ -1,0 +1,74 @@
+name: "Run the versions benchmark"
+
+run-name: "Versions benchmark: ${{ inputs.versions }} on ${{ inputs.machines || 'c7a.4xlarge' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: "ClickHouse versions to benchmark (space-separated): an exact version (26.6.1.1193, 1.1.54378), a prefix (26.6, 24), or master for the development build"
+        required: true
+        default: "master"
+      machines:
+        description: "EC2 instance types (space-separated)"
+        default: "c7a.4xlarge"
+      datasets:
+        description: "Datasets to load (space-separated; empty: all of hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi)"
+        default: ""
+      tries:
+        description: "Runs of every query: 1 cold + the rest hot (empty: 6)"
+        default: ""
+      timeout:
+        description: "Time limit for run-version.sh on the machine, seconds (empty: 18000)"
+        default: ""
+      repo:
+        description: "Repository the machine will clone (empty: the repository of this workflow run)"
+        default: ""
+      branch:
+        description: "Branch to clone (empty: the branch this workflow was dispatched from)"
+        default: ""
+
+permissions:
+  id-token: write  # To assume the federated IAM role.
+  contents: read
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+
+      # The same role as the main benchmark workflows; its trust policy only
+      # admits workflow runs of this repository.
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::264113785604:role/ClickBenchLauncher
+          aws-region: us-east-1
+          role-session-name: clickbench-versions-${{ github.run_id }}
+
+      # One self-terminating machine per (version, machine type): it downloads
+      # the prepared Native files, runs versions/run-version.sh and sends the
+      # result to the sink. The runner only launches.
+      - shell: bash
+        env:
+          versions: ${{ inputs.versions }}
+          machines: ${{ inputs.machines }}
+          datasets: ${{ inputs.datasets }}
+          tries: ${{ inputs.tries }}
+          timeout: ${{ inputs.timeout }}
+          repo: ${{ inputs.repo || github.repository }}
+          branch: ${{ inputs.branch || github.ref_name }}
+        run: |
+          [ -n "$versions" ] || { echo "No versions given"; exit 1; }
+          : "${machines:=c7a.4xlarge}"
+          failed=""
+          for m in $machines; do
+              for v in $versions; do
+                  machine="$m" ./versions/run-benchmark.sh "$v" || failed="$failed $v/$m"
+              done
+          done
+          if [ -n "$failed" ]; then
+              echo "Failed to launch:$failed"
+              exit 1
+          fi
