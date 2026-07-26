@@ -111,10 +111,18 @@ fi
 # the two build dirs (build_ch wrapper vs build inner) are easy to confuse.
 # Honors the CC/CXX exported above; JAVA_HOME points cmake's FindJNI at the
 # full JDK 17 so it locates jawt.h/libjawt.so (see the JDK note above).
+# Note: the wrapper was renamed build_clickhouse.sh -> build-clickhouse.sh
+# after v1.4.0; glob so either name works across Gluten versions.
 export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-${ARCH}"
 LIBCH_SO=$(find "$GLUTEN_DIR/cpp-ch" -name libch.so -type f 2>/dev/null | head -n1)
 if [ -z "$LIBCH_SO" ]; then
-    bash "$GLUTEN_DIR/ep/build-clickhouse/src/build_clickhouse.sh"
+    BUILD_CH_SCRIPT=$(find "$GLUTEN_DIR/ep/build-clickhouse" \
+        -name 'build[-_]clickhouse.sh' -type f 2>/dev/null | head -n1)
+    if [ -z "$BUILD_CH_SCRIPT" ]; then
+        echo "ERROR: could not find the build-clickhouse wrapper script" >&2
+        exit 1
+    fi
+    bash "$BUILD_CH_SCRIPT"
     LIBCH_SO=$(find "$GLUTEN_DIR/cpp-ch" -name libch.so -type f 2>/dev/null | head -n1)
 fi
 if [ -z "$LIBCH_SO" ]; then
