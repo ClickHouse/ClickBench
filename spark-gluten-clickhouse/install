@@ -104,6 +104,44 @@ if grep -q -- '-DENABLE_JEMALLOC=ON' "$CH_CMAKELISTS" \
     exit 1
 fi
 
+# Scala 2.12 compat for the Delta 3.3 backend sources. On Gluten main,
+# backends-clickhouse/src-delta33/.../delta/Snapshot.scala calls Option.when,
+# which only exists in Scala 2.13's stdlib -- but scala-2.12 is Gluten's default
+# profile and matches the pyspark wheel we run, so the CH backend module fails
+# to compile ("value when is not a member of object Option"). Rather than pull
+# in a whole Scala-2.13 Spark stack, drop in Option.when/unless as implicit
+# extensions on the Option companion (compiled from src-delta33, so it is on the
+# module's own source path) and import it into Snapshot.scala. Under a scala-2.13
+# build the real Option.when takes precedence and this shim is simply unused, so
+# it is safe across versions. Only Snapshot.scala uses Option.when in
+# backends-clickhouse (verified by code search), so this one file is enough.
+DELTA33_SCALA="$GLUTEN_DIR/backends-clickhouse/src-delta33/main/scala"
+SNAPSHOT_SCALA="$DELTA33_SCALA/org/apache/spark/sql/delta/Snapshot.scala"
+if [ -f "$SNAPSHOT_SCALA" ]; then
+    mkdir -p "$DELTA33_SCALA/org/apache/gluten/compat"
+    cat > "$DELTA33_SCALA/org/apache/gluten/compat/OptionCompat.scala" <<'SCALA'
+package org.apache.gluten.compat
+
+// Scala 2.12 lacks Option.when/Option.unless (added in 2.13). Provide them as
+// implicit extensions on the Option companion so Delta 3.3 sources compile
+// under scala-2.12 (Gluten's default profile). Under scala-2.13 the real
+// stdlib methods take precedence and this shim is unused.
+object OptionCompat {
+  implicit class OptionCompanionOps(companion: Option.type) {
+    def when[A](cond: Boolean)(a: => A): Option[A] = if (cond) Some(a) else None
+    def unless[A](cond: Boolean)(a: => A): Option[A] = if (cond) None else Some(a)
+  }
+}
+SCALA
+    if ! grep -q 'org.apache.gluten.compat.OptionCompat' "$SNAPSHOT_SCALA"; then
+        sed -i '/^package /a import org.apache.gluten.compat.OptionCompat._' "$SNAPSHOT_SCALA"
+    fi
+    if ! grep -q 'org.apache.gluten.compat.OptionCompat._' "$SNAPSHOT_SCALA"; then
+        echo "ERROR: failed to inject the Option.when shim into Snapshot.scala" >&2
+        exit 1
+    fi
+fi
+
 # Build libch.so via Gluten's own wrapper. It cmakes cpp-ch into
 # cpp-ch/build_ch, whose build_ch target drives an inner ClickHouse cmake that
 # builds `--target libch` into cpp-ch/build/, so the artifact lands under
