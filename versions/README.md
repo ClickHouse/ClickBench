@@ -126,6 +126,14 @@ result JSON (enriched with the machine type, `kind:"versions-benchmark"`) plus
 the log to `sink.data` on play.clickhouse.com. A server-side materialized view
 turns those into the published report, exactly as the main benchmark does.
 
+The same thing on demand from GitHub: the **Run the versions benchmark**
+workflow (`.github/workflows/versions-benchmark.yml`, `workflow_dispatch`) takes
+the versions (exact, a prefix, or `master`), the machine types, and optionally
+the datasets / tries / timeout / repository / branch, and launches one machine
+per (version, machine type) with `run-benchmark.sh`. Its defaults for the
+repository and branch are the ones the workflow was dispatched from, so a branch
+can be tested without merging it first.
+
 Notes: all datasets run by default (`datasets="hits ssb mgbench tpch tpcds
 coffeeshop taxi"`); the taxi table is narrowed to the five columns its queries
 use (~15 GB), so it no longer dominates. Pass a subset via `datasets=` to skip
