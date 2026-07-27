@@ -43,4 +43,10 @@ ulimit -n 1048576 2>/dev/null || ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
 ulimit -v unlimited 2>/dev/null || true
 
 query=$(cat)
-printf '%s' "$query" | python3 query.py
+# DIAGNOSTIC: pin the JVM (and thus libch.so) to 16 CPUs. ClickHouse sizes its
+# thread pools to the visible core count (sched_getaffinity), so on the bare
+# 192-core box it eagerly spawns a huge number of threads at init and dies with
+# "unable to create native thread" even though every system limit is unlimited.
+# If capping perceived cores clears it, that confirms thread-count as the cause
+# and the real fix is a ClickHouse pool-size setting (keeping full parallelism).
+printf '%s' "$query" | taskset -c 0-15 python3 query.py

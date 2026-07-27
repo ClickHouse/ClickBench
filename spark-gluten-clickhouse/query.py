@@ -209,13 +209,19 @@ builder = (
 
 
 def _dump_crash_artifacts():
-    """Surface a JVM crash log if one exists; its absence implies SIGKILL (OOM)."""
+    """Surface a JVM crash log if one exists, plus the live thread count."""
     import glob
+    import subprocess
+    try:
+        n = subprocess.run(["ps", "-eL"], capture_output=True, text=True).stdout.count("\n")
+        print(f"=== system thread count at failure: {n} ===", file=sys.stderr, flush=True)
+    except Exception as exc:  # noqa: BLE001
+        print(f"=== could not count threads: {exc} ===", file=sys.stderr, flush=True)
     files = sorted(glob.glob("hs_err_pid*.log") + glob.glob("/tmp/hs_err_pid*.log"))
     if not files:
         print(
-            "=== no hs_err file: JVM was SIGKILLed, not a caught crash "
-            "(points to earlyoom/OOM, not a native SIGSEGV) ===",
+            "=== no hs_err file: this is a caught Java OutOfMemoryError "
+            "(unable to create native thread), not a JVM/native crash ===",
             file=sys.stderr, flush=True,
         )
         return
