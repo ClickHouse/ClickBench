@@ -180,6 +180,14 @@ builder = (
     .config("spark.shuffle.manager", "org.apache.spark.shuffle.sort.ColumnarShuffleManager")
     .config("spark.gluten.sql.columnar.backend.lib", "ch")
     .config("spark.gluten.sql.columnar.libpath", os.path.abspath("libch.so"))
+    # Cap ClickHouse's global/IO thread pools. On a 192-core box libch.so's
+    # pools are sized to the core count and their eager thread creation is the
+    # leading suspect for "unable to create native thread" at init (all system
+    # count limits are already unlimited). Passed through to ClickHouse config
+    # via the runtime_config prefix. 512 still far exceeds per-query
+    # parallelism, so this does not throttle the benchmark.
+    .config("spark.gluten.sql.columnar.backend.ch.runtime_config.max_thread_pool_size", "512")
+    .config("spark.gluten.sql.columnar.backend.ch.runtime_config.max_io_thread_pool_size", "64")
     .config("spark.memory.offHeap.enabled", "true")
     .config("spark.memory.offHeap.size", f"{off_heap}m")
     # Cap the JVM's helper threads: on 192 cores it otherwise spawns ~150
