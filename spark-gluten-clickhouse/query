@@ -17,19 +17,26 @@ ulimit -u unlimited 2>/dev/null || ulimit -u "$(ulimit -Hu)" 2>/dev/null || true
 ulimit -n 1048576 2>/dev/null || ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
 
 # The ulimit/sysctl bumps did NOT clear the native-thread error, which points to
-# a cgroup pids.max (systemd TasksMax) ceiling that ulimit can't override. Print
-# the effective ceilings (temporary diagnostic) and raise pids.max on our cgroup
-# and every ancestor up to the root (the effective limit is the min across them).
-echo "=== LIMITS: nproc(-u)=$(ulimit -u) nofile(-n)=$(ulimit -n) stack(-s)=$(ulimit -s) KiB ==="
-echo "=== KERNEL: threads-max=$(cat /proc/sys/kernel/threads-max 2>/dev/null) pid_max=$(cat /proc/sys/kernel/pid_max 2>/dev/null) overcommit=$(cat /proc/sys/vm/overcommit_memory 2>/dev/null) max_map_count=$(cat /proc/sys/vm/max_map_count 2>/dev/null) ==="
-cg=$(awk -F: '$1=="0"{print $3}' /proc/self/cgroup 2>/dev/null)
-echo "=== CGROUP=$cg pids.max=$(cat "/sys/fs/cgroup${cg}/pids.max" 2>/dev/null) pids.current=$(cat "/sys/fs/cgroup${cg}/pids.current" 2>/dev/null) ==="
-d="/sys/fs/cgroup${cg}"
-while [ -n "$cg" ] && [ "$d" != "/sys/fs/cgroup" ] && [ "$d" != "/" ]; do
-    echo max | sudo tee "$d/pids.max" >/dev/null 2>&1 || true
-    d=$(dirname "$d")
-done
-echo "=== after raise: pids.max=$(cat "/sys/fs/cgroup${cg}/pids.max" 2>/dev/null) ==="
+# a cgroup pids.max (systemd TasksMax) ceiling that ulimit can't override, and/or
+# a memory-overcommit gate on thread stacks. Diagnose + raise both. NOTE: the
+# harness sends this script's STDOUT to /dev/null and only surfaces STDERR (on a
+# non-zero exit), so ALL diagnostics must go to stderr -- hence the { ... } >&2.
+{
+    echo "=== LIMITS: nproc(-u)=$(ulimit -u) nofile(-n)=$(ulimit -n) stack(-s)=$(ulimit -s) KiB ==="
+    echo "=== KERNEL: threads-max=$(cat /proc/sys/kernel/threads-max 2>/dev/null) pid_max=$(cat /proc/sys/kernel/pid_max 2>/dev/null) overcommit=$(cat /proc/sys/vm/overcommit_memory 2>/dev/null) max_map_count=$(cat /proc/sys/vm/max_map_count 2>/dev/null) ==="
+    cg=$(awk -F: '$1=="0"{print $3}' /proc/self/cgroup 2>/dev/null)
+    echo "=== CGROUP=$cg pids.max=$(cat "/sys/fs/cgroup${cg}/pids.max" 2>/dev/null) pids.current=$(cat "/sys/fs/cgroup${cg}/pids.current" 2>/dev/null) ==="
+    # Raise pids.max on our cgroup and every ancestor up to the root (effective
+    # limit is the min across them). Also allow memory overcommit so thread-stack
+    # reservations can't trip an ENOMEM under the big -Xmx.
+    d="/sys/fs/cgroup${cg}"
+    while [ -n "$cg" ] && [ "$d" != "/sys/fs/cgroup" ] && [ "$d" != "/" ]; do
+        echo max | sudo tee "$d/pids.max" >/dev/null 2>&1 || true
+        d=$(dirname "$d")
+    done
+    echo 1 | sudo tee /proc/sys/vm/overcommit_memory >/dev/null 2>&1 || true
+    echo "=== after raise: pids.max=$(cat "/sys/fs/cgroup${cg}/pids.max" 2>/dev/null) overcommit=$(cat /proc/sys/vm/overcommit_memory 2>/dev/null) ==="
+} >&2
 
 query=$(cat)
 printf '%s' "$query" | python3 query.py
