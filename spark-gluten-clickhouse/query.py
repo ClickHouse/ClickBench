@@ -103,6 +103,32 @@ if os.path.exists(HANG_SENTINEL):
 watchdog = threading.Timer(QUERY_TIMEOUT, _dump_and_die)
 watchdog.daemon = True
 watchdog.start()
+
+# Peak thread-count sampler: the except handler counts threads too late (the
+# failed JVM has already torn its threads down), so sample the JVM subtree's
+# thread count continuously and remember the max, to see how many threads
+# actually existed at the "unable to create native thread" moment.
+_peak_threads = [0]
+
+
+def _sample_peak_threads():
+    while True:
+        try:
+            total = psutil.Process().num_threads()
+            for child in psutil.Process().children(recursive=True):
+                try:
+                    total += child.num_threads()
+                except Exception:  # noqa: BLE001
+                    pass
+            if total > _peak_threads[0]:
+                _peak_threads[0] = total
+        except Exception:  # noqa: BLE001
+            pass
+        time.sleep(0.2)
+
+
+_sampler = threading.Thread(target=_sample_peak_threads, daemon=True)
+_sampler.start()
 # -----------------------------------------------------------------------------
 
 
@@ -157,12 +183,17 @@ print(f"SparkSession will use {heap} MB of heap and {off_heap} MB of off-heap me
 # subscript` -> `[JAVA_GATEWAY_EXITED] Java gateway process exited before
 # sending its port number`, so all queries return null. Measured locally
 # (OpenJDK 17, 192 GC threads to mimic c6a.metal): the cliff is sharp and
-# machine-independent — every value <= 1 MiB starts 5/5 for both the -Xmx128m
-# launcher and a big-heap (-Xmx64g) gateway JVM, and 2 MiB fails 5/5 (which is
-# exactly what killed the prior run). 512 KiB sits 4x under that cliff yet is
-# 315x the failing glibc default (1664 B) — well clear of libch.so's small
-# IE-model TLS footprint.
-_TLS_SURPLUS = "glibc.rtld.optional_static_tls=524288"
+# machine-independent for a FEW threads. But the surplus is per-thread, so the
+# real budget is surplus x thread_count: 512 KiB let the JVM's own startup
+# threads through, yet init still died with "unable to create native thread"
+# once ClickHouse added its threads (all system limits were proven unlimited:
+# nproc, pids.max, threads-max, addrspace, overcommit all uncapped) — the same
+# class of failure as the too-large surplus, just reached via thread count
+# instead. Shrinking the surplus cuts each thread's native-TLS cost, so more
+# threads fit before the collision. 128 KiB is 4x smaller (4x the thread
+# headroom) and still ~79x the failing glibc default (1664 B), so libch.so's
+# small IE-model TLS still loads.
+_TLS_SURPLUS = "glibc.rtld.optional_static_tls=131072"
 os.environ["GLIBC_TUNABLES"] = _TLS_SURPLUS
 
 builder = (
@@ -214,7 +245,10 @@ def _dump_crash_artifacts():
     import subprocess
     try:
         n = subprocess.run(["ps", "-eL"], capture_output=True, text=True).stdout.count("\n")
-        print(f"=== system thread count at failure: {n} ===", file=sys.stderr, flush=True)
+        print(
+            f"=== threads at failure: system={n}, JVM-subtree peak={_peak_threads[0]} ===",
+            file=sys.stderr, flush=True,
+        )
     except Exception as exc:  # noqa: BLE001
         print(f"=== could not count threads: {exc} ===", file=sys.stderr, flush=True)
     files = sorted(glob.glob("hs_err_pid*.log") + glob.glob("/tmp/hs_err_pid*.log"))
