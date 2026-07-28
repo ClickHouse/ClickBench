@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+# Idempotent: blow away any prior local catalog (remote backends are dropped
+# in-binary via drop_table).
+rm -rf data
+
+# INFINO_SRC / INFINO_MAX_ROWS pass through from the environment.
+./bench/target/release/clickbench-infino load
+
+rm -f hits.parquet hits_*.parquet
+sync
