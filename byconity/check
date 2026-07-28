@@ -6,6 +6,15 @@ set -e
 docker compose exec -T server clickhouse-client --port 52145 \
     --query "SELECT 1" >/dev/null
 
+# TSO probe (see ./start for context). Guards against declaring 'ready'
+# while tso-server is still finishing its FoundationDB handshake — the
+# next ./load INSERT would otherwise hit
+#   Code: 7002. DB::Exception: Can't get process TSO request.
+docker compose exec -T server clickhouse-client --port 52145 \
+    --query "CREATE DATABASE IF NOT EXISTS _bck_readiness" >/dev/null
+docker compose exec -T server clickhouse-client --port 52145 \
+    --query "DROP DATABASE IF EXISTS _bck_readiness" >/dev/null
+
 # If hits exists (post-load), force a worker-touching query so we
 # refuse to declare 'ready' until the server-to-worker BRPC connection
 # has actually re-established. Without this gate the first /query

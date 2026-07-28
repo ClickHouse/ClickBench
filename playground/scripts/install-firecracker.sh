@@ -26,8 +26,21 @@ sudo chown "$(id -u):$(id -g)" \
 #
 #   sudo mkfs.btrfs -L cbplayground -f /dev/<your-device>
 #   echo 'LABEL=cbplayground /opt/clickbench-playground btrfs \
-#       defaults,noatime,compress=zstd:1,nofail 0 2' | sudo tee -a /etc/fstab
+#       defaults,noatime,compress-force=zstd:6,nofail 0 2' | sudo tee -a /etc/fstab
 #   sudo mount /opt/clickbench-playground
+#
+# Notes on the mount options:
+#   - compress-force (not compress): the default heuristic samples the
+#     first 128 KiB of each file and skips compression if that head
+#     looks incompressible. For the ext4 disk images we write, the
+#     sparse-metadata head throws off the sampler and ~80 % of the
+#     data ends up stored raw. `compress-force` disables the heuristic
+#     and gets the whole file compressed.
+#   - zstd:6 (not zstd:1): the on-disk savings from 6-vs-1 are modest
+#     for the compressible portion (~10 %), but 6's higher ratio adds
+#     up over 6+ TiB of goldens. Compression speed drops from ~500
+#     MB/s to ~120 MB/s per core — writeback stays disk-bound anyway,
+#     and the CPU is otherwise idle during provisioning.
 #
 # (XFS also works for reflink but doesn't have transparent compression,
 # so on XFS the host fills up at ~7 TB once every system is provisioned.)

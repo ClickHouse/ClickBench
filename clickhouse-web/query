@@ -4,9 +4,9 @@
 # Stderr: query runtime in fractional seconds on the last line (from --time).
 # Exit non-zero on error.
 #
-# The web-disk cache is dropped before the query so timings are cold.
+# The web-disk cache is dropped by ./flush-caches, which the harness runs
+# once per query before the cold try — not here, or every try would be cold.
 set -e
 
 query=$(cat)
-clickhouse-client --query "SYSTEM DROP FILESYSTEM CACHE" >/dev/null
 clickhouse-client --time --format=Pretty --query="$query"

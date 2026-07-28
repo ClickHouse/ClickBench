@@ -1,10 +1,27 @@
 #!/bin/bash
 set -e
 
-# Hardlink the 100 partitioned Parquet files into the Hive
-# external_location directory; the Trino container reads /clickbench/hits.
+# Stage the 100 partitioned Parquet files under the Hive
+# external_location the Trino container sees at /clickbench/hits.
+# We used to hardlink `ln -f "$f" "data/hits/$f"`, but on the
+# playground `hits_*.parquet` are symlinks into a read-only dataset
+# mount; GNU ln's default -P preserves the symlink so the container
+# ends up opening the file via its symlink-target path and hits
+#   Query … failed: Malformed Parquet file. Metadata index: -33578
+#   out of range [local:///hits/hits_10.parquet]
+# for arbitrary files at query time (trino ≥ 483's local FS provider
+# reading the symlink chain confuses its parquet footer parser).
+# Copy the file bytes instead — one-time cost per provision, reliable
+# afterward. Auto-fall-back to hardlink when the source is a real
+# file on the same filesystem (bare-metal ClickBench runs).
 for f in hits_*.parquet; do
-    ln -f "$f" "data/hits/$f"
+    dst="data/hits/$f"
+    if [ -L "$f" ]; then
+        # symlink → resolve and copy the target bytes
+        cp -f "$(readlink -f "$f")" "$dst"
+    else
+        ln -f "$f" "$dst" 2>/dev/null || cp -f "$f" "$dst"
+    fi
 done
 sudo chown -R 1000:1000 data
 

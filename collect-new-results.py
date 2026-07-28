@@ -13,7 +13,9 @@ Good runs are parsed into sink.results by a materialized view
   runs that produced no results get a comment with the logs too;
 - for runs of main: keeps at most one open automated pull request per system
   (head branch auto-results/<system>), adding result files and log links to
-  it, or opening a new one with the links in the description;
+  it, or opening a new one with the links in the description; PRs for
+  ClickHouse variants (system name clickhouse or clickhouse-*) are trusted
+  and merged automatically right after opening;
 - never posts the same run twice: every posted run leaves an HTML comment
   marker on the pull request, and result files are also compared by content.
 
@@ -227,6 +229,23 @@ def post_comment(number, body):
     gh("api", f"repos/{REPO}/issues/{number}/comments", "-f", "body=" + body)
 
 
+def merge_pr(url):
+    """Merge an automated PR with a merge commit and delete its branch.
+    Retries because GitHub may still be computing mergeability right after
+    the PR is created."""
+    if DRY_RUN:
+        print(f"DRY_RUN: would merge {url}")
+        return
+    for attempt in range(3):
+        try:
+            gh("pr", "merge", url, "--merge", "--delete-branch")
+            return
+        except RuntimeError:
+            if attempt == 2:
+                raise
+            time_module.sleep(5)
+
+
 def marker(run_row):
     return "<!-- clickbench-collect: {system}/{machine}/{time} -->".format(**run_row)
 
@@ -398,6 +417,11 @@ def manual_result_files(pr_number, systems, bot_paths):
 
 # === processing ===
 
+def is_clickhouse_variant(system):
+    """ClickHouse's own systems, whose result PRs are trusted and auto-merged."""
+    return system == "clickhouse" or system.startswith("clickhouse-")
+
+
 def process_pr(pr_number, rows):
     meta = pr_meta(pr_number)
     if meta is None:
@@ -553,6 +577,13 @@ def process_main(system, rows):
             url = gh("pr", "create", "--repo", REPO, "--head", branch, "--base", "main",
                      "--title", f"Automated results for {system}", "--body", body)
             note(f"{system}: opened {url} with {len(rows)} run(s)")
+            # ClickHouse's own result PRs are trusted; merge right after opening.
+            if is_clickhouse_variant(system):
+                try:
+                    merge_pr(url)
+                    note(f"{system}: auto-merged {url}")
+                except RuntimeError as e:
+                    note(f"{system}: auto-merge of {url} failed: {e}")
 
 
 def main():

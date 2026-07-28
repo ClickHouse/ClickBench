@@ -1,6 +1,10 @@
 #!/bin/bash
 set -eu
 
+# CedarDB listens on /tmp/.s.PGSQL.5432; see ./check for context.
+export PGHOST=${PGHOST:-/tmp}
+export PGUSER=${PGUSER:-postgres}
+
 psql -f create.sql
 {
     # CedarDB would like to have ~4 GB of memory per parallel worker for parquet import to be efficient, so set the number of workers accordingly.

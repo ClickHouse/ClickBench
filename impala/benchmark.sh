@@ -18,4 +18,11 @@
 export BENCH_DOWNLOAD_SCRIPT="download-hits-parquet-single"
 export BENCH_RESTARTABLE=no
 export BENCH_CHECK_TIMEOUT=900
+# BENCH_RESTARTABLE=no covers the ClickBench cold-cycle driver, but the
+# playground agent uses PLAYGROUND_SKIP_RESTART_BEFORE_SNAPSHOT for
+# the equivalent gate. Without it, pre-snapshot ./stop + ./start runs
+# `docker compose down` + `up`, which recreates catalogd with an empty
+# in-memory catalog — snapshotted, then every restored /query fails
+# with "Database does not exist: clickbench".
+export PLAYGROUND_SKIP_RESTART_BEFORE_SNAPSHOT=yes
 exec ../lib/benchmark-common.sh

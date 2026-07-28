@@ -26,10 +26,37 @@ both. XFS works for reflink but lacks compression and fills the host at
 ```
 sudo mkfs.btrfs -L cbplayground -f /dev/<your-device>
 echo 'LABEL=cbplayground /opt/clickbench-playground btrfs \
-    defaults,noatime,compress=zstd:1,nofail 0 2' | sudo tee -a /etc/fstab
+    defaults,noatime,compress-force=zstd:6,nofail 0 2' | sudo tee -a /etc/fstab
 sudo mkdir -p /opt/clickbench-playground
 sudo mount /opt/clickbench-playground
 ```
+
+Notes on the mount options:
+
+- `compress-force` (not `compress`): btrfs' default heuristic samples the
+  first 128 KiB of each file and skips compression when that head looks
+  incompressible. For the ext4 disk images we write the sparse-metadata
+  head throws the sampler off, and roughly 80 % of the data ends up
+  stored raw. `compress-force` disables the heuristic and compresses
+  everything.
+- `zstd:6` (not `zstd:1`): the ratio delta on the compressible portion
+  is modest (~10 %), but it adds up over 6+ TiB of goldens. Compression
+  speed drops from ~500 MB/s to ~120 MB/s per core — writeback stays
+  disk-bound anyway, and the CPU is idle during provisioning.
+
+If you're upgrading an existing playground volume from `compress=zstd:1`,
+remount with the new options and then re-encode existing extents:
+
+```
+sudo mount -o remount,compress-force=zstd:6 /opt/clickbench-playground
+sudo btrfs filesystem defragment -r -f -czstd -t 128M \
+    /opt/clickbench-playground/systems
+```
+
+The defrag pass is heavy (rewrites all extents; 20 h–3 days for a 7 TiB
+volume) and briefly increases disk usage while old extents remain
+reflink-referenced by golden files. Run it under `ionice -c 3 nice -n 15`
+if the playground is serving live traffic.
 
 ## 2. Clone the repo
 

@@ -12,6 +12,21 @@ set -e
 ck() {
     docker compose exec -T server clickhouse-client --port 52145 \
         --query "SELECT 1" >/dev/null 2>&1 || return 1
+    # TSO probe. `SELECT 1` doesn't touch TSO — TSO is only involved in
+    # writes (any DDL, any INSERT). Cold-provision used to fail on the
+    # very first INSERT of ./load with
+    #   Code: 7002. DB::Exception: Can't get process TSO request,
+    #                type: GetTimestamp
+    # even though ./check reported ready — TSO's TCP port was up
+    # (server's docker-compose depends_on satisfied) but tso-server
+    # hadn't finished initializing against FoundationDB yet. Force a
+    # TSO round-trip here via a lightweight CREATE/DROP DATABASE pair.
+    docker compose exec -T server clickhouse-client --port 52145 \
+        --query "CREATE DATABASE IF NOT EXISTS _bck_readiness" \
+        >/dev/null 2>&1 || return 1
+    docker compose exec -T server clickhouse-client --port 52145 \
+        --query "DROP DATABASE IF EXISTS _bck_readiness" \
+        >/dev/null 2>&1 || return 1
     local exists
     exists=$(docker compose exec -T server clickhouse-client --port 52145 \
         --query "EXISTS TABLE hits" 2>/dev/null || echo 0)

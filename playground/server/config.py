@@ -61,6 +61,14 @@ class Config:
     idle_kick_after_sec: int
     host_min_free_ram_gb: int
     host_min_free_disk_gb: int
+    # Cap the number of VMs in "ready" state at any time. When exceeded,
+    # the monitor evicts the least-recently-used ready VM. Bounds total
+    # host memory during query bursts — without this a mass /query
+    # against N systems keeps all N VMs ready for `idle_kick_after_sec`
+    # (10 min default), which on 100+ systems can pile up hundreds of
+    # GB of guest RSS + file cache. Snapshot is preserved, so eviction
+    # only costs the next /query one restore.
+    max_ready_vms: int
     # Per-system disk full check.
     vm_disk_pct_kill_threshold: float
     # ClickHouse Cloud logging.
@@ -141,6 +149,10 @@ def load() -> Config:
         idle_kick_after_sec=_env_int("VM_IDLE_KICK_AFTER_SEC", 600),
         host_min_free_ram_gb=_env_int("HOST_MIN_FREE_RAM_GB", 32),
         host_min_free_disk_gb=_env_int("HOST_MIN_FREE_DISK_GB", 100),
+        # 40 VMs × ~2 GB avg RSS ≈ 80 GB of guest anon, comfortably
+        # under host RAM on the 1 TB benchmark box. Override via
+        # PLAYGROUND_MAX_READY_VMS.
+        max_ready_vms=_env_int("PLAYGROUND_MAX_READY_VMS", 40),
         vm_disk_pct_kill_threshold=float(os.environ.get("VM_DISK_FULL_PCT", "0.97")),
         ch_cloud_url=os.environ.get("CLICKHOUSE_CLOUD_URL", ch_conf.get("url", "")),
         ch_cloud_user=os.environ.get("CLICKHOUSE_CLOUD_USER", ch_conf.get("user", "")),

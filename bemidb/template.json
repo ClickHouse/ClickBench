@@ -1,0 +1,14 @@
+{
+  "system": "BemiDB",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Go",
+    "column-oriented",
+    "DuckDB derivative",
+    "PostgreSQL compatible",
+    "Iceberg",
+    "lukewarm-cold-run"
+  ]
+}

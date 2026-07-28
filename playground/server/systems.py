@@ -61,6 +61,12 @@ _EXTERNAL = {
     #   16 GB RAM; not investigable without bumping VM RAM.
     # - pg_duckdb-motherduck: requires MOTHERDUCK_TOKEN (cloud creds).
     "paradedb", "paradedb-partitioned", "pg_duckdb-motherduck",
+    # kdb (KDB-X Community Edition): the CE license does not allow
+    # serving KDB-X to third parties (the same reason kdb is listed
+    # under "results cannot be published" in the top-level README).
+    # The kdb/ scripts stay so an operator can reproduce results
+    # locally, but the playground never exposes it.
+    "kdb",
 }
 
 # Systems that need outbound access at query time get routed through

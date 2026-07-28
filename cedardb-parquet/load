@@ -1,6 +1,10 @@
 #!/bin/bash
 set -eu
 
+# CedarDB listens on /tmp/.s.PGSQL.5432; see ./check for context.
+export PGHOST=${PGHOST:-/tmp}
+export PGUSER=${PGUSER:-postgres}
+
 # Substitute the absolute path so CedarDB can find the file regardless of
 # its working directory.
 sed "s|'hits\.parquet'|'$PWD/hits.parquet'|" create.sql | psql
