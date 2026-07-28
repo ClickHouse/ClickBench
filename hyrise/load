@@ -38,7 +38,10 @@ if [ ! -f data/hits.bin ]; then
         lines_per_piece=1000000
     fi
     if [ -f hits.csv ]; then
-        split -l "$lines_per_piece" --numeric-suffixes=1 --additional-suffix=.csv \
+        # -a3: 3-digit suffixes so 100+ pieces work. Default (-a2) gives
+        # 01..99 and fails with "output file suffixes exhausted" once
+        # we cross 100 pieces (lines_per_piece=1000000 → 100 pieces).
+        split -a3 -l "$lines_per_piece" --numeric-suffixes=1 --additional-suffix=.csv \
             hits.csv data/hits_part_
         rm hits.csv
     fi
