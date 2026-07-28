@@ -17,10 +17,14 @@ const $ = (sel) => document.querySelector(sel);
 //     the live playground; CORS is open (Access-Control-Allow-Origin: *
 //     is set by the server's middleware).
 //   - file:// → localhost dev instance.
-const API =
+const PROD_API = "https://clickbench-playground.clickhouse.com";
+// `let`, not `const`: when opened from file:// the default target is a
+// local dev server, but loadCatalog transparently falls back to
+// PROD_API if that server isn't running (see below).
+let API =
     location.hostname === "clickbench-playground.clickhouse.com" ? "" :
     location.protocol === "file:" ? "http://localhost:8000" :
-    "https://clickbench-playground.clickhouse.com";
+    PROD_API;
 
 const listEl = $("#system-list");
 const queryEl = $("#query");
@@ -42,6 +46,19 @@ const uiDown = $("#ui-down");
 let catalog = [];          // [{name, display_name, data_format, ...}]
 let stateByName = {};      // {name: {state, ...}}
 let selected = null;       // selected system name
+// Multi-selection for the "compare selected systems" feature. Shift /
+// Ctrl / Cmd click, right-click, or a long press (touch) on a slab
+// toggles its membership; a plain click/tap clears the whole set. When
+// non-empty, "Run all" runs the competition only among these systems
+// (see runAll).
+let multiSelected = new Set();
+// Long-press (touch) state. A press held for LONG_PRESS_MS toggles
+// multi-selection, mirroring right-click on the desktop.
+const LONG_PRESS_MS = 500;
+let _lpTimer = null;        // pending long-press timer
+let _lpFired = false;       // the current touch already toggled via long press
+let _lastTouchStart = 0;    // ts of last touchstart — lets us tell a touch-origin
+                            // contextmenu (long press) from a mouse right-click
 let pollTimer = null;
 let resultsByName = {};    // {name: {output, time, wall, bytes, truncated, exit}}
 let queriesByName = {};    // {name: [q1, q2, ...]}
@@ -49,9 +66,28 @@ let queriesByName = {};    // {name: [q1, q2, ...]}
 // example). If the current textarea still equals it, the user hasn't
 // edited it and we're free to swap in the next system's example.
 let pristineQuery = "";
+// Example index requested via the URL (?example=N), to be applied once
+// the queries for the first selected system load. Consumed on first use.
+let pendingExampleFromURL = null;
 
 async function loadCatalog() {
-    const r = await fetch(API + "/api/systems");
+    let r;
+    try {
+        r = await fetch(API + "/api/systems");
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    } catch (e) {
+        // The file:// default (localhost:8000) is a dev server that may
+        // not be running when someone just opens index.html from disk.
+        // Fall back to the live production API so the page still works.
+        // API is reassigned so every later fetch (state, query, run-all)
+        // uses the same working base.
+        if (location.protocol === "file:" && API !== PROD_API) {
+            API = PROD_API;
+            r = await fetch(API + "/api/systems");
+        } else {
+            throw e;
+        }
+    }
     catalog = await r.json();
     catalog.sort((a, b) => a.display_name.localeCompare(b.display_name));
     renderList();
@@ -63,6 +99,18 @@ async function loadCatalog() {
     } else if (catalog.length) {
         select(catalog[0].name);
     }
+    restoreMultiSelectionFromURL();
+}
+
+// Compute the full class string for a system slab: base + state +
+// single-selection + multi-selection. Centralized so renderList and
+// pollState (which rebuilds classes every 2 s) stay in sync and don't
+// wipe the multi-selection highlight.
+function slabClass(name, st) {
+    let c = `system-item state-${st}`;
+    if (name === selected) c += " selected";
+    if (multiSelected.has(name)) c += " multi-selected";
+    return c;
 }
 
 function renderList() {
@@ -71,11 +119,45 @@ function renderList() {
         const sObj = stateByName[s.name];
         const st = (sObj && sObj.state) || "down";
         const row = document.createElement("div");
-        row.className = `system-item state-${st}` + (s.name === selected ? " selected" : "");
+        row.className = slabClass(s.name, st);
         row.dataset.name = s.name;
         row.textContent = s.display_name;
         row.dataset.tooltip = tooltipFor(sObj, st);
-        row.addEventListener("click", () => onSlabClick(s.name));
+        row.addEventListener("click", (e) => onSlabClick(s.name, e));
+        // Right-click also toggles multi-selection (mirrors Shift/Ctrl/
+        // Cmd click). Suppress the browser context menu so it feels like
+        // a first-class gesture.
+        row.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            // On touch devices a long press also fires contextmenu; the
+            // touch timer below already handled the toggle, so skip it
+            // here to avoid toggling twice. A desktop right-click has no
+            // recent touchstart and falls through to toggle.
+            if (Date.now() - _lastTouchStart < 1000) return;
+            toggleMulti(s.name);
+        });
+        // Long press on touch: hold for LONG_PRESS_MS to toggle
+        // multi-selection. A quick tap cancels the timer (touchend) and
+        // behaves as a normal click; scrolling cancels it (touchmove).
+        row.addEventListener("touchstart", () => {
+            _lastTouchStart = Date.now();
+            _lpFired = false;
+            clearTimeout(_lpTimer);
+            _lpTimer = setTimeout(() => {
+                _lpFired = true;
+                toggleMulti(s.name);
+            }, LONG_PRESS_MS);
+        }, {passive: true});
+        row.addEventListener("touchmove", () => clearTimeout(_lpTimer), {passive: true});
+        row.addEventListener("touchend", (e) => {
+            clearTimeout(_lpTimer);
+            if (_lpFired) {
+                // The long press already toggled the selection; swallow
+                // the click the browser synthesizes so it doesn't
+                // immediately reset it.
+                e.preventDefault();
+            }
+        });
         // In competition mode, hovering a slab highlights its row in
         // the leaderboard so the user can scan from picker to result
         // without losing context.
@@ -83,6 +165,72 @@ function renderList() {
         row.addEventListener("mouseleave", () => _setRailHover(null));
         listEl.appendChild(row);
     }
+}
+
+// Reapply slab classes to the existing rows without rebuilding the DOM —
+// used when the multi-selection changes.
+function refreshSlabClasses() {
+    for (const row of listEl.children) {
+        const s = stateByName[row.dataset.name];
+        const st = (s && s.state) || "down";
+        row.className = slabClass(row.dataset.name, st);
+    }
+}
+
+function toggleMulti(name) {
+    // Seed a fresh selection with the current single-selection so the
+    // first modifier/right click compares "current + clicked" rather
+    // than just the clicked system on its own.
+    if (multiSelected.size === 0 && selected && selected !== name) {
+        multiSelected.add(selected);
+    }
+    if (multiSelected.has(name)) multiSelected.delete(name);
+    else multiSelected.add(name);
+    updateMultiUI();
+}
+
+// Reflect the current multi-selection in the UI: recolor the slabs and
+// arm the "Run all" button (yellow) when a selection exists.
+function updateMultiUI() {
+    refreshSlabClasses();
+    const n = multiSelected.size;
+    runAllBtn.classList.toggle("armed", n > 0);
+    if (n > 0) {
+        runAllBtn.style.display = "";
+        runAllBtn.textContent = `Run selected (${n})`;
+        runAllBtn.title = "Run the competition among the selected systems only";
+    } else {
+        runAllBtn.textContent = "Run all";
+        runAllBtn.title = "Run this query on every snapshotted system in parallel — per-system translation if an example is picked, exact text otherwise";
+        refreshRunAllVisibility();
+    }
+    updateMultiSelectionURL();
+}
+
+// Persist the multi-selection in the URL (?compare=a,b,c) so a copied
+// link reopens with the same systems highlighted and "Run all" armed.
+// replaceState (not pushState) so toggling doesn't spam history.
+function updateMultiSelectionURL() {
+    const u = new URL(window.location.href);
+    if (multiSelected.size) {
+        u.searchParams.set("compare",
+            [...multiSelected].map(encodeURIComponent).join(","));
+    } else {
+        u.searchParams.delete("compare");
+    }
+    window.history.replaceState({}, "", u.toString());
+}
+
+// Restore a shared multi-selection from the URL. Called once after the
+// catalog is loaded (so we can drop names that no longer exist).
+function restoreMultiSelectionFromURL() {
+    const compare = new URL(window.location.href).searchParams.get("compare");
+    if (!compare) return;
+    multiSelected = new Set(
+        compare.split(",")
+            .map(decodeURIComponent)
+            .filter(nm => catalog.some(s => s.name === nm)));
+    updateMultiUI();
 }
 
 function tooltipFor(sObj, st) {
@@ -114,11 +262,23 @@ function formatDuration(secs) {
     return `${d} day${d === 1 ? "" : "s"}`;
 }
 
-function onSlabClick(name) {
+function onSlabClick(name, e) {
+    // Shift / Ctrl / Cmd click toggles multi-selection instead of
+    // selecting/running — this is how the user builds up a set of
+    // systems to compare.
+    if (e && (e.shiftKey || e.ctrlKey || e.metaKey)) {
+        toggleMulti(name);
+        return;
+    }
     // Systems that are mid-install/load aren't queryable yet; ignore
     // clicks so the user doesn't get a stranded selection.
     const st = stateByName[name] && stateByName[name].state;
     if (st === "provisioning") return;
+    // A plain click resets any multi-selection.
+    if (multiSelected.size) {
+        multiSelected.clear();
+        updateMultiUI();
+    }
     // Click on the already-selected system = shortcut to run the
     // current query, as long as that system is in a queryable state.
     if (name === selected) {
@@ -193,12 +353,19 @@ async function loadExamples(name) {
             o.textContent = `Q${i + 1}: ${label}`;
             exampleSel.appendChild(o);
         }
-        // Clamp prevIndex into range; default to 0.
+        // Choose the example index: a URL-requested one (?example=N)
+        // takes priority on first load, then the preserved prevIndex,
+        // else 0.
         let idx = 0;
-        if (!isNaN(prevIndex) && prevIndex >= 0 && prevIndex < qs.length) {
+        if (pendingExampleFromURL != null
+            && pendingExampleFromURL >= 0 && pendingExampleFromURL < qs.length) {
+            idx = pendingExampleFromURL;
+            pendingExampleFromURL = null;  // consume once
+        } else if (!isNaN(prevIndex) && prevIndex >= 0 && prevIndex < qs.length) {
             idx = prevIndex;
         }
         exampleSel.value = String(idx);
+        updateExampleURL();
         refreshRunAllVisibility();
         // Replace the textarea with this system's example at the same
         // index, but only if the user hasn't edited the current text
@@ -295,8 +462,7 @@ async function pollState() {
         for (const row of listEl.children) {
             const s = stateByName[row.dataset.name];
             const st = (s && s.state) || "down";
-            row.className = `system-item state-${st}` +
-                (row.dataset.name === selected ? " selected" : "");
+            row.className = slabClass(row.dataset.name, st);
             row.dataset.tooltip = tooltipFor(s, st);
         }
         if (selected && stateByName[selected]) {
@@ -329,6 +495,8 @@ async function runQuery() {
     outLabelEl.textContent = "Output";
     uiOutput.style.display = "";
     uiStats.style.display = "";
+    // Bring the results into view now that the run has started.
+    scrollIntoViewSmooth(uiStats);
 
     const target = selected;  // capture in case the user switches mid-flight
     const t0 = performance.now();
@@ -380,6 +548,18 @@ async function runQuery() {
     if (selected === target) showResult(payload);
 }
 
+// Smoothly bring an element into view. Called when a run starts so the
+// results are visible without manual scrolling — chiefly for mobile,
+// where the output sits below the query editor and the fold.
+function scrollIntoViewSmooth(el) {
+    if (!el) return;
+    try {
+        el.scrollIntoView({behavior: "smooth", block: "start"});
+    } catch {
+        el.scrollIntoView();
+    }
+}
+
 function bytesToText(buf) {
     try {
         return new TextDecoder("utf-8", {fatal: false}).decode(buf);
@@ -400,8 +580,24 @@ function applyCurrentExample() {
     applyExampleIdx(parseInt(exampleSel.value, 10));
 }
 
+// Persist the selected example query in the URL (?example=N) so a
+// reload — or a shared competition link — reopens with the same query
+// chosen. Removed when the user switches to a custom (non-example)
+// query. replaceState so it doesn't spam history.
+function updateExampleURL() {
+    const u = new URL(window.location.href);
+    const idx = parseInt(exampleSel.value, 10);
+    if (!isNaN(idx)) {
+        u.searchParams.set("example", String(idx));
+    } else {
+        u.searchParams.delete("example");
+    }
+    window.history.replaceState({}, "", u.toString());
+}
+
 exampleSel.addEventListener("change", () => {
     applyCurrentExample();
+    updateExampleURL();
     refreshRunAllVisibility();
     hideRunAll();
 });
@@ -413,6 +609,7 @@ exampleSel.addEventListener("change", () => {
 queryEl.addEventListener("input", () => {
     if (queryEl.value !== pristineQuery) {
         exampleSel.value = "";
+        updateExampleURL();  // custom query → drop the ?example= param
     }
     refreshRunAllVisibility();
 });
@@ -461,6 +658,13 @@ async function maybeLoadShared() {
     // so first-system selection is free to swap it for the first
     // example.
     pristineQuery = queryEl.value;
+    // Pick up a shared example-query index before the catalog loads so
+    // loadExamples can apply it to the first selected system.
+    const exParam = new URL(window.location.href).searchParams.get("example");
+    if (exParam !== null) {
+        const n = parseInt(exParam, 10);
+        if (!isNaN(n)) pendingExampleFromURL = n;
+    }
     await loadCatalog();
     await pollState();
     await maybeLoadShared();
@@ -479,6 +683,13 @@ const runAllSection = $("#ui-runall");
 const runAllTable = $("#runall-table");
 
 function refreshRunAllVisibility() {
+    // A live multi-selection keeps the (armed) button on screen
+    // regardless of query state, so it can't disappear out from under
+    // the user while they're comparing selected systems.
+    if (multiSelected.size) {
+        runAllBtn.style.display = "";
+        return;
+    }
     // Always available when there's *something* to run: a picked
     // example index OR a non-empty custom query in the textarea.
     const haveExample = exampleSel.value !== ""
@@ -551,7 +762,10 @@ async function runAll() {
     runAllSection.style.display = "";
     uiSplit.classList.add("split");
     _measureSplitOffset();
-    runAllSection.focus();
+    // preventScroll so the instant focus-jump doesn't fight the smooth
+    // scroll below; then bring the leaderboard into view (mobile).
+    runAllSection.focus({preventScroll: true});
+    scrollIntoViewSmooth(runAllSection);
 
     // Collect candidate systems. With an example picked, each system
     // runs its OWN translation of the example at the same index
@@ -559,8 +773,13 @@ async function runAll() {
     // in the textarea, every system runs the exact same string —
     // the systems whose query language doesn't accept it will just
     // show up in the failed bucket.
-    const candidates = Object.values(stateByName)
+    let candidates = Object.values(stateByName)
         .filter(s => s.state === "snapshotted" || s.state === "ready");
+    // When the user has built a multi-selection, restrict the
+    // competition to those systems only ("compare selected systems").
+    if (multiSelected.size) {
+        candidates = candidates.filter(s => multiSelected.has(s.name));
+    }
     const targets = [];
     for (const s of candidates) {
         if (useExampleIndex) {

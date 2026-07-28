@@ -1,0 +1,11 @@
+#!/bin/bash
+# Drop the web disk's filesystem cache so the cold try is really cold.
+#
+# bench_flush_caches calls this while the server is stopped, so
+# SYSTEM DROP FILESYSTEM CACHE is not available — delete the files directly.
+# The cache lives in tmpfs, which the kernel's drop_caches does not touch.
+#
+# ./install bind-mounts /dev/shm/clickhouse onto the cache directory, so
+# remove the contents and leave the mount point itself alone. The server owns
+# these files (it runs as the clickhouse user), hence sudo.
+sudo find /dev/shm/clickhouse -mindepth 1 -delete

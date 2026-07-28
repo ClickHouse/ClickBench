@@ -119,6 +119,14 @@ button.run-all:hover:not(:disabled) {
     border-color: var(--border);
     filter: none;
 }
+/* Armed: a multi-selection exists, so "Run all" becomes "Run selected"
+   and lights up yellow like a primary action. */
+button.run-all.armed {
+    background: var(--accent);
+    color: var(--accent-fg);
+    border-color: var(--border);
+    font-weight: 600;
+}
 
 /* Competition-mode table. */
 #runall-table {
@@ -156,11 +164,9 @@ button.run-all:hover:not(:disabled) {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
     gap: 16px;
-    align-items: stretch;
-    /* Take the rest of the viewport (whatever's left below the
-       buttons row) so the rail can scroll independently rather than
-       stretching the page. */
-    height: calc(100vh - var(--ui-split-offset, 200px));
+    /* start (not stretch) so the rail is only as tall as its rows;
+       no forced height so the split doesn't stretch the page. */
+    align-items: start;
 }
 #ui-main { min-width: 0; overflow: auto; }
 #ui-main > section:first-child { margin-top: 0; }
@@ -171,7 +177,9 @@ aside#ui-runall {
        the rail's width fluctuates as rows finish, briefly making the
        right pane overflow and the page grow a horizontal scrollbar. */
     scrollbar-gutter: stable;
-    height: 100%;
+    /* Fit the content, but never taller than what's left of the
+       viewport below the split — then scroll inside the rail. */
+    max-height: calc(100vh - var(--ui-split-offset, 200px));
     border: 1px solid var(--border);
     background: var(--bg-alt);
     outline: none;
@@ -181,7 +189,7 @@ aside#ui-runall #runall-table {
     border: 0;
 }
 @media (max-width: 800px) {
-    #ui-split.split { grid-template-columns: 1fr; height: auto; }
+    #ui-split.split { grid-template-columns: 1fr; }
 }
 
 /* Flash on every state change in competition mode: yellow that
@@ -211,6 +219,10 @@ aside#ui-runall #runall-table {
 }
 .system-item {
     display: inline-block;
+    /* Don't let flex compress a slab below its (nowrap) text — a shrunk
+       slab overflows its own box, and those overflows add up into a
+       page-wide horizontal scrollbar. Keep natural width; wrap instead. */
+    flex: 0 0 auto;
     padding: 4px 8px;
     cursor: pointer;
     font-family: monospace;
@@ -238,7 +250,10 @@ aside#ui-runall #runall-table {
     line-height: 1.2;
     white-space: nowrap;
     pointer-events: none;
-    visibility: hidden;
+    /* display:none (not visibility:hidden) so the balloon isn't laid out
+       until hover — a laid-out, wider-than-slab absolute balloon on every
+       slab otherwise inflates the page's scroll width (horizontal scroll). */
+    display: none;
     z-index: 10;
 }
 
@@ -253,13 +268,13 @@ aside#ui-runall #runall-table {
     border-top-color: #000;
     border-bottom-width: 0;
     pointer-events: none;
-    visibility: hidden;
+    display: none;
     z-index: 10;
 }
 
 .system-item:hover::after,
 .system-item:hover::before {
-    visibility: visible;
+    display: block;
 }
 .system-item:hover { filter: brightness(0.95); }
 .system-item.selected {
@@ -276,7 +291,71 @@ aside#ui-runall #runall-table {
 }
 .system-item.state-down        { background: #f6d1ce; color: var(--bad); }
 
+/* Multi-selection ("compare selected systems"): bright blue, overriding
+   the state color. Placed after the state rules so it wins on equal
+   specificity. */
+.system-item.multi-selected {
+    background: #1a8cff;
+    color: #fff;
+    border-color: #0a5bd0;
+    font-weight: 600;
+}
+.system-item.multi-selected:hover { filter: brightness(1.08); }
+/* Keep the single-selection outline readable on top of blue. */
+.system-item.multi-selected.selected { outline-color: #002b6b; }
+
+/* Discoverability hint for multi-selection. On pointer devices it sits
+   in the top-right corner and fades in while the system list is hovered.
+   On touch devices (no hover) it falls back to a static muted caption
+   under the list so the long-press gesture is still discoverable. */
+#multi-hint {
+    position: fixed;
+    top: 10px;
+    right: 12px;
+    /* ~400px wraps the tip to two lines; never wider than the viewport. */
+    width: 400px;
+    max-width: calc(100vw - 24px);
+    background: #000;
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.35;
+    padding: 8px 12px;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    pointer-events: none;
+    /* Below the slabs' uptime balloons (z-index:10) so a balloon that
+       overlaps the tip stays readable on top of it. */
+    z-index: 9;
+}
+#multi-hint b { color: var(--accent); font-weight: 600; }
+.system-list:hover + #multi-hint { opacity: 1; transform: translateY(0); }
+
+@media (hover: none) {
+    #multi-hint {
+        position: static;
+        width: auto;
+        max-width: none;
+        margin-top: 8px;
+        padding: 0;
+        opacity: 1;
+        transform: none;
+        background: transparent;
+        color: var(--muted);
+        box-shadow: none;
+        pointer-events: auto;
+    }
+    #multi-hint b { color: var(--fg); }
+}
+
 select { padding: 0.5em; border-radius: 0; }
+/* The example dropdown's options carry long query text; without a cap the
+   <select> grows to the widest option and pushes the page wider than the
+   viewport (horizontal scroll on mobile). min-width:0 lets it shrink as a
+   flex item; max-width keeps it within the row. */
+#example { min-width: 0; max-width: 100%; }
 
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
