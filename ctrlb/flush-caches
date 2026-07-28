@@ -1,0 +1,15 @@
+#!/bin/bash
+# Per-system cache hook, invoked by the harness's bench_flush_caches AFTER it has
+# already run `sync; sudo tee /proc/sys/vm/drop_caches` itself. So the OS page
+# cache is dropped either way (the harness requires passwordless sudo regardless).
+#
+# We just re-assert the page-cache drop for good measure. CtrlB runs as a
+# `docker run --rm` container that is torn down and recreated on every per-query
+# restart, so its entire on-disk state (metadata cache, sqlite, wal) lives in the
+# container's ephemeral filesystem and is wiped automatically each restart — there
+# is no persistent host directory for this hook to clear.
+set -u
+
+sync
+echo 3 | sudo -n tee /proc/sys/vm/drop_caches > /dev/null 2>&1 || true
+exit 0
