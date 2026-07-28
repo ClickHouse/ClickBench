@@ -1,0 +1,21 @@
+[package]
+name = "clickbench-infino"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "clickbench-infino"
+path = "src/main.rs"
+
+[dependencies]
+infino = "0.1.10"
+arrow = "58"
+arrow-array = "58"
+arrow-schema = "58"
+parquet = "58"
+glob = "0.3"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1

@@ -1,0 +1,10 @@
+# Build + runtime artifacts — not source.
+bench/target/
+data/
+cache/
+*.parquet
+result.csv
+run.log
+serve.log
+infino.sock
+infino.pid
