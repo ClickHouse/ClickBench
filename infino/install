@@ -10,6 +10,13 @@ if [ -x "$BIN" ]; then
     exit 0
 fi
 
+# The benchmark VM ships no C toolchain, but several deps (ring, zstd-sys,
+# mimalloc, ...) compile C in their build scripts, so cargo needs a linker.
+if ! command -v cc >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y build-essential pkg-config
+fi
+
 if ! command -v cargo >/dev/null 2>&1; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     # shellcheck disable=SC1091
