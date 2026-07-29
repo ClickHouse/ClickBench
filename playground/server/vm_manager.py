@@ -660,11 +660,26 @@ class VMManager:
         if vm.system.name in DATALAKE_FILTERED:
             await net.enable_filtered_internet(vm.slot)
         await self._boot(vm, restore_snapshot=True)
-        await self._wait_for_agent(vm, timeout=60)
-        # Block here until the system's daemon reports ready, so the
-        # first user query doesn't time out mid-startup. Big upper bound
-        # for slow JVMs (Doris/Druid/Trino).
-        await self._wait_for_daemon_ready(vm, timeout=600)
+        try:
+            await self._wait_for_agent(vm, timeout=60)
+            # Block here until the system's daemon reports ready, so the
+            # first user query doesn't time out mid-startup. Big upper
+            # bound for slow JVMs (Doris/Druid/Trino).
+            await self._wait_for_daemon_ready(vm, timeout=600)
+        except Exception:
+            # _boot's own except handler covers _configure_boot failure,
+            # but if the guest agent never comes up or the daemon never
+            # reports ready, the fc process is left alive holding
+            # fc-tap-<slot>. The next /query then hits
+            #   Open tap device failed: … Resource busy (os error 16)
+            # even though vm.state was left at "snapshotted". Reap the
+            # process + delete the TAP so ensure_tap can recreate a
+            # fresh one on the next attempt.
+            with contextlib.suppress(Exception):
+                await self._shutdown(vm)
+            with contextlib.suppress(Exception):
+                await net.teardown_tap(vm.slot)
+            raise
         vm.state = "ready"
         vm.ready_since = time.time()
         # Baseline the firecracker's current jiffy counter so the
