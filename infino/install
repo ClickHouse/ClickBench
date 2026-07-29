@@ -22,4 +22,16 @@ if ! command -v cargo >/dev/null 2>&1; then
     # shellcheck disable=SC1091
     source "$HOME/.cargo/env"
 fi
+
+# LTO by RAM: fat LTO links at ~7.6 GB peak and swap-thrashes the small VMs, so use it 
+# only where it fits (>= 12 GiB) and fall back to thin (~1.5 GB peak) below. Defaults to thin.
+ram_gib=$(awk '/MemTotal/ { printf "%d", $2 / 1024 / 1024 }' /proc/meminfo 2>/dev/null || echo 0)
+if [ "${ram_gib:-0}" -ge 12 ]; then
+    export CARGO_PROFILE_RELEASE_LTO=fat
+    export CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1
+    echo "install: ${ram_gib} GiB RAM -> fat LTO"
+else
+    echo "install: ${ram_gib} GiB RAM -> thin LTO (Cargo.toml default)"
+fi
+
 cargo build --release --manifest-path bench/Cargo.toml
