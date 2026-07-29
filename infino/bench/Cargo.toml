@@ -15,7 +15,9 @@ arrow-schema = "58"
 parquet = "58"
 glob = "0.3"
 
+# Default to thin LTO so the build fits any machine (see ./install). On boxes
+# with RAM to spare, install raises this to fat LTO + codegen-units=1 via the
+# CARGO_PROFILE_RELEASE_* env vars for the best codegen.
 [profile.release]
 opt-level = 3
-lto = "fat"
-codegen-units = 1
+lto = "thin"
