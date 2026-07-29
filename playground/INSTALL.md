@@ -252,6 +252,31 @@ Boots one system end-to-end (provision → snapshot → restore → /query),
 prints timing, tears down. Use this to validate any change to
 `base-rootfs.ext4` or the agent before re-kicking the full catalog.
 
+## Re-provisioning after a system's scripts change
+
+A snapshot pins the engine version `install` fetched and the schema
+`create.sql` declared when it was built, but the example queries the UI
+offers are read from the live repo. Bump a system in the repo and the two
+drift apart — QuestDB served 9.3.1 for two months after the repo moved to
+9.3.5, so the two `length_bytes()` examples (a 9.3.2 function) failed with
+"unknown function name".
+
+`/api/system/<name>` reports `source_stale: true` once a system's files
+differ from the fingerprint stamped at provision time
+(`<state>/systems/<name>/source.sha256`; `results/`, `template.json` and
+READMEs are excluded, since they never reach the VM). `provision-all.sh`
+re-kicks those even with `SKIP_PROVISIONED=yes`, so the usual
+
+```
+git pull && playground/scripts/provision-all.sh
+```
+
+picks up engine bumps. To refresh one system:
+
+```
+curl -X POST http://localhost:8000/api/admin/provision/<name>
+```
+
 ## Re-provisioning after agent or base-image changes
 
 `vm_manager` rebuilds the per-system rootfs+sysdisk automatically when

@@ -19,14 +19,24 @@ mapfile -t SYSTEMS < <(
 
 echo "$(date -Is) catalog: ${#SYSTEMS[@]} systems"
 
-# Kick off /provision for each system that isn't already snapshotted.
+# Kick off /provision for each system that isn't already snapshotted from
+# the current scripts. A system whose install/create.sql/queries.sql moved
+# on in the repo since its snapshot was taken (source_stale) is re-kicked
+# even under SKIP_PROVISIONED — otherwise it serves the engine version it
+# was first provisioned with forever, while the UI hands out examples from
+# today's queries.sql.
 for sys in "${SYSTEMS[@]}"; do
     if [ "$SKIP_PROVISIONED" = "yes" ]; then
-        state=$(curl -fsS "$BASE/api/system/$sys" |
-                python3 -c 'import json,sys; print(json.load(sys.stdin)["state"])')
-        if [ "$state" = "snapshotted" ] || [ "$state" = "ready" ]; then
+        info=$(curl -fsS "$BASE/api/system/$sys" |
+                python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["state"], d.get("source_stale", False))')
+        read -r state stale <<< "$info"
+        if { [ "$state" = "snapshotted" ] || [ "$state" = "ready" ]; } &&
+           [ "$stale" != "True" ]; then
             echo "  $sys: skip (already $state)"
             continue
+        fi
+        if [ "$stale" = "True" ]; then
+            echo "  $sys: scripts changed since snapshot — re-provisioning"
         fi
     fi
     echo "  $sys: kicking provision"

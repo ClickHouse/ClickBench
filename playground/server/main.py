@@ -215,6 +215,11 @@ class App:
             **self.systems[name].asdict(),
             "state": vm.state,
             "has_snapshot": vm.snapshot_bin.exists(),
+            # Whether the system's scripts moved on in the repo since this
+            # snapshot was taken. Per-system rather than part of /api/state
+            # because it hashes the system's files and /api/state is polled
+            # every 2 s by every open tab.
+            "source_stale": self.vmm.source_stale(name),
             "provisioned_at": vm.provisioned_at,
             "last_used": vm.last_used,
             "ready_since": vm.ready_since,

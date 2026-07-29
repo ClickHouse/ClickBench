@@ -17,6 +17,7 @@ The registry is built by scanning the repo at startup. Each `System` carries:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass, field
@@ -163,6 +164,54 @@ class System:
             "durable": self.durable,
             "restartable": self.restartable,
         }
+
+
+def _source_files(system_dir: Path) -> list[Path]:
+    """The system's files that end up inside its VM, sorted.
+
+    Mirrors the `--exclude` list in images/build-system-rootfs.sh: the
+    result JSONs, the frontend metadata and the READMEs never reach the
+    guest, and `results/` in particular gets new files every week — a
+    fingerprint that moved on every results commit would mark the whole
+    catalog stale for no reason.
+    """
+    out = []
+    for p in sorted(system_dir.rglob("*")):
+        rel = p.relative_to(system_dir)
+        if rel.parts[0] == "results" or p.name == "template.json" \
+                or p.name.startswith("README"):
+            continue
+        if p.is_file():
+            out.append(p)
+    return out
+
+
+def source_fingerprint(system_dir: Path) -> str:
+    """SHA-256 over a system's ClickBench scripts.
+
+    A snapshot is only as current as the scripts it was provisioned
+    from: `install` pins the engine version, `create.sql` the schema,
+    `load` the ingest path. When any of them change in the repo the
+    snapshot is stale and the system needs a re-provision — see
+    VMManager.source_stale.
+    """
+    h = hashlib.sha256()
+    for p in _source_files(system_dir):
+        h.update(str(p.relative_to(system_dir)).encode())
+        h.update(b"\0")
+        h.update(p.read_bytes())
+        h.update(b"\0")
+    return h.hexdigest()
+
+
+def source_mtime(system_dir: Path) -> float:
+    """Newest mtime among the files source_fingerprint() hashes.
+
+    Only used for snapshots taken before fingerprints were stamped, where
+    there is nothing to compare a hash against.
+    """
+    return max((p.stat().st_mtime for p in _source_files(system_dir)),
+               default=0.0)
 
 
 def _read_template(p: Path) -> dict:

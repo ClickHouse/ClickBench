@@ -3,9 +3,20 @@ set -eu
 
 qdb_version="${QDB_VERSION:-9.3.5}"
 
-if [ -d questdb/bin ]; then
+# Skip only when the version already installed is the one being asked for.
+# A bare `[ -d questdb/bin ]` check made this script a permanent no-op on
+# any working directory that survives a run: bumping QDB_VERSION (or the
+# default above) then silently kept benchmarking the old binaries.
+if [ -d questdb/bin ] && \
+   [ "$(cat questdb/.clickbench-version 2>/dev/null)" = "$qdb_version" ]; then
     exit 0
 fi
+
+# Nothing installed, or a different version is. Start clean: the untar
+# globs below match `questdb*.tar.gz`, so a leftover tarball from another
+# version would make them ambiguous. Paths are relative to this system
+# directory, which is where every path in this script lives.
+rm -rf ./questdb ./graalvm ./questdb-*.tar.gz ./graalvm-community-*.tar.gz
 
 if [[ $(arch) == "aarch64" ]] || [[ $(arch) == arm* ]]; then
     # ARM uses no-JRE binary, so we install GraalVM JDK alongside.
@@ -28,3 +39,5 @@ else
         "https://github.com/questdb/questdb/releases/download/${qdb_version}/questdb-${qdb_version}-rt-linux-x86-64.tar.gz"
     tar xf questdb*.tar.gz --one-top-level=questdb --strip-components 1
 fi
+
+echo "$qdb_version" > questdb/.clickbench-version

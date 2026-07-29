@@ -37,7 +37,9 @@ from . import firecracker as fc
 from . import net
 from .systems import NEEDS_SWAP, SWAP_SIZE_GB, SYSDISK_OVERRIDES_GB
 from .config import Config
-from .systems import System, DATALAKE_FILTERED
+from .systems import (
+    System, DATALAKE_FILTERED, source_fingerprint, source_mtime,
+)
 
 log = logging.getLogger("vm_manager")
 
@@ -185,6 +187,38 @@ class VMManager:
             vm.state = "down"
             self._set_last_error(vm, None)
             await self._initial_provision(vm)
+
+    def source_stale(self, system: str) -> bool:
+        """True when the snapshot no longer matches the system's scripts.
+
+        A snapshot freezes whatever `install` fetched and `create.sql`
+        declared on the day it was built, but the examples the UI serves
+        come from the live repo (main.py:handle_queries). Nothing used to
+        reconcile the two: provision-all.sh skips any system that already
+        has a snapshot, so a system stayed on its original engine version
+        indefinitely. QuestDB sat on 9.3.1 for two months after the repo
+        moved to 9.3.5, against a queries.sql that had switched to
+        `length_bytes()` — a function 9.3.1 doesn't have, so two of the
+        playground's own examples answered "unknown function name".
+        """
+        vm = self.vms.get(system)
+        if vm is None or not _has_snapshot(vm):
+            return False
+        src = self.cfg.repo_dir / system
+        stamp = self._source_stamp(vm)
+        if stamp.exists():
+            return stamp.read_text().strip() != source_fingerprint(src)
+        # Snapshot predates fingerprint stamping, so there's no hash to
+        # compare against. Fall back to mtimes: only systems whose scripts
+        # were touched after the snapshot was taken count as stale, which
+        # keeps adopting this from re-provisioning the whole catalog.
+        # _has_snapshot doesn't look at snapshot.state, so it may be gone;
+        # treat that as stale rather than raising out of /api/system.
+        try:
+            snapshot_mtime = vm.snapshot_state.stat().st_mtime
+        except OSError:
+            return True
+        return source_mtime(src) > snapshot_mtime
 
     async def ensure_ready_for_query(self, system: str) -> VM:
         """Make sure system is up and responsive to /query. Boot/resume as needed.
@@ -355,6 +389,13 @@ class VMManager:
                     await net.disable_internet(vm.slot)
             vm.state = "snapshotted"
             vm.provisioned_at = time.time()
+            # Record which revision of the system's scripts this snapshot
+            # came from, so a later change in the repo is detectable
+            # (source_stale). Written last: a snapshot we failed to take
+            # must not look current.
+            with contextlib.suppress(Exception):
+                self._source_stamp(vm).write_text(
+                    source_fingerprint(self.cfg.repo_dir / vm.system.name) + "\n")
             log.info("[%s] initial provision complete", vm.system.name)
         except Exception as e:
             self._set_last_error(vm, f"provision: {e!r}")
@@ -685,6 +726,10 @@ class VMManager:
         # Baseline the firecracker's current jiffy counter so the
         # per-VM CPU-cap watchdog can bill only post-ready CPU time.
         vm.cpu_baseline_jiffies = _read_proc_jiffies(vm.pid) if vm.pid else 0
+
+    def _source_stamp(self, vm: VM) -> Path:
+        """Fingerprint of the scripts this system was last provisioned from."""
+        return self.cfg.systems_dir / vm.system.name / "source.sha256"
 
     def _golden_paths(self, vm: VM) -> tuple[Path, Path, Path, Path]:
         """(working rootfs, working sysdisk, golden rootfs, golden sysdisk)."""
