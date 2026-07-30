@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+. "$(dirname "$0")/env.sh"
+
+$PSQL -tAc 'SELECT 1' >/dev/null
