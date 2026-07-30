@@ -81,8 +81,7 @@ Alternatively, create a more restrictive token in the Tinybird UI with `PIPES:RE
 benchmark from this directory:
 
 ```bash
-set -o pipefail
-TINYBIRD_HOST="$(jq -r '.host' .tinyb)" \
+TINYBIRD_HOST="$(jq -er '.host | strings | select(length > 0)' .tinyb)" \
 TINYBIRD_TOKEN='<copied token>' \
-./run.sh 2>&1 | tee log.txt
+./run.sh > >(tee log.txt) 2>&1
 ```

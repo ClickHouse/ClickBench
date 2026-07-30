@@ -32,7 +32,7 @@ hits.vortex
 bemidb/bemidb
 bemidb/iceberg
 
-# Python venvs created by install scripts
+# Local credentials and Python virtual environments
 myenv
 .tinyb
 .venv/
