@@ -34,3 +34,5 @@ bemidb/iceberg
 
 # Python venvs created by install scripts
 myenv
+.tinyb
+.venv/

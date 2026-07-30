@@ -25,7 +25,8 @@ tb auth -i
 ```
 
 `tb auth -i` asks for the Tinybird region and an admin token. You can copy the admin token from the "Tokens" page in the Tinybird UI.
-The command writes credentials to a local `.tinyb` file, so do not commit that file.
+The command writes credentials and the selected workspace API host to a local `.tinyb` file. The file is ignored by Git because it must not
+be committed.
 
 # Inserting data
 
@@ -80,5 +81,8 @@ Alternatively, create a more restrictive token in the Tinybird UI with `PIPES:RE
 benchmark from this directory:
 
 ```bash
-TINYBIRD_TOKEN='<copied token>' ./run.sh 2>&1 | tee log.txt
+set -o pipefail
+TINYBIRD_HOST="$(jq -r '.host' .tinyb)" \
+TINYBIRD_TOKEN='<copied token>' \
+./run.sh 2>&1 | tee log.txt
 ```

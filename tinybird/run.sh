@@ -1,8 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-BASE_URL="https://api.tinybird.co/v0/pipes/"
 : "${TINYBIRD_TOKEN:?Set TINYBIRD_TOKEN}"
+: "${TINYBIRD_HOST:?Set TINYBIRD_HOST to your workspace API host}"
+BASE_URL="${TINYBIRD_HOST%/}/v0/pipes/"
 AUTH_HEADER="Authorization: Bearer ${TINYBIRD_TOKEN}"
 
 results="["
