@@ -424,14 +424,24 @@ print('\n'.join(map(str, xs)))
 PY
 )
 
-            local ok=0 err=0 idx=0 qi q_text
+            local ok=0 err=0 idx=0 qi q_text outcome
             while [ "$(date +%s)" -lt "$deadline" ]; do
                 qi="${perm[$idx]}"
                 q_text="${queries[$qi]}"
                 if printf '%s\n' "$q_text" | ./query >/dev/null 2>&1; then
-                    ok=$((ok + 1))
+                    outcome=ok
                 else
-                    err=$((err + 1))
+                    outcome=err
+                fi
+                # QPS is completions within the fixed wall-clock window.
+                # Do not include a query merely because it started before
+                # the deadline if it only completed after the window ended.
+                if [ "$(date +%s)" -lt "$deadline" ]; then
+                    if [ "$outcome" = ok ]; then
+                        ok=$((ok + 1))
+                    else
+                        err=$((err + 1))
+                    fi
                 fi
                 idx=$(( (idx + 1) % nq ))
             done
