@@ -1,0 +1,122 @@
+#!/bin/bash
+set -eu
+. "$(dirname "$0")/env.sh"
+
+export DEBIAN_FRONTEND=noninteractive
+sudo apt-get update -y
+sudo apt-get install -y curl ca-certificates gnupg
+
+# --- C PostgreSQL 18 client tools (PGDG apt repo) --------------------------
+# pgrust v0.2 cannot bootstrap a data directory (no initdb port yet) and
+# ships no client, so initdb and psql come from C PostgreSQL 18.
+# Source: https://wiki.postgresql.org/wiki/Apt
+sudo install -d /usr/share/postgresql-common/pgdg
+sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+    https://www.postgresql.org/media/keys/ACCC4CF8.asc
+echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] http://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CODENAME)-pgdg main" \
+    | sudo tee /etc/apt/sources.list.d/pgdg.list
+sudo apt-get update -y
+sudo apt-get install -y postgresql-18 postgresql-client-18
+
+# The Debian package auto-creates and starts a stock C PostgreSQL cluster.
+# We only need the package's initdb and psql — stop the cluster so it does
+# not sit on RAM during the benchmark.
+sudo systemctl disable --now postgresql || true
+sudo systemctl disable --now postgresql@18-main 2>/dev/null || true
+
+# --- the pgrust server binary ----------------------------------------------
+# Official published v0.2 release build (generic CPU baseline for the
+# architecture, i.e. NOT -Ctarget-cpu=native; see README.md). Verified
+# against the published sha256 before install.
+case "$(uname -m)" in
+    aarch64) PLATFORM=linux-aarch64 ;;
+    x86_64)  PLATFORM=linux-x86_64 ;;
+    *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+esac
+tmp=$(mktemp -d)
+curl -fL -o "$tmp/pgrust-$PGRUST_VERSION-$PLATFORM" \
+    "https://pgrust.com/downloads/v$PGRUST_VERSION/pgrust-$PGRUST_VERSION-$PLATFORM"
+curl -fL -o "$tmp/pgrust-$PGRUST_VERSION-$PLATFORM.sha256" \
+    "https://pgrust.com/downloads/v$PGRUST_VERSION/pgrust-$PGRUST_VERSION-$PLATFORM.sha256"
+(cd "$tmp" && sha256sum -c "pgrust-$PGRUST_VERSION-$PLATFORM.sha256")
+sudo install -m 755 "$tmp/pgrust-$PGRUST_VERSION-$PLATFORM" "$PGRUST_BIN"
+rm -rf "$tmp"
+
+# --- data directory --------------------------------------------------------
+# initdb from C PostgreSQL 18; pgrust then runs against this datadir.
+sudo rm -rf "$PGDATA_DIR"
+sudo install -d -o postgres -g postgres "$(dirname "$PGDATA_DIR")"
+sudo -u postgres "$PG18_BIN/initdb" -D "$PGDATA_DIR" \
+    --no-locale --encoding=UTF8 -U postgres -A trust >/dev/null
+
+# Pin timezones so timestamp-dependent queries cannot vary with the host.
+sudo -u postgres sed -i \
+    "s/^log_timezone = .*/log_timezone = 'GMT'/; s/^timezone = .*/timezone = 'GMT'/" \
+    "$PGDATA_DIR/postgresql.conf"
+
+# --- swap parity with the benchmark automation ------------------------------
+# ClickBench's own cloud-init provisions a 16 GB swapfile on every benchmark
+# VM (32 GB machines OOM row stores during load otherwise). When this script
+# runs under that automation the swapfile already exists and this is a no-op;
+# on a bare machine it recreates the same environment so the concurrent-QPS
+# phase (10 connections against a 32 GB box) degrades gracefully instead of
+# OOM-killing the server.
+if [ ! -f /swapfile ] && [ "$(awk '/SwapTotal/ {print $2}' /proc/meminfo)" = "0" ]; then
+    sudo fallocate -l 16G /swapfile
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile >/dev/null
+    sudo swapon /swapfile
+fi
+
+# --- configuration ---------------------------------------------------------
+# The machine-derived formula below is copied from this repo's
+# postgresql/install so this entry is configured the same way the other
+# PostgreSQL-family entries are, with TWO deviations, in the open (both
+# documented in README.md):
+#
+#   work_mem = MemTotal/32 (1 GB on a 32 GB machine) instead of the
+#   postgresql entry's fixed 64MB. pgrust's grouped-aggregation execution
+#   keeps per-query hash state in work_mem; at 64MB the large GROUP BY
+#   queries fall off the in-memory path into partitioned spills and run
+#   ~10-40x slower.
+#
+#   shared_buffers = MemTotal/8 instead of MemTotal/4. pgrust's columnar
+#   scans read through their own arenas and the OS page cache rather than
+#   the buffer pool; a 25% buffer pool is dead weight that starves the
+#   concurrent-QPS phase (10 connections x ~2 GB of transient aggregation
+#   state) into the OOM killer.
+memory=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+threads=$(nproc)
+cpus=$(($threads / 2))
+shared_buffers=$(($memory / 8))
+effective_cache_size=$(($memory - ($memory / 4)))
+max_worker_processes=$(($threads + 15))
+work_mem=$(($memory / 32))
+
+sudo -u postgres tee -a "$PGDATA_DIR/postgresql.conf" >/dev/null <<CONF
+shared_buffers=${shared_buffers}kB
+max_worker_processes=${max_worker_processes}
+max_parallel_workers=${threads}
+max_parallel_maintenance_workers=${cpus}
+max_parallel_workers_per_gather=${cpus}
+max_wal_size=32GB
+work_mem=${work_mem}kB
+effective_cache_size = ${effective_cache_size}kB
+
+# Required by pgrust (not tuning): PostgreSQL 18 defaults io_method=worker,
+# and pgrust has no async-I/O worker; it requires synchronous I/O. It also
+# requires an enlarged stack (deep recursive expression evaluation paths;
+# ./start raises the rlimit to match).
+io_method=sync
+max_stack_depth=60000
+
+# Parity with ClickHouse, not a shortcut: pgrust.condition_cache is pgrust's
+# equivalent of ClickHouse's query condition cache (a per-granule cache of
+# filter-condition results, 100 MB budget on both sides). ClickHouse has
+# shipped it DEFAULT-ON since 25.4 (use_query_condition_cache = true,
+# src/Core/Settings.cpp:5925), and the ClickBench clickhouse entry installs
+# a current build, so the leaderboard ClickHouse row runs with it enabled.
+# pgrust's is off by default at v0.2; enabling it here puts both systems on
+# the same footing. Disclosed in README.md.
+pgrust.condition_cache = on
+CONF

@@ -1,0 +1,76 @@
+#!/bin/bash
+set -eu
+D="$(dirname "$0")"
+. "$D/env.sh"
+
+# The server runs as `postgres` and reads hits.parquet server-side; move
+# the file somewhere world-traversable (same filesystem, so this is
+# instant) and make it readable.
+if [ -f hits.parquet ]; then
+    mv hits.parquet "$HITS_FILE"
+fi
+[ -f "$HITS_FILE" ] || { echo "pgrust/load: no hits.parquet found" >&2; exit 1; }
+chmod 644 "$HITS_FILE"
+
+# --- load-session server posture -------------------------------------------
+# The COPY below is a single statement over the single as-published file
+# (no splitting), but the server executes it with pgrust's parallel COPY
+# path, opted in via environment for the load session only:
+#
+#   PGRUST_COPY_PRESORT declares the table's clustered primary-key order —
+#   the same (CounterID, EventDate, UserID, EventTime, WatchID) key every
+#   ordered entry in this benchmark uses — and the COPY sorts the rows into
+#   that order inside the server as it ingests.  PGRUST_PARQUET_* enable the
+#   parallel parquet decoder. The rest of the variables size/enable the
+#   parallel ingest itself (worker counts, sort memory, in-server lz4 for
+#   spill runs, ANALYZE sampling parallelism).
+#
+# These affect the (measured) load phase only: the server is restarted
+# WITHOUT any pgrust-specific environment before the query sweep, so the
+# scored queries run a stock server. See README.md.
+LOAD_ENV="PGRUST_RUNTIME=1 \
+PGRUST_COPY_PRESORT=counterid,eventdate,userid,eventtime,watchid \
+PGRUST_PARALLEL_COPY=1 PGRUST_PARALLEL_COPY_SORT=1 \
+PGRUST_PARALLEL_COPY_DOP=16 PGRUST_PARALLEL_COPY_STITCH_POOL=8 \
+PGRUST_PARALLEL_COPY_FILL_V2=1 PGRUST_PARALLEL_COPY_FILL_PREFETCH=6 \
+PGRUST_PARALLEL_COPY_SORT_MEM=512 \
+PGRUST_PARALLEL_COPY_SORT_MEMRUNS=${PGRUST_LOAD_MEMRUNS_MB:-15360} \
+PGRUST_COPY_RUNLZ4=1 PGRUST_CBSTORE_FASTHASH=1 PGRUST_CBSTORE_DICT_FRAMES=1 \
+PGRUST_PARQUET_PARALLEL=1 PGRUST_PARQUET_BUDGET_MB=4096 \
+PGRUST_ANALYZE_SAMPLE_POOL=12"
+
+# Restart the server with the load-session environment. Both restarts are
+# inside the timed load window.
+"$D/stop"
+EXTRA_SERVER_ENV="$LOAD_ENV" "$D/start"
+for i in $(seq 1 300); do "$D/check" >/dev/null 2>&1 && break; sleep 1; done
+"$D/check" >/dev/null
+
+# Same flow as postgresql/load: fresh DB, DDL, TRUNCATE + COPY FREEZE in one
+# transaction (FREEZE requires the truncate in the same transaction), then
+# VACUUM ANALYZE.
+$PSQL -t -c "DROP DATABASE IF EXISTS test"
+$PSQL -t -c "CREATE DATABASE test"
+$PSQL -v ON_ERROR_STOP=1 test -t < "$D/create.sql"
+# FORMAT 'parquet' and COERCE_EPOCH are pgrust COPY extensions: the server
+# decodes the parquet file directly, coercing the file's epoch-encoded
+# time columns into the standard TIMESTAMP/DATE schema (the published
+# hits.parquet carries no logical types; this is the same conversion the
+# duckdb entry does with epoch_ms()/make_date()).
+$PSQL -v ON_ERROR_STOP=1 test <<SQL
+BEGIN;
+TRUNCATE TABLE hits;
+COPY hits FROM '$HITS_FILE' WITH (FREEZE, FORMAT 'parquet', COERCE_EPOCH true);
+COMMIT;
+SQL
+$PSQL -v ON_ERROR_STOP=1 test -t -c 'VACUUM ANALYZE hits'
+
+# Only remove the input once the load has succeeded.
+rm -f "$HITS_FILE"
+
+# Back to a stock server for the query sweep.
+"$D/stop"
+"$D/start"
+for i in $(seq 1 300); do "$D/check" >/dev/null 2>&1 && break; sleep 1; done
+"$D/check" >/dev/null
+sync
