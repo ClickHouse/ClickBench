@@ -34,3 +34,9 @@ bemidb/iceberg
 
 # Python venvs created by install scripts
 myenv
+__pycache__/
+
+# spark-gluten-clickhouse: from-source build tree and symlinked artifacts
+gluten/
+gluten.jar
+libch.so
