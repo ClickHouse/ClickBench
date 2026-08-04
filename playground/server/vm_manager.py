@@ -797,11 +797,28 @@ class VMManager:
         if vm.pid is not None and _pid_alive(vm.pid):
             with contextlib.suppress(ProcessLookupError):
                 os.kill(vm.pid, signal.SIGKILL)
-        # Reap the process. asyncio.Process.wait() drains the exit status so
-        # the kernel can release the resources (TAP fd, memory mappings).
+        # Reap the process. Post-SIGKILL cleanup of a 16 GiB guest can
+        # take many seconds (page freeing + virtio-blk fd close +
+        # memory-backing unmap), especially under concurrent
+        # shutdowns. If wait_for times out we still MUST confirm the
+        # PID is dead before dropping vm.proc/vm.pid — otherwise the
+        # process lingers, holds fc-tap-<slot> open, and the next
+        # /restore for the same slot fails with EBUSY. Poll _pid_alive
+        # up to 60 s (a good deal longer than the earlier 5 s) and
+        # SIGKILL again on the way if the first didn't take.
         if vm.proc is not None:
             with contextlib.suppress(Exception):
-                await asyncio.wait_for(vm.proc.wait(), timeout=5.0)
+                await asyncio.wait_for(vm.proc.wait(), timeout=60.0)
+        for _ in range(600):  # 60 s total
+            if vm.pid is None or not _pid_alive(vm.pid):
+                break
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(vm.pid, signal.SIGKILL)
+            await asyncio.sleep(0.1)
+        if vm.pid is not None and _pid_alive(vm.pid):
+            log.error("[%s] _shutdown: fc pid=%d still alive after 60 s SIGKILL "
+                      "loop — leaking; next restore may hit fc-tap-<slot> busy",
+                      vm.system.name, vm.pid)
         vm.proc = None
         vm.pid = None
         with contextlib.suppress(FileNotFoundError):
@@ -811,6 +828,14 @@ class VMManager:
         log.warning("[%s] teardown: %s", vm.system.name, reason)
         with contextlib.suppress(Exception):
             await self._shutdown(vm)
+        # Tear down the TAP unconditionally on every teardown so the
+        # next /restore's ensure_tap gets a fresh interface. Belt-
+        # and-braces against a dying-but-not-yet-dead fc process
+        # holding the TAP fd, or any other kernel-level lingering
+        # state we haven't yet accounted for. ensure_tap on the next
+        # boot is cheap (a single tuntap add + address assignment).
+        with contextlib.suppress(Exception):
+            await net.teardown_tap(vm.slot)
         vm.state = "snapshotted" if _has_snapshot(vm) else "down"
         vm.ready_since = None
         vm.cpu_baseline_jiffies = 0
