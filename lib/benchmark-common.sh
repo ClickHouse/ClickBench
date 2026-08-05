@@ -348,7 +348,7 @@ bench_concurrent_qps() {
 
     # Read the same query file that bench_run_query consumed.
     local queries=() q
-    while IFS= read -r q; do
+    while IFS= read -r q || [ -n "$q" ]; do
         [ -z "$q" ] && continue
         queries+=("$q")
     done < "$BENCH_QUERIES_FILE"
@@ -476,7 +476,7 @@ bench_main() {
 
     : > result.csv
     local query_num=1
-    while IFS= read -r query; do
+    while IFS= read -r query || [ -n "$query" ]; do
         # Skip empty lines.
         [ -z "$query" ] && continue
         bench_run_query "$query" "$query_num"
