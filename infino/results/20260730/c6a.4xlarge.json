@@ -6,7 +6,7 @@
       "proprietary": "no",
       "hardware": "cpu",
       "tuned": "no",
-      "tags": ["Rust","column-oriented","Parquet","search"],
+      "tags": ["Rust","column-oriented","search"],
       "load_time": 1136,
       "data_size": 10722245566,
       "concurrent_qps": null,
