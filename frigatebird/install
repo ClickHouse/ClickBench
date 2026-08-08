@@ -1,0 +1,29 @@
+#!/bin/bash
+set -e
+
+export HOME=${HOME:=~}
+
+# Rust toolchain (frigatebird requires edition 2024 — Rust >= 1.85).
+if ! command -v cargo >/dev/null 2>&1; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+fi
+# shellcheck disable=SC1091
+source "$HOME/.cargo/env"
+
+# pyarrow is used by ./load to stream hits.parquet into batched INSERT
+# statements (Frigatebird only accepts INSERT ... VALUES — no parquet
+# or CSV import).
+sudo apt-get update -y
+sudo apt-get install -y python3-pip git
+pip3 install --quiet --break-system-packages pyarrow
+
+# Clone and build frigatebird. We keep the source tree under ./frigatebird-src
+# so the build is idempotent across re-runs of install.
+if [ ! -d frigatebird-src ]; then
+    git clone --depth 1 https://github.com/Frigatebird-db/frigatebird.git frigatebird-src
+fi
+cd frigatebird-src
+cargo build --release --bin frigatebird
+cd ..
+
+sudo ln -sf "$PWD/frigatebird-src/target/release/frigatebird" /usr/local/bin/frigatebird

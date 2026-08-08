@@ -1,0 +1,11 @@
+{
+  "system": "Frigatebird",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "embedded"
+  ]
+}
