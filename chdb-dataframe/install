@@ -2,11 +2,37 @@
 set -e
 
 sudo apt-get update -y
-sudo apt-get install -y python3-pip python3-venv
+sudo apt-get install -y python3-pip python3-venv unzip
 
 if [ ! -d myenv ]; then
     python3 -m venv myenv
 fi
 # shellcheck disable=SC1091
 source myenv/bin/activate
-pip install --quiet pandas pyarrow chdb fastapi uvicorn
+
+# Everything except chdb still comes from PyPI.
+pip install --quiet pandas pyarrow fastapi uvicorn
+
+# chdb: install a specific chdb-core CI build instead of the PyPI `chdb`
+# release, to benchmark an unreleased build. The artifact is
+# chdb-io/chdb-core's linux-x86_64 build, mirrored by nightly.link so the
+# benchmark machine can fetch it without a GitHub token. It ships a
+# cp39-abi3 wheel that imports as `chdb` (server.py is unchanged), next to
+# libchdb tarballs and debug info we don't need.
+CHDB_ARTIFACT_URL="${CHDB_ARTIFACT_URL:-https://nightly.link/chdb-io/chdb-core/actions/artifacts/8990204903.zip}"
+rm -rf chdb-artifact chdb-artifact.zip
+curl -fSL --retry 3 -o chdb-artifact.zip "$CHDB_ARTIFACT_URL"
+unzip -q -o chdb-artifact.zip 'dist/*.whl' -d chdb-artifact
+
+# The full wheel, not chdb_core_lite.
+wheel=$(ls chdb-artifact/dist/chdb_core-*.whl 2>/dev/null | grep -v _lite | head -n1)
+if [ -z "$wheel" ]; then
+    echo "install: no chdb_core wheel found in artifact:" >&2
+    ls -la chdb-artifact/dist/ >&2 || true
+    exit 1
+fi
+echo "install: installing $wheel"
+pip install --quiet "$wheel"
+
+# Fail at install (not query) time if the wheel is broken or lacks chdb.
+python3 -c "import chdb; print('chdb', chdb.__version__)"
