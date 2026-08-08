@@ -7,7 +7,7 @@
     "hardware": "cpu",
     "tuned": "no",
     "comment":"",
-    "tags": ["column-oriented","DuckDB derivative", "PostgreSQL compatible", "managed"],
+    "tags": ["column-oriented","DuckDB derivative", "PostgreSQL compatible", "managed", "lukewarm-cold-run"],
     "load_time": 0,
     "data_size": 14779976446,
 

@@ -12,7 +12,8 @@
         "column-oriented",
         "PostgreSQL compatible",
         "managed",
-        "historical"
+        "historical",
+        "lukewarm-cold-run"
     ],
     "load_time": 13711,
     "data_size": 135469176422,

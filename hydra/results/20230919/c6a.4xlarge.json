@@ -6,7 +6,8 @@
     "comment": "",
     "tags": [
         "PostgreSQL compatible",
-        "column-oriented"
+        "column-oriented",
+        "lukewarm-cold-run"
     ],
     "load_time": 1222,
     "data_size": 18995669982,
