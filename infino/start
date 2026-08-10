@@ -4,6 +4,9 @@
 # driver's ./check loop finds a live server.
 set -e
 
+# Same tuning as the load (cache dir + budget); benchmark.sh sources this too.
+. "$(dirname "$0")/config.sh"
+
 BIN=./bench/target/release/clickbench-infino
 
 rm -f infino.sock
