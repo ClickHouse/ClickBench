@@ -19,16 +19,17 @@ pip install --quiet pandas pyarrow fastapi uvicorn
 # benchmark machine can fetch it without a GitHub token. It ships a
 # cp39-abi3 wheel that imports as `chdb` (server.py is unchanged), next to
 # libchdb tarballs and debug info we don't need.
-CHDB_ARTIFACT_URL="${CHDB_ARTIFACT_URL:-https://nightly.link/chdb-io/chdb-core/actions/artifacts/8990204903.zip}"
+CHDB_ARTIFACT_URL="${CHDB_ARTIFACT_URL:-https://nightly.link/chdb-io/chdb-core/actions/runs/31350619096/chdb-artifacts-linux-x86_64.zip}"
 rm -rf chdb-artifact chdb-artifact.zip
 curl -fSL --retry 3 -o chdb-artifact.zip "$CHDB_ARTIFACT_URL"
-unzip -q -o chdb-artifact.zip 'dist/*.whl' -d chdb-artifact
+# Flatten (-j): wheels sit at the zip root or under dist/ depending on the build.
+unzip -q -o -j chdb-artifact.zip '*.whl' -d chdb-artifact
 
 # The full wheel, not chdb_core_lite.
-wheel=$(ls chdb-artifact/dist/chdb_core-*.whl 2>/dev/null | grep -v _lite | head -n1)
+wheel=$(ls chdb-artifact/chdb_core-*.whl 2>/dev/null | grep -v _lite | head -n1)
 if [ -z "$wheel" ]; then
     echo "install: no chdb_core wheel found in artifact:" >&2
-    ls -la chdb-artifact/dist/ >&2 || true
+    ls -la chdb-artifact/ >&2 || true
     exit 1
 fi
 echo "install: installing $wheel"
