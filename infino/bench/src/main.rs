@@ -36,7 +36,7 @@ use arrow_schema::{DataType, Field, Schema, SchemaRef};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 
 use infino::{
-    connect, connect_with, CompactionSettings, ConnectOptions, IndexSpec, OptimizeOptions,
+    connect_with, CompactionSettings, ConnectOptions, Consistency, IndexSpec, OptimizeOptions,
 };
 
 type R<T> = Result<T, Box<dyn Error>>;
@@ -52,35 +52,30 @@ fn sock_path() -> String {
 }
 
 fn open() -> R<infino::Connection> {
-    let mut opts = ConnectOptions::new();
-    let mut custom = false;
+    // Strong read consistency. infino 0.5 changed the default from strong to
+    // BoundedStaleness(1s). ClickBench needs exact results, so pin strong everywhere.
+    let mut opts = ConnectOptions::new().with_read_consistency(Consistency::Strong);
+
     for (k, v) in env::vars() {
         if let Some(key) = k.strip_prefix("INFINO_STORAGE_") {
             opts = opts.with_storage_option(key.to_lowercase(), v);
-            custom = true;
         }
     }
     if let Ok(dir) = env::var("INFINO_CACHE_DIR") {
         opts = opts.with_cache_dir(dir);
-        custom = true;
     }
 
-    // Raise the disk-cache budget above the 10 GiB default so a large corpus
-    // (e.g. 100M rows, tens of GB of superfiles) fits on a big disk instead of
+    // Raise the disk-cache budget above the default so a large corpus (e.g.
+    // 100M rows, tens of GB of superfiles) fits on a big disk instead of
     // thrashing / falling back to range-only reads. Bytes.
     if let Some(b) = env::var("INFINO_CACHE_BUDGET")
         .ok()
         .and_then(|s| s.parse::<u64>().ok())
     {
         opts = opts.with_cache_budget_bytes(b);
-        custom = true;
     }
 
-    Ok(if custom {
-        connect_with(uri(), opts)?
-    } else {
-        connect(uri())?
-    })
+    Ok(connect_with(uri(), opts)?)
 }
 
 /// Target arrow type for a source parquet field. infino queries its own table
@@ -227,14 +222,17 @@ fn serve() -> R<()> {
     Ok(())
 }
 
-/// Handle one client: read the SQL, run it, write back one line
-///   `OK <rows> <seconds>`   on success
-///   `ERR <message>`         on failure
+/// Handle one client. The response is a header line followed by the result:
+///   `OK <rows> <seconds>\n<pretty-printed result table>`   on success
+///   `ERR <message>`                                        on failure
 /// The client sends the SQL then half-closes its write side; that EOF is what
 /// lets `read_to_string` return. The read timeout bounds a client that never
-/// does, so one stuck caller cannot wedge the single-threaded server. Timing
-/// wraps `query_sql` only — the socket read above and the write below are
-/// excluded, so the reported seconds are pure query latency.
+/// does, so one stuck caller cannot wedge the single-threaded server.
+///
+/// Timing wraps `query_sql` only: the result is formatted AFTER `elapsed()`, so
+/// the reported seconds stay pure query latency (unchanged from before). We
+/// return the actual rows, not just a count, because the playground shows this
+/// output to the user; a bounded preview keeps a huge result from blowing up.
 fn handle_conn(db: &infino::Connection, mut stream: UnixStream) -> R<()> {
     stream.set_read_timeout(Some(Duration::from_secs(300)))?;
     let mut sql = String::new();
@@ -246,43 +244,113 @@ fn handle_conn(db: &infino::Connection, mut stream: UnixStream) -> R<()> {
     let start = Instant::now();
     let resp = match db.query_sql(sql) {
         Ok(batches) => {
+            let secs = start.elapsed().as_secs_f64();
             let rows: usize = batches.iter().map(|b| b.num_rows()).sum();
-            format!("OK {rows} {:.6}\n", start.elapsed().as_secs_f64())
+
+            format!("OK {rows} {secs:.6}\n{}", format_preview(&batches))
         }
         Err(e) => format!("ERR {e}\n"),
     };
+
     stream.write_all(resp.as_bytes())?;
+
     Ok(())
 }
 
-/// Send `sql` to the running server and return its single-line response. The
-/// `shutdown(Write)` signals end-of-request (EOF) so the server's
-/// `read_to_string` returns; without it both sides would block forever.
+/// Byte cap on the result the server sends back, matching the playground's
+/// `CLICKBENCH_OUTPUT_LIMIT` (its in-VM agent truncates at the same bound).
+fn output_limit() -> usize {
+    env::var("CLICKBENCH_OUTPUT_LIMIT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(262_144)
+}
+
+/// Pretty-print a bounded preview of the result as a text table (the boxed
+/// style datafusion-cli / duckdb use). Caps both the number of rows rendered
+/// and the byte size, so formatting never touches more than a preview even if
+/// the query returns millions of rows.
+fn format_preview(batches: &[RecordBatch]) -> String {
+    const MAX_PREVIEW_ROWS: usize = 1000;
+    let mut preview = Vec::new();
+    let mut taken = 0;
+
+    for b in batches {
+        if taken >= MAX_PREVIEW_ROWS {
+            break;
+        }
+        let n = (MAX_PREVIEW_ROWS - taken).min(b.num_rows());
+        preview.push(b.slice(0, n));
+        taken += n;
+    }
+
+    let mut s = match arrow::util::pretty::pretty_format_batches(&preview) {
+        Ok(t) => t.to_string(),
+        Err(e) => format!("<could not format result: {e}>"),
+    };
+
+    let cap = output_limit();
+
+    if s.len() > cap {
+        let mut c = cap;
+        while c > 0 && !s.is_char_boundary(c) {
+            c -= 1;
+        }
+        s.truncate(c);
+        s.push_str("\n... (truncated)");
+    }
+    s
+}
+
+/// Send `sql` to the running server and return its full response: a header line
+/// (`OK <rows> <seconds>` or `ERR <message>`) followed, on success, by the
+/// result table. The `shutdown(Write)` signals end-of-request (EOF) so the
+/// server's `read_to_string` returns; without it both sides would block forever.
 fn ask(sql: &str) -> R<String> {
     let mut stream = UnixStream::connect(sock_path())?;
     stream.write_all(sql.as_bytes())?;
     stream.shutdown(Shutdown::Write)?;
+
     let mut resp = String::new();
     stream.read_to_string(&mut resp)?;
-    Ok(resp.trim().to_string())
+
+    // Do not trim: the response body is the result table, whose whitespace and
+    // newlines are meaningful. Only the header line is parsed by the caller.
+    Ok(resp)
 }
 
 /// Client: read one SQL statement from stdin, send it to the server, print the
-/// row count to stdout and the elapsed seconds to stderr (the ClickBench
-/// query-script contract: last stderr line is fractional seconds).
+/// result table to stdout and the elapsed seconds to stderr (the ClickBench
+/// query-script contract: stdout is the query result, the last stderr line is
+/// fractional seconds). The result on stdout is also what the playground shows
+/// the user.
 fn query() -> R<()> {
     let mut sql = String::new();
     std::io::stdin().read_to_string(&mut sql)?;
     let resp = ask(&sql)?;
-    if let Some(rest) = resp.strip_prefix("OK ") {
-        let mut it = rest.split_whitespace();
-        let rows: usize = it.next().unwrap_or("0").parse().unwrap_or(0);
-        let secs = it.next().unwrap_or("0");
-        println!("{rows} rows");
+    let (header, body) = resp.split_once('\n').unwrap_or((resp.as_str(), ""));
+
+    if let Some(rest) = header.strip_prefix("OK ") {
+        // header: "OK <rows> <seconds>". `rows` is the full count; the body
+        // table is a preview (up to MAX_PREVIEW_ROWS), so the footer shows the
+        // real total, which also signals when the table was row-capped.
+        let mut fields = rest.split_whitespace();
+        let rows = fields.next().unwrap_or("0");
+        let secs = fields.next().unwrap_or("0");
+        print!("{body}");
+        if !body.is_empty() && !body.ends_with('\n') {
+            println!();
+        }
+        println!("({rows} rows)");
         eprintln!("{secs}");
         Ok(())
     } else {
-        Err(resp.strip_prefix("ERR ").unwrap_or(&resp).to_string().into())
+        Err(header
+            .strip_prefix("ERR ")
+            .unwrap_or(header)
+            .trim()
+            .to_string()
+            .into())
     }
 }
 
@@ -306,9 +374,7 @@ fn main() {
         "serve" => serve(),
         "query" => query(),
         "check" => check(),
-        other => {
-            Err(format!("unknown subcommand {other:?} (want load|serve|query|check)").into())
-        }
+        other => Err(format!("unknown subcommand {other:?} (want load|serve|query|check)").into()),
     };
     if let Err(e) = result {
         eprintln!("{e}");

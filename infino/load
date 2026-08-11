@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Tuning (256 MB segments, RAM-sized cache) so the raw playground load matches
+# the benchmark; benchmark.sh sources this too.
+. "$(dirname "$0")/config.sh"
+
 # Idempotent: blow away any prior local catalog (remote backends are dropped
 # in-binary via drop_table).
 rm -rf data
