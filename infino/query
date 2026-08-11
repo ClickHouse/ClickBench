@@ -1,6 +1,7 @@
 #!/bin/bash
 # Client: reads a SQL query from stdin and sends it to the running infino
-# server (started by ./start). Stdout: row count. Stderr: query runtime in
-# fractional seconds on the last line (the ClickBench query-script contract).
+# server (started by ./start). Stdout: the query result as a text table (also
+# what the playground shows the user). Stderr: query runtime in fractional
+# seconds on the last line (the ClickBench query-script contract).
 set -e
 exec ./bench/target/release/clickbench-infino query

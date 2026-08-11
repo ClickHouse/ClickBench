@@ -25,10 +25,12 @@ queries, so `tuned=no`.
 ./install        # installs rustup if absent, then cargo build --release
 ```
 
-The release build is `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`
-(`bench/Cargo.toml`), a portable build with no `-C target-cpu`, matching the
-`datafusion` variant's recipe. Pinned to a published crate version
-(`infino = "0.1.10"`) so the result is reproducible from crates.io alone.
+The release build is portable (no `-C target-cpu`), pinned to a published crate
+version (`infino = "0.5.3"`) so the result is reproducible from crates.io alone.
+LTO is sized to the machine by `install`: fat LTO + `codegen-units = 1` at
+>= 12 GiB RAM (its single-pass link peaks ~7.6 GB), thin LTO below so the small
+VMs still build. Reads use strong consistency, so a query issued right after
+load sees every ingested row.
 
 ## Run (automated ClickBench flow)
 
@@ -45,7 +47,7 @@ seq 0 10 | xargs -P11 -I{} wget -q --continue \
 
 INFINO_SRC="hits_*.parquet" INFINO_MAX_ROWS=10000000 ./load   # ingest once
 ./start                                                       # launch the server
-printf '%s\n' "SELECT COUNT(*) FROM hits" | ./query           # row count + seconds
+printf '%s\n' "SELECT COUNT(*) FROM hits" | ./query           # result table + seconds
 ./stop                                                        # shut the server down
 ```
 
@@ -54,9 +56,11 @@ printf '%s\n' "SELECT COUNT(*) FROM hits" | ./query           # row count + seco
 `serve` opens the table once and answers one query per connection on
 `INFINO_SOCK` (default `./infino.sock`). Timing wraps `query_sql` only, so the
 socket round-trip is never counted. `./query` sends stdin to the server and
-prints the row count to stdout and the elapsed seconds to stderr (the
-ClickBench query-script contract). `./check` pings the server so the driver can
-detect it coming up and going down.
+prints the query result as a text table to stdout (a bounded preview: up to
+1000 rows and `CLICKBENCH_OUTPUT_LIMIT` bytes, so a huge result cannot blow up)
+and the elapsed seconds to stderr (the ClickBench query-script contract). The
+result on stdout is also what the online playground shows the user. `./check`
+pings the server so the driver can detect it coming up and going down.
 
 ## Environment
 
