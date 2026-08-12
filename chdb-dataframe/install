@@ -19,7 +19,7 @@ pip install --quiet pandas pyarrow fastapi uvicorn
 # benchmark machine can fetch it without a GitHub token. It ships a
 # cp39-abi3 wheel that imports as `chdb` (server.py is unchanged), next to
 # libchdb tarballs and debug info we don't need.
-CHDB_ARTIFACT_URL="${CHDB_ARTIFACT_URL:-https://nightly.link/chdb-io/chdb-core/actions/runs/31375897647/chdb-artifacts-linux-x86_64.zip}"
+CHDB_ARTIFACT_URL="${CHDB_ARTIFACT_URL:-https://nightly.link/chdb-io/chdb-core/actions/runs/31572981058/chdb-artifacts-linux-x86_64.zip}"
 rm -rf chdb-artifact chdb-artifact.zip
 curl -fSL --retry 3 -o chdb-artifact.zip "$CHDB_ARTIFACT_URL"
 # Flatten (-j): wheels sit at the zip root or under dist/ depending on the build.
