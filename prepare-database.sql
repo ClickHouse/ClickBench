@@ -53,7 +53,8 @@ WITH
     match(content, 'Load time:\s*(?:COPY \d+\n)?(\d+)') ? arraySum(x -> toFloat64(x), extractAll(content, 'Load time:\s*(?:COPY \d+\n)?(\d+)')) : NULL AS load_time,
     match(content, 'Data size: *(\d+)') ? arraySum(x -> toUInt64(x), extractAll(content, 'Data size: *(\d+)')) : NULL AS data_size,
 
-    extractAllGroups(content, '\n *\[([\d\.]+|null),\s*([\d\.]+|null),\s*([\d\.]+|null)\]') AS runtimes,
+    extractAll(content, '\n *(\[(?:[\d\.]+|null)(?:,\s*(?:[\d\.]+|null)){2,}\])') AS runtime_rows,
+    arrayMap(x -> extractAll(x, '[\d\.]+|null'), runtime_rows) AS runtimes,
     '[\n' || arrayStringConcat(arrayMap(x -> '        [' || arrayStringConcat(arrayMap(v -> v == 'null' ? v : round(v::Float64, 3)::String, x), ', ') || ']', runtimes), ',\n') || '\n]' AS runtimes_formatted,
 
     -- Concurrent QPS test (lib/benchmark-common.sh bench_concurrent_qps).
@@ -70,7 +71,9 @@ WITH
     -- 'ClickBench PR: <number>' that may occur later in untrusted bench output.
     toUInt32OrZero(extract(content, 'ClickBench PR: (\d*)')) AS clickbench_pr,
 
-    load_time IS NOT NULL AND length(runtimes) = 43 AND data_size >= 5000000000
+    load_time IS NOT NULL AND length(runtimes) = 43
+        AND arrayAll(x -> length(x) = length(runtimes[1]), runtimes)
+        AND data_size >= 5000000000
         AND arrayExists(x -> arrayExists(y -> toFloat64OrZero(y) > 0.1, x), runtimes) AS good
 
 SELECT time, system, machine, system_name, proprietary, tuned, tags, total_time, disk_space_diff, load_time, data_size, length(runtimes) AS num_results, runtimes, runtimes_formatted,

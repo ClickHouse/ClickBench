@@ -216,7 +216,7 @@ bench_load() {
     fi
 }
 
-# Run a single query script and emit a single JSON-array `[t1,t2,t3],` line.
+# Run a single query script and emit one JSON array containing BENCH_TRIES timings.
 # Per-try timing is also appended to result.csv as `<num>,<try>,<seconds>`.
 bench_run_query() {
     local query="$1"
@@ -299,7 +299,7 @@ bench_run_query() {
         echo "${query_num},${i},${timing}" >> result.csv
     done
 
-    # Emit "[t1,t2,t3]," for compatibility with the existing log format.
+    # Emit one JSON-array line for compatibility with the existing log format.
     local out="["
     local j
     for j in "${!results[@]}"; do

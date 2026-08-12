@@ -2,6 +2,9 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-08-12
+Allow result rows to contain more than three query repetitions. The first run remains the cold measurement, and the minimum of all subsequent successful runs is used as the hot measurement. Existing three-run results and the default of three runs are unchanged.
+
 ### 2026-07-22
 Introducing [ClickBench Playground](https://benchmark.clickhouse.com/playground/), which allows you to run arbitrary SQL queries on 110+ databases using a pre-loaded ClickBench dataset.
 
