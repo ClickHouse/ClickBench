@@ -1,0 +1,43 @@
+#!/bin/bash
+set -e -o pipefail
+
+# Round 4 of the A/B for https://github.com/ClickHouse/ClickHouse/issues/114640:
+# straddle the uniqExact two-level copy-on-write cluster inside the guilty
+# master window 06-29..07-11 (Q10/Q11/Q24/Q26 flipped there in round 3).
+# X3: master @ 6a27522419b (2026-07-07, has #108928 AND #109389).
+SHA=6a27522419b52820f04900d9fa5ff4b006acd433
+
+if [ ! -x /usr/bin/clickhouse ]; then
+    curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors -o clickhouse \
+        "https://clickhouse-builds.s3.amazonaws.com/REFs/master/${SHA}/build_amd_release/clickhouse"
+    chmod +x clickhouse
+    sudo ./clickhouse install --noninteractive
+fi
+
+# Force synchronous startup loading so the cold timer doesn't catch
+# work that should have been amortized into ./start.
+#
+# Two independent layers of laziness contribute to the cold-query floor:
+#
+# 1. async_load_databases (server-level): with the default 1, the server
+#    binds its listen port and answers SELECT 1 before user databases
+#    have finished loading. ./check passes, then the first query stalls
+#    waiting for the part loader.
+#
+# 2. primary_key_lazy_load and columns_and_secondary_indices_sizes_lazy_calculation
+#    (MergeTree-level): even after parts are loaded, the in-memory
+#    primary key and the per-column .size streams are populated lazily
+#    on first query. With ~25 parts × ~80 columns × multiple metadata
+#    files per column that's >1.8k file opens on the first query path,
+#    contributing several hundred ms even on local NVMe.
+#
+# Both are eager-load toggles, not caching shortcuts: the same I/O
+# happens either way, just before query timing instead of during it.
+# Together they brought Q40 cold from ~3 s to ~1.5 s on c6a.4xlarge.
+sudo mkdir -p /etc/clickhouse-server/config.d
+sudo tee /etc/clickhouse-server/config.d/eager_load.yaml >/dev/null <<'EOF'
+async_load_databases: false
+merge_tree:
+  primary_key_lazy_load: 0
+  columns_and_secondary_indices_sizes_lazy_calculation: 0
+EOF
