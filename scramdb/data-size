@@ -1,0 +1,3 @@
+#!/bin/bash
+set -eu
+sudo du -sb --exclude=scramvm_cache ./db | cut -f1
