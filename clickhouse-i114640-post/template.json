@@ -1,0 +1,11 @@
+{
+  "system": "ClickHouse (i114640 master post-LIFO)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative"
+  ]
+}
