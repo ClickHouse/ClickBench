@@ -1,0 +1,11 @@
+{
+  "system": "ClickHouse (i114640 Z1 pre-107490)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative"
+  ]
+}
