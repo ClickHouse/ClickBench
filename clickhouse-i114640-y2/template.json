@@ -1,0 +1,11 @@
+{
+  "system": "ClickHouse (i114640 Y2 post-qcc-topn)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative"
+  ]
+}
