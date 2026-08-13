@@ -1,0 +1,11 @@
+{
+  "system": "ClickHouse (i114640 daily-master CDN)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative"
+  ]
+}
