@@ -1,0 +1,17 @@
+#!/bin/bash
+# Starts the Rayforce IPC server (see server.rfl for why the table is opened
+# once here rather than in every query process).
+#
+# stdin/stdout are not a terminal, so rayforce skips the REPL and runs only the
+# IPC poll loop. The listening socket accepts connections only after server.rfl
+# returns, which makes ./check a real readiness probe.
+set -e
+
+port="${RAYFORCE_PORT:-5000}"
+
+if pgrep -x rayforce >/dev/null 2>&1; then
+    exit 0
+fi
+
+nohup rayforce -p "$port" server.rfl >> server.log 2>&1 &
+echo $! > server.pid

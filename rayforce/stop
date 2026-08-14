@@ -1,0 +1,13 @@
+#!/bin/bash
+# Stops the Rayforce IPC server. The engine keeps its columns mmap'd, so the
+# process has to be gone before the driver's drop_caches can evict them.
+#
+# `pkill -x` matches the process name, not the command line: matching on
+# "rayforce -p <port>" with -f would also match any shell whose own command line
+# happens to contain that string.
+if [ -f server.pid ]; then
+    kill "$(cat server.pid)" 2>/dev/null || true
+    rm -f server.pid
+fi
+pkill -x rayforce 2>/dev/null || true
+exit 0

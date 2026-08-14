@@ -1,0 +1,42 @@
+; ClickBench `hits` schema for Rayforce.
+;
+; `load` feeds these two vectors to `.csv.splayed`, which streams
+; hits.csv straight into the on-disk splayed table without a header row
+; (an explicit name vector implies headerless input).
+;
+; Types follow ../clickhouse/create.sql: BIGINT -> I64, INTEGER -> I32,
+; SMALLINT -> I16, TIMESTAMP -> TIMESTAMP, Date -> DATE.  Every TEXT /
+; VARCHAR / CHAR column is loaded as SYM (dictionary-encoded) rather
+; than STR -- see README.md "Why every text column is SYM".
+
+(set hits-names [
+  WatchID JavaEnable Title GoodEvent EventTime EventDate CounterID ClientIP
+  RegionID UserID CounterClass OS UserAgent URL Referer IsRefresh
+  RefererCategoryID RefererRegionID URLCategoryID URLRegionID
+  ResolutionWidth ResolutionHeight ResolutionDepth FlashMajor FlashMinor
+  FlashMinor2 NetMajor NetMinor UserAgentMajor UserAgentMinor CookieEnable
+  JavascriptEnable IsMobile MobilePhone MobilePhoneModel Params IPNetworkID
+  TraficSourceID SearchEngineID SearchPhrase AdvEngineID IsArtifical
+  WindowClientWidth WindowClientHeight ClientTimeZone ClientEventTime
+  SilverlightVersion1 SilverlightVersion2 SilverlightVersion3
+  SilverlightVersion4 PageCharset CodeVersion IsLink IsDownload IsNotBounce
+  FUniqID OriginalURL HID IsOldCounter IsEvent IsParameter DontCountHits
+  WithHash HitColor LocalEventTime Age Sex Income Interests Robotness
+  RemoteIP WindowName OpenerName HistoryLength BrowserLanguage
+  BrowserCountry SocialNetwork SocialAction HTTPError SendTiming DNSTiming
+  ConnectTiming ResponseStartTiming ResponseEndTiming FetchTiming
+  SocialSourceNetworkID SocialSourcePage ParamPrice ParamOrderID
+  ParamCurrency ParamCurrencyID OpenstatServiceName OpenstatCampaignID
+  OpenstatAdID OpenstatSourceID UTMSource UTMMedium UTMCampaign UTMContent
+  UTMTerm FromTag HasGCLID RefererHash URLHash CLID
+])
+
+(set hits-types [
+  I64 I16 SYM I16 TIMESTAMP DATE I32 I32 I32 I64 I16 I16 I16 SYM SYM I16
+  I16 I32 I16 I32 I16 I16 I16 I16 I16 SYM I16 I16 I16 SYM I16 I16 I16 I16
+  SYM SYM I32 I16 I16 SYM I16 I16 I16 I16 I16 TIMESTAMP I16 I16 I32 I16 SYM
+  I32 I16 I16 I16 I64 SYM I32 I16 I16 I16 I16 I16 SYM TIMESTAMP I16 I16 I16
+  I16 I16 I32 I32 I32 I16 SYM SYM SYM SYM I16 I32 I32 I32 I32 I32 I32 I16
+  SYM I64 SYM SYM I16 SYM SYM SYM SYM SYM SYM SYM SYM SYM SYM I16 I64 I64
+  I32
+])
