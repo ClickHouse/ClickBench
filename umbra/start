@@ -15,4 +15,4 @@ sudo docker run -d --name umbradb \
     --ulimit nofile=1048576:1048576 \
     --ulimit memlock=-1:-1 \
     -e ASYNCIO=0 \
-    umbradb/umbra:latest >/dev/null
+    umbradb/umbra:26.08 >/dev/null
