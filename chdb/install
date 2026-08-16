@@ -35,6 +35,6 @@ PY
 if [ -n "$RELEASE_WHEEL_URL" ]; then
     RELEASE_WHEEL="$(basename "$RELEASE_WHEEL_URL")"
     curl -fSL --retry 3 -o "$RELEASE_WHEEL" "$RELEASE_WHEEL_URL"
-    pip uninstall --quiet -y chdb chdb-core || true
+    pip uninstall --quiet -y chdb-core || true
     pip install --quiet "./$RELEASE_WHEEL"
 fi
