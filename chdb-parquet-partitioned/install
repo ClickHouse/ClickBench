@@ -13,3 +13,50 @@ source myenv/bin/activate
 
 pip install --upgrade pip
 pip install psutil pyarrow chdb
+# chdb-core cannot cut PyPI releases frequently, but every GitHub release
+# (including release candidates) publishes the full wheel set as assets.
+# If the newest chdb-core release is newer than the package installed above,
+# install that wheel instead: always the newest publicly released build,
+# never a downgrade. If the check itself fails (network), keep the PyPI build.
+pip install --quiet packaging
+RELEASE_WHEEL_URL=$(python3 - <<'PY'
+import json, platform, urllib.request
+from importlib.metadata import version as distver
+from packaging.version import Version, InvalidVersion
+
+try:
+    installed = Version(distver("chdb"))
+except Exception:
+    installed = Version("0")
+
+best = None
+releases = json.load(urllib.request.urlopen(
+    "https://api.github.com/repos/chdb-io/chdb-core/releases?per_page=100", timeout=30))
+for release in releases:
+    if release.get("draft"):
+        continue
+    try:
+        v = Version(release.get("tag_name", "").lstrip("v"))
+    except InvalidVersion:
+        continue
+    if best is None or v > best[0]:
+        best = (v, release)
+
+if best and best[0] > installed:
+    arch = platform.machine()
+    for asset in best[1].get("assets", []):
+        name = asset["name"]
+        if (name.startswith("chdb_core-") and name.endswith(".whl")
+                and "_lite" not in name and "linux" in name and arch in name):
+            print(asset["browser_download_url"])
+            break
+PY
+) || true
+if [ -n "$RELEASE_WHEEL_URL" ]; then
+    echo "install: newer chdb-core release found, installing $RELEASE_WHEEL_URL"
+    RELEASE_WHEEL="$(basename "$RELEASE_WHEEL_URL")"
+    curl -fSL --retry 3 -o "$RELEASE_WHEEL" "$RELEASE_WHEEL_URL"
+    pip uninstall --quiet -y chdb chdb-core || true
+    pip install --quiet "./$RELEASE_WHEEL"
+fi
+python3 -c "import chdb; print('chdb version:', chdb.__version__)"
