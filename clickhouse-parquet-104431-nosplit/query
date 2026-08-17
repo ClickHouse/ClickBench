@@ -1,0 +1,20 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via clickhouse-local with the table
+# definition from create.sql prepended. Stdout: query result. Stderr: query
+# runtime in fractional seconds on the last line. Exit non-zero on error.
+#
+# Same binary as clickhouse-parquet-104431, but with the single-file Parquet
+# split switched off: no read is large enough to clear a 1 PB floor. The
+# decision itself still runs - the pull request computes the projected read
+# size, and therefore parses the footer, before comparing it against the floor
+# - so this directory holds the plan-time cost of the decision while removing
+# its effect, and the three directories decompose as
+#
+#   baseline -> nosplit   cost of making the split decision
+#   nosplit  -> 104431    effect of actually splitting
+set -e
+
+query=$(cat)
+./clickhouse local --time --format=Pretty \
+    --input_format_parquet_min_bytes_to_split=1000000000000000 \
+    --query="$(cat create.sql); ${query}"
