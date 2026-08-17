@@ -15,19 +15,8 @@ export BENCH_DURABLE=yes
 # oversubscribe it. Skip by default.
 export BENCH_CONCURRENT_DURATION="${BENCH_CONCURRENT_DURATION:-0}"
 
-# Disk cache lives beside the data so warm tries read cached column chunks.
-export INFINO_CACHE_DIR="${INFINO_CACHE_DIR:-./cache}"
-
-# Superfile segment size: many mid-size segments let the scan parallelise
-# across all cores. 256 MB fits a 16-core box on up.
-export INFINO_TARGET_SF_MB="${INFINO_TARGET_SF_MB:-256}"
-
-# Disk-cache budget sized to the machine so the whole dataset stays resident
-# (the 10 GiB default range-reads a >10 GiB dataset). ~75% of RAM: portable
-# across machines, overridable. Memory sizing, not per-query tuning.
-if [ -z "${INFINO_CACHE_BUDGET:-}" ] && [ -r /proc/meminfo ]; then
-  ram_kb=$(awk '/^MemTotal:/{print $2}' /proc/meminfo)
-  export INFINO_CACHE_BUDGET=$(( ram_kb * 1024 * 3 / 4 ))
-fi
+# infino tuning (cache dir + budget, superfile segment size). Shared with the
+# raw load/start scripts so the playground gets the same config.
+. "$(dirname "$0")/config.sh"
 
 exec ../lib/benchmark-common.sh
