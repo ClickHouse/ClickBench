@@ -1,0 +1,3 @@
+#!/bin/bash
+# clickhouse-local is invoked per-query — no daemon to stop.
+exit 0

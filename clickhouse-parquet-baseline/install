@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e -o pipefail
+
+# The A/B baseline for clickhouse-parquet-104431: a pinned RelWithDebInfo
+# build of master, taken from the commit that ClickHouse CI merged the pull
+# request into.
+#
+# ClickHouse CI built https://github.com/ClickHouse/ClickHouse/pull/104431 as
+# "Merge 07303b95... into 2a539919...". Master CI skips Build (amd_release),
+# so 2a539919 has no x86-64 release build; its parent
+# aec8b1d56234cdf035fcc0fc65afe31a9a0f224d has both, and differs from
+# 2a539919 only in test files - no source that goes into the binary.
+
+BUILD="https://clickhouse-builds.s3.amazonaws.com/REFs/master/aec8b1d56234cdf035fcc0fc65afe31a9a0f224d"
+
+case "$(uname -m)" in
+    x86_64)  url="${BUILD}/build_amd_release/clickhouse";;
+    aarch64) url="${BUILD}/build_arm_release/clickhouse";;
+    *)       echo "No pinned build for $(uname -m)" >&2; exit 1;;
+esac
+
+if [ ! -x ./clickhouse ]; then
+    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors -o clickhouse "$url"
+    chmod +x clickhouse
+fi
+
+# Record in the log which binary is actually being measured.
+./clickhouse local --query "
+    SELECT 'Binary: ' || arrayStringConcat(groupArray(name || '=' || value), ' ')
+    FROM system.build_options
+    WHERE name IN ('VERSION_DESCRIBE', 'GIT_HASH', 'BUILD_TYPE')"

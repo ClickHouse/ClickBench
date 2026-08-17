@@ -1,0 +1,13 @@
+{
+  "system": "ClickHouse (Parquet, single) master baseline",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "embedded",
+    "stateless",
+    "ClickHouse derivative"
+  ]
+}

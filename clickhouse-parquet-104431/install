@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e -o pipefail
+
+# Same as clickhouse-parquet, except that the binary is not the latest release
+# but a pinned RelWithDebInfo build from ClickHouse CI, so that this directory
+# measures one specific pull request:
+#
+#   https://github.com/ClickHouse/ClickHouse/pull/104431
+#   "Parallelize reads from a single Parquet file in StorageFile, again"
+#
+# head 07303b95365362daace76759e4c51e39efefd25a, which CI built as the merge
+# commit e350489c261768cbc0679b720e24ee0d97d9290c
+# ("Merge 07303b95... into aec8b1d5..." modulo test-only commits).
+#
+# clickhouse-parquet-baseline pins the corresponding master build, so the two
+# directories differ only by the pull request.
+
+BUILD="https://clickhouse-builds.s3.amazonaws.com/PRs/104431/07303b95365362daace76759e4c51e39efefd25a"
+
+case "$(uname -m)" in
+    x86_64)  url="${BUILD}/build_amd_release/clickhouse";;
+    aarch64) url="${BUILD}/build_arm_release/clickhouse";;
+    *)       echo "No pinned build for $(uname -m)" >&2; exit 1;;
+esac
+
+if [ ! -x ./clickhouse ]; then
+    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors -o clickhouse "$url"
+    chmod +x clickhouse
+fi
+
+# Record in the log which binary is actually being measured.
+./clickhouse local --query "
+    SELECT 'Binary: ' || arrayStringConcat(groupArray(name || '=' || value), ' ')
+    FROM system.build_options
+    WHERE name IN ('VERSION_DESCRIBE', 'GIT_HASH', 'BUILD_TYPE')"

@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+# clickhouse-local with File(Parquet) engine reads the parquet file in place,
+# so there's no separate ingest step. The "load" is implicit — just keep the
+# downloaded hits.parquet in this directory.
+sync
