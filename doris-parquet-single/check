@@ -2,8 +2,8 @@
 set -e
 
 # Print state that is otherwise invisible in the benchmark log (the harness
-# shows only the last failing ./check stderr): the FE's view of the BE and
-# the BE's own startup log.
+# shows only the last failing ./check stderr): the FE's view of the BE, the
+# daemon launchers' own output (captured by ./start), and the BE's logs.
 diagnose() {
     mysql -h127.0.0.1 -P9030 -uroot -e 'SHOW BACKENDS\G' 2>/dev/null \
         | grep -E 'Alive|ErrMsg|Version|LastHeartbeat|HeartbeatFailureCounter' >&2 || true
@@ -12,9 +12,18 @@ diagnose() {
     else
         echo "doris: BE process is NOT running" >&2
     fi
+    echo "--- start_be.sh output:" >&2
+    cat start_be.out >&2 2>/dev/null || true
     local doris_home
     doris_home=$(cat .doris_home 2>/dev/null) || return 0
-    tail -n 30 "$doris_home"/be/log/be.out 2>/dev/null >&2 || true
+    echo "--- be/log contents:" >&2
+    ls -la "$doris_home"/be/log/ >&2 2>/dev/null || true
+    echo "--- be.out tail:" >&2
+    tail -n 30 "$doris_home"/be/log/be.out >&2 2>/dev/null || true
+    echo "--- be.INFO tail:" >&2
+    tail -n 15 "$doris_home"/be/log/be.INFO >&2 2>/dev/null || true
+    echo "--- dmesg:" >&2
+    dmesg 2>/dev/null | grep -iE 'doris|segfault|oom|killed process' | tail -n 5 >&2 || true
 }
 
 # On Doris 4.x even `SELECT 1` is dispatched to a backend, so this fails

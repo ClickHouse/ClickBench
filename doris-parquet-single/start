@@ -22,9 +22,12 @@ fi
 ulimit -n 65535
 
 # Tolerate "already running" from either daemon: we may get here with the FE
-# up but the BE not alive yet.
-"$DORIS_HOME"/fe/bin/start_fe.sh --daemon || true
-"$DORIS_HOME"/be/bin/start_be.sh --daemon || true
+# up but the BE not alive yet. Capture the launchers' output — the harness
+# silences ./start entirely, and if start_be.sh refuses to launch (a failed
+# env check prints to its stderr and no be.out is ever created), this file
+# is the only evidence; ./check dumps it on failure.
+"$DORIS_HOME"/fe/bin/start_fe.sh --daemon > start_fe.out 2>&1 || true
+"$DORIS_HOME"/be/bin/start_be.sh --daemon > start_be.out 2>&1 || true
 
 # Wait for the FE to accept connections (up to 10 min). SHOW FRONTENDS is
 # FE-only metadata: on Doris 4.x, `SELECT 1` is dispatched to a backend and
