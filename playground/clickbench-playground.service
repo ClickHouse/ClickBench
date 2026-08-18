@@ -16,6 +16,27 @@ ExecStart=/usr/bin/python3 -m playground.server.main
 Restart=on-failure
 RestartSec=3
 
+# CPU + I/O priority. The playground competes with dozens of firecracker
+# guest processes eating whole vCPUs. Under load the async event loop
+# starves — /api/query response takes seconds to enqueue a restore,
+# the UI feels stuck. Raise the API server ahead of the guests so the
+# UI stays responsive:
+#   Nice=-10                     — CPU priority above default 0. Guests
+#                                  stay at 0, so the API always wins
+#                                  the scheduler when both are runnable.
+#                                  systemd applies this before dropping
+#                                  to User=ubuntu; RestrictRealtime=yes
+#                                  below still allows negative nice
+#                                  (nice is not real-time scheduling).
+#   IOSchedulingClass=best-effort
+#   IOSchedulingPriority=0       — highest best-effort I/O priority.
+#                                  Modern NVMe with mq-deadline/none
+#                                  mostly ignores ionice, but there's
+#                                  no downside on schedulers that do.
+Nice=-10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=0
+
 # Grant the playground process CAP_NET_BIND_SERVICE so it can bind
 # 443 as the unprivileged `ubuntu` user. We do NOT lock the
 # capability bounding set: the server uses `sudo` to invoke
