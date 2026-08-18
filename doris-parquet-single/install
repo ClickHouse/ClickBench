@@ -32,6 +32,14 @@ if [ ! -d "$DORIS_HOME" ]; then
     # Disable internal caches so cold runs are actually cold.
     printf "\ndisable_storage_page_cache = true\n"  >> "$DORIS_HOME"/be/conf/be.conf
     printf "\nsegment_cache_capacity = 0\n"         >> "$DORIS_HOME"/be/conf/be.conf
+
+    # Pin both daemons' self-detected address to loopback so the FE's saved
+    # BE address (ADD BACKEND '127.0.0.1:9050') matches what the BE reports
+    # in heartbeats. Without it the BE picks the instance's private IP and
+    # can stay Alive=false forever — same single-node pin the starrocks
+    # entry needs.
+    printf "\npriority_networks = 127.0.0.1/32\n"   >> "$DORIS_HOME"/be/conf/be.conf
+    printf "\npriority_networks = 127.0.0.1/32\n"   >> "$DORIS_HOME"/fe/conf/fe.conf
 fi
 
 # Install dependencies (idempotent — apt-get is fine to re-run).

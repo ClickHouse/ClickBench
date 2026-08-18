@@ -1,24 +1,35 @@
 #!/bin/bash
 set -e
 
-# FE up AND at least one BE alive: local() TVF queries need an alive backend,
-# so a bare FE `SELECT 1` would let the harness create the view / fire
-# queries before the BE has registered — the FE then answers
-# "Can not build local(): No available backend".
-mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null
+# Print state that is otherwise invisible in the benchmark log (the harness
+# shows only the last failing ./check stderr): the FE's view of the BE and
+# the BE's own startup log.
+diagnose() {
+    mysql -h127.0.0.1 -P9030 -uroot -e 'SHOW BACKENDS\G' 2>/dev/null \
+        | grep -E 'Alive|ErrMsg|Version|LastHeartbeat|HeartbeatFailureCounter' >&2 || true
+    if pgrep -f doris_be >/dev/null 2>&1; then
+        echo "doris: BE process is running" >&2
+    else
+        echo "doris: BE process is NOT running" >&2
+    fi
+    local doris_home
+    doris_home=$(cat .doris_home 2>/dev/null) || return 0
+    tail -n 30 "$doris_home"/be/log/be.out 2>/dev/null >&2 || true
+}
+
+# On Doris 4.x even `SELECT 1` is dispatched to a backend, so this fails
+# with "No backend available as scan node" until a BE is alive — which is
+# exactly the readiness this benchmark needs.
+if ! err=$(mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' 2>&1 >/dev/null); then
+    echo "doris: SELECT 1 failed: ${err}" >&2
+    diagnose
+    exit 1
+fi
 
 if ! mysql -h127.0.0.1 -P9030 -uroot -B -e 'SHOW BACKENDS' 2>/dev/null \
     | awk -F'\t' 'NR==1 { for (i = 1; i <= NF; i++) if ($i == "Alive") c = i; next }
                   c && tolower($c) == "true" { found = 1 } END { exit !found }'; then
-    # The harness prints the last failing ./check stderr on timeout, so dump
-    # what the FE thinks of the BE and the BE's own crash log here — the
-    # daemons' output is otherwise invisible in the benchmark log.
     echo "doris: FE is up but no BE is alive" >&2
-    mysql -h127.0.0.1 -P9030 -uroot -e 'SHOW BACKENDS\G' 2>/dev/null \
-        | grep -E 'Alive|ErrMsg|Version|LastHeartbeat' >&2 || true
-    DORIS_HOME=$(cat .doris_home 2>/dev/null) || true
-    if [ -n "$DORIS_HOME" ]; then
-        tail -n 30 "$DORIS_HOME"/be/log/be.out 2>/dev/null >&2 || true
-    fi
+    diagnose
     exit 1
 fi

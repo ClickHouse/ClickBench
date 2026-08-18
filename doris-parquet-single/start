@@ -26,9 +26,12 @@ ulimit -n 65535
 "$DORIS_HOME"/fe/bin/start_fe.sh --daemon || true
 "$DORIS_HOME"/be/bin/start_be.sh --daemon || true
 
-# Wait for the FE to accept connections (up to 10 min).
+# Wait for the FE to accept connections (up to 10 min). SHOW FRONTENDS is
+# FE-only metadata: on Doris 4.x, `SELECT 1` is dispatched to a backend and
+# fails until a BE is alive, which would stall this loop for its full
+# timeout before ADD BACKEND below ever runs.
 for _ in $(seq 1 300); do
-    mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null 2>&1 && break
+    mysql -h127.0.0.1 -P9030 -uroot -e 'SHOW FRONTENDS' >/dev/null 2>&1 && break
     sleep 2
 done
 
