@@ -10,6 +10,15 @@ mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null
 if ! mysql -h127.0.0.1 -P9030 -uroot -B -e 'SHOW BACKENDS' 2>/dev/null \
     | awk -F'\t' 'NR==1 { for (i = 1; i <= NF; i++) if ($i == "Alive") c = i; next }
                   c && tolower($c) == "true" { found = 1 } END { exit !found }'; then
+    # The harness prints the last failing ./check stderr on timeout, so dump
+    # what the FE thinks of the BE and the BE's own crash log here — the
+    # daemons' output is otherwise invisible in the benchmark log.
     echo "doris: FE is up but no BE is alive" >&2
+    mysql -h127.0.0.1 -P9030 -uroot -e 'SHOW BACKENDS\G' 2>/dev/null \
+        | grep -E 'Alive|ErrMsg|Version|LastHeartbeat' >&2 || true
+    DORIS_HOME=$(cat .doris_home 2>/dev/null) || true
+    if [ -n "$DORIS_HOME" ]; then
+        tail -n 30 "$DORIS_HOME"/be/log/be.out 2>/dev/null >&2 || true
+    fi
     exit 1
 fi
