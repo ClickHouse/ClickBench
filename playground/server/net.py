@@ -168,6 +168,14 @@ async def enable_internet(slot: int) -> None:
 # sync with the values in main.py.
 PROXY_HTTPS_PORT = 8443
 PROXY_HTTP_PORT = 8080
+# Port the host's dnsmasq listens on for VM DNS. Not :53 because
+# systemd-resolved already owns 127.0.0.53:53 on the host, and
+# dnsmasq's bind-dynamic still tries a wildcard fallback socket
+# that collides with it. Moving dnsmasq off :53 sidesteps the whole
+# fight. The iptables REDIRECT below rewrites the VM's UDP/53 to
+# this port on the host, so guests still think they're talking to
+# a normal :53 resolver.
+DNS_PROXY_PORT = 5353
 
 # /16 we hand TAP addresses out of — used to scope INPUT firewall rules.
 _INTERNAL_CIDR = f"{_BASE}.0.0/16"
@@ -186,17 +194,17 @@ async def setup_host_firewall() -> None:
     public internet. Same logic for the host's UDP/53 resolver.
 
     Per-protocol source allowlists:
-      TCP 8080 / 8443 (SNI proxy): internal CIDR + loopback.
-      UDP 53 (DNS):                internal CIDR + loopback.
-      TCP 53 (DNS):                loopback only — VMs must use UDP.
-                                   Big-payload DNS-over-TCP is a
-                                   classic exfiltration channel.
+      TCP 8080 / 8443 (SNI proxy):     internal CIDR + loopback.
+      UDP 5353 (dnsmasq for VM DNS):   internal CIDR + loopback.
+      TCP 53 (DNS):                    loopback only — VMs must use UDP.
+                                       Big-payload DNS-over-TCP is a
+                                       classic exfiltration channel.
     """
     # (proto, dport, allowed_sources)
     ports = (
         ("tcp", str(PROXY_HTTPS_PORT), (_INTERNAL_CIDR, "127.0.0.0/8")),
         ("tcp", str(PROXY_HTTP_PORT),  (_INTERNAL_CIDR, "127.0.0.0/8")),
-        ("udp", "53",                  (_INTERNAL_CIDR, "127.0.0.0/8")),
+        ("udp", str(DNS_PROXY_PORT),   (_INTERNAL_CIDR, "127.0.0.0/8")),
         # TCP/53 explicitly loopback-only: VMs are not allowed to use
         # DNS-over-TCP. enable_filtered_internet's FORWARD DROP already
         # covers the routed path; this closes the alternate path where
@@ -249,7 +257,7 @@ async def enable_filtered_internet(slot: int) -> None:
         ("-i", tap, "-p", "tcp", "--dport", "80",
          "-j", "REDIRECT", "--to-ports", str(PROXY_HTTP_PORT)),
         ("-i", tap, "-p", "udp", "--dport", "53",
-         "-j", "REDIRECT", "--to-ports", "53"),
+         "-j", "REDIRECT", "--to-ports", str(DNS_PROXY_PORT)),
     ):
         await _run("sudo", "iptables", "-t", "nat", "-A", "PREROUTING", *match)
 
