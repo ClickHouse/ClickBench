@@ -11,24 +11,15 @@ mkdir -p ./db
 chmod 777 ./db
 
 ram_kb=$(grep MemTotal /proc/meminfo | tr -dc 0-9)
-ram_mb=$(( ram_kb / 1024 ))
-ram_gb=$(( ram_mb / 1024 ))
+ram_gb=$(( ram_kb / 1024 / 1024 ))
 
 if [ "$ram_gb" -lt 16 ]; then
     echo "WARNING: ScramDB targets machines with at least 16 GB of RAM; this one has ${ram_gb} GB." >&2
     echo "WARNING: proceeding anyway, but this result is not representative of the product." >&2
 fi
 
-jit_mb=$(( ram_mb * 10 / 100 ))
-floor_mb=2048
-if [ "$floor_mb" -gt $(( ram_mb / 4 )) ]; then floor_mb=$(( ram_mb / 4 )); fi
-if [ "$jit_mb" -lt "$floor_mb" ]; then jit_mb=$floor_mb; fi
-if [ "$jit_mb" -gt 32768 ]; then jit_mb=32768; fi
-jit_disk_mb=$(( jit_mb * 4 ))
-if [ "$jit_disk_mb" -lt 4096 ]; then jit_disk_mb=4096; fi
-if [ "$jit_disk_mb" -gt 65536 ]; then jit_disk_mb=65536; fi
-echo "scramdb-tuned: ${ram_gb} GB RAM detected -> compiled-query cache ${jit_mb}MB memory / ${jit_disk_mb}MB disk"
-
+# The tuned configuration. The README lists every deviation from the product
+# default and its reason.
 cat > scramdb-config.toml <<EOF
 [general]
 jit_enabled = true
@@ -38,16 +29,17 @@ shutdown_jit_quiesce_timeout_secs = 10
 shutdown_drain_timeout_secs = 5
 
 [jit]
-compiled_cache_memory = "${jit_mb}MB"
-compiled_cache_disk = "${jit_disk_mb}MB"
+compiled_cache_memory = "256MB"
+compiled_cache_disk = "1024MB"
 
 [storage]
 prod_name = "tundra"
 shard_id = 0
 basedir = "/var/lib/scramdb"
-buffer_pool_percent = 60
+# 0 = auto: the share is derived from the io backend.
+buffer_pool_percent = 0
 buffer_pool_cap = "192GB"
-execution_memory_percent = 15
+execution_memory_percent = 25
 execution_memory_cap = "64GB"
 
 flush_threshold_rows = 65536
@@ -59,7 +51,7 @@ bloom_max_bytes = "16KB"
 working_set_percent = 85
 
 [storage.io]
-backend = "io_uring"
+backend = "buffered"
 
 [storage.wal.archive]
 enabled = false
@@ -97,4 +89,4 @@ enabled = false
 enabled = false
 EOF
 
-sudo docker pull "${SCRAMDB_IMAGE:-scramdb/scramdb:latest}"
+sudo docker pull "${SCRAMDB_IMAGE:-scramdb/scramdb:cb}"

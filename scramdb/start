@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-IMAGE="${SCRAMDB_IMAGE:-scramdb/scramdb:latest}"
+IMAGE="${SCRAMDB_IMAGE:-scramdb/scramdb:cb}"
 PORT="${PGPORT:-5432}"
 
 if sudo docker inspect scramdb >/dev/null 2>&1; then
