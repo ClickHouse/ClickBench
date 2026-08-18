@@ -8,6 +8,7 @@ if sudo docker inspect scramdb >/dev/null 2>&1; then
     sudo docker start scramdb
 else
     sudo docker run -d --name scramdb \
+        -e SCRAMDB_LOG=warn \
         --privileged \
         --cap-add=IPC_LOCK \
         --ulimit memlock=-1:-1 \
