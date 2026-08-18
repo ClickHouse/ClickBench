@@ -1,4 +1,15 @@
 #!/bin/bash
 set -e
 
+# FE up AND at least one BE alive: local() TVF queries need an alive backend,
+# so a bare FE `SELECT 1` would let the harness create the view / fire
+# queries before the BE has registered — the FE then answers
+# "Can not build local(): No available backend".
 mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null
+
+if ! mysql -h127.0.0.1 -P9030 -uroot -B -e 'SHOW BACKENDS' 2>/dev/null \
+    | awk -F'\t' 'NR==1 { for (i = 1; i <= NF; i++) if ($i == "Alive") c = i; next }
+                  c && tolower($c) == "true" { found = 1 } END { exit !found }'; then
+    echo "doris: FE is up but no BE is alive" >&2
+    exit 1
+fi

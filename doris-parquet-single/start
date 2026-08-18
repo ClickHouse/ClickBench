@@ -6,30 +6,44 @@ export DORIS_HOME
 export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-$(dpkg --print-architecture)/"
 export PATH=$JAVA_HOME/bin:$PATH
 
-if mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null 2>&1; then
+# `SHOW BACKENDS` reports Alive per BE; find the column by header name —
+# positions shift between Doris versions.
+backend_alive() {
+    mysql -h127.0.0.1 -P9030 -uroot -B -e 'SHOW BACKENDS' 2>/dev/null \
+        | awk -F'\t' 'NR==1 { for (i = 1; i <= NF; i++) if ($i == "Alive") c = i; next }
+                      c && tolower($c) == "true" { found = 1 } END { exit !found }'
+}
+
+# Idempotent: done only when the FE answers AND a BE is alive.
+if mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null 2>&1 && backend_alive; then
     exit 0
 fi
 
 ulimit -n 65535
 
-"$DORIS_HOME"/fe/bin/start_fe.sh --daemon
-"$DORIS_HOME"/be/bin/start_be.sh --daemon
+# Tolerate "already running" from either daemon: we may get here with the FE
+# up but the BE not alive yet.
+"$DORIS_HOME"/fe/bin/start_fe.sh --daemon || true
+"$DORIS_HOME"/be/bin/start_be.sh --daemon || true
 
+# Wait for the FE to accept connections (up to 10 min).
 for _ in $(seq 1 300); do
-    fe_version=$(mysql -h127.0.0.1 -P9030 -uroot -e 'show frontends' 2>/dev/null | cut -f16 | sed -n '2,$p')
-    if [ -n "$fe_version" ] && [ "$fe_version" != "NULL" ]; then
-        break
-    fi
+    mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null 2>&1 && break
     sleep 2
 done
 
 mysql -h127.0.0.1 -P9030 -uroot \
     -e "ALTER SYSTEM ADD BACKEND '127.0.0.1:9050'" 2>/dev/null || true
 
+# Wait for the BE to become ALIVE, not merely registered: an earlier version
+# waited for a non-empty SHOW BACKENDS column by position, which passes as
+# soon as the row exists — ./load then created the local() view against a
+# still-initializing BE and the FE answered
+# "Can not build local(): No available backend".
 for _ in $(seq 1 300); do
-    be_version=$(mysql -h127.0.0.1 -P9030 -uroot -e 'show backends' 2>/dev/null | cut -f22 | sed -n '2,$p')
-    if [ -n "$be_version" ]; then
-        break
-    fi
+    backend_alive && exit 0
     sleep 2
 done
+echo "doris BE did not become alive within 10 min" >&2
+mysql -h127.0.0.1 -P9030 -uroot -e 'SHOW BACKENDS' 2>&1 | tail -5 >&2 || true
+exit 1
