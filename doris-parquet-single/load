@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+ROOT=$(pwd)
+DORIS_HOME=$(cat .doris_home)
+export DORIS_HOME
+
+# The dataset must be visible to the BE process (the local() TVF reads files
+# relative to the BE working dir). benchmark.sh already downloaded
+# hits.parquet into this directory, so move it into the BE dir instead of
+# downloading a second copy.
+if [ -f "hits.parquet" ]; then
+    mv -f hits.parquet "$DORIS_HOME/be/"
+elif [ ! -f "$DORIS_HOME/be/hits.parquet" ]; then
+    "$ROOT/../lib/download-hits-parquet-single" "$DORIS_HOME/be"
+fi
+
+# Create the view that wraps a local() TVF over the parquet file. Idempotent
+# (CREATE OR REPLACE / IF NOT EXISTS).
+mysql -h127.0.0.1 -P9030 -uroot < "$ROOT/create.sql"
+
+# Pre-set parquet flags to match original benchmark.
+mysql -h127.0.0.1 -P9030 -uroot \
+    -e 'set global enable_parquet_filter_by_min_max=true; set global enable_parquet_lazy_materialization=true;'
+
+# Note: data files remain — for parquet-as-storage there's no separate copy,
+# the TVF reads them directly.
+sync
