@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+# The parquet file stays in this directory (downloaded by benchmark.sh via
+# lib/download-hits-parquet-single); the view reads it in place through the
+# FILES() table function, so there is no separate ingest step. The file://
+# protocol needs an absolute path, so substitute it at load time.
+sed "s|__DATA_DIR__|$PWD|" create.sql | mysql -h127.0.0.1 -P9030 -uroot
+
+sync
