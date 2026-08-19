@@ -26,7 +26,8 @@ if [ "$(free -g | awk '/^Mem:/{print $2}')" -lt 12 ]; then
     fi
 fi
 
+# gcc + make: tikv-jemalloc-sys compiles jemalloc's C sources at build time.
 sudo apt-get update -y
-sudo apt-get install -y gcc
+sudo apt-get install -y gcc make
 
 cargo build --release --locked --manifest-path hits-slatedb/Cargo.toml
