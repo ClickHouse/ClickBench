@@ -47,10 +47,13 @@ use datafusion::physical_plan::{
 use datafusion::prelude::{ParquetReadOptions, SessionContext};
 
 use slatedb::bytes::Bytes;
-use slatedb::config::{CompressionCodec, ScanOptions, Settings, WriteOptions};
+use slatedb::config::{CompressionCodec, ScanOptions, Settings};
 use slatedb::object_store::local::LocalFileSystem;
 use slatedb::object_store::ObjectStore;
 use slatedb::{Db, DbReader, SstBlockSize, WriteBatch};
+
+#[global_allocator]
+static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 // Row keys are 8-byte big-endian indexes, so they sort in row order and any
 // key starting with 0xff sorts after all of them (the dataset has far fewer
@@ -581,7 +584,7 @@ impl ExecutionPlan for SlateScanExec {
         let lo = (partition as u64) * chunk;
         let hi = ((partition as u64 + 1) * chunk).min(self.row_count);
         let db = self.db.clone();
-        let mut remaining = self.limit.unwrap_or(usize::MAX);
+        let limit = self.limit.unwrap_or(usize::MAX);
         let decoder = Decoder::new(self.tags.clone(), &self.projection, self.out_schema.clone());
 
         let batches = stream::once(async move {
@@ -598,8 +601,8 @@ impl ExecutionPlan for SlateScanExec {
                 None
             };
             Ok::<_, DataFusionError>(stream::try_unfold(
-                (iter, decoder),
-                move |(mut iter, mut decoder)| async move {
+                (iter, decoder, limit),
+                move |(mut iter, mut decoder, mut remaining)| async move {
                     let Some(it) = iter.as_mut() else {
                         return Ok(None);
                     };
@@ -616,7 +619,7 @@ impl ExecutionPlan for SlateScanExec {
                         Ok(None)
                     } else {
                         let batch = decoder.finish()?;
-                        Ok(Some((batch, (iter, decoder))))
+                        Ok(Some((batch, (iter, decoder, remaining))))
                     }
                 },
             ))
@@ -682,7 +685,6 @@ async fn load(parquet_path: &str, db_dir: &str) -> Result<()> {
         let tags = tags.clone();
         let counter = counter.clone();
         handles.push(tokio::spawn(async move {
-            let wopts = WriteOptions { await_durable: false, ..Default::default() };
             while let Some(batch) = s.next().await {
                 let batch = batch?;
                 let rows = encode_rows(&batch, &tags)?;
@@ -691,7 +693,9 @@ async fn load(parquet_path: &str, db_dir: &str) -> Result<()> {
                 for (i, row) in rows.iter().enumerate() {
                     wb.put(row_key(base + i as u64), row);
                 }
-                db.write_with_options(wb, &wopts).await?;
+                // Fire-and-forget (the returned WriteHandle is not awaited);
+                // durability comes from the final flush + close.
+                db.write(wb).await?;
             }
             Ok::<_, anyhow::Error>(())
         }));
@@ -704,8 +708,7 @@ async fn load(parquet_path: &str, db_dir: &str) -> Result<()> {
     let mut wb = WriteBatch::new();
     wb.put(META_COUNT, total.to_le_bytes());
     wb.put(META_SCHEMA, schema_txt.as_bytes());
-    db.write_with_options(wb, &WriteOptions { await_durable: false, ..Default::default() })
-        .await?;
+    db.write(wb).await?;
     db.flush().await?;
     db.close().await?;
     println!("Loaded {total} rows");

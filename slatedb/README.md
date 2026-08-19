@@ -36,6 +36,16 @@ Non-default settings, per the fine-tuning rules:
   end): the WAL would double the load I/O for no durability benefit since the
   load ends with a flush + clean close. Queries open the database with a
   read-only `DbReader`.
+- The harness binary uses jemalloc: with glibc malloc, the allocation churn of
+  the load path fragments the heap and RSS grows several GB beyond live data,
+  OOMing the smaller machines.
+
+SlateDB is pinned to v0.15.0 plus 17 commits (rev `d0c3d63`) because v0.15.0's
+embedded compactor intermittently panics during large bulk loads
+("compaction source view not found in L0") and takes the database down;
+the fix ([slatedb#2002]) is merged upstream but not yet in a crates.io release.
+
+[slatedb#2002]: https://github.com/slatedb/slatedb/pull/2002
 
 The concurrent-QPS test is skipped: each query forks a fresh full-machine
 process with no shared server (see issue #946).
