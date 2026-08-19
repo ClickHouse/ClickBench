@@ -1,0 +1,22 @@
+[package]
+name = "hits-slatedb"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# SlateDB is the system under test: an embedded LSM-tree key-value store on
+# top of an object store (the local filesystem here). `zstd` enables SST
+# block compression, `wal_disable` allows turning the WAL off for the bulk
+# load, `foyer` provides the default in-memory block cache.
+slatedb = { version = "0.15.0", default-features = false, features = ["zstd", "wal_disable", "foyer"] }
+# DataFusion provides the SQL frontend; all table data is scanned out of
+# SlateDB through a custom TableProvider.
+datafusion = "55"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+futures = "0.3"
+async-trait = "0.1"
+anyhow = "1"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
