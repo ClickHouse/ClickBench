@@ -51,4 +51,12 @@ sudo systemctl stop unattended-upgrades 2>/dev/null || true
 
 sudo sysctl -w vm.max_map_count=2000000
 
+# cloud-init adds a 16 GB swapfile to every benchmark instance (f236e7ba2,
+# 2026-05-09) for systems that load the dataset into RAM. Doris's
+# start_be.sh hard-refuses to launch while swap is active ("Disable swap
+# memory before starting be") — this is why no doris entry has produced
+# results since that date. Parquet-in-place needs no swap headroom, so
+# turn it off (persists until reboot; instances never reboot mid-run).
+sudo swapoff -a
+
 echo "$DORIS_HOME" > .doris_home
