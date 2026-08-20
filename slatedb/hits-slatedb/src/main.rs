@@ -46,8 +46,12 @@ use datafusion::physical_plan::{
 };
 use datafusion::prelude::{ParquetReadOptions, SessionContext};
 
+use slatedb::admin::Admin;
 use slatedb::bytes::Bytes;
-use slatedb::config::{CompressionCodec, ScanOptions, Settings};
+use slatedb::config::{
+    CompressionCodec, GarbageCollectorDirectoryOptions, GarbageCollectorOptions, ScanOptions,
+    Settings,
+};
 use slatedb::object_store::local::LocalFileSystem;
 use slatedb::object_store::ObjectStore;
 use slatedb::{Db, DbReader, SstBlockSize, WriteBatch};
@@ -711,7 +715,34 @@ async fn load(parquet_path: &str, db_dir: &str) -> Result<()> {
     db.write(wb).await?;
     db.flush().await?;
     db.close().await?;
+
+    // The background GC never deletes objects younger than 5 minutes, so a
+    // fast load would report several GB of compaction garbage in data-size.
+    // Run one immediate GC pass now that the database is closed.
+    gc(db_dir).await?;
+
     println!("Loaded {total} rows");
+    Ok(())
+}
+
+// Delete unreferenced SSTs/manifests left behind by compaction. Safe to run
+// with zero min-age because no other process has the database open; the WAL
+// fence directory keeps its default min-age since deleting fresh fence files
+// could un-fence a concurrent writer.
+async fn gc(db_dir: &str) -> Result<()> {
+    let admin = Admin::builder(DB_PATH, object_store(db_dir)?).build();
+    let eager = GarbageCollectorDirectoryOptions {
+        min_age: std::time::Duration::ZERO,
+        ..Default::default()
+    };
+    let gc_opts = GarbageCollectorOptions {
+        manifest_options: Some(eager),
+        wal_options: Some(eager),
+        compacted_options: Some(eager),
+        compactions_options: Some(eager),
+        ..Default::default()
+    };
+    admin.run_gc_once(gc_opts).await?;
     Ok(())
 }
 
@@ -817,6 +848,7 @@ async fn main() -> Result<()> {
         Some("queryp") if args.len() >= 3 => {
             query_parquet(&args[2], args.get(3).map(String::as_str)).await
         }
+        Some("gc") if args.len() == 3 => gc(&args[2]).await,
         _ => {
             eprintln!("usage: hits-slatedb load <hits.parquet> <db-dir>");
             eprintln!("       hits-slatedb query <db-dir> [create.sql]  (SQL on stdin)");
