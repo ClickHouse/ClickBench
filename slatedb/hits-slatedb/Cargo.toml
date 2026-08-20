@@ -16,7 +16,7 @@ slatedb = { git = "https://github.com/slatedb/slatedb.git", rev = "d0c3d635b6d5d
 # DataFusion provides the SQL frontend; all table data is scanned out of
 # SlateDB through a custom TableProvider.
 datafusion = "55"
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
 futures = "0.3"
 async-trait = "0.1"
 anyhow = "1"

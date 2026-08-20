@@ -39,6 +39,12 @@ Non-default settings, per the fine-tuning rules:
 - The harness binary uses jemalloc: with glibc malloc, the allocation churn of
   the load path fragments the heap and RSS grows several GB beyond live data,
   OOMing the smaller machines.
+- The load waits for the embedded compactor to drain its queue, deletes the
+  checkpoints left behind by compaction workers, and runs one GC pass before
+  exiting. Without this the database reports ~4x its live size: closing
+  mid-compaction pins the GC's low watermark, leftover checkpoints pin old
+  manifests and every SST they reference, and the GC never deletes objects
+  younger than 5 minutes.
 
 SlateDB is pinned to v0.15.0 plus 17 commits (rev `d0c3d63`) because v0.15.0's
 embedded compactor intermittently panics during large bulk loads

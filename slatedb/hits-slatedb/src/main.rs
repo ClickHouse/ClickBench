@@ -714,6 +714,14 @@ async fn load(parquet_path: &str, db_dir: &str) -> Result<()> {
     wb.put(META_SCHEMA, schema_txt.as_bytes());
     db.write(wb).await?;
     db.flush().await?;
+
+    // Keep the database open until the embedded compactor drains its queue.
+    // Closing with compactions still pending leaves the LSM un-merged (every
+    // scan pays for the extra sorted runs) and pins the garbage collector's
+    // low watermark at the oldest pending compaction, so the input SSTs of
+    // already-committed compactions could never be collected.
+    wait_for_compaction_quiesce(db_dir).await?;
+
     db.close().await?;
 
     // The background GC never deletes objects younger than 5 minutes, so a
@@ -725,12 +733,51 @@ async fn load(parquet_path: &str, db_dir: &str) -> Result<()> {
     Ok(())
 }
 
+// Poll the compactions state until nothing is submitted, scheduled, running,
+// or awaiting commit. Capped at 2 hours; on timeout the load proceeds with
+// whatever state the compactor reached.
+async fn wait_for_compaction_quiesce(db_dir: &str) -> Result<()> {
+    let admin = Admin::builder(DB_PATH, object_store(db_dir)?).build();
+    let mut quiet = 0;
+    for _ in 0..1440 {
+        // Compaction and CompactionStatus are not exported from the crate, so
+        // classify via the status Debug representation.
+        let active = match admin.read_compactions(None).await? {
+            Some(vc) => vc.recent_compactions().any(|c| {
+                matches!(
+                    format!("{:?}", c.status()).as_str(),
+                    "Submitted" | "Scheduled" | "Running" | "Compacted"
+                )
+            }),
+            None => false,
+        };
+        quiet = if active { 0 } else { quiet + 1 };
+        if quiet >= 2 {
+            return Ok(());
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+    }
+    eprintln!("warning: compaction did not quiesce within 2 hours");
+    Ok(())
+}
+
 // Delete unreferenced SSTs/manifests left behind by compaction. Safe to run
 // with zero min-age because no other process has the database open; the WAL
 // fence directory keeps its default min-age since deleting fresh fence files
 // could un-fence a concurrent writer.
 async fn gc(db_dir: &str) -> Result<()> {
     let admin = Admin::builder(DB_PATH, object_store(db_dir)?).build();
+
+    // Compaction workers leave checkpoints behind (74 after a full load),
+    // and checkpoints pin old manifests and every SST those reference, so
+    // the GC would keep ~2x the live bytes. The database is closed and this
+    // is the only process, so none of them are needed.
+    if let Some(m) = admin.read_manifest(None).await? {
+        for cp in m.checkpoints() {
+            admin.delete_checkpoint(cp.id).await?;
+        }
+    }
+
     let eager = GarbageCollectorDirectoryOptions {
         min_age: std::time::Duration::ZERO,
         ..Default::default()
@@ -849,6 +896,27 @@ async fn main() -> Result<()> {
             query_parquet(&args[2], args.get(3).map(String::as_str)).await
         }
         Some("gc") if args.len() == 3 => gc(&args[2]).await,
+        Some("state") if args.len() == 3 => {
+            let admin = Admin::builder(DB_PATH, object_store(&args[2])?).build();
+            match admin.read_compactions(None).await? {
+                Some(vc) => {
+                    for c in vc.recent_compactions() {
+                        println!("{:?}  start={}", c.status(), c.id().datetime().duration_since(std::time::UNIX_EPOCH)?.as_secs());
+                    }
+                }
+                None => println!("no compactions file"),
+            }
+            if let Some(m) = admin.read_manifest(None).await? {
+                let l0_bytes: u64 = m.l0().iter().map(|v| v.estimate_size()).sum();
+                let sr_bytes: u64 = m.compacted().iter().map(|sr| sr.estimate_size()).sum();
+                println!("manifest id={} l0={} ({} bytes)", m.id(), m.l0().len(), l0_bytes);
+                for sr in m.compacted() {
+                    println!("  run {}: {} ssts, {} bytes", sr.id, sr.sst_views().len(), sr.estimate_size());
+                }
+                println!("live total: {} bytes, checkpoints: {}", l0_bytes + sr_bytes, m.checkpoints().len());
+            }
+            Ok(())
+        }
         _ => {
             eprintln!("usage: hits-slatedb load <hits.parquet> <db-dir>");
             eprintln!("       hits-slatedb query <db-dir> [create.sql]  (SQL on stdin)");
