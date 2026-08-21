@@ -10,14 +10,19 @@ DF=arrow-datafusion/target/release/datafusion-cli
 
 query=$(cat)
 tmp=$(mktemp /tmp/datafusion.XXXXXX.sql)
-trap 'rm -f "$tmp"' EXIT
+err=$(mktemp /tmp/datafusion.XXXXXX.err)
+trap 'rm -f "$tmp" "$err"' EXIT
 printf '%s\n' "$query" > "$tmp"
 
-out=$("$DF" -f create.sql "$tmp" 2>&1) && status=0 || status=$?
+# datafusion-cli exits 0 even when a query errors: it prints to stderr and leaves
+# only create.sql's "Elapsed" on stdout, which the driver would mis-record as the
+# query time. Treat any stderr output (or a nonzero exit) as failure.
+out=$("$DF" -f create.sql "$tmp" 2>"$err") && status=0 || status=$?
 
-if [ "$status" -ne 0 ]; then
+if [ "$status" -ne 0 ] || [ -s "$err" ]; then
+    cat "$err" >&2
     printf '%s\n' "$out" >&2
-    exit "$status"
+    exit 1
 fi
 
 # Print everything that's not an "Elapsed" timing line as the result.
