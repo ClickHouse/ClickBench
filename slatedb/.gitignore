@@ -1,0 +1,3 @@
+hits-slatedb/target/
+db/
+rust-init.sh
