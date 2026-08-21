@@ -75,12 +75,12 @@ Tl;dr: *All Benchmarks Are ~~Bastards~~ Liars*.
 
 To add a new entry, copy-paste one of the existing directories and edit the files accordingly:
 
-- `benchmark.sh`: this is the main script which runs the benchmark on a fresh VM; Ubuntu 24.04 or newer should be used by default. For databases that can be installed locally, the script should be able to run in a fully automated manner so it can be used in the benchmark automation (cloud-init). It should output the results in the following format: - one or more lines `Load time: 1234` with the time in seconds; - a line `Data size: 1234567890` with the data size in bytes; the data size should include indexes and transaction logs if applicable; - 43 consecutive lines in the form of `[1.234, 5.678, 9.012],` for the runtimes of every query; - the output may include other lines with the logs, that are not used for the report. For managed databases, if the setup requires clicking in a UI, write a `README.md` instead.
+- `benchmark.sh`: this is the main script which runs the benchmark on a fresh VM; Ubuntu 24.04 or newer should be used by default. For databases that can be installed locally, the script should be able to run in a fully automated manner so it can be used in the benchmark automation (cloud-init). It should output the results in the following format: - one or more lines `Load time: 1234` with the time in seconds; - a line `Data size: 1234567890` with the data size in bytes; the data size should include indexes and transaction logs if applicable; - 43 consecutive JSON-array lines in the form of `[1.234, 5.678, 9.012],` for the runtimes of every query, with at least three values and the same number of values on every line; - the output may include other lines with the logs, that are not used for the report. For managed databases, if the setup requires clicking in a UI, write a `README.md` instead.
 - `check`, `data-size`, `install`, `load`, `query`, `start`, `stop`: These scripts perform sub-tasks during benchmarking, see `lib/benchmark-common.sh` for an overview.
 - `README.md`: contains comments and observations if needed. For managed databases, it can describe the setup procedure to be used instead of a shell script.
 - `create.sql`: a CREATE TABLE statement. If it's a NoSQL system, another file like `wtf.json` can be used instead.
 - `queries.sql`: contains 43 ClickBench queries to run;
-- `run.sh`: a loop that running the queries; every query is run three times, see section "Caching" below for details.
+- `run.sh`: a loop that runs the queries; every query is run three times by default, see section "Caching" below for details.
 - `results/`: put the .json files with the results for every hardware configuration into this directory, under a subdirectory named with the UTC date of the run (`results/YYYYMMDD/<machine>.json`). Each new run for an existing machine goes into a new dated subdirectory; older runs are kept for history. The website displays the latest dated copy of each `<system>/<machine>` pair. Please double-check that each file is valid JSON (e.g., no comma errors).
 
 To introduce a new result for an existing system for a different hardware configuration, add a new file to `results/<YYYYMMDD>/`.
@@ -152,10 +152,10 @@ If a system is of a "multidimensional OLAP" kind, and so is always or implicitly
 
 ### Caching
 
-Each of the 43 queries is run three times.
+Each of the 43 queries is run three times by default. The shared benchmark driver accepts `BENCH_TRIES` to record more repetitions.
 We distinguish two cases:
 
-1. Hot runs. This is the second and third run of each query. As the previous first run is supposed to populate all database and operating system caches, the two hot runs are expected to be the fastest runs overall.
+1. Hot runs. These are all runs after the first run of each query. As the first run is supposed to populate all database and operating system caches, the hot runs are expected to be the fastest runs overall.
 
 2. Cold runs. This is the first run of each query. There are two sub-cases.
 
@@ -219,7 +219,7 @@ Load time can be zero for stateless query engines like `clickhouse-local` or `Am
 
 If you select "Cold Run" or "Hot Run", the aggregation across the queries is performed in the following way:
 
-1. The first run for every query is considered a Cold Run. For the Hot Run, the smaller of the 2nd and 3rd runtime is used if both runs are successful, or null if some were unsuccessful.
+1. The first run for every query is considered a Cold Run. For the Hot Run, the smallest of all subsequent runtimes is used if every run is successful, or null if some were unsuccessful.
 
 2. For every query, find a system that demonstrated the best (fastest) query time and use it as a baseline.
 

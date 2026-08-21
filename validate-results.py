@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 EXPECTED_QUERIES = 43
-EXPECTED_RUNS = 3
+MINIMUM_RUNS = 3
 OUTLIER_SECONDS = 24 * 60 * 60
 DATE_DIR_RE = re.compile(r"^\d{8}$")
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -89,13 +89,25 @@ def validate_result_matrix(path, data, active, problems):
     if len(result) != EXPECTED_QUERIES:
         add(problems, severity, path, f"result must contain {EXPECTED_QUERIES} query rows, got {len(result)}")
 
+    expected_runs = None
     for query_index, row in enumerate(result, 1):
         if not isinstance(row, list):
             add(problems, severity, path, f"result row {query_index} must be an array")
             continue
 
-        if len(row) != EXPECTED_RUNS:
-            add(problems, severity, path, f"result row {query_index} must contain {EXPECTED_RUNS} timings, got {len(row)}")
+        if expected_runs is None:
+            expected_runs = len(row)
+        elif len(row) != expected_runs:
+            add(
+                problems,
+                severity,
+                path,
+                f"result rows must contain the same number of timings; "
+                f"row {query_index} has {len(row)}, expected {expected_runs}",
+            )
+
+        if len(row) < MINIMUM_RUNS:
+            add(problems, severity, path, f"result row {query_index} must contain at least {MINIMUM_RUNS} timings, got {len(row)}")
 
         for run_index, value in enumerate(row, 1):
             if value is None:
