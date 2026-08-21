@@ -1,0 +1,3 @@
+#!/bin/bash
+# frigatebird is embedded — no daemon to stop.
+exit 0
