@@ -1,0 +1,13 @@
+{
+  "system": "ScramDB",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "yes",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "PostgreSQL compatible",
+    "UTAP",
+    "JIT"
+  ]
+}

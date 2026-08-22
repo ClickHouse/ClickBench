@@ -1,0 +1,10 @@
+#!/bin/bash
+set -eu
+
+psql -v ON_ERROR_STOP=1 -f create.sql
+psql -v ON_ERROR_STOP=1 -c "COPY hits FROM '/bench/hits.csv' WITH (FORMAT CSV)"
+psql -v ON_ERROR_STOP=1 -c "CHECKPOINT"
+psql -v ON_ERROR_STOP=1 -c "ANALYZE hits"
+
+rm -f hits.csv
+sync

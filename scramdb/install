@@ -1,0 +1,70 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y postgresql-client docker.io bc
+
+./stop || true
+sudo docker rm -f scramdb 2>/dev/null || true
+sudo rm -rf ./db
+mkdir -p ./db
+chmod 777 ./db
+
+ram_kb=$(grep MemTotal /proc/meminfo | tr -dc 0-9)
+ram_gb=$(( ram_kb / 1024 / 1024 ))
+
+if [ "$ram_gb" -lt 16 ]; then
+    echo "WARNING: ScramDB targets machines with at least 16 GB of RAM; this one has ${ram_gb} GB." >&2
+    echo "WARNING: proceeding anyway, but this result is not representative of the product." >&2
+fi
+
+# Product defaults (tuned: no): this restates the config the image itself
+# ships at /etc/scramdb/config.toml, because mounting a file over that path
+# replaces it wholesale. No performance knob is changed. Deviations from the
+# shipped file: WAL archiving off (a benchmark box does no point-in-time
+# recovery, and archived segments would otherwise count into data_size), and
+# the UDF and GPU lanes off (nothing beyond the benchmark runs).
+cat > scramdb-config.toml <<EOF
+[general]
+jit_enabled = true
+metrics_port = 9090
+pg_address = "0.0.0.0:5432"
+shutdown_jit_quiesce_timeout_secs = 10
+
+[gpu]
+enabled = false
+
+[storage]
+prod_name = "tundra"
+shard_id = 0
+basedir = "/var/lib/scramdb"
+# 0 = auto for both shares: derived from the io backend and detected RAM.
+buffer_pool_percent = 0
+buffer_pool_cap = "192GB"
+execution_memory_percent = 0
+execution_memory_cap = "64GB"
+
+[storage.io]
+backend = "auto"
+
+[storage.cold_config]
+cold_enable = false
+writeback_frequency_secs = 0
+concurrent_requests = 0
+bucket_name = ""
+cloud_api = "GCP"
+base_path = ""
+
+[storage.memory]
+working_set_percent = 85
+
+[storage.wal.archive]
+# The shipped image enables this (PITR out of the box); off for the benchmark.
+enabled = false
+
+[udf]
+# Disabling the lane also disables package preinstall and daemon autostart.
+enabled = false
+EOF
+
+sudo docker pull "${SCRAMDB_IMAGE:-scramdb/scramdb:cb}"

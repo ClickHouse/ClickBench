@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eu
+
+IMAGE="${SCRAMDB_IMAGE:-scramdb/scramdb:cb}"
+PORT="${PGPORT:-5432}"
+
+if sudo docker inspect scramdb >/dev/null 2>&1; then
+    sudo docker start scramdb
+else
+    sudo docker run -d --name scramdb \
+        -e SCRAMDB_LOG=warn \
+        --privileged \
+        --cap-add=IPC_LOCK \
+        --ulimit memlock=-1:-1 \
+        -p "${PORT}:5432" \
+        -v "$PWD:/bench:ro" \
+        -v "$PWD/db:/var/lib/scramdb" \
+        -v "$PWD/scramdb-config.toml:/etc/scramdb/config.toml:ro" \
+        "$IMAGE"
+fi
