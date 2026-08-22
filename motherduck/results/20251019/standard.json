@@ -11,7 +11,8 @@
         "column-oriented",
         "DuckDB derivative",
         "serverless",
-        "managed"
+        "managed",
+        "lukewarm-cold-run"
     ],
     "load_time": 181,
     "data_size": 23622320128,

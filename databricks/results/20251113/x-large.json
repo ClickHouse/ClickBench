@@ -8,7 +8,8 @@
     "tuned": "no",
     "tags": [
         "managed",
-        "column-oriented"
+        "column-oriented",
+        "lukewarm-cold-run"
     ],
     "load_time": 41,
     "data_size": 10219802927,

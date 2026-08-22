@@ -8,7 +8,7 @@
   "tuned": "no",
   "comment": "",
 
-  "tags": ["managed", "column-oriented", "aws"],
+  "tags": ["managed", "column-oriented", "aws", "lukewarm-cold-run"],
 
   "load_time": 1829,
   "data_size": 26330791936,
