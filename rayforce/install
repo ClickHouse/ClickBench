@@ -1,0 +1,36 @@
+#!/bin/bash
+# Builds Rayforce from source.
+#
+# Rayforce publishes an amd64 .deb and prebuilt tarballs, but ClickBench also
+# runs on aarch64 machines (c8g.*), and the engine is zero-dependency C that
+# builds with a plain `make release` on both. Building from source is therefore
+# the only setup that works everywhere, and it is what upstream documents first.
+#
+# RAYFORCE_VERSION pins the release tag; unset means "latest GitHub release"
+# (falling back to a known-good tag when the unauthenticated API call is rate
+# limited).
+set -e
+
+RAYFORCE_FALLBACK_VERSION=v2.5.14
+
+if ! command -v rayforce >/dev/null 2>&1; then
+    sudo apt-get update
+    sudo apt-get install -y build-essential git curl
+
+    version="${RAYFORCE_VERSION:-}"
+    if [ -z "$version" ]; then
+        version=$(curl -sS --max-time 30 \
+            https://api.github.com/repos/RayforceDB/rayforce/releases/latest \
+            | grep -o '"tag_name": *"[^"]*"' | head -n1 | cut -d'"' -f4 || true)
+        [ -z "$version" ] && version="$RAYFORCE_FALLBACK_VERSION"
+    fi
+    echo "Building Rayforce $version"
+
+    rm -rf "$HOME/rayforce-src"
+    git clone --depth 1 --branch "$version" \
+        https://github.com/RayforceDB/rayforce "$HOME/rayforce-src"
+    make -C "$HOME/rayforce-src" release -j"$(nproc)"
+    sudo install -m 755 "$HOME/rayforce-src/rayforce" /usr/local/bin/rayforce
+fi
+
+rayforce --help >/dev/null

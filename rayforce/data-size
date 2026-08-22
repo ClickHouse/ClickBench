@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Splayed table: one file per column plus the `.sym` dictionary, all under ./hits.
+du -sb hits | cut -f1
