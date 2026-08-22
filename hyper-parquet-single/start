@@ -40,7 +40,12 @@ signal.signal(signal.SIGINT, _terminate)
 
 with HyperProcess(
     telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU,
-    parameters={"experimental_persisted_external_tables": "on"},
+    parameters={
+        "experimental_persisted_external_tables": "on",
+        # External-table samples are not persisted, so every cold restart would
+        # otherwise resample the wide Parquet table before executing the query.
+        "external_sampling": "false",
+    },
 ) as hyper:
     # Keep-alive: hold hits_parquet.hyper attached for the server lifetime so
     # its external-table catalog (and the plan-cache entries depending on it)
