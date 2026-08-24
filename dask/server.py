@@ -37,6 +37,15 @@ import uvicorn
 from dask.distributed import Client, LocalCluster, wait
 from fastapi import FastAPI, HTTPException, Request
 
+# ClickBench timings must include serializing the full query result back
+# to the client (README, "Output Suppression"), so render frames (computed
+# results are pandas objects) without any row/column/cell truncation —
+# nothing may be suppressed.
+pd.set_option("display.max_rows", None)
+pd.set_option("display.max_columns", None)
+pd.set_option("display.width", None)
+pd.set_option("display.max_colwidth", None)
+
 # Dask's built-in groupby.agg() doesn't offer nunique, so COUNT(DISTINCT)
 # combined with other aggregates in one pass (queries 10 and 23) needs the
 # documented custom aggregation. Exposed in the query scope as `nunique`.
@@ -120,11 +129,13 @@ async def query(request: Request):
     # dask.compute() recurses into tuples/lists, so queries that return a
     # tuple of scalars (3, 7) or a list of sums (30) compute in one pass.
     result = dask.compute(eval(compiled, scope))[0]
+    # Rendering the result is part of the timed run: ClickBench measures
+    # back-to-back runtimes including returning the result to the client
+    # (issue #1397). The playground UI shows the string; the agent
+    # truncates it to OUTPUT_LIMIT before it reaches the browser.
+    text = str(result)
     elapsed = round(timeit.default_timer() - start, 3)
-    # Render the result as a string so the playground UI sees the actual
-    # query output instead of just the timing. Truncated by the agent
-    # to OUTPUT_LIMIT before it reaches the browser.
-    return {"elapsed": elapsed, "result": str(result)}
+    return {"elapsed": elapsed, "result": text}
 
 
 @app.get("/data-size")
