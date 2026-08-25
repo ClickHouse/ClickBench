@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e -o pipefail
+
+if [ ! -x /usr/bin/clickhouse ]; then
+    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ | sh
+    sudo ./clickhouse install --noninteractive
+fi
+
+# Unlike the MergeTree entry, there is nothing to eager-load here: a Memory
+# table has no parts, no primary key on disk and no column size streams, so
+# the startup laziness that entry disables does not exist. The data itself is
+# re-inserted by ./load before every cold query.
