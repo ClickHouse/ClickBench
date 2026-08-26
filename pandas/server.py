@@ -25,6 +25,14 @@ import pandas as pd
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 
+# ClickBench timings must include serializing the full query result back
+# to the client (README, "Output Suppression"), so render frames without
+# any row/column/cell truncation — nothing may be suppressed.
+pd.set_option("display.max_rows", None)
+pd.set_option("display.max_columns", None)
+pd.set_option("display.width", None)
+pd.set_option("display.max_colwidth", None)
+
 app = FastAPI()
 hits: pd.DataFrame | None = None
 
@@ -61,12 +69,14 @@ async def query(request: Request):
     except SyntaxError as e:
         raise HTTPException(status_code=400, detail=f"syntax error: {e}")
     start = timeit.default_timer()
-    result = eval(compiled, {"hits": hits, "pd": pd})
+    value = eval(compiled, {"hits": hits, "pd": pd})
+    # Rendering the result is part of the timed run: ClickBench measures
+    # back-to-back runtimes including returning the result to the client
+    # (issue #1397). The playground UI shows the string; the agent
+    # truncates it to OUTPUT_LIMIT before it reaches the browser.
+    result = str(value)
     elapsed = round(timeit.default_timer() - start, 3)
-    # Render the result as a string so the playground UI sees the actual
-    # query output instead of just the timing. Truncated by the agent
-    # to OUTPUT_LIMIT before it reaches the browser.
-    return {"elapsed": elapsed, "result": str(result)}
+    return {"elapsed": elapsed, "result": result}
 
 
 @app.get("/data-size")

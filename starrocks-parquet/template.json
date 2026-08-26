@@ -1,0 +1,12 @@
+{
+  "system": "StarRocks (Parquet, single)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "MySQL compatible",
+    "stateless"
+  ]
+}
