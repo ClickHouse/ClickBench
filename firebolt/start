@@ -8,12 +8,10 @@ if curl -sS --max-time 5 'http://localhost:3473/' \
 fi
 
 mkdir -p data fb-volume
-# firebolt-core runs as UID/GID 1111 inside the container and refuses
-# to start if its data dir is not writeable by that uid (the engine
-# self-checks and aborts with "directory ... is not readable or
-# writeable by the Firebolt Core process"). Set the host-side
-# ownership accordingly so the bind-mounted dir is usable.
-sudo chown 1111:1111 fb-volume
+# The engine runs as UID/GID 3473 inside the container and refuses to
+# start if its data dir is not writeable by that uid. World-writeable is
+# what the official installer at get.firebolt.io does.
+sudo chmod 0777 fb-volume
 
 # If the container exists (stopped from a prior agent pre-snapshot
 # cycle), just start it back — the data lives on the bind-mounted
@@ -22,10 +20,10 @@ sudo chown 1111:1111 fb-volume
 if sudo docker ps -a --format '{{.Names}}' | grep -qx firebolt-core; then
     sudo docker start firebolt-core >/dev/null
 else
-    # `firebolt-core` is the public self-hosted image. Container needs
+    # `engine` is the public self-hosted image. Container needs
     # memlock 8 GiB and seccomp unconfined per upstream's run docs.
     # /firebolt-core/clickbench: parquet source (read at load time).
-    # /firebolt-core/volume:     engine data directory (must persist
+    # /var/lib/firebolt:         engine data directory (must persist
     #                            across the agent's pre-snapshot
     #                            stop+start cycle or the snapshot
     #                            ships an empty DB).
@@ -33,9 +31,9 @@ else
         --ulimit memlock=8589934592:8589934592 \
         --security-opt seccomp=unconfined \
         -p 127.0.0.1:3473:3473 \
-        -v "$(pwd)/fb-volume:/firebolt-core/volume" \
+        -v "$(pwd)/fb-volume:/var/lib/firebolt" \
         -v "$(pwd)/data:/firebolt-core/clickbench" \
-        ghcr.io/firebolt-db/firebolt-core:preview-rc >/dev/null
+        "${FB_IMAGE:-ghcr.io/firebolt-db/engine:dev}" >/dev/null
 fi
 
 # Wait for the cluster to be "actually" ready. firebolt-core's HTTP
