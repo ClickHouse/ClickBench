@@ -61,7 +61,10 @@ in its own container — from `1.1.54xxx` (2018) to today — with no host insta
 4. **`run-version.sh <version> [image]`** — starts the server, creates each
    dataset's tables **in its own database** (so same-named tables like TPC-H and
    TPC-DS `customer` don't collide), loads each Native file with the simplest
-   possible `clickhouse-client INSERT … FORMAT Native`, then times every query in
+   possible `clickhouse-client INSERT … FORMAT Native`, waits for background
+   merges to settle (bounded by `MERGE_SETTLE_TIMEOUT`, default 1 h) so every
+   version is benchmarked against the settled table state rather than whatever
+   merge backlog its load left behind, then times every query in
    `queries/{mgbench,ssb,hits,tpch,tpcds,coffeeshop,taxi}.sql` (`TRIES` runs each,
    dropping the page cache between queries) and writes `results/<version>.json`.
 
