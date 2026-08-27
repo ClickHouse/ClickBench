@@ -26,7 +26,7 @@ queries, so `tuned=no`.
 ```
 
 The release build is portable (no `-C target-cpu`), pinned to a published crate
-version (`infino = "0.5.3"`) so the result is reproducible from crates.io alone.
+version (`infino = "0.5.10"`) so the result is reproducible from crates.io alone.
 LTO is sized to the machine by `install`: fat LTO + `codegen-units = 1` at
 >= 12 GiB RAM (its single-pass link peaks ~7.6 GB), thin LTO below so the small
 VMs still build. Reads use strong consistency, so a query issued right after
