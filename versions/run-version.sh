@@ -383,44 +383,6 @@ load_data() {
 
 drop_caches() { sync; echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null 2>&1; }
 
-# Wait until background merges settle before timing queries, so every version is
-# benchmarked against the same table state (the settled one) rather than against
-# whatever merge backlog its load left behind. Historically the single-threaded
-# INSERT was slow enough that merges finished within the load window; since
-# ClickHouse 26.8 a plain INSERT runs with max_insert_threads = all cores
-# (ClickHouse/ClickHouse#109000), the load saturates the machine and defers most
-# of the merge work past the INSERT -- right into the query phase, where it
-# competes with the queries for CPU, disk and page cache. That skewed the 26.9
-# master results: mgbench/ssb run first and absorbed the merge storm (ssb hot
-# runs degraded up to 130x), while hits and later datasets ran on a settled
-# server and showed master's genuine speedups.
-# Polls the server-wide system.merges; requires a few consecutive empty reads
-# (a lull between back-to-back merges must not end the wait), gives up after
-# MERGE_SETTLE_TIMEOUT seconds (default 1 h) and on versions where the count
-# cannot be read (prehistoric builds without system.merges, or Log tables that
-# never merge).
-wait_for_merges_to_settle() {
-    local timeout_s="${MERGE_SETTLE_TIMEOUT:-3600}" t0=${SECONDS} zeros=0 cnt last_log=0
-    while true; do
-        cnt=$(client --query "SELECT count() FROM system.merges" </dev/null 2>/dev/null | tr -d '[:space:]\r')
-        case "${cnt}" in
-            '') echo "merge settle: cannot read system.merges on ${VERSION}; not waiting" >&2; return 0 ;;
-            0)  zeros=$((zeros + 1)); [ "${zeros}" -ge 3 ] && break ;;
-            *)  zeros=0 ;;
-        esac
-        if [ $((SECONDS - t0)) -ge "${timeout_s}" ]; then
-            echo "merge settle: still ${cnt} merges running after ${timeout_s}s; benchmarking anyway" >&2
-            return 0
-        fi
-        if [ $((SECONDS - last_log)) -ge 60 ]; then
-            echo "merge settle: ${cnt:-?} merges running, $((SECONDS - t0))s elapsed" >&2
-            last_log=${SECONDS}
-        fi
-        sleep 10
-    done
-    echo "merge settle: background merges finished $((SECONDS - t0))s after load" >&2
-}
-
 # </dev/null: the client runs via `docker {exec,run} -i`, which would otherwise
 # read the caller's stdin — and the benchmark loop reads its query file on
 # stdin, so a bare probe here would swallow the remaining queries.
@@ -700,8 +662,6 @@ run_benchmark() {
     ACTUAL=$(server_version)
     RELEASE=$(release_date)
     echo "benchmarking ${VERSION} (server reports ${ACTUAL:-unknown}, released ${RELEASE:-unknown})" >&2
-    # Also stabilizes data_size below: it is measured on the settled parts, not mid-merge.
-    wait_for_merges_to_settle
     # Datasets that loaded in full. A dataset with even one table that failed to load is
     # not benchmarked (its queries record null) and reports neither load time nor size.
     for ds in ${QUERY_ORDER}; do
