@@ -15,4 +15,14 @@
 ; exactly the readiness signal ./check needs.
 
 (set hits (try (.db.splayed.get "hits") (fn [e] (println "hits not loaded yet") 0)))
-(if (== (type hits) 'TABLE) (println (format "loaded % rows" (count hits))) 0)
+(set hits-ready (== (type hits) 'TABLE))
+(if hits-ready (println (format "loaded % rows" (count hits))) 0)
+
+; Once ./hits exists on disk a failed open is fatal, and ./start says so with
+; RAYFORCE_REQUIRE_TABLE=1. Staying up with `hits` bound to 0 would look healthy
+; to any liveness probe, while query 1 — `(count hits)` — returned 1 in
+; microseconds and got recorded as a valid timing (every other query would error
+; out). Exiting instead keeps ./check failing, which the driver reports as a
+; start failure rather than as benchmark results.
+(set fatal (and (not hits-ready) (== (.os.getenv "RAYFORCE_REQUIRE_TABLE") "1")))
+(if fatal (do (println "./hits exists but could not be opened; refusing to serve") (exit 1)) 0)

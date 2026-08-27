@@ -75,6 +75,25 @@ numbers and out of the run's wall clock. The listening socket only
 accepts connections after `server.rfl` finishes, so `./check` — a
 one-expression IPC round trip — is a genuine readiness probe.
 
+`./start` runs once before `./load`, when `./hits` does not exist yet, and
+again before every query, when it must be there. `./start` tells the two
+cases apart with `RAYFORCE_REQUIRE_TABLE`, and in the second one a failed
+open is fatal: `server.rfl` exits instead of serving. Otherwise the server
+would sit there with `hits` bound to `0`, answer the readiness probe
+happily, and return `1` from query 1 — `(count hits)` — in microseconds,
+which the driver would record as a valid timing rather than an error.
+
+`./start` and `./stop` match the server with
+`pgrep -x -f "rayforce -p <port> server.rfl"` rather than by process name:
+`./query` and `./check` spawn clients that are *also* called `rayforce`, so
+a `-x rayforce` name match cannot tell a live client from a live server. It
+made `./start` a no-op whenever a client happened to be in flight — most of
+the time during the concurrent-QPS test — so the watchdog could silently
+fail to restart a crashed server, and it made `./stop` kill the workers'
+in-flight queries as well. Anchoring with `-x -f` matches the whole
+command line, so it picks out the server without the usual `-f` hazard of
+also matching a shell that merely mentions it.
+
 `./query` sends the query text; the server evaluates
 `(timeit (set rf-result <query>))`, which returns the elapsed
 milliseconds from a nanosecond clock, and a second untimed round trip
