@@ -9,7 +9,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "gcp"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "gcp", "lukewarm-cold-run"],
 
     "load_time": 47.535,
     "data_size": 10302574136,

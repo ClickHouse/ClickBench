@@ -12,7 +12,8 @@
         "column-oriented",
         "ClickHouse derivative",
         "managed",
-        "azure"
+        "azure",
+        "lukewarm-cold-run"
     ],
     "load_time": 489,
     "data_size": 10237522622,
