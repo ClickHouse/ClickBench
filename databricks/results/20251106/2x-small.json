@@ -9,7 +9,7 @@
     "tags": [
         "managed",
         "column-oriented",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 126,
     "data_size": 10219802927,

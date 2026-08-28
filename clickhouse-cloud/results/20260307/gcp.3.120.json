@@ -13,7 +13,7 @@
         "ClickHouse derivative",
         "managed",
         "gcp",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 32,
     "data_size": 10225966632,

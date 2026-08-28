@@ -41,7 +41,7 @@ do
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "'$PROVIDER'", "lukewarm-cold-run"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "'$PROVIDER'", "no-cold"],
 
     "load_time": '$LOAD_TIME',
     "data_size": '$DATA_SIZE',

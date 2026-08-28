@@ -6,7 +6,7 @@
     "proprietary":   "no",
     "hardware": "cpu",
     "tuned":   "no",
-    "tags":   ["Java","column-oriented", "lukewarm-cold-run"],
+    "tags":   ["Java","column-oriented", "no-cold"],
     "load_time": 35643,
     "data_size": 55406110686,
     "result": [

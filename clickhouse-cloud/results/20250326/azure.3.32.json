@@ -13,7 +13,7 @@
         "ClickHouse derivative",
         "managed",
         "azure",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 489,
     "data_size": 9945091902,

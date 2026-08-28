@@ -10,7 +10,7 @@
         "Rust",
         "column-oriented",
         "ClickHouse derivative",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 393,
     "data_size": 20917119994,
