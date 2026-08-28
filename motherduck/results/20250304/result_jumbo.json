@@ -8,7 +8,8 @@
         "column-oriented",
         "DuckDB derivative",
         "serverless",
-        "historical"
+        "historical",
+        "lukewarm-cold-run"
     ],
     "load_time": 69,
     "data_size": 23620000000,

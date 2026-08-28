@@ -12,7 +12,8 @@
         "C++",
         "MySQL compatible",
         "row-oriented",
-        "aws"
+        "aws",
+        "lukewarm-cold-run"
     ],
     "load_time": 7687,
     "data_size": 89614492631,

@@ -3,7 +3,7 @@
   "date": "2025-12-13",
   "machine": "32GiB",
   "cluster_size": 1,
-  "tags": ["C", "PostgreSQL compatible", "column-oriented", "time-series", "managed"],
+  "tags": ["C", "PostgreSQL compatible", "column-oriented", "time-series", "managed", "lukewarm-cold-run"],
   "proprietary": "yes",
     "hardware": "cpu",
   "tuned": "no",

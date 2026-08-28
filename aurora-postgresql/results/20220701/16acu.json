@@ -8,7 +8,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["managed", "C", "PostgreSQL compatible", "row-oriented", "aws"],
+    "tags": ["managed", "C", "PostgreSQL compatible", "row-oriented", "aws", "lukewarm-cold-run"],
 
     "load_time": 2127,
     "data_size": 52183852646,

@@ -7,6 +7,7 @@
     "C++",
     "MPP",
     "column-oriented",
-    "stateless"
+    "stateless",
+    "lukewarm-cold-run"
   ]
 }

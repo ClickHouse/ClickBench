@@ -8,7 +8,7 @@
     "hardware": "cpu",
     "tuned": "no",
 
-    "tags": ["managed", "column-oriented"],
+    "tags": ["managed", "column-oriented", "lukewarm-cold-run"],
 
     "load_time": 67,
     "data_size": 13030859264,
