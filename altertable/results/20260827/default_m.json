@@ -7,7 +7,7 @@
   "hardware": "cpu",
   "tuned": "no",
   "tags": ["altertable", "duckdb", "parquet"],
-  "load_time": 0.0,
+  "load_time": 149,
   "data_size": 14856662018,
   "result": [
     [0.086, 0.081, 0.081],
