@@ -11,7 +11,7 @@
         "managed",
         "gcp",
         "historical",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 176,
     "data_size": 9945086465,

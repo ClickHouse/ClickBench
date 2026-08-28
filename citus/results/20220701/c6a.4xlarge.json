@@ -10,7 +10,7 @@
         "C",
         "PostgreSQL compatible",
         "column-oriented",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 1579,
     "data_size": 18980918899,

@@ -12,7 +12,7 @@
         "DuckDB derivative",
         "serverless",
         "managed",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 61,
     "data_size": 23622320128,

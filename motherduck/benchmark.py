@@ -126,7 +126,7 @@ if __name__ == "__main__":
         "proprietary": "yes",
         "hardware": "cpu",
         "tuned": "no",
-        "tags": ["C++", "column-oriented", "serverless", "managed", "lukewarm-cold-run"],
+        "tags": ["C++", "column-oriented", "serverless", "managed", "no-cold"],
     }
     load_data(run_metadata)
 
