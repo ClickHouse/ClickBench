@@ -6,7 +6,7 @@
       "proprietary": "no",
       "hardware": "cpu",
       "tuned": "no",
-      "tags": ["Rust","column-oriented","lukewarm-cold-run"],
+      "tags": ["Rust","column-oriented"],
       "load_time": 17858,
       "data_size": 14046768711,
       "concurrent_qps": 0.055,

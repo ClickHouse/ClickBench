@@ -6,7 +6,7 @@
       "proprietary": "no",
       "hardware": "cpu",
       "tuned": "no",
-      "tags": ["Python","dataframe","in-memory","column-oriented","lukewarm-cold-run"],
+      "tags": ["Python","dataframe","in-memory","column-oriented"],
       "load_time": 69,
       "data_size": 174168110180,
       "concurrent_qps": 0.082,

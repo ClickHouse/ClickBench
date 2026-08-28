@@ -6,7 +6,7 @@
       "proprietary": "no",
       "hardware": "cpu",
       "tuned": "no",
-      "tags": ["Go","column-oriented","DuckDB derivative","PostgreSQL compatible","Iceberg","lukewarm-cold-run"],
+      "tags": ["Go","column-oriented","DuckDB derivative","PostgreSQL compatible","Iceberg"],
       "load_time": 15826,
       "data_size": 21054692646,
       "concurrent_qps": 0.125,
