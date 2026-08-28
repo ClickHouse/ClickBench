@@ -872,7 +872,8 @@ const combined_hot_share = 0.6;
 function selectRun(timings, metric) {
     if (timings == null) return null;
     const cold_timing = timings[0];
-    const hot_timing = (timings[1] !== null && timings[2] !== null ? Math.min(timings[1], timings[2]) : null);
+    const hot_timings = timings.slice(1);
+    const hot_timing = (hot_timings.length >= 2 && hot_timings.every(timing => timing != null) ? Math.min(...hot_timings) : null);
 
     return metric == 'cold' ? cold_timing : metric == 'hot' ? hot_timing :
         (hot_timing !== null && cold_timing !== null ? (hot_timing * combined_hot_share + cold_timing * combined_cold_share) / (combined_hot_share + combined_cold_share) : null);
@@ -939,9 +940,11 @@ function renderSummary(filtered_data) {
 
     const num_queries = filtered_data[0].result.length;
 
+    const real_data = filtered_data.filter(elem => !elem.fake);
+    const num_runs = Math.max(...real_data.flatMap(elem => elem.result.map(timings => timings?.length ?? 0)));
     const baseline_data = [...filtered_data[0].result.keys()].map(query_num =>
-        [...Array(3).keys()].map(run_num =>
-            Math.min(...filtered_data.filter(elem => !elem.fake).map(elem => elem.result[query_num]?.[run_num]).filter(x => x != null))));
+        [...Array(num_runs).keys()].map(run_num =>
+            Math.min(...real_data.map(elem => elem.result[query_num]?.[run_num]).filter(x => x != null))));
 
     const min_load_time = Math.min(...filtered_data.map(elem => elem.load_time).filter(x => x && x > 5));
     const min_data_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x && x > 1e9));
