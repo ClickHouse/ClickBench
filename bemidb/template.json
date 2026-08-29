@@ -8,7 +8,6 @@
     "column-oriented",
     "DuckDB derivative",
     "PostgreSQL compatible",
-    "Iceberg",
-    "lukewarm-cold-run"
+    "Iceberg"
   ]
 }

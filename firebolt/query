@@ -2,8 +2,7 @@
 # Reads a SQL query from stdin, runs it against the firebolt-core
 # container via /?database=clickbench.
 # Stdout: query result (firebolt's JSON_Compact format).
-# Stderr: query runtime in fractional seconds on the last line,
-#         pulled from the response's `.statistics.elapsed`.
+# Stderr: query runtime in fractional seconds on the last line.
 # Exit non-zero on error.
 set -e
 
@@ -16,15 +15,32 @@ PARAMS='database=clickbench&enable_result_cache=false&enable_subresult_cache=fal
 body_file=$(mktemp)
 trap 'rm -f "$body_file"' EXIT
 
-http_code=$(curl -sS --max-time 600 -o "$body_file" -w '%{http_code}' \
-                "http://localhost:3473/?${PARAMS}" \
-                --data-binary "$query")
-resp=$(cat "$body_file")
-
 fail() {
     printf '%s\n' "$1" >&2
     exit 1
 }
+
+# We time from "request sent" to "last response byte": DNS/TCP setup is
+# excluded, everything the server does before the response is complete is
+# included. That is the same boundary `clickhouse-client --time` reports (the
+# server's final Progress packet, which is sent after the last result block
+# has been written), so the two entries measure comparable things.
+#
+# We deliberately do NOT use the response's own `.statistics.elapsed`.
+# Firebolt sends the result rows in one chunk and then emits the trailing
+# `"statistics"` object of the *same* chunked response tens of milliseconds
+# later, carrying an `elapsed` value captured before that gap. The gap grows
+# with the engine's thread count (~2 ms at 8 threads, ~15 ms at 96, ~55 ms at
+# 192), so on the big machines `.statistics.elapsed` understates the query by
+# up to 3.6x. Firebolt's own
+# information_schema.engine_query_history.duration_us agrees with the
+# wall-clock figure below to within ~1%.
+timing=$(curl -sS --max-time 600 -o "$body_file" \
+              -w '%{http_code} %{time_pretransfer} %{time_total}' \
+              "http://localhost:3473/?${PARAMS}" \
+              --data-binary "$query") || fail "curl failed: $(cat "$body_file")"
+read -r http_code t_pretransfer t_total <<< "$timing"
+resp=$(cat "$body_file")
 
 [ "$http_code" = "200" ] || fail "HTTP ${http_code}: ${resp}"
 [ -n "$resp" ] || fail "empty response body (HTTP 200)"
@@ -37,8 +53,13 @@ if printf '%s' "$resp" | jq -e '.errors' >/dev/null 2>&1; then
     fail "$resp"
 fi
 
-elapsed=$(printf '%s' "$resp" | jq -r '.statistics.elapsed')
-[[ "$elapsed" =~ ^[0-9]+(\.[0-9]+)?$ ]] || fail "no numeric statistics.elapsed: ${resp}"
+# Not the reported timing, but a successful query always carries it — keep the
+# check as a guard against a truncated response that still parses as JSON.
+server_elapsed=$(printf '%s' "$resp" | jq -r '.statistics.elapsed')
+[[ "$server_elapsed" =~ ^[0-9]+(\.[0-9]+)?$ ]] || fail "no numeric statistics.elapsed: ${resp}"
+
+elapsed=$(awk -v t="$t_total" -v p="$t_pretransfer" 'BEGIN { printf "%.6f", t - p }')
+[[ "$elapsed" =~ ^[0-9]+(\.[0-9]+)?$ ]] || fail "bad curl timing: total=${t_total} pretransfer=${t_pretransfer}"
 
 printf '%s\n' "$resp"
 printf '%s\n' "$elapsed" >&2

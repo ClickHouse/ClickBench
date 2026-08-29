@@ -10,7 +10,7 @@
         "C++",
         "column-oriented",
         "ClickHouse derivative",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 9,
     "data_size": 14458565532,

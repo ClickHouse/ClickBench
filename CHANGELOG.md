@@ -2,6 +2,9 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-08-28
+Renamed the `lukewarm-cold-run` tag to `no-cold` — a shorter name for the same thing: an entry whose first run of each query is not a true cold run, because the system is not restarted before it. The classification was also brought up to date. The 37 systems that the common runner in `lib/` already stops, page-cache-flushes and restarts before every cold run lost the tag, as did the 82 result files it had already produced; the managed services that clear nothing at all before a first run (ClickHouse Cloud, Databricks, MotherDuck, Hologres, AlloyDB) gained it, as [#1646](https://github.com/ClickHouse/ClickBench/pull/1646) requires.
+
 ### 2026-07-22
 Introducing [ClickBench Playground](https://benchmark.clickhouse.com/playground/), which allows you to run arbitrary SQL queries on 110+ databases using a pre-loaded ClickBench dataset.
 

@@ -10,7 +10,6 @@
     "embedded",
     "Python",
     "dataframe",
-    "in-memory",
-    "lukewarm-cold-run"
+    "in-memory"
   ]
 }

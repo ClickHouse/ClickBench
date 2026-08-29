@@ -161,7 +161,7 @@ We distinguish two cases:
 
 2.a) True cold runs. Before each first run of each query, all operating system caches (page cache) and database caches (e.g. buffer pools) are cleared. Some databases provide commands to clear internal caches. For fairness towards databases which do not offer such statements, it is _required_ to restart the database before the first run of each query. Databases which do not stick around as a background process between queries, e.g. [clickhouse-local](https://clickhouse.com/docs/operations/utilities/clickhouse-local), satisfy this requirement implicitly. It is still needed to clear the page cache before each first query to qualify as a true cold run.
 
-2.b) Lukewarm cold runs. Compared to true cold runs, _only_ the operating system page cache is cleared before each first run of each query. This is what was historically considered as "cold run" in ClickBench, benefiting databases with extensive internal caching. Submissions that do not restart the database _must_ set tag "lukewarm-cold-run" in their result file. We encourage contributors to migrate submissions from lukewarm to true cold runs.
+2.b) Lukewarm cold runs. Compared to true cold runs, _only_ the operating system page cache is cleared before each first run of each query. This is what was historically considered as "cold run" in ClickBench, benefiting databases with extensive internal caching. Submissions that do not restart the database _must_ set tag "no-cold" in their result file. We encourage contributors to migrate submissions from lukewarm to true cold runs.
 
 General rules regarding caching:
 - Query result caches should be disabled.

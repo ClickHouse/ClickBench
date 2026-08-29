@@ -11,7 +11,7 @@
         "column-oriented",
         "PostgreSQL compatible",
         "ClickHouse derivative",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 157,
     "data_size": 15716159954,

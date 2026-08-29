@@ -82,8 +82,8 @@ different engine and a different storage format behind the same SQL surface.
   produces the same table; parquet is simply the faster and cheaper-to-
   download source.)
 - **Cold runs are true cold runs.** The shared driver stops the server,
-  drops the page cache, and restarts before each query's first try (no
-  `lukewarm-cold-run` tag).
+  drops the page cache, and restarts before each query's first try, so the
+  `no-cold` tag does not apply.
 - **Results are submitted for c8g.4xlarge (arm64) only.** The scripts also
   run on x86-64 (the published x86-64 binary works and the full benchmark
   completes), but pgrust currently has **no JIT on x86-64**, so an x86 row

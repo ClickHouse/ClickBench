@@ -1,0 +1,35 @@
+#!/bin/bash
+# Starts the Rayforce IPC server (see server.rfl for why the table is opened
+# once here rather than in every query process).
+#
+# stdin/stdout are not a terminal, so rayforce skips the REPL and runs only the
+# IPC poll loop. The listening socket accepts connections only after server.rfl
+# returns, which makes ./check a real readiness probe.
+set -e
+
+port="${RAYFORCE_PORT:-5000}"
+
+# Match the server's whole command line, not the process name. ./query and
+# ./check each spawn a client that is also called `rayforce`, and during the
+# concurrent-QPS test ten workers keep one of them alive essentially all the
+# time, so a `pgrep -x rayforce` guard reported "already running" whenever a
+# client happened to be in flight: the driver's watchdog could then silently
+# fail to restart a crashed server and the rest of the throughput window would
+# run against a dead process. `-x -f` anchors the pattern to the *entire*
+# command line, so it picks out the server without also matching a shell that
+# merely mentions it — the hazard that ruled out a plain `-f`.
+if pgrep -x -f "rayforce -p $port server.rfl" >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Tell server.rfl whether a table is supposed to be there: the driver starts
+# the server once before ./load, when ./hits legitimately does not exist yet,
+# and again before every query, when it must open successfully.
+if [ -d hits ]; then
+    export RAYFORCE_REQUIRE_TABLE=1
+else
+    export RAYFORCE_REQUIRE_TABLE=0
+fi
+
+nohup rayforce -p "$port" server.rfl >> server.log 2>&1 &
+echo $! > server.pid

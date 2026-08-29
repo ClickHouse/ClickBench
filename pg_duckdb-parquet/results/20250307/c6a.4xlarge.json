@@ -10,7 +10,7 @@
         "column-oriented",
         "DuckDB derivative",
         "PostgreSQL compatible",
-        "lukewarm-cold-run",
+        "no-cold",
         "stateless"
     ],
     "load_time": 0,
