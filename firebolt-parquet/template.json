@@ -8,7 +8,6 @@
     "column-oriented",
     "PostgreSQL compatible",
     "ClickHouse derivative",
-    "stateless",
-    "no-cold"
+    "stateless"
   ]
 }
