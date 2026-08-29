@@ -36,12 +36,16 @@ use arrow_schema::{DataType, Field, Schema, SchemaRef};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 
 use infino::{
-    connect_with, CompactionSettings, ConnectOptions, Consistency, IndexSpec, OptimizeOptions,
+    connect_with, CompactionSettings, ConnectOptions, Consistency, GcSettings, IndexSpec,
+    OptimizeOptions,
 };
 
 type R<T> = Result<T, Box<dyn Error>>;
 
 const BATCH_ROWS: usize = 1_000_000;
+
+/// Safety gap for the load's own garbage collection.
+const GC_SAFETY_GAP_SECS: u64 = 1;
 
 fn uri() -> String {
     env::var("INFINO_URI").unwrap_or_else(|_| "./data".to_string())
@@ -177,6 +181,9 @@ fn load() -> R<()> {
 /// of one large file plus small leftovers. min_fill_percent is dropped to 1 so
 /// a one-shot optimize actually merges the small tail rather than leaving it.
 fn optimize_options() -> OptimizeOptions {
+    // Reclaim the files this optimize supersedes instead of leaving them for a later sweep.
+    // The cost adds in "load" time.
+    let gc = GcSettings::default().with_safety_gap(Duration::from_secs(GC_SAFETY_GAP_SECS));
     match env::var("INFINO_TARGET_SF_MB")
         .ok()
         .and_then(|s| s.parse::<u64>().ok())
@@ -186,8 +193,9 @@ fn optimize_options() -> OptimizeOptions {
             min_fill_percent: 1,
             max_memory_mb: mb + 2048,
             ..Default::default()
-        }),
-        None => OptimizeOptions::default(),
+        })
+        .with_gc(gc),
+        None => OptimizeOptions::default().with_gc(gc),
     }
 }
 
