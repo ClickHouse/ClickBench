@@ -28,10 +28,21 @@ if [ ! -x axiom/_build/release/axiom/cli/axiom_sql ]; then
     # bridge off. The macro is ARM-only, so defining it is a no-op on x86.
     export OS_CXXFLAGS=" -DFOLLY_ARM_FEATURE_NEON_SVE_BRIDGE=0"
 
+    # fbthrift's build runs the thrift1 compiler it has just built, and that
+    # binary links Boost's shared libraries from /usr/local/lib — which the
+    # dynamic loader does not find, because nothing refreshed the ldconfig
+    # cache after Boost was installed a few steps earlier. Point the loader at
+    # the prefix directly for the whole build.
+    export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+
     # Velox's dependency setup: apt packages plus a set of libraries built from
     # source (boost, folly, fbthrift, arrow, ...) installed into /usr/local.
     # VELOX_BUILD_SHARED=ON is required by the Velox mono library Axiom links.
     VELOX_BUILD_SHARED=ON PROMPT_ALWAYS_RESPOND=y velox/scripts/setup-ubuntu.sh
+
+    # Now that the libraries are in place, make them findable without
+    # LD_LIBRARY_PATH so ./check and ./query work in a plain environment.
+    sudo ldconfig
 
     # Velox's Presto function registration translation units peak at ~4 GB of
     # RAM each, so a plain -j$(nproc) gets the compiler OOM-killed. Give the
@@ -61,4 +72,10 @@ if [ ! -x axiom/_build/release/axiom/cli/axiom_sql ]; then
         -DVELOX_BUILD_SHARED=ON \
         -DCMAKE_CXX_FLAGS="-DFOLLY_ARM_FEATURE_NEON_SVE_BRIDGE=0"
     cmake --build _build/release --target axiom_sql axiom_hive_import -j "$threads"
+
+    # Smoke-test the binary the way ./check and ./query will run it — without
+    # the LD_LIBRARY_PATH the build needed. If ldconfig did not make the
+    # dependencies findable, fail here with the loader's own message instead of
+    # 300 seconds into ./check.
+    env -u LD_LIBRARY_PATH _build/release/axiom/cli/axiom_sql --query "SELECT 1" > /dev/null
 fi
