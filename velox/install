@@ -35,6 +35,17 @@ if [ ! -x axiom/_build/release/axiom/cli/axiom_sql ]; then
     # the prefix directly for the whole build.
     export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
 
+    # Velox's Presto function registration translation units peak at ~4 GB of
+    # RAM each, so a plain -j$(nproc) gets the compiler OOM-killed. Add swap
+    # before anything is compiled — the dependency builds run at -j$(nproc)
+    # themselves — and keep the Velox build's own job count under memory/5GB.
+    if [ "$(swapon --noheadings --show | wc -l)" -eq 0 ]; then
+        sudo fallocate -l 16G /swapfile
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+    fi
+
     # Velox's dependency setup: apt packages plus a set of libraries built from
     # source (boost, folly, fbthrift, arrow, ...) installed into /usr/local.
     # VELOX_BUILD_SHARED=ON is required by the Velox mono library Axiom links.
@@ -44,15 +55,6 @@ if [ ! -x axiom/_build/release/axiom/cli/axiom_sql ]; then
     # LD_LIBRARY_PATH so ./check and ./query work in a plain environment.
     sudo ldconfig
 
-    # Velox's Presto function registration translation units peak at ~4 GB of
-    # RAM each, so a plain -j$(nproc) gets the compiler OOM-killed. Give the
-    # build swap and keep the job count under memory/5GB.
-    if [ "$(swapon --noheadings --show | wc -l)" -eq 0 ]; then
-        sudo fallocate -l 16G /swapfile
-        sudo chmod 600 /swapfile
-        sudo mkswap /swapfile
-        sudo swapon /swapfile
-    fi
     mem_gb=$(free -g | awk '/^Mem:/{print $2}')
     threads=$(( mem_gb / 5 ))
     [ "$threads" -lt 1 ] && threads=1
