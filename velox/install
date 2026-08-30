@@ -1,0 +1,64 @@
+#!/bin/bash
+set -e
+
+# Build the Axiom SQL CLI from source. Axiom is Meta's SQL front-end for Velox
+# (PrestoSQL parser, cost-based optimizer, local runner); Velox comes in as a
+# git submodule and does all the execution. There are no release binaries, so
+# the whole thing — Velox's own dependencies included — is built here.
+#
+# Idempotent: only build if axiom_sql isn't there already.
+
+AXIOM_COMMIT=717cf92d970bae3e2803abaacf987345cfb01a2b
+
+if [ ! -x axiom/_build/release/axiom/cli/axiom_sql ]; then
+    sudo apt-get update -y
+    sudo apt-get install -y git
+
+    if [ ! -d axiom ]; then
+        git clone https://github.com/facebookincubator/axiom.git
+    fi
+    cd axiom
+    git fetch origin
+    git checkout "$AXIOM_COMMIT"
+    git submodule update --init --recursive
+
+    # On ARM cores with SVE (Graviton3/4) folly turns on its NEON<->SVE bridge,
+    # and fbthrift's bridge code does not compile with gcc: it subscripts
+    # sizeless SVE vectors and passes uint8_t* to vst1q_lane_u64. Turn the
+    # bridge off. The macro is ARM-only, so defining it is a no-op on x86.
+    export OS_CXXFLAGS=" -DFOLLY_ARM_FEATURE_NEON_SVE_BRIDGE=0"
+
+    # Velox's dependency setup: apt packages plus a set of libraries built from
+    # source (boost, folly, fbthrift, arrow, ...) installed into /usr/local.
+    # VELOX_BUILD_SHARED=ON is required by the Velox mono library Axiom links.
+    VELOX_BUILD_SHARED=ON PROMPT_ALWAYS_RESPOND=y velox/scripts/setup-ubuntu.sh
+
+    # Velox's Presto function registration translation units peak at ~4 GB of
+    # RAM each, so a plain -j$(nproc) gets the compiler OOM-killed. Give the
+    # build swap and keep the job count under memory/5GB.
+    if [ "$(swapon --noheadings --show | wc -l)" -eq 0 ]; then
+        sudo fallocate -l 16G /swapfile
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+    fi
+    mem_gb=$(free -g | awk '/^Mem:/{print $2}')
+    threads=$(( mem_gb / 5 ))
+    [ "$threads" -lt 1 ] && threads=1
+    [ "$threads" -gt "$(nproc)" ] && threads=$(nproc)
+
+    # Axiom's documented `make release` builds every test binary as well, which
+    # more than doubles the build. Configure the same way it does — Axiom's own
+    # testing flag has to stay ON, because the CLI links the test connector —
+    # and then build only the two binaries this benchmark needs.
+    cmake -B _build/release \
+        -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+        -DAXIOM_BUILD_TESTING=ON \
+        -DVELOX_BUILD_TESTING=OFF \
+        -DVELOX_MONO_LIBRARY=ON \
+        -DVELOX_BUILD_SHARED=ON \
+        -DCMAKE_CXX_FLAGS="-DFOLLY_ARM_FEATURE_NEON_SVE_BRIDGE=0"
+    cmake --build _build/release --target axiom_sql axiom_hive_import -j "$threads"
+fi
