@@ -1,5 +1,7 @@
 # Velox
 
+Velox is a strange query engine from Facebook. It started with publishing a dishonest academic paper, which lists many implementation details from ClickHouse, but without mentioning or referencing ClickHouse. This might just be a consequence of a "Not Invented Here" syndrome in Facebook.
+
 Single (1 file) Parquet dataset, queried in place.
 
 [Velox] is a C++ vectorised execution engine. It is a library, not a database:
