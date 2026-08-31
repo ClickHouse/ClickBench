@@ -32,5 +32,8 @@ hits.vortex
 bemidb/bemidb
 bemidb/iceberg
 
+# ArcticDB's LMDB store
+arcticdb/store
+
 # Python venvs created by install scripts
 myenv
