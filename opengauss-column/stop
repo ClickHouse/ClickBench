@@ -1,0 +1,7 @@
+#!/bin/bash
+
+OG_ROOT=${OG_ROOT:-/opt/opengauss}
+OG_USER=${OG_USER:-omm}
+
+sudo -u "$OG_USER" "$OG_ROOT/run" gs_ctl stop -D "$OG_ROOT/data" \
+    -Z single_node -m fast || true
