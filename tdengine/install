@@ -1,0 +1,86 @@
+#!/bin/bash
+set -e
+
+# TDengine TSDB OSS ships as a self-contained tarball with the vendor's own
+# install.sh; there is no apt repository for arm64 (the one at
+# repos.taosdata.com is amd64-only), so use the tarball on both.
+VERSION="${TDENGINE_VERSION:-3.4.2.5}"
+
+case "$(uname -m)" in
+    x86_64)  ARCH="x64" ;;
+    aarch64) ARCH="arm64" ;;
+    *)
+        echo "install: no TDengine build for $(uname -m)" >&2
+        exit 1
+        ;;
+esac
+
+sudo apt-get update -y
+sudo apt-get install -y wget curl
+
+PACKAGE="tdengine-tsdb-oss-${VERSION}-linux-${ARCH}.tar.gz"
+if [ ! -x /usr/local/taos/bin/taosd ]; then
+    wget --continue --progress=dot:giga \
+        "https://downloads.tdengine.com/tdengine-tsdb-oss/${VERSION}/${PACKAGE}"
+    tar -xzf "$PACKAGE"
+    # -e no: non-interactive, keep the detected FQDN instead of prompting.
+    ( cd "tdengine-tsdb-oss-${VERSION}" && sudo ./install.sh -e no )
+    rm -rf "tdengine-tsdb-oss-${VERSION}" "$PACKAGE"
+fi
+
+# The installer enables four systemd units. Only taosd (the engine) and
+# taosadapter (the HTTP gateway ./query talks to) are wanted:
+#
+#   taoskeeper      scrapes taosd every 30s and writes the metrics back into
+#                   a `log` database inside the same server, which would land
+#                   in ./data-size and add write load during the run.
+#   taos-explorer   the web UI; nothing here uses it.
+sudo systemctl disable --now taoskeeper taos-explorer 2>/dev/null || true
+
+# Four settings differ from the shipped defaults, and all four are about not
+# doing work that has nothing to do with the benchmark:
+#
+#   monitor 0             stop generating the metrics taoskeeper collected.
+#   telemetryReporting 0  no usage report to telemetry.taosdata.com.
+#   crashReporting 0      no crash report to the vendor. TDengine does crash
+#                         during this benchmark (see README) and a run should
+#                         not phone home about it.
+#
+#   tempDir               where sorts and DISTINCT spill (Q34's GROUP BY URL
+#                         does). It defaults to /tmp, which on Ubuntu 25.04
+#                         and later is a tmpfs sized at half of RAM: on a
+#                         small instance those queries fail with "No space
+#                         left on device", and on a large one they would be
+#                         spilling to RAM while every other system in the
+#                         benchmark spills to disk. Point it at the data
+#                         volume instead -- beside /var/lib/taos rather than
+#                         inside it, so spill files stay out of ./data-size.
+sudo mkdir -p /var/lib/taos_tmp
+sudo chown --reference=/var/lib/taos /var/lib/taos_tmp
+sudo sed -i -E '/^[# ]*(monitor|telemetryReporting|crashReporting|tempDir) /d' /etc/taos/taos.cfg
+sudo tee -a /etc/taos/taos.cfg >/dev/null <<'CFG'
+monitor              0
+telemetryReporting   0
+crashReporting       0
+tempDir              /var/lib/taos_tmp
+CFG
+
+# From 3.x taosd snapshots its configuration into dataDir on first start
+# (dnode/config/{local,global,stype}.json) and prefers that snapshot over
+# taos.cfg afterwards, so on a machine where taosd has already run the edits
+# above would be read ("cfg_file" in `taosd -C`) but not applied. Drop the
+# snapshot; taosd rebuilds it from taos.cfg on the next start and the data in
+# the same directory is untouched.
+sudo rm -f /var/lib/taos/dnode/config/local.json \
+           /var/lib/taos/dnode/config/global.json \
+           /var/lib/taos/dnode/config/stype.json
+
+# taosadapter aborts a query after queryWaitTimeout seconds, 900 by default.
+# 900 is too tight -- Q6 takes ~870s at 100M rows and would be reported as a
+# failure on a slower machine -- but it is also the only thing bounding the
+# queries that cannot finish at all: Q17 ran for an hour without either
+# completing or hitting a limit. 1800 gives everything that does complete 2x
+# headroom and keeps a full run to a sane wall clock.
+sudo sed -i -E 's/^([[:space:]]*)queryWaitTimeout[[:space:]]*=.*/\1queryWaitTimeout = 1800/' \
+    /etc/taos/taosadapter.toml
+grep -q 'queryWaitTimeout = 1800' /etc/taos/taosadapter.toml

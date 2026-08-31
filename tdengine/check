@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+# Queries go through taosadapter's REST endpoint, so readiness has to mean
+# "the adapter can reach taosd", not just "taosd is listening": the adapter
+# comes up before the server has restored its vnodes and answers with
+# {"code":...,"desc":"Unable to establish connection"} until it has.
+curl -sSf --max-time 30 -u "root:${TDENGINE_PASSWORD:-taosdata}" \
+    --data-binary 'SELECT SERVER_VERSION()' \
+    "http://localhost:${TDENGINE_REST_PORT:-6041}/rest/sql" \
+    | grep -q '"code":0'
