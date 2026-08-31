@@ -38,5 +38,8 @@ dolphindb/clickbench.cfg
 dolphindb/db
 dolphindb/__pycache__
 
+# ArcticDB's LMDB store
+arcticdb/store
+
 # Python venvs created by install scripts
 myenv

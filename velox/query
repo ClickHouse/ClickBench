@@ -1,0 +1,65 @@
+#!/bin/bash
+# Reads a SQL query from stdin and runs it with axiom_sql against the Hive
+# table under data/.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -eo pipefail
+
+AXIOM=axiom/_build/release/axiom/cli/axiom_sql
+
+query=$(cat)
+err=$(mktemp /tmp/velox.XXXXXX.err)
+trap 'rm -f "$err"' EXIT
+
+# The CLI defaults to 4 in-process "workers" of 4 drivers each, which simulates
+# distributed execution: every stage boundary goes through the shuffle/exchange
+# path, and even at the same total driver count that costs 10-50x on a single
+# machine (Q23 goes from 0.7s to 37s). ClickBench runs one machine, so use one
+# worker with one driver per vCPU, which is the parallelism every other
+# single-node engine here takes by default.
+
+# --query "" reads the statement from stdin; --print_timing adds a
+#   Query ID: <id> | Parsing: 1.2ms | Optimizing: 3.3ms | Executing: 5.3ms | Total: 19.3ms / ...
+# line to stdout after the result. --data_path has to be absolute: Velox's file
+# system registry only matches absolute paths, and a relative one crashes the
+# scan.
+out=$(printf '%s\n' "$query" | "$AXIOM" --data_path "$(pwd)/data" \
+    --num_workers 1 --num_drivers "$(nproc)" \
+    --print_timing --query "" 2>"$err") && status=0 || status=$?
+
+# axiom_sql exits 0 even when the statement fails: it prints "Query failed: ..."
+# to stderr and returns success, so the exit code alone can't be trusted.
+if [ "$status" -ne 0 ] || grep -q '^Query failed:' "$err"; then
+    cat "$err" >&2
+    printf '%s\n' "$out" >&2
+    exit 1
+fi
+
+# Everything except the timing line is the result.
+printf '%s\n' "$out" | grep -v '^Query ID: ' || true
+
+# Total is printed in Velox's succinct form: "19.26ms", "1.53s", or "1m 5s"
+# past a minute. Sum the <number><unit> tokens into fractional seconds.
+printf '%s\n' "$out" \
+    | grep -o 'Total: [^/]*' \
+    | tail -n1 \
+    | awk '{
+        s = $0; sub(/^Total: /, "", s);
+        n = 0; total = 0;
+        while (match(s, /[0-9]+(\.[0-9]+)?(ns|us|ms|s|m|h|d)/)) {
+            token = substr(s, RSTART, RLENGTH);
+            s = substr(s, RSTART + RLENGTH);
+            unit = token; gsub(/[0-9.]/, "", unit);
+            value = token + 0;
+            if (unit == "ns") value /= 1000000000;
+            else if (unit == "us") value /= 1000000;
+            else if (unit == "ms") value /= 1000;
+            else if (unit == "m") value *= 60;
+            else if (unit == "h") value *= 3600;
+            else if (unit == "d") value *= 86400;
+            total += value; n++;
+        }
+        if (n == 0) { exit 1 }
+        printf "%.3f\n", total;
+    }' >&2
