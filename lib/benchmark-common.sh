@@ -140,6 +140,12 @@ bench_flush_caches() {
 
 bench_install() {
     ./install
+    # Flush the installation's writeback here, where nothing is measured.
+    # Unpacking packages, Docker images and binaries leaves dirty pages
+    # behind, and whoever calls sync next pays for writing them out — which
+    # used to be the sync at the end of bench_load, charging an install to
+    # Load time. See the comment in bench_download.
+    sync
 }
 
 bench_start() {
@@ -164,6 +170,17 @@ bench_download() {
         return 0
     fi
     "$LIB_DIR/$BENCH_DOWNLOAD_SCRIPT"
+    # Same reasoning as in bench_install, and the effect is much larger here.
+    # Fetching and decompressing the dataset leaves tens of GB of dirty pages
+    # behind; the next sync writes them out. Until now that next sync was the
+    # one at the end of bench_load, so every system paid for its download's
+    # writeback inside its measured load window — and paid unevenly, because
+    # the volume depends on the input format the system happens to ingest
+    # (~70 GB of uncompressed TSV/CSV against ~14 GB of Parquet) rather than
+    # on anything the system did. The leftover dirty pages also made the
+    # first ./drop_caches cycle slower for the TSV/CSV systems. Syncing here,
+    # outside every measured window, keeps Load time about the load.
+    sync
 }
 
 bench_load() {
