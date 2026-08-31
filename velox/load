@@ -1,0 +1,45 @@
+#!/bin/bash
+set -e
+
+# Axiom's Hive connector reads a directory tree: every subdirectory of
+# --data_path is one table, so hits.parquet becomes data/hits/hits.parquet.
+# The Parquet file itself is not rewritten — the load step only derives the
+# metadata the connector requires next to the data: axiom_hive_import infers
+# the schema (.schema) and per-column statistics (.stats) from the Parquet
+# footer. Both the import and the queries need an absolute --data_path: the
+# connector hands the path to Velox's file system registry, which only matches
+# absolute paths.
+mkdir -p data/hits
+ln -f hits.parquet data/hits/hits.parquet
+rm -f hits.parquet
+
+axiom/_build/release/axiom/cli/axiom_hive_import --data_path "$(pwd)/data" --force
+
+# hits.parquet stores EventDate as UINT16, which Velox reads as SMALLINT, and
+# any filter on a column of unsigned Parquet type crashes the scan (see
+# README). Declaring it INTEGER avoids that, and is also the faithful mapping
+# of an unsigned 16-bit type — the same one presto/create.sql uses. The
+# connector requires the statistics min/max type to match the column type, so
+# widen it in both metadata files.
+python3 - <<'PY'
+import json
+
+with open("data/hits/.schema") as f:
+    schema = json.load(f)
+for column in schema["dataColumns"]:
+    if column["name"] == "EventDate":
+        column["type"] = {"name": "Type", "type": "INTEGER"}
+with open("data/hits/.schema", "w") as f:
+    json.dump(schema, f)
+
+with open("data/hits/.stats") as f:
+    stats = json.load(f)
+for column in stats["columns"]:
+    if column["name"] == "EventDate":
+        for bound in ("min", "max"):
+            column[bound]["type"] = "INTEGER"
+with open("data/hits/.stats", "w") as f:
+    json.dump(stats, f)
+PY
+
+sync

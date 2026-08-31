@@ -2,6 +2,9 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-08-29
+Firebolt now does a true cold run. The three self-hosted firebolt-core entries (`firebolt`, `firebolt-parquet`, `firebolt-parquet-partitioned`) set `BENCH_RESTARTABLE=no` and therefore only got their page cache flushed before each first run; they now go through the common runner's full `./stop` → `drop_caches` → `./start` cycle like every other daemon, and lost the `no-cold` tag. The engine handles `SIGTERM` and shuts down cleanly, and the database lives on a bind-mounted volume, so it is still there when the container is started back up. The result files produced before this change keep the tag. The managed-cloud Firebolt results from 2025-06-07 also keep it: those ran against the hosted service, which cannot be restarted.
+
 ### 2026-08-28
 Renamed the `lukewarm-cold-run` tag to `no-cold` — a shorter name for the same thing: an entry whose first run of each query is not a true cold run, because the system is not restarted before it. The classification was also brought up to date. The 37 systems that the common runner in `lib/` already stops, page-cache-flushes and restarts before every cold run lost the tag, as did the 82 result files it had already produced; the managed services that clear nothing at all before a first run (ClickHouse Cloud, Databricks, MotherDuck, Hologres, AlloyDB) gained it, as [#1646](https://github.com/ClickHouse/ClickBench/pull/1646) requires.
 
