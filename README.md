@@ -292,6 +292,7 @@ Currently, this includes
 
 - Vertica
 - kdb (KDB-X Community Edition)
+- DolphinDB (the download is licensed under an evaluation agreement whose confidentiality clause covers "any information relating to the Evaluation Software")
 
 Please help us add more systems and run the benchmarks on more types of VMs:
 
@@ -302,7 +303,6 @@ Please help us add more systems and run the benchmarks on more types of VMs:
 - [ ] Azure Synapse
 - [ ] Boilingdata
 - [ ] CockroachDB Serverless
-- [ ] DolphinDB
 - [ ] Dremio (without publishing)
 - [ ] Exasol
 - [ ] Hydrolix

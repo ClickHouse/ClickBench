@@ -1,0 +1,101 @@
+#!/bin/bash
+set -e
+
+# DolphinDB is distributed as a zip with a self-contained server tree. The
+# download bundles the free "community" license (dolphindb.lic), so there is
+# no registration step; see README.md for what that license caps.
+VERSION="${DOLPHINDB_VERSION:-3.00.6}"
+
+# Per-architecture package names, from the vendor's deployment tutorials.
+# x86-64 ships a plain build and an "_ABI" build (the latter compiled with
+# _GLIBCXX_USE_CXX11_ABI=1, which only matters for linking plugins); arm64
+# ships the ABI build only, so use it there.
+case "$(uname -m)" in
+    x86_64)  PACKAGE="DolphinDB_Linux64_V${VERSION}.zip" ;;
+    aarch64) PACKAGE="DolphinDB_ARM64_V${VERSION}_ABI.zip" ;;
+    *)
+        echo "install: no DolphinDB build for $(uname -m)" >&2
+        exit 1
+        ;;
+esac
+
+sudo apt-get update -y
+# iproute2 for ss, which ./stop uses to confirm the listening
+# socket is released before it returns.
+sudo apt-get install -y unzip wget python3-pip python3-venv iproute2
+
+if [ ! -x dolphindb/server/dolphindb ]; then
+    wget --continue --progress=dot:giga \
+        "https://www.dolphindb.com/downloads/${PACKAGE}" -O dolphindb.zip
+    unzip -q -o dolphindb.zip -d dolphindb
+    rm -f dolphindb.zip
+    chmod +x dolphindb/server/dolphindb
+fi
+
+# The Python API is DolphinDB's primary client; it speaks the native binary
+# protocol and hands back pandas DataFrames.
+if [ ! -d myenv ]; then
+    python3 -m venv myenv
+fi
+# shellcheck disable=SC1091
+source myenv/bin/activate
+if ! python3 -m pip install --quiet dolphindb; then
+    echo "install: pip could not install the dolphindb client." >&2
+    echo "install: it publishes manylinux wheels for CPython 3.8-3.13 only;" >&2
+    echo "install: this venv is $(python3 -V). Ubuntu 24.04 ships 3.12." >&2
+    exit 1
+fi
+
+# Generate the server config. Start from the dolphindb.cfg that ships in the
+# package (the vendor's own standalone configuration) and override only the
+# settings that have to track the machine and the license:
+#
+#   workerNum, localExecutors, maxBatchJobWorker
+#               the shipped values are 4/3/4; the DolphinDB default for
+#               workerNum is "number of CPU cores". Under the community
+#               license the process pins itself to maxCoresPerNode cores
+#               (sched_setaffinity), so sizing the worker pool to nproc would
+#               put 16+ workers on 2 cores.
+#   maxMemSize  the shipped value is 32 (GB) and the default is ~80% of RAM,
+#               but the license caps memory per node independently. Stating it
+#               keeps the server's own accounting in step with what it can use.
+#
+# Both caps are read out of the license file rather than hardcoded, so
+# dropping an Enterprise license in place of the bundled one is picked up.
+# Its first line is
+#   <expiration>,<maxMemoryPerNode GB>,<maxCoresPerNode>,<maxNodes>,...
+LIC="dolphindb/server/dolphindb.lic"
+lic_mem=$(head -n 1 "$LIC" | cut -d, -f2)
+lic_cores=$(head -n 1 "$LIC" | cut -d, -f3)
+
+# Echo $2, lowered to $1 when $1 is a smaller positive integer. A license
+# field we do not recognise (blank, -1, a future format) leaves the machine
+# value alone.
+clamp_to_license() {
+    local limit="$1" value="$2"
+    case "$limit" in
+        ''|*[!0-9]*) echo "$value"; return 0 ;;
+    esac
+    if [ "$limit" -gt 0 ] && [ "$limit" -lt "$value" ]; then
+        echo "$limit"
+    else
+        echo "$value"
+    fi
+}
+
+cores=$(clamp_to_license "$lic_cores" "$(nproc)")
+mem_total_gb=$(( $(awk '/^MemTotal:/ { print $2 }' /proc/meminfo) * 8 / 10 / 1048576 ))
+[ "$mem_total_gb" -lt 1 ] && mem_total_gb=1
+mem_gb=$(clamp_to_license "$lic_mem" "$mem_total_gb")
+
+{
+    grep -v -E '^(workerNum|localExecutors|maxBatchJobWorker|maxMemSize)=' \
+        dolphindb/server/dolphindb.cfg
+    echo "workerNum=${cores}"
+    echo "localExecutors=$(( cores > 1 ? cores - 1 : 1 ))"
+    echo "maxBatchJobWorker=${cores}"
+    echo "maxMemSize=${mem_gb}"
+} > clickbench.cfg
+
+echo "install: workerNum=${cores} maxMemSize=${mem_gb}" \
+     "(license: ${lic_cores} cores / ${lic_mem} GB per node)"
