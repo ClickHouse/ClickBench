@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# The Parquet file plus the metadata (.schema/.stats) Axiom's Hive connector
+# derives from it in ./load.
+du -sb data | cut -f1
