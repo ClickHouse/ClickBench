@@ -32,5 +32,11 @@ hits.vortex
 bemidb/bemidb
 bemidb/iceberg
 
+# DolphinDB's unpacked server tree, generated config and -home data directory
+dolphindb/dolphindb
+dolphindb/clickbench.cfg
+dolphindb/db
+dolphindb/__pycache__
+
 # Python venvs created by install scripts
 myenv

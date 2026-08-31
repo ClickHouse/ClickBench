@@ -67,6 +67,13 @@ _EXTERNAL = {
     # The kdb/ scripts stay so an operator can reproduce results
     # locally, but the playground never exposes it.
     "kdb",
+    # dolphindb: same situation. The download is covered by the DolphinDB
+    # Software Evaluation License Agreement, which grants use "internally
+    # within Your facilities solely for the purpose of evaluation" (§3) and
+    # forbids distributing "any portion of the Evaluation Software ... to any
+    # third party" (§5). Serving it from the playground would be exactly that.
+    # The dolphindb/ scripts stay for local reproduction only.
+    "dolphindb",
 }
 
 # Systems that need outbound access at query time get routed through

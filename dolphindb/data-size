@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# Everything the server persists lives under -home: the column chunks and
+# their metadata (db/local8848/storage), the DFS catalog (dfsMeta) and the
+# write-ahead logs (local8848/log/{redoLog,TSDBRedo,PKEYRedo,recoverLog}).
+# The server's own text log is not here: DolphinDB writes dolphindb.log next
+# to the binary, so this measures data and WAL only.
+du -sb db | awk '{ print $1 }'

@@ -1,0 +1,11 @@
+{
+  "system": "DolphinDB",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "time-series"
+  ]
+}
