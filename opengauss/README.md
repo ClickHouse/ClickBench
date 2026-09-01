@@ -84,6 +84,15 @@ three quarters, `work_mem` at 64 MB. Two of them are openGauss-specific:
 - openGauss has no `max_wal_size`; the pre-9.5 `checkpoint_segments` is still
   the knob, and 2048 segments is the same 32 GB the `postgresql` entry
   allocates.
+- The open-file budget has to be raised in two places or hash aggregations
+  that spill die with `could not create temporary file ...: Too many open
+  files`. openGauss derives `max_safe_fds` from the shell's `ulimit -n`, which
+  cloud-init leaves at 1024, so the `run` wrapper raises it to the 1000000
+  openGauss's own installation guide asks for; and `max_files_per_process`
+  caps the budget again at 1000 on top of that, independently of the OS, so
+  `install` raises it too. A machine with a generous default `ulimit` hides
+  this completely, which is how it survived local testing and failed on the
+  first c6a.4xlarge run.
 
 ## Parallelism
 
@@ -125,8 +134,40 @@ These scripts were run end to end on the full dataset: `./load` gets exactly
 result — none errors, none times out. The correctness comparison against
 `clickhouse-local` above was done query by query on a 1% slice.
 
-There is nothing surprising in the shape of the result: as in the `postgresql`
-entry, every query is a full sequential scan of the whole table, so on a
-machine whose RAM cannot hold it the runtimes collapse onto the time it takes
-to read the table off the disk. No results yet — those need runs on the
-benchmark's own EC2 machines.
+As in the `postgresql` entry, every query is a full sequential scan of the
+whole table, so on a machine whose RAM cannot hold it the runtimes collapse
+onto one number: how fast openGauss can read the table.
+
+## That number is ~110 MB/s, and it is a problem on small machines
+
+On c6a.4xlarge every query, cold or warm, takes 670-720 s against a ~72 GB
+table — about 103 MB/s. The `postgresql` entry answers the same queries on the
+same instance type in ~258 s each against a *larger* table, about 287 MB/s.
+
+The gap is not the disk. Measured here on NVMe capable of gigabytes per
+second, with the page cache dropped before each run, a full scan of a 10M-row
+row-store table moves at:
+
+| `heap_bulk_read_size` | `query_dop` | rate | average read |
+| --- | --- | --- | --- |
+| 0 (default) | 1 | 107 MB/s | 45 KB |
+| 64 | 1 | 112 MB/s | 56 KB |
+| 64 | 8 | 120 MB/s | 55 KB |
+| 16 | 8 | 123 MB/s | 54 KB |
+
+The scan sits at ~110 MB/s whatever the storage underneath and whatever
+`heap_bulk_read_size`, the seqscan pre-read knob, is set to — and at
+`query_dop = 1` a large pre-read makes it worse, reading 25 GB to scan a
+6.7 GB table. It is a property of the engine, not of the hardware.
+
+43 queries x 3 runs x ~700 s is about 25 hours, so on a machine whose RAM
+cannot hold the table this entry cannot finish inside the benchmark's 10-hour
+cap: the first c6a.4xlarge run got through 23 of the 43 queries. On the
+large-memory machines the picture changes, since only the cold run of each
+query has to come off the disk and the two warm runs are served from RAM.
+Expect results from the metal instances and a timeout from the small ones.
+
+The `opengauss-column` entry does not have this problem: it reads a sixth as
+much data and answered its first 18 queries in a total of 156 seconds.
+
+No results yet — those need runs on the benchmark's own EC2 machines.

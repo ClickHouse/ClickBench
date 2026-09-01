@@ -58,9 +58,18 @@ export PGDATA=$OG_ROOT/data
 export PGPORT=$OG_PORT
 export PGHOST=$OG_ROOT/tmp
 export TMPDIR=$OG_ROOT/tmp
+# Bound each ./check probe: a server still replaying WAL accepts the
+# connection and then sits on it, which would turn the driver's readiness
+# loop into a multi-minute stall per cold cycle.
+export PGCONNECT_TIMEOUT=5
 EOF
 sudo tee "$OG_ROOT/run" >/dev/null <<EOF
 #!/bin/bash
+# openGauss's installation guide asks for a nofile limit of 1000000, and it
+# means it: the server derives max_safe_fds from whatever the shell had, so
+# under the 1024 that cloud-init leaves in place a hash aggregation that
+# spills dies with 'could not create temporary file ... Too many open files'.
+ulimit -n 1000000 2>/dev/null || ulimit -n "\$(ulimit -Hn)" 2>/dev/null || true
 source $OG_ROOT/env.sh
 exec "\$@"
 EOF
@@ -116,6 +125,7 @@ max_process_memory = ${max_process_memory}kB
 shared_buffers = ${shared_buffers}kB
 effective_cache_size = ${effective_cache_size}kB
 work_mem = 64MB
+max_files_per_process = 100000
 query_dop = $query_dop
 max_connections = $max_connections
 maintenance_work_mem = ${maintenance_work_mem}kB

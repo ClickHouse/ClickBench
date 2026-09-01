@@ -22,10 +22,13 @@ To run the benchmark:
   the schema is otherwise byte-for-byte the `postgresql` one. Compression is
   left at the column store's default of `low`; `middle` and `high` exist and
   would trade CPU for space.
-- `install` gives a quarter of RAM to `cstore_buffers`, the CU cache the
-  column store reads through, and a thirty-second of it to `shared_buffers`,
-  which here holds little more than the catalog. The row-store entry does the
-  reverse.
+- Nothing else. `install` is byte-for-byte the row-store entry's, including
+  `shared_buffers`: `cstore_buffers`, the CU cache the column store reads
+  through, is deliberately left at its default, because the driver restarts
+  the server and drops the page cache before every query, so a large CU cache
+  is never warm when it matters. An earlier revision of this entry gave it a
+  quarter of RAM and the c6a.4xlarge run spent about 30 minutes in each cold
+  cycle -- 18 queries in ten hours, against 156 seconds of actual query time.
 - `./load` finishes with `ANALYZE` rather than `VACUUM ANALYZE`: there are no
   heap pages to freeze and no visibility map to build.
 

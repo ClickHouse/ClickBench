@@ -3,5 +3,7 @@
 OG_ROOT=${OG_ROOT:-/opt/opengauss}
 OG_USER=${OG_USER:-omm}
 
+# Bounded so a stuck shutdown cannot eat a cold cycle; the driver waits for
+# ./check to start failing afterwards either way.
 sudo -u "$OG_USER" "$OG_ROOT/run" gs_ctl stop -D "$OG_ROOT/data" \
-    -Z single_node -m fast || true
+    -Z single_node -m fast -t 120 || true
