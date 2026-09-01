@@ -63,6 +63,16 @@ from arithmetic on `memory_limit`, because the bootstrap has already given the
 for one core or one byte more than is free fails the `CREATE` outright with
 `resource not enough to hold 1 unit`.
 
+The bootstrap gets up to three attempts, and a failed one is reported with the
+observer's own log rather than just the client's `ERROR 4015 (HY000): System
+error`, which says nothing. Retrying is not simply a matter of running the
+statement again: the observer decides whether it may be bootstrapped by looking
+for its own leftovers, and those are spread around `$OB_HOME` rather than
+confined to `store/` — `etc2/`, `etc3/`, `wallet/`, `audit/` and two generated
+files in `etc/`. Leave any of them behind and the second attempt is refused with
+`Server is not empty but has never been bootstrapped … has_data_version_file=
+TRUE`, so `install` clears all of them between attempts.
+
 `./check` connects to the `bench` tenant, not to `sys`. After a restart the
 server answers `root@sys` well before the tenant's log stream has replayed, and
 a query issued in that window fails — checking `sys` would let the driver start

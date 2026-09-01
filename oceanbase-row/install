@@ -185,24 +185,82 @@ echo "oceanbase: memory_limit=${memory_limit_mb}M system_memory=${system_memory_
 sys() { sudo "$OB_HOME/obc" -h127.0.0.1 -P"$OB_MYSQL_PORT" -uroot@sys -A "$@"; }
 ten() { sudo "$OB_HOME/obc" -h127.0.0.1 -P"$OB_MYSQL_PORT" -uroot@"$OB_TENANT" -A "$@"; }
 
-./start
 # The bootstrap statement is itself what creates the sys tenant, so wait for
 # root@sys to answer rather than for the tenant ./check looks at. This first
 # start is the slow one: it preallocates datafile_size + log_disk_size.
-started=no
-for i in $(seq 1 600); do
-    if sys -N -e 'SELECT 1' >/dev/null 2>&1; then
-        started=yes
+start_and_bootstrap() {
+    ./start
+    local i started=no
+    for i in $(seq 1 900); do
+        if sys -N -e 'SELECT 1' >/dev/null 2>&1; then
+            started=yes
+            break
+        fi
+        sleep 1
+    done
+    if [ "$started" != "yes" ]; then
+        echo "oceanbase: observer did not come up" >&2
+        return 1
+    fi
+    # The SQL port answers before the rest of the server has settled, and the
+    # bootstrap's first act is a round of RPCs to every address in the
+    # rs_list -- itself, here. Give that a moment rather than firing the
+    # statement into a half-started process.
+    sleep 30
+    sys -e "ALTER SYSTEM BOOTSTRAP ZONE 'zone1' SERVER '127.0.0.1:${OB_RPC_PORT}'"
+}
+
+# A bootstrap that fails cannot simply be retried: the observer decides whether
+# it is allowed to be bootstrapped by looking for its own leftovers, and those
+# are scattered around $OB_HOME rather than confined to store/ -- etc2/, etc3/,
+# wallet/, audit/ and two generated files in etc/. Leave any of them in place
+# and the retry is refused with "Server is not empty but has never been
+# bootstrapped ... has_data_version_file=TRUE". Clearing all of them puts the
+# directory back the way it was before the first ./start.
+reset_observer_state() {
+    ./stop
+    # The observer is launched as ./bin/observer from $OB_HOME, so pgrep on an
+    # absolute path would not match it; the pid file is the reliable handle.
+    local i pid
+    for i in $(seq 1 120); do
+        pid=$(sudo cat "$OB_HOME/run/observer.pid" 2>/dev/null || true)
+        [ -z "$pid" ] && break
+        sudo kill -0 "$pid" 2>/dev/null || break
+        sleep 1
+    done
+    sudo rm -rf "$OB_HOME/store" "$OB_HOME/log" "$OB_HOME/run" \
+                "$OB_HOME/etc2" "$OB_HOME/etc3" "$OB_HOME/wallet" "$OB_HOME/audit" \
+                "$OB_HOME"/etc/observer.config.bin* \
+                "$OB_HOME"/etc/observer.data_version.bin*
+    sudo mkdir -p "$OB_HOME/store/clog" "$OB_HOME/store/slog" "$OB_HOME/store/sstable" \
+                  "$OB_HOME/log" "$OB_HOME/run"
+    sudo chown -R root:root "$OB_HOME"
+}
+
+bootstrapped=no
+for attempt in 1 2 3; do
+    if start_and_bootstrap; then
+        bootstrapped=yes
         break
     fi
-    sleep 1
+    # Say why. Without this the benchmark log shows one bare "ERROR 4015
+    # (HY000): System error" and nothing to act on.
+    echo "oceanbase: bootstrap attempt ${attempt} failed. Observer log says:" >&2
+    sudo grep -aE "BOOTSTRAP|bootstrap|CHECK_SERVER_EMPTY|WDIAG|EDIAG|ERROR" \
+        "$OB_HOME/log/observer.log" 2>/dev/null | tail -n 60 | cut -c1-500 >&2
+    echo "oceanbase: ...and the last lines of the log, whatever they are:" >&2
+    sudo tail -n 20 "$OB_HOME/log/observer.log" 2>/dev/null | cut -c1-500 >&2
+    if [ -s "$OB_HOME/log/observer.log.wf" ]; then
+        echo "oceanbase: ...and the warning log:" >&2
+        sudo tail -n 30 "$OB_HOME/log/observer.log.wf" 2>/dev/null | cut -c1-500 >&2
+    fi
+    [ "$attempt" = 3 ] && break
+    reset_observer_state
 done
-if [ "$started" != "yes" ]; then
-    echo "oceanbase: observer did not come up; see $OB_HOME/log/observer.log" >&2
+if [ "$bootstrapped" != "yes" ]; then
+    echo "oceanbase: could not bootstrap the cluster; giving up" >&2
     exit 1
 fi
-
-sys -e "ALTER SYSTEM BOOTSTRAP ZONE 'zone1' SERVER '127.0.0.1:${OB_RPC_PORT}'"
 
 # A freshly bootstrapped cluster has only the sys tenant, which is reserved for
 # cluster metadata; user data goes in a tenant of its own, and a tenant needs a
