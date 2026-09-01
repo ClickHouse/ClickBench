@@ -50,6 +50,25 @@
 #   BENCH_QUERIES_FILE     Path to a queries file, one query per line.
 #                          Default "queries.sql" (in the system dir).
 #   BENCH_CHECK_TIMEOUT    Seconds to wait for ./check to succeed. Default 300.
+#   BENCH_QUERY_TIMEOUT    Wall-clock cap on a single ./query invocation, in
+#                          seconds. Default 0 — no cap, the historical
+#                          behaviour that every system keeps unless it opts
+#                          in. When set, a try that runs past the cap is
+#                          recorded as null AND the query's remaining tries
+#                          are skipped (also null): a query that can't
+#                          finish its cold run won't be rescued by two more
+#                          attempts, and without the skip one hopeless query
+#                          costs 3x the cap instead of 1x.
+#                          For engines where a few queries run for hours
+#                          this is the difference between a result row and
+#                          no result at all. Turso on c6a.4xlarge spent ~7h
+#                          inside Q5 (SELECT COUNT(DISTINCT UserID) FROM
+#                          hits) and the global timeout then killed the run
+#                          at query 5 of 43, discarding the four it had
+#                          finished. Raising the global timeout doesn't fix
+#                          that — it just moves where the run dies. Nulls
+#                          are already how ClickBench reports queries a
+#                          system can't do.
 #   BENCH_CONCURRENT_CONNECTIONS
 #                          Number of parallel workers in the QPS test
 #                          that runs after the cold/warm sweep. Default 10.
@@ -88,9 +107,34 @@ export HOME="${HOME:-/root}"
 : "${BENCH_TRIES:=3}"
 : "${BENCH_QUERIES_FILE:=queries.sql}"
 : "${BENCH_CHECK_TIMEOUT:=300}"
+: "${BENCH_QUERY_TIMEOUT:=0}"
 : "${BENCH_CONCURRENT_CONNECTIONS:=10}"
 : "${BENCH_CONCURRENT_DURATION:=600}"
 : "${BENCH_CONCURRENT_SEED:=clickbench}"
+
+# BENCH_QUERY_TIMEOUT is compared with -gt on every try. A non-numeric value
+# would make that comparison fail under `set -e` — hours into the run, after
+# the load, with an error message that says nothing about the typo. Check it
+# once, up front.
+if ! [[ "$BENCH_QUERY_TIMEOUT" =~ ^[0-9]+$ ]]; then
+    echo "bench: BENCH_QUERY_TIMEOUT must be a non-negative integer of seconds," >&2
+    echo "bench: got '${BENCH_QUERY_TIMEOUT}'" >&2
+    exit 1
+fi
+
+# Command prefix for every ./query invocation; empty when uncapped, so the
+# default path is byte-for-byte the old one.
+#
+# Deliberately no --foreground: in its default mode timeout(1) puts ./query
+# in a fresh process group and signals the whole group, so the engine
+# process the script spawned (tursodb, a client binary, a JVM) dies with it.
+# With --foreground only the wrapper script would be killed and the engine
+# would be left orphaned, still holding the machine's RAM and disk bandwidth
+# while the next query tries to run.
+query_timeout_cmd=()
+if [ "$BENCH_QUERY_TIMEOUT" -gt 0 ]; then
+    query_timeout_cmd=(timeout "$BENCH_QUERY_TIMEOUT")
+fi
 
 # Resolve the directory containing this script so we can find sibling
 # helpers (download-hits-*).
@@ -241,6 +285,7 @@ bench_run_query() {
     local i raw_stderr exit_code timing
     local load_secs=0
     local results=()
+    local timed_out=no
 
     # Cold-cycle: stop, wait until really stopped, drop_caches, start,
     # check. Order matters: the naive order (flush, then stop) leaves
@@ -281,9 +326,26 @@ bench_run_query() {
     fi
 
     for i in $(seq 1 "$BENCH_TRIES"); do
+        # An earlier try ran past BENCH_QUERY_TIMEOUT — see the env docs at
+        # the top. Record the rest of the tries as null without running them.
+        if [ "$timed_out" = "yes" ]; then
+            results+=("null")
+            echo "${query_num},${i},null" >> result.csv
+            continue
+        fi
+
         # The query script's contract: stdout = result, stderr's last line =
         # fractional seconds, exit 0 on success.
-        raw_stderr=$(printf '%s\n' "$query" | ./query 2>&1 >/dev/null) && exit_code=0 || exit_code=$?
+        raw_stderr=$(printf '%s\n' "$query" | "${query_timeout_cmd[@]}" ./query 2>&1 >/dev/null) && exit_code=0 || exit_code=$?
+
+        # 124 is timeout(1)'s "the command timed out". A ./query that exited
+        # 124 on its own account would be misreported as a timeout; none of
+        # them do, and the consequence is only that we skip its retries.
+        if [ "$BENCH_QUERY_TIMEOUT" -gt 0 ] && [ "$exit_code" -eq 124 ]; then
+            timed_out=yes
+            echo "bench: query ${query_num} exceeded BENCH_QUERY_TIMEOUT=${BENCH_QUERY_TIMEOUT}s;" >&2
+            echo "bench: recording null for all ${BENCH_TRIES} tries and moving on" >&2
+        fi
 
         if [ "$exit_code" -eq 0 ]; then
             # The query script's contract is "fractional seconds on the
@@ -445,7 +507,12 @@ PY
             while [ "$(date +%s)" -lt "$deadline" ]; do
                 qi="${perm[$idx]}"
                 q_text="${queries[$qi]}"
-                if printf '%s\n' "$q_text" | ./query >/dev/null 2>&1; then
+                # Honour BENCH_QUERY_TIMEOUT here too: without it a worker
+                # that draws a query the engine can't finish blocks past the
+                # deadline, and `wait` below hangs with it. A capped query
+                # counts as an error, which is the honest reading — the
+                # engine did not answer.
+                if printf '%s\n' "$q_text" | "${query_timeout_cmd[@]}" ./query >/dev/null 2>&1; then
                     ok=$((ok + 1))
                 else
                     err=$((err + 1))
