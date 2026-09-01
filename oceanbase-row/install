@@ -1,0 +1,310 @@
+#!/bin/bash
+# OceanBase publishes only el7/el8 RPMs, but the observer links nothing outside
+# glibc and a bundled libaio, so the el8 package runs unmodified on Ubuntu once
+# it is unpacked with rpm2cpio. Everything lands under $OB_HOME; nothing is
+# installed system-wide.
+#
+# Because a fresh observer serves no tenant until it has been bootstrapped, the
+# whole one-time setup (bootstrap, resource unit/pool, tenant, OLAP parameter
+# template) happens here rather than in ./load -- the driver runs ./install
+# before its first ./check, and ./check has to be able to reach the tenant.
+set -eu
+
+OB_VERSION=${OB_VERSION:-5.0.1.0-100000042026072912}
+OBCLIENT_VERSION=${OBCLIENT_VERSION:-2.2.14-1}
+LIBOBCLIENT_VERSION=${LIBOBCLIENT_VERSION:-2.2.14-2}
+OB_HOME=${OB_HOME:-/opt/oceanbase}
+OB_TENANT=${OB_TENANT:-bench}
+OB_CLUSTER=${OB_CLUSTER:-clickbench}
+OB_MYSQL_PORT=${OB_MYSQL_PORT:-2881}
+OB_RPC_PORT=${OB_RPC_PORT:-2882}
+# "row" for this entry, "column" for the ../oceanbase one.
+OB_STORE_FORMAT=${OB_STORE_FORMAT:-row}
+
+# The sentinel is written as the very last thing this script does, so an install
+# that died halfway -- after the observer had already written its config and
+# preallocated its data file, but before the tenant existed -- is retried from
+# scratch rather than left half-built for ./check to time out against.
+if [ -f "$OB_HOME/.clickbench-installed" ]; then
+    echo "oceanbase: cluster already initialized in $OB_HOME" >&2
+    exit 0
+fi
+
+case "$(uname -m)" in
+    x86_64)  ob_arch=x86_64  ;;
+    aarch64) ob_arch=aarch64 ;;
+    *) echo "oceanbase: unsupported architecture $(uname -m)" >&2; exit 1 ;;
+esac
+mirror=${OB_MIRROR:-"https://mirrors.aliyun.com/oceanbase/community/stable/el/8/${ob_arch}"}
+
+sudo apt-get update -y
+# rpm2cpio+cpio unpack the RPMs. The -libs package is what carries the bundled
+# libaio the observer links against; without it the binary will not start.
+sudo apt-get install -y wget rpm2cpio cpio
+
+pkgdir=$(mktemp -d)
+for rpm in "oceanbase-ce-${OB_VERSION}.el8.${ob_arch}.rpm" \
+           "oceanbase-ce-libs-${OB_VERSION}.el8.${ob_arch}.rpm" \
+           "obclient-${OBCLIENT_VERSION}.el8.${ob_arch}.rpm" \
+           "libobclient-${LIBOBCLIENT_VERSION}.el8.${ob_arch}.rpm"; do
+    wget --continue --tries=5 --progress=dot:giga -O "$pkgdir/$rpm" "$mirror/$rpm"
+done
+
+unpack=$(mktemp -d)
+for rpm in "$pkgdir"/*.rpm; do
+    (cd "$unpack" && rpm2cpio "$rpm" | cpio -idm --quiet)
+done
+
+# The server package unpacks to /home/admin/oceanbase, obclient to /u01/obclient.
+sudo rm -rf "$OB_HOME"
+sudo mkdir -p "$OB_HOME"
+sudo cp -a "$unpack"/home/admin/oceanbase/. "$OB_HOME/"
+sudo mkdir -p "$OB_HOME/obclient"
+sudo cp -a "$unpack"/u01/obclient/. "$OB_HOME/obclient/"
+rm -rf "$pkgdir" "$unpack"
+
+# store/{clog,slog,sstable} have to exist before the first start: the observer
+# does not create them and dies with OB_NO_SUCH_FILE_OR_DIRECTORY if they are
+# missing.
+sudo mkdir -p "$OB_HOME/store/clog" "$OB_HOME/store/slog" "$OB_HOME/store/sstable" \
+              "$OB_HOME/log" "$OB_HOME/run"
+
+# cpio restores the RPM's uid/gid only when it runs as root, so on a machine
+# where the benchmark is driven by a sudo-capable non-root user the tree ends up
+# owned by that user while the observer itself runs as root -- and the observer
+# refuses to start when the two differ ("current user that starts observer is
+# not the same with the original one"). Normalise the ownership instead.
+sudo chown -R root:root "$OB_HOME"
+
+# The observer submits its data I/O through libaio, and one context per disk
+# thread quickly exceeds Ubuntu's default fs.aio-max-nr of 65536.
+sudo sysctl -w fs.aio-max-nr=1048576 >/dev/null
+sudo sysctl -w vm.max_map_count=655360 >/dev/null
+
+memory_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+threads=$(nproc)
+# Free space on the filesystem that will hold the data files, in kB.
+disk_kb=$(df -Pk "$OB_HOME" | awk 'NR==2 {print $4}')
+
+# OceanBase documents 8 GB of RAM as its minimum, and it means it: the observer
+# reserves the whole memory_limit up front, and out of that it needs
+# system_memory plus a resource unit for the sys tenant plus one for the
+# benchmark tenant. Below 8 GB there is no split that leaves a working tenant,
+# so say so here rather than let the OOM killer end the run 40 minutes in.
+if [ "$memory_kb" -lt 8000000 ]; then
+    echo "oceanbase: needs at least 8 GB of RAM, this machine has" \
+         "$((memory_kb / 1024)) MB; skipping" >&2
+    exit 1
+fi
+
+# 80% of RAM for the whole instance. The observer reserves memory_limit as its
+# own arena and never gives it back, so leaving a fifth of the machine to the
+# page cache (and to reading hits.tsv during ./load) keeps the kernel OOM killer
+# out of the run.
+memory_limit_mb=$((memory_kb / 1024 * 4 / 5))
+
+# system_memory is carved out of memory_limit for the instance's own bookkeeping
+# and cannot be handed to a tenant. These are the steps obd's
+# generate_general_config.py uses; picking a number by hand either starves the
+# root service or wastes a tenant's worth of RAM.
+if   [ "$memory_limit_mb" -lt  12288 ]; then system_memory_mb=1024
+elif [ "$memory_limit_mb" -lt  20480 ]; then system_memory_mb=5120
+elif [ "$memory_limit_mb" -lt  40960 ]; then system_memory_mb=6144
+elif [ "$memory_limit_mb" -lt  61440 ]; then system_memory_mb=7168
+elif [ "$memory_limit_mb" -lt  81920 ]; then system_memory_mb=8192
+elif [ "$memory_limit_mb" -lt 102400 ]; then system_memory_mb=9216
+elif [ "$memory_limit_mb" -lt 133120 ]; then system_memory_mb=10240
+else                                        system_memory_mb=$((memory_limit_mb * 8 / 100))
+fi
+
+# The data file is preallocated at startup, so ask for a fixed slab rather than
+# letting it auto-extend in the middle of the load: 35% of the free space, which
+# on the 500 GB benchmark volume leaves room for the 75 GB hits.tsv alongside.
+# The preallocated size does not distort ./data-size -- that reports the bytes
+# actually occupied (see the comment there).
+datafile_mb=$((disk_kb / 1024 * 35 / 100))
+[ "$datafile_mb" -lt 20480 ] && datafile_mb=20480
+
+# The redo log pool is preallocated too. obd's automatic sizing asks for three
+# times the tenant memory, which is meant for a cluster taking continuous
+# writes; this benchmark writes once, through a path that bypasses the redo log
+# (see ./load), so one times memory_limit is ample.
+log_disk_mb=$memory_limit_mb
+[ "$log_disk_mb" -lt 8192 ] && log_disk_mb=8192
+
+# cpu_count is what the instance believes the machine has; obd reserves two
+# cores for the OS. obd also floors it at 8, which would tell a four-core
+# machine it has twice the cores it does, so that part is left out.
+cpu_count=$((threads > 2 ? threads - 2 : threads))
+
+# Every resource unit -- the sys tenant's, created by the bootstrap, and the
+# benchmark tenant's -- has to be at least __min_full_resource_pool_memory,
+# which defaults to 5 GB. Two of those need 10 GB on top of system_memory, more
+# than a c6a.xlarge has in total, and CREATE RESOURCE UNIT is then rejected
+# outright. Keep the vendor default where it fits and drop to the 1 GB floor the
+# parameter accepts only on machines where it does not.
+if [ $((memory_limit_mb - system_memory_mb)) -lt 12288 ]; then
+    min_pool_memory=1073741824
+else
+    min_pool_memory=5368709120
+fi
+
+# Cluster-level half of the vendor's OLAP parameter template, taken verbatim
+# from etc/default_parameter.json (scenario "olap") in this very package. It
+# only turns off per-statement tracing and the slow-query machinery, neither of
+# which means anything for a 43-query analytical sweep, and bounds the syslog.
+#
+# __min_full_resource_pool_memory is not from the template; see the comment
+# where it is computed above.
+sudo tee "$OB_HOME/bench.env" >/dev/null <<EOF
+# Written by ./install. Sourced by ./start, ./stop, ./check, ./load, ./query
+# and ./data-size so that every restart uses byte-identical settings.
+export OB_HOME=$OB_HOME
+export OB_TENANT=$OB_TENANT
+export OB_CLUSTER=$OB_CLUSTER
+export OB_MYSQL_PORT=$OB_MYSQL_PORT
+export OB_RPC_PORT=$OB_RPC_PORT
+export OB_OPTSTR="memory_limit=${memory_limit_mb}M,system_memory=${system_memory_mb}M,datafile_size=${datafile_mb}M,log_disk_size=${log_disk_mb}M,cpu_count=${cpu_count},__min_full_resource_pool_memory=${min_pool_memory},enable_record_trace_log=False,trace_log_slow_query_watermark=7d,large_query_threshold=0ms,enable_syslog_recycle=True,max_syslog_file_count=20"
+EOF
+
+# obclient needs its own libobclnt on the library path; wrap it once so no other
+# script has to care.
+sudo tee "$OB_HOME/obc" >/dev/null <<EOF
+#!/bin/bash
+export LD_LIBRARY_PATH=$OB_HOME/obclient/lib
+exec $OB_HOME/obclient/bin/obclient "\$@"
+EOF
+sudo chmod 755 "$OB_HOME/obc"
+
+echo "oceanbase: memory_limit=${memory_limit_mb}M system_memory=${system_memory_mb}M" \
+     "datafile=${datafile_mb}M log_disk=${log_disk_mb}M cpu_count=${cpu_count}" >&2
+
+# No default database in these connections: `oceanbase` does not exist until the
+# bootstrap creates it, and obclient fails the connection outright if -D names a
+# missing database.
+sys() { sudo "$OB_HOME/obc" -h127.0.0.1 -P"$OB_MYSQL_PORT" -uroot@sys -A "$@"; }
+ten() { sudo "$OB_HOME/obc" -h127.0.0.1 -P"$OB_MYSQL_PORT" -uroot@"$OB_TENANT" -A "$@"; }
+
+./start
+# The bootstrap statement is itself what creates the sys tenant, so wait for
+# root@sys to answer rather than for the tenant ./check looks at. This first
+# start is the slow one: it preallocates datafile_size + log_disk_size.
+started=no
+for i in $(seq 1 600); do
+    if sys -N -e 'SELECT 1' >/dev/null 2>&1; then
+        started=yes
+        break
+    fi
+    sleep 1
+done
+if [ "$started" != "yes" ]; then
+    echo "oceanbase: observer did not come up; see $OB_HOME/log/observer.log" >&2
+    exit 1
+fi
+
+sys -e "ALTER SYSTEM BOOTSTRAP ZONE 'zone1' SERVER '127.0.0.1:${OB_RPC_PORT}'"
+
+# A freshly bootstrapped cluster has only the sys tenant, which is reserved for
+# cluster metadata; user data goes in a tenant of its own, and a tenant needs a
+# resource pool, which needs a unit config.
+#
+# Size that unit from what the server reports as unassigned rather than from
+# arithmetic on memory_limit: the bootstrap gives the sys tenant a unit of its
+# own, and how much it takes is a function of the version, not of anything set
+# here. Asking for one core or one byte more than is free fails the CREATE with
+# "resource not enough to hold 1 unit".
+read -r tenant_cpu tenant_memory_mb tenant_log_disk_mb <<EOF || true
+$(sys -N -e "SELECT CPU_CAPACITY_MAX - CPU_ASSIGNED_MAX,
+                    FLOOR((MEM_CAPACITY - MEM_ASSIGNED) / 1048576),
+                    FLOOR((LOG_DISK_CAPACITY - LOG_DISK_ASSIGNED) / 1048576)
+             FROM oceanbase.GV\$OB_SERVERS")
+EOF
+if ! [[ "$tenant_cpu" =~ ^[0-9]+ ]] || ! [[ "$tenant_memory_mb" =~ ^[0-9]+ ]]; then
+    echo "oceanbase: could not read free resources from GV\$OB_SERVERS" >&2
+    exit 1
+fi
+echo "oceanbase: tenant unit ${tenant_cpu} cpu / ${tenant_memory_mb}M memory /" \
+     "${tenant_log_disk_mb}M log disk" >&2
+
+sys -e "CREATE RESOURCE UNIT bench_unit
+            MAX_CPU = ${tenant_cpu}, MIN_CPU = ${tenant_cpu},
+            MEMORY_SIZE = '${tenant_memory_mb}M',
+            LOG_DISK_SIZE = '${tenant_log_disk_mb}M'"
+sys -e "CREATE RESOURCE POOL bench_pool
+            UNIT = 'bench_unit', UNIT_NUM = 1, ZONE_LIST = ('zone1')"
+sys -e "CREATE TENANT ${OB_TENANT}
+            RESOURCE_POOL_LIST = ('bench_pool'), PRIMARY_ZONE = 'zone1'
+            SET ob_tcp_invited_nodes = '%'"
+
+# Degree of parallelism for the bulk load in ./load. The vendor's rule is "up to
+# the tenant's core count", but the direct load's per-worker cost is memory as
+# well as CPU -- a sort area, a macroblock writer and a 7 MB coroutine stack
+# each -- so a machine with many cores and little RAM per core runs the tenant
+# out of memory (ERROR 4013) halfway through the load instead of finishing it.
+# Cap at one worker per 512 MB of tenant memory. On every machine this benchmark
+# runs on the core count is the smaller of the two and this changes nothing.
+load_parallel=${tenant_cpu%%.*}
+memory_cap=$((tenant_memory_mb / 512))
+[ "$memory_cap" -lt 1 ] && memory_cap=1
+[ "$load_parallel" -gt "$memory_cap" ] && load_parallel=$memory_cap
+echo "export OB_LOAD_PARALLEL=${load_parallel}" | sudo tee -a "$OB_HOME/bench.env" >/dev/null
+echo "oceanbase: load parallelism ${load_parallel}" >&2
+
+ready=no
+for i in $(seq 1 600); do
+    if ten -N -e 'SELECT 1' >/dev/null 2>&1; then
+        ready=yes
+        break
+    fi
+    sleep 1
+done
+if [ "$ready" != "yes" ]; then
+    echo "oceanbase: tenant ${OB_TENANT} never became reachable" >&2
+    exit 1
+fi
+
+# Tenant-level half of the same OLAP template from etc/default_parameter.json.
+# These are storage-engine and optimizer defaults for analytical work, not
+# rewrites of anything this benchmark measures.
+ten -e "
+ALTER SYSTEM SET default_table_store_format = '${OB_STORE_FORMAT}';
+ALTER SYSTEM SET default_table_organization = 'HEAP';
+ALTER SYSTEM SET default_table_merge_engine = 'DELETE_INSERT';
+ALTER SYSTEM SET default_micro_block_format_version = 2;
+ALTER SYSTEM SET default_skip_index_level = 1;
+ALTER SYSTEM SET default_delta_format = 'encoding';
+ALTER SYSTEM SET default_load_mode = 'DISABLED';
+ALTER SYSTEM SET direct_load_allow_fallback = 0;
+ALTER SYSTEM SET _io_read_batch_size = '128K';
+ALTER SYSTEM SET _io_read_redundant_limit_percentage = 50;
+ALTER SYSTEM SET _io_callback_thread_count = 64;
+ALTER SYSTEM SET _nested_loop_join_enabled = False;
+ALTER SYSTEM SET _rtf_creator_max_row_count = 2000000000;
+ALTER SYSTEM SET _force_subquery_unnest = True;
+ALTER SYSTEM SET _rowsets_max_rows = 512;
+ALTER SYSTEM SET max_partition_num = 65536;
+"
+
+# Variables half of the same template, from etc/default_system_variable.json.
+# The three collation lines matter beyond performance: utf8mb4_bin makes string
+# comparison, ORDER BY and LIKE byte-exact, which is what the reference
+# ClickHouse results these numbers get compared against do.
+ten -e "
+SET GLOBAL ob_query_timeout = 604800000000;
+SET GLOBAL ob_trx_timeout = 604800000000;
+SET GLOBAL parallel_min_scan_time_threshold = 10;
+SET GLOBAL ob_sql_work_area_percentage = 30;
+SET GLOBAL parallel_degree_policy = 'AUTO';
+SET GLOBAL collation_server = utf8mb4_bin;
+SET GLOBAL collation_connection = utf8mb4_bin;
+SET GLOBAL collation_database = utf8mb4_bin;
+"
+
+# LOAD DATA reads a server-side file and the path has to be inside
+# secure_file_priv. OceanBase only lets that variable be changed over a local
+# Unix socket, never over TCP -- hence the -S connection here.
+sudo "$OB_HOME/obc" -S "$OB_HOME/run/sql.sock" -uroot@"$OB_TENANT" -A \
+    -e "SET GLOBAL secure_file_priv = '/'"
+
+sudo touch "$OB_HOME/.clickbench-installed"
+./stop

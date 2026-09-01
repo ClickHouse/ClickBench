@@ -1,0 +1,27 @@
+#!/bin/bash
+set -eu
+
+OB_HOME=${OB_HOME:-/opt/oceanbase}
+source "$OB_HOME/bench.env"
+
+# The observer reads its persisted config from etc/observer.config.bin, but
+# passing the full option string on every start keeps the configuration in one
+# place (./install wrote it to bench.env) instead of depending on whatever the
+# last ALTER SYSTEM left behind.
+#
+# setsid: the observer daemonizes but stays in the caller's process group, so a
+# `timeout` around the driver or a killed shell would take the database with it.
+#
+# The observer wants a large open-file limit: it keeps a descriptor per worker
+# thread plus one per connection, and 655350 is the figure obd's own start check
+# insists on.
+sudo bash -c "
+    cd '$OB_HOME'
+    export LD_LIBRARY_PATH='$OB_HOME/lib'
+    ulimit -n 655350
+    ulimit -c unlimited
+    exec setsid ./bin/observer \
+        -p '$OB_MYSQL_PORT' -P '$OB_RPC_PORT' -z zone1 -n '$OB_CLUSTER' -c 1 \
+        -d '$OB_HOME/store' -I 127.0.0.1 -r '127.0.0.1:$OB_RPC_PORT:$OB_MYSQL_PORT' \
+        -o '$OB_OPTSTR'
+"
