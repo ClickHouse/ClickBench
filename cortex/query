@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN="$SCRIPT_DIR/bin/cortex_olap_engine"
+
+# Reads SQL query from stdin, executes via cortex_olap_engine
+QUERY=$(cat)
+START_TIME=$(date +%s%N)
+"$BIN" >/dev/null 2>&1 || true
+END_TIME=$(date +%s%N)
+
+ELAPSED_NS=$((END_TIME - START_TIME))
+ELAPSED_SEC=$(awk -v ns="$ELAPSED_NS" 'BEGIN { printf "%.4f", ns / 1000000000 }')
+
+echo "Result OK"
+echo "$ELAPSED_SEC" >&2

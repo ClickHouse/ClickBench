@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Standalone in-process engine: no persistent daemon required.
+exit 0
