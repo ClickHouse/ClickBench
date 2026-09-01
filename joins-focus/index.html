@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Joins-Focus Benchmark</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" href="data:image/gif;base64,R0lGODlhIAAgAOMPAHMUEmkyHOcbF8UvJts/E3BeOih1YziiQmebLt2AFjeyQKqZKNWPjLybfPfcDP///yH5BAEKAA8ALAAAAAAgACAAAATg8MlJ6ws26z0EGcQmZgAhnN6oPg0wDA0zrGMTAADDxEJCZ4Gba8c4hX4Uw+XWeYGOyMdhgkuYrAToqIBQHBCIKQ6wcJhPyINarUBcyuYE+ndQeOsKuNlxmv3CdnZfew5yAlEPC12BhFhZiBJ2CI1GkBMHeoV9PpYPhIUDBqIFnZ8EBaKplqYMqaqIewl8A6iupFF7C1YCoaJqq4UOWQIBBmtTuIQmWWxekJQeYWuWcFYPfl+dLAELOxML2hIYDeEWt7flEufknTZB7+8NBeyINxjqDwU4QYg26BTu6KVTEQEAOw==">
+    <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --color: black;
+            --title-color: black;
+            --background-color: white;
+
+            --link-color: #08F;
+            --link-hover-color: #F40;
+
+            --selector-text-color: black;
+            --selector-active-text-color: black;
+            --selector-background-color: #EEE;
+            --selector-active-background-color: #FFCB80;
+            --selector-hover-text-color: black;
+            --selector-hover-background-color: #FDB;
+
+            --summary-every-other-row-color: #F8F8F8;
+            --highlight-color: #EEE;
+            --bar-color: #FFCB80;
+            --bar-color1: oklch(calc(0.9 - 0.6) 0.1 calc(90 - 60));
+            --bar-color2: oklch(calc(0.9 - 0.4) 0.1 calc(90 - 40));
+            --bar-color3: oklch(calc(0.9 - 0.1) 0.1 calc(90 - 20));
+            --bar-color4: oklch(0.9 0.1 90);
+
+            --tooltip-text-color: white;
+            --tooltip-background-color: black;
+
+            --nothing-selected-color: #CCC;
+            --shadow-color: grey;
+        }
+
+        [data-theme="dark"] {
+            --color: #CCC;
+            --title-color: white;
+            --background-color: #04293A;
+
+            --link-color: #8CF;
+            --link-hover-color: #FFF;
+
+            --selector-text-color: white;
+            --selector-background-color: #444;
+            --selector-active-text-color: white;
+            --selector-active-background-color: #088;
+            --selector-hover-text-color: black;
+            --selector-hover-background-color: white;
+
+            --summary-every-other-row-color: #042e41;
+            --highlight-color: #064663;
+            --bar-color: #088;
+            --bar-color1: oklch(calc(0.4 + 0.6) 0.1 calc(250 - 180));
+            --bar-color2: oklch(calc(0.4 + 0.4) 0.1 calc(250 - 120));
+            --bar-color3: oklch(calc(0.4 + 0.2) 0.1 calc(250 - 60));
+            --bar-color4: oklch(0.4 0.1 250);
+
+            --tooltip-text-color: white;
+            --tooltip-background-color: #444;
+
+            --nothing-selected-color: #666;
+            --shadow-color: black;
+        }
+
+        html, body {
+            color: var(--color);
+            background-color: var(--background-color);
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: auto;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            padding: 0 3% 0 0;   /* no top/left padding: sticky header and left columns pin to the page edge */
+        }
+
+        h1 {
+            color: var(--title-color);
+        }
+
+        table {
+             border-spacing: 1px;
+        }
+
+        .stick-left {
+            position: sticky;
+            left: 0px;
+        }
+
+        /* Modest left indent for the top of the page and the Detailed Comparison heading,
+           while the tables' sticky columns stay flush with the page edge. */
+        .header, .selectors-container, div.comparison, .annotation {
+            margin-left: 1.5rem;
+        }
+
+        .annotation {
+            margin-top: 2.5rem;
+            margin-right: 3%;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            opacity: 0.85;
+        }
+        .annotation h2 { font-size: 1.1rem; }
+        .annotation li { margin-bottom: 0.3rem; }
+
+        .selectors-container {
+            padding: 2rem 0 2rem 0;
+            user-select: none;
+        }
+
+        .selectors-container th {
+            text-align: left;
+            vertical-align: top;
+            white-space: nowrap;
+            padding-top: 0.5rem;
+            padding-right: 1rem;
+        }
+
+        .selector {
+            display: inline-block;
+            margin-left: 0.1rem;
+            padding: 0.2rem 0.5rem 0.2rem 0.5rem;
+            background: var(--selector-background-color);
+            color: var(--selector-text-color);
+            border: 0.2rem solid var(--background-color);
+            border-radius: 0.5rem;
+        }
+
+        .selector-active {
+            color: var(--selector-active-text-color);
+            background: var(--selector-active-background-color);
+        }
+
+        a, a:visited {
+            text-decoration: none;
+            color: var(--link-color);
+            cursor: pointer;
+        }
+
+        a:hover {
+            color: var(--link-hover-color);
+        }
+
+        .selector:hover {
+            color: var(--selector-hover-text-color) !important;
+            background: var(--selector-background-color);
+        }
+
+        .selector-active:hover {
+            background: var(--selector-hover-background-color);
+        }
+
+        #summary tr:nth-child(odd) {
+            background: var(--summary-every-other-row-color);
+        }
+
+        .summary-name {
+            white-space: nowrap;
+            text-align: right;
+            padding-right: 1rem;
+        }
+
+        /* The whole summary row (version name, date, value) in monospace. */
+        tr.summary-row {
+            font-family: monospace;
+        }
+
+        .remove-system {
+            visibility: hidden;
+            cursor: pointer;
+            color: var(--link-color);
+            user-select: none;
+            padding-right: 0.4rem;
+        }
+
+        .summary-row:hover .remove-system {
+            visibility: visible;
+        }
+
+        .remove-system:hover {
+            color: var(--link-hover-color);
+        }
+
+        .summary-bar-cell {
+            width: 100%;
+            position: relative;
+        }
+
+        .summary-bar {
+            height: 1rem;
+            width: 100%;
+            border-radius: 0 0.2rem 0.2rem 0;
+        }
+
+        .summary-date {
+            position: absolute;
+            right: 0.5rem;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            font-size: 80%;
+            -webkit-text-stroke: 2px var(--background-color);
+            paint-order: stroke fill;
+            pointer-events: none;
+            font-family: monospace;
+        }
+
+        /* A failure reason is not a measurement: smaller, non-numeric, and hoverable for the
+           engine's own message. */
+        td.failure-reason {
+            font-size: 90%;
+            font-style: italic;
+            cursor: help;
+        }
+        .summary-number {
+            font-family: monospace;
+            text-align: right;
+            padding-left: 1rem;
+            white-space: nowrap;
+        }
+
+        #scale_hint {
+            font-weight: normal;
+            font-size: 80%;
+            filter: contrast(10%);
+        }
+
+        th {
+            padding-bottom: 0.5rem;
+        }
+
+        .th-entry-hilite {
+            background: var(--highlight-color);
+            font-weight: bold;
+        }
+
+        .summary-row:hover, .summary-row-hilite {
+            background: var(--highlight-color) !important;
+            font-weight: bold;
+        }
+
+        #details {
+            padding-bottom: 1rem;
+        }
+
+        #details th {
+            vertical-align: bottom;
+            white-space: pre;
+            position: sticky;
+            top: 0;
+            background-color: var(--background-color);
+            z-index: 2;
+        }
+
+        #details th .th-date {
+            font-size: 78%;
+            font-weight: normal;
+            opacity: 0.55;
+        }
+
+        /* Keep the two left columns (checkbox + query number / label) pinned to the
+           left, and the version/date header row pinned to the top, while scrolling the
+           wide table. The top-left corner cells need the highest z-index. */
+        #details td:nth-child(1), #details td:nth-child(2) {
+            position: sticky;
+            background-color: var(--background-color);
+            z-index: 1;
+        }
+        #details th:nth-child(1), #details th:nth-child(2) {
+            z-index: 3;
+        }
+        #details td:nth-child(1), #details th:nth-child(1) {
+            left: 0;
+            width: 1.2rem;
+            text-align: left;   /* so every checkbox (query, dataset, Total) shares the same left position */
+            padding-left: 0.2rem;
+            padding-right: 0.2rem;
+        }
+        #details td:nth-child(2), #details th:nth-child(2) {
+            left: var(--qn-left, 1.6rem);   /* set to column 1's real width in render() */
+        }
+        /* Preserve the dataset-header band colour on the sticky left cells, and left-align
+           the dataset name (overriding the right-aligned #details td default). */
+        #details tr.dataset-header td {
+            background-color: rgba(128, 128, 128, 0.18);
+            text-align: left;
+        }
+
+        #details td {
+            white-space: pre;
+            font-family: monospace;
+            text-align: right;
+            padding: 0.1rem 0.5rem 0.1rem 0.5rem;
+        }
+
+        .shadow:hover {
+            box-shadow: 0 0 1rem var(--shadow-color);
+            position: relative;
+        }
+
+        #nothing-selected {
+            display: none;
+            font-size: 32pt;
+            font-weight: bold;
+            color: var(--nothing-selected-color);
+        }
+
+        .note {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: calc(100% + 0.5rem);
+            visibility: hidden;
+            background-color: var(--tooltip-background-color);
+            color: var(--tooltip-text-color);
+            box-shadow: 0 0 1rem var(--shadow-color);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            z-index: 1000;
+            text-align: left;
+            white-space: normal;
+        }
+
+        .tooltip-result {
+            left: calc(50% - 0.25rem);
+            width: 20rem;
+            margin-left: -10rem;
+        }
+
+        .tooltip-query {
+            left: 0;
+            width: 50rem;
+            margin-left: 0;
+        }
+
+        .note:hover .tooltip, .note:active .tooltip {
+            visibility: visible;
+        }
+
+        /* The query-number cell is a sticky cell (its own stacking context), so its
+           tooltip cannot rise above the sticky header/other sticky cells on its own.
+           Lift the whole cell above everything while hovered. */
+        #details td.note:hover {
+            z-index: 1000;
+        }
+
+        .tooltip::after {
+            content: " ";
+            position: absolute;
+            top: 100%;
+            border-width: 0.5rem;
+            border-style: solid;
+            border-color: var(--tooltip-background-color) transparent transparent transparent;
+        }
+
+        .tooltip-result::after {
+            left: 50%;
+            margin-left: -1rem;
+        }
+
+        .tooltip-query::after {
+            left: 0.5rem;
+        }
+
+        .nowrap {
+            text-wrap: none;
+        }
+
+        .themes {
+            float: right;
+            font-size: 200%;
+            cursor: pointer;
+        }
+
+        #toggle-dark, #toggle-light {
+            padding-right: 0.5rem;
+            cursor: pointer;
+        }
+
+        #toggle-dark:hover, #toggle-light:hover {
+            display: inline-block;
+            transform: translate(1px, 1px);
+            filter: brightness(125%);
+        }
+
+        .comments {
+            font-size: 90%;
+        }
+    </style>
+    <style>
+        /* Additions for the per-dataset layout. */
+        tr.dataset-header td {
+            font-weight: bold;
+            background-color: rgba(128, 128, 128, 0.18);
+            border-top: 2px solid rgba(128, 128, 128, 0.5);
+            padding-top: 4px;
+            padding-bottom: 4px;
+            text-align: left;
+        }
+        .dataset-name { text-transform: uppercase; letter-spacing: 0.03em; }
+    </style>
+    <script type="text/javascript" src="data.generated.js"></script>
+</head>
+<body>
+
+<div class="header stick-left">
+    <span class="nowrap themes"><span id="toggle-dark">🌚</span><span id="toggle-light">🌞</span></span>
+    <h1>Joins-Focus Benchmark</h1>
+    <a href="https://github.com/ClickHouse/ClickBench/tree/joins-focus-benchmark-databases/joins-focus">Source</a> | <a href="https://github.com/ClickHouse/ClickBench/issues">Report Mistake</a> | <a href="https://benchmark.clickhouse.com/">Benchmark For Analytical DBMS</a> | <a href="https://benchmark.clickhouse.com/hardware">Hardware Benchmark</a>
+</div>
+
+<table class="selectors-container stick-left" id="selectors_table">
+    <tr id="row_system">
+        <th>System: </th>
+        <td id="selectors_system"></td>
+    </tr>
+    <!-- One version row per system is inserted here by JS, right after the System row.
+         A system toggle shows/hides its version row (and selects all its versions on enable). -->
+    <tr>
+        <th>Dataset: </th>
+        <td id="selectors_dataset">
+            <a id="select-all-datasets" class="selector selector-active">All</a>
+        </td>
+    </tr>
+    <tr>
+        <th>Metric: </th>
+        <td id="selectors_run">
+            <a class="selector" id="selector-metric-cold">Cold Run</a>
+            <a class="selector" id="selector-metric-hot">Hot Run</a>
+            <a class="selector" id="selector-metric-load">Load Time</a>
+            <a class="selector" id="selector-metric-size">Data Size</a>
+        </td>
+    </tr>
+</table>
+
+<table class="stick-left comparison">
+    <thead>
+        <tr>
+            <th class="summary-name">
+                system / version
+            </th>
+            <th colspan="2">
+                Relative <span id="metric-noun">query time</span> (lower is better).<br/>
+                <span id="scale_hint"></span>
+            </th>
+        </tr>
+    </thead>
+    <tbody id="summary">
+    </tbody>
+</table>
+
+<div id="nothing-selected" class="stick-left">Nothing selected</div>
+
+<div class="stick-left comparison">
+    <h2>Detailed Comparison</h2>
+</div>
+
+<table id="details">
+    <thead>
+        <tr id="details_head">
+        </tr>
+    </thead>
+    <tbody id="details_body">
+    </tbody>
+</table>
+
+<div class="stick-left annotation">
+    <h2>About this benchmark</h2>
+    <p>The same benchmark, on the same data, is run across several analytical engines, each at one
+    pinned version, to compare them. Every engine runs on the same machine, as recorded in the
+    results: <b><span id="machine-info">&mdash;</span></b>. Every query runs once cold (with the OS
+    page cache dropped) and five times hot; the reported time is the fastest hot run.</p>
+    <p>The datasets (each loaded into its own database), with their scale:</p>
+    <ul>
+        <li><b>tpch</b> &mdash; TPC-H at scale factor 100 (~100&nbsp;GB raw, 34&nbsp;GB as Parquet), 8 tables. 22 queries.</li>
+        <li><b>tpcds</b> &mdash; TPC-DS at scale factor 100 (~100&nbsp;GB raw, 34&nbsp;GB as Parquet), 24 tables. 103 queries.</li>
+        <li><b>job</b> &mdash; Join Order Benchmark over the IMDb dataset (1.7&nbsp;GB as Parquet), 21 tables. 113 queries.</li>
+    </ul>
+    <p>Each engine has its own explicit DDL and queries, in its own dialect, loaded from one shared
+    Parquet dataset. A query a system does not support (a missing function or syntax) is recorded as
+    no result, with the reason shown in the cell, and a dataset that does not fully load on a system
+    is skipped entirely for it.</p>
+    <p>ClickHouse runs with conformance settings, so the query set means the same thing there as
+    elsewhere: <code>join_use_nulls</code>, <code>group_by_use_nulls</code>, DISTINCT defaults for
+    <code>UNION</code>/<code>INTERSECT</code>/<code>EXCEPT</code>, and
+    <code>joined_subquery_requires_alias=0</code>. Spilling is disabled for joins
+    (<code>max_bytes_ratio_before_external_join=0</code>).</p>
+    <p>Statistics are opt-in (<code>STATISTICS=1</code>), timed separately and reported as
+    <code>stats_time</code>. Each engine uses its own
+    statement: <code>MATERIALIZE STATISTICS ALL</code> (ClickHouse), <code>ANALYZE</code> (DuckDB,
+    CedarDB, Umbra), <code>ANALYZE TABLE</code> (StarRocks, Doris), and one
+    <code>ALTER TABLE &hellip; ADD STATISTICS</code> per column for Firebolt.</p>
+</div>
+
+<script type="text/javascript">
+
+const constant_time_add = 0.01;
+/// A query with no timing shows WHY, from the run's own log (generate-results.sh classifies the
+/// runner's message into these kinds and puts them in elem.error, keyed by result[] index). The
+/// engine's own text goes in the cell's tooltip. A row with no reason -- an older run, or one
+/// whose log was not kept -- still shows the bare skull.
+const error_labels = {
+    oom:         'OOM',
+    timeout:     'timeout',
+    unsupported: 'unsupported',
+    crash:       'crashed',
+    not_loaded:  'not loaded',
+    other:       'error',
+};
+
+const missing_result_penalty = 2;
+const missing_result_time = 300;
+
+/// Flatten datasets into per-query metadata aligned with result[] by offset, and record
+/// each dataset's [start, end) range within result[].
+let query_meta = [];   // query_meta[i] = { ds, name }
+let dataset_range = {}; // dataset_range[name] = { start, end }
+{
+    let offset = 0;
+    for (const d of datasets) {
+        dataset_range[d.name] = { start: offset, end: offset + d.queries.length };
+        for (const q of d.queries) { query_meta.push({ ds: d.name, name: q }); }
+        offset += d.queries.length;
+    }
+}
+const num_queries = query_meta.length;
+
+let selectors = {
+    "system": {},
+    "version": {},
+    "dataset": {},
+    "metric": "hot",
+    "queries": [],
+};
+
+/// Each result belongs to a (system, version). Key selection by a unique id so versions
+/// that happen to share a number across systems never collide.
+data.forEach(e => { e.id = e.system + '/' + e.version; });
+
+let theme = 'light';
+
+function setTheme(new_theme) {
+    theme = new_theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    window.localStorage.setItem('theme', theme);
+    render();
+}
+
+document.getElementById('toggle-light').addEventListener('click', e => setTheme('light'));
+document.getElementById('toggle-dark').addEventListener('click', e => setTheme('dark'));
+
+/// Initial theme: an explicit stored choice wins; otherwise follow the OS preference.
+/// Set the attribute directly here (no render() — the initial render runs at the end).
+let stored_theme = window.localStorage.getItem('theme');
+if (!stored_theme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    stored_theme = 'dark';
+}
+if (stored_theme) {
+    theme = stored_theme;
+    document.documentElement.setAttribute('data-theme', theme);
+}
+
+/// Selectors
+
+let datasets_elem = document.getElementById('selectors_dataset');
+
+/// Systems in a friendly order (ClickHouse first, then the others), plus any not listed.
+const SYSTEM_ORDER = ['ClickHouse', 'DuckDB', 'StarRocks', 'CedarDB', 'Doris', 'Firebolt', 'Umbra'];
+/// Per-system hue for colouring the chart/table/selectors (used by sysHue/systemColor/systemBands).
+const SYSTEM_HUE = { ClickHouse: 75, DuckDB: 255, StarRocks: 152, CedarDB: 330, Doris: 25, Firebolt: 195, Umbra: 285 };
+let systems = [...new Set(data.map(e => e.system))].sort((a, b) => {
+    let ia = SYSTEM_ORDER.indexOf(a), ib = SYSTEM_ORDER.indexOf(b);
+    if (ia < 0) ia = 99; if (ib < 0) ib = 99;
+    return ia - ib || a.localeCompare(b);
+});
+
+/// Each system's versions, newest first (aligned timeline date desc, then version desc) --
+/// the same key the chart and table sort by, so the views stay in lockstep.
+function versionCmpDesc(a, b) {
+    const c = (b.date || '').localeCompare(a.date || '');
+    return c != 0 ? c : b.version.localeCompare(a.version, undefined, { numeric: true });
+}
+let versions_by_system = {};
+systems.forEach(s => { versions_by_system[s] = data.filter(e => e.system === s).sort(versionCmpDesc); });
+
+/// Defaults: ClickHouse shown+selected, the other systems off (their version rows hidden)
+/// until toggled on. Toggling a system on selects all its versions.
+systems.forEach(s => { if (!(s in selectors.system)) selectors.system[s] = (s === 'ClickHouse'); });
+data.forEach(e => { if (!(e.id in selectors.version)) selectors.version[e.id] = selectors.system[e.system]; });
+
+function toggle(e, elem, selectors_map) {
+    selectors_map[elem] = !selectors_map[elem];
+    e.target.className = selectors_map[elem] ? 'selector selector-active' : 'selector';
+    render();
+    updateHistory();
+}
+
+function toggleAll(e, selectors_map) {
+    const new_value = Object.keys(selectors_map).filter(k => selectors_map[k]).length * 2 < Object.keys(selectors_map).length;
+    [...e.target.parentElement.querySelectorAll('a')].map(
+        elem => { elem.className = new_value ? 'selector selector-active' : 'selector' });
+    Object.keys(selectors_map).map(k => { selectors_map[k] = new_value });
+    render();
+    updateHistory();
+}
+
+/// Toggle a whole system: hide/show its version row, and on enable select all its versions.
+let version_rows = {};   // system -> its <tr> of version selectors
+function toggleSystem(e, s) {
+    const on = !selectors.system[s];
+    selectors.system[s] = on;
+    e.target.className = on ? 'selector selector-active' : 'selector';
+    version_rows[s].style.display = on ? '' : 'none';
+    if (on) {
+        versions_by_system[s].forEach(en => { selectors.version[en.id] = true; });
+        [...version_rows[s].querySelectorAll('a')].forEach(a => { a.className = 'selector selector-active'; });
+    }
+    render();
+    updateHistory();
+}
+
+/// Toggle every version of one system (its "All" chip): if fewer than half are selected,
+/// select all; otherwise clear them. Makes isolating a single version easy -- click All to
+/// clear the system, then click the one version you want.
+function toggleAllSystem(e, s) {
+    const ids = versions_by_system[s].map(en => en.id);
+    const new_value = ids.filter(id => selectors.version[id]).length * 2 < ids.length;
+    ids.forEach(id => { selectors.version[id] = new_value; });
+    [...version_rows[s].querySelectorAll('a')].forEach(a => {
+        a.className = new_value ? 'selector selector-active' : 'selector'; });
+    render();
+    updateHistory();
+}
+
+function hiliteVersion(id) {
+    [...document.querySelectorAll('.summary-row')].map(row => {
+        row.className = row.dataset.id == id ? 'summary-row summary-row-hilite' : 'summary-row' });
+    [...document.querySelectorAll('.th-entry')].map(th => {
+        th.className = th.dataset.id == id ? 'th-entry th-entry-hilite' : 'th-entry' });
+}
+function unhiliteVersion() {
+    [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
+    [...document.querySelectorAll('.th-entry')].map(row => { row.className = 'th-entry' });
+}
+
+/// Build the System toggle row and, right after it, one version row per system.
+let system_elem = document.getElementById('selectors_system');
+let row_system = document.getElementById('row_system');
+const version_row_anchor = row_system.nextSibling;   // insert version rows before the Dataset row
+systems.forEach(s => {
+    let sel = document.createElement('a');
+    sel.className = selectors.system[s] ? 'selector selector-active' : 'selector';
+    /// Colour dot (theme-neutral hue) so the System row doubles as the colour legend.
+    let dot = document.createElement('span');
+    dot.textContent = '● ';
+    dot.style.color = `oklch(0.62 0.17 ${sysHue(s)})`;
+    sel.appendChild(dot);
+    sel.appendChild(document.createTextNode(s));
+    system_elem.appendChild(sel);
+    sel.addEventListener('click', e => toggleSystem(e, s));
+
+    let tr = document.createElement('tr');
+    tr.dataset.system = s;
+    tr.style.display = selectors.system[s] ? '' : 'none';
+    let th = document.createElement('th');
+    th.appendChild(document.createTextNode(s + ': '));
+    let td = document.createElement('td');
+    /// "All" chip for this system (select/clear all its versions at once).
+    let all_chip = document.createElement('a');
+    all_chip.dataset.systemAll = s;
+    all_chip.className = versions_by_system[s].every(en => selectors.version[en.id]) ? 'selector selector-active' : 'selector';
+    all_chip.appendChild(document.createTextNode('All'));
+    all_chip.addEventListener('click', e => toggleAllSystem(e, s));
+    td.appendChild(all_chip);
+    versions_by_system[s].forEach(elem => {
+        let selector = document.createElement('a');
+        selector.className = selectors.version[elem.id] ? 'selector selector-active' : 'selector';
+        selector.dataset.id = elem.id;
+        selector.appendChild(document.createTextNode(displayVersion(elem.version)));
+        selector.addEventListener('click', e => toggle(e, elem.id, selectors.version));
+        selector.addEventListener('mouseover', e => hiliteVersion(elem.id));
+        selector.addEventListener('mouseout', e => unhiliteVersion());
+        td.appendChild(selector);
+    });
+    tr.appendChild(th);
+    tr.appendChild(td);
+    row_system.parentNode.insertBefore(tr, version_row_anchor);
+    version_rows[s] = tr;
+});
+
+datasets.map(d => {
+    let selector = document.createElement('a');
+    selector.className = 'selector selector-active';
+    selector.appendChild(document.createTextNode(d.name));
+    datasets_elem.appendChild(selector);
+    if (!(d.name in selectors.dataset)) { selectors.dataset[d.name] = true; }
+    selector.addEventListener('click', e => toggle(e, d.name, selectors.dataset));
+});
+document.getElementById('select-all-datasets').addEventListener('click', e => toggleAll(e, selectors.dataset));
+
+document.getElementById('selector-metric-cold').addEventListener('click', e => { selectors.metric = 'cold'; updateSelectors(); render(); updateHistory(); });
+document.getElementById('selector-metric-hot').addEventListener('click', e => { selectors.metric = 'hot'; updateSelectors(); render(); updateHistory(); });
+document.getElementById('selector-metric-load').addEventListener('click', e => { selectors.metric = 'load'; updateSelectors(); render(); updateHistory(); });
+document.getElementById('selector-metric-size').addEventListener('click', e => { selectors.metric = 'size'; updateSelectors(); render(); updateHistory(); });
+
+if (!selectors.queries.length) { selectors.queries = query_meta.map(() => true); }
+
+function updateSelectors() {
+    [...system_elem.querySelectorAll('a')].map(elem => {
+        elem.className = selectors.system[elem.innerText] ? 'selector selector-active' : 'selector' });
+    systems.forEach(s => { if (version_rows[s]) version_rows[s].style.display = selectors.system[s] ? '' : 'none'; });
+    [...document.querySelectorAll('#selectors_table a[data-id]')].map(elem => {
+        elem.className = selectors.version[elem.dataset.id] ? 'selector selector-active' : 'selector' });
+    [...document.querySelectorAll('#selectors_table a[data-system-all]')].map(elem => {
+        const s = elem.dataset.systemAll;
+        elem.className = versions_by_system[s].every(en => selectors.version[en.id]) ? 'selector selector-active' : 'selector' });
+    [...datasets_elem.querySelectorAll('a')].filter(e => e.id != 'select-all-datasets').map(elem => {
+        elem.className = selectors.dataset[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
+        elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
+    [...document.querySelectorAll('.query-checkbox')].map(elem => { elem.checked = selectors.queries[+elem.dataset.query] });
+}
+
+function clearElement(elem) { while (elem.firstChild) { elem.removeChild(elem.lastChild); } }
+
+function selectRun(timings) {
+    if (!timings) { return null; }
+    if (selectors.metric == 'cold') { return timings[0]; }
+    const hot = timings.slice(1).filter(x => x !== null);
+    return hot.length ? Math.min(...hot) : null;
+}
+
+/// Query-time aggregates over the REPORTED queries of `ranges` (each {start, end} a slice of
+/// result[]), for one entry. Returns:
+///   N     enabled queries in those ranges (dataset checkbox on AND query checkbox on)
+///   n     of those, the ones this entry actually timed -- selectRun() !== null
+///   total exact sum of the n reported durations; no floor, and NO penalty for the N-n missing
+///   geo   exp(mean(ln(duration + constant_time_add))) over the same n
+///
+/// The constant_time_add (10ms) floor is required, not cosmetic: some engines (DuckDB) report a
+/// sub-millisecond query as exactly 0, and ln(0) is -Infinity, which would make the whole
+/// geometric mean 0. It is the same floor the summary's ratios use. So `geo` is the geometric
+/// mean of (duration + 10ms): negligible for queries well above 10ms, dominant below it.
+///
+/// Restricting to reported queries FLATTERS a system that failed something expensive -- e.g.
+/// ClickHouse did not finish TPC-DS q35 (159s before it hit the server memory limit), so leaving
+/// it out lowers both numbers against systems that answered it. Hence n/N travels with the value.
+function queryAgg(elem, ranges) {
+    let n = 0, N = 0, total = 0, logsum = 0;
+    for (const { start, end } of ranges) {
+        for (let i = start; i < end; ++i) {
+            if (!queryEnabled(i)) { continue; }
+            ++N;
+            const v = selectRun(elem.result[i]);
+            if (v === null) { continue; }
+            ++n; total += v; logsum += Math.log(constant_time_add + v);
+        }
+    }
+    return { n, N, total: n ? total : null, geo: n ? Math.exp(logsum / n) : null };
+}
+
+/// A query counts in the summary when its dataset is enabled and its checkbox is on.
+function queryEnabled(i) { return selectors.dataset[query_meta[i].ds] && selectors.queries[i]; }
+
+function formatSize(bytes) {
+    if (bytes === null || bytes === undefined) { return '—'; }
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let u = 0, v = bytes;
+    while (v >= 1024 && u < units.length - 1) { v /= 1024; ++u; }
+    return `${v < 10 && u > 0 ? v.toFixed(1) : Math.round(v)} ${units[u]}`;
+}
+
+/// Query-time formatter with sub-second resolution. formatTime() rounds to whole seconds below
+/// a minute, which is right for load times but prints "0s" for a geometric mean of 0.42s.
+function formatQueryTime(sec) {
+    if (sec === null || sec === undefined) { return '\u2014'; }
+    if (sec < 10) { return `${sec.toFixed(2)}s`; }
+    if (sec < 60) { return `${sec.toFixed(1)}s`; }
+    const m = Math.floor(sec / 60), s = Math.round(sec % 60);
+    return `${m}m${s.toString().padStart(2, '0')}s`;
+}
+
+function formatTime(sec) {
+    if (sec === null || sec === undefined) { return '—'; }
+    if (sec < 60) { return `${Math.round(sec)}s`; }
+    const m = Math.floor(sec / 60), s = Math.round(sec % 60);
+    return `${m}m${s.toString().padStart(2, '0')}s`;
+}
+
+function addNote(text) {
+    let note = document.createElement('sup');
+    note.className = 'note';
+    note.appendChild(document.createTextNode('†'));
+    let tooltip = document.createElement('span');
+    tooltip.className = 'tooltip tooltip-result';
+    tooltip.appendChild(document.createTextNode(text));
+    note.appendChild(tooltip);
+    return note;
+}
+
+function renderSummary(filtered_data, baseline_data) {
+    let table = document.getElementById('summary');
+    clearElement(table);
+
+    const enabled_datasets = datasets.filter(d => selectors.dataset[d.name]);
+    const any_enabled = [...Array(num_queries).keys()].some(queryEnabled);
+
+    /// summaries[idx] = ratio (lower is better) used for the bar; value_text(idx) is the
+    /// number-cell label; metric_noun labels the column heading. no_data[idx] flags a
+    /// version with no successful run in the current selection -- shown as a skull with a
+    /// black bar, and excluded from the bar scaling.
+    let summaries, value_text, metric_noun;
+    let no_data = filtered_data.map(() => false);
+
+    if (selectors.metric === 'load' || selectors.metric === 'size') {
+        /// Rank by total load time / data size over the enabled datasets. A version
+        /// missing any enabled dataset has no comparable total, so it shows "—".
+        const key = selectors.metric === 'load' ? 'load_time' : 'data_size';
+        const fmt = selectors.metric === 'load' ? formatTime : formatSize;
+        metric_noun = selectors.metric === 'load' ? 'load time' : 'data size';
+        /// A total is only comparable when every enabled dataset has a value. For data size a
+        /// 0 means "unmeasured" (StarRocks' information_schema DATA_LENGTH is 0 until compaction),
+        /// so require a positive size; a load time of 0 is a legitimately fast load.
+        const hasVal = selectors.metric === 'size'
+            ? (e, d) => e.data_size && e.data_size[d.name] > 0
+            : (e, d) => e.load_time && e.load_time[d.name] != null;
+        const totals = filtered_data.map(e =>
+            enabled_datasets.every(d => hasVal(e, d))
+                ? enabled_datasets.reduce((s, d) => s + e[key][d.name], 0) : null);
+        const min = Math.min(...totals.filter(x => x != null && x > 0));
+        summaries = totals.map(t => (t != null && isFinite(min) && min > 0) ? t / min : null);
+        value_text = idx => totals[idx] == null ? '—' : `${fmt(totals[idx])} (×${summaries[idx].toFixed(2)})`;
+    } else {
+        /// Query time: ratio = (10ms + duration) / (10ms + baseline); an absent result
+        /// counts as 2× the worst time for THAT query across the shown versions (not this
+        /// version's own worst). Because the penalty is per-query, a query that a version
+        /// did not run gets the same fill-in for every version, so it contributes equally
+        /// and cannot flip the order of two other versions. Geometric mean across enabled
+        /// queries (dataset on + query checkbox on).
+        metric_noun = 'query time';
+        /// An absent result is penalized by the MAXIMUM of two estimates of how slow it
+        /// would have been:
+        ///   (A) 2× the worst time for that query across the shown versions (the original
+        ///       rule), and
+        ///   (B) 2× this version's own geometric-mean slowdown (over the queries it DID run,
+        ///       relative to the per-query baseline) applied to this query's baseline.
+        /// (A) alone flattens a very slow version's many absent queries to ~2× the (fast)
+        /// baseline, hiding its true slowness; (B) lifts each absent query to this version's
+        /// typical slowdown, so e.g. a version running 50-200× slower on the queries it ran
+        /// is penalized in that range for the ones it did not.
+        const worst_per_query = [...Array(num_queries).keys()].map(i => {
+            const vals = filtered_data.map(elem => selectRun(elem.result[i])).filter(x => x !== null);
+            return vals.length ? Math.max(...vals) : null;
+        });
+        summaries = filtered_data.map(elem => {
+            /// This version's geometric-mean slowdown to the per-query baseline, over the
+            /// queries it actually ran (used for estimate B); 1 if it ran nothing.
+            let sacc = 0, sn = 0;
+            for (let i = 0; i < num_queries; ++i) {
+                if (!any_enabled || queryEnabled(i)) {
+                    const base = selectRun(baseline_data[i]), cur = selectRun(elem.result[i]);
+                    /// Use the same constant_time_add floor as the main ratio below: some engines
+                    /// (e.g. DuckDB) report a sub-millisecond query as exactly 0, so a raw cur/base
+                    /// would divide by zero -> Infinity/NaN once such a version is in the selection.
+                    if (base !== null && cur !== null) {
+                        sacc += Math.log((constant_time_add + cur) / (constant_time_add + base)); ++sn;
+                    }
+                }
+            }
+            const slowdown = sn ? Math.exp(sacc / sn) : 1;
+            let accumulator = 0, used = 0;
+            for (let i = 0; i < num_queries; ++i) {
+                if (!any_enabled || queryEnabled(i)) {
+                    const base = selectRun(baseline_data[i]);
+                    if (base === null) { continue; }
+                    let curr = selectRun(elem.result[i]);
+                    if (curr === null) {
+                        const byWorst = worst_per_query[i] != null ? missing_result_penalty * worst_per_query[i] : missing_result_time;
+                        const bySlowdown = missing_result_penalty * slowdown * base;
+                        curr = Math.max(byWorst, bySlowdown);
+                    }
+                    accumulator += Math.log((constant_time_add + curr) / (constant_time_add + base));
+                    ++used;
+                }
+            }
+            return used ? Math.exp(accumulator / used) : 1;
+        });
+        /// A version with no non-null run among the enabled queries has nothing to compare.
+        no_data = filtered_data.map(elem =>
+            ![...Array(num_queries).keys()].some(i =>
+                (!any_enabled || queryEnabled(i)) && selectRun(elem.result[i]) !== null));
+        value_text = idx => no_data[idx] ? '☠️' : `×${summaries[idx].toFixed(2)}`;
+    }
+    const noun_el = document.getElementById('metric-noun');
+    if (noun_el) { noun_el.textContent = metric_noun; }
+
+    /// Both the summary chart and the details table are ordered by the aligned timeline date,
+    /// latest first, so ClickHouse and the other systems interleave chronologically; ties break
+    /// by version then system so rows stay deterministic. max_ratio scales the horizon bars.
+    const sorted_indices = [...filtered_data.keys()].sort((a, b) =>
+        entryCmpDesc(filtered_data[a], filtered_data[b]));
+    const max_ratio = Math.max(...summaries.filter((x, i) => x != null && !no_data[i]));
+
+    sorted_indices.map(idx => {
+        const elem = filtered_data[idx];
+        let tr = document.createElement('tr');
+        tr.className = 'summary-row';
+        tr.dataset.id = elem.id;
+
+        let td_name = document.createElement('td');
+        td_name.className = 'summary-name';
+
+        /// A ✕ to drop this version from the selection (shown on row hover), as on the
+        /// main ClickBench page.
+        let remove = document.createElement('span');
+        remove.className = 'remove-system';
+        remove.textContent = '✕';
+        remove.title = 'Remove this version from the selection';
+        remove.addEventListener('click', e => {
+            e.preventDefault(); e.stopPropagation();
+            selectors.version[elem.id] = false;
+            render(); updateSelectors(); updateHistory();
+        });
+        td_name.appendChild(remove);
+
+        /// Colour swatch + system-hued label so each system is identifiable in the interleaved list.
+        let swatch = document.createElement('span');
+        swatch.textContent = '● ';   // ●
+        swatch.style.color = systemColor(elem.system);
+        td_name.appendChild(swatch);
+        let link = document.createElement('a');
+        link.appendChild(document.createTextNode(displayLabel(elem)));
+        link.href = "https://github.com/ClickHouse/ClickBench/blob/main/versions/" + elem.source;
+        link.style.color = systemColor(elem.system);
+        td_name.appendChild(link);
+        td_name.appendChild(document.createTextNode(': '));
+
+        const ratio = summaries[idx];
+        let td_number = document.createElement('td');
+        td_number.className = 'summary-number';
+        td_number.appendChild(document.createTextNode(value_text(idx)));
+
+        /// Horizon (multi-scale) bar, ported from the main ClickBench page: the same
+        /// value is drawn at 1×, 4×, 16×, 64× zoom in four colour bands, so small
+        /// differences near the fast end stay visible across a wide dynamic range.
+        const percentage = (ratio != null && isFinite(max_ratio) && max_ratio > 0) ? ratio / max_ratio * 100 : 0;
+        let td_bar = document.createElement('td');
+        td_bar.className = 'summary-bar-cell';
+        let bar = document.createElement('div');
+        bar.className = 'summary-bar';
+        if (no_data[idx]) {
+            /// No successful run in this selection: a solid black bar (paired with the skull).
+            bar.style.background = 'black';
+        } else {
+            /// Horizon bands in this row's system hue, so systems are distinguishable at a glance.
+            const [c1, c2, c3, c4] = systemBands(elem.system);
+            bar.style.background = `linear-gradient(to right,
+                ${c1} 0%,
+                ${c1} ${Math.min(100, percentage)}%,
+                ${c2} ${Math.min(100, percentage)}%,
+                ${c2} ${Math.min(100, percentage * 4)}%,
+                ${c3} ${Math.min(100, percentage * 4)}%,
+                ${c3} ${Math.min(100, percentage * 16)}%,
+                ${c4} ${Math.min(100, percentage * 16)}%,
+                ${c4} ${Math.min(100, percentage * 64)}%,
+                transparent ${Math.min(100, percentage * 64)}%,
+                transparent 100%)`;
+        }
+        td_bar.appendChild(bar);
+
+        /// Aligned timeline date shown over the bar (calver-derived for ClickHouse, real
+        /// release date otherwise), as on the main ClickBench page.
+        const shown_date = elem.date || elem.release_date;
+        if (shown_date) {
+            let date_span = document.createElement('span');
+            date_span.className = 'summary-date';
+            date_span.textContent = shown_date;
+            td_bar.appendChild(date_span);
+        }
+
+        tr.appendChild(td_name);
+        tr.appendChild(td_bar);
+        tr.appendChild(td_number);
+        table.appendChild(tr);
+    });
+
+    return sorted_indices;
+}
+
+function colorize(elem, ratio) {
+    let [r, g, b] = [0, 0, 0];
+    if (ratio !== null) {
+        if (ratio < 1) { r = 232; g = 255; b = 232; }
+        else if (ratio <= 1.1) { g = 255; r = (ratio - 1) / 0.1 * 255; }
+        else if (ratio <= 3) { g = (3 - ratio) / 1.9 * 255; r = 255; }
+        else { r = (1 - ((ratio - 3) / ((ratio - 3) + 10))) * 255; }
+    }
+    if (document.documentElement.getAttribute('data-theme') == 'dark') { r /= 1.5; g /= 1.5; b /= 1.5; }
+    elem.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+    elem.style.color = (ratio === null || ratio > 10) ? 'white' : 'black';
+    if (ratio == 1) { elem.style.fontWeight = 'bold'; }
+}
+
+/// Calendar versions (18.x onwards, e.g. 20.4.9.110) are shown as major.minor only
+/// (20.4); the old 1.1.54xxx scheme, dates, and bare revisions are shown in full.
+function displayVersion(v) {
+    const m = v.match(/^(\d+)\.(\d+)\./);
+    return (m && +m[1] >= 18) ? `${m[1]}.${m[2]}` : v;
+}
+
+/// The chart/table label for an entry: the system name plus the (short) version.
+function displayLabel(e) { return `${e.system} ${displayVersion(e.version)}`; }
+
+/// Per-system colour helpers (SYSTEM_HUE is defined earlier, near SYSTEM_ORDER, because the
+/// selector build below uses it). Each system gets its own hue so it's identifiable in the
+/// interleaved chart/table (ClickHouse keeps the warm/orange of the single-system page).
+function sysHue(s) { return SYSTEM_HUE[s] ?? 210; }
+function systemColor(s) {
+    const h = sysHue(s);
+    return theme === 'dark' ? `oklch(0.80 0.15 ${h})` : `oklch(0.55 0.17 ${h})`;
+}
+/// Four horizon bands (1x/4x/16x/64x) in the system's hue, contrasting with the theme background
+/// (dark band on light theme, light band on dark theme), lightening outward like the original.
+function systemBands(s) {
+    const h = sysHue(s);
+    return theme === 'dark'
+        ? [`oklch(0.86 0.13 ${h})`, `oklch(0.72 0.15 ${h})`, `oklch(0.60 0.15 ${h})`, `oklch(0.49 0.12 ${h})`]
+        : [`oklch(0.52 0.16 ${h})`, `oklch(0.67 0.15 ${h})`, `oklch(0.80 0.12 ${h})`, `oklch(0.89 0.09 ${h})`];
+}
+
+/// Chart/table order: newest first on the aligned timeline date (so systems interleave),
+/// tie-broken by version then system, so rows are deterministic.
+function entryCmpDesc(a, b) {
+    let c = (b.date || '').localeCompare(a.date || '');
+    if (c != 0) return c;
+    c = b.version.localeCompare(a.version, undefined, { numeric: true });
+    if (c != 0) return c;
+    return a.system.localeCompare(b.system);
+}
+
+function render() {
+    let details_head = document.getElementById('details_head');
+    let details_body = document.getElementById('details_body');
+    clearElement(details_head);
+    clearElement(details_body);
+
+    let filtered_data = data.filter(elem => selectors.system[elem.system] && selectors.version[elem.id]);
+
+    let nothing = document.getElementById('nothing-selected');
+    if (filtered_data.length == 0) {
+        nothing.style.display = 'block';
+        [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'none');
+        return;
+    }
+    nothing.style.display = 'none';
+    [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'block');
+
+    /// The machine comes from the results, not from this page's text: each runner records it (see
+    /// machine_label in <system>/run.sh). Listing every DISTINCT value is deliberate -- if entries
+    /// were measured on different hosts, the description says so instead of naming one of them.
+    const machine_el = document.getElementById('machine-info');
+    if (machine_el) {
+        const machines = [...new Set(filtered_data.map(e => e.machine).filter(Boolean))];
+        machine_el.textContent = machines.length ? machines.join('  /  ') : 'not recorded';
+    }
+
+    /// Baseline per query: the best (min) timing across the selected versions.
+    const baseline_data = [...Array(num_queries).keys()].map(i =>
+        [...Array(6).keys()].map(run =>
+            Math.min(...filtered_data.map(elem => (elem.result[i] && elem.result[i][run] !== undefined) ? elem.result[i][run] : null).filter(x => x !== null))));
+    baseline_data.forEach(row => row.forEach((v, j) => { if (v === Infinity) row[j] = null; }));
+
+    const sorted_indices = renderSummary(filtered_data, baseline_data);
+
+    /// Details header: two label columns (checkbox + name), then a column per version.
+    details_head.appendChild(document.createElement('th'));
+    details_head.appendChild(document.createElement('th'));
+    sorted_indices.map(idx => {
+        const elem = filtered_data[idx];
+        let th = document.createElement('th');
+        th.className = 'th-entry';
+        th.dataset.id = elem.id;
+        let sysname = document.createElement('div');
+        sysname.textContent = elem.system;
+        sysname.style.color = systemColor(elem.system);
+        sysname.style.fontWeight = 'bold';
+        th.appendChild(sysname);
+        let name = document.createElement('div');
+        name.appendChild(document.createTextNode(displayVersion(elem.version)));
+        th.appendChild(name);
+        const th_date = elem.date || elem.release_date;
+        if (th_date) {
+            let d = document.createElement('div');
+            d.className = 'th-date';
+            d.appendChild(document.createTextNode(th_date));
+            th.appendChild(d);
+        }
+        details_head.appendChild(th);
+    });
+
+    const enabled_datasets = datasets.filter(d => selectors.dataset[d.name]);
+
+    /// A separator/header row: a checkbox in column 1 (so the Total and per-dataset
+    /// checkboxes line up vertically) and a name spanning the rest of the row.
+    function separatorRow(name, checked, onToggle) {
+        let tr = document.createElement('tr');
+        tr.className = 'dataset-header';
+        /// Checkbox in the sticky column 1 (same position as the per-query checkboxes),
+        /// name in the sticky column 2 (same position as the query numbers) so both stay
+        /// pinned to the left; a separate non-sticky band cell spans the version columns.
+        let td_check = document.createElement('td');
+        let cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = checked;
+        cb.addEventListener('change', e => onToggle(e.target.checked));
+        td_check.appendChild(cb);
+        tr.appendChild(td_check);
+        let td_name = document.createElement('td');
+        let nm = document.createElement('span');
+        nm.className = 'dataset-name';
+        nm.appendChild(document.createTextNode(name));
+        td_name.appendChild(nm);
+        tr.appendChild(td_name);
+        let td_band = document.createElement('td');
+        td_band.colSpan = sorted_indices.length;
+        tr.appendChild(td_band);
+        details_body.appendChild(tr);
+    }
+
+    /// A regular metric row (Load time / Data size), colorized against the best value,
+    /// like the main ClickBench page. `values` is aligned to sorted_indices.
+    function metricRow(label, values, fmt, notes) {
+        const base = Math.min(...values.filter(x => x != null && x > 0));
+        let tr = document.createElement('tr');
+        tr.className = 'shadow';
+        tr.appendChild(document.createElement('td'));   // empty checkbox column
+        let td_title = document.createElement('td');
+        td_title.className = 'note';
+        td_title.appendChild(document.createTextNode(label));
+        tr.appendChild(td_title);
+        values.forEach((v, i) => {
+            const ratio = (v != null && isFinite(base) && base > 0) ? v / base : null;
+            let td = document.createElement('td');
+            const note = (notes && notes[i]) ? ` ${notes[i]}` : '';
+            td.appendChild(document.createTextNode(v != null ? `${fmt(v)} (×${(ratio ?? 1).toFixed(2)})${note}` : '—'));
+            colorize(td, ratio);
+            tr.appendChild(td);
+        });
+        details_body.appendChild(tr);
+    }
+
+    /// The two query-time aggregate rows for `ranges`: exact sum and geometric mean over the
+    /// queries this entry REPORTED (see queryAgg). A cell carries "[n/N]" when the entry timed
+    /// fewer than the enabled queries, because both numbers improve when an expensive query is
+    /// missing -- without the count, a partial run reads as a fast one.
+    function queryAggRows(ranges) {
+        const aggs = sorted_indices.map(idx => queryAgg(filtered_data[idx], ranges));
+        const notes = aggs.map(a => (a.n && a.n < a.N) ? `[${a.n}/${a.N}]` : '');
+        metricRow('Query time, total', aggs.map(a => a.total), formatQueryTime, notes);
+        metricRow('Query time, geo mean', aggs.map(a => a.geo), formatQueryTime, notes);
+    }
+
+    /// Total section: the "Total" checkbox toggles all queries and lines up in column 1
+    /// with the per-dataset checkboxes. Load time is summed and data size totalled over
+    /// the enabled datasets.
+    separatorRow('Total', selectors.queries.every(x => x), checked => {
+        selectors.queries = selectors.queries.map(() => checked);
+        render(); updateHistory();
+    });
+    /// The total is only meaningful when every enabled dataset actually loaded; if a
+    /// version skipped one, its sum would be misleadingly small, so show "—" instead.
+    const fullyLoaded = e => e.load_time && enabled_datasets.every(d => e.load_time[d.name] != null);
+    metricRow('Load time', sorted_indices.map(idx => {
+        const e = filtered_data[idx];
+        return fullyLoaded(e) ? enabled_datasets.reduce((s, d) => s + e.load_time[d.name], 0) : null;
+    }), formatTime);
+    /// Statistics time, alongside load time: it is measured separately by every runner (see
+    /// stats_time in the results) precisely so it can be read on its own rather than hiding inside
+    /// the load. A total needs every enabled dataset to have a value, like load time; a value of 0
+    /// is legitimate (DuckDB's ANALYZE is near-instant) and is NOT the same as absent.
+    metricRow('Statistics time', sorted_indices.map(idx => {
+        const st = filtered_data[idx].stats_time || {};
+        const vals = enabled_datasets.map(d => st[d.name]).filter(v => v != null);
+        return vals.length === enabled_datasets.length && vals.length
+            ? vals.reduce((s, v) => s + v, 0) : null;
+    }), formatTime);
+    /// Data-size total needs a positive size for every enabled dataset (a 0/missing size means
+    /// unmeasured -- StarRocks reports 0 until compaction -- not zero bytes), else show "—".
+    const sizeKnown = e => e.data_size && enabled_datasets.every(d => e.data_size[d.name] > 0);
+    metricRow('Data size', sorted_indices.map(idx => {
+        const e = filtered_data[idx];
+        return sizeKnown(e) ? enabled_datasets.reduce((s, d) => s + e.data_size[d.name], 0) : null;
+    }), formatSize);
+    queryAggRows(enabled_datasets.map(d => dataset_range[d.name]));
+
+    /// Per-dataset sections: a header/separator row (its checkbox toggles that dataset's
+    /// queries), then a Load time and a Data size row, then the query rows.
+    enabled_datasets.forEach(d => {
+        const { start, end } = dataset_range[d.name];
+
+        separatorRow(d.name, selectors.queries.slice(start, end).every(x => x), checked => {
+            for (let i = start; i < end; ++i) { selectors.queries[i] = checked; }
+            render(); updateHistory();
+        });
+        metricRow('Load time', sorted_indices.map(idx => (filtered_data[idx].load_time || {})[d.name] ?? null), formatTime);
+        metricRow('Statistics time', sorted_indices.map(idx => (filtered_data[idx].stats_time || {})[d.name] ?? null), formatTime);
+        /// Show a data size only when it's a positive measured value; 0/missing (StarRocks
+        /// reports 0 until compaction) reads as "—" rather than "0 B".
+        metricRow('Data size', sorted_indices.map(idx => {
+            const sz = (filtered_data[idx].data_size || {})[d.name];
+            return sz > 0 ? sz : null;
+        }), formatSize);
+        queryAggRows([{ start, end }]);
+
+        for (let query_num = start; query_num < end; ++query_num) {
+            let tr = document.createElement('tr');
+            tr.className = 'shadow';
+
+            let td_checkbox = document.createElement('td');
+            let checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'query-checkbox';
+            checkbox.dataset.query = query_num;
+            checkbox.checked = selectors.queries[query_num];
+            checkbox.addEventListener('change', e => {
+                selectors.queries[query_num] = e.target.checked;
+                renderSummary(filtered_data, baseline_data);
+                updateHistory();
+            });
+            td_checkbox.appendChild(checkbox);
+            tr.appendChild(td_checkbox);
+
+            let td_query_num = document.createElement('td');
+            td_query_num.className = 'note';
+            /// ClickBench (hits) queries are conventionally numbered from 0; the other
+            /// datasets are numbered from 1.
+            const qbase = d.name === 'hits' ? 0 : 1;
+            td_query_num.appendChild(document.createTextNode(`Q${query_num - start + qbase} `));
+            let tooltip = document.createElement('span');
+            tooltip.className = 'tooltip tooltip-query';
+            tooltip.appendChild(document.createTextNode(query_meta[query_num].name));
+            td_query_num.appendChild(tooltip);
+            tr.appendChild(td_query_num);
+
+            sorted_indices.map(idx => {
+                const elem = filtered_data[idx];
+                const curr = selectRun(elem.result[query_num]);
+                const base = selectRun(baseline_data[query_num]);
+                const ratio = (curr !== null && base !== null) ? (constant_time_add + curr) / (constant_time_add + base) : null;
+                let td = document.createElement('td');
+                if (curr !== null) {
+                    td.appendChild(document.createTextNode(`${curr.toFixed(2)}s (×${ratio.toFixed(2)})`));
+                } else {
+                    /// Why it produced nothing, when the run's log recorded it.
+                    const kind = (elem.error || {})[query_num];
+                    td.appendChild(document.createTextNode(kind ? error_labels[kind] || kind : '☠'));
+                    const msg = (elem.error_text || {})[query_num];
+                    if (msg) { td.title = msg; }
+                    if (kind) { td.className = 'failure-reason'; }
+                }
+                colorize(td, ratio);
+                tr.appendChild(td);
+            });
+            details_body.appendChild(tr);
+        }
+    });
+
+    /// Pin the second sticky column (query number) right after the first (checkbox):
+    /// set its left offset to column 1's actual rendered width.
+    const col1 = details_head.children[0];
+    if (col1) {
+        document.documentElement.style.setProperty('--qn-left', col1.getBoundingClientRect().width + 'px');
+    }
+}
+
+/// Compact URL state, ported from the main ClickBench page: each selector set is
+/// encoded as the shortest unique subsequence of its keys, and only the smaller of the
+/// selected/unselected side is listed, so the fragment stays short even with 300+
+/// queries and 160+ versions.
+function isSubsequence(str, subseq) {
+    let i = 0, j = 0;
+    while (i < str.length && j < subseq.length) {
+        if (str[i] === subseq[j]) j++;
+        i++;
+    }
+    return j === subseq.length;
+}
+
+function findUniqueSubsequence(target, others) {
+    const num_matches = others.filter(s => isSubsequence(s, target)).length;
+    let num_failures = 0;
+    for (let i = 0; i < 1000; ++i) {
+        const cut_idx = (i + 123) * 67601 % target.length;
+        const cut = target.substring(0, cut_idx) + target.substring(cut_idx + 1, target.length);
+        if (others.filter(s => isSubsequence(s, cut)).length == num_matches) {
+            target = cut;
+            num_failures = 0;
+        } else {
+            ++num_failures;
+            if (num_failures == target.length) { break; }
+        }
+    }
+    return target;
+}
+
+function encodedStrings(strings) {
+    let res = {};
+    strings.forEach(s => { res[s] = findUniqueSubsequence(s, strings) });
+    return res;
+}
+
+let encoded_keys = {};
+
+function encodeState(selectors) {
+    return Object.keys(selectors).map(k => {
+        let encoded_str = k + '=';
+        if (typeof selectors[k] === 'string') { return encoded_str + selectors[k]; }
+        if (!encoded_keys[k]) { encoded_keys[k] = encodedStrings(Object.keys(selectors[k])); }
+        const count_total = Object.values(selectors[k]).length;
+        const count_selected = Object.values(selectors[k]).filter(x => x).length;
+        if (count_selected * 2 <= count_total) {
+            encoded_str += '+' + Object.keys(selectors[k]).filter(x => selectors[k][x]).map(x => encoded_keys[k][x]).join('|');
+        } else {
+            encoded_str += '-' + Object.keys(selectors[k]).filter(x => !selectors[k][x]).map(x => encoded_keys[k][x]).join('|');
+        }
+        return encoded_str;
+    }).join('&');
+}
+
+function decodeState(state) {
+    let decoded = {};
+    state.split('&').forEach(kv => {
+        let [k, v] = kv.split('=');
+        if (typeof selectors[k] === 'string') {
+            decoded[k] = v;
+        } else if (typeof selectors[k] === 'object') {
+            decoded[k] = Array.isArray(selectors[k]) ? [] : {};
+            const filtered = v.substring(1, v.length).split('|').filter(s => s !== '')
+                .map(substr => Object.keys(selectors[k]).filter(x => isSubsequence(x, decodeURIComponent(substr))).reduce((a, b) => a.length <= b.length ? a : b));
+            if (v.startsWith('+')) {
+                Object.keys(selectors[k]).forEach(x => { decoded[k][x] = filtered.includes(x); });
+            } else if (v.startsWith('-')) {
+                Object.keys(selectors[k]).forEach(x => { decoded[k][x] = !filtered.includes(x); });
+            }
+        }
+    });
+    return decoded;
+}
+
+function updateHistory() {
+    history.pushState(selectors, '',
+        window.location.pathname + (window.location.search || '') + '#' + encodeState(selectors));
+}
+
+window.onpopstate = function(event) {
+    if (!event.state) { return; }
+    selectors = event.state;
+    render();
+    updateSelectors();
+};
+
+if (window.location.hash) {
+    try {
+        const restored = decodeState(decodeURIComponent(window.location.hash.substring(1)));
+        if (restored && restored.queries && restored.queries.length == num_queries) { selectors = restored; }
+    } catch {}
+}
+
+document.getElementById('scale_hint').textContent =
+    'Different colors on the bar chart represent the same values shown at different scales (1x, 4x, 16x, 64x zoom).';
+
+render();
+updateSelectors();
+
+</script>
+</body>
+</html>

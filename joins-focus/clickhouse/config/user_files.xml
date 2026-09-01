@@ -1,0 +1,7 @@
+<clickhouse>
+    <!-- Point file() at the mounted data directory. It must live OUTSIDE /var/lib/clickhouse:
+         the entrypoint creates and manages that tree, and the data is mounted read-only.
+         Reading server-side through file() is what makes the load parallel; streaming the
+         Parquet into the client's stdin instead was single-threaded and ran at ~20 MB/s. -->
+    <user_files_path>/data/</user_files_path>
+</clickhouse>

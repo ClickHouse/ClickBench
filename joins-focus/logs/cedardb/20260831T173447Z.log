@@ -1,0 +1,20 @@
+page cache dropped before each query (6 tries: 1 cold + 5 hot)
+starting CedarDB v2026-08-20 (cedardb/cedardb:v2026-08-20)
+CedarDB up (PostgreSQL 16.3 compatible CedarDB v2026-08-20, compiled on 2026-08-20, x86_64 build)
+=== CREATE job tables ===
+=== job: INSERT INTO job.aka_name SELECT * FROM '/data/parquet/job/aka_name.parquet'; ===
+=== job: INSERT INTO job.aka_title SELECT * FROM '/data/parquet/job/aka_title.parquet'; ===
+=== job: INSERT INTO job.cast_info SELECT * FROM '/data/parquet/job/cast_info.parquet'; ===
+=== job: INSERT INTO job.char_name SELECT * FROM '/data/parquet/job/char_name.parquet'; ===
+=== job: INSERT INTO job.comp_cast_type SELECT * FROM '/data/parquet/job/comp_cast_type.parquet'; ===
+=== job: INSERT INTO job.company_name SELECT * FROM '/data/parquet/job/company_name.parquet'; ===
+=== job: INSERT INTO job.company_type SELECT * FROM '/data/parquet/job/company_type.parquet'; ===
+=== job: INSERT INTO job.complete_cast SELECT * FROM '/data/parquet/job/complete_cast.parquet'; ===
+=== job: INSERT INTO job.info_type SELECT * FROM '/data/parquet/job/info_type.parquet'; ===
+=== job: INSERT INTO job.keyword SELECT * FROM '/data/parquet/job/keyword.parquet'; ===
+=== job: INSERT INTO job.kind_type SELECT * FROM '/data/parquet/job/kind_type.parquet'; ===
+=== job: INSERT INTO job.link_type SELECT * FROM '/data/parquet/job/link_type.parquet'; ===
+=== job: INSERT INTO job.movie_companies SELECT * FROM '/data/parquet/job/movie_companies.parquet'; ===
+=== job: INSERT INTO job.movie_info SELECT * FROM '/data/parquet/job/movie_info.parquet'; ===
+=== job: INSERT INTO job.movie_info_idx SELECT * FROM '/data/parquet/job/movie_info_idx.parquet'; ===
+=== job: INSERT INTO job.movie_keyword SELECT * FROM '/data/parquet/job/movie_keyword.parquet'; ===

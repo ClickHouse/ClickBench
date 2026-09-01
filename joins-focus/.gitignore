@@ -1,0 +1,32 @@
+# Generated data -- 75 GB, and reproducible with ./generate-data.sh. The repo root's .gitignore
+# already matches *.parquet, but data/csv (6 GB, Umbra's input) and data/bin are not parquet, so
+# the whole tree is ignored here rather than relying on that.
+data/
+
+# Engine data directories, created per run and multi-GB. duckdb/.duckdb also holds the pinned
+# DuckDB CLI, which ensure_binary re-downloads when it is missing.
+duckdb/.duckdb/
+firebolt/.fb/
+
+# Per-system load and statistics timings. Every load truncates these, so they only ever hold the
+# most recent run's numbers -- state, not history. The published figures are load_time and
+# stats_time inside results/<system>/<run>.json.
+logs/*.tsv
+
+# The flat single-file logs of the old layout, superseded by logs/<system>/<run timestamp>.log.
+logs/*.log
+
+# Self-contained pages from ./generate-results.sh --html (report.html by default).
+report.html
+
+# Python bytecode (nothing here is an importable module; appears only if one is imported).
+__pycache__/
+
+# DELIBERATELY NOT IGNORED:
+#   results/<system>/<run>.json   the measurements themselves
+#   logs/<system>/<run>.log       INPUTS, not artifacts: generate-results.sh pairs each log with
+#                                 the results file of the same timestamp and reads it for the
+#                                 per-query failure reasons (OOM / timeout / unsupported) shown
+#                                 in the page. versions/.gitignore ignores logs/ because there
+#                                 they are only artifacts; here that would silently drop a column.
+#   data.generated.js             what index.html loads; the page shows nothing without it.

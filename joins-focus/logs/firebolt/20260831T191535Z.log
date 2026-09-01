@@ -1,0 +1,252 @@
+page cache dropped before each query (6 tries: 1 cold + 5 hot)
+starting Firebolt 4.31.13 (ghcr.io/firebolt-db/firebolt-core:4.31.13-0.20260424104720.5698ca5339fc)
+Firebolt up (4.31.13-0.20260424104720.5698ca5339fc)
+STATISTICS=1: per-column ALTER ... ADD STATISTICS after each load (see stats/)
+=== CREATE tpch tables ===
+=== LOAD tpch ===
+=== ADD STATISTICS tpch (61 statements) ===
+statistics on tpch: 127s
+loaded tpch in 1162s
+benchmarking Firebolt 4.31.13 (reports 4.31.13-0.20260424104720.5698ca5339fc)
+=== tpcds: not fully loaded; skipping its queries, load time and size ===
+=== job: not fully loaded; skipping its queries, load time and size ===
+q1 [tpch]: [79.303, 2.609, 2.605, 2.603, 2.610, 2.610]
+q2 [tpch]: [7.719, 0.532, 0.527, 0.520, 0.532, 0.524]
+q3 [tpch]: [65.460, 0.896, 0.887, 0.891, 0.894, 0.888]
+q4 [tpch]: [39.978, 1.122, 1.112, 1.113, 1.108, 1.108]
+q5 [tpch]: [71.357, 1.048, 1.039, 1.033, 1.040, 1.041]
+q6 [tpch]: [60.632, 0.491, 0.489, 0.484, 0.489, 0.489]
+q7 [tpch]: [80.671, 1.428, 1.394, 1.373, 1.380, 1.392]
+q8 [tpch]: [91.336, 1.215, 1.206, 1.211, 1.215, 1.207]
+q9 [tpch]: [106.494, 3.411, 3.533, 3.605, 3.524, 3.570]
+q10 [tpch]: [65.444, 2.023, 2.056, 2.020, 2.046, 2.033]
+q11 [tpch]: [6.707, 0.192, 0.188, 0.188, 0.191, 0.192]
+q12 [tpch]: [58.575, 0.960, 0.938, 0.950, 0.946, 0.943]
+q13 [tpch]: [27.028, 0.964, 0.954, 0.952, 0.940, 0.949]
+q14 [tpch]: [67.155, 0.649, 0.637, 0.632, 0.642, 0.643]
+q15 [tpch]: [66.096, 1.138, 1.164, 1.455, 1.144, 1.138]
+q16 [tpch]: [4.896, 0.404, 0.394, 0.405, 0.390, 0.395]
+q17 [tpch]: [55.439, 2.819, 2.710, 2.691, 2.704, 2.652]
+q18 [tpch]: [37.114, 1.281, 1.241, 1.233, 1.205, 1.190]
+q19 [tpch]: [88.843, 1.019, 1.007, 1.003, 1.001, 1.002]
+q20 [tpch]: [70.469, 1.070, 1.052, 1.055, 1.063, 1.052]
+q21 [tpch]: [58.958, 7.062, 7.116, 7.101, 7.079, 7.025]
+q22 [tpch]: [6.092, 0.321, 0.320, 0.312, 0.313, 0.317]
+q23 [tpcds]: SKIPPED (not loaded); recording null
+q24 [tpcds]: SKIPPED (not loaded); recording null
+q25 [tpcds]: SKIPPED (not loaded); recording null
+q26 [tpcds]: SKIPPED (not loaded); recording null
+q27 [tpcds]: SKIPPED (not loaded); recording null
+q28 [tpcds]: SKIPPED (not loaded); recording null
+q29 [tpcds]: SKIPPED (not loaded); recording null
+q30 [tpcds]: SKIPPED (not loaded); recording null
+q31 [tpcds]: SKIPPED (not loaded); recording null
+q32 [tpcds]: SKIPPED (not loaded); recording null
+q33 [tpcds]: SKIPPED (not loaded); recording null
+q34 [tpcds]: SKIPPED (not loaded); recording null
+q35 [tpcds]: SKIPPED (not loaded); recording null
+q36 [tpcds]: SKIPPED (not loaded); recording null
+q37 [tpcds]: SKIPPED (not loaded); recording null
+q38 [tpcds]: SKIPPED (not loaded); recording null
+q39 [tpcds]: SKIPPED (not loaded); recording null
+q40 [tpcds]: SKIPPED (not loaded); recording null
+q41 [tpcds]: SKIPPED (not loaded); recording null
+q42 [tpcds]: SKIPPED (not loaded); recording null
+q43 [tpcds]: SKIPPED (not loaded); recording null
+q44 [tpcds]: SKIPPED (not loaded); recording null
+q45 [tpcds]: SKIPPED (not loaded); recording null
+q46 [tpcds]: SKIPPED (not loaded); recording null
+q47 [tpcds]: SKIPPED (not loaded); recording null
+q48 [tpcds]: SKIPPED (not loaded); recording null
+q49 [tpcds]: SKIPPED (not loaded); recording null
+q50 [tpcds]: SKIPPED (not loaded); recording null
+q51 [tpcds]: SKIPPED (not loaded); recording null
+q52 [tpcds]: SKIPPED (not loaded); recording null
+q53 [tpcds]: SKIPPED (not loaded); recording null
+q54 [tpcds]: SKIPPED (not loaded); recording null
+q55 [tpcds]: SKIPPED (not loaded); recording null
+q56 [tpcds]: SKIPPED (not loaded); recording null
+q57 [tpcds]: SKIPPED (not loaded); recording null
+q58 [tpcds]: SKIPPED (not loaded); recording null
+q59 [tpcds]: SKIPPED (not loaded); recording null
+q60 [tpcds]: SKIPPED (not loaded); recording null
+q61 [tpcds]: SKIPPED (not loaded); recording null
+q62 [tpcds]: SKIPPED (not loaded); recording null
+q63 [tpcds]: SKIPPED (not loaded); recording null
+q64 [tpcds]: SKIPPED (not loaded); recording null
+q65 [tpcds]: SKIPPED (not loaded); recording null
+q66 [tpcds]: SKIPPED (not loaded); recording null
+q67 [tpcds]: SKIPPED (not loaded); recording null
+q68 [tpcds]: SKIPPED (not loaded); recording null
+q69 [tpcds]: SKIPPED (not loaded); recording null
+q70 [tpcds]: SKIPPED (not loaded); recording null
+q71 [tpcds]: SKIPPED (not loaded); recording null
+q72 [tpcds]: SKIPPED (not loaded); recording null
+q73 [tpcds]: SKIPPED (not loaded); recording null
+q74 [tpcds]: SKIPPED (not loaded); recording null
+q75 [tpcds]: SKIPPED (not loaded); recording null
+q76 [tpcds]: SKIPPED (not loaded); recording null
+q77 [tpcds]: SKIPPED (not loaded); recording null
+q78 [tpcds]: SKIPPED (not loaded); recording null
+q79 [tpcds]: SKIPPED (not loaded); recording null
+q80 [tpcds]: SKIPPED (not loaded); recording null
+q81 [tpcds]: SKIPPED (not loaded); recording null
+q82 [tpcds]: SKIPPED (not loaded); recording null
+q83 [tpcds]: SKIPPED (not loaded); recording null
+q84 [tpcds]: SKIPPED (not loaded); recording null
+q85 [tpcds]: SKIPPED (not loaded); recording null
+q86 [tpcds]: SKIPPED (not loaded); recording null
+q87 [tpcds]: SKIPPED (not loaded); recording null
+q88 [tpcds]: SKIPPED (not loaded); recording null
+q89 [tpcds]: SKIPPED (not loaded); recording null
+q90 [tpcds]: SKIPPED (not loaded); recording null
+q91 [tpcds]: SKIPPED (not loaded); recording null
+q92 [tpcds]: SKIPPED (not loaded); recording null
+q93 [tpcds]: SKIPPED (not loaded); recording null
+q94 [tpcds]: SKIPPED (not loaded); recording null
+q95 [tpcds]: SKIPPED (not loaded); recording null
+q96 [tpcds]: SKIPPED (not loaded); recording null
+q97 [tpcds]: SKIPPED (not loaded); recording null
+q98 [tpcds]: SKIPPED (not loaded); recording null
+q99 [tpcds]: SKIPPED (not loaded); recording null
+q100 [tpcds]: SKIPPED (not loaded); recording null
+q101 [tpcds]: SKIPPED (not loaded); recording null
+q102 [tpcds]: SKIPPED (not loaded); recording null
+q103 [tpcds]: SKIPPED (not loaded); recording null
+q104 [tpcds]: SKIPPED (not loaded); recording null
+q105 [tpcds]: SKIPPED (not loaded); recording null
+q106 [tpcds]: SKIPPED (not loaded); recording null
+q107 [tpcds]: SKIPPED (not loaded); recording null
+q108 [tpcds]: SKIPPED (not loaded); recording null
+q109 [tpcds]: SKIPPED (not loaded); recording null
+q110 [tpcds]: SKIPPED (not loaded); recording null
+q111 [tpcds]: SKIPPED (not loaded); recording null
+q112 [tpcds]: SKIPPED (not loaded); recording null
+q113 [tpcds]: SKIPPED (not loaded); recording null
+q114 [tpcds]: SKIPPED (not loaded); recording null
+q115 [tpcds]: SKIPPED (not loaded); recording null
+q116 [tpcds]: SKIPPED (not loaded); recording null
+q117 [tpcds]: SKIPPED (not loaded); recording null
+q118 [tpcds]: SKIPPED (not loaded); recording null
+q119 [tpcds]: SKIPPED (not loaded); recording null
+q120 [tpcds]: SKIPPED (not loaded); recording null
+q121 [tpcds]: SKIPPED (not loaded); recording null
+q122 [tpcds]: SKIPPED (not loaded); recording null
+q123 [tpcds]: SKIPPED (not loaded); recording null
+q124 [tpcds]: SKIPPED (not loaded); recording null
+q125 [tpcds]: SKIPPED (not loaded); recording null
+q126 [job]: SKIPPED (not loaded); recording null
+q127 [job]: SKIPPED (not loaded); recording null
+q128 [job]: SKIPPED (not loaded); recording null
+q129 [job]: SKIPPED (not loaded); recording null
+q130 [job]: SKIPPED (not loaded); recording null
+q131 [job]: SKIPPED (not loaded); recording null
+q132 [job]: SKIPPED (not loaded); recording null
+q133 [job]: SKIPPED (not loaded); recording null
+q134 [job]: SKIPPED (not loaded); recording null
+q135 [job]: SKIPPED (not loaded); recording null
+q136 [job]: SKIPPED (not loaded); recording null
+q137 [job]: SKIPPED (not loaded); recording null
+q138 [job]: SKIPPED (not loaded); recording null
+q139 [job]: SKIPPED (not loaded); recording null
+q140 [job]: SKIPPED (not loaded); recording null
+q141 [job]: SKIPPED (not loaded); recording null
+q142 [job]: SKIPPED (not loaded); recording null
+q143 [job]: SKIPPED (not loaded); recording null
+q144 [job]: SKIPPED (not loaded); recording null
+q145 [job]: SKIPPED (not loaded); recording null
+q146 [job]: SKIPPED (not loaded); recording null
+q147 [job]: SKIPPED (not loaded); recording null
+q148 [job]: SKIPPED (not loaded); recording null
+q149 [job]: SKIPPED (not loaded); recording null
+q150 [job]: SKIPPED (not loaded); recording null
+q151 [job]: SKIPPED (not loaded); recording null
+q152 [job]: SKIPPED (not loaded); recording null
+q153 [job]: SKIPPED (not loaded); recording null
+q154 [job]: SKIPPED (not loaded); recording null
+q155 [job]: SKIPPED (not loaded); recording null
+q156 [job]: SKIPPED (not loaded); recording null
+q157 [job]: SKIPPED (not loaded); recording null
+q158 [job]: SKIPPED (not loaded); recording null
+q159 [job]: SKIPPED (not loaded); recording null
+q160 [job]: SKIPPED (not loaded); recording null
+q161 [job]: SKIPPED (not loaded); recording null
+q162 [job]: SKIPPED (not loaded); recording null
+q163 [job]: SKIPPED (not loaded); recording null
+q164 [job]: SKIPPED (not loaded); recording null
+q165 [job]: SKIPPED (not loaded); recording null
+q166 [job]: SKIPPED (not loaded); recording null
+q167 [job]: SKIPPED (not loaded); recording null
+q168 [job]: SKIPPED (not loaded); recording null
+q169 [job]: SKIPPED (not loaded); recording null
+q170 [job]: SKIPPED (not loaded); recording null
+q171 [job]: SKIPPED (not loaded); recording null
+q172 [job]: SKIPPED (not loaded); recording null
+q173 [job]: SKIPPED (not loaded); recording null
+q174 [job]: SKIPPED (not loaded); recording null
+q175 [job]: SKIPPED (not loaded); recording null
+q176 [job]: SKIPPED (not loaded); recording null
+q177 [job]: SKIPPED (not loaded); recording null
+q178 [job]: SKIPPED (not loaded); recording null
+q179 [job]: SKIPPED (not loaded); recording null
+q180 [job]: SKIPPED (not loaded); recording null
+q181 [job]: SKIPPED (not loaded); recording null
+q182 [job]: SKIPPED (not loaded); recording null
+q183 [job]: SKIPPED (not loaded); recording null
+q184 [job]: SKIPPED (not loaded); recording null
+q185 [job]: SKIPPED (not loaded); recording null
+q186 [job]: SKIPPED (not loaded); recording null
+q187 [job]: SKIPPED (not loaded); recording null
+q188 [job]: SKIPPED (not loaded); recording null
+q189 [job]: SKIPPED (not loaded); recording null
+q190 [job]: SKIPPED (not loaded); recording null
+q191 [job]: SKIPPED (not loaded); recording null
+q192 [job]: SKIPPED (not loaded); recording null
+q193 [job]: SKIPPED (not loaded); recording null
+q194 [job]: SKIPPED (not loaded); recording null
+q195 [job]: SKIPPED (not loaded); recording null
+q196 [job]: SKIPPED (not loaded); recording null
+q197 [job]: SKIPPED (not loaded); recording null
+q198 [job]: SKIPPED (not loaded); recording null
+q199 [job]: SKIPPED (not loaded); recording null
+q200 [job]: SKIPPED (not loaded); recording null
+q201 [job]: SKIPPED (not loaded); recording null
+q202 [job]: SKIPPED (not loaded); recording null
+q203 [job]: SKIPPED (not loaded); recording null
+q204 [job]: SKIPPED (not loaded); recording null
+q205 [job]: SKIPPED (not loaded); recording null
+q206 [job]: SKIPPED (not loaded); recording null
+q207 [job]: SKIPPED (not loaded); recording null
+q208 [job]: SKIPPED (not loaded); recording null
+q209 [job]: SKIPPED (not loaded); recording null
+q210 [job]: SKIPPED (not loaded); recording null
+q211 [job]: SKIPPED (not loaded); recording null
+q212 [job]: SKIPPED (not loaded); recording null
+q213 [job]: SKIPPED (not loaded); recording null
+q214 [job]: SKIPPED (not loaded); recording null
+q215 [job]: SKIPPED (not loaded); recording null
+q216 [job]: SKIPPED (not loaded); recording null
+q217 [job]: SKIPPED (not loaded); recording null
+q218 [job]: SKIPPED (not loaded); recording null
+q219 [job]: SKIPPED (not loaded); recording null
+q220 [job]: SKIPPED (not loaded); recording null
+q221 [job]: SKIPPED (not loaded); recording null
+q222 [job]: SKIPPED (not loaded); recording null
+q223 [job]: SKIPPED (not loaded); recording null
+q224 [job]: SKIPPED (not loaded); recording null
+q225 [job]: SKIPPED (not loaded); recording null
+q226 [job]: SKIPPED (not loaded); recording null
+q227 [job]: SKIPPED (not loaded); recording null
+q228 [job]: SKIPPED (not loaded); recording null
+q229 [job]: SKIPPED (not loaded); recording null
+q230 [job]: SKIPPED (not loaded); recording null
+q231 [job]: SKIPPED (not loaded); recording null
+q232 [job]: SKIPPED (not loaded); recording null
+q233 [job]: SKIPPED (not loaded); recording null
+q234 [job]: SKIPPED (not loaded); recording null
+q235 [job]: SKIPPED (not loaded); recording null
+q236 [job]: SKIPPED (not loaded); recording null
+q237 [job]: SKIPPED (not loaded); recording null
+q238 [job]: SKIPPED (not loaded); recording null
+wrote /home/ubuntu/dbbench/results/firebolt/20260831T191535Z.json
+Firebolt 4.31.13: tpch 22/22  tpcds 0/103  job 0/113   load_time {'tpch': 1035}

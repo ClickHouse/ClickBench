@@ -1,0 +1,369 @@
+page cache dropped before each query (6 tries: 1 cold + 5 hot)
+starting 26.7.5.10 from image clickhouse/clickhouse-server:26.7.5.10
+=== CREATE tpcds tables ===
+=== INSERT INTO tpcds.call_center SELECT * FROM file('/data/parquet/tpcds/call_center.parquet', Parquet)  (12K) ===
+=== MATERIALIZE STATISTICS tpcds.call_center ===
+statistics on tpcds.call_center: 0s
+loaded tpcds.call_center: 30 rows in 0s
+=== INSERT INTO tpcds.catalog_page SELECT * FROM file('/data/parquet/tpcds/catalog_page.parquet', Parquet)  (1.2M) ===
+=== MATERIALIZE STATISTICS tpcds.catalog_page ===
+statistics on tpcds.catalog_page: 1s
+loaded tpcds.catalog_page: 20400 rows in 0s
+=== INSERT INTO tpcds.catalog_returns SELECT * FROM file('/data/parquet/tpcds/catalog_returns.parquet', Parquet)  (1.1G) ===
+=== MATERIALIZE STATISTICS tpcds.catalog_returns ===
+statistics on tpcds.catalog_returns: 11s
+loaded tpcds.catalog_returns: 14399221 rows in 8s
+=== INSERT INTO tpcds.catalog_sales SELECT * FROM file('/data/parquet/tpcds/catalog_sales.parquet', Parquet)  (11G) ===
+=== MATERIALIZE STATISTICS tpcds.catalog_sales ===
+statistics on tpcds.catalog_sales: 248s
+loaded tpcds.catalog_sales: 143997065 rows in 269s
+=== INSERT INTO tpcds.customer_address SELECT * FROM file('/data/parquet/tpcds/customer_address.parquet', Parquet)  (20M) ===
+=== MATERIALIZE STATISTICS tpcds.customer_address ===
+statistics on tpcds.customer_address: 0s
+loaded tpcds.customer_address: 1000000 rows in 1s
+=== INSERT INTO tpcds.customer_demographics SELECT * FROM file('/data/parquet/tpcds/customer_demographics.parquet', Parquet)  (7.5M) ===
+=== MATERIALIZE STATISTICS tpcds.customer_demographics ===
+statistics on tpcds.customer_demographics: 0s
+loaded tpcds.customer_demographics: 1920800 rows in 1s
+=== INSERT INTO tpcds.customer SELECT * FROM file('/data/parquet/tpcds/customer.parquet', Parquet)  (109M) ===
+=== MATERIALIZE STATISTICS tpcds.customer ===
+statistics on tpcds.customer: 0s
+loaded tpcds.customer: 2000000 rows in 2s
+=== INSERT INTO tpcds.date_dim SELECT * FROM file('/data/parquet/tpcds/date_dim.parquet', Parquet)  (1.8M) ===
+=== MATERIALIZE STATISTICS tpcds.date_dim ===
+statistics on tpcds.date_dim: 0s
+loaded tpcds.date_dim: 73049 rows in 0s
+=== INSERT INTO tpcds.household_demographics SELECT * FROM file('/data/parquet/tpcds/household_demographics.parquet', Parquet)  (32K) ===
+=== MATERIALIZE STATISTICS tpcds.household_demographics ===
+statistics on tpcds.household_demographics: 0s
+loaded tpcds.household_demographics: 7200 rows in 1s
+=== INSERT INTO tpcds.income_band SELECT * FROM file('/data/parquet/tpcds/income_band.parquet', Parquet)  (4.0K) ===
+=== MATERIALIZE STATISTICS tpcds.income_band ===
+statistics on tpcds.income_band: 0s
+loaded tpcds.income_band: 20 rows in 0s
+=== INSERT INTO tpcds.inventory SELECT * FROM file('/data/parquet/tpcds/inventory.parquet', Parquet)  (2.0G) ===
+=== MATERIALIZE STATISTICS tpcds.inventory ===
+statistics on tpcds.inventory: 9s
+loaded tpcds.inventory: 399330000 rows in 43s
+=== INSERT INTO tpcds.item SELECT * FROM file('/data/parquet/tpcds/item.parquet', Parquet)  (19M) ===
+=== MATERIALIZE STATISTICS tpcds.item ===
+statistics on tpcds.item: 0s
+loaded tpcds.item: 204000 rows in 1s
+=== INSERT INTO tpcds.promotion SELECT * FROM file('/data/parquet/tpcds/promotion.parquet', Parquet)  (56K) ===
+=== MATERIALIZE STATISTICS tpcds.promotion ===
+statistics on tpcds.promotion: 0s
+loaded tpcds.promotion: 1000 rows in 1s
+=== INSERT INTO tpcds.reason SELECT * FROM file('/data/parquet/tpcds/reason.parquet', Parquet)  (4.0K) ===
+=== MATERIALIZE STATISTICS tpcds.reason ===
+statistics on tpcds.reason: 0s
+loaded tpcds.reason: 55 rows in 1s
+=== INSERT INTO tpcds.ship_mode SELECT * FROM file('/data/parquet/tpcds/ship_mode.parquet', Parquet)  (4.0K) ===
+=== MATERIALIZE STATISTICS tpcds.ship_mode ===
+statistics on tpcds.ship_mode: 0s
+loaded tpcds.ship_mode: 20 rows in 0s
+=== INSERT INTO tpcds.store_returns SELECT * FROM file('/data/parquet/tpcds/store_returns.parquet', Parquet)  (1.7G) ===
+=== MATERIALIZE STATISTICS tpcds.store_returns ===
+statistics on tpcds.store_returns: 10s
+loaded tpcds.store_returns: 28792282 rows in 39s
+=== INSERT INTO tpcds.store_sales SELECT * FROM file('/data/parquet/tpcds/store_sales.parquet', Parquet)  (14G) ===
+=== MATERIALIZE STATISTICS tpcds.store_sales ===
+statistics on tpcds.store_sales: 303s
+loaded tpcds.store_sales: 287997024 rows in 523s
+=== INSERT INTO tpcds.store SELECT * FROM file('/data/parquet/tpcds/store.parquet', Parquet)  (44K) ===
+=== MATERIALIZE STATISTICS tpcds.store ===
+statistics on tpcds.store: 0s
+loaded tpcds.store: 402 rows in 1s
+=== INSERT INTO tpcds.time_dim SELECT * FROM file('/data/parquet/tpcds/time_dim.parquet', Parquet)  (1.1M) ===
+=== MATERIALIZE STATISTICS tpcds.time_dim ===
+statistics on tpcds.time_dim: 0s
+loaded tpcds.time_dim: 86400 rows in 1s
+=== INSERT INTO tpcds.warehouse SELECT * FROM file('/data/parquet/tpcds/warehouse.parquet', Parquet)  (4.0K) ===
+=== MATERIALIZE STATISTICS tpcds.warehouse ===
+statistics on tpcds.warehouse: 0s
+loaded tpcds.warehouse: 15 rows in 0s
+=== INSERT INTO tpcds.web_page SELECT * FROM file('/data/parquet/tpcds/web_page.parquet', Parquet)  (40K) ===
+=== MATERIALIZE STATISTICS tpcds.web_page ===
+statistics on tpcds.web_page: 0s
+loaded tpcds.web_page: 2040 rows in 1s
+=== INSERT INTO tpcds.web_returns SELECT * FROM file('/data/parquet/tpcds/web_returns.parquet', Parquet)  (559M) ===
+=== MATERIALIZE STATISTICS tpcds.web_returns ===
+statistics on tpcds.web_returns: 10s
+loaded tpcds.web_returns: 7199229 rows in 15s
+=== INSERT INTO tpcds.web_sales SELECT * FROM file('/data/parquet/tpcds/web_sales.parquet', Parquet)  (5.0G) ===
+=== MATERIALIZE STATISTICS tpcds.web_sales ===
+statistics on tpcds.web_sales: 50s
+loaded tpcds.web_sales: 72001237 rows in 155s
+=== INSERT INTO tpcds.web_site SELECT * FROM file('/data/parquet/tpcds/web_site.parquet', Parquet)  (12K) ===
+=== MATERIALIZE STATISTICS tpcds.web_site ===
+statistics on tpcds.web_site: 0s
+loaded tpcds.web_site: 24 rows in 1s
+=== all loads finished ===
+benchmarking ClickHouse 26.7.5.10 (server reports 26.7.5.10)
+=== tpch: not fully loaded; skipping its queries, load time and size ===
+=== job: not fully loaded; skipping its queries, load time and size ===
+q1 [tpch]: SKIPPED (not loaded); recording null
+q2 [tpch]: SKIPPED (not loaded); recording null
+q3 [tpch]: SKIPPED (not loaded); recording null
+q4 [tpch]: SKIPPED (not loaded); recording null
+q5 [tpch]: SKIPPED (not loaded); recording null
+q6 [tpch]: SKIPPED (not loaded); recording null
+q7 [tpch]: SKIPPED (not loaded); recording null
+q8 [tpch]: SKIPPED (not loaded); recording null
+q9 [tpch]: SKIPPED (not loaded); recording null
+q10 [tpch]: SKIPPED (not loaded); recording null
+q11 [tpch]: SKIPPED (not loaded); recording null
+q12 [tpch]: SKIPPED (not loaded); recording null
+q13 [tpch]: SKIPPED (not loaded); recording null
+q14 [tpch]: SKIPPED (not loaded); recording null
+q15 [tpch]: SKIPPED (not loaded); recording null
+q16 [tpch]: SKIPPED (not loaded); recording null
+q17 [tpch]: SKIPPED (not loaded); recording null
+q18 [tpch]: SKIPPED (not loaded); recording null
+q19 [tpch]: SKIPPED (not loaded); recording null
+q20 [tpch]: SKIPPED (not loaded); recording null
+q21 [tpch]: SKIPPED (not loaded); recording null
+q22 [tpch]: SKIPPED (not loaded); recording null
+q23 [tpcds]: [2.834, 0.222, 0.191, 0.210, 0.195, 0.197]
+q24 [tpcds]: [10.788, 0.446, 0.399, 0.386, 0.392, 0.395]
+q25 [tpcds]: [5.032, 0.063, 0.057, 0.052, 0.051, 0.054]
+q26 [tpcds]: [94.547, 5.197, 5.484, 4.498, 4.473, 4.492]
+q27 [tpcds]: [57.176, 0.635, 0.585, 0.587, 0.590, 0.590]
+q28 [tpcds]: [18.184, 0.245, 0.230, 0.260, 0.232, 0.235]
+q29 [tpcds]: [52.605, 0.676, 0.669, 0.688, 0.672, 0.665]
+q30 [tpcds]: [23.510, 0.323, 0.319, 0.320, 0.321, 0.321]
+q31 [tpcds]: [20.380, 1.522, 1.536, 1.605, 1.508, 1.510]
+q32 [tpcds]: [33.336, 12.500, 12.421, 21.604, 12.673, 12.471]
+q33 [tpcds]: [45.991, 3.390, 3.344, 3.323, 3.383, 3.312]
+q34 [tpcds]: [3.002, 0.110, 0.142, 0.101, 0.096, 0.139]
+q35 [tpcds]: [83.913, 0.778, 0.771, 0.912, 0.783, 0.773]
+q36 [tpcds]: [51.209, 17.399, 17.183, 17.311, 17.161, 16.934]
+q37 [tpcds]: [46.049, 11.941, 11.913, 11.956, 12.015, 11.980]
+q38 [tpcds]: [4.077, 0.180, 0.176, 0.175, 0.178, 0.178]
+q39 [tpcds]: [17.887, 0.345, 0.344, 0.370, 0.341, 0.340]
+q40 [tpcds]: [50.243, 0.810, 0.789, 0.829, 0.791, 0.798]
+q41 [tpcds]: [26.855, 0.943, 0.976, 0.919, 0.889, 0.904]
+q42 [tpcds]: [13.416, 0.141, 0.134, 0.133, 0.132, 0.136]
+q43 [tpcds]: [2.823, 0.132, 0.127, 0.135, 0.129, 0.130]
+q44 [tpcds]: [0.454, 0.470, 0.408, 0.415, 0.401, 0.366]
+q45 [tpcds]: [3.979, 1.979, 1.228, 1.089, 0.734, 0.612]
+q46 [tpcds]: [58.802, 12.095, 12.186, 12.143, 12.364, 12.152]
+q47 [tpcds]: [58.529, 12.191, 12.141, 12.292, 12.077, 12.135]
+q48 [tpcds]: [38.846, 0.687, 0.676, 0.695, 0.679, 0.687]
+q49 [tpcds]: [38.890, 0.681, 0.669, 0.677, 0.671, 0.667]
+q50 [tpcds]: [52.867, 0.694, 0.666, 0.692, 0.677, 0.670]
+q51 [tpcds]: [13.161, 0.254, 0.248, 0.248, 0.248, 0.246]
+q52 [tpcds]: [48.926, 0.602, 0.608, 0.605, 0.598, 0.602]
+q53 [tpcds]: [25.336, 1.209, 1.201, 1.205, 1.206, 1.215]
+q54 [tpcds]: [56.394, 0.826, 0.809, 0.825, 0.810, 0.802]
+q55 [tpcds]: [1.240, 0.252, 0.241, 0.249, 0.247, 0.240]
+q56 [tpcds]: [32.347, 1.473, 1.478, 1.488, 1.493, 1.468]
+q57 [tpcds]: [2.706, 0.141, 0.142, 0.141, 0.142, 0.141]
+q58 [tpcds]: [36.706, 0.511, 0.507, 0.509, 0.503, 0.511]
+q59 [tpcds]: [43.562, 0.519, 0.517, 0.524, 0.519, 0.514]
+q60 [tpcds]: FAILED (error): 159.033 Received exception from server (version 26.7.5): Code: 241. DB::Exception: Received from localhost:9000. DB::Exception: (total) memory limit exceeded: would use 52.77 GiB (attempt to allocate 
+q60 [tpcds]: [null, null, null, null, null, null]
+q61 [tpcds]: [30.818, 0.484, 0.438, 0.439, 0.440, 0.435]
+q62 [tpcds]: [11.066, 0.225, 0.216, 0.219, 0.217, 0.222]
+q63 [tpcds]: [30.050, 20.709, 20.747, 20.703, 20.693, 20.628]
+q64 [tpcds]: [0.991, 0.856, 0.724, 0.698, 0.484, 0.561]
+q65 [tpcds]: [1.776, 0.683, 0.857, 0.563, 0.790, 0.426]
+q66 [tpcds]: [6.446, 0.123, 0.120, 0.144, 0.122, 0.121]
+q67 [tpcds]: [0.046, 0.041, 0.041, 0.040, 0.041, 0.041]
+q68 [tpcds]: [7.120, 0.064, 0.063, 0.062, 0.061, 0.062]
+q69 [tpcds]: [20.096, 0.417, 0.409, 0.410, 0.411, 0.410]
+q70 [tpcds]: [16.001, 0.294, 0.289, 0.290, 0.290, 0.294]
+q71 [tpcds]: [5.423, 0.162, 0.151, 0.154, 0.151, 0.151]
+q72 [tpcds]: [65.825, 0.756, 0.747, 0.743, 0.751, 0.747]
+q73 [tpcds]: [22.371, 3.027, 3.053, 3.058, 3.040, 3.052]
+q74 [tpcds]: [57.364, 0.581, 0.563, 0.581, 0.557, 0.556]
+q75 [tpcds]: [73.106, 0.697, 0.644, 0.654, 0.652, 0.649]
+q76 [tpcds]: [37.639, 0.483, 0.470, 0.564, 0.467, 0.464]
+q77 [tpcds]: [17.842, 2.409, 2.350, 2.389, 2.482, 2.352]
+q78 [tpcds]: [7.129, 0.066, 0.064, 0.063, 0.065, 0.064]
+q79 [tpcds]: [16.360, 0.185, 0.182, 0.180, 0.181, 0.178]
+q80 [tpcds]: [33.446, 0.472, 0.467, 0.464, 0.475, 0.454]
+q81 [tpcds]: [7.181, 0.067, 0.063, 0.062, 0.062, 0.064]
+q82 [tpcds]: [27.458, 0.303, 0.300, 0.296, 0.292, 0.292]
+q83 [tpcds]: [6.319, 1.412, 1.474, 1.458, 1.471, 1.426]
+q84 [tpcds]: [22.255, 0.451, 0.438, 0.441, 0.431, 0.430]
+q85 [tpcds]: [20.561, 1.008, 1.002, 1.003, 1.007, 1.022]
+q86 [tpcds]: [35.701, 0.454, 0.453, 0.440, 0.438, 0.428]
+q87 [tpcds]: [33.938, 0.559, 0.546, 0.510, 0.512, 0.522]
+q88 [tpcds]: [6.821, 0.193, 0.180, 0.174, 0.172, 0.179]
+q89 [tpcds]: [16.375, 0.183, 0.176, 0.179, 0.178, 0.178]
+q90 [tpcds]: [5.851, 2.775, 0.582, 0.583, 0.592, 0.588]
+q91 [tpcds]: [21.261, 1.593, 1.579, 1.601, 1.588, 1.546]
+q92 [tpcds]: [31.829, 0.641, 0.438, 0.574, 0.477, 0.507]
+q93 [tpcds]: [111.393, 87.447, 87.628, 90.597, 90.097, 89.051]
+q94 [tpcds]: [79.286, 0.740, 0.731, 0.734, 0.726, 0.727]
+q95 [tpcds]: [195.136, 164.791, 208.462, 218.277, 174.852, 197.667]
+q96 [tpcds]: [22.100, 0.723, 0.721, 0.721, 0.719, 0.719]
+q97 [tpcds]: [34.278, 0.188, 0.171, 0.178, 0.180, 0.169]
+q98 [tpcds]: [33.639, 17.571, 17.586, 17.687, 17.724, 17.658]
+q99 [tpcds]: [43.461, 0.493, 0.485, 0.498, 0.493, 0.493]
+q100 [tpcds]: [39.852, 2.613, 2.611, 2.576, 2.599, 2.599]
+q101 [tpcds]: [57.851, 9.269, 8.893, 8.923, 8.810, 8.903]
+q102 [tpcds]: [40.247, 0.354, 0.325, 0.343, 0.319, 0.322]
+q103 [tpcds]: [49.547, 0.539, 0.531, 0.542, 0.526, 0.532]
+q104 [tpcds]: [78.883, 3.590, 3.612, 3.554, 3.270, 3.544]
+q105 [tpcds]: [65.733, 0.689, 0.682, 0.690, 0.680, 0.681]
+q106 [tpcds]: [57.793, 0.516, 0.454, 0.460, 0.465, 0.474]
+q107 [tpcds]: [1.892, 0.409, 0.393, 0.393, 0.393, 0.392]
+q108 [tpcds]: [11.146, 0.242, 0.237, 0.236, 0.233, 0.234]
+q109 [tpcds]: [1.505, 0.130, 0.125, 0.172, 0.124, 0.119]
+q110 [tpcds]: [0.664, 0.057, 0.054, 0.055, 0.054, 0.055]
+q111 [tpcds]: [12.623, 0.213, 0.211, 0.234, 0.210, 0.207]
+q112 [tpcds]: [2.889, 0.161, 0.160, 0.129, 0.164, 0.160]
+q113 [tpcds]: [30.429, 21.059, 21.016, 21.040, 21.051, 21.105]
+q114 [tpcds]: [25.673, 2.763, 2.749, 2.744, 2.757, 2.756]
+q115 [tpcds]: [17.279, 0.239, 0.236, 0.227, 0.227, 0.223]
+q116 [tpcds]: [5.142, 0.156, 0.160, 0.154, 0.149, 0.154]
+q117 [tpcds]: [0.512, 0.056, 0.058, 0.056, 0.056, 0.058]
+q118 [tpcds]: [2.919, 0.118, 0.121, 0.116, 0.120, 0.118]
+q119 [tpcds]: [231.705, 1.327, 1.262, 1.216, 1.173, 1.205]
+q120 [tpcds]: [15.050, 0.236, 0.229, 0.228, 0.221, 0.226]
+q121 [tpcds]: [49.804, 38.561, 38.851, 39.340, 40.918, 39.836]
+q122 [tpcds]: [23.270, 0.336, 0.336, 0.329, 0.329, 0.335]
+q123 [tpcds]: [22.927, 3.089, 2.920, 2.969, 2.974, 2.994]
+q124 [tpcds]: [14.778, 0.235, 0.228, 0.227, 0.236, 0.231]
+q125 [tpcds]: [12.999, 0.315, 0.308, 0.307, 0.307, 0.307]
+q126 [job]: SKIPPED (not loaded); recording null
+q127 [job]: SKIPPED (not loaded); recording null
+q128 [job]: SKIPPED (not loaded); recording null
+q129 [job]: SKIPPED (not loaded); recording null
+q130 [job]: SKIPPED (not loaded); recording null
+q131 [job]: SKIPPED (not loaded); recording null
+q132 [job]: SKIPPED (not loaded); recording null
+q133 [job]: SKIPPED (not loaded); recording null
+q134 [job]: SKIPPED (not loaded); recording null
+q135 [job]: SKIPPED (not loaded); recording null
+q136 [job]: SKIPPED (not loaded); recording null
+q137 [job]: SKIPPED (not loaded); recording null
+q138 [job]: SKIPPED (not loaded); recording null
+q139 [job]: SKIPPED (not loaded); recording null
+q140 [job]: SKIPPED (not loaded); recording null
+q141 [job]: SKIPPED (not loaded); recording null
+q142 [job]: SKIPPED (not loaded); recording null
+q143 [job]: SKIPPED (not loaded); recording null
+q144 [job]: SKIPPED (not loaded); recording null
+q145 [job]: SKIPPED (not loaded); recording null
+q146 [job]: SKIPPED (not loaded); recording null
+q147 [job]: SKIPPED (not loaded); recording null
+q148 [job]: SKIPPED (not loaded); recording null
+q149 [job]: SKIPPED (not loaded); recording null
+q150 [job]: SKIPPED (not loaded); recording null
+q151 [job]: SKIPPED (not loaded); recording null
+q152 [job]: SKIPPED (not loaded); recording null
+q153 [job]: SKIPPED (not loaded); recording null
+q154 [job]: SKIPPED (not loaded); recording null
+q155 [job]: SKIPPED (not loaded); recording null
+q156 [job]: SKIPPED (not loaded); recording null
+q157 [job]: SKIPPED (not loaded); recording null
+q158 [job]: SKIPPED (not loaded); recording null
+q159 [job]: SKIPPED (not loaded); recording null
+q160 [job]: SKIPPED (not loaded); recording null
+q161 [job]: SKIPPED (not loaded); recording null
+q162 [job]: SKIPPED (not loaded); recording null
+q163 [job]: SKIPPED (not loaded); recording null
+q164 [job]: SKIPPED (not loaded); recording null
+q165 [job]: SKIPPED (not loaded); recording null
+q166 [job]: SKIPPED (not loaded); recording null
+q167 [job]: SKIPPED (not loaded); recording null
+q168 [job]: SKIPPED (not loaded); recording null
+q169 [job]: SKIPPED (not loaded); recording null
+q170 [job]: SKIPPED (not loaded); recording null
+q171 [job]: SKIPPED (not loaded); recording null
+q172 [job]: SKIPPED (not loaded); recording null
+q173 [job]: SKIPPED (not loaded); recording null
+q174 [job]: SKIPPED (not loaded); recording null
+q175 [job]: SKIPPED (not loaded); recording null
+q176 [job]: SKIPPED (not loaded); recording null
+q177 [job]: SKIPPED (not loaded); recording null
+q178 [job]: SKIPPED (not loaded); recording null
+q179 [job]: SKIPPED (not loaded); recording null
+q180 [job]: SKIPPED (not loaded); recording null
+q181 [job]: SKIPPED (not loaded); recording null
+q182 [job]: SKIPPED (not loaded); recording null
+q183 [job]: SKIPPED (not loaded); recording null
+q184 [job]: SKIPPED (not loaded); recording null
+q185 [job]: SKIPPED (not loaded); recording null
+q186 [job]: SKIPPED (not loaded); recording null
+q187 [job]: SKIPPED (not loaded); recording null
+q188 [job]: SKIPPED (not loaded); recording null
+q189 [job]: SKIPPED (not loaded); recording null
+q190 [job]: SKIPPED (not loaded); recording null
+q191 [job]: SKIPPED (not loaded); recording null
+q192 [job]: SKIPPED (not loaded); recording null
+q193 [job]: SKIPPED (not loaded); recording null
+q194 [job]: SKIPPED (not loaded); recording null
+q195 [job]: SKIPPED (not loaded); recording null
+q196 [job]: SKIPPED (not loaded); recording null
+q197 [job]: SKIPPED (not loaded); recording null
+q198 [job]: SKIPPED (not loaded); recording null
+q199 [job]: SKIPPED (not loaded); recording null
+q200 [job]: SKIPPED (not loaded); recording null
+q201 [job]: SKIPPED (not loaded); recording null
+q202 [job]: SKIPPED (not loaded); recording null
+q203 [job]: SKIPPED (not loaded); recording null
+q204 [job]: SKIPPED (not loaded); recording null
+q205 [job]: SKIPPED (not loaded); recording null
+q206 [job]: SKIPPED (not loaded); recording null
+q207 [job]: SKIPPED (not loaded); recording null
+q208 [job]: SKIPPED (not loaded); recording null
+q209 [job]: SKIPPED (not loaded); recording null
+q210 [job]: SKIPPED (not loaded); recording null
+q211 [job]: SKIPPED (not loaded); recording null
+q212 [job]: SKIPPED (not loaded); recording null
+q213 [job]: SKIPPED (not loaded); recording null
+q214 [job]: SKIPPED (not loaded); recording null
+q215 [job]: SKIPPED (not loaded); recording null
+q216 [job]: SKIPPED (not loaded); recording null
+q217 [job]: SKIPPED (not loaded); recording null
+q218 [job]: SKIPPED (not loaded); recording null
+q219 [job]: SKIPPED (not loaded); recording null
+q220 [job]: SKIPPED (not loaded); recording null
+q221 [job]: SKIPPED (not loaded); recording null
+q222 [job]: SKIPPED (not loaded); recording null
+q223 [job]: SKIPPED (not loaded); recording null
+q224 [job]: SKIPPED (not loaded); recording null
+q225 [job]: SKIPPED (not loaded); recording null
+q226 [job]: SKIPPED (not loaded); recording null
+q227 [job]: SKIPPED (not loaded); recording null
+q228 [job]: SKIPPED (not loaded); recording null
+q229 [job]: SKIPPED (not loaded); recording null
+q230 [job]: SKIPPED (not loaded); recording null
+q231 [job]: SKIPPED (not loaded); recording null
+q232 [job]: SKIPPED (not loaded); recording null
+q233 [job]: SKIPPED (not loaded); recording null
+q234 [job]: SKIPPED (not loaded); recording null
+q235 [job]: SKIPPED (not loaded); recording null
+q236 [job]: SKIPPED (not loaded); recording null
+q237 [job]: SKIPPED (not loaded); recording null
+q238 [job]: SKIPPED (not loaded); recording null
+wrote /home/ubuntu/dbbench/results/clickhouse/20260827T185952Z.json
+ClickHouse 26.7.5.10: tpch 0/22  tpcds 102/103  job 0/113   load_time {'tpcds': 1061}
+=== table sizes on disk (26.7.5.10) ===
+tpcds	call_center	14313
+tpcds	catalog_page	1205909
+tpcds	catalog_returns	1450827875
+tpcds	catalog_sales	17717659013
+tpcds	customer	169633785
+tpcds	customer_address	48993565
+tpcds	customer_demographics	9144598
+tpcds	date_dim	1816846
+tpcds	household_demographics	35179
+tpcds	income_band	1571
+tpcds	inventory	1589817969
+tpcds	item	27107326
+tpcds	promotion	65568
+tpcds	reason	3382
+tpcds	ship_mode	2995
+tpcds	store	65558
+tpcds	store_returns	2115088342
+tpcds	store_sales	23282736518
+tpcds	time_dim	1100232
+tpcds	warehouse	5437
+tpcds	web_page	74899
+tpcds	web_returns	668920952
+tpcds	web_sales	8857801117
+tpcds	web_site	11572

@@ -1,0 +1,297 @@
+page cache dropped before each query (6 tries: 1 cold + 5 hot)
+starting StarRocks 4.1.4 from image starrocks/allin1-ubuntu:4.1.4
+StarRocks up (4.1.4-4a9848e); result cache off, BE data caches as shipped
+=== CREATE tpcds tables ===
+=== LOAD tpcds.call_center ===
+=== LOAD tpcds.catalog_page ===
+=== LOAD tpcds.catalog_returns ===
+=== LOAD tpcds.catalog_sales ===
+=== LOAD tpcds.customer_address ===
+=== LOAD tpcds.customer_demographics ===
+=== LOAD tpcds.customer ===
+=== LOAD tpcds.date_dim ===
+=== LOAD tpcds.household_demographics ===
+=== LOAD tpcds.income_band ===
+=== LOAD tpcds.inventory ===
+=== LOAD tpcds.item ===
+=== LOAD tpcds.promotion ===
+=== LOAD tpcds.reason ===
+=== LOAD tpcds.ship_mode ===
+=== LOAD tpcds.store_returns ===
+=== LOAD tpcds.store_sales ===
+=== LOAD tpcds.store ===
+=== LOAD tpcds.time_dim ===
+=== LOAD tpcds.warehouse ===
+=== LOAD tpcds.web_page ===
+=== LOAD tpcds.web_returns ===
+=== LOAD tpcds.web_sales ===
+=== LOAD tpcds.web_site ===
+=== ANALYZE tpcds.call_center ===
+=== ANALYZE tpcds.catalog_page ===
+=== ANALYZE tpcds.catalog_returns ===
+=== ANALYZE tpcds.catalog_sales ===
+=== ANALYZE tpcds.customer_address ===
+=== ANALYZE tpcds.customer_demographics ===
+=== ANALYZE tpcds.customer ===
+=== ANALYZE tpcds.date_dim ===
+=== ANALYZE tpcds.household_demographics ===
+=== ANALYZE tpcds.income_band ===
+=== ANALYZE tpcds.inventory ===
+=== ANALYZE tpcds.item ===
+=== ANALYZE tpcds.promotion ===
+=== ANALYZE tpcds.reason ===
+=== ANALYZE tpcds.ship_mode ===
+=== ANALYZE tpcds.store_returns ===
+=== ANALYZE tpcds.store_sales ===
+=== ANALYZE tpcds.store ===
+=== ANALYZE tpcds.time_dim ===
+=== ANALYZE tpcds.warehouse ===
+=== ANALYZE tpcds.web_page ===
+=== ANALYZE tpcds.web_returns ===
+=== ANALYZE tpcds.web_sales ===
+=== ANALYZE tpcds.web_site ===
+statistics on tpcds: 246s
+loaded tpcds in 712s
+benchmarking StarRocks 4.1.4 (reports 4.1.4-4a9848e)
+=== tpch: not fully loaded; skipping its queries, load time and size ===
+=== job: not fully loaded; skipping its queries, load time and size ===
+q1 [tpch]: SKIPPED (not loaded); recording null
+q2 [tpch]: SKIPPED (not loaded); recording null
+q3 [tpch]: SKIPPED (not loaded); recording null
+q4 [tpch]: SKIPPED (not loaded); recording null
+q5 [tpch]: SKIPPED (not loaded); recording null
+q6 [tpch]: SKIPPED (not loaded); recording null
+q7 [tpch]: SKIPPED (not loaded); recording null
+q8 [tpch]: SKIPPED (not loaded); recording null
+q9 [tpch]: SKIPPED (not loaded); recording null
+q10 [tpch]: SKIPPED (not loaded); recording null
+q11 [tpch]: SKIPPED (not loaded); recording null
+q12 [tpch]: SKIPPED (not loaded); recording null
+q13 [tpch]: SKIPPED (not loaded); recording null
+q14 [tpch]: SKIPPED (not loaded); recording null
+q15 [tpch]: SKIPPED (not loaded); recording null
+q16 [tpch]: SKIPPED (not loaded); recording null
+q17 [tpch]: SKIPPED (not loaded); recording null
+q18 [tpch]: SKIPPED (not loaded); recording null
+q19 [tpch]: SKIPPED (not loaded); recording null
+q20 [tpch]: SKIPPED (not loaded); recording null
+q21 [tpch]: SKIPPED (not loaded); recording null
+q22 [tpch]: SKIPPED (not loaded); recording null
+q23 [tpcds]: [1.358, 0.236, 0.237, 0.222, 0.218, 0.215]
+q24 [tpcds]: [5.788, 0.228, 0.214, 0.221, 0.205, 0.202]
+q25 [tpcds]: [1.602, 0.039, 0.038, 0.039, 0.038, 0.038]
+q26 [tpcds]: [53.370, 3.801, 2.765, 2.744, 2.787, 2.789]
+q27 [tpcds]: [30.145, 0.584, 0.570, 0.592, 0.581, 0.565]
+q28 [tpcds]: [8.211, 0.189, 0.191, 0.194, 0.200, 0.192]
+q29 [tpcds]: [26.692, 1.272, 0.603, 0.610, 0.565, 0.598]
+q30 [tpcds]: [10.978, 0.194, 0.180, 0.180, 0.177, 0.182]
+q31 [tpcds]: [11.830, 0.987, 0.992, 0.980, 0.980, 0.982]
+q32 [tpcds]: [15.822, 0.292, 0.288, 0.288, 0.282, 0.297]
+q33 [tpcds]: [17.524, 7.887, 1.677, 1.706, 1.678, 1.695]
+q34 [tpcds]: [1.280, 0.082, 0.081, 0.083, 0.081, 0.079]
+q35 [tpcds]: [45.888, 0.801, 0.757, 0.773, 0.755, 0.761]
+q36 [tpcds]: [17.360, 2.146, 2.141, 2.092, 2.098, 2.132]
+q37 [tpcds]: [17.335, 2.110, 2.040, 2.105, 2.107, 2.008]
+q38 [tpcds]: [1.602, 0.134, 0.127, 0.135, 0.135, 0.131]
+q39 [tpcds]: [11.942, 0.202, 0.200, 0.201, 0.202, 0.198]
+q40 [tpcds]: [28.107, 0.895, 0.921, 0.880, 0.874, 0.881]
+q41 [tpcds]: [15.973, 1.405, 0.532, 0.543, 0.485, 0.486]
+q42 [tpcds]: [17.824, 0.233, 0.228, 0.215, 0.219, 0.212]
+q43 [tpcds]: [0.871, 0.080, 0.082, 0.086, 0.082, 0.081]
+q44 [tpcds]: [0.192, 0.056, 0.054, 0.053, 0.053, 0.053]
+q45 [tpcds]: [1.486, 1.337, 1.319, 1.355, 1.333, 1.460]
+q46 [tpcds]: [20.788, 7.855, 7.244, 7.180, 7.315, 7.428]
+q47 [tpcds]: [21.864, 7.655, 7.566, 7.496, 7.567, 7.465]
+q48 [tpcds]: [21.069, 0.707, 0.531, 0.527, 0.517, 0.525]
+q49 [tpcds]: [19.550, 1.986, 0.551, 0.532, 0.529, 0.553]
+q50 [tpcds]: [32.189, 1.823, 0.727, 0.727, 0.714, 0.724]
+q51 [tpcds]: [12.254, 0.241, 0.216, 0.217, 0.219, 0.236]
+q52 [tpcds]: [27.511, 0.630, 0.615, 0.615, 0.595, 0.622]
+q53 [tpcds]: [13.388, 0.860, 0.898, 0.861, 0.884, 0.900]
+q54 [tpcds]: [28.455, 0.936, 0.905, 0.900, 0.887, 0.888]
+q55 [tpcds]: [0.630, 0.156, 0.157, 0.153, 0.153, 0.153]
+q56 [tpcds]: [18.411, 0.514, 0.496, 0.505, 0.507, 0.493]
+q57 [tpcds]: [0.166, 0.074, 0.071, 0.072, 0.070, 0.068]
+q58 [tpcds]: [14.969, 6.477, 0.448, 0.433, 0.453, 0.430]
+q59 [tpcds]: [21.630, 0.530, 0.485, 0.514, 0.514, 0.485]
+q60 [tpcds]: [11.799, 0.422, 0.408, 0.413, 0.419, 0.429]
+q61 [tpcds]: [15.346, 2.451, 0.451, 0.456, 0.459, 0.443]
+q62 [tpcds]: [0.187, 0.084, 0.082, 0.086, 0.082, 0.083]
+q63 [tpcds]: [15.064, 0.696, 0.699, 0.720, 0.709, 0.710]
+q64 [tpcds]: [0.230, 0.190, 0.194, 0.196, 0.198, 0.191]
+q65 [tpcds]: [0.196, 0.191, 0.185, 0.185, 0.189, 0.184]
+q66 [tpcds]: [1.055, 0.117, 0.105, 0.107, 0.105, 0.107]
+q67 [tpcds]: [0.080, 0.029, 0.028, 0.029, 0.028, 0.029]
+q68 [tpcds]: [5.247, 0.105, 0.108, 0.106, 0.103, 0.102]
+q69 [tpcds]: [6.140, 0.232, 0.232, 0.221, 0.215, 0.213]
+q70 [tpcds]: [11.732, 0.903, 1.566, 1.539, 1.508, 0.390]
+q71 [tpcds]: [2.683, 0.142, 0.146, 0.139, 0.135, 0.141]
+q72 [tpcds]: [38.573, 0.781, 0.790, 0.756, 0.743, 0.767]
+q73 [tpcds]: [9.374, 0.770, 0.748, 0.772, 0.770, 0.741]
+q74 [tpcds]: [29.151, 1.254, 0.698, 0.688, 0.697, 0.710]
+q75 [tpcds]: [38.605, 0.702, 0.702, 0.700, 0.669, 0.689]
+q76 [tpcds]: [19.432, 0.748, 0.526, 0.505, 0.510, 0.515]
+q77 [tpcds]: [8.873, 1.416, 1.432, 1.426, 1.408, 1.411]
+q78 [tpcds]: [4.887, 0.114, 0.110, 0.114, 0.110, 0.107]
+q79 [tpcds]: [4.035, 0.159, 0.155, 0.161, 0.161, 0.157]
+q80 [tpcds]: [15.881, 0.241, 0.241, 0.244, 0.239, 0.240]
+q81 [tpcds]: [5.334, 0.106, 0.114, 0.105, 0.108, 0.111]
+q82 [tpcds]: [15.194, 3.830, 0.742, 0.335, 0.330, 0.333]
+q83 [tpcds]: [2.648, 0.460, 0.461, 0.455, 0.444, 0.434]
+q84 [tpcds]: [11.897, 0.213, 0.209, 0.212, 0.215, 0.211]
+q85 [tpcds]: [6.183, 0.832, 0.811, 0.809, 0.806, 0.817]
+q86 [tpcds]: [20.779, 0.698, 0.460, 0.449, 0.448, 0.450]
+q87 [tpcds]: [20.195, 0.927, 0.626, 0.640, 0.647, 0.635]
+q88 [tpcds]: [1.836, 0.141, 0.137, 0.144, 0.135, 0.141]
+q89 [tpcds]: [9.041, 0.162, 0.162, 0.163, 0.162, 0.163]
+q90 [tpcds]: [20.423, 2.621, 2.185, 0.464, 0.420, 0.572]
+q91 [tpcds]: [10.170, 1.107, 1.080, 1.098, 1.101, 1.117]
+q92 [tpcds]: [16.741, 0.429, 0.427, 0.428, 0.393, 0.388]
+q93 [tpcds]: [15.325, 4.856, 4.827, 4.890, 4.912, 4.934]
+q94 [tpcds]: [44.855, 0.698, 0.687, 0.684, 0.682, 0.695]
+q95 [tpcds]: [14.020, 0.253, 0.250, 0.246, 0.248, 0.244]
+q96 [tpcds]: [8.518, 0.717, 0.722, 0.697, 0.678, 0.688]
+q97 [tpcds]: [19.431, 0.760, 0.313, 0.316, 0.320, 0.321]
+q98 [tpcds]: [14.360, 1.308, 1.254, 1.259, 1.295, 1.262]
+q99 [tpcds]: [22.158, 0.435, 0.451, 0.450, 0.448, 0.442]
+q100 [tpcds]: [16.591, 1.401, 1.345, 1.323, 1.337, 1.339]
+q101 [tpcds]: [33.776, 1.850, 1.874, 1.923, 1.855, 1.896]
+q102 [tpcds]: [23.224, 0.500, 0.463, 0.451, 0.456, 0.472]
+q103 [tpcds]: [28.264, 0.838, 0.640, 0.778, 0.764, 0.660]
+q104 [tpcds]: [47.657, 3.229, 3.309, 3.291, 3.295, 3.298]
+q105 [tpcds]: [38.587, 0.817, 0.826, 0.844, 0.803, 0.799]
+q106 [tpcds]: [43.094, 0.887, 0.858, 0.840, 0.861, 0.859]
+q107 [tpcds]: [0.466, 0.165, 0.165, 0.166, 0.172, 0.169]
+q108 [tpcds]: [0.220, 0.122, 0.120, 0.118, 0.120, 0.116]
+q109 [tpcds]: [0.196, 0.097, 0.099, 0.102, 0.106, 0.103]
+q110 [tpcds]: [0.220, 0.091, 0.095, 0.093, 0.091, 0.090]
+q111 [tpcds]: [6.555, 0.224, 0.225, 0.222, 0.225, 0.226]
+q112 [tpcds]: [0.511, 0.143, 0.151, 0.146, 0.138, 0.136]
+q113 [tpcds]: [14.974, 0.738, 0.733, 0.730, 0.740, 0.736]
+q114 [tpcds]: [10.846, 1.114, 1.122, 1.112, 1.114, 1.141]
+q115 [tpcds]: [7.505, 0.240, 0.233, 0.238, 0.243, 0.245]
+q116 [tpcds]: [1.972, 0.126, 0.130, 0.129, 0.130, 0.128]
+q117 [tpcds]: [0.348, 0.087, 0.085, 0.087, 0.086, 0.087]
+q118 [tpcds]: [0.999, 0.070, 0.074, 0.074, 0.072, 0.071]
+q119 [tpcds]: [19.555, 0.528, 0.479, 0.498, 0.476, 0.456]
+q120 [tpcds]: [6.505, 0.139, 0.143, 0.139, 0.139, 0.142]
+q121 [tpcds]: [0.382, 0.387, 0.447, 0.368, 0.490, 0.441]
+q122 [tpcds]: [10.797, 0.200, 0.189, 0.196, 0.195, 0.207]
+q123 [tpcds]: [14.168, 0.908, 0.905, 0.914, 0.928, 0.912]
+q124 [tpcds]: [5.441, 0.175, 0.176, 0.175, 0.175, 0.181]
+q125 [tpcds]: [4.258, 0.243, 0.233, 0.239, 0.240, 0.238]
+q126 [job]: SKIPPED (not loaded); recording null
+q127 [job]: SKIPPED (not loaded); recording null
+q128 [job]: SKIPPED (not loaded); recording null
+q129 [job]: SKIPPED (not loaded); recording null
+q130 [job]: SKIPPED (not loaded); recording null
+q131 [job]: SKIPPED (not loaded); recording null
+q132 [job]: SKIPPED (not loaded); recording null
+q133 [job]: SKIPPED (not loaded); recording null
+q134 [job]: SKIPPED (not loaded); recording null
+q135 [job]: SKIPPED (not loaded); recording null
+q136 [job]: SKIPPED (not loaded); recording null
+q137 [job]: SKIPPED (not loaded); recording null
+q138 [job]: SKIPPED (not loaded); recording null
+q139 [job]: SKIPPED (not loaded); recording null
+q140 [job]: SKIPPED (not loaded); recording null
+q141 [job]: SKIPPED (not loaded); recording null
+q142 [job]: SKIPPED (not loaded); recording null
+q143 [job]: SKIPPED (not loaded); recording null
+q144 [job]: SKIPPED (not loaded); recording null
+q145 [job]: SKIPPED (not loaded); recording null
+q146 [job]: SKIPPED (not loaded); recording null
+q147 [job]: SKIPPED (not loaded); recording null
+q148 [job]: SKIPPED (not loaded); recording null
+q149 [job]: SKIPPED (not loaded); recording null
+q150 [job]: SKIPPED (not loaded); recording null
+q151 [job]: SKIPPED (not loaded); recording null
+q152 [job]: SKIPPED (not loaded); recording null
+q153 [job]: SKIPPED (not loaded); recording null
+q154 [job]: SKIPPED (not loaded); recording null
+q155 [job]: SKIPPED (not loaded); recording null
+q156 [job]: SKIPPED (not loaded); recording null
+q157 [job]: SKIPPED (not loaded); recording null
+q158 [job]: SKIPPED (not loaded); recording null
+q159 [job]: SKIPPED (not loaded); recording null
+q160 [job]: SKIPPED (not loaded); recording null
+q161 [job]: SKIPPED (not loaded); recording null
+q162 [job]: SKIPPED (not loaded); recording null
+q163 [job]: SKIPPED (not loaded); recording null
+q164 [job]: SKIPPED (not loaded); recording null
+q165 [job]: SKIPPED (not loaded); recording null
+q166 [job]: SKIPPED (not loaded); recording null
+q167 [job]: SKIPPED (not loaded); recording null
+q168 [job]: SKIPPED (not loaded); recording null
+q169 [job]: SKIPPED (not loaded); recording null
+q170 [job]: SKIPPED (not loaded); recording null
+q171 [job]: SKIPPED (not loaded); recording null
+q172 [job]: SKIPPED (not loaded); recording null
+q173 [job]: SKIPPED (not loaded); recording null
+q174 [job]: SKIPPED (not loaded); recording null
+q175 [job]: SKIPPED (not loaded); recording null
+q176 [job]: SKIPPED (not loaded); recording null
+q177 [job]: SKIPPED (not loaded); recording null
+q178 [job]: SKIPPED (not loaded); recording null
+q179 [job]: SKIPPED (not loaded); recording null
+q180 [job]: SKIPPED (not loaded); recording null
+q181 [job]: SKIPPED (not loaded); recording null
+q182 [job]: SKIPPED (not loaded); recording null
+q183 [job]: SKIPPED (not loaded); recording null
+q184 [job]: SKIPPED (not loaded); recording null
+q185 [job]: SKIPPED (not loaded); recording null
+q186 [job]: SKIPPED (not loaded); recording null
+q187 [job]: SKIPPED (not loaded); recording null
+q188 [job]: SKIPPED (not loaded); recording null
+q189 [job]: SKIPPED (not loaded); recording null
+q190 [job]: SKIPPED (not loaded); recording null
+q191 [job]: SKIPPED (not loaded); recording null
+q192 [job]: SKIPPED (not loaded); recording null
+q193 [job]: SKIPPED (not loaded); recording null
+q194 [job]: SKIPPED (not loaded); recording null
+q195 [job]: SKIPPED (not loaded); recording null
+q196 [job]: SKIPPED (not loaded); recording null
+q197 [job]: SKIPPED (not loaded); recording null
+q198 [job]: SKIPPED (not loaded); recording null
+q199 [job]: SKIPPED (not loaded); recording null
+q200 [job]: SKIPPED (not loaded); recording null
+q201 [job]: SKIPPED (not loaded); recording null
+q202 [job]: SKIPPED (not loaded); recording null
+q203 [job]: SKIPPED (not loaded); recording null
+q204 [job]: SKIPPED (not loaded); recording null
+q205 [job]: SKIPPED (not loaded); recording null
+q206 [job]: SKIPPED (not loaded); recording null
+q207 [job]: SKIPPED (not loaded); recording null
+q208 [job]: SKIPPED (not loaded); recording null
+q209 [job]: SKIPPED (not loaded); recording null
+q210 [job]: SKIPPED (not loaded); recording null
+q211 [job]: SKIPPED (not loaded); recording null
+q212 [job]: SKIPPED (not loaded); recording null
+q213 [job]: SKIPPED (not loaded); recording null
+q214 [job]: SKIPPED (not loaded); recording null
+q215 [job]: SKIPPED (not loaded); recording null
+q216 [job]: SKIPPED (not loaded); recording null
+q217 [job]: SKIPPED (not loaded); recording null
+q218 [job]: SKIPPED (not loaded); recording null
+q219 [job]: SKIPPED (not loaded); recording null
+q220 [job]: SKIPPED (not loaded); recording null
+q221 [job]: SKIPPED (not loaded); recording null
+q222 [job]: SKIPPED (not loaded); recording null
+q223 [job]: SKIPPED (not loaded); recording null
+q224 [job]: SKIPPED (not loaded); recording null
+q225 [job]: SKIPPED (not loaded); recording null
+q226 [job]: SKIPPED (not loaded); recording null
+q227 [job]: SKIPPED (not loaded); recording null
+q228 [job]: SKIPPED (not loaded); recording null
+q229 [job]: SKIPPED (not loaded); recording null
+q230 [job]: SKIPPED (not loaded); recording null
+q231 [job]: SKIPPED (not loaded); recording null
+q232 [job]: SKIPPED (not loaded); recording null
+q233 [job]: SKIPPED (not loaded); recording null
+q234 [job]: SKIPPED (not loaded); recording null
+q235 [job]: SKIPPED (not loaded); recording null
+q236 [job]: SKIPPED (not loaded); recording null
+q237 [job]: SKIPPED (not loaded); recording null
+q238 [job]: SKIPPED (not loaded); recording null
+wrote /home/ubuntu/dbbench/results/starrocks/20260827T234734Z.json
+StarRocks 4.1.4: tpch 0/22  tpcds 103/103  job 0/113   load_time {'tpcds': 712}

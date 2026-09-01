@@ -1,0 +1,299 @@
+page cache dropped before each query (6 tries: 1 cold + 5 hot)
+starting CedarDB v2026-08-20 (cedardb/cedardb:v2026-08-20)
+CedarDB up (PostgreSQL 16.3 compatible CedarDB v2026-08-20, compiled on 2026-08-20, x86_64 build)
+=== CREATE tpcds tables ===
+=== tpcds: INSERT INTO tpcds.call_center SELECT * FROM '/data/parquet/tpcds/call_center.parquet'; ===
+=== tpcds: INSERT INTO tpcds.catalog_page SELECT * FROM '/data/parquet/tpcds/catalog_page.parquet'; ===
+=== tpcds: INSERT INTO tpcds.catalog_returns SELECT * FROM '/data/parquet/tpcds/catalog_returns.parquet'; ===
+=== tpcds: INSERT INTO tpcds.catalog_sales SELECT * FROM '/data/parquet/tpcds/catalog_sales.parquet'; ===
+=== tpcds: INSERT INTO tpcds.customer_address SELECT * FROM '/data/parquet/tpcds/customer_address.parquet'; ===
+=== tpcds: INSERT INTO tpcds.customer_demographics SELECT * FROM '/data/parquet/tpcds/customer_demographics.parquet'; ===
+=== tpcds: INSERT INTO tpcds.customer SELECT * FROM '/data/parquet/tpcds/customer.parquet'; ===
+=== tpcds: INSERT INTO tpcds.date_dim SELECT * FROM '/data/parquet/tpcds/date_dim.parquet'; ===
+=== tpcds: INSERT INTO tpcds.household_demographics SELECT * FROM '/data/parquet/tpcds/household_demographics.parquet'; ===
+=== tpcds: INSERT INTO tpcds.income_band SELECT * FROM '/data/parquet/tpcds/income_band.parquet'; ===
+=== tpcds: INSERT INTO tpcds.inventory SELECT * FROM '/data/parquet/tpcds/inventory.parquet'; ===
+=== tpcds: INSERT INTO tpcds.item SELECT * FROM '/data/parquet/tpcds/item.parquet'; ===
+=== tpcds: INSERT INTO tpcds.promotion SELECT * FROM '/data/parquet/tpcds/promotion.parquet'; ===
+=== tpcds: INSERT INTO tpcds.reason SELECT * FROM '/data/parquet/tpcds/reason.parquet'; ===
+=== tpcds: INSERT INTO tpcds.ship_mode SELECT * FROM '/data/parquet/tpcds/ship_mode.parquet'; ===
+=== tpcds: INSERT INTO tpcds.store_returns SELECT * FROM '/data/parquet/tpcds/store_returns.parquet'; ===
+=== tpcds: INSERT INTO tpcds.store_sales SELECT * FROM '/data/parquet/tpcds/store_sales.parquet'; ===
+=== tpcds: INSERT INTO tpcds.store SELECT * FROM '/data/parquet/tpcds/store.parquet'; ===
+=== tpcds: INSERT INTO tpcds.time_dim SELECT * FROM '/data/parquet/tpcds/time_dim.parquet'; ===
+=== tpcds: INSERT INTO tpcds.warehouse SELECT * FROM '/data/parquet/tpcds/warehouse.parquet'; ===
+=== tpcds: INSERT INTO tpcds.web_page SELECT * FROM '/data/parquet/tpcds/web_page.parquet'; ===
+=== tpcds: INSERT INTO tpcds.web_returns SELECT * FROM '/data/parquet/tpcds/web_returns.parquet'; ===
+=== tpcds: INSERT INTO tpcds.web_sales SELECT * FROM '/data/parquet/tpcds/web_sales.parquet'; ===
+=== tpcds: INSERT INTO tpcds.web_site SELECT * FROM '/data/parquet/tpcds/web_site.parquet'; ===
+=== ANALYZE tpcds.call_center ===
+=== ANALYZE tpcds.catalog_page ===
+=== ANALYZE tpcds.catalog_returns ===
+=== ANALYZE tpcds.catalog_sales ===
+=== ANALYZE tpcds.customer_address ===
+=== ANALYZE tpcds.customer_demographics ===
+=== ANALYZE tpcds.customer ===
+=== ANALYZE tpcds.date_dim ===
+=== ANALYZE tpcds.household_demographics ===
+=== ANALYZE tpcds.income_band ===
+=== ANALYZE tpcds.inventory ===
+=== ANALYZE tpcds.item ===
+=== ANALYZE tpcds.promotion ===
+=== ANALYZE tpcds.reason ===
+=== ANALYZE tpcds.ship_mode ===
+=== ANALYZE tpcds.store_returns ===
+=== ANALYZE tpcds.store_sales ===
+=== ANALYZE tpcds.store ===
+=== ANALYZE tpcds.time_dim ===
+=== ANALYZE tpcds.warehouse ===
+=== ANALYZE tpcds.web_page ===
+=== ANALYZE tpcds.web_returns ===
+=== ANALYZE tpcds.web_sales ===
+=== ANALYZE tpcds.web_site ===
+statistics on tpcds: 541s
+loaded tpcds in 2387s, 58113486848 bytes
+benchmarking CedarDB v2026-08-20 (reports PostgreSQL 16.3 compatible CedarDB v2026-08-20, compiled on 2026-08-20, x86_64 build)
+=== tpch: not fully loaded; skipping its queries, load time and size ===
+=== job: not fully loaded; skipping its queries, load time and size ===
+q1 [tpch]: SKIPPED (not loaded); recording null
+q2 [tpch]: SKIPPED (not loaded); recording null
+q3 [tpch]: SKIPPED (not loaded); recording null
+q4 [tpch]: SKIPPED (not loaded); recording null
+q5 [tpch]: SKIPPED (not loaded); recording null
+q6 [tpch]: SKIPPED (not loaded); recording null
+q7 [tpch]: SKIPPED (not loaded); recording null
+q8 [tpch]: SKIPPED (not loaded); recording null
+q9 [tpch]: SKIPPED (not loaded); recording null
+q10 [tpch]: SKIPPED (not loaded); recording null
+q11 [tpch]: SKIPPED (not loaded); recording null
+q12 [tpch]: SKIPPED (not loaded); recording null
+q13 [tpch]: SKIPPED (not loaded); recording null
+q14 [tpch]: SKIPPED (not loaded); recording null
+q15 [tpch]: SKIPPED (not loaded); recording null
+q16 [tpch]: SKIPPED (not loaded); recording null
+q17 [tpch]: SKIPPED (not loaded); recording null
+q18 [tpch]: SKIPPED (not loaded); recording null
+q19 [tpch]: SKIPPED (not loaded); recording null
+q20 [tpch]: SKIPPED (not loaded); recording null
+q21 [tpch]: SKIPPED (not loaded); recording null
+q22 [tpch]: SKIPPED (not loaded); recording null
+q23 [tpcds]: [4.5415, 0.0404, 0.0402, 0.0392, 0.0394, 0.0398]
+q24 [tpcds]: [2.9747, 0.1752, 0.1555, 0.1531, 0.1542, 0.1555]
+q25 [tpcds]: [7.3353, 0.2681, 0.0264, 0.0255, 0.0252, 0.0262]
+q26 [tpcds]: [28.6754, 5.0728, 2.2187, 1.1542, 1.1575, 1.1504]
+q27 [tpcds]: [13.5051, 1.6547, 0.3083, 0.2264, 0.2259, 0.2294]
+q28 [tpcds]: [2.4627, 0.0401, 0.0395, 0.0390, 0.0404, 0.0414]
+q29 [tpcds]: [15.1756, 0.7052, 0.0955, 0.0626, 0.0620, 0.0637]
+q30 [tpcds]: [1.0559, 0.0401, 0.0394, 0.0394, 0.0409, 0.0415]
+q31 [tpcds]: [6.9819, 0.1656, 0.1711, 0.1654, 0.1671, 0.1685]
+q32 [tpcds]: [1.2383, 0.1282, 0.0639, 0.0661, 0.0662, 0.0649]
+q33 [tpcds]: [3.8936, 0.6954, 0.7112, 0.7005, 0.6916, 0.6873]
+q34 [tpcds]: [1.6621, 0.0253, 0.0205, 0.0232, 0.0201, 0.0200]
+q35 [tpcds]: [10.2333, 0.2982, 0.0621, 0.0603, 0.0608, 0.0623]
+q36 [tpcds]: [14.4829, 1.6209, 1.2045, 1.1170, 1.1210, 1.1128]
+q37 [tpcds]: [1.0693, 1.0631, 1.0617, 1.0645, 1.0724, 1.0669]
+q38 [tpcds]: [2.9510, 0.0382, 0.0354, 0.0336, 0.0335, 0.0344]
+q39 [tpcds]: [8.0348, 0.0441, 0.0326, 0.0334, 0.0321, 0.0322]
+q40 [tpcds]: [4.5933, 0.6342, 0.1102, 0.0744, 0.0700, 0.0710]
+q41 [tpcds]: [3.7375, 0.8563, 0.0729, 0.0727, 0.0718, 0.0719]
+q42 [tpcds]: [3.3865, 0.0358, 0.0360, 0.0352, 0.0340, 0.0352]
+q43 [tpcds]: [2.2844, 0.0269, 0.0261, 0.0253, 0.0249, 0.0260]
+q44 [tpcds]: [4.0609, 0.0879, 0.0832, 0.0834, 0.0857, 0.0837]
+q45 [tpcds]: [0.4613, 0.4818, 0.4905, 0.4533, 0.4513, 0.4546]
+q46 [tpcds]: [6.4565, 1.1075, 1.0741, 1.0605, 1.0807, 1.0663]
+q47 [tpcds]: [1.0885, 1.0772, 1.0811, 1.0780, 1.0749, 1.0700]
+q48 [tpcds]: [4.9009, 1.2505, 1.2400, 0.9328, 0.1194, 0.1156]
+q49 [tpcds]: [0.1295, 0.1137, 0.1210, 0.1194, 0.1177, 0.1187]
+q50 [tpcds]: [4.6123, 0.3001, 0.1134, 0.0491, 0.0476, 0.0486]
+q51 [tpcds]: [4.8113, 0.0361, 0.0330, 0.0326, 0.0321, 0.0332]
+q52 [tpcds]: [8.7497, 0.0850, 0.0593, 0.0586, 0.0578, 0.0585]
+q53 [tpcds]: [6.0481, 0.1582, 0.1545, 0.1542, 0.1554, 0.1548]
+q54 [tpcds]: [0.7398, 0.2373, 0.0803, 0.0732, 0.0739, 0.0730]
+q55 [tpcds]: [0.5474, 0.0351, 0.0307, 0.0299, 0.0301, 0.0303]
+q56 [tpcds]: [4.7390, 0.3656, 0.1225, 0.1147, 0.1155, 0.1165]
+q57 [tpcds]: [2.8465, 0.0141, 0.0143, 0.0146, 0.0143, 0.0146]
+q58 [tpcds]: [4.4927, 0.9364, 0.2045, 0.0628, 0.0643, 0.0616]
+q59 [tpcds]: [0.9113, 0.0882, 0.0345, 0.0347, 0.0349, 0.0347]
+q60 [tpcds]: [0.9642, 0.1466, 0.1439, 0.1421, 0.1422, 0.1406]
+q61 [tpcds]: [2.4154, 0.0695, 0.0667, 0.0653, 0.0666, 0.0645]
+q62 [tpcds]: [1.8003, 0.0844, 0.0384, 0.0376, 0.0386, 0.0378]
+q63 [tpcds]: [0.7392, 0.4203, 0.4148, 0.4214, 0.4211, 0.4200]
+q64 [tpcds]: [0.1596, 0.1126, 0.1118, 0.1130, 0.1109, 0.1110]
+q65 [tpcds]: [0.1240, 0.1063, 0.1086, 0.1083, 0.1089, 0.1068]
+q66 [tpcds]: [1.8636, 0.0400, 0.0279, 0.0271, 0.0284, 0.0310]
+q67 [tpcds]: [0.0676, 0.0048, 0.0044, 0.0049, 0.0041, 0.0042]
+q68 [tpcds]: [0.9800, 0.0358, 0.0260, 0.0266, 0.0263, 0.0259]
+q69 [tpcds]: [1.8641, 0.0601, 0.0617, 0.0602, 0.0591, 0.0590]
+q70 [tpcds]: [0.6258, 0.0893, 0.0289, 0.0285, 0.0279, 0.0270]
+q71 [tpcds]: [1.6780, 0.0312, 0.0349, 0.0331, 0.0343, 0.0347]
+q72 [tpcds]: [1.1907, 0.0743, 0.0671, 0.0676, 0.0676, 0.0683]
+q73 [tpcds]: [0.5299, 0.4912, 0.4851, 0.4827, 0.4840, 0.4844]
+q74 [tpcds]: [0.5674, 0.1042, 0.0651, 0.0640, 0.0687, 0.0702]
+q75 [tpcds]: [39.4287, 4.9926, 0.8912, 0.2600, 0.0859, 0.0409]
+q76 [tpcds]: [0.9014, 0.1725, 0.1550, 0.1490, 0.1489, 0.1485]
+q77 [tpcds]: [2.4607, 1.1494, 1.1399, 1.1736, 1.1460, 1.1511]
+q78 [tpcds]: [2.4418, 0.0316, 0.0310, 0.0311, 0.0314, 0.0314]
+q79 [tpcds]: [0.0784, 0.0416, 0.0413, 0.0410, 0.0418, 0.0410]
+q80 [tpcds]: [0.7126, 0.0955, 0.0886, 0.0893, 0.0908, 0.0919]
+q81 [tpcds]: [0.0822, 0.0317, 0.0324, 0.0326, 0.0326, 0.0321]
+q82 [tpcds]: [3.6340, 0.9516, 0.0742, 0.0499, 0.0501, 0.0487]
+q83 [tpcds]: [1.3498, 0.2767, 0.2730, 0.2762, 0.2759, 0.2756]
+q84 [tpcds]: [0.2103, 0.0770, 0.0705, 0.0687, 0.0689, 0.0654]
+q85 [tpcds]: [0.2762, 0.2524, 0.2486, 0.2540, 0.2508, 0.2497]
+q86 [tpcds]: [0.1752, 0.0685, 0.0575, 0.0595, 0.0596, 0.0578]
+q87 [tpcds]: [4.7556, 0.2118, 0.0602, 0.0610, 0.0618, 0.0600]
+q88 [tpcds]: [1.9657, 0.0521, 0.0505, 0.0506, 0.0505, 0.0502]
+q89 [tpcds]: [0.1125, 0.0357, 0.0358, 0.0359, 0.0371, 0.0372]
+q90 [tpcds]: [16.8565, 1.8712, 0.6336, 0.9433, 0.2503, 0.2367]
+q91 [tpcds]: [0.5610, 0.2862, 0.2910, 0.2880, 0.2855, 0.2863]
+q92 [tpcds]: [8.4893, 0.5603, 0.0984, 0.0417, 0.0413, 0.0420]
+q93 [tpcds]: FAILED: ERROR:  canceled Time: 363765.952 ms (06:03.766) NOTICE:  canceling transaction due to statement timeout of "SELECT * FROM ( SELECT i_category, i_class, i_brand
+q93 [tpcds]: [null, null, null, null, null, null]
+q94 [tpcds]: [176.4697, 4.2806, 0.7865, 0.1201, 0.0365, 0.0375]
+q95 [tpcds]: [0.8377, 0.0755, 0.0758, 0.0747, 0.0734, 0.0772]
+q96 [tpcds]: [2.5565, 0.1571, 0.1353, 0.1349, 0.1364, 0.1350]
+q97 [tpcds]: [6.0368, 3.9277, 0.0667, 0.0640, 0.0619, 0.0670]
+q98 [tpcds]: FAILED: ERROR:  unable to allocate working memory (8192 MB requested) HINT:  Working memory is exhausted. Increase `workmemsize` or reduce intermediate result sizes. Do
+q98 [tpcds]: [null, null, null, null, null, null]
+q99 [tpcds]: [0.5232, 0.0504, 0.0275, 0.0281, 0.0278, 0.0282]
+q100 [tpcds]: [5.0992, 0.7373, 0.4854, 0.4938, 0.4739, 0.4704]
+q101 [tpcds]: [6.1889, 0.5680, 1.6518, 0.5458, 0.4339, 0.4371]
+q102 [tpcds]: [1.0724, 0.1860, 0.0631, 0.0582, 0.0577, 0.0576]
+q103 [tpcds]: [10.8393, 0.9037, 0.1100, 0.0734, 0.0713, 0.0709]
+q104 [tpcds]: [16.7329, 2.3487, 0.9107, 0.8545, 0.8579, 0.8401]
+q105 [tpcds]: [2.0126, 0.3208, 0.1589, 0.0784, 0.0773, 0.0799]
+q106 [tpcds]: [22.5179, 3.5784, 5.7292, 0.8703, 0.2661, 0.1249]
+q107 [tpcds]: [0.9884, 0.0562, 0.0506, 0.0506, 0.0497, 0.0485]
+q108 [tpcds]: [1.8281, 0.1348, 0.2617, 0.2104, 0.0563, 0.0552]
+q109 [tpcds]: [0.1215, 0.0290, 0.0250, 0.0263, 0.0264, 0.0260]
+q110 [tpcds]: [0.2923, 0.0233, 0.0216, 0.0217, 0.0213, 0.0215]
+q111 [tpcds]: [2.3002, 0.0315, 0.0326, 0.0311, 0.0312, 0.0296]
+q112 [tpcds]: [0.8764, 0.0458, 0.0447, 0.0441, 0.0455, 0.0453]
+q113 [tpcds]: [0.9811, 0.4380, 0.4353, 0.4301, 0.4321, 0.4324]
+q114 [tpcds]: [0.9119, 0.1651, 0.1647, 0.1692, 0.1647, 0.1650]
+q115 [tpcds]: [2.1130, 0.0573, 0.0559, 0.0560, 0.0556, 0.0560]
+q116 [tpcds]: [0.3128, 0.0168, 0.0169, 0.0169, 0.0166, 0.0163]
+q117 [tpcds]: [0.1220, 0.0155, 0.0148, 0.0145, 0.0150, 0.0147]
+q118 [tpcds]: [1.5426, 0.0179, 0.0157, 0.0192, 0.0179, 0.0181]
+q119 [tpcds]: [1.3319, 0.1150, 0.1045, 0.1003, 0.0996, 0.0998]
+q120 [tpcds]: [2.7287, 0.0591, 0.0253, 0.0255, 0.0257, 0.0258]
+q121 [tpcds]: [0.0574, 0.0512, 0.0511, 0.0509, 0.0496, 0.0520]
+q122 [tpcds]: [0.2258, 0.0209, 0.0192, 0.0194, 0.0193, 0.0193]
+q123 [tpcds]: [0.7277, 0.4296, 0.4216, 0.4131, 0.4201, 0.4159]
+q124 [tpcds]: [1.1484, 0.2038, 0.2030, 0.2051, 0.1958, 0.2035]
+q125 [tpcds]: [1.3396, 0.1194, 0.1170, 0.1166, 0.1163, 0.1166]
+q126 [job]: SKIPPED (not loaded); recording null
+q127 [job]: SKIPPED (not loaded); recording null
+q128 [job]: SKIPPED (not loaded); recording null
+q129 [job]: SKIPPED (not loaded); recording null
+q130 [job]: SKIPPED (not loaded); recording null
+q131 [job]: SKIPPED (not loaded); recording null
+q132 [job]: SKIPPED (not loaded); recording null
+q133 [job]: SKIPPED (not loaded); recording null
+q134 [job]: SKIPPED (not loaded); recording null
+q135 [job]: SKIPPED (not loaded); recording null
+q136 [job]: SKIPPED (not loaded); recording null
+q137 [job]: SKIPPED (not loaded); recording null
+q138 [job]: SKIPPED (not loaded); recording null
+q139 [job]: SKIPPED (not loaded); recording null
+q140 [job]: SKIPPED (not loaded); recording null
+q141 [job]: SKIPPED (not loaded); recording null
+q142 [job]: SKIPPED (not loaded); recording null
+q143 [job]: SKIPPED (not loaded); recording null
+q144 [job]: SKIPPED (not loaded); recording null
+q145 [job]: SKIPPED (not loaded); recording null
+q146 [job]: SKIPPED (not loaded); recording null
+q147 [job]: SKIPPED (not loaded); recording null
+q148 [job]: SKIPPED (not loaded); recording null
+q149 [job]: SKIPPED (not loaded); recording null
+q150 [job]: SKIPPED (not loaded); recording null
+q151 [job]: SKIPPED (not loaded); recording null
+q152 [job]: SKIPPED (not loaded); recording null
+q153 [job]: SKIPPED (not loaded); recording null
+q154 [job]: SKIPPED (not loaded); recording null
+q155 [job]: SKIPPED (not loaded); recording null
+q156 [job]: SKIPPED (not loaded); recording null
+q157 [job]: SKIPPED (not loaded); recording null
+q158 [job]: SKIPPED (not loaded); recording null
+q159 [job]: SKIPPED (not loaded); recording null
+q160 [job]: SKIPPED (not loaded); recording null
+q161 [job]: SKIPPED (not loaded); recording null
+q162 [job]: SKIPPED (not loaded); recording null
+q163 [job]: SKIPPED (not loaded); recording null
+q164 [job]: SKIPPED (not loaded); recording null
+q165 [job]: SKIPPED (not loaded); recording null
+q166 [job]: SKIPPED (not loaded); recording null
+q167 [job]: SKIPPED (not loaded); recording null
+q168 [job]: SKIPPED (not loaded); recording null
+q169 [job]: SKIPPED (not loaded); recording null
+q170 [job]: SKIPPED (not loaded); recording null
+q171 [job]: SKIPPED (not loaded); recording null
+q172 [job]: SKIPPED (not loaded); recording null
+q173 [job]: SKIPPED (not loaded); recording null
+q174 [job]: SKIPPED (not loaded); recording null
+q175 [job]: SKIPPED (not loaded); recording null
+q176 [job]: SKIPPED (not loaded); recording null
+q177 [job]: SKIPPED (not loaded); recording null
+q178 [job]: SKIPPED (not loaded); recording null
+q179 [job]: SKIPPED (not loaded); recording null
+q180 [job]: SKIPPED (not loaded); recording null
+q181 [job]: SKIPPED (not loaded); recording null
+q182 [job]: SKIPPED (not loaded); recording null
+q183 [job]: SKIPPED (not loaded); recording null
+q184 [job]: SKIPPED (not loaded); recording null
+q185 [job]: SKIPPED (not loaded); recording null
+q186 [job]: SKIPPED (not loaded); recording null
+q187 [job]: SKIPPED (not loaded); recording null
+q188 [job]: SKIPPED (not loaded); recording null
+q189 [job]: SKIPPED (not loaded); recording null
+q190 [job]: SKIPPED (not loaded); recording null
+q191 [job]: SKIPPED (not loaded); recording null
+q192 [job]: SKIPPED (not loaded); recording null
+q193 [job]: SKIPPED (not loaded); recording null
+q194 [job]: SKIPPED (not loaded); recording null
+q195 [job]: SKIPPED (not loaded); recording null
+q196 [job]: SKIPPED (not loaded); recording null
+q197 [job]: SKIPPED (not loaded); recording null
+q198 [job]: SKIPPED (not loaded); recording null
+q199 [job]: SKIPPED (not loaded); recording null
+q200 [job]: SKIPPED (not loaded); recording null
+q201 [job]: SKIPPED (not loaded); recording null
+q202 [job]: SKIPPED (not loaded); recording null
+q203 [job]: SKIPPED (not loaded); recording null
+q204 [job]: SKIPPED (not loaded); recording null
+q205 [job]: SKIPPED (not loaded); recording null
+q206 [job]: SKIPPED (not loaded); recording null
+q207 [job]: SKIPPED (not loaded); recording null
+q208 [job]: SKIPPED (not loaded); recording null
+q209 [job]: SKIPPED (not loaded); recording null
+q210 [job]: SKIPPED (not loaded); recording null
+q211 [job]: SKIPPED (not loaded); recording null
+q212 [job]: SKIPPED (not loaded); recording null
+q213 [job]: SKIPPED (not loaded); recording null
+q214 [job]: SKIPPED (not loaded); recording null
+q215 [job]: SKIPPED (not loaded); recording null
+q216 [job]: SKIPPED (not loaded); recording null
+q217 [job]: SKIPPED (not loaded); recording null
+q218 [job]: SKIPPED (not loaded); recording null
+q219 [job]: SKIPPED (not loaded); recording null
+q220 [job]: SKIPPED (not loaded); recording null
+q221 [job]: SKIPPED (not loaded); recording null
+q222 [job]: SKIPPED (not loaded); recording null
+q223 [job]: SKIPPED (not loaded); recording null
+q224 [job]: SKIPPED (not loaded); recording null
+q225 [job]: SKIPPED (not loaded); recording null
+q226 [job]: SKIPPED (not loaded); recording null
+q227 [job]: SKIPPED (not loaded); recording null
+q228 [job]: SKIPPED (not loaded); recording null
+q229 [job]: SKIPPED (not loaded); recording null
+q230 [job]: SKIPPED (not loaded); recording null
+q231 [job]: SKIPPED (not loaded); recording null
+q232 [job]: SKIPPED (not loaded); recording null
+q233 [job]: SKIPPED (not loaded); recording null
+q234 [job]: SKIPPED (not loaded); recording null
+q235 [job]: SKIPPED (not loaded); recording null
+q236 [job]: SKIPPED (not loaded); recording null
+q237 [job]: SKIPPED (not loaded); recording null
+q238 [job]: SKIPPED (not loaded); recording null
+wrote /home/ubuntu/dbbench/results/cedardb/20260827T215142Z.json
+CedarDB v2026-08-20: tpch 0/22  tpcds 101/103  job 0/113   load_time {'tpcds': 1846}

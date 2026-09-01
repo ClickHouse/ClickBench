@@ -1,0 +1,33 @@
+page cache dropped before each query (6 tries: 1 cold + 5 hot)
+starting CedarDB v2026-08-20 (cedardb/cedardb:v2026-08-20)
+CedarDB up (PostgreSQL 16.3 compatible CedarDB v2026-08-20, compiled on 2026-08-20, x86_64 build)
+=== CREATE tpcds tables ===
+=== tpcds: INSERT INTO tpcds.call_center SELECT * FROM '/data/parquet/tpcds/call_center.parquet'; ===
+=== tpcds: INSERT INTO tpcds.catalog_page SELECT * FROM '/data/parquet/tpcds/catalog_page.parquet'; ===
+=== tpcds: INSERT INTO tpcds.catalog_returns SELECT * FROM '/data/parquet/tpcds/catalog_returns.parquet'; ===
+=== tpcds: INSERT INTO tpcds.catalog_sales SELECT * FROM '/data/parquet/tpcds/catalog_sales.parquet'; ===
+=== tpcds: INSERT INTO tpcds.customer_address SELECT * FROM '/data/parquet/tpcds/customer_address.parquet'; ===
+=== tpcds: INSERT INTO tpcds.customer_demographics SELECT * FROM '/data/parquet/tpcds/customer_demographics.parquet'; ===
+=== tpcds: INSERT INTO tpcds.customer SELECT * FROM '/data/parquet/tpcds/customer.parquet'; ===
+=== tpcds: INSERT INTO tpcds.date_dim SELECT * FROM '/data/parquet/tpcds/date_dim.parquet'; ===
+=== tpcds: INSERT INTO tpcds.household_demographics SELECT * FROM '/data/parquet/tpcds/household_demographics.parquet'; ===
+=== tpcds: INSERT INTO tpcds.income_band SELECT * FROM '/data/parquet/tpcds/income_band.parquet'; ===
+=== tpcds: INSERT INTO tpcds.inventory SELECT * FROM '/data/parquet/tpcds/inventory.parquet'; ===
+=== tpcds: INSERT INTO tpcds.item SELECT * FROM '/data/parquet/tpcds/item.parquet'; ===
+=== tpcds: INSERT INTO tpcds.promotion SELECT * FROM '/data/parquet/tpcds/promotion.parquet'; ===
+=== tpcds: INSERT INTO tpcds.reason SELECT * FROM '/data/parquet/tpcds/reason.parquet'; ===
+=== tpcds: INSERT INTO tpcds.ship_mode SELECT * FROM '/data/parquet/tpcds/ship_mode.parquet'; ===
+=== tpcds: INSERT INTO tpcds.store_returns SELECT * FROM '/data/parquet/tpcds/store_returns.parquet'; ===
+=== tpcds: INSERT INTO tpcds.store_sales SELECT * FROM '/data/parquet/tpcds/store_sales.parquet'; ===
+=== tpcds: INSERT INTO tpcds.store SELECT * FROM '/data/parquet/tpcds/store.parquet'; ===
+=== tpcds: INSERT INTO tpcds.time_dim SELECT * FROM '/data/parquet/tpcds/time_dim.parquet'; ===
+=== tpcds: INSERT INTO tpcds.warehouse SELECT * FROM '/data/parquet/tpcds/warehouse.parquet'; ===
+=== tpcds: INSERT INTO tpcds.web_page SELECT * FROM '/data/parquet/tpcds/web_page.parquet'; ===
+=== tpcds: INSERT INTO tpcds.web_returns SELECT * FROM '/data/parquet/tpcds/web_returns.parquet'; ===
+=== tpcds: INSERT INTO tpcds.web_sales SELECT * FROM '/data/parquet/tpcds/web_sales.parquet'; ===
+=== tpcds: INSERT INTO tpcds.web_site SELECT * FROM '/data/parquet/tpcds/web_site.parquet'; ===
+loaded tpcds in 2273s, 58224807936 bytes
+server left running on 127.0.0.1:5432. Connect with:
+    PGPASSWORD=Cedarbench1! psql -h127.0.0.1 -p5432 -U postgres -d postgres
+    (then: SET search_path TO <benchmark>;)
+Tear down with: docker rm -fv dbbench_cedardb
