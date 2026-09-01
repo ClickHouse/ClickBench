@@ -21,12 +21,17 @@ DATA="${DATA:-${ROOT}/data}"    # on the host
 # deployment there (/data/deploy), so a read-only mount over it makes the container fail to
 # start at all ("mkdir /data/deploy: read-only file system").
 CDATA_DIR="/benchdata"
+# Where the allin1 image keeps the BE config.
+BE_CONF="/data/deploy/starrocks/be/conf/be.conf"
 # What {{DATA}} in load/*.sql expands to.
 CDATA="file://${CDATA_DIR}"
 TRIES="${TRIES:-6}"                                    # 1 cold + 5 hot
 # DROP_CACHES=0 skips the page-cache drop before each query, so the first of the TRIES is no
 # longer cold. Default 1.
 DROP_CACHES="${DROP_CACHES:-1}"
+# The BE's own data caches. Default 0 disables them the way ClickBench's starrocks/install does
+# (be.conf: disable_storage_page_cache, datacache_enable).
+ENGINE_CACHES="${ENGINE_CACHES:-0}"
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-300}"   # seconds
 # Loads (INSERT ... FROM FILES) on the biggest tables can crawl; cap them server-side too.
 LOAD_TIMEOUT="${LOAD_TIMEOUT:-1200}"
@@ -132,13 +137,16 @@ start_server() {
     [ -d "${DATA}" ] || { echo "no data directory ${DATA}" >&2; return 1; }
     echo "starting ${SYSTEM} ${VERSION} from image ${IMAGE}" >&2
     docker pull "${IMAGE}" >/dev/null 2>&1
-    # Only result caches are disabled here (see the SET below); the BE's data caches are left as
-    # they ship. ClickBench's starrocks/install sets disable_storage_page_cache and
-    # datacache_enable=false in be.conf, which this deliberately does not.
-    #
-    # Accepted so that each system is measured as it ships.
+    # be.conf has to be written BEFORE the BE boots, so the image's own entrypoint is wrapped
+    # rather than replaced: tini and ./entrypoint.sh are what the image would have run anyway
+    # (WorkingDir is /data/deploy, hence the relative path).
+    local pre=""
+    if [ "${ENGINE_CACHES}" = 0 ]; then
+        pre="printf '\ndisable_storage_page_cache = true\ndatacache_enable = false\n' >> ${BE_CONF}; "
+    fi
     docker run -d --name "${CONTAINER}" -p 9030:9030 -p 8030:8030 -p 8040:8040 \
-        -v "${DATA}:${CDATA_DIR}:ro" "${IMAGE}" >/dev/null || return 1
+        -v "${DATA}:${CDATA_DIR}:ro" --entrypoint bash "${IMAGE}" \
+        -c "${pre}exec /usr/bin/tini-static -- ./entrypoint.sh" >/dev/null || return 1
     # Wait for FE and BE.
     local waited=0
     until Mq 'SELECT 1' >/dev/null 2>&1; do
@@ -153,7 +161,11 @@ start_server() {
     done
     # Result cache off, explicitly (already the default on 4.1.4).
     Mq "SET GLOBAL enable_query_cache = false;" >/dev/null 2>&1 || true
-    echo "StarRocks up ($(Mq 'SELECT current_version()' 2>/dev/null | head -1)); result cache off, BE data caches as shipped" >&2
+    # Read the values back from the BE rather than trusting the append.
+    local varz
+    varz=$(curl -s --max-time 10 http://127.0.0.1:8040/varz 2>/dev/null \
+           | grep -E '^(disable_storage_page_cache|datacache_enable)=' | tr '\n' ' ')
+    echo "StarRocks up ($(Mq 'SELECT current_version()' 2>/dev/null | head -1)); result cache off; BE: ${varz:-could not read /varz}" >&2
 }
 
 # Load one benchmark: create its database and tables from ddl/, then run load/ one statement at

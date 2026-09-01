@@ -59,6 +59,7 @@ STATISTICS=1 ./run-all.sh           # collect statistics after loading
 |---|---|---|
 | `TRIES` | `6` | how many times each query runs — one cold, the rest hot |
 | `DROP_CACHES` | `1` | drop the page cache before each query. `0` skips it, so no run is cold |
+| `ENGINE_CACHES` | `0` | the engines' own data caches. `0` disables the: `disable_storage_page_cache=true` and `datacache_enable=false` (StarRocks), `disable_storage_page_cache=true` and `segment_cache_capacity=0` (Doris), `enable_scan_cache=false` (Firebolt). |
 | `QUERY_TIMEOUT` | `300` | per-query cap **in seconds**; a query that exceeds it records null |
 | `LOAD_TIMEOUT` | `1200` (ClickHouse `2400`, DuckDB `3600`) | per-table load cap; on DuckDB it bounds a whole benchmark's load, which runs in one process. On ClickHouse it is the client's `receive_timeout` — how long to wait on the server, so a long-but-progressing statement is never cut short |
 | `SCALE` | `1` | TPC-H / TPC-DS scale factor (`generate-data.sh` only) |

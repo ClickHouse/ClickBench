@@ -500,6 +500,16 @@
     <code>UNION</code>/<code>INTERSECT</code>/<code>EXCEPT</code>, and
     <code>joined_subquery_requires_alias=0</code>. Spilling is disabled for joins
     (<code>max_bytes_ratio_before_external_join=0</code>).</p>
+    <p>Result caches are disabled everywhere, and so are the engines' data caches where they can
+    be switched off: <code>enable_query_cache=false</code> with
+    <code>disable_storage_page_cache=true</code> and <code>datacache_enable=false</code> in
+    be.conf (StarRocks); <code>enable_sql_cache=false</code> with
+    <code>disable_storage_page_cache=true</code> and <code>segment_cache_capacity=0</code>
+    (Doris); <code>enable_result_cache</code>, <code>enable_subresult_cache</code> and
+    <code>enable_scan_cache</code> per request (Firebolt). ClickHouse's query cache is off by
+    default and its uncompressed cache is unused (<code>use_uncompressed_cache=0</code>). What
+    remains is each engine's buffer pool, which is not an optional layer &mdash; DuckDB, CedarDB
+    and Umbra serve their hot runs from one. The OS page cache is dropped before each query.</p>
     <p>Statistics are opt-in (<code>STATISTICS=1</code>), timed separately and reported as
     <code>stats_time</code>. Each engine uses its own
     statement: <code>MATERIALIZE STATISTICS ALL</code> (ClickHouse), <code>ANALYZE</code> (DuckDB,

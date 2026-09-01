@@ -31,6 +31,9 @@ TRIES="${TRIES:-6}"                                    # 1 cold + 5 hot
 # DROP_CACHES=0 skips the page-cache drop before each query, so the first of the TRIES is no
 # longer cold. Default 1.
 DROP_CACHES="${DROP_CACHES:-1}"
+# The BE's own data caches. Default 0 disables them the way ClickBench's doris/install does
+# (be.conf: disable_storage_page_cache, segment_cache_capacity).
+ENGINE_CACHES="${ENGINE_CACHES:-0}"
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-300}"   # seconds
 LOAD_TIMEOUT="${LOAD_TIMEOUT:-1200}"
 # STATISTICS=1 runs one `ANALYZE TABLE <db>.<table> WITH SYNC` per loaded table (see
@@ -52,6 +55,8 @@ VERSION="4.1.3"
 RELEASE_DATE="2026-07-08"   # release date of the pinned version, reported in the results
 FE_IMAGE="apache/doris:fe-${VERSION}"
 BE_IMAGE="apache/doris:be-${VERSION}"
+# Where the BE image keeps its config.
+BE_CONF="/opt/apache-doris/be/conf/be.conf"
 FE_CONTAINER="dbbench_doris_fe"
 BE_CONTAINER="dbbench_doris_be"
 # One file per run, never overwritten.
@@ -169,9 +174,17 @@ start_server() {
         fi
     done
     echo "starting Doris ${VERSION} BE (${BE_IMAGE})" >&2
+    # be.conf has to be written BEFORE the BE boots, so the image's own entrypoint is wrapped
+    # rather than replaced: `bash entry_point.sh` is what the image would have run anyway
+    # (WorkingDir is /opt/apache-doris, hence the relative path).
+    local pre=""
+    if [ "${ENGINE_CACHES}" = 0 ]; then
+        pre="printf '\ndisable_storage_page_cache = true\nsegment_cache_capacity = 0\n' >> ${BE_CONF}; "
+    fi
     docker run -d --name "${BE_CONTAINER}" --network host \
         -e FE_SERVERS="fe1:127.0.0.1:9010" -e BE_ADDR="127.0.0.1:9050" \
-        -v "${DATA}:${BE_HOME}/${BE_DATA}:ro" "${BE_IMAGE}" >/dev/null || return 1
+        -v "${DATA}:${BE_HOME}/${BE_DATA}:ro" --entrypoint bash "${BE_IMAGE}" \
+        -c "${pre}exec bash entry_point.sh" >/dev/null || return 1
     waited=0
     until show_backends | grep -qE '^ *Alive: true'; do
         sleep 5; waited=$((waited + 5))
@@ -185,13 +198,12 @@ start_server() {
     BEID=$(show_backends | awk '/BackendId:/{print $2; exit}')
     [ -n "${BEID}" ] || { echo "could not read BackendId" >&2; return 1; }
     # The FE's SQL RESULT cache, off globally.
-    #
-    # ClickBench's doris/install ALSO sets disable_storage_page_cache and segment_cache_capacity=0
-    # in be.conf. Those are deliberately NOT set here -- only the result cache is disabled.
-    #
-    # That is an accepted trade: each system is measured as it ships.
     Mq "SET GLOBAL enable_sql_cache = false;" >/dev/null 2>&1
-    echo "FE result cache off (enable_sql_cache=false); buffer pool left enabled" >&2
+    # Read the values back from the BE rather than trusting the append.
+    local varz
+    varz=$(curl -s --max-time 10 http://127.0.0.1:8040/varz 2>/dev/null \
+           | grep -E '^(disable_storage_page_cache|segment_cache_capacity)=' | tr '\n' ' ')
+    echo "FE result cache off (enable_sql_cache=false); BE: ${varz:-could not read /varz}" >&2
     echo "Doris up ($(actual_version), backend ${BEID})" >&2
 }
 stop_server() { docker rm -fv "${FE_CONTAINER}" "${BE_CONTAINER}" >/dev/null 2>&1; }

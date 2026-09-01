@@ -22,6 +22,10 @@ TRIES="${TRIES:-6}"                                    # 1 cold + 5 hot
 # DROP_CACHES=0 skips the page-cache drop before each query, so the first of the TRIES is no
 # longer cold. Default 1.
 DROP_CACHES="${DROP_CACHES:-1}"
+# Firebolt's scan cache is a DATA cache -- the counterpart of the StarRocks and Doris BE caches --
+# so it follows the same switch, and all three engines are configured alike. The result and
+# sub-result caches are off either way.
+ENGINE_CACHES="${ENGINE_CACHES:-0}"
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-300}"   # seconds
 LOAD_TIMEOUT="${LOAD_TIMEOUT:-1200}"
 # See the header: statistics are per-column ALTERs from stats/<benchmark>.sql, timed separately.
@@ -95,7 +99,10 @@ done
 # Q <sql> [extra-params] -> response body. Caches are disabled per request so a cold run is
 # actually cold; JSON_Compact is the format the published Firebolt benchmark uses.
 # MAXTIME bounds one HTTP call.
-NOCACHE='enable_result_cache=false&enable_subresult_cache=false&enable_scan_cache=false'
+NOCACHE='enable_result_cache=false&enable_subresult_cache=false'
+if [ "${ENGINE_CACHES}" = 0 ]; then
+    NOCACHE="${NOCACHE}&enable_scan_cache=false"
+fi
 MAXTIME=""
 Q() {
     local sql="$1" params="${2:-}"
