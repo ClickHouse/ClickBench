@@ -1,0 +1,10 @@
+# `./install` compiles on the benchmark machine itself, so the build target and
+# the run target are the same machine and native codegen is safe. It is worth
+# real time here: the hot path is Arrow's kernels and a per-row decode loop,
+# both of which widen usefully.
+#
+# This file sits next to ./install rather than next to the manifest: cargo
+# reads .cargo/config.toml from the working directory upward, and ./install
+# builds with --manifest-path from this directory.
+[build]
+rustflags = ["-C", "target-cpu=native"]
