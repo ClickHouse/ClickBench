@@ -15,6 +15,9 @@ mkdir -p data fb-volume
 # ownership accordingly so the bind-mounted dir is usable.
 sudo chown 1111:1111 fb-volume
 
+# The start/stop cycle is off (BENCH_RESTARTABLE=no): as of Sept 2026
+# Firebolt Core does not handle it gracefully. Caches are still
+# flushed as usual.
 # If the container exists (stopped by the cold cycle before this
 # query, or by a prior agent pre-snapshot cycle), just start it back —
 # the data lives on the bind-mounted fb-volume below, so the

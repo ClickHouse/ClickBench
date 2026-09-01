@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# The start/stop cycle is off (BENCH_RESTARTABLE=no): as of Sept 2026
+# Firebolt Core does not handle it gracefully. Caches are still
+# flushed as usual.
 # Full engine restart is what the cold cycle needs, so stop the process
 # but leave the container in place: the database lives on the
 # bind-mounted fb-volume and has to still be there when ./start brings

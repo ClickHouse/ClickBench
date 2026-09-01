@@ -13,6 +13,9 @@ mkdir -p data fb-volume
 # what the official installer at get.firebolt.io does.
 sudo chmod 0777 fb-volume
 
+# The start/stop cycle is off (BENCH_RESTARTABLE=no): as of Sept 2026
+# Firebolt Core does not handle it gracefully. Caches are still
+# flushed as usual.
 # If the container exists (stopped by the cold cycle before this
 # query, or by a prior agent pre-snapshot cycle), just start it back —
 # the data lives on the bind-mounted fb-volume below, so the
@@ -35,7 +38,7 @@ else
         -p 127.0.0.1:3473:3473 \
         -v "$(pwd)/fb-volume:/var/lib/firebolt" \
         -v "$(pwd)/data:/firebolt-core/clickbench" \
-        "${FB_IMAGE:-ghcr.io/firebolt-db/engine:dev}" >/dev/null
+        "${FB_IMAGE:-ghcr.io/firebolt-db/engine:dev_mv1}" >/dev/null
 fi
 
 # Wait for the cluster to be "actually" ready. firebolt-core's HTTP
