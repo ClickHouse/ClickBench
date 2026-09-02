@@ -1,3 +1,4 @@
+set global duckdb_require_primary_key = OFF;
 CREATE TABLE hits
 (
     WatchID BIGINT NOT NULL,
@@ -104,6 +105,5 @@ CREATE TABLE hits
     HasGCLID SMALLINT NOT NULL,
     RefererHash BIGINT NOT NULL,
     URLHash BIGINT NOT NULL,
-    CLID INTEGER NOT NULL,
-    PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID)
+    CLID INTEGER NOT NULL
 ) ENGINE=DuckDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;

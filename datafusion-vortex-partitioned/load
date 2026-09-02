@@ -1,9 +1,23 @@
 #!/bin/bash
 set -e
 
-# ./query uses datafusion-cli against the partitioned parquet files
-# under partitioned/. See datafusion-vortex/load for the rationale.
+DF=vortex-datafusion-cli/target/release/vortex-datafusion-cli
+
 mkdir -p partitioned
-../lib/download-hits-parquet-partitioned partitioned
+mv hits_*.parquet partitioned/ 2>/dev/null || true
+
+rm -rf vortex
+mkdir -p vortex
+
+seq 0 99 | xargs -P"$(nproc)" -I{} "$DF" -q \
+    -c "SET datafusion.execution.target_partitions = 1;" \
+    -c "CREATE EXTERNAL TABLE hits_parquet STORED AS PARQUET LOCATION 'partitioned/hits_{}.parquet' OPTIONS ('binary_as_string' 'true');" \
+    -c "COPY (SELECT * EXCEPT (\"EventDate\"), CAST(CAST(\"EventDate\" AS INTEGER) AS DATE) AS \"EventDate\" FROM hits_parquet) TO 'vortex/hits_{}.vortex' STORED AS VORTEX;"
+
+files=$(find vortex -maxdepth 1 -name 'hits_*.vortex' | wc -l)
+if [ "$files" -ne 100 ]; then
+    echo "Expected 100 Vortex files, found $files" >&2
+    exit 1
+fi
 
 sync

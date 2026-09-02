@@ -1,5 +1,4 @@
 #!/bin/bash
-# Thin shim — actual flow is in lib/benchmark-common.sh.
 export BENCH_DOWNLOAD_SCRIPT="download-hits-tsv"
 # byconity boots a chain of containers (fdb -> tso -> server -> workers
 # / daemon-manager). Each later step waits up to 600s for its

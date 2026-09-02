@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# SIGTERM makes DolphinDB flush its cache engine and close the chunks
+# cleanly; SIGKILL would leave a recovery pass for the next ./start.
+if [ -f db/dolphindb.pid ]; then
+    kill -15 "$(cat db/dolphindb.pid)" 2>/dev/null || true
+    rm -f db/dolphindb.pid
+fi
+
+# Anything left from an earlier run. -x matches the executable name only, so
+# this cannot match this script. Skip zombies: they have already exited, and
+# killing or waiting on one never makes progress.
+live_pids() {
+    local p
+    for p in $(pgrep -x dolphindb 2>/dev/null); do
+        case "$(awk '{print $3}' /proc/"$p"/stat 2>/dev/null)" in
+            Z|'') ;;
+            *) echo "$p" ;;
+        esac
+    done
+}
+for p in $(live_pids); do
+    kill -15 "$p" 2>/dev/null || true
+done
+
+# Wait for the process to go and for the listening socket to be released.
+# Both matter: DolphinDB refuses to start on a port that is still bound
+# ("Failed to bind the socket on port 8848. Shutting down the server.") and
+# exits immediately, which would otherwise leave the caller waiting out its
+# whole readiness timeout with nothing to show for it.
+port="${DOLPHINDB_PORT:-8848}"
+for _ in $(seq 1 60); do
+    if [ -z "$(live_pids)" ] && ! ss -ltnH "sport = :$port" 2>/dev/null | grep -q .; then
+        exit 0
+    fi
+    sleep 1
+done
+echo "stop: dolphindb still present or port $port still bound after 60s" >&2
+exit 0

@@ -1,5 +1,4 @@
 #!/bin/bash
-# Thin shim — actual flow is in lib/benchmark-common.sh.
 export BENCH_DOWNLOAD_SCRIPT="download-hits-tsv"
 # databend's first cold start (meta + query coming up together, opening
 # every object-store dir) regularly runs past the lib's 300s default;

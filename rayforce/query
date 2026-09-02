@@ -1,0 +1,27 @@
+#!/bin/bash
+# Reads a Rayfall query from stdin and runs it on the Rayforce server.
+# Stdout: query result. Stderr: query runtime in fractional seconds on the last
+# line. Exit non-zero on error.
+set -e
+
+export RAYFORCE_PORT="${RAYFORCE_PORT:-5000}"
+export RAYFORCE_QUERY RAYFORCE_MS
+RAYFORCE_QUERY=$(mktemp)
+RAYFORCE_MS=$(mktemp)
+trap 'rm -f "$RAYFORCE_QUERY" "$RAYFORCE_MS"' EXIT
+
+cat > "$RAYFORCE_QUERY"
+
+rayforce query.rfl
+
+# Guard against reporting a query that produced no timing as 0 seconds.
+ms=$(cat "$RAYFORCE_MS")
+if [ -z "$ms" ]; then
+    echo "rayforce: query returned no timing" >&2
+    exit 1
+fi
+
+# `timeit` reports milliseconds and Rayforce may render them in exponent form
+# (5.6e-06); awk normalises whatever it printed into plain fractional seconds,
+# which is the only shape the driver's timing parser accepts.
+awk -v ms="$ms" 'BEGIN { printf "%.6f\n", ms / 1000 }' >&2

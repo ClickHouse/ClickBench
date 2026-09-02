@@ -161,7 +161,7 @@ We distinguish two cases:
 
 2.a) True cold runs. Before each first run of each query, all operating system caches (page cache) and database caches (e.g. buffer pools) are cleared. Some databases provide commands to clear internal caches. For fairness towards databases which do not offer such statements, it is _required_ to restart the database before the first run of each query. Databases which do not stick around as a background process between queries, e.g. [clickhouse-local](https://clickhouse.com/docs/operations/utilities/clickhouse-local), satisfy this requirement implicitly. It is still needed to clear the page cache before each first query to qualify as a true cold run.
 
-2.b) Lukewarm cold runs. Compared to true cold runs, _only_ the operating system page cache is cleared before each first run of each query. This is what was historically considered as "cold run" in ClickBench, benefiting databases with extensive internal caching. Submissions that do not restart the database _must_ set tag "lukewarm-cold-run" in their result file. We encourage contributors to migrate submissions from lukewarm to true cold runs.
+2.b) Lukewarm cold runs. Compared to true cold runs, _only_ the operating system page cache is cleared before each first run of each query. This is what was historically considered as "cold run" in ClickBench, benefiting databases with extensive internal caching. Submissions that do not restart the database _must_ set tag "no-cold" in their result file. We encourage contributors to migrate submissions from lukewarm to true cold runs.
 
 General rules regarding caching:
 - Query result caches should be disabled.
@@ -292,6 +292,7 @@ Currently, this includes
 
 - Vertica
 - kdb (KDB-X Community Edition)
+- DolphinDB (the download is licensed under an evaluation agreement whose confidentiality clause covers "any information relating to the Evaluation Software")
 
 Please help us add more systems and run the benchmarks on more types of VMs:
 
@@ -302,20 +303,15 @@ Please help us add more systems and run the benchmarks on more types of VMs:
 - [ ] Azure Synapse
 - [ ] Boilingdata
 - [ ] CockroachDB Serverless
-- [ ] DolphinDB
 - [ ] Dremio (without publishing)
-- [ ] EventQL
 - [ ] Exasol
-- [ ] Hive
 - [ ] Hydrolix
-- [ ] Impala
 - [ ] InfluxDB
 - [ ] LocustDB
 - [ ] Manticore Search
 - [ ] MS SQL Server with Column Store Index (without publishing)
 - [ ] OceanBase
 - [ ] Planetscale (without publishing)
-- [x] Quickwit
 - [ ] Redshift Spectrum
 - [ ] Seafowl
 - [ ] ShitholeDB
@@ -333,6 +329,10 @@ Systems that have been identified to have known limitations or issues and could 
 - LoctusDB (see [README](https://github.com/ClickHouse/ClickBench/tree/main/locustdb))
 - ScyllaDB (see [discussion](https://github.com/ClickHouse/ClickBench/issues/384))
 - S3 select command in AWS (see [README](https://github.com/ClickHouse/ClickBench/tree/main/s3select))
+
+## Bonus
+
+You can run every system from ClickBench in the [online Playground](https://benchmark.clickhouse.com/playground/).
 
 ## Similar Projects
 

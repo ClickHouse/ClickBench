@@ -8,8 +8,10 @@ It may seem unfair to other benches that don't have same preparation but working
 require that all because you can't just make arbitrary queries on big collections in mongo.
 
 If you search mongo analogues for your SQL queries then you can inspire by
-`queries.js` but remember that these queries specially adapted to current benchmark
-and may be work slower in your cases/environment. Especially if you have less than 100k docs.
+`queries.sql`, which holds one aggregation pipeline per line in Extended JSON, in the same
+order as the SQL of `../clickhouse/queries.sql`. Remember that these queries are specially
+adapted to the current benchmark and may work slower in your cases/environment, especially
+if you have less than 100k docs.
 
 ---
 

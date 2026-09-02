@@ -9,7 +9,7 @@
     "comment": "",
     "tags": [
         "column-oriented",
-        "lukewarm-cold-run",
+        "no-cold",
         "stateless"
     ],
     "load_time": 275,

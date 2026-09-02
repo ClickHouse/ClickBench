@@ -1,0 +1,8 @@
+#!/bin/bash
+# CtrlB reads hits.parquet in place — there is no ingestion step. The `hits`
+# view is (re)created in ./start after each restart, not here. The harness wraps
+# this script in its load-time timer and appends its own `sync` afterward; that
+# sync (flushing the freshly-downloaded parquet to disk) is the reported
+# "Load time", exactly as for the other read-in-place parquet engines.
+set -e
+exit 0

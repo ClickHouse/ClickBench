@@ -1,0 +1,16 @@
+# ClickHouse credentials for the playground.
+#
+# Copy this file to <state_dir>/clickhouse.conf (default:
+#   /opt/clickbench-playground/clickhouse.conf
+# ) and fill in your hostname / user / password. The playground server
+# reads it on startup for both the request-logging sink and any
+# shared-query feature that gets wired in later.
+#
+# Env vars (CLICKHOUSE_CLOUD_URL / _USER / _PASSWORD / _DB) take
+# precedence over this file so existing deployments keep working.
+
+[clickhouse]
+url = https://your-host.clickhouse.cloud:8443
+user = default
+password =
+db = playground

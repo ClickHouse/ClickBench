@@ -7,7 +7,7 @@
     "hardware": "cpu",
   "tuned": "no",
   "comment": "",
-  "tags": ["Rust", "column-oriented", "search", "PostgreSQL compatible", "lukewarm-cold-run"],
+  "tags": ["Rust", "column-oriented", "search", "PostgreSQL compatible", "no-cold"],
   "load_time": 0,
   "data_size": 14779976446,
 

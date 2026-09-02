@@ -1,4 +1,13 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+pidfile="${SCRIPT_DIR}/zighouse-server.pid"
+
+if [ -f "$pidfile" ]; then
+    kill "$(cat "$pidfile")" 2>/dev/null || true
+    rm -f "$pidfile"
+fi
+# Fallback in case the pidfile is missing or stale.
+pkill -f "zighouse serve" 2>/dev/null || true
 exit 0

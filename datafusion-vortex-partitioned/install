@@ -1,41 +1,36 @@
 #!/bin/bash
 set -e
 
-VORTEX_VERSION=0.44.0
+if [ ! -x vortex-datafusion-cli/target/release/vortex-datafusion-cli ]; then
+    # <vortex-version>-<datafusion-version>
+    CLI_TAG=0.70.0-53.1.0
 
-if ! command -v cargo >/dev/null 2>&1; then
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
-    bash rust-init.sh -y
-fi
-export HOME=${HOME:=~}
-# shellcheck disable=SC1091
-source ~/.cargo/env
+    if ! command -v cargo >/dev/null 2>&1; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
+        bash rust-init.sh -y
+    fi
+    export HOME=${HOME:=~}
+    # shellcheck disable=SC1091
+    source "$HOME/.cargo/env"
 
-sudo apt-get update -y
-# vortex-duckdb's build.rs runs bindgen, which needs libclang plus the
-# clang freestanding headers (stdbool.h etc.); without libclang-dev the
-# build fails with `'stdbool.h' file not found`.
-sudo apt-get install -y gcc jq build-essential git clang libclang-dev
+    if [ "$(free -g | awk '/^Mem:/{print $2}')" -lt 12 ]; then
+        if [ "$(swapon --noheadings --show | wc -l)" -eq 0 ]; then
+            sudo fallocate -l 8G /swapfile
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile
+            sudo swapon /swapfile
+        fi
+    fi
 
-if [ ! -d vortex ]; then
-    git clone https://github.com/spiraldb/vortex.git
-fi
-(
-    cd vortex
+    sudo apt-get update -y
+    sudo apt-get install -y build-essential clang cmake git libclang-dev pkg-config
+
+    if [ ! -d vortex-datafusion-cli ]; then
+        git clone https://github.com/vortex-data/vortex-datafusion-cli.git
+    fi
+    cd vortex-datafusion-cli
     git fetch --tags
-    git checkout "$VORTEX_VERSION"
-    # See datafusion-vortex/install — submodule update isn't idempotent
-    # without sync + --force when a previous run left a partial clone.
-    git submodule sync --recursive
-    git submodule update --init --recursive --force
-    cargo build --release --bin query_bench --package bench-vortex
-)
-
-# Build datafusion-cli so ./query can return actual rows instead of
-# the bench driver's JSON timing blob. See datafusion-vortex/install.
-if ! command -v datafusion-cli >/dev/null 2>&1; then
-    cargo install --locked --version 49.0.2 datafusion-cli
-    # Cargo installs into $HOME/.cargo/bin; the playground agent
-    # runs scripts with a stripped PATH, so symlink into /usr/local/bin.
-    sudo ln -sf "$HOME/.cargo/bin/datafusion-cli" /usr/local/bin/datafusion-cli
+    git checkout "$CLI_TAG"
+    CARGO_PROFILE_RELEASE_LTO=true RUSTFLAGS="-C codegen-units=1" \
+        cargo build --release --bin vortex-datafusion-cli
 fi

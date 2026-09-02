@@ -12,7 +12,8 @@
         "column-oriented",
         "ClickHouse derivative",
         "managed",
-        "azure"
+        "azure",
+        "no-cold"
     ],
     "load_time": 281,
     "data_size": 9940628074,

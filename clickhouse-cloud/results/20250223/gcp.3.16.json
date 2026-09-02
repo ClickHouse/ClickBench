@@ -12,7 +12,8 @@
         "column-oriented",
         "ClickHouse derivative",
         "managed",
-        "gcp"
+        "gcp",
+        "no-cold"
     ],
     "load_time": 334,
     "data_size": 9941968043,

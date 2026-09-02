@@ -1,0 +1,24 @@
+#!/bin/bash
+set -eu
+. "$(dirname "$0")/env.sh"
+
+sudo install -d -o postgres -g postgres "$PGSOCK_DIR"
+
+# Runs as the `postgres` system user (the server refuses to run as root,
+# and the datadir is owned by postgres). RUST_MIN_STACK and the rlimit
+# raise thread/main stacks to match max_stack_depth=60000 — pgrust
+# requires both (deep recursive expression evaluation paths).
+sudo -u postgres \
+    PGRUST_BIN="$PGRUST_BIN" PGDATA_DIR="$PGDATA_DIR" \
+    PGSOCK_DIR="$PGSOCK_DIR" SERVER_LOG="$SERVER_LOG" \
+    PGSHARE_DIR="$PGSHARE_DIR" TZDATA_DIR="$TZDATA_DIR" \
+    EXTRA_SERVER_ENV="${EXTRA_SERVER_ENV:-}" \
+    bash -c '
+        ulimit -s 65520
+        nohup env RUST_MIN_STACK=33554432 RUST_BACKTRACE=1 \
+            PGRUST_TZDIR="$TZDATA_DIR" PGRUST_PGSHAREDIR="$PGSHARE_DIR" \
+            $EXTRA_SERVER_ENV \
+            "$PGRUST_BIN" -D "$PGDATA_DIR" -k "$PGSOCK_DIR" -p 5432 \
+            -c listen_addresses="" \
+            >> "$SERVER_LOG" 2>&1 &
+    '

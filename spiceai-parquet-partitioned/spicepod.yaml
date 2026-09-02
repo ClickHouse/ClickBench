@@ -1,0 +1,19 @@
+version: v2
+kind: Spicepod
+name: spiceai-parquet-partitioned-clickbench
+
+runtime:
+  caching:
+    # The SQL results cache is enabled by default; the benchmark rules
+    # require query result caches to be disabled.
+    sql_results:
+      enabled: false
+
+datasets:
+  # Directory of hits_0.parquet … hits_99.parquet, registered as one table
+  # via the file connector's listing-table support (glob-scans the dir for
+  # files matching file_format).
+  - from: file:data
+    name: hits
+    params:
+      file_format: parquet

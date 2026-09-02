@@ -1,5 +1,4 @@
 #!/bin/bash
-# Thin shim — actual flow is in lib/benchmark-common.sh.
 export BENCH_DOWNLOAD_SCRIPT="download-hits-json"
 # queries are LogsQL, not SQL.
 export BENCH_QUERIES_FILE="queries.logsql"

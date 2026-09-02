@@ -26,7 +26,7 @@ jobs:
         fi
 
         cd clickhouse-cloud
-        curl https://clickhouse.com/ | sh
+        curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ | sh
         sudo ./clickhouse install -y
         
         bash combinations.sh

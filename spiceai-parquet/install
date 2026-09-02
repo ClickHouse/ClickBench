@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+
+# install.spiceai.org ships the CLI only; `spice install` then downloads
+# the runtime binary (spiced) into ~/.spice/bin.
+if [ ! -x "$HOME/.spice/bin/spice" ]; then
+    curl https://install.spiceai.org | /bin/bash
+fi
+"$HOME/.spice/bin/spice" install v2.1.1 --force >/dev/null 2>&1
+
+# Symlink into /usr/local/bin so sibling scripts (check, load, query,
+# start) find them unconditionally.
+sudo ln -sf "$HOME/.spice/bin/spiced" /usr/local/bin/spiced
+sudo ln -sf "$HOME/.spice/bin/spice" /usr/local/bin/spice
+
+spiced --version

@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# spiced loads ./spicepod.yaml from the working directory and serves the
+# HTTP API on 127.0.0.1:8090. Logs append to spiced.log for debugging.
+nohup spiced >> spiced.log 2>&1 &

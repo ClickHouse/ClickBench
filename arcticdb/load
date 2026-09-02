@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+# The ingest runs inside the server process rather than as a separate
+# script: ArcticDB supports one writer per symbol, and the wrapper already
+# holds the only Arctic instance the process is allowed to have over this
+# LMDB path.
+body=$(curl -sS --max-time 36000 -X POST http://127.0.0.1:8000/load 2>&1) || {
+    echo "load: curl to /load failed:" >&2
+    printf '%s\n' "$body" >&2
+    echo "load: server may have been OOM-killed during ingest" >&2
+    exit 1
+}
+
+elapsed=$(printf '%s' "$body" | python3 -c \
+    'import json,sys;print(json.load(sys.stdin)["elapsed"])' 2>&1) || {
+    echo "load: /load did not return valid {\"elapsed\": ...} JSON:" >&2
+    printf '%s\n' "$body" >&2
+    exit 1
+}
+
+echo "Load (server-reported): ${elapsed}s"
+
+sync

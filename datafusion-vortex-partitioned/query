@@ -1,23 +1,30 @@
 #!/bin/bash
-# Reads a SQL query from stdin, runs it via datafusion-cli against the
-# partitioned parquet files. See ../datafusion-vortex/query for the
-# rationale; the vortex bench binary is benchmark-only.
-# Stdout: query result.
-# Stderr: query runtime in fractional seconds on the last line.
+# Reads a SQL query from stdin and runs it via vortex-datafusion-cli.
+# Stdout: query result. Stderr: query runtime in fractional seconds.
 set -e
 
+DF=vortex-datafusion-cli/target/release/vortex-datafusion-cli
+
+# vortex-io opens all partitions at once; on many-core hosts a wide scan can
+# exceed the default 1024 open-file limit. Raise the soft limit to the hard cap.
+ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
+
 query=$(cat)
-tmp=$(mktemp /tmp/datafusion.XXXXXX.sql)
-trap 'rm -f "$tmp"' EXIT
+tmp=$(mktemp /tmp/datafusion-vortex.XXXXXX.sql)
+err=$(mktemp /tmp/datafusion-vortex.XXXXXX.err)
+trap 'rm -f "$tmp" "$err"' EXIT
 printf '%s\n' "$query" > "$tmp"
 
-out=$(datafusion-cli -f create.sql "$tmp" 2>&1) && status=0 || status=$?
+# The CLI exits 0 even when a query errors: it prints to stderr and leaves only
+# create.sql's tiny "Elapsed" on stdout, which the driver would mis-record as the
+# query time. Treat any stderr output (or a nonzero exit) as failure.
+out=$("$DF" -f create.sql -f "$tmp" 2>"$err") && status=0 || status=$?
 
-if [ "$status" -ne 0 ]; then
+if [ "$status" -ne 0 ] || [ -s "$err" ]; then
+    cat "$err" >&2
     printf '%s\n' "$out" >&2
-    exit "$status"
+    exit 1
 fi
 
 printf '%s\n' "$out" | grep -v 'Elapsed' || true
-
 printf '%s\n' "$out" | awk '/Elapsed/ { e = $2 } END { print e }' >&2

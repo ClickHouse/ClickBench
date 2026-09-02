@@ -1,0 +1,72 @@
+#!/bin/bash
+# Drop+create the test DB, install pg_deltax, set up the partitioned hits table,
+# enable compression, and direct-backfill load the 100 hits_*.parquet files in
+# a single COPY ... WITH (FORMAT deltax_compress).
+set -eu
+
+PARQUET_DIR=/tmp/hits_parquet
+
+# Move parquet files into a path the postgres server user can read.
+sudo rm -rf "$PARQUET_DIR"
+sudo mkdir -p "$PARQUET_DIR"
+sudo mv hits_*.parquet "$PARQUET_DIR/"
+# When the source parquet files are symlinks into a read-only dataset
+# mount (the playground layout), chmod --dereference blows up on every
+# file with "Read-only file system". The mount already publishes them
+# world-readable (0664), so postgres can read them via the "other"
+# bits — soft-fail this chmod, keep the strict behaviour for setups
+# where hits_*.parquet are copies rather than symlinks.
+sudo chmod 644 "$PARQUET_DIR"/*.parquet 2>/dev/null || true
+
+# Recreate the DB so this script is idempotent. DROP wipes any prior
+# ALTER DATABASE settings so we start from postgresql.conf defaults
+# (work_mem=64MB, set by ./install in conf.d/clickbench.conf).
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t -c "DROP DATABASE IF EXISTS test"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t -c "CREATE DATABASE test"
+
+# Bump work_mem for the load only. Direct backfill sorts each segment
+# before compressing; larger keeps more segments in memory and shaves
+# load time. Reset before the query phase so the concurrent-QPS test
+# (10 connections each spawning parallel-scan workers) doesn't multiply
+# this up to OOM. Scale to guest RAM: 1 GB was fine on 32 GB benchmark
+# hosts but crashed pg_deltax's compression pipeline mid-load on the
+# 16 GiB playground VM. Cap at MemTotal/64 so pg_deltax's decoder pool
+# × work_mem still leaves headroom for shared_buffers + kernel.
+load_wm_mb=$(awk '/MemTotal/{ printf "%d", $2/1024/64 }' /proc/meminfo)
+[ "$load_wm_mb" -lt 64 ] && load_wm_mb=64
+[ "$load_wm_mb" -gt 1024 ] && load_wm_mb=1024
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t \
+    -c "ALTER DATABASE test SET work_mem TO '${load_wm_mb}MB'"
+
+# pg_deltax.parallel_workers=0 (default) uses num_cpus (capped at 16), so
+# 4-vCPU / 16 GiB VMs end up with 4 decoders + 1 compressor. Each decoder
+# accumulates ~250 MB of blob buffers before flush → ~1.5 GB of transient
+# state that OOM-kills the backend ("server closed the connection
+# unexpectedly" after 4-6 partition flushes). Cap decoders on
+# memory-constrained hosts. Skip on hosts with ≥24 GiB RAM.
+mem_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo)
+if [ "$mem_kb" -lt $((24 * 1024 * 1024)) ]; then
+    sudo -u postgres psql -v ON_ERROR_STOP=1 -t \
+        -c "ALTER DATABASE test SET pg_deltax.parallel_workers TO 2"
+fi
+
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t test -c "CREATE EXTENSION pg_deltax"
+
+# Schema + partitioning + compression setup. mock_now pins the partition
+# boundary calculation to the dataset's epoch (the hits data is from 2013).
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t test < create.sql
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t test -c "SET pg_deltax.mock_now = '2013-07-01 12:00:00'; SELECT deltax.deltax_create_table('hits', 'eventtime', '3 days'::interval, 15)"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t test -c "SELECT deltax.deltax_enable_compression('hits', order_by => ARRAY['counterid', 'userid', 'eventtime'])"
+
+# Direct backfill: load and compress in a single pass using FORMAT deltax_compress.
+sudo -u postgres psql -v ON_ERROR_STOP=1 test -c "COPY hits FROM '$PARQUET_DIR/hits_*.parquet' WITH (FORMAT deltax_compress)"
+
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t test -c "VACUUM FREEZE ANALYZE hits"
+
+# Restore default work_mem (64MB) and disable JIT for the query phase.
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t -c "ALTER DATABASE test RESET work_mem"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t -c "ALTER DATABASE test SET jit TO off"
+
+# Free disk: the source parquet files are no longer needed.
+sudo rm -rf "$PARQUET_DIR"
+sync

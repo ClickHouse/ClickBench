@@ -1,5 +1,4 @@
 #!/bin/bash
-# Thin shim — actual flow is in lib/benchmark-common.sh.
 export BENCH_DOWNLOAD_SCRIPT="download-hits-csv"
 # cockroach replays its WAL on each restart; after the 60 GB+ IMPORT
 # that takes long enough that the lib's default 300 s check window

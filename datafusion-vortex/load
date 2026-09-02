@@ -1,12 +1,15 @@
 #!/bin/bash
 set -e
 
-# The ./query path uses datafusion-cli reading hits.parquet directly,
-# so make sure that file is in CWD. (The shared bench_download already
-# stages it; we don't need vortex's clickbench warmup for playground
-# query output.)
-if [ ! -e hits.parquet ]; then
-    ../lib/download-hits-parquet-single .
-fi
+DF=vortex-datafusion-cli/target/release/vortex-datafusion-cli
 
+rm -rf vortex
+mkdir -p vortex
+
+"$DF" -q \
+    -c "SET datafusion.execution.target_partitions = 1;" \
+    -c "CREATE EXTERNAL TABLE hits_parquet STORED AS PARQUET LOCATION 'hits.parquet' OPTIONS ('binary_as_string' 'true');" \
+    -c "COPY (SELECT * EXCEPT (\"EventDate\"), CAST(CAST(\"EventDate\" AS INTEGER) AS DATE) AS \"EventDate\" FROM hits_parquet) TO 'vortex/hits.vortex' STORED AS VORTEX;"
+
+test -f vortex/hits.vortex
 sync

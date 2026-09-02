@@ -6,7 +6,7 @@
     "proprietary":  "yes",
     "hardware": "cpu",
     "tuned":  "no",
-    "tags":  ["C", "lukewarm-cold-run"],
+    "tags":  ["C", "no-cold"],
     "load_time": 632,
     "data_size": 17823718769,
     "result": [

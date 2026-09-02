@@ -12,7 +12,8 @@
         "column-oriented",
         "PostgreSQL compatible",
         "managed",
-        "gcp"
+        "gcp",
+        "no-cold"
     ],
     "load_time": 1543,
     "data_size": 9941379875,

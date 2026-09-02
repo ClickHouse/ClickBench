@@ -1,4 +1,23 @@
 #!/bin/bash
 set -e
 
+# The REST server responds to /version well before the searcher has
+# registered with the (single-node) gossip cluster. Snapshotting at
+# that point leaves the restored VM in a state where the very first
+# /query returns
+#   "no available searcher nodes in the cluster"
+# from quickwit's job dispatcher. Also probe the search endpoint —
+# it succeeds (200) once the searcher has joined and the `hits`
+# index manifest is loaded, and returns 404 pre-load when the index
+# doesn't exist yet. Either is fine; the 500 "no available searcher
+# nodes" error we're trying to avoid is what fails the -f gate.
+# Any non-2xx that isn't 404 is treated as unready.
 curl -sS -f http://localhost:7280/api/v1/version >/dev/null
+code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
+    -H 'Content-Type: application/json' \
+    -d '{"query":"*","max_hits":0}' \
+    http://localhost:7280/api/v1/hits/search)
+case "$code" in
+    200|404) exit 0 ;;
+    *) echo "quickwit/check: /hits/search HTTP $code" >&2; exit 1 ;;
+esac

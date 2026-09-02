@@ -8,7 +8,7 @@
   "tuned": "no",
   "comment": "",
 
-  "tags": ["row-oriented", "document", "C++", "lukewarm-cold-run"],
+  "tags": ["row-oriented", "document", "C++", "no-cold"],
 
   "load_time": 44824,
   "data_size": 86397751448,

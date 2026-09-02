@@ -95,6 +95,43 @@
             color: var(--title-color);
         }
 
+        .title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .github-stars {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4em;
+            font-size: 0.95rem;
+            line-height: 1;
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid rgba(127, 127, 127, 0.4);
+            border-radius: 6px;
+            padding: 0.4em 0.7em;
+            background: rgba(127, 127, 127, 0.08);
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+
+        .github-stars:hover {
+            background: rgba(127, 127, 127, 0.18);
+        }
+
+        .github-stars-icon {
+            width: 1.1em;
+            height: 1.1em;
+            fill: currentColor;
+        }
+
+        .github-stars-count {
+            font-weight: 600;
+        }
+
         table {
              border-spacing: 1px;
         }
@@ -262,6 +299,29 @@
             padding: 0.1rem 0.5rem 0.1rem 0.5rem;
         }
 
+        /* The query checkbox and number stay put while the table is scrolled
+           horizontally, so it is always clear which query a row belongs to.
+           The outline covers the table's 1px border-spacing and the
+           pseudo-element covers the body padding left of the table — without
+           them the cells scrolling underneath shine through around it. */
+        #details .details-query {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background-color: var(--background-color);
+            outline: 1px solid var(--background-color);
+        }
+
+        #details .details-query::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            bottom: -1px;
+            right: 100%;
+            width: 100vw;
+            background-color: var(--background-color);
+        }
+
         .shadow:hover {
             box-shadow: 0 0 1rem var(--shadow-color);
             position: relative;
@@ -302,7 +362,6 @@
         .tooltip-query {
             left: 0;
             width: 40rem;
-            margin-left: -3rem;
         }
 
         .note:hover .tooltip, .note:active .tooltip {
@@ -324,8 +383,7 @@
         }
 
         .tooltip-query::after {
-            left: 3rem;
-            margin-left: 0.5rem;
+            left: 0.5rem;
         }
 
         .nowrap {
@@ -419,8 +477,15 @@ const additional_data_size_points = [
 
 <div class="header stick-left">
     <span class="nowrap themes"><span id="toggle-dark">🌚</span><span id="toggle-light">🌞</span></span>
-    <h1>ClickBench — a Benchmark For Analytical DBMS</h1>
-    <a href="https://github.com/ClickHouse/ClickBench/">Methodology</a> | <a href="https://github.com/ClickHouse/ClickBench/">Reproduce and Validate the Results</a> | <a href="https://github.com/ClickHouse/ClickBench/">Add a System</a> | <a href="https://benchmark.clickhouse.com/hardware/">Hardware Benchmark</a> | <a href="https://benchmark.clickhouse.com/versions/">Versions Benchmark</a> | See also: <a href="https://jsonbench.com/">JSONBench</a>
+    <div class="title-row">
+        <h1>ClickBench — a Benchmark For Analytical DBMS</h1>
+        <a class="github-stars" href="https://github.com/ClickHouse/ClickBench/" target="_blank" rel="noopener noreferrer" aria-label="Star ClickBench on GitHub" title="Star ClickBench on GitHub">
+            <svg class="github-stars-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
+            <span>Star</span>
+            <span class="github-stars-count" id="github-stars-count"></span>
+        </a>
+    </div>
+    <a href="https://github.com/ClickHouse/ClickBench/">Methodology</a> | <a href="https://github.com/ClickHouse/ClickBench/">Reproduce and Validate the Results</a> | <a href="https://github.com/ClickHouse/ClickBench/">Add a System</a> | <a href="https://benchmark.clickhouse.com/hardware/">Hardware Benchmark</a> | <a href="https://benchmark.clickhouse.com/versions/">Versions Benchmark</a> | See also: <a href="https://jsonbench.com/">JSONBench</a> | <a href="https://benchmark.clickhouse.com/playground/">🎈 Playground (new)</a>
 </div>
 
 <table class="selectors-container stick-left">
@@ -1120,16 +1185,15 @@ function render() {
         let th_checkbox = document.createElement('th');
         let checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.checked = true;
+        checkbox.checked = selectors.queries.every(selected => selected);
         checkbox.addEventListener('change', e => {
-            [...document.querySelectorAll('.query-checkbox')].map(elem => { elem.checked = e.target.checked });
-            selectors.queries.map((_, i) => { selectors.queries[i] = e.target.checked });
-            renderSummary(filtered_data);
+            selectors.queries.fill(e.target.checked);
+            render();
             updateHistory();
         });
+        th_checkbox.className = 'details-query';
         th_checkbox.appendChild(checkbox);
         details_head.appendChild(th_checkbox);
-        details_head.appendChild(document.createElement('th'));
     }
 
     /// Table header
@@ -1150,7 +1214,7 @@ function render() {
         tr.className = 'shadow';
 
         let td_title = document.createElement('td');
-        td_title.colSpan = 2;
+        td_title.className = 'details-query';
         td_title.appendChild(document.createTextNode('Load time: '));
         tr.appendChild(td_title);
 
@@ -1175,7 +1239,7 @@ function render() {
         tr.className = 'shadow';
 
         let td_title = document.createElement('td');
-        td_title.colSpan = 2;
+        td_title.className = 'details-query';
         td_title.appendChild(document.createTextNode('Data size: '));
         tr.appendChild(td_title);
 
@@ -1201,29 +1265,32 @@ function render() {
         let tr = document.createElement('tr');
         tr.className = 'shadow';
 
-        let td_checkbox = document.createElement('td');
+        let td_query = document.createElement('td');
+        td_query.className = 'details-query';
+
         let checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'query-checkbox';
         checkbox.checked = selectors.queries[query_num];
         checkbox.addEventListener('change', e => {
             selectors.queries[query_num] = e.target.checked;
-            renderSummary(filtered_data);
+            render();
             updateHistory();
         });
-        td_checkbox.appendChild(checkbox);
-        tr.appendChild(td_checkbox);
+        td_query.appendChild(checkbox);
 
-        let td_query_num = document.createElement('td');
-        td_query_num.className = 'note';
-        td_query_num.appendChild(document.createTextNode(`Q${query_num}. `));
+        /// Padded to a fixed width so the checkboxes of Q0..Q9 line up with the rest.
+        let query_name = document.createElement('span');
+        query_name.className = 'note';
+        query_name.appendChild(document.createTextNode(` ${`Q${query_num}.`.padStart(4)}`));
 
         let tooltip = document.createElement('span');
         tooltip.className = 'tooltip tooltip-query';
         tooltip.appendChild(document.createTextNode(`Query ${query_num}: ${queries[query_num]}`));
-        td_query_num.appendChild(tooltip);
+        query_name.appendChild(tooltip);
 
-        tr.appendChild(td_query_num);
+        td_query.appendChild(query_name);
+        tr.appendChild(td_query);
 
         sorted_indices.map(idx => {
             const curr_timing = selectRun(filtered_data[idx].result[query_num], selectors.metric);
@@ -1369,6 +1436,34 @@ if (window.location.hash) {
 updateSelectors();
 render();
 
+</script>
+<script>
+(function () {
+    var el = document.getElementById('github-stars-count');
+    if (!el) return;
+    var REPO = 'ClickHouse/ClickBench';
+    var CACHE_KEY = 'github-stars-' + REPO;
+    var TTL = 6 * 3600 * 1000;
+
+    function format(n) {
+        return '' + n;
+    }
+    function show(n) { el.textContent = format(n); }
+
+    try {
+        var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (cached && (Date.now() - cached.t) < TTL) { show(cached.n); return; }
+    } catch (e) {}
+
+    fetch('https://api.github.com/repos/' + REPO)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+            if (!d || typeof d.stargazers_count !== 'number') return;
+            show(d.stargazers_count);
+            try { localStorage.setItem(CACHE_KEY, JSON.stringify({ n: d.stargazers_count, t: Date.now() })); } catch (e) {}
+        })
+        .catch(function () {});
+})();
 </script>
 </body>
 </html>

@@ -1,0 +1,23 @@
+#!/bin/bash
+. "$(dirname "$0")/env.sh"
+
+pid=$(sudo head -1 "$PGDATA_DIR/postmaster.pid" 2>/dev/null)
+[ -n "$pid" ] || exit 0
+
+# Fast shutdown, as the true-cold-run protocol requires.
+sudo kill -INT "$pid" 2>/dev/null || exit 0
+for i in $(seq 1 120); do
+    sudo kill -0 "$pid" 2>/dev/null || exit 0
+    sleep 0.5
+done
+
+# Still alive after 60s: immediate shutdown. The datadir is durable and the
+# next start recovers; better than leaving a half-stopped server pinning the
+# page cache through the "cold" cycle.
+echo "pgrust/stop: fast shutdown did not finish in 60s, escalating to SIGQUIT" >&2
+sudo kill -QUIT "$pid" 2>/dev/null || exit 0
+for i in $(seq 1 60); do
+    sudo kill -0 "$pid" 2>/dev/null || exit 0
+    sleep 0.5
+done
+exit 0

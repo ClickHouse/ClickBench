@@ -1,0 +1,28 @@
+[Unit]
+Description=ClickBench in-VM playground agent
+# Wait for clickbench-net.service to assign eth0's IP — without it the
+# kernel-set IP (firecracker-ci kernel via CONFIG_IP_PNP) is a no-op on
+# the Ubuntu generic kernel and we'd bind 0.0.0.0:50080 on an interface
+# that doesn't have an IP yet.
+After=local-fs.target clickbench-net.service
+Wants=clickbench-net.service
+
+[Service]
+Type=simple
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/root
+# Several ClickBench install/load scripts (monetdb, ...) reference $USER
+# and `set -u`-fail without it. systemd's default service environment
+# has no USER/LOGNAME, so stamp them. We run as root in the VM (no
+# multi-tenant separation inside a per-VM playground), so these are
+# correct.
+Environment=USER=root
+Environment=LOGNAME=root
+ExecStart=/usr/bin/python3 /opt/clickbench-agent/agent.py
+Restart=on-failure
+RestartSec=2
+KillMode=mixed
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

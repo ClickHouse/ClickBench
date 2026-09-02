@@ -1,5 +1,4 @@
 #!/bin/bash
-# Thin shim — actual flow is in lib/benchmark-common.sh.
 # Datalake variant: Parquet is read directly from public S3, no download.
 export BENCH_DOWNLOAD_SCRIPT=""
 # Trino bootstrap on a cold sysdisk pushes past the 300s default.

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+export RAYFORCE_PORT="${RAYFORCE_PORT:-5000}"
+rayforce check.rfl >/dev/null

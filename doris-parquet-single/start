@@ -1,0 +1,55 @@
+#!/bin/bash
+set -e
+
+DORIS_HOME=$(cat .doris_home)
+export DORIS_HOME
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-$(dpkg --print-architecture)/"
+export PATH=$JAVA_HOME/bin:$PATH
+
+# `SHOW BACKENDS` reports Alive per BE; find the column by header name —
+# positions shift between Doris versions.
+backend_alive() {
+    mysql -h127.0.0.1 -P9030 -uroot -B -e 'SHOW BACKENDS' 2>/dev/null \
+        | awk -F'\t' 'NR==1 { for (i = 1; i <= NF; i++) if ($i == "Alive") c = i; next }
+                      c && tolower($c) == "true" { found = 1 } END { exit !found }'
+}
+
+# Idempotent: done only when the FE answers AND a BE is alive.
+if mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null 2>&1 && backend_alive; then
+    exit 0
+fi
+
+ulimit -n 65535
+
+# Tolerate "already running" from either daemon: we may get here with the FE
+# up but the BE not alive yet. Capture the launchers' output — the harness
+# silences ./start entirely, and if start_be.sh refuses to launch (a failed
+# env check prints to its stderr and no be.out is ever created), this file
+# is the only evidence; ./check dumps it on failure.
+"$DORIS_HOME"/fe/bin/start_fe.sh --daemon > start_fe.out 2>&1 || true
+"$DORIS_HOME"/be/bin/start_be.sh --daemon > start_be.out 2>&1 || true
+
+# Wait for the FE to accept connections (up to 10 min). SHOW FRONTENDS is
+# FE-only metadata: on Doris 4.x, `SELECT 1` is dispatched to a backend and
+# fails until a BE is alive, which would stall this loop for its full
+# timeout before ADD BACKEND below ever runs.
+for _ in $(seq 1 300); do
+    mysql -h127.0.0.1 -P9030 -uroot -e 'SHOW FRONTENDS' >/dev/null 2>&1 && break
+    sleep 2
+done
+
+mysql -h127.0.0.1 -P9030 -uroot \
+    -e "ALTER SYSTEM ADD BACKEND '127.0.0.1:9050'" 2>/dev/null || true
+
+# Wait for the BE to become ALIVE, not merely registered: an earlier version
+# waited for a non-empty SHOW BACKENDS column by position, which passes as
+# soon as the row exists — ./load then created the local() view against a
+# still-initializing BE and the FE answered
+# "Can not build local(): No available backend".
+for _ in $(seq 1 300); do
+    backend_alive && exit 0
+    sleep 2
+done
+echo "doris BE did not become alive within 10 min" >&2
+mysql -h127.0.0.1 -P9030 -uroot -e 'SHOW BACKENDS' 2>&1 | tail -5 >&2 || true
+exit 1

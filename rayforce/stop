@@ -1,0 +1,19 @@
+#!/bin/bash
+# Stops the Rayforce IPC server. The engine keeps its columns mmap'd, so the
+# process has to be gone before the driver's drop_caches can evict them.
+#
+# Kill the recorded pid first, then sweep in case server.pid is missing or
+# stale. The sweep matches the server's whole command line rather than the bare
+# process name: ./query and ./check spawn clients that are also named
+# `rayforce`, and `pkill -x rayforce` killed those too — during the
+# concurrent-QPS test that meant the watchdog shot down the workers' in-flight
+# queries on every poll. `-x -f` anchors the pattern to the entire command
+# line, so unlike a plain `-f` it cannot match a shell that merely mentions it.
+port="${RAYFORCE_PORT:-5000}"
+
+if [ -f server.pid ]; then
+    kill "$(cat server.pid)" 2>/dev/null || true
+    rm -f server.pid
+fi
+pkill -x -f "rayforce -p $port server.rfl" 2>/dev/null || true
+exit 0

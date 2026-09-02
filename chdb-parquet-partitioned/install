@@ -13,3 +13,27 @@ source myenv/bin/activate
 
 pip install --upgrade pip
 pip install psutil pyarrow chdb
+RELEASE_WHEEL_URL=$(python3 - <<'PY'
+import json, platform, urllib.request
+from importlib.metadata import PackageNotFoundError, version
+release = json.load(urllib.request.urlopen(
+    "https://api.github.com/repos/chdb-io/chdb-core/releases?per_page=1", timeout=30))[0]
+try:
+    installed = version("chdb-core")
+except PackageNotFoundError:
+    installed = ""
+if release["tag_name"].lstrip("v") != installed:
+    arch = platform.machine()
+    for asset in release["assets"]:
+        name = asset["name"]
+        if name.endswith(".whl") and "_lite" not in name and "linux" in name and arch in name:
+            print(asset["browser_download_url"])
+            break
+PY
+) || true
+if [ -n "$RELEASE_WHEEL_URL" ]; then
+    RELEASE_WHEEL="$(basename "$RELEASE_WHEEL_URL")"
+    curl -fSL --retry 3 -o "$RELEASE_WHEEL" "$RELEASE_WHEEL_URL"
+    pip uninstall --quiet -y chdb-core || true
+    pip install --quiet "./$RELEASE_WHEEL"
+fi

@@ -1,0 +1,38 @@
+[package]
+name = "hits-regolith"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# regolith is the system under test: an embedded LSM-tree key-value store
+# with a synchronous API, no async runtime and no object store.
+#
+# 0.1.3, the first release that can serve this workload. 0.1.2 could not:
+# with more than one compaction worker its scheduler could hand the same
+# input files to two workers, which then wrote two sorted runs covering the
+# same key range into one level. A scan across that level stops at the first
+# key that does not advance, so it returns a fraction of the rows and
+# reports success. Loading this dataset hit it every time.
+regolith = "0.1.3"
+# DataFusion provides the SQL frontend; all table data is scanned out of
+# regolith through a custom TableProvider.
+datafusion = "55"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+futures = "0.3"
+async-trait = "0.1"
+anyhow = "1"
+# glibc malloc fragments badly under the allocation churn of the load path
+# (row buffers + SST builds across many threads), growing RSS without bound;
+# jemalloc keeps it flat. Same allocator as the SlateDB entry, so the two
+# harnesses differ only in the storage engine.
+tikv-jemallocator = "0.6"
+
+[profile.release]
+opt-level = 3
+# Fat LTO across the whole graph, not thin: the hot path is a decode loop in
+# this crate calling straight into regolith's block reader and Arrow's
+# builders, and cross-crate inlining is what collapses it. One codegen unit
+# so nothing is left un-inlined for want of a partition boundary. Costs
+# several minutes of build time, which the benchmark does not measure.
+lto = "fat"
+codegen-units = 1

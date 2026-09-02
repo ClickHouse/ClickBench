@@ -6,7 +6,7 @@
     "proprietary": "yes",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","PostgreSQL compatible","ClickHouse derivative"],
+    "tags": ["C++","column-oriented","PostgreSQL compatible","ClickHouse derivative","no-cold"],
     "load_time": 281,
     "data_size": 15786247920,
     "concurrent_qps": null,

@@ -1,5 +1,4 @@
 #!/bin/bash
-# Thin shim — actual flow is in lib/benchmark-common.sh.
 #
 # GenDB's pipeline produces one specialized C++ binary per query (the .cpp
 # files we ship in generated/ were synthesized by a multi-agent LLM pipeline

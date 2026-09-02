@@ -89,9 +89,16 @@ async def query(request: Request):
     if not sql:
         raise HTTPException(status_code=400, detail="empty query")
     start = timeit.default_timer()
-    result = daft.sql(sql).collect()
+    # ClickBench timings must include returning the full result to the
+    # client (README, "Output Suppression"; issue #1397): collect() with
+    # num_preview_rows=None makes __str__ render every row, and to_pydict()
+    # pulls the complete, untruncated result into plain Python objects (the
+    # fetchall() equivalent) — all inside the timed run.
+    result = daft.sql(sql).collect(num_preview_rows=None)
+    result.to_pydict()
+    text = str(result)
     elapsed = round(timeit.default_timer() - start, 3)
-    return {"elapsed": elapsed, "result": str(result)}
+    return {"elapsed": elapsed, "result": text}
 
 
 @app.get("/data-size")

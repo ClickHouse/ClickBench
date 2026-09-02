@@ -1,0 +1,24 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via the Spice HTTP API.
+# Stdout: query result (JSON).
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+resp=$(mktemp /tmp/spiceai-query.XXXXXX)
+trap 'rm -f "$resp"' EXIT
+
+metrics=$(curl -sS -o "$resp" -w '%{http_code} %{time_total}' \
+    -H 'Content-Type: text/plain' --data-binary @- \
+    'http://localhost:8090/v1/sql')
+code=${metrics% *}
+time_total=${metrics#* }
+
+if [ "$code" != "200" ]; then
+    cat "$resp" >&2
+    echo >&2
+    exit 1
+fi
+
+cat "$resp"
+printf '%s\n' "$time_total" >&2

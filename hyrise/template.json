@@ -1,0 +1,12 @@
+{
+    "system": "Hyrise",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "no",
+    "tags": [
+        "C++",
+        "column-oriented",
+        "in-memory",
+        "PostgreSQL compatible"
+    ]
+}

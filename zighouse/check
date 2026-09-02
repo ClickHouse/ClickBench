@@ -1,4 +1,7 @@
 #!/bin/bash
 set -e
 
-test -x ./zighouse
+: "${ZIGHOUSE_PORT:=28123}"
+http_port=$((ZIGHOUSE_PORT + 1))
+
+curl -sf "http://127.0.0.1:${http_port}/ping" >/dev/null

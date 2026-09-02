@@ -1,5 +1,4 @@
 #!/bin/bash
-# Thin shim — actual flow is in lib/benchmark-common.sh.
 export BENCH_DOWNLOAD_SCRIPT="download-hits-tsv"
 # Pinot's quickstart starts a controller, broker, server and a Zookeeper
 # inside one JVM and takes longer than the lib's 300 s default to be

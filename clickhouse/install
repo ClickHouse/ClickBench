@@ -1,8 +1,8 @@
 #!/bin/bash
-set -e
+set -e -o pipefail
 
 if [ ! -x /usr/bin/clickhouse ]; then
-    curl https://clickhouse.com/ | sh
+    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ | sh
     sudo ./clickhouse install --noninteractive
 fi
 

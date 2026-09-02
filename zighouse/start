@@ -1,4 +1,22 @@
 #!/bin/bash
 set -e
 
-test -x ./zighouse
+# Start the ZigHouse server. It speaks the ClickHouse HTTP protocol; with
+# --port=<P> the native TCP interface listens on <P> and HTTP on <P>+1.
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+: "${ZIGHOUSE_PORT:=28123}"
+: "${ZIGHOUSE_DATA_DIR:=${SCRIPT_DIR}/zighouse-store}"
+http_port=$((ZIGHOUSE_PORT + 1))
+
+mkdir -p "$ZIGHOUSE_DATA_DIR"
+
+# Already up (e.g. ./start called twice)? Nothing to do.
+if curl -sf "http://127.0.0.1:${http_port}/ping" >/dev/null 2>&1; then
+    exit 0
+fi
+
+nohup "${SCRIPT_DIR}/zighouse" serve \
+    --data-dir="${ZIGHOUSE_DATA_DIR}" \
+    --port="${ZIGHOUSE_PORT}" \
+    >"${SCRIPT_DIR}/zighouse-server.log" 2>&1 &
+echo $! > "${SCRIPT_DIR}/zighouse-server.pid"
