@@ -293,6 +293,7 @@ Currently, this includes
 - Vertica
 - kdb (KDB-X Community Edition)
 - DolphinDB (the download is licensed under an evaluation agreement whose confidentiality clause covers "any information relating to the Evaluation Software")
+- Deepgreen DB (the licence forbids disclosing "results of any benchmark tests related to the Software" without the vendor's written consent, and the vendor no longer exists)
 
 Please help us add more systems and run the benchmarks on more types of VMs:
 
