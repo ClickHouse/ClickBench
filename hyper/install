@@ -21,4 +21,4 @@ fi
 source myenv/bin/activate
 
 pip install --upgrade pip
-pip install tableauhyperapi==0.0.26359
+pip install tableauhyperapi==0.0.26479
