@@ -1,0 +1,11 @@
+{
+  "system": "OceanBase (row store)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "row-oriented",
+    "MySQL compatible"
+  ]
+}

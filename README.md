@@ -310,7 +310,6 @@ Please help us add more systems and run the benchmarks on more types of VMs:
 - [ ] LocustDB
 - [ ] Manticore Search
 - [ ] MS SQL Server with Column Store Index (without publishing)
-- [ ] OceanBase
 - [ ] Planetscale (without publishing)
 - [ ] Redshift Spectrum
 - [ ] Seafowl

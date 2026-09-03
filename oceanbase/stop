@@ -1,0 +1,12 @@
+#!/bin/bash
+
+OB_HOME=${OB_HOME:-/opt/oceanbase}
+source "$OB_HOME/bench.env" 2>/dev/null || true
+
+# SIGTERM is the observer's graceful shutdown: it stops accepting connections,
+# checkpoints, and exits. The pid file is the only handle -- there is no
+# `observer stop` subcommand.
+if [ -f "$OB_HOME/run/observer.pid" ]; then
+    sudo kill -TERM "$(sudo cat "$OB_HOME/run/observer.pid")" 2>/dev/null || true
+fi
+exit 0
