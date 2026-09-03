@@ -74,6 +74,14 @@ _EXTERNAL = {
     # third party" (§5). Serving it from the playground would be exactly that.
     # The dolphindb/ scripts stay for local reproduction only.
     "dolphindb",
+    # deepgreen: same situation, plus the software is x86-64 only and no
+    # longer distributed by its (defunct) vendor. The Vitesse Deepgreen DB
+    # 18.16 licence limits use to "a single Node ... for EVALUATION purpose
+    # only" and forbids making the Software "available in any form to anyone
+    # other than Customer's" own people (§3.1, §3.3); it also forbids
+    # disclosing benchmark results, which is why deepgreen/results is
+    # gitignored. The deepgreen/ scripts stay for local reproduction only.
+    "deepgreen",
 }
 
 # Systems that need outbound access at query time get routed through
