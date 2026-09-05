@@ -55,8 +55,11 @@ if [ "$ram_gb" -ge 16 ]; then EXEC_PCT=65; else EXEC_PCT=0; fi
 
 # Below 8 GB the ingest pipeline is sized to the machine as well: the default
 # batch times pipeline depth is an admission working set a 4 GB box does not
-# have.
-if [ "$ram_gb" -ge 8 ]; then COPY_BATCH=131072; COPY_DEPTH=8; else COPY_BATCH=16384; COPY_DEPTH=2; fi
+# have. copy_consumers (load lane, rank 4): N lane-owned writers add N-1
+# batches to that same working set, so the < 8 GB tier keeps the single
+# consumer (today's path) and only the >= 8 GB tier auto-sizes from the
+# box's own executor width.
+if [ "$ram_gb" -ge 8 ]; then COPY_BATCH=131072; COPY_DEPTH=8; COPY_CONSUMERS=0; else COPY_BATCH=16384; COPY_DEPTH=2; COPY_CONSUMERS=1; fi
 
 cat > "$BENCH_DIR/scramdb-config.toml" <<EOF
 [general]
@@ -108,6 +111,7 @@ workers = "auto"
 morsel_size = "8MB"
 copy_batch_rows = $COPY_BATCH
 copy_pipeline_depth = $COPY_DEPTH
+copy_consumers = $COPY_CONSUMERS
 copy_parse_lane_percent = 0
 spill_agg_partitions = 128
 arena_chunk_size = "8MB"
