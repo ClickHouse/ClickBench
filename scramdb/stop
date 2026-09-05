@@ -1,0 +1,47 @@
+#!/bin/bash
+set -euo pipefail
+
+BENCH_DIR="$(cd "$(dirname "$0")" && pwd)"
+PIDFILE="$BENCH_DIR/scramdb.pid"
+STOP_TIMEOUT="${SCRAMDB_STOP_TIMEOUT:-120}"
+
+[ -f "$PIDFILE" ] || exit 0
+pid=$(cat "$PIDFILE")
+
+if ! [[ "$pid" =~ ^[0-9]+$ ]]; then
+    echo "stop: $PIDFILE holds '${pid}', not a pid; removing it" >&2
+    rm -f "$PIDFILE"
+    exit 0
+fi
+
+if ! kill -0 "$pid" 2>/dev/null; then
+    rm -f "$PIDFILE"
+    exit 0
+fi
+
+# SIGTERM is the graceful path: the server flushes and closes its segments.
+kill "$pid"
+
+deadline=$(( $(date +%s) + STOP_TIMEOUT ))
+while [ "$(date +%s)" -lt "$deadline" ]; do
+    if ! kill -0 "$pid" 2>/dev/null; then
+        rm -f "$PIDFILE"
+        exit 0
+    fi
+    sleep 0.2
+done
+
+echo "stop: pid $pid ignored SIGTERM for ${STOP_TIMEOUT}s, sending SIGKILL" >&2
+kill -9 "$pid" 2>/dev/null || true
+
+deadline=$(( $(date +%s) + 10 ))
+while [ "$(date +%s)" -lt "$deadline" ]; do
+    if ! kill -0 "$pid" 2>/dev/null; then
+        rm -f "$PIDFILE"
+        exit 0
+    fi
+    sleep 0.2
+done
+
+echo "stop: pid $pid survived SIGKILL" >&2
+exit 1
