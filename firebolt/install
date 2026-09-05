@@ -6,4 +6,6 @@ if ! command -v docker >/dev/null || ! command -v jq >/dev/null; then
     sudo apt-get update -y
     sudo apt-get install -y docker.io jq
 fi
-sudo docker pull ghcr.io/firebolt-db/engine:dev
+# dev_mv1 rather than dev: a build we verify and re-tag by hand, so that mainline
+# regressions cannot walk into the benchmark unnoticed.
+sudo docker pull ghcr.io/firebolt-db/engine:dev_mv1

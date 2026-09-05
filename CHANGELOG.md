@@ -2,6 +2,9 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-09-01
+The three Firebolt entries (`firebolt`, `firebolt-parquet`, `firebolt-parquet-partitioned`) are back to `BENCH_RESTARTABLE=no` and the `no-cold` tag: as of Sept 2026 Firebolt Core does not handle the start / stop cycle that [#1666](https://github.com/ClickHouse/ClickBench/pull/1666) introduced gracefully, so those runs did not lead to meaningful measurements. Caches are still flushed before the first run of each query, as for every other `BENCH_RESTARTABLE=no` system. The result files #1666 produced (`results/20260829`) keep no tag.
+
 ### 2026-08-29
 Firebolt now does a true cold run. The three self-hosted firebolt-core entries (`firebolt`, `firebolt-parquet`, `firebolt-parquet-partitioned`) set `BENCH_RESTARTABLE=no` and therefore only got their page cache flushed before each first run; they now go through the common runner's full `./stop` → `drop_caches` → `./start` cycle like every other daemon, and lost the `no-cold` tag. The engine handles `SIGTERM` and shuts down cleanly, and the database lives on a bind-mounted volume, so it is still there when the container is started back up. The result files produced before this change keep the tag. The managed-cloud Firebolt results from 2025-06-07 also keep it: those ran against the hosted service, which cannot be restarted.
 
