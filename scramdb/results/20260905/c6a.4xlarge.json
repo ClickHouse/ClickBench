@@ -53,5 +53,5 @@
     [0.433, 0.02, 0.022],
     [0.465, 0.019, 0.023]
   ],
-  "comment": "ScramDB a097be5c: native install on c6a.4xlarge (500 GB gp2), the harness load with the one-pass CSV split; cold runs after sync and drop_caches with a restart per query"
+  "comment": "ScramDB build c664e19 (the master merge carrying a097be5c): native install on c6a.4xlarge (500 GB gp2), the harness load with the one-pass CSV split; cold runs after sync and drop_caches with a restart per query"
 }

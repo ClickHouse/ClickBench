@@ -10,7 +10,7 @@ set -euo pipefail
 : "${HOME:?HOME must be set: the install directory lives under it}"
 
 BENCH_DIR="$(cd "$(dirname "$0")" && pwd)"
-VERSION="${SCRAMDB_VERSION:-44837c8}"
+VERSION="${SCRAMDB_VERSION:-c664e19}"
 INSTALL_DIR="${SCRAMDB_INSTALL_DIR:-$HOME/.scramdb}"
 BIN="$INSTALL_DIR/bin/scramdb"
 
