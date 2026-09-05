@@ -1,0 +1,134 @@
+#!/bin/bash
+set -euo pipefail
+
+# Native install: the official one-command installer, pinned to a single build
+# so the run is reproducible. The installer resolves the host architecture
+# itself (linux/amd64 and linux/arm64 tarballs are published for every build)
+# and verifies every download against that release's SHA256SUMS before it
+# writes anything, so nothing here is architecture-specific.
+
+: "${HOME:?HOME must be set: the install directory lives under it}"
+
+BENCH_DIR="$(cd "$(dirname "$0")" && pwd)"
+VERSION="${SCRAMDB_VERSION:-44837c8}"
+INSTALL_DIR="${SCRAMDB_INSTALL_DIR:-$HOME/.scramdb}"
+BIN="$INSTALL_DIR/bin/scramdb"
+
+# psql drives load/query/check; bc converts psql's millisecond timings.
+sudo apt-get update -y
+sudo apt-get install -y postgresql-client bc
+
+# A server left behind by a previous run still holds the data directory.
+"$BENCH_DIR/stop"
+
+ram_kb=$(awk '/MemTotal/ { print $2 }' /proc/meminfo)
+ram_gb=$(( ram_kb / 1024 / 1024 ))
+
+if [ "$ram_gb" -lt 16 ]; then
+    echo "WARNING: ScramDB targets machines with at least 16 GB of RAM; this one has ${ram_gb} GB." >&2
+    echo "WARNING: proceeding anyway, but this result is not representative of the product." >&2
+fi
+
+curl -fsSL https://scramdb.com/install \
+    | SCRAMDB_YES=1 SCRAMDB_MODIFY_PATH=0 SCRAMDB_INSTALL_DIR="$INSTALL_DIR" \
+      bash -s -- --version "$VERSION"
+
+if [ ! -x "$BIN" ]; then
+    echo "install: the installer produced no executable at $BIN" >&2
+    exit 1
+fi
+
+rm -rf "$BENCH_DIR/db"
+mkdir -p "$BENCH_DIR/db"
+rm -f "$BENCH_DIR/scramdb.log" "$BENCH_DIR/scramdb.pid"
+
+# The analytics configuration ScramDB ships and documents for a dedicated
+# analytics box. Deviations from the installed default: WAL archiving off (a
+# benchmark box does no point-in-time recovery, and archived segments would
+# otherwise count into data_size), and the UDF and GPU lanes off (nothing
+# beyond the benchmark runs).
+#
+# The 65 percent execution share is the documented setting for machines at or
+# above the 16 GB target. Below it, 0 keeps the engine's automatic derivation,
+# which sizes every budget to the RAM actually present.
+if [ "$ram_gb" -ge 16 ]; then EXEC_PCT=65; else EXEC_PCT=0; fi
+
+# Below 8 GB the ingest pipeline is sized to the machine as well: the default
+# batch times pipeline depth is an admission working set a 4 GB box does not
+# have. copy_consumers (load lane, rank 4): N lane-owned writers add N-1
+# batches to that same working set, so the < 8 GB tier keeps the single
+# consumer (today's path) and only the >= 8 GB tier auto-sizes from the
+# box's own executor width.
+if [ "$ram_gb" -ge 8 ]; then COPY_BATCH=131072; COPY_DEPTH=8; COPY_CONSUMERS=0; else COPY_BATCH=16384; COPY_DEPTH=2; COPY_CONSUMERS=1; fi
+
+cat > "$BENCH_DIR/scramdb-config.toml" <<EOF
+[general]
+jit_enabled = true
+metrics_port = 9090
+pg_address = "0.0.0.0:5432"
+shutdown_jit_quiesce_timeout_secs = 10
+shutdown_drain_timeout_secs = 5
+
+[jit]
+compiled_cache_memory = "256MB"
+compiled_cache_disk = "1024MB"
+
+[storage]
+prod_name = "tundra"
+shard_id = 0
+basedir = "$BENCH_DIR/db"
+# 0 = auto: the engine sizes the pool for the io backend and detected RAM.
+buffer_pool_percent = 0
+buffer_pool_cap = "192GB"
+# A dedicated analytics box gives its one big query the machine.
+execution_memory_percent = $EXEC_PCT
+execution_memory_cap = "64GB"
+
+flush_threshold_rows = 65536
+prefetch_depth = 32
+prefetch_queue_depth = 256
+bloom_max_bytes = "16KB"
+
+[storage.memory]
+working_set_percent = 85
+
+[storage.io]
+backend = "io_uring"
+
+[storage.wal.archive]
+enabled = false
+
+[storage.cold_config]
+cold_enable = false
+writeback_frequency_secs = 0
+concurrent_requests = 0
+bucket_name = ""
+cloud_api = "GCP"
+base_path = ""
+
+[execution]
+workers = "auto"
+morsel_size = "8MB"
+copy_batch_rows = $COPY_BATCH
+copy_pipeline_depth = $COPY_DEPTH
+copy_consumers = $COPY_CONSUMERS
+copy_parse_lane_percent = 0
+spill_agg_partitions = 128
+arena_chunk_size = "8MB"
+
+[storage.compaction]
+check_interval = "24h"
+
+[storage.gc]
+cycle_interval = "24h"
+
+[statistics]
+analyze_on_load = false
+auto_analyze_check_interval = "24h"
+
+[udf]
+enabled = false
+
+[gpu]
+enabled = false
+EOF
