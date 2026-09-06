@@ -711,7 +711,27 @@ data.forEach(d => {
     });
 });
 
-[... new Set(data.map(elem => elem.machine))].sort((a, b) => {
+/// The whitelist of AWS machines: results on any other EC2 instance type are hidden,
+/// so that the set of compared machines stays consistent.
+const aws_machines_whitelist = new Set([
+    't3a.small',
+    'c6a.large',
+    'c6a.xlarge',
+    'c6a.2xlarge',
+    'c6a.4xlarge',
+    'c8g.4xlarge',
+    'c6a.metal',
+    'c7a.metal-48xl',
+    'c8g.metal-48xl',
+    'p5.4xlarge', /// GPU, the only notable demo for Sirius.
+]);
+
+/// Matches EC2 instance type names, e.g. `c6a.4xlarge` or `m9gd.xlarge`,
+/// but not the names of cloud service sizes, e.g. `64GiB` or `Motherduck: jumbo`.
+const aws_machine_regexp = /^[a-z]+[0-9]+[a-z]*\.[0-9a-z-]+$/;
+
+[... new Set(data.map(elem => elem.machine))].filter(
+    elem => aws_machines_whitelist.has(elem) || !aws_machine_regexp.test(elem)).sort((a, b) => {
     const count_diff = data.filter(elem => elem.machine === b).length - data.filter(elem => elem.machine === a).length;
     return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
 }).map(elem => {
