@@ -132,6 +132,20 @@ NEEDS_SWAP: frozenset[str] = frozenset({
     # The docker container has no memory.swap.max set, so the guest
     # kernel will swap it the same as any process.
     "umbra",
+    # arcticdb's python server keeps the whole Arctic Library in
+    # process memory during load — 16 GB RSS on the full hits set
+    # triggers the guest's OOM killer, python3 dies mid-load, the
+    # host sees ServerDisconnectedError (empty provision-log).
+    # Guest kernel dmesg:
+    #   Out of memory: Killed process 1952 (python3)
+    #   total-vm:414791488kB anon-rss:16045040kB
+    "arcticdb",
+    # rayforce also OOMed at ~16 GB RSS on load:
+    #   Out of memory: Killed process 2227 (rayforce) anon-rss:15943296kB
+    # Same class as arcticdb / dataframe engines — in-process load
+    # of the full 100M-row hits set doesn't fit the 16 GiB VM cap
+    # without swap.
+    "rayforce",
 })
 
 # Sparse size of the swap.raw block device handed to NEEDS_SWAP systems.
