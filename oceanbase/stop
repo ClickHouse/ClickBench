@@ -7,6 +7,30 @@ source "$OB_HOME/bench.env" 2>/dev/null || true
 # checkpoints, and exits. The pid file is the only handle -- there is no
 # `observer stop` subcommand.
 if [ -f "$OB_HOME/run/observer.pid" ]; then
-    sudo kill -TERM "$(sudo cat "$OB_HOME/run/observer.pid")" 2>/dev/null || true
+    pid=$(sudo cat "$OB_HOME/run/observer.pid" 2>/dev/null || echo)
+    if [ -n "$pid" ]; then
+        sudo kill -TERM "$pid" 2>/dev/null || true
+        # Wait for the observer to actually exit (checkpoints + slog
+        # flush + clog fsync). If we return before it's gone, the
+        # next ./start's observer daemonize will see `pid already
+        # exists` (the observer's start_daemon reads the pid file
+        # and kill(0)-checks the pid — still alive → refuses to
+        # start; exit code 96 → agent /provision fails). Up to 60 s
+        # is enough for a fresh, mostly-empty cluster; escalate to
+        # SIGKILL after that.
+        for _ in $(seq 1 60); do
+            sudo kill -0 "$pid" 2>/dev/null || break
+            sleep 1
+        done
+        if sudo kill -0 "$pid" 2>/dev/null; then
+            sudo kill -KILL "$pid" 2>/dev/null || true
+            sleep 2
+        fi
+    fi
+    # Always drop the stale pid file. Even if the observer already
+    # exited, leaving it there is a footgun: an unrelated pid could
+    # cycle onto the same number, and the next ./start would see
+    # `pid already exists`.
+    sudo rm -f "$OB_HOME/run/observer.pid"
 fi
 exit 0

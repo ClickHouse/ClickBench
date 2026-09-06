@@ -29,12 +29,21 @@ else
     #                            driver runs before every cold query,
     #                            and across the agent's pre-snapshot
     #                            cycle, or the DB comes back empty).
+    # data/hits_*.parquet in cwd are (on the playground) symlinks into
+    # /opt/clickbench/datasets_ro/hits_partitioned/. Inside the
+    # container the symlink targets need to resolve, so bind-mount
+    # datasets_ro at the same host path. Without this, the parquet
+    # files inside /firebolt-core/clickbench dangle and the INSERT
+    # INTO hits SELECT * FROM hits_external returns 0 rows — the
+    # entire load "succeeds" in <1 s and every query later returns
+    # count(*) = 0.
     sudo docker run -dit --name firebolt-core \
         --ulimit memlock=8589934592:8589934592 \
         --security-opt seccomp=unconfined \
         -p 127.0.0.1:3473:3473 \
         -v "$(pwd)/fb-volume:/var/lib/firebolt" \
         -v "$(pwd)/data:/firebolt-core/clickbench" \
+        -v "/opt/clickbench/datasets_ro:/opt/clickbench/datasets_ro:ro" \
         "${FB_IMAGE:-ghcr.io/firebolt-db/engine:dev}" >/dev/null
 fi
 

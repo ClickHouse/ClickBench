@@ -448,6 +448,24 @@ cat > /etc/hosts <<EOF
 127.0.0.1   localhost ubuntu
 ::1         localhost ip6-localhost ip6-loopback
 EOF
+
+# Disable needrestart's automatic service restarts. Ubuntu 24.04's
+# needrestart runs after every apt install/upgrade and, if it sees a
+# service whose libs got upgraded, restarts it — including our own
+# clickbench-agent.service (which links to libpython). Any install
+# script that upgrades python3 or its runtime libs (arcticdb pip
+# install → python3-dev, rayforce apt install → build-essential
+# pulling glibc-locale-source, etc.) triggers this. The mid-provision
+# restart drops the /provision HTTP connection → the host sees
+# ServerDisconnectedError and gives up. Set mode=l (list only) so
+# needrestart still runs and reports, but never restarts anything.
+mkdir -p /etc/needrestart/conf.d
+cat > /etc/needrestart/conf.d/99-clickbench.conf <<EOF
+# Managed by clickbench playground base image build.
+\$nrconf{restart} = 'l';
+\$nrconf{kernelhints} = 0;
+\$nrconf{ucodehints} = 0;
+EOF
 CUSTOMIZE
 sudo chmod +x "$MNT/tmp/customize-rest.sh"
 sudo chroot "$MNT" /tmp/customize-rest.sh
