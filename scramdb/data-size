@@ -1,0 +1,8 @@
+#!/bin/bash
+set -euo pipefail
+
+BENCH_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# The compiled-query cache sits inside the data directory but is derived from
+# the queries, not from the data.
+du -sb --exclude=scramvm_cache "$BENCH_DIR/db" | cut -f1

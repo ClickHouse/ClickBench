@@ -1,0 +1,3 @@
+#!/bin/bash
+set -e
+psql -t -c 'SELECT 1' >/dev/null
