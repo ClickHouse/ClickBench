@@ -1,0 +1,46 @@
+#!/bin/bash
+set -e -o pipefail
+
+# Install the release build of ClickHouse/ClickHouse#96844 ("Columns Cache"),
+# head c55690a2e8479e7c851e4ec042d7a69dbfe70d79 (v26.9.1.1), instead of the
+# published package. This directory exists only to benchmark that build; it is
+# not part of the published results.
+if [ ! -x /usr/bin/clickhouse ]; then
+    wget --continue --progress=dot:giga \
+        'https://clickhouse-builds.s3.amazonaws.com/PRs/96844/c55690a2e8479e7c851e4ec042d7a69dbfe70d79/pr/build_amd_release/clickhouse-common-static-26.9.1.1-amd64.tgz' \
+        -O clickhouse-pr.tgz
+    mkdir -p clickhouse-pr && tar -xzf clickhouse-pr.tgz -C clickhouse-pr
+    sudo clickhouse-pr/clickhouse-common-static-26.9.1.1/usr/bin/clickhouse install --noninteractive
+    rm -rf clickhouse-pr.tgz clickhouse-pr
+fi
+
+# See clickhouse/install for the rationale — without these, ./check passes on
+# SELECT 1 before user-database parts are loaded, and even after parts load the
+# per-table primary key and column sizes are populated lazily on first query.
+sudo mkdir -p /etc/clickhouse-server/config.d
+sudo tee /etc/clickhouse-server/config.d/eager_load.yaml >/dev/null <<'YAML'
+async_load_databases: false
+merge_tree:
+  primary_key_lazy_load: 0
+  columns_and_secondary_indices_sizes_lazy_calculation: 0
+YAML
+
+# Enable the PR's experimental columns cache, which is off by default.
+#
+# columns_cache_size is the server-level cap on deserialized column data kept
+# in memory; the PR's default is 2 GiB, too small to say much on a 32 GB
+# machine, so give it 8 GiB — a quarter of c6a.4xlarge's RAM, which leaves
+# plenty for query execution and the mark/uncompressed caches. Everything else
+# stays at the PR's defaults, including
+# columns_cache_max_estimated_compressed_bytes_to_write_to_cache (0 = half of
+# columns_cache_size), so wide scans still inhibit their own writes.
+sudo tee /etc/clickhouse-server/config.d/columns_cache.yaml >/dev/null <<'YAML'
+columns_cache_size: 8589934592
+YAML
+
+sudo mkdir -p /etc/clickhouse-server/users.d
+sudo tee /etc/clickhouse-server/users.d/columns_cache.yaml >/dev/null <<'YAML'
+profiles:
+  default:
+    use_columns_cache: 1
+YAML
