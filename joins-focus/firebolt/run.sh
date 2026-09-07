@@ -45,6 +45,13 @@ LOAD_ONLY="${LOAD_ONLY:-}"
 # QUERY_ONLY=1 runs ONLY the query phase, against a engine that is ALREADY up with data in it --
 # typically one left behind by LOAD_ONLY=1.
 QUERY_ONLY="${QUERY_ONLY:-}"
+# RESULTS=1 also dumps every query's full result set to query-results/<bench>/q<NNN>.txt, one
+# block per system in a shared file (see emit-result.py). TRIES=0 with RESULTS=1 means dump only
+RESULTS="${RESULTS:-}"
+if [ "${TRIES}" -lt 1 ] && [ -z "${RESULTS}" ]; then
+    echo "TRIES=0 only makes sense with RESULTS=1 (dump results, run no timings)." >&2
+    exit 1
+fi
 if [ -n "${LOAD_ONLY}" ] && [ -n "${QUERY_ONLY}" ]; then
     echo "LOAD_ONLY=1 and QUERY_ONLY=1 are mutually exclusive: one loads without querying, the" >&2
     echo "other queries without loading. Pick one." >&2
@@ -140,7 +147,11 @@ announce_cache_mode() {
     if [ "${DROP_CACHES}" = 0 ]; then
         echo "DROP_CACHES=0: page cache NOT dropped; the first of the ${TRIES} tries is not cold" >&2
     elif sudo -n true 2>/dev/null; then
-        echo "page cache dropped before each query (${TRIES} tries: 1 cold + $((TRIES - 1)) hot)" >&2
+        if [ "${TRIES}" -lt 1 ]; then
+            echo "page cache dropped before each query (no timing pass; results dump only)" >&2
+        else
+            echo "page cache dropped before each query (${TRIES} tries: 1 cold + $((TRIES - 1)) hot)" >&2
+        fi
     else
         echo "WARNING: no passwordless sudo, so the page cache cannot be dropped -- every one of" >&2
         echo "         the ${TRIES} tries is warm. Set DROP_CACHES=0 to make that explicit." >&2
@@ -322,6 +333,49 @@ emit_data_size_json() {  # $1 = fully-loaded benchmarks; volume size is cumulati
         END{printf "{"; for(x in s)printf "%s\"%s\": %s",(n++?", ":""),x,s[x]; printf "}"}' "${LOAD_STATS}" || printf '{}'
 }
 
+# One execution per query with the output captured, handed to emit-result.py.
+dump_results() {
+    local ds query n rc resp out msg status
+    local ACTUAL; ACTUAL="$(actual_version)"
+    for ds in ${QUERY_ORDER}; do
+        dataset_fully_loaded "${ds}" || { echo "=== ${ds}: not loaded; no results dumped ===" >&2; continue; }
+        echo "=== dumping ${ds} results ===" >&2
+        n=0
+        while IFS= read -r query <&3; do
+            [ -z "${query}" ] && continue
+            query="${query%;}"
+            n=$((n + 1))
+            resp=$(Qdb "${query}" "${ds}"); rc=$?
+            msg=""; status=ok; out=""
+            if [ "${rc}" != 0 ]; then
+                status=timeout; msg="http rc=${rc}, timeout >$((QUERY_TIMEOUT + 30))s?"
+            elif fb_failed "${resp}"; then
+                msg="$(fb_error "${resp}")"
+                case "${msg}" in
+                    *"emory"*) status=oom ;;
+                    *) status=error ;;
+                esac
+            else
+                # output_format=JSON_Compact makes data a list of row arrays, so the rows convert
+                # to TSV without needing the column names.
+                out=$(printf '%s' "${resp}" | python3 -c '
+import json, sys
+def cell(v):
+    if v is None: return "\\N"
+    if v is True: return "1"
+    if v is False: return "0"
+    return str(v)
+for row in json.load(sys.stdin).get("data") or []:
+    print("\t".join(cell(v) for v in row))
+' 2>/dev/null) || { status=error; msg="response was not JSON_Compact"; out=""; }
+            fi
+            printf '%s' "${out}" | python3 "${ROOT}/emit-result.py" \
+                --system firebolt --bench "${ds}" --query "${n}" --status "${status}" \
+                --version "${ACTUAL}" --message "${msg}" --null-token '\N' --root "${ROOT}"
+        done 3< "${HERE}/queries/${ds}.sql"
+    done
+}
+
 # Time every query and write results/firebolt.json.
 run_benchmark() {
     local ACTUAL ds query FIRST=1 qnum=0 row ds_loaded FULLY_LOADED="" n
@@ -406,7 +460,8 @@ if [ -n "${QUERY_ONLY}" ]; then
     else
         echo "QUERY_ONLY=1: no load times on record, so load_time will be empty" >&2
     fi
-    run_benchmark
+    if [ "${TRIES}" -ge 1 ]; then run_benchmark; fi
+    if [ -n "${RESULTS}" ]; then dump_results; fi
     echo "engine left running (this run did not start it). Tear down with:" >&2
     echo "    docker rm -fv ${CONTAINER} && sudo rm -rf ${VOLUME}" >&2
     exit 0
@@ -424,4 +479,9 @@ if [ -n "${LOAD_ONLY}" ]; then
     echo "Tear down with: docker rm -fv ${CONTAINER} && sudo rm -rf ${VOLUME}" >&2
     exit 0
 fi
-run_benchmark
+if [ "${TRIES}" -ge 1 ]; then
+    run_benchmark
+fi
+if [ -n "${RESULTS}" ]; then
+    dump_results
+fi

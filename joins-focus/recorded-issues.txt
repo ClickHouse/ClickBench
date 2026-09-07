@@ -1,0 +1,34 @@
+# Divergences whose cause has been established, so a run reports them as RECORDED and reserves
+# DIFFER for something new. Format: <bench> <query> <category> <note>
+#
+# These are NOT mechanically detectable from the dumps -- integer division leaves no numeric
+# trace when it changes which rows pass a predicate -- which is why they are listed by hand
+# rather than classified by compare-results.py.
+
+# int/int truncates on CedarDB (PostgreSQL semantics, verified against Postgres 16.15) and
+# ROUNDS on Firebolt, where the other four promote to a fractional type.
+tpcds q022 int-division   inv_after/inv_before BETWEEN 2/3 AND 3/2: CedarDB keeps only int(ratio)==1, window 1.003-1.883 vs 0.672-1.494; 55 rows differ. Firebolt rounds, so 0.502 passes
+tpcds q037 int-division   hd_dep_count/hd_vehicle_count > 1.2 becomes 1 > 1.2: CedarDB returns 354 rows vs 455. 1040 of 1600 eligible households pass under true division, 800 under integer
+tpcds q077 int-division   same predicate with > 1: CedarDB and Firebolt return no rows at all where four engines return one
+tpcds q082 int-division   ss_qty ratio: CedarDB 0, Firebolt 1, others 0.67
+tpcds q087 int-division   sr_item_qty/(sr+cr+wr)/3.0*100: CedarDB 0.000000 on all 24 rows, Firebolt 33.33, others 17.24137931034483. The same row's (sr+cr+wr)/3.0 is correct at 48.333333, because 3.0 forces promotion
+
+# ClickHouse decimal division takes the DIVIDEND's scale and truncates, so the quotient has
+# already lost digits before round() runs.
+tpch  q008 decimal-scale  mkt_share: dividend scale 4, so 0.0344 against 0.034435
+tpcds q002 decimal-scale  round(sun_sales1/sun_sales2, 2): dividend scale 2, so 3.51 against 3.52 on 9240 of 17591 ratio values, always exactly -0.01
+tpcds q065 decimal-scale  51.8200 against 51.8231914518851 -- truncated at 2dp, then padded back to the declared 4dp
+
+# CAST(numeric AS int): PostgreSQL, DuckDB, CedarDB and Firebolt round; ClickHouse, Doris and
+# StarRocks truncate. Both legal, SQL:2016 leaves it implementation-defined.
+tpcds q058 cast-rounding  CAST(revenue/50 AS int) puts one customer in segment 10714 or 10715; the derived segment*50 column amplifies the 1-unit difference to 50
+
+# ClickHouse FixedString(N) padding survives inside a concatenation, so the NULs are interior
+# and the dump's trailing-NUL stripping cannot reach them.
+tpcds q088 padding        'Benson\0\0...\0, Floyd' against 'Benson, Floyd' on 15 of 16 rows
+
+# Bare "date + integer" -- the only such expression in the whole query set. Verified by running
+# each engine: CAST('1999-11-26' AS DATE) + 5 gives 1999-12-01 on DuckDB/CedarDB/ClickHouse/PG,
+# 19991131 on Doris and 19991131.0 on StarRocks. Both MySQL-family engines add numerically on the
+# YYYYMMDD form, so the result is an invalid date whenever d_date is within 5 days of a month end.
+tpcds q076 date-arithmetic  d1.d_date + 5: Doris compares the invalid value as a date, so the predicate is NULL and the row drops -- it loses the two count=2 groups at d_week_seq 5213 (1999-11-23..29) and all of 5218 (1999-12-28..2000-01-03). StarRocks compares numerically, which over-includes instead: '1999-12-01' > ('1999-11-26' + 5) returns true where the answer is false

@@ -30,3 +30,7 @@ __pycache__/
 #                                 in the page. versions/.gitignore ignores logs/ because there
 #                                 they are only artifacts; here that would silently drop a column.
 #   data.generated.js             what index.html loads; the page shows nothing without it.
+
+# Query result dumps from RESULTS=1 -- full result sets for every query, every system, so
+# unbounded in size and regenerable. Diagnostic output, not measurements.
+query-results/

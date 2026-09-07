@@ -31,6 +31,13 @@ LOAD_ONLY="${LOAD_ONLY:-}"
 # QUERY_ONLY=1 runs ONLY the query phase, against a server that is ALREADY up with data in it --
 # typically one left behind by LOAD_ONLY=1.
 QUERY_ONLY="${QUERY_ONLY:-}"
+# RESULTS=1 also dumps every query's full result set to query-results/<bench>/q<NNN>.txt, one
+# block per system in a shared file (see emit-result.py). TRIES=0 with RESULTS=1 means dump only.
+RESULTS="${RESULTS:-}"
+if [ "${TRIES}" -lt 1 ] && [ -z "${RESULTS}" ]; then
+    echo "TRIES=0 only makes sense with RESULTS=1 (dump results, run no timings)." >&2
+    exit 1
+fi
 if [ -n "${LOAD_ONLY}" ] && [ -n "${QUERY_ONLY}" ]; then
     echo "LOAD_ONLY=1 and QUERY_ONLY=1 are mutually exclusive: one loads without querying, the" >&2
     echo "other queries without loading. Pick one." >&2
@@ -46,11 +53,7 @@ CONTAINER="dbbench_cedardb"
 # Must satisfy the password policy CedarDB enforces from v2026-08-20 on.
 PASSWORD="Cedarbench1!"
 # One file per run, never overwritten.
-# The "machine" field of the results, which the page displays instead of naming a host in its own
-# text -- so a report always describes the machine it was measured on. `uname -m` alone was
-# useless: every x86 host reported "x86_64", which distinguishes nothing. The EC2 instance type
-# comes from IMDSv2 when available; core count, RAM and root-volume size are read locally. Set
-# MACHINE=... to override with anything the probe cannot see.
+# The "machine" field of the results.
 machine_label() {
     local tok itype cores ram disk
     tok=$(curl -sX PUT http://169.254.169.254/latest/api/token \
@@ -117,7 +120,11 @@ announce_cache_mode() {
     if [ "${DROP_CACHES}" = 0 ]; then
         echo "DROP_CACHES=0: page cache NOT dropped; the first of the ${TRIES} tries is not cold" >&2
     elif sudo -n true 2>/dev/null; then
-        echo "page cache dropped before each query (${TRIES} tries: 1 cold + $((TRIES - 1)) hot)" >&2
+        if [ "${TRIES}" -lt 1 ]; then
+            echo "page cache dropped before each query (no timing pass; results dump only)" >&2
+        else
+            echo "page cache dropped before each query (${TRIES} tries: 1 cold + $((TRIES - 1)) hot)" >&2
+        fi
     else
         echo "WARNING: no passwordless sudo, so the page cache cannot be dropped -- every one of" >&2
         echo "         the ${TRIES} tries is warm. Set DROP_CACHES=0 to make that explicit." >&2
@@ -239,7 +246,7 @@ run_query() {
     drop_caches
     script="SET search_path TO \"${ds}\";"$'\n'"SET statement_timeout=${QUERY_TIMEOUT}000;"$'\n'"\\timing on"$'\n'
     for i in $(seq 1 "${TRIES}"); do script+="${query};"$'\n'; done
-    out=$(printf '%s' "${script}" | timeout -k 10 "$((QUERY_TIMEOUT * TRIES + 60))" docker run --rm -i --network host \
+    out=$(printf '%s' "${script}" | timeout -k 10 "$((QUERY_TIMEOUT * (TRIES > 0 ? TRIES : 1) + 60))" docker run --rm -i --network host \
           -e PGPASSWORD="${PASSWORD}" "${PSQL_IMAGE}" psql -h127.0.0.1 -p5432 -U postgres -d postgres 2>&1)
     # Match psql's error prefix ("ERROR:"/"FATAL:"), not "error" in result data.
     if printf '%s' "${out}" | grep -qE 'ERROR:|FATAL:'; then
@@ -350,6 +357,45 @@ print(f'{d["system"]} {d["version"]}: ' + '  '.join(parts) +
 SUMPY
 }
 
+# One execution per query with output captured, handed to emit-result.py.
+dump_results() {
+    local ds query n out rc msg status ACTUAL
+    ACTUAL="$(actual_version)"
+    for ds in ${QUERY_ORDER}; do
+        dataset_fully_loaded "${ds}" || { echo "=== ${ds}: not loaded; no results dumped ===" >&2; continue; }
+        echo "=== dumping ${ds} results ===" >&2
+        n=0
+        while IFS= read -r query <&3; do
+            [ -z "${query}" ] && continue
+            n=$((n + 1))
+            out=$(timeout -k 10 "$((QUERY_TIMEOUT + 60))" docker run --rm -i --network host \
+                  -e PGPASSWORD="${PASSWORD}" "${PSQL_IMAGE}" \
+                  psql -h127.0.0.1 -p5432 -U postgres -d postgres -qtA -F$'\t' -P null='\N' \
+                  -v ON_ERROR_STOP=1 \
+                  -c "SET search_path TO \"${ds}\"; SET statement_timeout=${QUERY_TIMEOUT}000; ${query}" \
+                  2>/tmp/cedar_dump_err)
+            rc=$?
+            msg=""; status=ok
+            # stderr goes to a file, not into ${out}: merged with 2>&1 any NOTICE the server chose
+            # to print would be recorded as a result row.
+            if [ "${rc}" -ne 0 ]; then
+                msg="$(tr '\n' ' ' < /tmp/cedar_dump_err 2>/dev/null | grep -oE '(ERROR|FATAL):.*' | head -1 | cut -c1-200)"
+                [ -z "${msg}" ] && msg="$(tr '\n' ' ' < /tmp/cedar_dump_err 2>/dev/null | cut -c1-200)"
+                case "${msg}" in
+                    *"statement timeout"*|*canceled*) status=timeout ;;
+                    *"unable to allocate"*|*"memory is exhausted"*) status=oom ;;
+                    *) status=error ;;
+                esac
+                out=""
+            fi
+            printf '%s' "${out}" | python3 "${ROOT}/emit-result.py" \
+                --system cedardb --bench "${ds}" --query "${n}" --status "${status}" \
+                --version "${ACTUAL}" --message "${msg}" --null-token '\N' --root "${ROOT}"
+        done 3< "${HERE}/queries/${ds}.sql"
+    done
+    rm -f /tmp/cedar_dump_err
+}
+
 # ---- run ----
 announce_cache_mode
 if [ -n "${QUERY_ONLY}" ]; then
@@ -363,7 +409,8 @@ if [ -n "${QUERY_ONLY}" ]; then
     else
         echo "QUERY_ONLY=1: no load times on record, so load_time will be empty" >&2
     fi
-    run_benchmark
+    if [ "${TRIES}" -ge 1 ]; then run_benchmark; fi
+    if [ -n "${RESULTS}" ]; then dump_results; fi
     echo "server left running (this run did not start it). Tear down with:" >&2
     echo "    docker rm -fv ${CONTAINER}" >&2
     exit 0
@@ -384,4 +431,9 @@ if [ -n "${LOAD_ONLY}" ]; then
     echo "Tear down with: docker rm -fv ${CONTAINER}" >&2
     exit 0
 fi
-run_benchmark
+if [ "${TRIES}" -ge 1 ]; then
+    run_benchmark
+fi
+if [ -n "${RESULTS}" ]; then
+    dump_results
+fi

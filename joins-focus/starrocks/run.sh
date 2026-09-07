@@ -44,6 +44,13 @@ LOAD_ONLY="${LOAD_ONLY:-}"
 # QUERY_ONLY=1 runs ONLY the query phase, against a server that is ALREADY up with data in it --
 # typically one left behind by LOAD_ONLY=1.
 QUERY_ONLY="${QUERY_ONLY:-}"
+# RESULTS=1 also dumps every query's full result set to query-results/<bench>/q<NNN>.txt, one
+# block per system in a shared file (see emit-result.py). TRIES=0 with RESULTS=1 means dump only
+RESULTS="${RESULTS:-}"
+if [ "${TRIES}" -lt 1 ] && [ -z "${RESULTS}" ]; then
+    echo "TRIES=0 only makes sense with RESULTS=1 (dump results, run no timings)." >&2
+    exit 1
+fi
 if [ -n "${LOAD_ONLY}" ] && [ -n "${QUERY_ONLY}" ]; then
     echo "LOAD_ONLY=1 and QUERY_ONLY=1 are mutually exclusive: one loads without querying, the" >&2
     echo "other queries without loading. Pick one." >&2
@@ -123,7 +130,11 @@ announce_cache_mode() {
     if [ "${DROP_CACHES}" = 0 ]; then
         echo "DROP_CACHES=0: page cache NOT dropped; the first of the ${TRIES} tries is not cold" >&2
     elif sudo -n true 2>/dev/null; then
-        echo "page cache dropped before each query (${TRIES} tries: 1 cold + $((TRIES - 1)) hot)" >&2
+        if [ "${TRIES}" -lt 1 ]; then
+            echo "page cache dropped before each query (no timing pass; results dump only)" >&2
+        else
+            echo "page cache dropped before each query (${TRIES} tries: 1 cold + $((TRIES - 1)) hot)" >&2
+        fi
     else
         echo "WARNING: no passwordless sudo, so the page cache cannot be dropped -- every one of" >&2
         echo "         the ${TRIES} tries is warm. Set DROP_CACHES=0 to make that explicit." >&2
@@ -360,6 +371,44 @@ emit_data_size_json() {  # $1 = fully-loaded benchmarks
     [ -s "${SIZE_STATS}" ] && awk -F'\t' -v L="${loaded}" 'index(L," "$1" ")>0{s[$1]+=$2} END{printf "{"; for(d in s)printf "%s\"%s\": %s",(n++?", ":""),d,s[d]; printf "}"}' "${SIZE_STATS}" || printf '{}'
 }
 
+# One execution per query with the output captured, handed to emit-result.py.
+dump_results() {
+    local ds query n rc out msg status
+    local ACTUAL; ACTUAL="$(actual_version)"
+    for ds in ${QUERY_ORDER}; do
+        dataset_fully_loaded "${ds}" || { echo "=== ${ds}: not loaded; no results dumped ===" >&2; continue; }
+        echo "=== dumping ${ds} results ===" >&2
+        n=0
+        while IFS= read -r query <&3; do
+            [ -z "${query}" ] && continue
+            query="${query%;}"
+            n=$((n + 1))
+            # -N drops the header, -B (batch) makes the output tab-separated and escaped. SET and
+            # USE emit no rows in the mysql protocol, so unlike psql they cannot inflate the dump.
+            out=$(timeout -k 10 "$((QUERY_TIMEOUT + 60))" docker exec -i "${CONTAINER}" \
+                  mysql -h127.0.0.1 -P9030 -uroot -N -B --connect-timeout=30 -D "${ds}" \
+                  -e "SET query_timeout=${QUERY_TIMEOUT}; ${query};" \
+                  </dev/null 2>/tmp/starrocks_dump_err); rc=$?
+            msg=""; status=ok
+            if [ "${rc}" = 124 ] || [ "${rc}" = 137 ]; then status=timeout; msg="timeout >${QUERY_TIMEOUT}s"
+            elif [ "${rc}" != 0 ]; then
+                msg="$(tr '\n' ' ' < /tmp/starrocks_dump_err 2>/dev/null | cut -c1-200)"
+                case "${msg}" in
+                    *"timeout"*|*"Timeout"*|*"cancelled"*) status=timeout ;;
+                    *"Memory"*|*"memory"*) status=oom ;;
+                    *) status=error ;;
+                esac
+                out=""
+            fi
+            printf '%s' "${out}" | python3 "${ROOT}/emit-result.py" \
+                --system starrocks --bench "${ds}" --query "${n}" --status "${status}" \
+                --version "${ACTUAL}" --message "${msg}" --null-token 'NULL' --tsv-escaped \
+                --root "${ROOT}"
+        done 3< "${HERE}/queries/${ds}.sql"
+    done
+    rm -f /tmp/starrocks_dump_err
+}
+
 # Time every query and write results/starrocks.json.
 run_benchmark() {
     local ACTUAL ds query FIRST=1 qnum=0 row ds_loaded FULLY_LOADED="" n
@@ -455,7 +504,8 @@ if [ -n "${QUERY_ONLY}" ]; then
     else
         echo "QUERY_ONLY=1: no load times on record, so load_time will be empty" >&2
     fi
-    run_benchmark
+    if [ "${TRIES}" -ge 1 ]; then run_benchmark; fi
+    if [ -n "${RESULTS}" ]; then dump_results; fi
     echo "server left running (this run did not start it). Tear down with:" >&2
     echo "    docker rm -fv ${CONTAINER}" >&2
     exit 0
@@ -473,4 +523,9 @@ if [ -n "${LOAD_ONLY}" ]; then
     echo "Tear down with: docker rm -fv ${CONTAINER}" >&2
     exit 0
 fi
-run_benchmark
+if [ "${TRIES}" -ge 1 ]; then
+    run_benchmark
+fi
+if [ -n "${RESULTS}" ]; then
+    dump_results
+fi

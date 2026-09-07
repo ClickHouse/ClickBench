@@ -40,6 +40,13 @@ LOAD_ONLY="${LOAD_ONLY:-}"
 #
 # load_time is NOT measured by such a run. It is carried over from the last load.
 QUERY_ONLY="${QUERY_ONLY:-}"
+# RESULTS=1 also dumps every query's full result set to query-results/<bench>/q<NNN>.txt, one
+# block per system in a shared file (see emit-result.py). TRIES=0 with RESULTS=1 means dump only
+RESULTS="${RESULTS:-}"
+if [ "${TRIES}" -lt 1 ] && [ -z "${RESULTS}" ]; then
+    echo "TRIES=0 only makes sense with RESULTS=1 (dump results, run no timings)." >&2
+    exit 1
+fi
 if [ -n "${LOAD_ONLY}" ] && [ -n "${QUERY_ONLY}" ]; then
     echo "LOAD_ONLY=1 and QUERY_ONLY=1 are mutually exclusive: one loads without querying, the" >&2
     echo "other queries without loading. Pick one." >&2
@@ -54,14 +61,7 @@ CONTAINER="dbbench_clickhouse"
 CDATA="/data"   # where ${DATA} is mounted in the container; user_files_path points here
 # Threads per server-side INSERT ... SELECT FROM file().
 INSERT_THREADS="${INSERT_THREADS:-$(( $(nproc) / 4 ))}"
-# One file per run: the timestamp keeps a run of one benchmark from erasing another benchmark's
-# timings. generate-results.sh groups these by system and takes each benchmark's rows from the
-# newest run that has them.
-# The "machine" field of the results, which the page displays instead of naming a host in its own
-# text -- so a report always describes the machine it was measured on. `uname -m` alone was
-# useless: every x86 host reported "x86_64", which distinguishes nothing. The EC2 instance type
-# comes from IMDSv2 when available; core count, RAM and root-volume size are read locally. Set
-# MACHINE=... to override with anything the probe cannot see.
+# The "machine" field of the results.
 machine_label() {
     local tok itype cores ram disk
     tok=$(curl -sX PUT http://169.254.169.254/latest/api/token \
@@ -284,7 +284,11 @@ announce_cache_mode() {
     if [ "${DROP_CACHES}" = 0 ]; then
         echo "DROP_CACHES=0: page cache NOT dropped; the first of the ${TRIES} tries is not cold" >&2
     elif sudo -n true 2>/dev/null; then
-        echo "page cache dropped before each query (${TRIES} tries: 1 cold + $((TRIES - 1)) hot)" >&2
+        if [ "${TRIES}" -lt 1 ]; then
+            echo "page cache dropped before each query (no timing pass; results dump only)" >&2
+        else
+            echo "page cache dropped before each query (${TRIES} tries: 1 cold + $((TRIES - 1)) hot)" >&2
+        fi
     else
         echo "WARNING: no passwordless sudo, so the page cache cannot be dropped -- every one of" >&2
         echo "         the ${TRIES} tries is warm. Set DROP_CACHES=0 to make that explicit." >&2
@@ -473,6 +477,39 @@ SUMPY
     report_sizes
 }
 
+# One execution per query with the output captured, handed to emit-result.py.
+dump_results() {
+    local ds query n rc out msg status
+    local ACTUAL; ACTUAL="$(server_version)"
+    for ds in ${QUERY_ORDER}; do
+        dataset_fully_loaded "${ds}" || { echo "=== ${ds}: not loaded; no results dumped ===" >&2; continue; }
+        echo "=== dumping ${ds} results ===" >&2
+        n=0
+        while IFS= read -r query <&3; do
+            [ -z "${query}" ] && continue
+            n=$((n + 1))
+            CH_TIMEOUT="${QUERY_TIMEOUT}"
+            # output_format_decimal_trailing_zeros=1 makes a Decimal print its declared scale.
+            out=$(printf '%s' "${query}" | client --database "${ds}" ${SETTINGS} \
+                  --output_format_decimal_trailing_zeros=1 \
+                  --format=TSV 2>/tmp/ch_dump_err); rc=$?
+            CH_TIMEOUT=""
+            msg=""; status=ok
+            if [ "${rc}" = 124 ] || [ "${rc}" = 137 ]; then status=timeout; msg="timeout >${QUERY_TIMEOUT}s"
+            elif [ "${rc}" != 0 ]; then
+                msg="$(fmt_err "$(cat /tmp/ch_dump_err 2>/dev/null)")"
+                case "${msg}" in *"MEMORY_LIMIT_EXCEEDED"*|*"memory limit"*) status=oom ;; *) status=error ;; esac
+                out=""
+            fi
+            printf '%s' "${out}" | python3 "${ROOT}/emit-result.py" \
+                --system clickhouse --bench "${ds}" --query "${n}" --status "${status}" \
+                --version "${ACTUAL}" --message "${msg}" --null-token '\N' --tsv-escaped \
+                --root "${ROOT}"
+        done 3< "${HERE}/queries/${ds}.sql"
+    done
+    rm -f /tmp/ch_dump_err
+}
+
 # ---- run ----
 announce_cache_mode
 if [ -n "${QUERY_ONLY}" ]; then
@@ -486,7 +523,8 @@ if [ -n "${QUERY_ONLY}" ]; then
     else
         echo "QUERY_ONLY=1: no load times on record, so load_time will be empty" >&2
     fi
-    run_benchmark
+    if [ "${TRIES}" -ge 1 ]; then run_benchmark; fi
+    if [ -n "${RESULTS}" ]; then dump_results; fi
     echo "server left running (this run did not start it). Tear down with:" >&2
     echo "    sudo docker rm -fv ${CONTAINER}" >&2
     exit 0
@@ -501,4 +539,9 @@ if [ -n "${LOAD_ONLY}" ]; then
     echo "Tear down with: sudo docker rm -fv ${CONTAINER}" >&2
     exit 0
 fi
-run_benchmark
+if [ "${TRIES}" -ge 1 ]; then
+    run_benchmark
+fi
+if [ -n "${RESULTS}" ]; then
+    dump_results
+fi

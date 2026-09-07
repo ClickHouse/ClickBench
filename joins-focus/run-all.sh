@@ -5,6 +5,9 @@
 #   ./run-all.sh --benchmarks tpch        # all 7 systems, TPC-H only
 #   ./run-all.sh --systems "clickhouse duckdb"
 #   STATISTICS=1 ./run-all.sh             # every system collects statistics after loading
+#   TRIES=0 RESULTS=1 ./run-all.sh --systems "clickhouse duckdb" --benchmarks tpch
+#                                         # no timings: dump each system's query results and
+#                                         # compare them, instead of regenerating the page
 #
 # A system that fails does not stop the run -- its results file simply reports null for the
 # queries it could not time, and the others still complete. The exit status is 0 unless every
@@ -20,10 +23,15 @@ while [ "$#" -gt 0 ]; do
     case "$1" in
         --systems)    SYSTEMS="$2"; shift 2 ;;
         --benchmarks) BENCHMARKS="$2"; shift 2 ;;
-        -h|--help)    sed -n '2,16p' "$0" | sed 's/^#\( \|$\)//'; exit 0 ;;
+        -h|--help)    awk 'NR>1{if(!/^#/)exit; sub(/^#( |$)/,""); print}' "$0"; exit 0 ;;
         *) echo "unknown option: $1 (want --systems / --benchmarks)" >&2; exit 1 ;;
     esac
 done
+
+# TRIES=0 RESULTS=1 is the results-comparison mode: no timing pass, and the runners write no
+# results file. Both of this script's closing steps assume one was written, so they are replaced.
+DUMP_ONLY=0
+[ "${TRIES:-6}" -lt 1 ] && DUMP_ONLY=1
 
 # Every system lives in its own directory with its own run.sh.
 runner_of() { printf '%s/%s/run.sh' "${HERE}" "$1"; }
@@ -39,8 +47,14 @@ for s in ${SYSTEMS}; do
         log="$(ls -t "${HERE}/logs/${s}"/*.log 2>/dev/null | head -1)"
         # grep -c PRINTS 0 and EXITS 1 when nothing matches, so `|| echo 0` fired as well and
         # the count came out as two lines ("0\n0"). Capture it, then default an empty capture.
-        n=$(grep -c '^q[0-9]* .*\[' "${log:-/dev/null}" 2>/dev/null); n=${n:-0}
-        echo "--- ${s}: ${n} queries logged (${log:-no log written})" >&2
+        if [ "${DUMP_ONLY}" = 1 ]; then
+            # A dump logs "tpch q1: clickhouse ok, 4 rows", not the timing loop's "q1 [tpch]: [...]".
+            n=$(grep -cE '^[a-z]+ q[0-9]+: ' "${log:-/dev/null}" 2>/dev/null); n=${n:-0}
+            echo "--- ${s}: ${n} query results dumped (${log:-no log written})" >&2
+        else
+            n=$(grep -c '^q[0-9]* .*\[' "${log:-/dev/null}" 2>/dev/null); n=${n:-0}
+            echo "--- ${s}: ${n} queries logged (${log:-no log written})" >&2
+        fi
     else
         echo "--- ${s}: FAILED (see logs/${s}/)" >&2
         failed+=" ${s}"
@@ -49,6 +63,15 @@ done
 
 echo >&2
 echo "=== summary ===" >&2
+if [ "${DUMP_ONLY}" = 1 ]; then
+    # The table below reads the newest results file per system. This run wrote none, so it would
+    # show OLD timings under a fresh header -- and generate-results.sh would rebuild the page from
+    # them. Report what this run actually produced: whether the engines agreed.
+    "${HERE}/compare-results.py" ${BENCHMARKS} >&2
+    [ "${ok}" -gt 0 ] || { echo "every system failed:${failed}" >&2; exit 1; }
+    [ -n "${failed}" ] && echo "failed:${failed}" >&2
+    exit 0
+fi
 python3 - "${HERE}" <<'PY' >&2
 import json, glob, os, sys
 root = sys.argv[1]

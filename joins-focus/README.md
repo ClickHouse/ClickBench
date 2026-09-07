@@ -68,12 +68,14 @@ STATISTICS=1 ./run-all.sh           # collect statistics after loading
 | `KEEP_DATA` | off | leave a system's loaded data on disk when its run ends |
 | `LOAD_ONLY` | off | start the server and load, then stop — server left running, no queries, no results file |
 | `QUERY_ONLY` | off | the reverse: query a server that is **already** loaded and running. Starts nothing, loads nothing, leaves it running. Writes a results file |
-| `MACHINE` | `uname -m` | label recorded in the results |
+| `RESULTS` | off | also dump every query's full result set to `query-results/`, for comparing engines. `TRIES=0 RESULTS=1` dumps without timing anything |
+| `MACHINE` | probed | label recorded in the results: instance type, vCPUs, RAM, disk. Set it to override what the probe cannot see |
 
 Each runner prints which cache mode it used, so a set of numbers says what it measured:
 
 ```
 page cache dropped before each query (6 tries: 1 cold + 5 hot)
+page cache dropped before each query (no timing pass; results dump only)
 DROP_CACHES=0: page cache NOT dropped; the first of the 6 tries is not cold
 ```
 
@@ -92,6 +94,9 @@ clickhouse/config/        the IPv4 listen override mounted into the server
 data/parquet, data/csv    generated data, shared by every system
 results/<system>/<ts>.json one file per run; the generator folds them per system
 generate-results.sh       results/*.json -> data.generated.js -> index.html
+emit-result.py            records one query's rows into query-results/, called by the runners
+compare-results.py        reads query-results/ and reports where engines disagree
+query-results/<bench>/q<NNN>.txt   every system's rows for one query, in one file (not committed)
 ```
 
 The page shows one query text per position, taken from `clickhouse/queries/` — each system has
@@ -145,7 +150,7 @@ The file contents:
 
 ```json
 { "system": "ClickHouse", "version": "26.7.5.10", "actual_version": "26.7.5.10",
-  "machine": "x86_64", "kind": "dbbench",
+  "machine": "c7a.8xlarge, 32 vCPU, 61 GB RAM, 484 GB disk", "kind": "dbbench",
   "load_time": {"tpch": 7}, "stats_time": {"tpch": 3}, "data_size": {"tpch": 480327132},
   "result": [[0.624, 0.057, ...], ...] }
 ```
@@ -153,6 +158,47 @@ The file contents:
 `result` is always **238 rows** — TPC-H 22, then TPC-DS 103, then JOB 113 — so a row's position
 identifies its query no matter which benchmarks a run covered. A query that could not run is a
 row of nulls.
+
+## Comparing results across systems
+
+Timings say nothing about whether the answers agree. `RESULTS=1` dumps every query's full result
+set and every system appends its own block to the same file:
+
+```bash
+TRIES=0 RESULTS=1 ./clickhouse/run.sh tpch    # dump only: no timings, no results file written
+TRIES=0 RESULTS=1 ./cedardb/run.sh tpch       # appends to the same query-results/tpch/q*.txt
+./compare-results.py tpch                     # exits non-zero if any engines really disagree
+```
+
+Or in one command, which runs the comparison at the end instead of rebuilding the page:
+
+```bash
+TRIES=0 RESULTS=1 ./run-all.sh --systems "clickhouse duckdb" --benchmarks tpch
+```
+
+One file per query, `query-results/<bench>/q<NNN>.txt`, holding one block per system. Re-running a
+system replaces its own block. Under `TRIES=0` no results file is written at all, so a correctness
+check can never displace a measurement.
+
+`compare-results.py` treats no system as the reference — it groups them by what they returned:
+
+```
+q008  SCALE     6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+      clickhouse vs cedardb: SCALE(4dp vs 6dp)  line 1: 0.0344 vs 0.034435
+      firebolt vs cedardb: SCALE(2dp vs 6dp)  line 1: 0.03 vs 0.034435
+q006  DIFFER    2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+      firebolt vs ...: DIFFER(0d)  line 1: 75207788.40 vs 123141078.2283
+   DIFFER 1, IDENTICAL 6, PRECISION 8, SAME 4, SCALE 3
+```
+
+`IDENTICAL` is byte-equal and `SAME` is equal once number formatting is canonicalised. `ORDER` is
+the same rows in another order. `SCALE(NdP vs Mdp)` means one engine
+truncated or rounded to fewer decimal places. `PRECISION(Nd)` is a difference that scale
+does **not** explain, agreeing to N significant digits — arithmetic that actually diverged.
+`DIFFER` is a real disagreement.
+
+Two normalisations happen at dump time, both about how a client prints a value rather than what
+the engine computed: NULL becomes `<NULL>`, and trailing NUL or space padding is stripped.
 
 ## Notes on individual systems
 
