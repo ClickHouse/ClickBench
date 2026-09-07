@@ -5,10 +5,15 @@ set -e -o pipefail
 # head c55690a2e8479e7c851e4ec042d7a69dbfe70d79 (v26.9.1.1), instead of the
 # published package. This directory exists only to benchmark that build; it is
 # not part of the published results.
+BUILD=https://clickhouse-builds.s3.amazonaws.com/PRs/96844/c55690a2e8479e7c851e4ec042d7a69dbfe70d79/pr
+
 if [ ! -x /usr/bin/clickhouse ]; then
-    wget --continue --progress=dot:giga \
-        'https://clickhouse-builds.s3.amazonaws.com/PRs/96844/c55690a2e8479e7c851e4ec042d7a69dbfe70d79/pr/build_amd_release/clickhouse-common-static-26.9.1.1-amd64.tgz' \
-        -O clickhouse-pr.tgz
+    case "$(uname -m)" in
+        x86_64)  job=build_amd_release; pkg=clickhouse-common-static-26.9.1.1-amd64.tgz ;;
+        aarch64) job=build_arm_release; pkg=clickhouse-common-static-26.9.1.1-arm64.tgz ;;
+        *) echo "no PR build for $(uname -m)" >&2; exit 1 ;;
+    esac
+    wget --continue --progress=dot:giga "$BUILD/$job/$pkg" -O clickhouse-pr.tgz
     mkdir -p clickhouse-pr && tar -xzf clickhouse-pr.tgz -C clickhouse-pr
     sudo clickhouse-pr/clickhouse-common-static-26.9.1.1/usr/bin/clickhouse install --noninteractive
     rm -rf clickhouse-pr.tgz clickhouse-pr

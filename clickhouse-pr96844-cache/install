@@ -5,10 +5,15 @@ set -e -o pipefail
 # head c55690a2e8479e7c851e4ec042d7a69dbfe70d79 (v26.9.1.1), instead of the
 # published package. This directory exists only to benchmark that build; it is
 # not part of the published results.
+BUILD=https://clickhouse-builds.s3.amazonaws.com/PRs/96844/c55690a2e8479e7c851e4ec042d7a69dbfe70d79/pr
+
 if [ ! -x /usr/bin/clickhouse ]; then
-    wget --continue --progress=dot:giga \
-        'https://clickhouse-builds.s3.amazonaws.com/PRs/96844/c55690a2e8479e7c851e4ec042d7a69dbfe70d79/pr/build_amd_release/clickhouse-common-static-26.9.1.1-amd64.tgz' \
-        -O clickhouse-pr.tgz
+    case "$(uname -m)" in
+        x86_64)  job=build_amd_release; pkg=clickhouse-common-static-26.9.1.1-amd64.tgz ;;
+        aarch64) job=build_arm_release; pkg=clickhouse-common-static-26.9.1.1-arm64.tgz ;;
+        *) echo "no PR build for $(uname -m)" >&2; exit 1 ;;
+    esac
+    wget --continue --progress=dot:giga "$BUILD/$job/$pkg" -O clickhouse-pr.tgz
     mkdir -p clickhouse-pr && tar -xzf clickhouse-pr.tgz -C clickhouse-pr
     sudo clickhouse-pr/clickhouse-common-static-26.9.1.1/usr/bin/clickhouse install --noninteractive
     rm -rf clickhouse-pr.tgz clickhouse-pr
@@ -28,14 +33,17 @@ YAML
 # Enable the PR's experimental columns cache, which is off by default.
 #
 # columns_cache_size is the server-level cap on deserialized column data kept
-# in memory; the PR's default is 2 GiB, too small to say much on a 32 GB
-# machine, so give it 8 GiB — a quarter of c6a.4xlarge's RAM, which leaves
-# plenty for query execution and the mark/uncompressed caches. Everything else
+# in memory. The PR's default is a flat 2 GiB, which says little on either end
+# of the machine range, so give the cache a quarter of the machine's RAM: 8 GiB
+# on c6a.4xlarge, ~96 GiB on the metals, 512 MiB on t3a.small (the server
+# lowers it further by itself on machines with little RAM). That leaves plenty
+# for query execution and for the mark and uncompressed caches. Everything else
 # stays at the PR's defaults, including
 # columns_cache_max_estimated_compressed_bytes_to_write_to_cache (0 = half of
 # columns_cache_size), so wide scans still inhibit their own writes.
-sudo tee /etc/clickhouse-server/config.d/columns_cache.yaml >/dev/null <<'YAML'
-columns_cache_size: 8589934592
+columns_cache_size=$(awk '/^MemTotal:/ { print int($2 * 1024 / 4) }' /proc/meminfo)
+sudo tee /etc/clickhouse-server/config.d/columns_cache.yaml >/dev/null <<YAML
+columns_cache_size: ${columns_cache_size}
 YAML
 
 sudo mkdir -p /etc/clickhouse-server/users.d
