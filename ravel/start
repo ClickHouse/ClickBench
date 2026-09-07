@@ -1,0 +1,99 @@
+#!/bin/bash
+set -eu
+. ./ravel-env.sh
+
+# Idempotent: ./check succeeds only for the server this harness launched (it
+# verifies the pidfile's pid owns the listening port), so "already serving"
+# here means ours is up, never a stale one.
+if ./check >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Nothing of ours is serving. Before launching, the listen ports must be free:
+# a killed server holds them for a while after its pid is gone, and a server
+# this harness did not start may hold them indefinitely. Launching into either
+# fails with EADDRINUSE, and the driver would then time out its check loop
+# without saying why. Wait for the transient case, refuse the other.
+http_port="${RAVEL_HTTP##*:}"
+ports_busy() {
+    ss -ltnH "( sport = :$http_port or sport = :4317 )" 2>/dev/null | grep -q .
+}
+for _ in $(seq 1 30); do
+    ports_busy || break
+    sleep 1
+done
+if ports_busy; then
+    echo "start: :$http_port or :4317 is still held after 30s by a process this harness did not start:" >&2
+    ss -ltnpH "( sport = :$http_port or sport = :4317 )" 2>/dev/null | sed 's/^/start:   /' >&2
+    echo "start: refusing to launch behind it; stop that server first" >&2
+    exit 1
+fi
+
+# No performance flags. Since Ravel 0.13.0 the server resolves its query
+# budgets at startup: fetch concurrency from the core count, the read caches and
+# the two SQL memory ceilings from usable memory (MemTotal, capped by the cgroup
+# limit in a container), with a fixed segment cap and engine deadline. The
+# resolved values and their sources are on the "performance default resolved"
+# lines in server.log, which is what a published result should record.
+#
+# --shards is not a budget: it must match what ./load provisioned, or the server
+# refuses to resolve rather than answering over a subset of shards.
+# --tenant-hash-unkeyed is a scheme choice, not a performance flag. A fresh
+# bucket has no sys/tenancy marker and the server bootstraps one on its first
+# start; the default is the keyed derivation, which refuses to start without a
+# deployment key file. This benchmark keeps no secret, so it pins the bucket to
+# the unkeyed (v1) derivation, which is what makes a tenant's prefix derivable
+# and ./data-size possible. It is written once and read on every later start.
+
+# One log per start, named by UTC time, with server.log a symlink to the
+# current one. The driver restarts the server before every cold try, so a
+# single rotated .prev kept exactly one prior log and a server that died two
+# tries ago had lost its evidence. Readers of server.log (the README's
+# "performance default resolved" lines) still find the live server there.
+log="server.$(date -u +%Y%m%dT%H%M%SZ).log"
+ln -sfn "$log" server.log
+
+# The disk cache tier is opt-in and off by default; see RAVEL_CACHE_DIR in
+# ravel-env.sh for the measurement that says why.
+cache_args=()
+[ -n "${RAVEL_CACHE_DIR:-}" ] && cache_args=(--cache-dir "$RAVEL_CACHE_DIR")
+
+# The tuned entry passes its server flags through RAVEL_TUNED_ARGS so the
+# setting is reproducible from this file rather than from a hand-edited
+# start script. Empty for the stock entry. Word-split on purpose.
+# shellcheck disable=SC2206
+tuned_args=(${RAVEL_TUNED_ARGS:-})
+
+nohup "$RAVEL_SERVER" \
+    --store s3 \
+    --s3-auth instance-role \
+    --tenant-hash-unkeyed \
+    --shards "$RAVEL_SHARDS" \
+    --listen-http "$RAVEL_HTTP" \
+    --dev-insecure-tenant-header \
+    ${cache_args[@]+"${cache_args[@]}"} \
+    ${tuned_args[@]+"${tuned_args[@]}"} \
+    > "$log" 2>&1 &
+pid=$!
+echo "$pid" > "$RAVEL_PIDFILE"
+disown
+
+# Wait for it to serve, so that this script returning means the next one can use
+# the server. ./check now also confirms that the answering process is this pid,
+# so readiness here cannot be satisfied by anything else. The listener opens
+# after a startup cache warmup, and the driver is not the only caller: ./load
+# restarts the server itself.
+for _ in $(seq 1 180); do
+    if ./check >/dev/null 2>&1; then
+        exit 0
+    fi
+    if ! kill -0 "$pid" 2>/dev/null; then
+        echo "start: the server exited during startup, last lines of $log:" >&2
+        tail -n 20 "$log" >&2
+        exit 1
+    fi
+    sleep 1
+done
+
+echo "start: the server did not begin serving within 180 seconds; see $log" >&2
+exit 1

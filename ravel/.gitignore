@@ -1,0 +1,10 @@
+# Artefacts fetched or built by ./install, and run output.
+bin/
+src/
+ravel-commit.txt
+server.log
+server.log.prev
+server.pid
+*.log
+hits.parquet
+cache/

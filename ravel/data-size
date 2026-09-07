@@ -1,0 +1,43 @@
+#!/bin/bash
+# Ravel keeps every durable byte in object storage, so the VM's local disk
+# footprint is not the data size. This sums the bytes stored under this
+# tenant's own prefix in the bucket: data objects, commit records, manifests
+# and catalog snapshots, which is the tenant's whole durable footprint.
+set -eu
+. ./ravel-env.sh
+
+# The tenant id is hashed under the bucket's pinned scheme, so the prefix is not
+# derivable from the id and no command prints it (NOFireAI/ravel#1180). Take it
+# from the key `catalog inspect` reports it addressed, which it names whether or
+# not a catalog HEAD has been published yet.
+hash=$("$RAVEL_CLI" --store s3 --s3-auth instance-role catalog inspect \
+    --tenant "$RAVEL_TENANT" --signal logs 2>&1 \
+    | grep -oE 't/[0-9a-f]+/' | head -1 | cut -d/ -f2)
+
+# Fallback: a bucket dedicated to this benchmark holds one tenant, so its single
+# prefix is unambiguous. Anything else is ambiguous and gets no guess.
+if [ -z "$hash" ]; then
+    prefixes=$(aws s3 ls "s3://${RAVEL_S3_BUCKET}/t/" | awk '$1 == "PRE" { print $2 }' | tr -d /)
+    count=$(printf '%s\n' "$prefixes" | awk 'NF' | wc -l | tr -d ' ')
+    if [ "$count" = 1 ]; then
+        hash=$(printf '%s\n' "$prefixes" | awk 'NF')
+        echo "data-size: resolved the prefix as the bucket's only tenant" >&2
+    fi
+fi
+
+if [ -z "$hash" ]; then
+    echo "data-size: could not resolve the object prefix for tenant '$RAVEL_TENANT'" >&2
+    exit 1
+fi
+
+bytes=$(aws s3 ls --summarize --recursive "s3://${RAVEL_S3_BUCKET}/t/${hash}/" \
+    | awk '/Total Size:/ { print $3 }')
+
+# A tenant that measured zero means the prefix resolved to the wrong place, or
+# the load did not land. Either way it is not a data size.
+if [ -z "$bytes" ] || [ "$bytes" -eq 0 ]; then
+    echo "data-size: prefix t/${hash}/ holds no objects" >&2
+    exit 1
+fi
+
+echo "$bytes"

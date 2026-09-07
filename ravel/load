@@ -1,0 +1,52 @@
+#!/bin/bash
+# Loads hits.parquet into Ravel. The driver times this script and prints the
+# "Load time:" line itself, so nothing here prints one.
+#
+# Everything this writes lands in object storage. There is no post-load step:
+# no compaction, no catalog fold, no VACUUM equivalent. Object sizing is done
+# at ingest instead, by the geometry below.
+set -eu
+. ./ravel-env.sh
+
+PARQUET="${RAVEL_PARQUET:-hits.parquet}"
+MAPPING="${RAVEL_MAPPING:-hits.mapping.toml}"
+[ -f "$PARQUET" ] || { echo "load: $PARQUET not found (the driver's download step should have fetched it)" >&2; exit 1; }
+[ -f "$MAPPING" ] || { echo "load: $MAPPING not found" >&2; exit 1; }
+
+# `ravel-cli load` drives the ingest router in-process and writes to object
+# storage itself, so the server takes no part in the load. A server left running
+# through it does no work for the load while its startup cache warmup and its
+# background catalog folds compete for the same memory the loader needs. That is
+# not a small effect: on a 32 GB box the read cache alone resolves to a 26.3 GB
+# ceiling and the kernel OOM-killed a 24.1 GB ravel-server six seconds before the
+# last row landed (NOFireAI/ravel#1170). Stop it here, start it again at the end.
+./stop
+
+# Declare the typed attribute columns before the first row lands. The mapping
+# names each hits column and its type; declaring them lets ingest stamp exact
+# per-column statistics on the commit records, which is what lets aggregates be
+# answered without reading data objects.
+"$RAVEL_CLI" --store s3 --s3-auth instance-role \
+    typed-attr-column set "$RAVEL_TENANT" --from-mapping "$MAPPING"
+
+# Load geometry. One batch becomes one object per involved shard, so
+# --batch-rows sets the object size directly: 150,000 rows over 4 shards is
+# ~37.5k rows (~4 MB) per object and ~2,600 objects for the 100M-row dataset.
+# That is the whole object-sizing mechanism; --target-bytes stays at its
+# default of 1 (flush every write) because accumulating instead makes each
+# batch's acknowledgement wait for a later batch and the load runs several
+# times longer for the same layout.
+"$RAVEL_CLI" --store s3 --s3-auth instance-role load \
+    --parquet "$PARQUET" \
+    --tenant "$RAVEL_TENANT" \
+    --mapping "$MAPPING" \
+    --shards "$RAVEL_SHARDS" \
+    --read-cursors "${RAVEL_READ_CURSORS:-16}" \
+    --batch-rows "${RAVEL_BATCH_ROWS:-150000}" \
+    --target-bytes 1
+
+sync
+
+# Serving again for ./check and the query phase. ./start waits for the listener,
+# so this returns only once the server answers.
+./start

@@ -1,0 +1,109 @@
+#!/bin/bash
+set -eu
+. ./ravel-env.sh
+
+# A server left over from a previous run holds the binaries this script is about
+# to replace, and ./start is idempotent through ./check, so a survivor would go
+# on serving and the run would measure the old build.
+./stop
+
+# ClickBench standardises on Ubuntu, so apt is the primary path; the dnf branch
+# keeps the entry runnable on the Amazon Linux images some of these VMs ship
+# with rather than failing at the first line.
+if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update -qq
+    # awscli is deliberately not in this list: Ubuntu 24.04 ships no awscli
+    # package ("has no installation candidate"), so it is installed from
+    # Amazon's own archive below on every distribution.
+    sudo apt-get install -y --no-install-recommends jq curl ca-certificates unzip
+elif command -v dnf >/dev/null 2>&1; then
+    # curl is deliberately absent: Amazon Linux ships curl-minimal, which
+    # provides the binary and conflicts with the full curl package.
+    sudo dnf install -y -q jq ca-certificates unzip
+else
+    echo "install: no supported package manager (apt-get or dnf)" >&2
+    exit 1
+fi
+
+# ./data-size sums the tenant's bytes in the bucket, which needs the AWS CLI.
+# Installed from Amazon's archive rather than from a distribution package so
+# the entry does not depend on which distributions still carry one.
+if ! command -v aws >/dev/null 2>&1; then
+    case "$(uname -m)" in
+        x86_64|amd64)  awsarch=x86_64 ;;
+        aarch64|arm64) awsarch=aarch64 ;;
+        *) echo "install: unsupported arch $(uname -m) for the AWS CLI" >&2; exit 1 ;;
+    esac
+    curl -fsSL --retry 3 "https://awscli.amazonaws.com/awscli-exe-linux-${awsarch}.zip" -o /tmp/awscliv2.zip
+    rm -rf /tmp/aws
+    unzip -q /tmp/awscliv2.zip -d /tmp
+    sudo /tmp/aws/install --update
+fi
+aws --version
+
+RAVEL_VERSION="${RAVEL_VERSION:-v0.14.0}"
+RAVEL_REPO="${RAVEL_REPO:-https://github.com/NOFireAI/ravel}"
+
+case "$(uname -m)" in
+    x86_64|amd64)  arch=amd64 ;;
+    aarch64|arm64) arch=arm64 ;;
+    *) echo "install: unsupported arch $(uname -m)" >&2; exit 1 ;;
+esac
+
+mkdir -p "$RAVEL_BIN_DIR"
+
+# Preferred path: the released binaries, which are the ones extracted from the
+# signed container images, so a downloaded binary is byte-identical to what the
+# published image runs (ADR-0086). Checksums are verified against the release's
+# own SHA256SUMS.
+base="${RAVEL_REPO}/releases/download/${RAVEL_VERSION}"
+if curl -fsSL --retry 3 -o "$RAVEL_BIN_DIR/SHA256SUMS" "${base}/SHA256SUMS"; then
+    # Downloaded under a temporary name and moved into place only once the
+    # checksum passes, so an unverified binary never sits at the path ./start
+    # runs. The rename also replaces a binary that is still executing, which
+    # writing to it in place does not: curl fails with ETXTBSY.
+    for b in ravel-server ravel-cli; do
+        curl -fsSL --retry 3 -o "$RAVEL_BIN_DIR/${b}.new" "${base}/${b}-linux-${arch}"
+    done
+    ( cd "$RAVEL_BIN_DIR" && for b in ravel-server ravel-cli; do
+        want=$(awk -v n="${b}-linux-${arch}" '$2 == n || $2 == "*"n {print $1}' SHA256SUMS | head -1)
+        [ -n "$want" ] || { echo "install: ${b}-linux-${arch} absent from SHA256SUMS" >&2; exit 1; }
+        have=$(sha256sum "${b}.new" | awk '{print $1}')
+        [ "$want" = "$have" ] || { echo "install: checksum mismatch for $b" >&2; exit 1; }
+        chmod +x "${b}.new"
+        mv -f "${b}.new" "$b"
+      done )
+else
+    # Fallback: build at a ref. Used when the release is unreachable, or to
+    # benchmark an unreleased commit via RAVEL_REF.
+    echo "install: release ${RAVEL_VERSION} not reachable, building from source" >&2
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get install -y --no-install-recommends git build-essential pkg-config libssl-dev protobuf-compiler
+    else
+        sudo dnf install -y -q git gcc gcc-c++ make pkgconfig openssl-devel protobuf-compiler
+    fi
+    if ! cargo --version >/dev/null 2>&1; then
+        if command -v rustup >/dev/null 2>&1; then rustup default stable
+        else curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal; fi
+    fi
+    # shellcheck disable=SC1091
+    [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+    [ -d src ] || git clone --filter=blob:none "${RAVEL_REPO}.git" src
+    git -C src fetch origin --quiet
+    git -C src checkout -q --detach "${RAVEL_REF:-$RAVEL_VERSION}"
+    git -C src rev-parse HEAD > ravel-commit.txt
+    # The SQL surface sits behind a cargo feature that is off by default.
+    # --release matters: the gate profile is opt-level 0 and loads ~7x slower.
+    cargo build --manifest-path src/Cargo.toml --release -p ravel-server --features sql
+    cargo build --manifest-path src/Cargo.toml --release -p ravel-cli
+    cp src/target/release/ravel-server src/target/release/ravel-cli "$RAVEL_BIN_DIR/"
+fi
+
+"$RAVEL_SERVER" --version || true
+"$RAVEL_CLI" --version || true
+
+# One-time bucket provisioning (ADR-0050 section 6): the server refuses to start
+# against a store that has never been qualified. It lives here rather than in
+# ./load because it qualifies the bucket rather than loading the dataset, and
+# ./load's wall clock is the reported Load time.
+"$RAVEL_CLI" --store s3 --s3-auth instance-role store qualify
