@@ -190,22 +190,38 @@ drop_caches() {
 }
 
 # Say once, at the start, what the cold column actually means in this run.
-# Before the cold try: drop the page cache, and with COLD_RESTART=1 restart the server first.
+cold_check() { timeout 15 docker run --rm -i --network host -e PGPASSWORD="${PASSWORD}" "${PSQL_IMAGE}" psql -h127.0.0.1 -p5432 -U postgres -d postgres -tAc 'SELECT 1' </dev/null; }
+
+cold_wait_stopped() {
+    local i
+    for i in $(seq 1 60); do
+        cold_check >/dev/null 2>&1 || return 0
+        sleep 1
+    done
+    echo "cold restart: server did not stop within 60s; proceeding anyway" >&2
+    return 0
+}
+
+cold_check_loop() {
+    local i last_err
+    for i in $(seq 1 300); do
+        if last_err=$(cold_check 2>&1 >/dev/null); then
+            return 0
+        fi
+        sleep 1
+    done
+    echo "cold restart: check did not succeed within 300s" >&2
+    [ -n "${last_err}" ] && printf '%s\n' "${last_err}" | sed 's/^/    /' >&2
+    return 1
+}
+
 cold_reset() {
     if [ "${COLD_RESTART}" != 1 ]; then drop_caches; return 0; fi
-    local waited=0
     docker stop "${CONTAINER}" >/dev/null 2>&1 || true
-    until ! PG 'SELECT 1' 2>/dev/null | grep -q '^1$'; do
-        sleep 1; waited=$((waited + 1))
-        [ "${waited}" -gt 60 ] && break            # still answering: flush anyway
-    done
+    cold_wait_stopped
     drop_caches
     docker start "${CONTAINER}" >/dev/null 2>&1 || true
-    waited=0
-    until PG 'SELECT 1' 2>/dev/null | grep -q '^1$'; do
-        sleep 2; waited=$((waited + 2))
-        [ "${waited}" -gt 300 ] && { echo "cold restart: server did not come back in 300s" >&2; return 1; }
-    done
+    cold_check_loop
 }
 
 announce_cache_mode() {
