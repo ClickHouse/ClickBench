@@ -54,6 +54,9 @@ TRIES="${TRIES:-6}"                            # 1 cold + 5 hot
 # 238 queries is ~6 minutes per system and, at scale factor 1, more than the queries themselves.
 # Turning it off makes the "cold" column meaningless, so the run announces which mode it used.
 DROP_CACHES="${DROP_CACHES:-1}"
+# COLD_RESTART=1 restarts the server before each query's cold try, so the cold number is not
+# served from the engine's own memory. Off by default.
+COLD_RESTART="${COLD_RESTART:-0}"
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-300}"   # seconds
 LOAD_TIMEOUT="${LOAD_TIMEOUT:-1200}"
 PSQL_IMAGE="${PSQL_IMAGE:-postgres:16-alpine}"
@@ -187,6 +190,24 @@ drop_caches() {
 }
 
 # Say once, at the start, what the cold column actually means in this run.
+# Before the cold try: drop the page cache, and with COLD_RESTART=1 restart the server first.
+cold_reset() {
+    if [ "${COLD_RESTART}" != 1 ]; then drop_caches; return 0; fi
+    local waited=0
+    docker stop "${CONTAINER}" >/dev/null 2>&1 || true
+    until ! PG 'SELECT 1' 2>/dev/null | grep -q '^1$'; do
+        sleep 1; waited=$((waited + 1))
+        [ "${waited}" -gt 60 ] && break            # still answering: flush anyway
+    done
+    drop_caches
+    docker start "${CONTAINER}" >/dev/null 2>&1 || true
+    waited=0
+    until PG 'SELECT 1' 2>/dev/null | grep -q '^1$'; do
+        sleep 2; waited=$((waited + 2))
+        [ "${waited}" -gt 300 ] && { echo "cold restart: server did not come back in 300s" >&2; return 1; }
+    done
+}
+
 announce_cache_mode() {
     if [ "${DROP_CACHES}" = 0 ]; then
         echo "DROP_CACHES=0: page cache NOT dropped; the first of the ${TRIES} tries is not cold" >&2
@@ -341,7 +362,7 @@ run_query() {
     script="SET search_path TO \"${ds}\";"$'\n'"\\timing on"$'\n'
     local i
     for i in $(seq 1 "${TRIES}"); do script+="${query};"$'\n'; done
-    drop_caches
+    cold_reset
     out=$(printf '%s' "${script}" | timeout -k 10 "$((QUERY_TIMEOUT * TRIES + 120))" \
           docker run --rm -i --network host -e PGPASSWORD="${PASSWORD}" "${PSQL_IMAGE}" \
           psql -h127.0.0.1 -p5432 -U postgres -d postgres 2>&1)

@@ -22,6 +22,9 @@ TRIES="${TRIES:-6}"                             # 1 cold + 5 hot
 # DROP_CACHES=0 skips the page-cache drop before each query, so the first of the TRIES is no
 # longer cold. Default 1.
 DROP_CACHES="${DROP_CACHES:-1}"
+# COLD_RESTART=1 restarts the server before each query's cold try, so the cold number is not
+# served from the engine's own memory. Off by default.
+COLD_RESTART="${COLD_RESTART:-0}"
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-300}"   # seconds
 LOAD_TIMEOUT="${LOAD_TIMEOUT:-1200}"            # per-statement load cap (server-side + client backstop)
 # STATISTICS=1 runs one ANALYZE per loaded table (see load_one_dataset).
@@ -116,6 +119,24 @@ drop_caches() {
 }
 
 # Say once, at the start, what the cold column actually means in this run.
+# Before the cold try: drop the page cache, and with COLD_RESTART=1 restart the server first.
+cold_reset() {
+    if [ "${COLD_RESTART}" != 1 ]; then drop_caches; return 0; fi
+    local waited=0
+    docker stop "${CONTAINER}" >/dev/null 2>&1 || true
+    until ! PG 'SELECT 1' 2>/dev/null | grep -q '^1$'; do
+        sleep 1; waited=$((waited + 1))
+        [ "${waited}" -gt 60 ] && break            # still answering: flush anyway
+    done
+    drop_caches
+    docker start "${CONTAINER}" >/dev/null 2>&1 || true
+    waited=0
+    until PG 'SELECT 1' 2>/dev/null | grep -q '^1$'; do
+        sleep 2; waited=$((waited + 2))
+        [ "${waited}" -gt 300 ] && { echo "cold restart: server did not come back in 300s" >&2; return 1; }
+    done
+}
+
 announce_cache_mode() {
     if [ "${DROP_CACHES}" = 0 ]; then
         echo "DROP_CACHES=0: page cache NOT dropped; the first of the ${TRIES} tries is not cold" >&2
@@ -243,7 +264,7 @@ null_row() { local i out="["; for i in $(seq 1 "${TRIES}"); do out+="null"; [ "$
 # seconds.
 run_query() {
     local ds="$1" query="$2" label="${3:-query}" i script out reals
-    drop_caches
+    cold_reset
     script="SET search_path TO \"${ds}\";"$'\n'"SET statement_timeout=${QUERY_TIMEOUT}000;"$'\n'"\\timing on"$'\n'
     for i in $(seq 1 "${TRIES}"); do script+="${query};"$'\n'; done
     out=$(printf '%s' "${script}" | timeout -k 10 "$((QUERY_TIMEOUT * (TRIES > 0 ? TRIES : 1) + 60))" docker run --rm -i --network host \

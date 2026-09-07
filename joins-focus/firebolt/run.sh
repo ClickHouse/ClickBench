@@ -22,6 +22,9 @@ TRIES="${TRIES:-6}"                                    # 1 cold + 5 hot
 # DROP_CACHES=0 skips the page-cache drop before each query, so the first of the TRIES is no
 # longer cold. Default 1.
 DROP_CACHES="${DROP_CACHES:-1}"
+# COLD_RESTART=1 restarts the server before each query's cold try, so the cold number is not
+# served from the engine's own memory. Off by default.
+COLD_RESTART="${COLD_RESTART:-0}"
 # Firebolt's scan cache is a DATA cache -- the counterpart of the StarRocks and Doris BE caches --
 # so it follows the same switch, and all three engines are configured alike. The result and
 # sub-result caches are off either way.
@@ -143,6 +146,24 @@ drop_caches() {
 }
 
 # Say once, at the start, what the cold column actually means in this run.
+# Before the cold try: drop the page cache, and with COLD_RESTART=1 restart the server first.
+cold_reset() {
+    if [ "${COLD_RESTART}" != 1 ]; then drop_caches; return 0; fi
+    local waited=0
+    docker stop "${CONTAINER}" >/dev/null 2>&1 || true
+    until ! Q "SELECT 'fb-ready'" | grep -q fb-ready; do
+        sleep 1; waited=$((waited + 1))
+        [ "${waited}" -gt 60 ] && break            # still answering: flush anyway
+    done
+    drop_caches
+    docker start "${CONTAINER}" >/dev/null 2>&1 || true
+    waited=0
+    until Q "SELECT 'fb-ready'" | grep -q fb-ready; do
+        sleep 2; waited=$((waited + 2))
+        [ "${waited}" -gt 300 ] && { echo "cold restart: server did not come back in 300s" >&2; return 1; }
+    done
+}
+
 announce_cache_mode() {
     if [ "${DROP_CACHES}" = 0 ]; then
         echo "DROP_CACHES=0: page cache NOT dropped; the first of the ${TRIES} tries is not cold" >&2
@@ -288,7 +309,7 @@ null_row() { local i out="["; for i in $(seq 1 "${TRIES}"); do out+="null"; [ "$
 run_query() {
     local ds="$1" query="$2" label="${3:-query}" i out rc t reals=()
     for i in $(seq 1 "${TRIES}"); do
-        [ "${i}" = 1 ] && drop_caches
+        [ "${i}" = 1 ] && cold_reset
         out=$(Qdb "${query}" "${ds}"); rc=$?
         if [ "${rc}" != 0 ]; then
             echo "${label}: FAILED (http rc=${rc}, timeout >$((QUERY_TIMEOUT + 30))s?): $(stmt_label "${out}")" >&2

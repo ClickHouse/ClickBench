@@ -31,6 +31,9 @@ TRIES="${TRIES:-6}"                                    # 1 cold + 5 hot
 # DROP_CACHES=0 skips the page-cache drop before each query, so the first of the TRIES is no
 # longer cold. Default 1.
 DROP_CACHES="${DROP_CACHES:-1}"
+# COLD_RESTART=1 restarts the server before each query's cold try, so the cold number is not
+# served from the engine's own memory. Off by default.
+COLD_RESTART="${COLD_RESTART:-0}"
 # The BE's own data caches. Default 0 disables them the way ClickBench's doris/install does
 # (be.conf: disable_storage_page_cache, segment_cache_capacity).
 ENGINE_CACHES="${ENGINE_CACHES:-0}"
@@ -142,6 +145,24 @@ drop_caches() {
 }
 
 # Say once, at the start, what the cold column actually means in this run.
+# Before the cold try: drop the page cache, and with COLD_RESTART=1 restart the server first.
+cold_reset() {
+    if [ "${COLD_RESTART}" != 1 ]; then drop_caches; return 0; fi
+    local waited=0
+    docker stop "${BE_CONTAINER}" "${FE_CONTAINER}" >/dev/null 2>&1 || true
+    until ! Mq 'SHOW FRONTENDS' >/dev/null 2>&1; do
+        sleep 1; waited=$((waited + 1))
+        [ "${waited}" -gt 60 ] && break            # still answering: flush anyway
+    done
+    drop_caches
+    docker start "${FE_CONTAINER}" && sleep 5 && docker start "${BE_CONTAINER}" >/dev/null 2>&1 || true
+    waited=0
+    until Mq 'SHOW FRONTENDS' >/dev/null 2>&1; do
+        sleep 2; waited=$((waited + 2))
+        [ "${waited}" -gt 300 ] && { echo "cold restart: server did not come back in 300s" >&2; return 1; }
+    done
+}
+
 announce_cache_mode() {
     if [ "${DROP_CACHES}" = 0 ]; then
         echo "DROP_CACHES=0: page cache NOT dropped; the first of the ${TRIES} tries is not cold" >&2
@@ -344,7 +365,7 @@ null_row() { local i out="["; for i in $(seq 1 "${TRIES}"); do out+="null"; [ "$
 run_query() {
     local ds="$1" query="$2" label="${3:-query}" i out qid t t0 t1 reals=()
     for i in $(seq 1 "${TRIES}"); do
-        [ "${i}" = 1 ] && drop_caches
+        [ "${i}" = 1 ] && cold_reset
         MYSQL_TIMEOUT="$((QUERY_TIMEOUT + 30))"
         if [ "${USE_PROFILE}" = 1 ]; then
             out=$(Mq "SET enable_profile=true; SET query_timeout=${QUERY_TIMEOUT}; USE ${ds}; ${query}; SELECT concat('__QID__:', last_query_id());" 2>&1)

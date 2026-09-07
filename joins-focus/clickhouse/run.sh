@@ -22,6 +22,9 @@ TRIES="${TRIES:-6}"   # 1 cold + 5 hot runs
 # DROP_CACHES=0 skips the page-cache drop before each query, so the first of the TRIES is no
 # longer cold. Default 1.
 DROP_CACHES="${DROP_CACHES:-1}"
+# COLD_RESTART=1 restarts the server before each query's cold try, so the cold number is not
+# served from the engine's own memory. Off by default.
+COLD_RESTART="${COLD_RESTART:-0}"
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-300}"   # seconds
 # Client-side receive timeout for LOAD-phase calls, in seconds. It is how long the client waits
 # for the SERVER to send something before giving up.
@@ -280,6 +283,24 @@ drop_caches() {
 }
 
 # Say once, at the start, what the cold column actually means in this run.
+# Before the cold try: drop the page cache, and with COLD_RESTART=1 restart the server first.
+cold_reset() {
+    if [ "${COLD_RESTART}" != 1 ]; then drop_caches; return 0; fi
+    local waited=0
+    sudo docker stop "${CONTAINER}" >/dev/null 2>&1 || true
+    until ! server_alive; do
+        sleep 1; waited=$((waited + 1))
+        [ "${waited}" -gt 60 ] && break            # still answering: flush anyway
+    done
+    drop_caches
+    sudo docker start "${CONTAINER}" >/dev/null 2>&1 || true
+    waited=0
+    until server_alive; do
+        sleep 2; waited=$((waited + 2))
+        [ "${waited}" -gt 300 ] && { echo "cold restart: server did not come back in 300s" >&2; return 1; }
+    done
+}
+
 announce_cache_mode() {
     if [ "${DROP_CACHES}" = 0 ]; then
         echo "DROP_CACHES=0: page cache NOT dropped; the first of the ${TRIES} tries is not cold" >&2
@@ -438,7 +459,7 @@ run_benchmark() {
                     row="$(null_row)"
                     echo "q${qnum} [${ds}]: SKIPPED (not loaded); recording null" >&2
                 else
-                    drop_caches
+                    cold_reset
                     row="$(run_query "${query}" "q${qnum} [${ds}]")"
                     echo "q${qnum} [${ds}]: ${row}" >&2
                 fi

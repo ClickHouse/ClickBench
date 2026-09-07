@@ -29,6 +29,9 @@ TRIES="${TRIES:-6}"                                    # 1 cold + 5 hot
 # DROP_CACHES=0 skips the page-cache drop before each query, so the first of the TRIES is no
 # longer cold. Default 1.
 DROP_CACHES="${DROP_CACHES:-1}"
+# COLD_RESTART=1 restarts the server before each query's cold try, so the cold number is not
+# served from the engine's own memory. Off by default.
+COLD_RESTART="${COLD_RESTART:-0}"
 # The BE's own data caches. Default 0 disables them the way ClickBench's starrocks/install does
 # (be.conf: disable_storage_page_cache, datacache_enable).
 ENGINE_CACHES="${ENGINE_CACHES:-0}"
@@ -126,6 +129,24 @@ drop_caches() {
 }
 
 # Say once, at the start, what the cold column actually means in this run.
+# Before the cold try: drop the page cache, and with COLD_RESTART=1 restart the server first.
+cold_reset() {
+    if [ "${COLD_RESTART}" != 1 ]; then drop_caches; return 0; fi
+    local waited=0
+    docker stop "${CONTAINER}" >/dev/null 2>&1 || true
+    until ! Mq 'SELECT 1' >/dev/null 2>&1; do
+        sleep 1; waited=$((waited + 1))
+        [ "${waited}" -gt 60 ] && break            # still answering: flush anyway
+    done
+    drop_caches
+    docker start "${CONTAINER}" >/dev/null 2>&1 || true
+    waited=0
+    until Mq 'SELECT 1' >/dev/null 2>&1; do
+        sleep 2; waited=$((waited + 2))
+        [ "${waited}" -gt 300 ] && { echo "cold restart: server did not come back in 300s" >&2; return 1; }
+    done
+}
+
 announce_cache_mode() {
     if [ "${DROP_CACHES}" = 0 ]; then
         echo "DROP_CACHES=0: page cache NOT dropped; the first of the ${TRIES} tries is not cold" >&2
@@ -310,7 +331,7 @@ run_query() {
     local ds="$1" query="$2" label="${3:-query}" db i out qid t t0 t1 reals=()
     db="${ds}"   # ddl/<benchmark>.sql creates a database named after the benchmark
     for i in $(seq 1 "${TRIES}"); do
-        [ "${i}" = 1 ] && drop_caches
+        [ "${i}" = 1 ] && cold_reset
         if [ "${USE_PROFILE}" = 1 ]; then
             out=$(timeout -k 10 "$((QUERY_TIMEOUT + 30))" docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N --connect-timeout=30 \
                   -e "SET enable_profile=true; SET query_timeout=${QUERY_TIMEOUT}; USE ${db}; ${query}; SELECT concat('__QID__:', last_query_id());" </dev/null 2>&1)
