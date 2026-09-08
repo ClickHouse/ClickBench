@@ -42,7 +42,7 @@ if ! command -v aws >/dev/null 2>&1; then
 fi
 aws --version
 
-RAVEL_VERSION="${RAVEL_VERSION:-v0.14.0}"
+RAVEL_VERSION="${RAVEL_VERSION:-v0.15.0}"
 RAVEL_REPO="${RAVEL_REPO:-https://github.com/NOFireAI/ravel}"
 
 case "$(uname -m)" in
@@ -137,6 +137,16 @@ if [ "$local_minio" = yes ]; then
               "ravel-$(head -c 6 /dev/urandom | od -An -tx1 | tr -d ' \n')" \
               "$(head -c 30 /dev/urandom | base64 | tr -d '/+=\n')" \
               > "$MINIO_DIR/credentials.env" )
+    fi
+    # The server records query text on its audit trail tokenized under a
+    # key. A keyed deployment derives it; this entry runs unkeyed (see
+    # ./start), so it needs one of its own. Generated once, kept beside the
+    # MinIO credentials, handed to the server through the environment.
+    if ! grep -q '^RAVEL_AUDIT_TOKEN_KEY=' "$MINIO_DIR/credentials.env"; then
+        ( umask 077
+          printf 'RAVEL_AUDIT_TOKEN_KEY=%s\n' \
+              "$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')" \
+              >> "$MINIO_DIR/credentials.env" )
     fi
     # Re-source so the keys just written are exported for the steps below.
     . ./ravel-env.sh

@@ -30,6 +30,12 @@ if [ -z "${RAVEL_S3_ACCESS_KEY:-}" ] && [ -f "$MINIO_DIR/credentials.env" ]; the
     export RAVEL_S3_ACCESS_KEY="$MINIO_ROOT_USER"
     export RAVEL_S3_SECRET_KEY="$MINIO_ROOT_PASSWORD"
 fi
+# The audit-trail tokenization key ./install generated; an unkeyed server
+# refuses to start without one.
+if [ -z "${RAVEL_AUDIT_TOKEN_KEY:-}" ] && [ -f "$MINIO_DIR/credentials.env" ]; then
+    RAVEL_AUDIT_TOKEN_KEY="$(sed -n 's/^RAVEL_AUDIT_TOKEN_KEY=//p' "$MINIO_DIR/credentials.env")"
+fi
+export RAVEL_AUDIT_TOKEN_KEY="${RAVEL_AUDIT_TOKEN_KEY:-}"
 unset RAVEL_S3_SESSION_TOKEN AWS_SESSION_TOKEN
 export AWS_ACCESS_KEY_ID="${RAVEL_S3_ACCESS_KEY:-}"
 export AWS_SECRET_ACCESS_KEY="${RAVEL_S3_SECRET_KEY:-}"
