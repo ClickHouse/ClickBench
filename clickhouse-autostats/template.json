@@ -1,0 +1,11 @@
+{
+  "system": "ClickHouse (auto statistics)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative"
+  ]
+}
