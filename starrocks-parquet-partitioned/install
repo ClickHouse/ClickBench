@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION="4.0.2-ubuntu-$(dpkg --print-architecture)"
+VERSION="4.0.14-ubuntu-$(dpkg --print-architecture)"
 SR_DIR="StarRocks-$VERSION"
 
 if [ ! -d "$SR_DIR" ]; then
