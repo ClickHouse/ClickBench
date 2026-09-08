@@ -146,10 +146,13 @@ Ravel's state lives.
 
 ### Reference: the same binary on real S3
 
-Measured on the same machine and corpus against an S3 bucket in the instance's
-region, credentials from the instance role, the same true-cold protocol; not
-reproducible by this harness and therefore not a results file. Cold and hot are
-the sums over the 43 statements of the first and third run.
+Measured on the same machine against an S3 bucket in the instance's region,
+credentials from the instance role, the same true-cold protocol, on a tenant
+loaded a few days earlier by an earlier build (12.2 GB rather than 11.2 GB for
+the same rows, and its hot runs still re-fetched about 500 MB of column
+statistics per query). Not reproducible by this harness and therefore not a
+results file. Cold and hot are the sums over the 43 statements of the first and
+third run.
 
 | configuration | cold | hot |
 |---|---|---|
