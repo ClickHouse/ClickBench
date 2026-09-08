@@ -1,0 +1,21 @@
+#!/bin/bash
+# Reports what the auto statistics setting actually produced. Called with a
+# label from ./load (right after the data is in, before the query sweep) and
+# from ./data-size (after the sweep). Never fails the caller: a broken
+# diagnostic must not abort an hour-long benchmark.
+label="${1:-report}"
+report() {
+    echo -n "[$label] Statistics setting: "
+    clickhouse-client --query "SELECT value FROM system.merge_tree_settings WHERE name = 'auto_statistics_types'"
+    echo -n "[$label] Statistics files: "
+    sudo find /var/lib/clickhouse -name 'statistics.packed' -printf '%s\n' 2>/dev/null \
+        | awk '{ n++; s += $1 } END { printf "%d files, %d bytes total\n", n+0, s+0 }'
+    echo -n "[$label] Active parts: "
+    clickhouse-client --query "SELECT count() FROM system.parts WHERE table = 'hits' AND database = 'default' AND active"
+    echo -n "[$label] Active part bytes: "
+    clickhouse-client --query "SELECT sum(bytes_on_disk) FROM system.parts WHERE table = 'hits' AND database = 'default' AND active"
+    echo -n "[$label] Server log lines mentioning statistics: "
+    sudo grep -ci 'statistic' /var/log/clickhouse-server/clickhouse-server.log || true
+}
+report || true
+exit 0
