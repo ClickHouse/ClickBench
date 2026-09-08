@@ -186,14 +186,28 @@ start_server() {
 # A heavy query can crash/OOM the CedarDB server (the container exits); restart down server.
 ensure_up() {
     PG 'SELECT 1' 2>/dev/null | grep -q '^1$' && return 0
-    echo "CedarDB ${VERSION} unreachable -- restarting the container" >&2
-    docker start "${CONTAINER}" >/dev/null 2>&1
-    local waited=0
-    until PG 'SELECT 1' 2>/dev/null | grep -q '^1$'; do
-        sleep 3; waited=$((waited + 3))
-        [ "${waited}" -gt 120 ] && { echo "restart failed; recreating" >&2; start_server; return $?; }
+    local running
+    running="$(docker inspect -f '{{.State.Running}}' "${CONTAINER}" 2>/dev/null)"
+    echo "CedarDB ${VERSION} unreachable (container running=${running:-unknown}); recent logs:" >&2
+    docker logs --tail 8 "${CONTAINER}" 2>&1 | sed 's/^/      | /' >&2 || true
+
+    [ "${running}" != "true" ] && { docker start "${CONTAINER}" >/dev/null 2>&1 \
+        || echo "CedarDB: 'docker start' failed" >&2; }
+    local i
+    for i in $(seq 1 "${REVIVE_TIMEOUT:-180}"); do
+        PG 'SELECT 1' 2>/dev/null | grep -q '^1$' && { echo "CedarDB: server back up" >&2; return 0; }
+        sleep 1
     done
-    return 0
+
+    echo "CedarDB: still down after ${REVIVE_TIMEOUT:-180}s; forcing 'docker restart'" >&2
+    docker restart -t 5 "${CONTAINER}" >/dev/null 2>&1 || echo "CedarDB: 'docker restart' failed" >&2
+    for i in $(seq 1 "${REVIVE_TIMEOUT:-180}"); do
+        PG 'SELECT 1' 2>/dev/null | grep -q '^1$' && { echo "CedarDB: back up after restart" >&2; return 0; }
+        sleep 1
+    done
+    echo "CedarDB: could not revive; final container logs:" >&2
+    docker logs --tail 30 "${CONTAINER}" 2>&1 | sed 's/^/      | /' >&2 || true
+    return 1
 }
 
 stop_server() { docker rm -fv "${CONTAINER}" >/dev/null 2>&1; }
@@ -294,8 +308,8 @@ run_query() {
     # No timings at all usually means the query crashed the server (connection dropped, which
     # doesn't print "ERROR:"). Revive it so the rest of the run isn't lost to a dead server.
     if [ "${#reals[@]}" -eq 0 ]; then
-        echo "${label}: no timing (server may have crashed)" >&2
-        ensure_up || true
+        echo "${label}: no timing; the server said:" >&2
+        printf '%s\n' "${out}" | tail -5 | sed 's/^/    /' >&2
     fi
     local res="[" v
     for i in $(seq 1 "${TRIES}"); do

@@ -146,7 +146,7 @@ drop_caches() {
 }
 
 # Say once, at the start, what the cold column actually means in this run.
-cold_check() { timeout 15 MAXTIME=15 Q "SELECT 'fb-ready'" </dev/null | grep -q fb-ready; }
+cold_check() { MAXTIME=15 Q "SELECT 'fb-ready'" </dev/null | grep -q fb-ready; }
 
 cold_wait_stopped() {
     local i
