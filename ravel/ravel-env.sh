@@ -1,26 +1,39 @@
 # Shared environment for the Ravel ClickBench entry. Sourced by every script.
 #
 # Ravel keeps every durable byte in S3-compatible object storage; there is no
-# local-disk storage mode (see README.md). The bucket is supplied by the
-# operator and the credentials come from the EC2 instance profile, so no key
-# ever appears in this repository or in a process argument list.
+# local-disk storage mode (see README.md). For this benchmark the store is a
+# single-node MinIO that ./install downloads, starts and provisions on this
+# machine's own disk, so the entry needs no cloud bucket and no credentials
+# from the operator. To run against another S3-compatible store instead, set
+# RAVEL_S3_ENDPOINT, RAVEL_S3_BUCKET, RAVEL_S3_ACCESS_KEY and
+# RAVEL_S3_SECRET_KEY before ./install.
 # shellcheck shell=bash
 
-: "${RAVEL_S3_BUCKET:?set RAVEL_S3_BUCKET to a bucket the instance role may read and write}"
-export RAVEL_S3_BUCKET
+export RAVEL_S3_ENDPOINT="${RAVEL_S3_ENDPOINT:-http://127.0.0.1:9000}"
+export RAVEL_S3_BUCKET="${RAVEL_S3_BUCKET:-clickbench}"
 export RAVEL_S3_REGION="${RAVEL_S3_REGION:-us-east-1}"
 
-# ADR-0106: fetch short-lived credentials from IMDSv2. The server refuses to
-# start if an inline credential flag is set alongside this, so scrub every
-# credential variable an interactive shell may have exported; a stray one would
-# either fail startup or silently make the run use static keys instead of the
-# instance role, which is the thing this entry is documenting.
-export RAVEL_S3_AUTH=instance-role
-unset RAVEL_S3_ACCESS_KEY RAVEL_S3_SECRET_KEY RAVEL_S3_SESSION_TOKEN \
-      RAVEL_S3_ACCESS_KEY_ID RAVEL_S3_SECRET_ACCESS_KEY \
-      AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+# Where ./install keeps MinIO: its binary, its data directory (this entry's
+# "data on local disk"), its pid file, its log and the credentials it
+# generated. ./minio-start brings it up from here.
+export MINIO_DIR="${MINIO_DIR:-$PWD/minio}"
 
-# The AWS CLI (used only by ./data-size) reads the same instance profile.
+# Static keys. ./install generates them once into a file readable by this
+# user only, and every script reads them from there, so no key appears in a
+# process argument list. The server and the CLI take RAVEL_S3_ACCESS_KEY and
+# RAVEL_S3_SECRET_KEY; the AWS CLI (bucket provisioning and ./data-size) takes
+# its own names plus the endpoint.
+export RAVEL_S3_AUTH=static
+if [ -z "${RAVEL_S3_ACCESS_KEY:-}" ] && [ -f "$MINIO_DIR/credentials.env" ]; then
+    # shellcheck disable=SC1091
+    . "$MINIO_DIR/credentials.env"
+    export RAVEL_S3_ACCESS_KEY="$MINIO_ROOT_USER"
+    export RAVEL_S3_SECRET_KEY="$MINIO_ROOT_PASSWORD"
+fi
+unset RAVEL_S3_SESSION_TOKEN AWS_SESSION_TOKEN
+export AWS_ACCESS_KEY_ID="${RAVEL_S3_ACCESS_KEY:-}"
+export AWS_SECRET_ACCESS_KEY="${RAVEL_S3_SECRET_KEY:-}"
+export AWS_ENDPOINT_URL="$RAVEL_S3_ENDPOINT"
 export AWS_DEFAULT_REGION="$RAVEL_S3_REGION"
 
 export RAVEL_TENANT="${RAVEL_TENANT:-clickbench}"
@@ -35,20 +48,13 @@ export RAVEL_SERVER="$RAVEL_BIN_DIR/ravel-server"
 export RAVEL_CLI="$RAVEL_BIN_DIR/ravel-cli"
 
 # ADR-0046 read cache, local-disk tier. Empty (the default) means the RAM tier
-# only, which is what the published numbers use.
-#
-# Off by default because on the ClickBench reference machine it is a
-# pessimisation, measured rather than assumed. A c6a.4xlarge has no instance
-# store, so "local disk" is a 500 GB gp2 volume: 286 MB/s sequential here, and
-# gp2 caps at 250 MB/s sustained. The same server reads S3 at 855 MB/s
-# sustained, 1,117 MB/s peak. Caching an object to this volume therefore makes
-# the next read of it about 3x slower than fetching it again from S3.
-#
-# Set it to a path when the disk is genuinely faster than the store: an
-# instance-store box (i4i, c6ad, c7gd: NVMe at multiple GB/s) or a gp3 volume
-# with provisioned throughput. The disk tier is bounded by the same resolved
-# ceiling as the RAM tier, 26.3 GB on this host, so the whole 11.24 GB corpus
-# fits either way.
+# only, which is what the stock result uses. MinIO serves a ranged GET by
+# reading every 1 MiB block the range touches, so with the store on this same
+# volume the tier's value is not a faster disk but byte-granular reads of the
+# objects the server already fetched once; the tier survives a server restart.
+# The tuned result sets it (see README.md). The tier is bounded by the same
+# resolved ceiling as the RAM tier, 26.3 GB with the tuned flags on this host,
+# so the whole 11.24 GB corpus fits.
 export RAVEL_CACHE_DIR="${RAVEL_CACHE_DIR:-}"
 
 # Loopback only: --dev-insecure-tenant-header refuses to enable unless

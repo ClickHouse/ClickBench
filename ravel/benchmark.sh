@@ -2,9 +2,11 @@
 # Ravel: object-storage-native telemetry database, queried over SQL.
 #
 # Ravel keeps every durable byte in S3-compatible object storage; there is no
-# local-disk storage mode. The bucket is supplied by the operator through
-# RAVEL_S3_BUCKET and the credentials come from the EC2 instance profile, so no
-# key is stored in this repository. See README.md for the required permissions.
+# local-disk storage mode. For this benchmark the store is a single-node MinIO
+# that ./install downloads, starts and provisions on this machine's disk, with
+# credentials it generates into a file readable by the current user only, so
+# nothing is required from the operator and no key is stored in this
+# repository. See README.md.
 export BENCH_DOWNLOAD_SCRIPT="download-hits-parquet-single"
 
 # The server is a daemon whose data survives a restart (it is in object

@@ -25,9 +25,10 @@ else
     exit 1
 fi
 
-# ./data-size sums the tenant's bytes in the bucket, which needs the AWS CLI.
-# Installed from Amazon's archive rather than from a distribution package so
-# the entry does not depend on which distributions still carry one.
+# Bucket provisioning below and ./data-size (which sums the tenant's bytes in
+# the bucket) need the AWS CLI. Installed from Amazon's archive rather than
+# from a distribution package so the entry does not depend on which
+# distributions still carry one.
 if ! command -v aws >/dev/null 2>&1; then
     case "$(uname -m)" in
         x86_64|amd64)  awsarch=x86_64 ;;
@@ -99,11 +100,57 @@ else
     cp src/target/release/ravel-server src/target/release/ravel-cli "$RAVEL_BIN_DIR/"
 fi
 
-"$RAVEL_SERVER" --version || true
-"$RAVEL_CLI" --version || true
+# What will run, by content rather than by a version string.
+sha256sum "$RAVEL_SERVER" "$RAVEL_CLI"
+
+# The object store: a single-node MinIO on this machine's disk, so the entry
+# is comparable with the local-disk systems in this repository and needs no
+# cloud account. A pinned release, verified against its published checksum.
+# A loopback RAVEL_S3_ENDPOINT means the MinIO this entry manages; anything
+# else is an external S3-compatible store the operator provisioned, and this
+# section is skipped.
+MINIO_RELEASE="${MINIO_RELEASE:-RELEASE.2025-09-07T16-13-09Z}"
+case "$RAVEL_S3_ENDPOINT" in
+    http://127.0.0.1:*|http://localhost:*) local_minio=yes ;;
+    *) local_minio=no ;;
+esac
+if [ "$local_minio" = yes ]; then
+    mkdir -p "$MINIO_DIR"
+    if ! [ -x "$MINIO_DIR/minio" ] || ! "$MINIO_DIR/minio" --version 2>/dev/null | grep -q "$MINIO_RELEASE"; then
+        mbase="https://dl.min.io/server/minio/release/linux-${arch}/archive"
+        curl -fsSL --retry 3 -o "$MINIO_DIR/minio.new" "${mbase}/minio.${MINIO_RELEASE}"
+        want=$(curl -fsSL --retry 3 "${mbase}/minio.${MINIO_RELEASE}.sha256sum" | awk '{print $1}')
+        have=$(sha256sum "$MINIO_DIR/minio.new" | awk '{print $1}')
+        [ -n "$want" ] && [ "$want" = "$have" ] || { echo "install: checksum mismatch for minio ${MINIO_RELEASE}" >&2; exit 1; }
+        chmod +x "$MINIO_DIR/minio.new"
+        # A running MinIO keeps serving from the replaced inode; ./minio-start
+        # only launches a new one when the health check fails.
+        mv -f "$MINIO_DIR/minio.new" "$MINIO_DIR/minio"
+    fi
+    "$MINIO_DIR/minio" --version | head -n 1
+    # Credentials: generated once, readable by this user only, handed to
+    # MinIO and to Ravel through the environment. Nothing in this repository
+    # or in a process argument list carries a key.
+    if [ ! -f "$MINIO_DIR/credentials.env" ]; then
+        ( umask 077
+          printf 'MINIO_ROOT_USER=%s\nMINIO_ROOT_PASSWORD=%s\n' \
+              "ravel-$(head -c 6 /dev/urandom | od -An -tx1 | tr -d ' \n')" \
+              "$(head -c 30 /dev/urandom | base64 | tr -d '/+=\n')" \
+              > "$MINIO_DIR/credentials.env" )
+    fi
+    # Re-source so the keys just written are exported for the steps below.
+    . ./ravel-env.sh
+    ./minio-start
+fi
+
+# The bucket. Everything Ravel writes lands under a t/<tenant hash>/ prefix in
+# it, so an existing bucket is fine; measure in one that holds nothing else.
+if ! aws s3api head-bucket --bucket "$RAVEL_S3_BUCKET" >/dev/null 2>&1; then
+    aws s3api create-bucket --bucket "$RAVEL_S3_BUCKET" >/dev/null
+fi
 
 # One-time bucket provisioning (ADR-0050 section 6): the server refuses to start
 # against a store that has never been qualified. It lives here rather than in
 # ./load because it qualifies the bucket rather than loading the dataset, and
 # ./load's wall clock is the reported Load time.
-"$RAVEL_CLI" --store s3 --s3-auth instance-role store qualify
+"$RAVEL_CLI" --store s3 --s3-auth static store qualify

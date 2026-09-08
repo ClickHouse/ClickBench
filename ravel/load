@@ -26,7 +26,7 @@ MAPPING="${RAVEL_MAPPING:-hits.mapping.toml}"
 # names each hits column and its type; declaring them lets ingest stamp exact
 # per-column statistics on the commit records, which is what lets aggregates be
 # answered without reading data objects.
-"$RAVEL_CLI" --store s3 --s3-auth instance-role \
+"$RAVEL_CLI" --store s3 --s3-auth static \
     typed-attr-column set "$RAVEL_TENANT" --from-mapping "$MAPPING"
 
 # Load geometry. One batch becomes one object per involved shard, so
@@ -36,7 +36,7 @@ MAPPING="${RAVEL_MAPPING:-hits.mapping.toml}"
 # default of 1 (flush every write) because accumulating instead makes each
 # batch's acknowledgement wait for a later batch and the load runs several
 # times longer for the same layout.
-"$RAVEL_CLI" --store s3 --s3-auth instance-role load \
+"$RAVEL_CLI" --store s3 --s3-auth static load \
     --parquet "$PARQUET" \
     --tenant "$RAVEL_TENANT" \
     --mapping "$MAPPING" \

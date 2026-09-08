@@ -53,8 +53,13 @@ fi
 log="server.$(date -u +%Y%m%dT%H%M%SZ).log"
 ln -sfn "$log" server.log
 
+# The store must be up before the server: a MinIO that died between queries
+# would otherwise turn every later statement into an error. No-op when it is
+# already serving.
+./minio-start
+
 # The disk cache tier is opt-in and off by default; see RAVEL_CACHE_DIR in
-# ravel-env.sh for the measurement that says why.
+# ravel-env.sh for what it does against a local store.
 cache_args=()
 [ -n "${RAVEL_CACHE_DIR:-}" ] && cache_args=(--cache-dir "$RAVEL_CACHE_DIR")
 
@@ -66,7 +71,7 @@ tuned_args=(${RAVEL_TUNED_ARGS:-})
 
 nohup "$RAVEL_SERVER" \
     --store s3 \
-    --s3-auth instance-role \
+    --s3-auth static \
     --tenant-hash-unkeyed \
     --shards "$RAVEL_SHARDS" \
     --listen-http "$RAVEL_HTTP" \

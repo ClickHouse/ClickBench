@@ -8,3 +8,6 @@ server.pid
 *.log
 hits.parquet
 cache/
+# The local MinIO ./install sets up: binary, data directory, pid, log and the
+# generated credentials.
+minio/

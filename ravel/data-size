@@ -10,7 +10,7 @@ set -eu
 # derivable from the id and no command prints it (NOFireAI/ravel#1180). Take it
 # from the key `catalog inspect` reports it addressed, which it names whether or
 # not a catalog HEAD has been published yet.
-hash=$("$RAVEL_CLI" --store s3 --s3-auth instance-role catalog inspect \
+hash=$("$RAVEL_CLI" --store s3 --s3-auth static catalog inspect \
     --tenant "$RAVEL_TENANT" --signal logs 2>&1 \
     | grep -oE 't/[0-9a-f]+/' | head -1 | cut -d/ -f2)
 
