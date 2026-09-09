@@ -129,7 +129,9 @@ drop_caches() {
 }
 
 # Say once, at the start, what the cold column actually means in this run.
-cold_check() { timeout 15 docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N -e 'SELECT 1' </dev/null; }
+cold_check() { docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N \
+                     --connect-timeout=5 -e 'SET query_timeout=10; SELECT 1' </dev/null \
+                     2>/dev/null | grep -q '^1$'; }
 
 cold_wait_stopped() {
     local i

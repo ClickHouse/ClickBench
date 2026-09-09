@@ -283,7 +283,8 @@ drop_caches() {
 }
 
 # Say once, at the start, what the cold column actually means in this run.
-cold_check() { timeout 15 docker exec -i "${CONTAINER}" clickhouse client -q 'SELECT 1' </dev/null; }
+cold_check() { docker exec -i "${CONTAINER}" clickhouse client --connect_timeout 5 \
+                     --receive_timeout 10 -q 'SELECT 1' </dev/null 2>/dev/null | grep -q '^1$'; }
 
 cold_wait_stopped() {
     local i

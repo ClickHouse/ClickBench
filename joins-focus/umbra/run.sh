@@ -190,7 +190,10 @@ drop_caches() {
 }
 
 # Say once, at the start, what the cold column actually means in this run.
-cold_check() { timeout 15 docker run --rm -i --network host -e PGPASSWORD="${PASSWORD}" "${PSQL_IMAGE}" psql -h127.0.0.1 -p5432 -U postgres -d postgres -tAc 'SELECT 1' </dev/null; }
+cold_check() { docker run --rm -i --network host -e PGPASSWORD="${PASSWORD}" \
+                 -e PGCONNECT_TIMEOUT=5 "${PSQL_IMAGE}" psql -h127.0.0.1 -p5432 -U postgres \
+                 -d postgres -q -tAc "SET statement_timeout=5000; SELECT 1" </dev/null \
+                 2>/dev/null | grep -q '^1$'; }
 
 cold_wait_stopped() {
     local i
