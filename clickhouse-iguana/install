@@ -1,0 +1,45 @@
+#!/bin/bash
+set -e -o pipefail
+
+# ClickHouse built from https://github.com/ClickHouse/ClickHouse/pull/107560
+# ("Add experimental Iguana compression codec"). The PR does not change the
+# factory default codec; this benchmark makes `Iguana` the table's default
+# codec explicitly (see create.sql) to measure it against the stock
+# `clickhouse` run, which uses the size-aware LZ4/ZSTD(3) default.
+#
+# Artifacts under s3://clickhouse-builds/PRs/ are lifecycled after 10 days,
+# so pin the commit and expect this URL to 403 once the PR is merged or
+# rebuilt — re-point it at a fresh `Build (amd_release)` artifact then.
+PR_SHA=fc9a431fb2105200c37f25ba15592a67f700d40f
+BUILD=build_amd_release
+[ "$(uname -m)" = "aarch64" ] && BUILD=build_arm_release
+
+if [ ! -x /usr/bin/clickhouse ]; then
+    wget --continue --progress=dot:giga \
+        "https://clickhouse-builds.s3.us-east-1.amazonaws.com/PRs/107560/${PR_SHA}/pr/${BUILD}/clickhouse" \
+        -O clickhouse
+    chmod +x clickhouse
+    sudo ./clickhouse install --noninteractive
+fi
+
+# See clickhouse/install for the rationale — without these, ./check passes on
+# SELECT 1 before user-database parts are loaded, and even after parts load the
+# per-table primary key and column sizes are populated lazily on first query.
+sudo mkdir -p /etc/clickhouse-server/config.d
+sudo tee /etc/clickhouse-server/config.d/eager_load.yaml >/dev/null <<'EOF'
+async_load_databases: false
+merge_tree:
+  primary_key_lazy_load: 0
+  columns_and_secondary_indices_sizes_lazy_calculation: 0
+EOF
+
+# `Iguana` is EXPERIMENTAL, so any session that introduces it has to opt in.
+# Enabling it in the default profile rather than passing it per-client keeps
+# the CREATE in ./load working, and covers any other server-side path that
+# revalidates the column codecs (ATTACH on restart, ALTER, merges).
+sudo mkdir -p /etc/clickhouse-server/users.d
+sudo tee /etc/clickhouse-server/users.d/iguana.yaml >/dev/null <<'EOF'
+profiles:
+  default:
+    enable_iguana_codec: 1
+EOF
