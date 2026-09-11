@@ -1,0 +1,53 @@
+#!/bin/bash
+# Succeeds only when the server this harness started is the one answering.
+#
+# The driver (lib/benchmark-common.sh) treats ./check as the authoritative
+# readiness signal and tolerates non-zero exits from ./start and ./stop. So a
+# stale server left running by a failed ./stop would, with a plain HTTP probe,
+# make the next "cold" try pass warm and nothing would notice. This check
+# therefore requires all of: the pidfile ./start wrote exists, that pid is
+# alive and is a ravel-server, that pid is the process listening on the HTTP
+# port, and SELECT 1 succeeds against it. A server answering on the port that
+# this harness did not launch fails the check, and the driver's check loop then
+# times out loudly instead of measuring the wrong process.
+#
+# `ss -p` shows the listening pid only for the same user or root. The
+# benchmark runs as root; run as another user the owner is invisible and this
+# fails closed with the message below rather than passing.
+set -eu
+. ./ravel-env.sh
+
+pidfile="$RAVEL_PIDFILE"
+if [ ! -f "$pidfile" ]; then
+    echo "check: no pidfile at $pidfile; nothing this harness started is running" >&2
+    exit 1
+fi
+pid=$(cat "$pidfile" 2>/dev/null || true)
+case "$pid" in
+    ''|*[!0-9]*) echo "check: $pidfile holds no pid" >&2; exit 1 ;;
+esac
+if ! kill -0 "$pid" 2>/dev/null; then
+    echo "check: pid $pid from $pidfile is not running" >&2
+    exit 1
+fi
+if ! grep -qs 'ravel-server' "/proc/$pid/cmdline" 2>/dev/null; then
+    echo "check: pid $pid is not a ravel-server" >&2
+    exit 1
+fi
+
+port="${RAVEL_HTTP##*:}"
+owner=$(ss -ltnpH "( sport = :$port )" 2>/dev/null | sed -n 's/.*pid=\([0-9][0-9]*\).*/\1/p' | head -n 1)
+if [ -z "$owner" ]; then
+    echo "check: no visible pid is listening on :$port (needs root or the same user)" >&2
+    exit 1
+fi
+if [ "$owner" != "$pid" ]; then
+    echo "check: :$port is held by pid $owner, not the pid $pid this harness started" >&2
+    exit 1
+fi
+
+curl -sSf -X POST \
+    -H 'Content-Type: application/json' \
+    -H "x-ravel-tenant: $RAVEL_TENANT" \
+    --data-binary '{"query":"SELECT 1","start":0,"end":4102444800}' \
+    "http://${RAVEL_HTTP}/api/v1/sql" >/dev/null

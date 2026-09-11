@@ -1,0 +1,43 @@
+#!/bin/bash
+# Brings up the local MinIO this entry runs against, if it is not already up.
+# Idempotent: ./install calls it after downloading MinIO, and ./start calls it
+# before every server start, so a MinIO that died between queries is restarted
+# rather than turning the rest of the run into errors. Its data directory is
+# on this machine's disk; ./stop leaves MinIO running on purpose, the driver's
+# restart cycle is for the database, and the page-cache drop before each cold
+# run reaches MinIO's files the same as any local-disk engine's.
+set -eu
+. ./ravel-env.sh
+
+health="${RAVEL_S3_ENDPOINT}/minio/health/live"
+if curl -fsS -o /dev/null "$health" 2>/dev/null; then
+    exit 0
+fi
+
+[ -x "$MINIO_DIR/minio" ] || { echo "minio-start: $MINIO_DIR/minio missing; run ./install first" >&2; exit 1; }
+[ -f "$MINIO_DIR/credentials.env" ] || { echo "minio-start: $MINIO_DIR/credentials.env missing; run ./install first" >&2; exit 1; }
+mkdir -p "$MINIO_DIR/data"
+
+# Credentials reach MinIO through its environment, never its argument list.
+# The console listener is off: nothing here uses it, and the entry should
+# open exactly two loopback ports, the store's and the database's.
+addr="${RAVEL_S3_ENDPOINT#http://}"
+(
+    set -a
+    # shellcheck disable=SC1091
+    . "$MINIO_DIR/credentials.env"
+    set +a
+    export MINIO_BROWSER=off
+    nohup "$MINIO_DIR/minio" server "$MINIO_DIR/data" --address "$addr" \
+        > "$MINIO_DIR/minio.log" 2>&1 &
+    echo $! > "$MINIO_DIR/minio.pid"
+)
+
+for _ in $(seq 1 60); do
+    if curl -fsS -o /dev/null "$health" 2>/dev/null; then
+        exit 0
+    fi
+    sleep 1
+done
+echo "minio-start: MinIO did not answer $health within 60s; see $MINIO_DIR/minio.log" >&2
+exit 1
