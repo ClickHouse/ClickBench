@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+# shellcheck disable=SC1091
+source ./s3-config.sh
+
+# Hyper's parallel S3 reader can exceed the 1,024-descriptor soft limit on
+# stock Ubuntu shells during the wider ClickBench scans. Match the host's
+# configured hard limit before launching hyperd.
+ulimit -n "$(ulimit -Hn)"
+
+if [ -f server.pid ] && kill -0 "$(cat server.pid 2>/dev/null)" 2>/dev/null; then
+    exit 0
+fi
+
+rm -f server.pid server.endpoint server.endpoint.tmp
+
+nohup python3 server.py >server.log 2>&1 &
+echo $! > server.pid
+
+for _ in $(seq 1 60); do
+    if [ -s server.endpoint ]; then
+        exit 0
+    fi
+    if ! kill -0 "$(cat server.pid)" 2>/dev/null; then
+        echo "hyper-web: server exited before publishing its endpoint" >&2
+        tail -20 server.log >&2
+        exit 1
+    fi
+    sleep 1
+done
+
+echo "hyper-web: server did not publish server.endpoint within 60s" >&2
+exit 1
