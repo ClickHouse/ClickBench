@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sudo clickhouse stop || true
