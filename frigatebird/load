@@ -1,0 +1,23 @@
+#!/bin/bash
+# Build frigatebird's persistent storage by streaming hits.parquet through
+# python -> batched INSERT statements -> the frigatebird REPL on stdin.
+#
+# Frigatebird does not support COPY/Parquet/CSV ingestion natively; INSERT
+# ... VALUES is the only ingest path, so the conversion happens client-side.
+set -e
+set -o pipefail
+
+# Idempotent: blow away any prior partial DB before rebuilding.
+rm -rf storage wal_files
+
+# CREATE TABLE first, then stream inserts. Both go through the REPL so the
+# whole load happens inside a single frigatebird process (no per-statement
+# WAL recovery cost). The REPL reads one statement per line, so we collapse
+# create.sql's multi-line DDL into a single line first.
+{
+    python3 -c 'import re, sys; sys.stdout.write(re.sub(r"\s+", " ", open("create.sql").read()).strip() + "\n")'
+    python3 parquet_to_inserts.py
+} | WALRUS_QUIET=1 frigatebird >/dev/null
+
+rm -f hits.parquet
+sync
