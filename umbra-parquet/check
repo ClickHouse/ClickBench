@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+PGPASSWORD=postgres psql -p 5432 -h 127.0.0.1 -U postgres -c 'SELECT 1' >/dev/null
