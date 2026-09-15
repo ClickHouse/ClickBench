@@ -38,6 +38,9 @@ _EXTERNAL = {
     "s3select", "singlestore", "snowflake", "supabase",
     "tembo-olap", "timescale-cloud", "tinybird", "velodb",
     "vertica", "ydb",
+    # hyper-web reads its database from public S3 at query time. Keep the
+    # benchmark reproducible, but do not expose it through the playground.
+    "hyper-web",
     # duckdb-memory runs duckdb with the database in :memory:. Even with
     # a generous swap drive, the 100M-row hits set blows past anything
     # reasonable here; duckdb has an on-disk fallback that we use via

@@ -1,0 +1,41 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+# shellcheck disable=SC1091
+source ./s3-config.sh
+
+query_file=$(mktemp)
+trap 'rm -f "$query_file"' EXIT
+cat > "$query_file"
+
+python3 - "$query_file" <<'PY'
+import os
+import sys
+import timeit
+
+from tableauhyperapi import Connection, CreateMode, Endpoint
+
+with open(sys.argv[1]) as query_file:
+    query = query_file.read()
+
+with open("server.endpoint") as endpoint_file:
+    descriptor = endpoint_file.read().strip()
+
+endpoint = Endpoint(connection_descriptor=descriptor, user_agent="clickbench")
+with Connection(
+    endpoint,
+    os.environ["HYPER_WEB_S3_DATABASE"],
+    CreateMode.NONE,
+    parameters={"access_mode": "readonly"},
+) as connection:
+    start = timeit.default_timer()
+    rows = connection.execute_list_query(query)
+    end = timeit.default_timer()
+
+for row in rows:
+    print(row)
+
+print(f"{end - start:.3f}", file=sys.stderr)
+PY

@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-# See hyper/install — tableauhyperapi has no Linux arm64 wheel.
+# tableauhyperapi only publishes Linux wheels for x86_64.
 if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "amd64" ]; then
-    echo "hyper-parquet: tableauhyperapi has no Linux $(uname -m) wheel; skipping" >&2
+    echo "hyper-web: tableauhyperapi has no Linux $(uname -m) wheel; skipping" >&2
     exit 1
 fi
 
