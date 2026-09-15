@@ -1,0 +1,12 @@
+{
+  "system": "Ravel",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "stateless",
+    "S3"
+  ]
+}
