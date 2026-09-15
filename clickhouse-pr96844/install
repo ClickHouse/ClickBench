@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e -o pipefail
+
+# Install the release build of ClickHouse/ClickHouse#96844 ("Columns Cache"),
+# head 9a1dbd4eed7d9785338989881899e64f65815cc8 (v26.9.1.1), instead of the
+# published package. This directory exists only to benchmark that build; it is
+# not part of the published results.
+BUILD=https://clickhouse-builds.s3.amazonaws.com/PRs/96844/9a1dbd4eed7d9785338989881899e64f65815cc8/pr
+
+if [ ! -x /usr/bin/clickhouse ]; then
+    case "$(uname -m)" in
+        x86_64)  job=build_amd_release; pkg=clickhouse-common-static-26.9.1.1-amd64.tgz ;;
+        aarch64) job=build_arm_release; pkg=clickhouse-common-static-26.9.1.1-arm64.tgz ;;
+        *) echo "no PR build for $(uname -m)" >&2; exit 1 ;;
+    esac
+    wget --continue --progress=dot:giga "$BUILD/$job/$pkg" -O clickhouse-pr.tgz
+    mkdir -p clickhouse-pr && tar -xzf clickhouse-pr.tgz -C clickhouse-pr
+    sudo clickhouse-pr/clickhouse-common-static-26.9.1.1/usr/bin/clickhouse install --noninteractive
+    rm -rf clickhouse-pr.tgz clickhouse-pr
+fi
+
+# See clickhouse/install for the rationale — without these, ./check passes on
+# SELECT 1 before user-database parts are loaded, and even after parts load the
+# per-table primary key and column sizes are populated lazily on first query.
+sudo mkdir -p /etc/clickhouse-server/config.d
+sudo tee /etc/clickhouse-server/config.d/eager_load.yaml >/dev/null <<'YAML'
+async_load_databases: false
+merge_tree:
+  primary_key_lazy_load: 0
+  columns_and_secondary_indices_sizes_lazy_calculation: 0
+YAML
