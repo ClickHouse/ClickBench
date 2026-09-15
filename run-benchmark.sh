@@ -28,6 +28,18 @@ ami=$(aws ec2 describe-images --owners amazon --filters "Name=name,Values=ubuntu
 
 # Global per-system benchmark timeout — substituted at render time.
 # Default keeps the 10h cap that worked for the slowest OLTP systems.
+#
+# A system that needs longer can ship a `timeout-seconds` file in its
+# directory holding the number of seconds; an explicit `timeout` in the
+# environment still wins over it. Turso is the case that forced this: even
+# with every query capped (BENCH_QUERY_TIMEOUT), 43 queries x 3 tries at
+# the ~350s per try it manages is over 12h before the ~1.8h load, so 10h
+# can only ever produce a dead machine. Note that the PR workflow checks
+# out the base branch for these launcher scripts, so a `timeout-seconds`
+# added by a pull request takes effect only once it is merged.
+if [ -z "${timeout:-}" ] && [ -r "$system/timeout-seconds" ]; then
+    timeout=$(tr -cd '0-9' < "$system/timeout-seconds")
+fi
 timeout="${timeout:-36000}"
 
 awk -v sys="$system" -v repo="$repo" -v branch="$branch" -v t="$timeout" -v pr="$clickbench_pr" '

@@ -1,5 +1,8 @@
 #!/bin/bash
 set -e
+# The import below pipes tursodb into grep, and grep's exit status would
+# otherwise mask an import failure from `set -e`.
+set -o pipefail
 
 export HOME=${HOME:=~}
 # shellcheck disable=SC1091
@@ -17,13 +20,32 @@ export RUST_BACKTRACE=1
 rm -f mydb
 
 tursodb mydb < create.sql
-tursodb mydb <<'EOF' 2>&1 | grep -v '^Inserting batch of'
+
+# Import on `.import`'s own per-batch commits.
+#
+# Wrapping the whole import in one BEGIN/COMMIT is faster on paper — one
+# fsync instead of one per batch — but it makes tursodb accumulate the
+# entire ~70 GB dataset in a single uncommitted transaction, and 0.7.0
+# doesn't survive that. The 2026-07-28 run on c6a.4xlarge wrote ~76 GB of
+# db+WAL over ~6900s and then vanished: no panic, no backtrace, no stderr
+# despite RUST_BACKTRACE=1, i.e. killed by a signal (these machines run
+# earlyoom and have 32 GiB). Per-batch commits loaded the same data in
+# 6414s on 2026-07-21, so the single transaction bought nothing worth
+# that. The wal_checkpoint(TRUNCATE) that followed the COMMIT goes with
+# it: there is no longer a 70 GB WAL to fold back in.
+#
+# `PRAGMA synchronous = OFF` stays. It removes the per-batch fsync that
+# the single transaction was reaching for, without letting the write set
+# pile up in the first place.
+#
+# grep: per-batch commits mean `.import` prints a progress line per 1000
+# rows — ~100k lines that would bury the benchmark log and push it past
+# the results sink's 1 MB cap. `|| true` because grep exits 1 when it
+# filters out every line, which with pipefail would fail the load.
+tursodb mydb <<'EOF' 2>&1 | { grep -v '^Inserting batch of' || true; }
 PRAGMA synchronous = OFF;
-BEGIN;
 .import --csv hits.csv hits
-COMMIT;
 EOF
-tursodb mydb 'PRAGMA wal_checkpoint(TRUNCATE);' > /dev/null
 
 rm -f hits.csv
 sync
