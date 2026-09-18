@@ -1,0 +1,52 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# Spark runs under JDK 17; Gluten was built under JDK 8 in ./install.
+arch=$(dpkg --print-architecture)
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-${arch}"
+export PATH="$JAVA_HOME/bin:$PATH"
+
+# libch.so plus Spark spin up many threads on a 192-core box; the default
+# per-process limits are too low and SparkContext init dies with
+# `OutOfMemoryError: unable to create native thread`. Raise the soft limits to
+# the hard max (./install also bumps the kernel-wide sysctls).
+ulimit -u unlimited 2>/dev/null || ulimit -u "$(ulimit -Hu)" 2>/dev/null || true
+ulimit -n 1048576 2>/dev/null || ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
+
+# The ulimit/sysctl bumps did NOT clear the native-thread error, which points to
+# a cgroup pids.max (systemd TasksMax) ceiling that ulimit can't override, and/or
+# a memory-overcommit gate on thread stacks. Diagnose + raise both. NOTE: the
+# harness sends this script's STDOUT to /dev/null and only surfaces STDERR (on a
+# non-zero exit), so ALL diagnostics must go to stderr -- hence the { ... } >&2.
+{
+    echo "=== LIMITS: nproc(-u)=$(ulimit -u) nofile(-n)=$(ulimit -n) stack(-s)=$(ulimit -s) KiB addrspace(-v)=$(ulimit -v) locked(-l)=$(ulimit -l) sys-threads=$(ps -eL 2>/dev/null | wc -l) ==="
+    echo "=== KERNEL: threads-max=$(cat /proc/sys/kernel/threads-max 2>/dev/null) pid_max=$(cat /proc/sys/kernel/pid_max 2>/dev/null) overcommit=$(cat /proc/sys/vm/overcommit_memory 2>/dev/null) max_map_count=$(cat /proc/sys/vm/max_map_count 2>/dev/null) ==="
+    cg=$(awk -F: '$1=="0"{print $3}' /proc/self/cgroup 2>/dev/null)
+    echo "=== CGROUP=$cg pids.max=$(cat "/sys/fs/cgroup${cg}/pids.max" 2>/dev/null) pids.current=$(cat "/sys/fs/cgroup${cg}/pids.current" 2>/dev/null) ==="
+    # Raise pids.max on our cgroup and every ancestor up to the root (effective
+    # limit is the min across them). Also allow memory overcommit so thread-stack
+    # reservations can't trip an ENOMEM under the big -Xmx.
+    d="/sys/fs/cgroup${cg}"
+    while [ -n "$cg" ] && [ "$d" != "/sys/fs/cgroup" ] && [ "$d" != "/" ]; do
+        echo max | sudo tee "$d/pids.max" >/dev/null 2>&1 || true
+        d=$(dirname "$d")
+    done
+    echo 1 | sudo tee /proc/sys/vm/overcommit_memory >/dev/null 2>&1 || true
+    echo "=== after raise: pids.max=$(cat "/sys/fs/cgroup${cg}/pids.max" 2>/dev/null) overcommit=$(cat /proc/sys/vm/overcommit_memory 2>/dev/null) ==="
+} >&2
+# RLIMIT_AS (address space) is the last unmeasured ceiling; a finite value would
+# make a thread-stack mmap fail as "unable to create native thread" even with
+# unlimited nproc/pids. Lift it (no-op if already unlimited).
+ulimit -v unlimited 2>/dev/null || true
+
+query=$(cat)
+# DIAGNOSTIC: pin the JVM (and thus libch.so) to 16 CPUs. ClickHouse sizes its
+# thread pools to the visible core count (sched_getaffinity), so on the bare
+# 192-core box it eagerly spawns a huge number of threads at init and dies with
+# "unable to create native thread" even though every system limit is unlimited.
+# If capping perceived cores clears it, that confirms thread-count as the cause
+# and the real fix is a ClickHouse pool-size setting (keeping full parallelism).
+printf '%s' "$query" | taskset -c 0-15 python3 query.py
