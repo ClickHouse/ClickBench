@@ -506,6 +506,15 @@ const additional_data_size_points = [
                 <a id="selector-tuned-no" class="selector">No</a>
                 <a id="selector-tuned-yes" class="selector selector-active">Yes</a>
             </span>
+            <span class="inline-filter" id="selectors_storage">
+                <span class="inline-filter-label">Storage:</span>
+                <a id="selector-storage-native" class="selector selector-active">Native</a>
+                <a id="selector-storage-cloud" class="selector selector-active">Cloud</a>
+                <a id="selector-storage-memory" class="selector selector-active">Memory</a>
+                <a id="selector-storage-parquet" class="selector selector-active">Parquet</a>
+                <a id="selector-storage-datalake" class="selector selector-active">Data Lake</a>
+                <a id="selector-storage-web" class="selector selector-active">Web</a>
+            </span>
         </td>
     </tr>
     <tr>
@@ -581,6 +590,10 @@ const constant_time_add = 0.01;
 const missing_result_penalty = 2;
 const missing_result_time = 300;
 
+/// Every storage kind is enabled by default: the selector is for narrowing the
+/// report down to a single way of keeping the data, not for the default view.
+const default_storage = {"native": true, "cloud": true, "memory": true, "parquet": true, "datalake": true, "web": true};
+
 let selectors = {
     "system": {},
     "type": {},
@@ -589,6 +602,7 @@ let selectors = {
     "opensource": {"yes": true, "no": true},
     "hardware": {"cpu": true, "gpu": false},
     "tuned": {"no": true, "yes": false},
+    "storage": {...default_storage},
     "metric": "combined",
     "queries": [],
 };
@@ -711,6 +725,79 @@ data.forEach(d => {
     });
 });
 
+/// Where a benchmark entry keeps its data, see
+/// https://github.com/ClickHouse/ClickBench/issues/2048:
+/// - native — the database native format on local storage; formats like Vortex or Lance
+///   are also here, when the entry creates the data in them on load;
+/// - cloud — a cloud service, as its storage is opaque;
+/// - memory — the full dataset has to be represented in memory for the system to operate;
+/// - parquet — Parquet files on local storage: either the benchmark-provided ones, or
+///   converted on load, in which case the conversion is accounted as the load time;
+/// - datalake — Parquet or a bunch of other files in a bucket on AWS S3 (it is a
+///   simplification to call it a data lake, but it distills what matters);
+/// - web — the database native format on a remote HTTP server, a bucket on AWS S3.
+///
+/// The classification is keyed by the directory of the benchmark entry; everything
+/// not listed here is `native`, unless one of the rules in `storageOf` recognizes it.
+const storage_by_directory = {};
+Object.entries({
+    parquet: [
+        'bemidb', /// Iceberg, but on local storage.
+        'cedardb-parquet', 'chdb-parquet-partitioned', 'clickhouse-parquet',
+        'clickhouse-parquet-partitioned', 'ctrlb', 'daft-parquet', 'daft-parquet-partitioned',
+        'datafusion', 'datafusion-partitioned', 'doris-parquet', 'doris-parquet-single',
+        'drill', 'duckdb-parquet', 'duckdb-parquet-partitioned', 'firebolt-parquet',
+        'firebolt-parquet-partitioned', 'glaredb', 'glaredb-partitioned', 'hive',
+        'hyper-parquet-partitioned', 'hyper-parquet-single', 'impala', 'octosql', 'opteryx',
+        'paradedb', 'paradedb-partitioned', 'parseable', 'pg_duckdb-parquet', 'pg_ducklake',
+        'pg_mooncake', 'polars', 'presto', 'presto-partitioned', 'sail', 'sail-partitioned',
+        'spark', 'spark-auron', 'spark-comet', 'spark-gluten', 'spark-velox', 'spiceai-parquet',
+        'spiceai-parquet-partitioned', 'starrocks-parquet', 'starrocks-parquet-partitioned',
+        'trino', 'trino-partitioned', 'velox',
+    ],
+    datalake: [
+        'athena', 'athena-partitioned', 'clickhouse-datalake', 'clickhouse-datalake-partitioned',
+        'crunchy-bridge-for-analytics', 'duckdb-datalake', 'duckdb-datalake-partitioned',
+        'presto-datalake', 'presto-datalake-partitioned', 's3select', 'trino-datalake',
+        'trino-datalake-partitioned',
+    ],
+    memory: [
+        'chdb-dataframe', 'dask', 'duckdb-dataframe', 'duckdb-memory', 'hyrise', 'pandas',
+        'polars-dataframe', 'sirius',
+    ],
+    web: ['clickhouse-web', 'hyper-web'],
+    /// The rest of the cloud services is recognized by their tags, see `storageOf`.
+    cloud: ['bytehouse', 'supabase', 'tembo-olap'],
+}).forEach(([storage, directories]) => directories.forEach(dir => { storage_by_directory[dir] = storage }));
+
+/// A few directories contain entries with different storage.
+const storage_by_system = {
+    'pgpro_tam (parquet, local storage)': 'parquet',
+    'pgpro_tam (parquet, local + cache)': 'parquet',
+    'pgpro_tam (parquet, local, parallel)': 'parquet',
+};
+
+function storageOf(elem) {
+    /// A result file can state the storage explicitly.
+    if (elem.storage) return elem.storage;
+    if (storage_by_system[elem.system]) return storage_by_system[elem.system];
+
+    const directory = (elem.source || '').split('/')[0];
+    if (storage_by_directory[directory]) return storage_by_directory[directory];
+
+    /// The rules for the entries added after the lists above were written — they
+    /// follow the naming conventions and the tags of the existing entries.
+    if (/\(web\)/i.test(elem.system)) return 'web';
+    if (/data.?lake/i.test(elem.system + ' ' + directory)) return 'datalake';
+    if (/parquet/i.test(elem.system + ' ' + directory)) return 'parquet';
+    if (/dataframe|\(memory\)/i.test(elem.system) || (elem.tags || []).includes('in-memory')) return 'memory';
+    if ((elem.tags || []).some(tag => tag == 'managed' || tag == 'serverless')) return 'cloud';
+
+    return 'native';
+}
+
+data.forEach(elem => { elem.storage_class = storageOf(elem) });
+
 /// The whitelist of AWS machines: results on any other EC2 instance type are hidden,
 /// so that the set of compared machines stays consistent.
 const aws_machines_whitelist = new Set([
@@ -820,6 +907,19 @@ document.getElementById('selector-tuned-no').addEventListener('click', e => {
     updateHistory();
 });
 
+Object.keys(default_storage).forEach(key => {
+    document.getElementById('selector-storage-' + key).addEventListener('click', e => {
+        selectors.storage[key] = !selectors.storage[key];
+        if (selectors.storage[key]) {
+            e.target.classList.add('selector-active');
+        } else {
+            e.target.classList.remove('selector-active');
+        }
+        render();
+        updateHistory();
+    });
+});
+
 document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
 document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
 document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
@@ -856,13 +956,18 @@ function updateSelectors() {
 
     document.getElementById('selector-tuned-yes').className = selectors.tuned.yes ? 'selector selector-active' : 'selector';
     document.getElementById('selector-tuned-no').className = selectors.tuned.no ? 'selector selector-active' : 'selector';
+
+    Object.keys(default_storage).forEach(key => {
+        document.getElementById('selector-storage-' + key).className =
+            selectors.storage[key] ? 'selector selector-active' : 'selector' });
 }
 
 function applyTopRowFilters() {
     const matches = data.filter(elem =>
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
-        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")));
+        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
+        selectors.storage[elem.storage_class]);
 
     function apply(container, getValues) {
         const allowed = new Set(matches.flatMap(getValues).map(x => String(x)));
@@ -1171,7 +1276,8 @@ function render() {
         elem.tags.filter(type => selectors.type[type]).length > 0 &&
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
-        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu"))
+        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
+        selectors.storage[elem.storage_class]
         );
 
     /// Filter out unreasonable entries
@@ -1437,6 +1543,9 @@ window.onpopstate = function(event) {
     if (!selectors.tuned) {
         selectors.tuned = {"no": true, "yes": false};
     }
+    if (!selectors.storage) {
+        selectors.storage = {...default_storage};
+    }
     updateSelectors();
     render();
 };
@@ -1452,6 +1561,9 @@ if (window.location.hash) {
         }
         if (!selectors.tuned) {
             selectors.tuned = {"no": true, "yes": false};
+        }
+        if (!selectors.storage) {
+            selectors.storage = {...default_storage};
         }
     } catch {}
 }

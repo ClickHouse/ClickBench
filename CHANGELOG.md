@@ -2,6 +2,17 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-09-18
+Added a "Storage" selector to the report, as requested in [#2048](https://github.com/ClickHouse/ClickBench/issues/2048). Every benchmark entry is now classified by where it keeps its data, and each kind can be enabled and disabled individually: `Native` — the database native format on local storage; `Cloud` — a cloud service, as its storage is opaque; `Memory` — the full dataset has to be represented in memory for the system to operate; `Parquet` — Parquet files on local storage, either the benchmark-provided ones, or converted on load, in which case the conversion is accounted as the load time; `Data Lake` — Parquet or a bunch of other files in a bucket on AWS S3 (it is a simplification to call it a data lake, but this simplification is good to allow many systems and distill what matters); `Web` — the database native format on a remote HTTP server represented as a bucket on AWS S3.
+
+All six kinds are selected by default, so the default report is unchanged, and the links shared before this change keep working. The notable classification decisions:
+- an entry that converts the dataset into a columnar format of its own on load is `Native` — Vortex, Opteryx's skene, pgpro_tam's feather;
+- an entry that ends up with Parquet files on local storage is `Parquet`, even when the format has another name on top of them — `pg_ducklake`, `pg_mooncake`, and BemiDB with its local Iceberg tables;
+- a managed service is `Cloud` even when it reads Parquet under the hood, because the storage is not ours to see; the exceptions are Athena and Crunchy Bridge, which query the benchmark files in an S3 bucket, and are therefore `Data Lake`;
+- `Memory` is for the systems that have to hold the whole dataset in RAM to answer at all: pandas, Dask, the Polars, DuckDB and chDB DataFrames, `DuckDB (memory)`, Hyrise, and Sirius. Daft is `Parquet` instead, despite its `in-memory` tag, because its data lives in local Parquet files.
+
+(Alexey Milovidov)
+
 ### 2026-08-29
 Firebolt now does a true cold run. The three self-hosted firebolt-core entries (`firebolt`, `firebolt-parquet`, `firebolt-parquet-partitioned`) set `BENCH_RESTARTABLE=no` and therefore only got their page cache flushed before each first run; they now go through the common runner's full `./stop` → `drop_caches` → `./start` cycle like every other daemon, and lost the `no-cold` tag. The engine handles `SIGTERM` and shuts down cleanly, and the database lives on a bind-mounted volume, so it is still there when the container is started back up. The result files produced before this change keep the tag. The managed-cloud Firebolt results from 2025-06-07 also keep it: those ran against the hosted service, which cannot be restarted.
 
