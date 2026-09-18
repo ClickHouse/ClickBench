@@ -1,0 +1,26 @@
+#!/bin/bash
+set -eu
+
+# cloud-init runs scripts as root with no HOME exported; the per-system
+# scripts expect one, so pin a default (same guard as the upstream entry).
+HOME="${HOME:-/root}"
+export HOME
+
+sudo apt-get update -y
+sudo apt-get install -y curl unzip netcat-openbsd
+
+# Install the released gizmosql_server + gizmosql_client of this entry from
+# https://github.com/bddppqs/intent-gizmosql (tag v1.38.0-clickbench.1): a portable Linux amd64
+# build with a glibc 2.28 baseline, so no loader shim is needed on Ubuntu 24.04.
+# The zip is pinned by URL and SHA-256; a different file fails the install.
+ZIP_URL="https://github.com/bddppqs/intent-gizmosql/releases/download/v1.38.0-clickbench.1/gizmosql_cli_linux_amd64.zip"
+ZIP_SHA256="a460e5b65804d2e1cd825834a2f2428412713e1424113e8706da37effa3e6f7b"
+if ! command -v gizmosql_server >/dev/null 2>&1; then
+    tmp=$(mktemp -d)
+    curl -fsSL "$ZIP_URL" -o "$tmp/gizmosql.zip"
+    echo "$ZIP_SHA256  $tmp/gizmosql.zip" | sha256sum -c -
+    unzip -q "$tmp/gizmosql.zip" -d "$tmp"
+    sudo install -m 0755 "$tmp/gizmosql_server" "$tmp/gizmosql_client" /usr/local/bin/
+    rm -rf "$tmp"
+fi
+gizmosql_server --version
