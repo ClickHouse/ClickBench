@@ -1,0 +1,10 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client gzip gcc
+
+sudo docker pull umbradb/umbra:26.09
+
+mkdir -p data db
+chmod -R 777 data db
