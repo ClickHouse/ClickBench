@@ -8,7 +8,7 @@ Added a "Storage" selector to the report, as requested in [#2048](https://github
 All six kinds are selected by default, so the default report is unchanged, and the links shared before this change keep working. The notable classification decisions:
 - an entry that converts the dataset into a columnar format of its own on load is `Native` — Vortex, Opteryx's skene, pgpro_tam's feather;
 - an entry that ends up with Parquet files on local storage is `Parquet`, even when the format has another name on top of them — `pg_ducklake`, `pg_mooncake`, and BemiDB with its local Iceberg tables;
-- a managed service is `Cloud` even when it reads Parquet under the hood, because the storage is not ours to see; the exceptions are Athena and Crunchy Bridge, which query the benchmark files in an S3 bucket, and are therefore `Data Lake`;
+- a managed service is `Cloud` even when it reads the benchmark's Parquet files from an S3 bucket, because everything around its storage — caching, tiering, prewarming — is opaque to us: Athena, Crunchy Bridge for Analytics, S3 Select. `Data Lake` is for the engines that we run ourselves over the files in a bucket;
 - `Memory` is for the systems that have to hold the whole dataset in RAM to answer at all: pandas, Dask, the Polars, DuckDB and chDB DataFrames, `DuckDB (memory)`, Hyrise, and Sirius. Daft is `Parquet` instead, despite its `in-memory` tag, because its data lives in local Parquet files.
 
 (Alexey Milovidov)
