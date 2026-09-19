@@ -1,11 +1,8 @@
 {
   "system": "pgrust",
+  "version": "v0.4-preview",
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
-  "tags": [
-    "Rust",
-    "column-oriented",
-    "PostgreSQL compatible"
-  ]
+  "tags": ["Rust", "PostgreSQL compatible", "column-oriented"]
 }

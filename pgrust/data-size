@@ -1,6 +1,4 @@
 #!/bin/bash
 set -eu
 . "$(dirname "$0")/env.sh"
-
-# Whole datadir, including WAL and catalogs.
-sudo du -bs "$PGDATA_DIR" | awk '{print $1}'
+du -bs "$PGDATA" | awk '{print $1}'
