@@ -7,7 +7,17 @@ sudo monetdb destroy -f test 2>/dev/null || true
 sudo monetdb create test
 sudo monetdb release test
 
-chmod 777 ~ hits.tsv
+# mserver5 runs as the `monetdb` system user (11.55 refuses to run as
+# root), so COPY INTO opens hits.tsv as that user: the file has to be
+# readable and every directory on the path down to it traversable —
+# a checkout under a 0700 home directory would otherwise fail with
+# "Failed to open file ...: Permission denied".
+chmod a+r hits.tsv
+dir=$(pwd)
+while [ "$dir" != "/" ]; do
+    chmod a+x "$dir"
+    dir=$(dirname "$dir")
+done
 
 # Drive mclient non-interactively. The bundled monetdb-client has no
 # password flag at all (not -P, not --password). Both user and password
