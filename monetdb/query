@@ -2,7 +2,7 @@
 # Reads a SQL query from stdin, runs it via mclient.
 # Stdout: query result.
 # Stderr: query runtime in fractional seconds on the last line (parsed
-# from mclient's `\t clock` output: "clk: <ms> ms" or "clk: <s> s").
+# from mclient's `\t clock` output — see the awk below for the shapes).
 # Exit non-zero on error.
 set -e
 
@@ -33,10 +33,27 @@ if [ -z "$timing" ]; then
     exit 1
 fi
 
+# mclient's human-readable clock switches unit as the duration grows
+# (clients/mapiclient/mclient.c):
+#   clk: 123.456 ms     < 1 s
+#   clk: 12.345 sec     < 1 min
+#   clk: 2:05 min       < 1 h     -- minutes:seconds, no fraction
+#   clk: 1:30 h         >= 1 h    -- hours:minutes
+# The colon-separated forms have to be split, not fed to a bare
+# numeric conversion: awk reads "2:05" as 2, so a 2m05s query used to
+# be recorded as 2.000 seconds — a 60x understatement that silently
+# turned the slowest queries into the fastest ones.
 awk -v s="$timing" 'BEGIN {
-    n = split(s, a, " ")
+    split(s, a, " ")
     val = a[2]; unit = a[3]
-    if (unit ~ /ms/) { printf "%.3f\n", val / 1000 }
-    else if (unit ~ /s/) { printf "%.3f\n", val }
-    else { printf "%.3f\n", val }
+    if (index(val, ":") > 0) {
+        split(val, b, ":")
+        if (unit == "h") { secs = b[1] * 3600 + b[2] * 60 }
+        else             { secs = b[1] * 60 + b[2] }
+    } else if (unit == "ms") {
+        secs = val / 1000
+    } else {
+        secs = val
+    }
+    printf "%.3f\n", secs
 }' >&2
