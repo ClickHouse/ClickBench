@@ -6,7 +6,6 @@
   "tags": [
     "C++",
     "column-oriented",
-    "DuckDB derivative",
-    "GizmoSQL derivative"
+    "DuckDB derivative"
   ]
 }

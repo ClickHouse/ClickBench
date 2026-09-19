@@ -9,8 +9,7 @@
   "tags": [
     "C++",
     "column-oriented",
-    "DuckDB derivative",
-    "GizmoSQL derivative"
+    "DuckDB derivative"
   ],
   "load_time": 121.111,
   "data_size": 20462186496,
