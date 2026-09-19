@@ -1,0 +1,166 @@
+#!/bin/bash
+set -eu
+. ./ravel-env.sh
+
+# A server left over from a previous run holds the binaries this script is about
+# to replace, and ./start is idempotent through ./check, so a survivor would go
+# on serving and the run would measure the old build.
+./stop
+
+# ClickBench standardises on Ubuntu, so apt is the primary path; the dnf branch
+# keeps the entry runnable on the Amazon Linux images some of these VMs ship
+# with rather than failing at the first line.
+if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update -qq
+    # awscli is deliberately not in this list: Ubuntu 24.04 ships no awscli
+    # package ("has no installation candidate"), so it is installed from
+    # Amazon's own archive below on every distribution.
+    sudo apt-get install -y --no-install-recommends jq curl ca-certificates unzip
+elif command -v dnf >/dev/null 2>&1; then
+    # curl is deliberately absent: Amazon Linux ships curl-minimal, which
+    # provides the binary and conflicts with the full curl package.
+    sudo dnf install -y -q jq ca-certificates unzip
+else
+    echo "install: no supported package manager (apt-get or dnf)" >&2
+    exit 1
+fi
+
+# Bucket provisioning below and ./data-size (which sums the tenant's bytes in
+# the bucket) need the AWS CLI. Installed from Amazon's archive rather than
+# from a distribution package so the entry does not depend on which
+# distributions still carry one.
+if ! command -v aws >/dev/null 2>&1; then
+    case "$(uname -m)" in
+        x86_64|amd64)  awsarch=x86_64 ;;
+        aarch64|arm64) awsarch=aarch64 ;;
+        *) echo "install: unsupported arch $(uname -m) for the AWS CLI" >&2; exit 1 ;;
+    esac
+    curl -fsSL --retry 3 "https://awscli.amazonaws.com/awscli-exe-linux-${awsarch}.zip" -o /tmp/awscliv2.zip
+    rm -rf /tmp/aws
+    unzip -q /tmp/awscliv2.zip -d /tmp
+    sudo /tmp/aws/install --update
+fi
+aws --version
+
+RAVEL_VERSION="${RAVEL_VERSION:-v0.15.0}"
+RAVEL_REPO="${RAVEL_REPO:-https://github.com/NOFireAI/ravel}"
+
+case "$(uname -m)" in
+    x86_64|amd64)  arch=amd64 ;;
+    aarch64|arm64) arch=arm64 ;;
+    *) echo "install: unsupported arch $(uname -m)" >&2; exit 1 ;;
+esac
+
+mkdir -p "$RAVEL_BIN_DIR"
+
+# Preferred path: the released binaries, which are the ones extracted from the
+# signed container images, so a downloaded binary is byte-identical to what the
+# published image runs (ADR-0086). Checksums are verified against the release's
+# own SHA256SUMS.
+base="${RAVEL_REPO}/releases/download/${RAVEL_VERSION}"
+if curl -fsSL --retry 3 -o "$RAVEL_BIN_DIR/SHA256SUMS" "${base}/SHA256SUMS"; then
+    # Downloaded under a temporary name and moved into place only once the
+    # checksum passes, so an unverified binary never sits at the path ./start
+    # runs. The rename also replaces a binary that is still executing, which
+    # writing to it in place does not: curl fails with ETXTBSY.
+    for b in ravel-server ravel-cli; do
+        curl -fsSL --retry 3 -o "$RAVEL_BIN_DIR/${b}.new" "${base}/${b}-linux-${arch}"
+    done
+    ( cd "$RAVEL_BIN_DIR" && for b in ravel-server ravel-cli; do
+        want=$(awk -v n="${b}-linux-${arch}" '$2 == n || $2 == "*"n {print $1}' SHA256SUMS | head -1)
+        [ -n "$want" ] || { echo "install: ${b}-linux-${arch} absent from SHA256SUMS" >&2; exit 1; }
+        have=$(sha256sum "${b}.new" | awk '{print $1}')
+        [ "$want" = "$have" ] || { echo "install: checksum mismatch for $b" >&2; exit 1; }
+        chmod +x "${b}.new"
+        mv -f "${b}.new" "$b"
+      done )
+else
+    # Fallback: build at a ref. Used when the release is unreachable, or to
+    # benchmark an unreleased commit via RAVEL_REF.
+    echo "install: release ${RAVEL_VERSION} not reachable, building from source" >&2
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get install -y --no-install-recommends git build-essential pkg-config libssl-dev protobuf-compiler
+    else
+        sudo dnf install -y -q git gcc gcc-c++ make pkgconfig openssl-devel protobuf-compiler
+    fi
+    if ! cargo --version >/dev/null 2>&1; then
+        if command -v rustup >/dev/null 2>&1; then rustup default stable
+        else curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal; fi
+    fi
+    # shellcheck disable=SC1091
+    [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+    [ -d src ] || git clone --filter=blob:none "${RAVEL_REPO}.git" src
+    git -C src fetch origin --quiet
+    git -C src checkout -q --detach "${RAVEL_REF:-$RAVEL_VERSION}"
+    git -C src rev-parse HEAD > ravel-commit.txt
+    # The SQL surface sits behind a cargo feature that is off by default.
+    # --release matters: the gate profile is opt-level 0 and loads ~7x slower.
+    cargo build --manifest-path src/Cargo.toml --release -p ravel-server --features sql
+    cargo build --manifest-path src/Cargo.toml --release -p ravel-cli
+    cp src/target/release/ravel-server src/target/release/ravel-cli "$RAVEL_BIN_DIR/"
+fi
+
+# What will run, by content rather than by a version string.
+sha256sum "$RAVEL_SERVER" "$RAVEL_CLI"
+
+# The object store: a single-node MinIO on this machine's disk, so the entry
+# is comparable with the local-disk systems in this repository and needs no
+# cloud account. A pinned release, verified against its published checksum.
+# A loopback RAVEL_S3_ENDPOINT means the MinIO this entry manages; anything
+# else is an external S3-compatible store the operator provisioned, and this
+# section is skipped.
+MINIO_RELEASE="${MINIO_RELEASE:-RELEASE.2025-09-07T16-13-09Z}"
+case "$RAVEL_S3_ENDPOINT" in
+    http://127.0.0.1:*|http://localhost:*) local_minio=yes ;;
+    *) local_minio=no ;;
+esac
+if [ "$local_minio" = yes ]; then
+    mkdir -p "$MINIO_DIR"
+    if ! [ -x "$MINIO_DIR/minio" ] || ! "$MINIO_DIR/minio" --version 2>/dev/null | grep -q "$MINIO_RELEASE"; then
+        mbase="https://dl.min.io/server/minio/release/linux-${arch}/archive"
+        curl -fsSL --retry 3 -o "$MINIO_DIR/minio.new" "${mbase}/minio.${MINIO_RELEASE}"
+        want=$(curl -fsSL --retry 3 "${mbase}/minio.${MINIO_RELEASE}.sha256sum" | awk '{print $1}')
+        have=$(sha256sum "$MINIO_DIR/minio.new" | awk '{print $1}')
+        [ -n "$want" ] && [ "$want" = "$have" ] || { echo "install: checksum mismatch for minio ${MINIO_RELEASE}" >&2; exit 1; }
+        chmod +x "$MINIO_DIR/minio.new"
+        # A running MinIO keeps serving from the replaced inode; ./minio-start
+        # only launches a new one when the health check fails.
+        mv -f "$MINIO_DIR/minio.new" "$MINIO_DIR/minio"
+    fi
+    "$MINIO_DIR/minio" --version | head -n 1
+    # Credentials: generated once, readable by this user only, handed to
+    # MinIO and to Ravel through the environment. Nothing in this repository
+    # or in a process argument list carries a key.
+    if [ ! -f "$MINIO_DIR/credentials.env" ]; then
+        ( umask 077
+          printf 'MINIO_ROOT_USER=%s\nMINIO_ROOT_PASSWORD=%s\n' \
+              "ravel-$(head -c 6 /dev/urandom | od -An -tx1 | tr -d ' \n')" \
+              "$(head -c 30 /dev/urandom | base64 | tr -d '/+=\n')" \
+              > "$MINIO_DIR/credentials.env" )
+    fi
+    # The server records query text on its audit trail tokenized under a
+    # key. A keyed deployment derives it; this entry runs unkeyed (see
+    # ./start), so it needs one of its own. Generated once, kept beside the
+    # MinIO credentials, handed to the server through the environment.
+    if ! grep -q '^RAVEL_AUDIT_TOKEN_KEY=' "$MINIO_DIR/credentials.env"; then
+        ( umask 077
+          printf 'RAVEL_AUDIT_TOKEN_KEY=%s\n' \
+              "$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')" \
+              >> "$MINIO_DIR/credentials.env" )
+    fi
+    # Re-source so the keys just written are exported for the steps below.
+    . ./ravel-env.sh
+    ./minio-start
+fi
+
+# The bucket. Everything Ravel writes lands under a t/<tenant hash>/ prefix in
+# it, so an existing bucket is fine; measure in one that holds nothing else.
+if ! aws s3api head-bucket --bucket "$RAVEL_S3_BUCKET" >/dev/null 2>&1; then
+    aws s3api create-bucket --bucket "$RAVEL_S3_BUCKET" >/dev/null
+fi
+
+# One-time bucket provisioning (ADR-0050 section 6): the server refuses to start
+# against a store that has never been qualified. It lives here rather than in
+# ./load because it qualifies the bucket rather than loading the dataset, and
+# ./load's wall clock is the reported Load time.
+"$RAVEL_CLI" --store s3 --s3-auth static store qualify
