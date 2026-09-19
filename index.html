@@ -755,11 +755,13 @@ Object.entries({
         'spiceai-parquet-partitioned', 'starrocks-parquet', 'starrocks-parquet-partitioned',
         'trino', 'trino-partitioned', 'velox',
     ],
+    /// Only the engines that we run ourselves over the files in a bucket: a managed
+    /// service that reads the same files is `cloud`, as everything around its storage
+    /// - caching, tiering, prewarming - is opaque to us.
     datalake: [
-        'athena', 'athena-partitioned', 'clickhouse-datalake', 'clickhouse-datalake-partitioned',
-        'crunchy-bridge-for-analytics', 'duckdb-datalake', 'duckdb-datalake-partitioned',
-        'presto-datalake', 'presto-datalake-partitioned', 's3select', 'trino-datalake',
-        'trino-datalake-partitioned',
+        'clickhouse-datalake', 'clickhouse-datalake-partitioned', 'duckdb-datalake',
+        'duckdb-datalake-partitioned', 'presto-datalake', 'presto-datalake-partitioned',
+        'trino-datalake', 'trino-datalake-partitioned',
     ],
     memory: [
         'chdb-dataframe', 'dask', 'duckdb-dataframe', 'duckdb-memory', 'hyrise', 'pandas',
@@ -767,7 +769,7 @@ Object.entries({
     ],
     web: ['clickhouse-web', 'hyper-web'],
     /// The rest of the cloud services is recognized by their tags, see `storageOf`.
-    cloud: ['bytehouse', 'supabase', 'tembo-olap'],
+    cloud: ['bytehouse', 'crunchy-bridge-for-analytics', 's3select', 'supabase', 'tembo-olap'],
 }).forEach(([storage, directories]) => directories.forEach(dir => { storage_by_directory[dir] = storage }));
 
 /// A few directories contain entries with different storage.
@@ -787,11 +789,12 @@ function storageOf(elem) {
 
     /// The rules for the entries added after the lists above were written — they
     /// follow the naming conventions and the tags of the existing entries.
+    /// A managed service is `cloud` no matter what it reads, hence the rule is first.
+    if ((elem.tags || []).some(tag => tag == 'managed' || tag == 'serverless')) return 'cloud';
     if (/\(web\)/i.test(elem.system)) return 'web';
     if (/data.?lake/i.test(elem.system + ' ' + directory)) return 'datalake';
     if (/parquet/i.test(elem.system + ' ' + directory)) return 'parquet';
     if (/dataframe|\(memory\)/i.test(elem.system) || (elem.tags || []).includes('in-memory')) return 'memory';
-    if ((elem.tags || []).some(tag => tag == 'managed' || tag == 'serverless')) return 'cloud';
 
     return 'native';
 }
