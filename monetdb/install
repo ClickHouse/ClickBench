@@ -36,6 +36,15 @@ sudo chown monetdb:monetdb /run/monetdb /var/log/monetdb "$DBFARM"
 sudo systemctl disable --now monetdbd 2>/dev/null || true
 
 sudo -u monetdb monetdbd create "$DBFARM" 2>/dev/null || true
+
+# `./stop` has to leave the database cleanly shut down: that is what
+# checkpoints the write-ahead log `COPY INTO` wrote and truncates it,
+# so the next `./start` doesn't replay it. monetdbd's default
+# `exittimeout` of 60 s is not enough for a 100M-row database, and on
+# expiry it SIGKILLs mserver5 — which would leave the log to be
+# replayed on every single cold cycle.
+sudo -u monetdb monetdbd set exittimeout=7200 "$DBFARM"
+
 sudo -u monetdb monetdbd start "$DBFARM" || true
 sudo usermod -a -G monetdb "$(id -un)"
 
