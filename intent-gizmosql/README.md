@@ -3,7 +3,8 @@
 A released fork of GizmoSQL v1.38.0 (a server embedding DuckDB) whose embedded
 DuckDB v1.5.5 carries a small series of engine changes:
 
-- GizmoSQL: https://github.com/bddppqs/intent-gizmosql, tag `v1.38.0-clickbench.1` (the release this entry installs).
+- GizmoSQL: https://github.com/bddppqs/intent-gizmosql, tag `v1.38.0-clickbench.1` (the release this entry installs: portable
+  Linux amd64 and arm64 builds).
 - DuckDB: https://github.com/bddppqs/intent-duckdb, tag `v1.5.5-clickbench.1` (changes documented in that
   repository's `CLICKBENCH-FORK.md`: batched RE2 character-class runs, CountZeros builtins with
   selection-fed HyperLogLog, an evictable decoded-dictionary cache with admission back-off, and
@@ -11,8 +12,8 @@ DuckDB v1.5.5 carries a small series of engine changes:
 
 The scripts in this directory are the upstream `gizmosql` entry's, unchanged, except:
 
-- `install`, which downloads the pinned release zip and verifies its SHA-256 instead of running
-  the vendor's network installer;
+- `install`, which downloads the pinned release zip for the machine's architecture (amd64 or
+  arm64) and verifies its SHA-256 instead of running the vendor's network installer;
 - `query`, whose failure check only looks at the client's own diagnostics (exit code, `Error:`
   lines) and no longer at result rows: a URL or title containing the word "error" in a result
   window over tied counts (e.g. Q39's `LIMIT 10 OFFSET 1000`) turned a valid run into a null
