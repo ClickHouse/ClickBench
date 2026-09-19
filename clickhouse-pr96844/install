@@ -1,0 +1,44 @@
+#!/bin/bash
+set -e -o pipefail
+
+# Install the release build of ClickHouse/ClickHouse#96844 ("Columns Cache"),
+# head 8c888f3419a12c2d6d27f7bb26e299e068d58b4f, instead of the published
+# package. This directory exists only to benchmark that build; it is not part
+# of the published results.
+#
+# The package name carries the version, and master bumps it (26.9 -> 26.10
+# mid-review), so resolve the exact file from the build's artifact report
+# instead of pinning a version that silently 403s after the next bump.
+BUILD=https://clickhouse-builds.s3.amazonaws.com/PRs/96844/8c888f3419a12c2d6d27f7bb26e299e068d58b4f/pr
+
+if [ ! -x /usr/bin/clickhouse ]; then
+    case "$(uname -m)" in
+        x86_64)  job=build_amd_release; arch=amd64 ;;
+        aarch64) job=build_arm_release; arch=arm64 ;;
+        *) echo "no PR build for $(uname -m)" >&2; exit 1 ;;
+    esac
+    pkg=$(curl -fsSL --retry 10 --retry-delay 30 --retry-all-errors "$BUILD/$job/artifact_report_$job.json" \
+        | jq -r '.build_urls[]' | grep -E "clickhouse-common-static-[0-9.]+-${arch}\.tgz$" | head -n1)
+    if [ -z "$pkg" ]; then
+        echo "no clickhouse-common-static tarball in the report of $job" >&2
+        exit 1
+    fi
+    echo "Installing $pkg"
+    wget --continue --progress=dot:giga "$pkg" -O clickhouse-pr.tgz
+    mkdir -p clickhouse-pr
+    tar -xzf clickhouse-pr.tgz -C clickhouse-pr --wildcards '*/usr/bin/clickhouse'
+    bin=$(find clickhouse-pr -type f -path '*/usr/bin/clickhouse' | head -n1)
+    sudo "$bin" install --noninteractive
+    rm -rf clickhouse-pr.tgz clickhouse-pr
+fi
+
+# See clickhouse/install for the rationale — without these, ./check passes on
+# SELECT 1 before user-database parts are loaded, and even after parts load the
+# per-table primary key and column sizes are populated lazily on first query.
+sudo mkdir -p /etc/clickhouse-server/config.d
+sudo tee /etc/clickhouse-server/config.d/eager_load.yaml >/dev/null <<'YAML'
+async_load_databases: false
+merge_tree:
+  primary_key_lazy_load: 0
+  columns_and_secondary_indices_sizes_lazy_calculation: 0
+YAML

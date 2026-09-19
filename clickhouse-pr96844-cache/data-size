@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+clickhouse-client --query "SELECT total_bytes FROM system.tables WHERE name = 'hits' AND database = 'default'"
+
+# Columns cache diagnostics, on stderr and only after the size is on stdout:
+# lib/benchmark-common.sh calls this script twice. In bench_load it captures
+# stdout and rejects anything that is not a bare integer (the partial-load
+# guard), discarding stderr; in bench_main it prints the stdout after
+# "Data size: " and cloud-init merges stderr into the same log. Writing from a
+# separate process after the first one exited keeps the two in order, and none
+# of the lines below match the patterns the sink's parser extracts.
+#
+# The driver restarts the server before every query, so the event counters
+# cover the last query of the sweep only - enough to tell whether reads are
+# served from the cache at all on this machine, next to the size the server
+# chose for it.
+{
+    clickhouse-client --query "
+        SELECT 'columns_cache_size: ' || (SELECT value FROM system.server_settings WHERE name = 'columns_cache_size')
+        UNION ALL SELECT 'columns_cache_entries_now: ' || toString(count()) || ' bytes: ' || toString(sum(bytes)) FROM system.columns_cache
+        UNION ALL SELECT 'event ' || event || ': ' || toString(value) FROM system.events WHERE event ILIKE '%ColumnsCache%'
+    " || true
+} >&2
