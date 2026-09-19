@@ -2,7 +2,7 @@
   "system": "intent-gizmosql",
   "proprietary": "no",
   "hardware": "cpu",
-  "tuned": "no",
+  "tuned": "yes",
   "tags": [
     "C++",
     "column-oriented",
