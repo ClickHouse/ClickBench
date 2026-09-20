@@ -7,9 +7,16 @@ fi
 
 # Disable asynchronous IO, the EBS GP2 device provides only 250 MiB/s. Therefore,
 # async IO is not needed to exploit the full bandwidth.
+# data/hits_*.parquet are (on the playground) symlinks into
+# /opt/clickbench/datasets_ro/hits_partitioned/. Inside the container
+# the symlink targets have to resolve, so bind-mount datasets_ro at
+# the same host path. Without this the parquetview scan fails with
+# "no file matches /data/hits_*.parquet" and every subsequent query
+# hits an empty view.
 sudo docker run -d --name umbradb \
     -v "$(pwd)/db:/var/db" \
     -v "$(pwd)/data:/data" \
+    -v "/opt/clickbench/datasets_ro:/opt/clickbench/datasets_ro:ro" \
     -p 5432:5432 \
     --privileged \
     --ulimit nofile=1048576:1048576 \

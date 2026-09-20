@@ -10,6 +10,7 @@ fi
 sudo docker run -d --name umbradb \
     -v "$(pwd)/db:/var/db" \
     -v "$(pwd)/data:/data" \
+    -v "/opt/clickbench/datasets_ro:/opt/clickbench/datasets_ro:ro" \
     -p 5432:5432 \
     --privileged \
     --ulimit nofile=1048576:1048576 \
