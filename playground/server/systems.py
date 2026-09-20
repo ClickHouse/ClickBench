@@ -133,8 +133,12 @@ NEEDS_SWAP: frozenset[str] = frozenset({
     # Umbra OOMs during load on the 16 GB cap (`psql:create.sql:109:
     # ERROR: unable to allocate memory` after ~70M rows of COPY).
     # The docker container has no memory.swap.max set, so the guest
-    # kernel will swap it the same as any process.
+    # kernel will swap it the same as any process. Same class for
+    # umbra-parquet + umbra-parquet-partitioned (same engine, just
+    # different data source).
     "umbra",
+    "umbra-parquet",
+    "umbra-parquet-partitioned",
     # arcticdb's python server keeps the whole Arctic Library in
     # process memory during load — 16 GB RSS on the full hits set
     # triggers the guest's OOM killer, python3 dies mid-load, the
