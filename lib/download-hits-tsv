@@ -8,6 +8,11 @@ dir="${1:-.}"
 mkdir -p "$dir"
 cd "$dir"
 
+if [ -f hits.tsv ]; then
+    echo "hits.tsv already exists, skipping download"
+    exit 0
+fi
+
 sudo apt-get install -y pigz
 wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz'
 pigz -d -f hits.tsv.gz

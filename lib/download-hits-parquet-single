@@ -9,4 +9,8 @@ dir="${1:-.}"
 mkdir -p "$dir"
 cd "$dir"
 
-wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet'
+if [ -f hits.parquet ]; then
+    echo "hits.parquet already exists, skipping download."
+else
+    wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet'
+fi

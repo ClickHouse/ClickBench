@@ -8,4 +8,13 @@ dir="${1:-.}"
 mkdir -p "$dir"
 cd "$dir"
 
-seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --progress=dot:giga https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
+missing=0
+for i in $(seq 0 99); do
+    [ -f "hits_$i.parquet" ] || { missing=1; break; }
+done
+if [ "$missing" = 0 ]; then
+    echo "All hits_*.parquet files already exist, skipping download"
+    exit 0
+fi
+
+seq 0 99 | xargs -P100 -I{} bash -c 'wget --continue --quiet https://datasets.clickhouse.com/hits_compatible/athena_partitioned/hits_{}.parquet'
