@@ -25,8 +25,30 @@ wc -c < pinot.log | tr -d ' ' > pinot.log.offset
 # run this OOMed mid-LaunchDataIngestionJob around segment 60/100 on a
 # 30GB-RAM c6a.4xlarge (observed: OutOfMemoryError in
 # SegmentDictionaryCreator, job silently reported success anyway).
-# Force a real heap ceiling sized for this instance.
-export JAVA_OPTS="-Xms4G -Xmx20G"
+#
+# A fixed -Xmx20G (this PR's original fix) instead broke every machine
+# smaller than c6a.4xlarge: on c6a.large (4GiB)/t3a.small (2GiB)/
+# c6a.xlarge (8GiB), the JVM can't even reserve the requested heap and
+# QuickStart fails to start at all (confirmed via ClickHouse/ClickBench's
+# own machine:all CI run on PR #2126). Size the heap off actual physical
+# RAM instead of hard-coding one instance's value.
+#
+# 64% of RAM, capped at 20G — chosen so a 32GiB c6a.4xlarge (this fix's
+# only end-to-end-verified machine: 43/43 queries passed 3/3 tries) gets
+# back exactly the already-proven 20G, while smaller machines scale down
+# instead of over-requesting. Not Presto's 70%/install pattern: Pinot
+# keeps segments memory-mapped/off-heap, so a heap that large would fight
+# the OS page cache on machines above 32GiB instead of helping — the 20G
+# cap keeps larger machines at the proven-safe ceiling rather than
+# growing further. No 4G floor on -Xms either (a 4G floor is what killed
+# t3a.small in the first place); -Xms only reaches 4G once the machine
+# can actually spare it.
+RAM_MB=$(awk '/MemTotal/{ printf "%d", $2 / 1024 }' /proc/meminfo)
+XMX_MB=$(( RAM_MB * 64 / 100 ))
+[ "$XMX_MB" -gt 20480 ] && XMX_MB=20480
+XMS_MB=$XMX_MB
+[ "$XMS_MB" -gt 4096 ] && XMS_MB=4096
+export JAVA_OPTS="-Xms${XMS_MB}m -Xmx${XMX_MB}m"
 
 nohup "./${PINOT_DIR}/bin/pinot-admin.sh" QuickStart -type batch \
     >> pinot.log 2>&1 < /dev/null &

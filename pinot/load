@@ -110,8 +110,20 @@ sed local.yaml    -e "s|PWD_DIR_PLACEHOLDER|$PWD|g" -i
 # ClickBench hits.tsv this OOMed mid-job around segment 60/100 on a
 # 30GB-RAM c6a.4xlarge (OutOfMemoryError in SegmentDictionaryCreator) —
 # and LaunchDataIngestionJob still exited 0, silently leaving only 60/100
-# segments on disk. Force a real heap ceiling sized for this instance.
-export JAVA_OPTS="-Xms4G -Xmx20G"
+# segments on disk.
+#
+# A fixed -Xmx20G (this PR's original fix) instead broke every machine
+# smaller than c6a.4xlarge — see ./start for the full explanation and the
+# same 64%-of-RAM/20G-cap/no-4G-floor rationale (anchored so c6a.4xlarge,
+# the only end-to-end-verified machine, gets back exactly its proven 20G).
+# Keep this in sync with ./start; both invoke pinot-admin.sh and both need
+# the same ceiling.
+RAM_MB=$(awk '/MemTotal/{ printf "%d", $2 / 1024 }' /proc/meminfo)
+XMX_MB=$(( RAM_MB * 64 / 100 ))
+[ "$XMX_MB" -gt 20480 ] && XMX_MB=20480
+XMS_MB=$XMX_MB
+[ "$XMS_MB" -gt 4096 ] && XMS_MB=4096
+export JAVA_OPTS="-Xms${XMS_MB}m -Xmx${XMX_MB}m"
 
 "./${PINOT_DIR}/bin/pinot-admin.sh" LaunchDataIngestionJob -jobSpecFile splitted.yaml
 
