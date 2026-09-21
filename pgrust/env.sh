@@ -1,5 +1,11 @@
 # shared by the step scripts
-export PGRUST_HOME="${PGRUST_HOME:-$HOME/pgrust}"       # install prefix + data + socket + logs
+# The server and initdb refuse to run as root, and ClickBench's automation runs these scripts as root
+# (HOME=/root): everything the server touches lives under a directory owned by the `postgres` system
+# user (created by the postgresql-18 package) and the server-side steps run through $AS_PG.
+export PGRUST_USER="${PGRUST_USER:-postgres}"
+export PGRUST_HOME="${PGRUST_HOME:-/var/lib/pgrust}"       # install prefix + data + socket + logs (owned by $PGRUST_USER)
+if [ "$(id -un)" = "$PGRUST_USER" ]; then AS_PG=""; else AS_PG="sudo -u $PGRUST_USER"; fi
+export AS_PG
 export PGRUST_PREFIX="$PGRUST_HOME/install"               # the release tarball, untarred (bin/postgres, share/postgresql)
 export PGDATA="$PGRUST_HOME/data"
 export PGSOCKDIR="$PGRUST_HOME/sock"
