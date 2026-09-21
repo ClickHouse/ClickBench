@@ -12,7 +12,7 @@ query=$(printf '%s' "$query" | tr -d ';')
 req=$(printf '%s' "$query" | python3 -c '
 import json, sys
 q = sys.stdin.read()
-print(json.dumps({"sql": q + "  option(timeoutMs=300000)"}))
+print(json.dumps({"sql": q + "  option(timeoutMs=300000,autoRewriteAggregationType=true)"}))
 ')
 
 resp=$(curl -sS -XPOST -H'Content-Type: application/json' \

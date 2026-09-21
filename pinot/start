@@ -4,13 +4,29 @@ set -e
 PINOT_VERSION=1.5.1
 PINOT_DIR="apache-pinot-$PINOT_VERSION-bin"
 
-# Idempotent: if broker query endpoint is up, do nothing.
+# Idempotent: if broker query endpoint is up, do nothing (leave the
+# existing pinot.log offset marker as-is; ./check will find the earlier
+# "setup complete" marker in the untouched log).
 if curl -sf -o /dev/null -w '%{http_code}' \
     -XPOST -H'Content-Type: application/json' \
     http://localhost:8000/query/sql/ \
     -d '{"sql":"SELECT 1"}' 2>/dev/null | grep -q '^200'; then
     exit 0
 fi
+
+# Record the current end of pinot.log so ./check can look only at what
+# this invocation appends, not a "setup complete" line left over from an
+# earlier run of the log-appending (>>) QuickStart process.
+touch pinot.log
+wc -c < pinot.log | tr -d ' ' > pinot.log.offset
+
+# pinot-admin.sh's own default is -Xms4G with NO -Xmx (falls back to the
+# JVM's default of ~25% of physical RAM). On a 100-segment/~74GB ClickBench
+# run this OOMed mid-LaunchDataIngestionJob around segment 60/100 on a
+# 30GB-RAM c6a.4xlarge (observed: OutOfMemoryError in
+# SegmentDictionaryCreator, job silently reported success anyway).
+# Force a real heap ceiling sized for this instance.
+export JAVA_OPTS="-Xms4G -Xmx20G"
 
 nohup "./${PINOT_DIR}/bin/pinot-admin.sh" QuickStart -type batch \
     >> pinot.log 2>&1 < /dev/null &
