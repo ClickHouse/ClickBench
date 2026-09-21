@@ -10,10 +10,10 @@ Called by each runner with the raw client output on stdin:
 
 APPEND IS IDEMPOTENT. A re-run replaces that system's block.
 
-WHAT IS NORMALISED, and only this:
+WHAT IS NORMALISED:
   * NULL -> the single token <NULL>. Each client spells it differently.
   * Trailing NUL bytes and trailing spaces are stripped from every field.
-  * With --tsv-escaped, the two-character sequence \\0 becomes a real NUL before that strip.
+  * With --tsv-escaped, the client's TSV escapes are decoded before that strip.
 
 WHAT IS NOT normalised: numbers are written exactly as the engine printed them. 
 Row order is likewise left as returned.
@@ -22,6 +22,34 @@ import argparse, datetime, os, pathlib, sys
 
 HDR = '=== '
 
+# What a TSV-escaping client puts on the wire for a byte that would otherwise break the format.
+# Probed against clickhouse 26.7.5.10, which emits for TabSeparated:
+#     quote:\'  back:\\  tab:\t  nl:\n  nul:\0  cr:\r  bs:\b  ff:\f
+TSV_UNESCAPE = {'\\': '\\', "'": "'", '0': '\0', 'b': '\b', 'f': '\f'}
+# \t, \n and \r stay escaped deliberately: this file keeps one row per line and one field per
+# tab, so restoring those bytes would corrupt the block.
+TSV_KEEP = set('tnr')
+
+
+def unescape_tsv(field):
+    if '\\' not in field:
+        return field
+    out, i, n = [], 0, len(field)
+    while i < n:
+        c = field[i]
+        if c == '\\' and i + 1 < n:
+            nxt = field[i + 1]
+            if nxt in TSV_KEEP:
+                out.append(c + nxt)
+            else:
+                out.append(TSV_UNESCAPE.get(nxt, c + nxt))   # unknown escape: keep both bytes
+            i += 2
+            continue
+        out.append(c)
+        i += 1
+    return ''.join(out)
+
+
 def canonical(line, null_token, tsv_escaped):
     out = []
     for field in line.split('\t'):
@@ -29,7 +57,7 @@ def canonical(line, null_token, tsv_escaped):
             out.append('<NULL>')
             continue
         if tsv_escaped:
-            field = field.replace('\\0', '\0')
+            field = unescape_tsv(field)
         out.append(field.rstrip('\0 '))
     return '\t'.join(out)
 
@@ -43,7 +71,7 @@ def main():
     ap.add_argument('--message', default='', help='engine message, for a non-ok status')
     ap.add_argument('--null-token', default='\\N')
     ap.add_argument('--tsv-escaped', action='store_true',
-                    help='client escapes its output (ClickHouse, mysql): unescape \\0 padding')
+                    help="client escapes its output (ClickHouse, mysql): decode those escapes")
     ap.add_argument('--root', default=os.path.dirname(os.path.abspath(__file__)))
     a = ap.parse_args()
 

@@ -34,6 +34,11 @@ DROP_CACHES="${DROP_CACHES:-1}"
 # COLD_RESTART=1 restarts the server before each query's cold try, so the cold number is not
 # served from the engine's own memory. Off by default.
 COLD_RESTART="${COLD_RESTART:-0}"
+# Grace period for the cold-restart `docker stop`.
+COLD_STOP_TIMEOUT="${COLD_STOP_TIMEOUT:-10}"
+# cold_reset drops this file when it fails to signal aborting the benchmark.
+COLD_FAIL="/tmp/${SYSTEM:-bench}_cold_restart_failed.$$"
+rm -f "${COLD_FAIL}"
 # The BE's own data caches. Default 0 disables them the way ClickBench's doris/install does
 # (be.conf: disable_storage_page_cache, segment_cache_capacity).
 ENGINE_CACHES="${ENGINE_CACHES:-0}"
@@ -147,7 +152,7 @@ drop_caches() {
 # Say once, at the start, what the cold column actually means in this run.
 cold_check() { docker exec -i "${FE_CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N \
                  --connect-timeout=5 -e 'SET query_timeout=10; SELECT 1' </dev/null \
-                 2>/dev/null | grep -q '^1$'; }
+                 | grep -q '^1$'; }
 
 cold_wait_stopped() {
     local i
@@ -161,24 +166,32 @@ cold_wait_stopped() {
 
 cold_check_loop() {
     local i last_err
-    for i in $(seq 1 300); do
+    for i in $(seq 1 600); do
         if last_err=$(cold_check 2>&1 >/dev/null); then
             return 0
         fi
         sleep 1
     done
-    echo "cold restart: check did not succeed within 300s" >&2
+    echo "cold restart: check did not succeed within 600s" >&2
     [ -n "${last_err}" ] && printf '%s\n' "${last_err}" | sed 's/^/    /' >&2
+    echo "cold restart: container log:" >&2
+    docker logs --tail 20 "${FE_CONTAINER}" "${BE_CONTAINER}" 2>&1 | sed 's/^/      | /' >&2 || true
     return 1
 }
 
 cold_reset() {
     if [ "${COLD_RESTART}" != 1 ]; then drop_caches; return 0; fi
-    docker stop "${BE_CONTAINER}" "${FE_CONTAINER}" >/dev/null 2>&1 || true
+    docker stop -t "${COLD_STOP_TIMEOUT}" "${BE_CONTAINER}" "${FE_CONTAINER}" >/dev/null 2>&1 || echo "cold restart: docker stop failed" >&2
     cold_wait_stopped
+    if [ "$(docker inspect -f '{{.State.ExitCode}}' "${FE_CONTAINER}" 2>/dev/null)" = 137 ]; then
+        echo "cold restart: the engine did not shut down within ${COLD_STOP_TIMEOUT}s and was killed." >&2
+        : > "${COLD_FAIL}"; return 1
+    fi
     drop_caches
-    docker start "${FE_CONTAINER}" && docker start "${BE_CONTAINER}" >/dev/null 2>&1 || true
-    cold_check_loop
+    local start_err
+    start_err=$({ docker start "${FE_CONTAINER}" && docker start "${BE_CONTAINER}"; } 2>&1 >/dev/null) \
+        || echo "cold restart: docker start FAILED: ${start_err}" >&2
+    cold_check_loop || { : > "${COLD_FAIL}"; return 1; }
 }
 
 announce_cache_mode() {
@@ -383,12 +396,12 @@ null_row() { local i out="["; for i in $(seq 1 "${TRIES}"); do out+="null"; [ "$
 run_query() {
     local ds="$1" query="$2" label="${3:-query}" i out qid t t0 t1 reals=()
     for i in $(seq 1 "${TRIES}"); do
-        [ "${i}" = 1 ] && cold_reset
+        [ "${i}" = 1 ] && { cold_reset || break; }
         MYSQL_TIMEOUT="$((QUERY_TIMEOUT + 30))"
         if [ "${USE_PROFILE}" = 1 ]; then
             out=$(Mq "SET enable_profile=true; SET query_timeout=${QUERY_TIMEOUT}; USE ${ds}; ${query}; SELECT concat('__QID__:', last_query_id());" 2>&1)
             MYSQL_TIMEOUT=""
-            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
+            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \(|Error response from daemon'; then
                 echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oE 'ERROR [0-9].*' | head -1 | cut -c1-160)" >&2
                 reals=(); break
             fi
@@ -414,7 +427,7 @@ run_query() {
                   mysql -h127.0.0.1 -P9030 -uroot -vvv --connect-timeout=30 -D "${ds}" \
                   -e "SET query_timeout=${QUERY_TIMEOUT}; ${query};" </dev/null 2>&1)
             MYSQL_TIMEOUT=""
-            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
+            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \(|Error response from daemon'; then
                 echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oE 'ERROR [0-9].*' | head -1 | cut -c1-160)" >&2
                 reals=(); break
             fi
@@ -431,6 +444,18 @@ run_query() {
     local res="["
     for i in $(seq 1 "${TRIES}"); do res+="${reals[$((i-1))]:-null}"; [ "${i}" -ne "${TRIES}" ] && res+=", "; done
     echo "${res}]"
+}
+
+# Whether each benchmark's cold try was measured against a freshly restarted server
+# (COLD_RESTART=1) or only with the OS page cache dropped.
+emit_cold_restart_json() {  # $1 = fully-loaded benchmarks
+    local loaded=" ${1:-} " ds sep="" val
+    val=$([ "${COLD_RESTART}" = 1 ] && echo true || echo false)
+    printf '{'
+    for ds in ${QUERY_ORDER}; do
+        case "${loaded}" in *" ${ds} "*) printf '%s"%s": %s' "${sep}" "${ds}" "${val}"; sep=", " ;; esac
+    done
+    printf '}'
 }
 
 emit_load_time_json() {  # $1 = fully-loaded benchmarks
@@ -510,6 +535,7 @@ run_benchmark() {
         echo "    \"release_date\": \"${RELEASE_DATE}\","
         echo "    \"machine\": \"${MACHINE}\","
         echo "    \"kind\": \"dbbench\","
+        echo "    \"cold_restart\": $(emit_cold_restart_json "${FULLY_LOADED}"),"
         echo "    \"load_time\": $(emit_load_time_json "${FULLY_LOADED}"),"
         echo "    \"stats_time\": $(emit_stats_time_json "${FULLY_LOADED}"),"
         echo "    \"data_size\": $(emit_data_size_json "${FULLY_LOADED}"),"
@@ -524,6 +550,11 @@ run_benchmark() {
                 [ -z "${query}" ] && continue
                 query="${query%;}"
                 qnum=$((qnum + 1)); n=$((n + 1))
+                if [ -f "${COLD_FAIL}" ]; then
+                    echo "aborting: the cold restart failed." >&2
+                    echo "container is left as it is." >&2
+                    rm -f "${COLD_FAIL}"; trap - EXIT; exit 1
+                fi
                 if [ "${ds_loaded}" = 0 ]; then
                     row="$(null_row)"
                     echo "q${qnum} [${ds}]: SKIPPED (not loaded); recording null" >&2

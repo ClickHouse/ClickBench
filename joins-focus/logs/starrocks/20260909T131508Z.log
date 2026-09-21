@@ -1,0 +1,407 @@
+page cache dropped before each query (6 tries: 1 cold + 5 hot)
+starting StarRocks 4.1.4 from image starrocks/allin1-ubuntu:4.1.4
+StarRocks up (4.1.4-4a9848e); result cache off; BE: datacache_enable=false disable_storage_page_cache=true 
+=== CREATE job tables ===
+=== LOAD job.aka_name ===
+=== LOAD job.aka_title ===
+=== LOAD job.cast_info ===
+=== LOAD job.char_name ===
+=== LOAD job.comp_cast_type ===
+=== LOAD job.company_name ===
+=== LOAD job.company_type ===
+=== LOAD job.complete_cast ===
+=== LOAD job.info_type ===
+=== LOAD job.keyword ===
+=== LOAD job.kind_type ===
+=== LOAD job.link_type ===
+=== LOAD job.movie_companies ===
+=== LOAD job.movie_info ===
+=== LOAD job.movie_info_idx ===
+=== LOAD job.movie_keyword ===
+=== LOAD job.movie_link ===
+=== LOAD job.name ===
+=== LOAD job.person_info ===
+=== LOAD job.role_type ===
+=== LOAD job.title ===
+=== ANALYZE job.aka_name ===
+=== ANALYZE job.aka_title ===
+=== ANALYZE job.cast_info ===
+=== ANALYZE job.char_name ===
+=== ANALYZE job.comp_cast_type ===
+=== ANALYZE job.company_name ===
+=== ANALYZE job.company_type ===
+=== ANALYZE job.complete_cast ===
+=== ANALYZE job.info_type ===
+=== ANALYZE job.keyword ===
+=== ANALYZE job.kind_type ===
+=== ANALYZE job.link_type ===
+=== ANALYZE job.movie_companies ===
+=== ANALYZE job.movie_info ===
+=== ANALYZE job.movie_info_idx ===
+=== ANALYZE job.movie_keyword ===
+=== ANALYZE job.movie_link ===
+=== ANALYZE job.name ===
+=== ANALYZE job.person_info ===
+=== ANALYZE job.role_type ===
+=== ANALYZE job.title ===
+statistics on job: 13s
+loaded job in 39s
+benchmarking StarRocks 4.1.4 (reports 4.1.4-4a9848e)
+=== tpch: not fully loaded; skipping its queries, load time and size ===
+=== tpcds: not fully loaded; skipping its queries, load time and size ===
+q1 [tpch]: SKIPPED (not loaded); recording null
+q2 [tpch]: SKIPPED (not loaded); recording null
+q3 [tpch]: SKIPPED (not loaded); recording null
+q4 [tpch]: SKIPPED (not loaded); recording null
+q5 [tpch]: SKIPPED (not loaded); recording null
+q6 [tpch]: SKIPPED (not loaded); recording null
+q7 [tpch]: SKIPPED (not loaded); recording null
+q8 [tpch]: SKIPPED (not loaded); recording null
+q9 [tpch]: SKIPPED (not loaded); recording null
+q10 [tpch]: SKIPPED (not loaded); recording null
+q11 [tpch]: SKIPPED (not loaded); recording null
+q12 [tpch]: SKIPPED (not loaded); recording null
+q13 [tpch]: SKIPPED (not loaded); recording null
+q14 [tpch]: SKIPPED (not loaded); recording null
+q15 [tpch]: SKIPPED (not loaded); recording null
+q16 [tpch]: SKIPPED (not loaded); recording null
+q17 [tpch]: SKIPPED (not loaded); recording null
+q18 [tpch]: SKIPPED (not loaded); recording null
+q19 [tpch]: SKIPPED (not loaded); recording null
+q20 [tpch]: SKIPPED (not loaded); recording null
+q21 [tpch]: SKIPPED (not loaded); recording null
+q22 [tpch]: SKIPPED (not loaded); recording null
+q23 [tpcds]: SKIPPED (not loaded); recording null
+q24 [tpcds]: SKIPPED (not loaded); recording null
+q25 [tpcds]: SKIPPED (not loaded); recording null
+q26 [tpcds]: SKIPPED (not loaded); recording null
+q27 [tpcds]: SKIPPED (not loaded); recording null
+q28 [tpcds]: SKIPPED (not loaded); recording null
+q29 [tpcds]: SKIPPED (not loaded); recording null
+q30 [tpcds]: SKIPPED (not loaded); recording null
+q31 [tpcds]: SKIPPED (not loaded); recording null
+q32 [tpcds]: SKIPPED (not loaded); recording null
+q33 [tpcds]: SKIPPED (not loaded); recording null
+q34 [tpcds]: SKIPPED (not loaded); recording null
+q35 [tpcds]: SKIPPED (not loaded); recording null
+q36 [tpcds]: SKIPPED (not loaded); recording null
+q37 [tpcds]: SKIPPED (not loaded); recording null
+q38 [tpcds]: SKIPPED (not loaded); recording null
+q39 [tpcds]: SKIPPED (not loaded); recording null
+q40 [tpcds]: SKIPPED (not loaded); recording null
+q41 [tpcds]: SKIPPED (not loaded); recording null
+q42 [tpcds]: SKIPPED (not loaded); recording null
+q43 [tpcds]: SKIPPED (not loaded); recording null
+q44 [tpcds]: SKIPPED (not loaded); recording null
+q45 [tpcds]: SKIPPED (not loaded); recording null
+q46 [tpcds]: SKIPPED (not loaded); recording null
+q47 [tpcds]: SKIPPED (not loaded); recording null
+q48 [tpcds]: SKIPPED (not loaded); recording null
+q49 [tpcds]: SKIPPED (not loaded); recording null
+q50 [tpcds]: SKIPPED (not loaded); recording null
+q51 [tpcds]: SKIPPED (not loaded); recording null
+q52 [tpcds]: SKIPPED (not loaded); recording null
+q53 [tpcds]: SKIPPED (not loaded); recording null
+q54 [tpcds]: SKIPPED (not loaded); recording null
+q55 [tpcds]: SKIPPED (not loaded); recording null
+q56 [tpcds]: SKIPPED (not loaded); recording null
+q57 [tpcds]: SKIPPED (not loaded); recording null
+q58 [tpcds]: SKIPPED (not loaded); recording null
+q59 [tpcds]: SKIPPED (not loaded); recording null
+q60 [tpcds]: SKIPPED (not loaded); recording null
+q61 [tpcds]: SKIPPED (not loaded); recording null
+q62 [tpcds]: SKIPPED (not loaded); recording null
+q63 [tpcds]: SKIPPED (not loaded); recording null
+q64 [tpcds]: SKIPPED (not loaded); recording null
+q65 [tpcds]: SKIPPED (not loaded); recording null
+q66 [tpcds]: SKIPPED (not loaded); recording null
+q67 [tpcds]: SKIPPED (not loaded); recording null
+q68 [tpcds]: SKIPPED (not loaded); recording null
+q69 [tpcds]: SKIPPED (not loaded); recording null
+q70 [tpcds]: SKIPPED (not loaded); recording null
+q71 [tpcds]: SKIPPED (not loaded); recording null
+q72 [tpcds]: SKIPPED (not loaded); recording null
+q73 [tpcds]: SKIPPED (not loaded); recording null
+q74 [tpcds]: SKIPPED (not loaded); recording null
+q75 [tpcds]: SKIPPED (not loaded); recording null
+q76 [tpcds]: SKIPPED (not loaded); recording null
+q77 [tpcds]: SKIPPED (not loaded); recording null
+q78 [tpcds]: SKIPPED (not loaded); recording null
+q79 [tpcds]: SKIPPED (not loaded); recording null
+q80 [tpcds]: SKIPPED (not loaded); recording null
+q81 [tpcds]: SKIPPED (not loaded); recording null
+q82 [tpcds]: SKIPPED (not loaded); recording null
+q83 [tpcds]: SKIPPED (not loaded); recording null
+q84 [tpcds]: SKIPPED (not loaded); recording null
+q85 [tpcds]: SKIPPED (not loaded); recording null
+q86 [tpcds]: SKIPPED (not loaded); recording null
+q87 [tpcds]: SKIPPED (not loaded); recording null
+q88 [tpcds]: SKIPPED (not loaded); recording null
+q89 [tpcds]: SKIPPED (not loaded); recording null
+q90 [tpcds]: SKIPPED (not loaded); recording null
+q91 [tpcds]: SKIPPED (not loaded); recording null
+q92 [tpcds]: SKIPPED (not loaded); recording null
+q93 [tpcds]: SKIPPED (not loaded); recording null
+q94 [tpcds]: SKIPPED (not loaded); recording null
+q95 [tpcds]: SKIPPED (not loaded); recording null
+q96 [tpcds]: SKIPPED (not loaded); recording null
+q97 [tpcds]: SKIPPED (not loaded); recording null
+q98 [tpcds]: SKIPPED (not loaded); recording null
+q99 [tpcds]: SKIPPED (not loaded); recording null
+q100 [tpcds]: SKIPPED (not loaded); recording null
+q101 [tpcds]: SKIPPED (not loaded); recording null
+q102 [tpcds]: SKIPPED (not loaded); recording null
+q103 [tpcds]: SKIPPED (not loaded); recording null
+q104 [tpcds]: SKIPPED (not loaded); recording null
+q105 [tpcds]: SKIPPED (not loaded); recording null
+q106 [tpcds]: SKIPPED (not loaded); recording null
+q107 [tpcds]: SKIPPED (not loaded); recording null
+q108 [tpcds]: SKIPPED (not loaded); recording null
+q109 [tpcds]: SKIPPED (not loaded); recording null
+q110 [tpcds]: SKIPPED (not loaded); recording null
+q111 [tpcds]: SKIPPED (not loaded); recording null
+q112 [tpcds]: SKIPPED (not loaded); recording null
+q113 [tpcds]: SKIPPED (not loaded); recording null
+q114 [tpcds]: SKIPPED (not loaded); recording null
+q115 [tpcds]: SKIPPED (not loaded); recording null
+q116 [tpcds]: SKIPPED (not loaded); recording null
+q117 [tpcds]: SKIPPED (not loaded); recording null
+q118 [tpcds]: SKIPPED (not loaded); recording null
+q119 [tpcds]: SKIPPED (not loaded); recording null
+q120 [tpcds]: SKIPPED (not loaded); recording null
+q121 [tpcds]: SKIPPED (not loaded); recording null
+q122 [tpcds]: SKIPPED (not loaded); recording null
+q123 [tpcds]: SKIPPED (not loaded); recording null
+q124 [tpcds]: SKIPPED (not loaded); recording null
+q125 [tpcds]: SKIPPED (not loaded); recording null
+q126 [job]: [0.553, 0.154, 0.145, 0.138, 0.123, 0.120]
+q127 [job]: [0.447, 0.116, 0.113, 0.109, 0.114, 0.104]
+q128 [job]: [0.437, 0.104, 0.097, 0.092, 0.091, 0.110]
+q129 [job]: [0.494, 0.137, 0.128, 0.124, 0.121, 0.122]
+q130 [job]: [0.454, 0.118, 0.107, 0.097, 0.091, 0.090]
+q131 [job]: [0.407, 0.103, 0.098, 0.101, 0.096, 0.093]
+q132 [job]: [0.245, 0.064, 0.054, 0.053, 0.050, 0.049]
+q133 [job]: [0.382, 0.108, 0.101, 0.099, 0.092, 0.092]
+q134 [job]: [2.375, 0.217, 0.211, 0.207, 0.211, 0.218]
+q135 [job]: [3.625, 0.163, 0.165, 0.157, 0.157, 0.152]
+q136 [job]: [2.645, 0.302, 0.310, 0.300, 0.301, 0.264]
+q137 [job]: [0.475, 0.137, 0.126, 0.116, 0.105, 0.107]
+q138 [job]: [0.460, 0.122, 0.108, 0.104, 0.099, 0.087]
+q139 [job]: [0.458, 0.147, 0.137, 0.133, 0.127, 0.118]
+q140 [job]: [2.352, 0.245, 0.226, 0.223, 0.212, 0.206]
+q141 [job]: [2.053, 0.219, 0.205, 0.200, 0.200, 0.197]
+q142 [job]: [2.522, 0.275, 0.260, 0.254, 0.252, 0.248]
+q143 [job]: [0.763, 0.142, 0.139, 0.138, 0.135, 0.130]
+q144 [job]: [0.698, 0.126, 0.123, 0.123, 0.119, 0.112]
+q145 [job]: [0.535, 0.076, 0.070, 0.069, 0.066, 0.063]
+q146 [job]: [1.127, 0.236, 0.228, 0.226, 0.219, 0.213]
+q147 [job]: [0.829, 0.142, 0.140, 0.138, 0.134, 0.121]
+q148 [job]: [0.888, 0.223, 0.211, 0.213, 0.219, 0.198]
+q149 [job]: [0.591, 0.172, 0.163, 0.157, 0.146, 0.139]
+q150 [job]: [0.463, 0.155, 0.143, 0.137, 0.133, 0.132]
+q151 [job]: [2.078, 0.387, 0.383, 0.360, 0.348, 0.354]
+q152 [job]: [0.543, 0.160, 0.147, 0.141, 0.128, 0.130]
+q153 [job]: [0.515, 0.154, 0.143, 0.139, 0.123, 0.120]
+q154 [job]: [0.560, 0.208, 0.202, 0.178, 0.170, 0.160]
+q155 [job]: [0.475, 0.181, 0.168, 0.164, 0.145, 0.148]
+q156 [job]: [0.719, 0.223, 0.212, 0.204, 0.192, 0.190]
+q157 [job]: [0.699, 0.217, 0.203, 0.200, 0.184, 0.184]
+q158 [job]: [0.563, 0.183, 0.157, 0.167, 0.157, 0.158]
+q159 [job]: [0.654, 0.204, 0.194, 0.175, 0.162, 0.152]
+q160 [job]: [0.564, 0.145, 0.133, 0.129, 0.125, 0.121]
+q161 [job]: [0.615, 0.165, 0.157, 0.152, 0.142, 0.139]
+q162 [job]: [1.686, 0.181, 0.167, 0.164, 0.163, 0.152]
+q163 [job]: [0.439, 0.342, 0.199, 0.163, 0.151, 0.146]
+q164 [job]: [0.710, 0.221, 0.175, 0.156, 0.150, 0.147]
+q165 [job]: [0.702, 0.211, 0.189, 0.181, 0.173, 0.166]
+q166 [job]: [0.332, 0.523, 0.256, 0.205, 0.193, 0.183]
+q167 [job]: [0.680, 0.226, 0.179, 0.168, 0.157, 0.156]
+q168 [job]: [0.452, 0.185, 0.149, 0.123, 0.109, 0.106]
+q169 [job]: [0.717, 0.245, 0.207, 0.183, 0.176, 0.174]
+q170 [job]: [0.579, 0.204, 0.170, 0.157, 0.169, 0.152]
+q171 [job]: [0.641, 0.264, 0.185, 0.170, 0.161, 0.160]
+q172 [job]: [0.536, 0.199, 0.169, 0.147, 0.142, 0.146]
+q173 [job]: [0.614, 0.330, 0.245, 0.230, 0.229, 0.216]
+q174 [job]: [0.564, 0.218, 0.186, 0.160, 0.150, 0.148]
+q175 [job]: [0.642, 0.178, 0.155, 0.148, 0.137, 0.135]
+q176 [job]: [0.712, 0.264, 0.242, 0.209, 0.200, 0.196]
+q177 [job]: [1.012, 0.351, 0.308, 0.307, 0.304, 0.291]
+q178 [job]: [0.839, 0.257, 0.169, 0.156, 0.149, 0.147]
+q179 [job]: [0.968, 0.315, 0.276, 0.258, 0.297, 0.299]
+q180 [job]: [0.755, 0.267, 0.224, 0.206, 0.207, 0.201]
+q181 [job]: [0.633, 0.168, 0.161, 0.144, 0.146, 0.130]
+q182 [job]: [0.713, 0.241, 0.230, 0.223, 0.203, 0.195]
+q183 [job]: [0.542, 0.174, 0.160, 0.144, 0.146, 0.140]
+q184 [job]: [0.546, 0.182, 0.162, 0.162, 0.142, 0.136]
+q185 [job]: [0.672, 0.185, 0.186, 0.176, 0.175, 0.158]
+q186 [job]: [0.580, 0.199, 0.181, 0.188, 0.168, 0.173]
+q187 [job]: [0.688, 0.187, 0.187, 0.189, 0.166, 0.173]
+q188 [job]: [0.579, 0.215, 0.209, 0.198, 0.195, 0.179]
+q189 [job]: [0.691, 0.229, 0.206, 0.201, 0.183, 0.189]
+q190 [job]: [0.681, 0.207, 0.211, 0.207, 0.202, 0.192]
+q191 [job]: [1.347, 0.165, 0.152, 0.150, 0.130, 0.130]
+q192 [job]: [0.876, 0.242, 0.136, 0.127, 0.120, 0.116]
+q193 [job]: [1.191, 0.139, 0.135, 0.122, 0.125, 0.123]
+q194 [job]: [0.577, 0.199, 0.191, 0.175, 0.180, 0.173]
+q195 [job]: [0.587, 0.209, 0.194, 0.187, 0.188, 0.181]
+q196 [job]: [0.603, 0.218, 0.204, 0.159, 0.169, 0.175]
+q197 [job]: [0.548, 0.237, 0.211, 0.180, 0.178, 0.178]
+q198 [job]: [0.959, 0.241, 0.224, 0.214, 0.218, 0.212]
+q199 [job]: [1.043, 0.286, 0.276, 0.257, 0.255, 0.247]
+q200 [job]: [1.148, 0.265, 0.263, 0.242, 0.231, 0.238]
+q201 [job]: [2.803, 0.329, 0.288, 0.272, 0.264, 0.267]
+q202 [job]: [2.770, 0.334, 0.311, 0.280, 0.279, 0.273]
+q203 [job]: [2.957, 0.358, 0.306, 0.292, 0.283, 0.281]
+q204 [job]: [1.053, 0.392, 0.366, 0.354, 0.348, 0.343]
+q205 [job]: [0.688, 0.400, 0.353, 0.331, 0.331, 0.326]
+q206 [job]: [1.078, 0.396, 0.369, 0.365, 0.354, 0.348]
+q207 [job]: [0.884, 0.353, 0.298, 0.278, 0.270, 0.261]
+q208 [job]: [0.870, 0.301, 0.224, 0.222, 0.210, 0.211]
+q209 [job]: [0.757, 0.230, 0.165, 0.143, 0.143, 0.135]
+q210 [job]: [0.700, 0.255, 0.187, 0.172, 0.170, 0.161]
+q211 [job]: [0.982, 0.221, 0.197, 0.171, 0.172, 0.158]
+q212 [job]: [0.974, 0.224, 0.211, 0.171, 0.177, 0.173]
+q213 [job]: [1.575, 0.150, 0.141, 0.128, 0.137, 0.116]
+q214 [job]: [1.475, 0.165, 0.153, 0.139, 0.125, 0.122]
+q215 [job]: [1.464, 0.161, 0.144, 0.133, 0.129, 0.124]
+q216 [job]: [1.143, 0.303, 0.293, 0.275, 0.268, 0.261]
+q217 [job]: [0.869, 0.306, 0.286, 0.262, 0.253, 0.246]
+q218 [job]: [0.898, 0.277, 0.272, 0.267, 0.260, 0.256]
+q219 [job]: [2.703, 0.318, 0.289, 0.276, 0.271, 0.266]
+q220 [job]: [2.804, 0.354, 0.288, 0.271, 0.268, 0.265]
+q221 [job]: [2.746, 0.395, 0.325, 0.303, 0.309, 0.292]
+q222 [job]: [1.154, 0.481, 0.407, 0.390, 0.379, 0.383]
+q223 [job]: [0.842, 0.291, 0.286, 0.240, 0.239, 0.240]
+q224 [job]: [1.151, 0.473, 0.396, 0.382, 0.378, 0.379]
+q225 [job]: [0.966, 0.204, 0.157, 0.154, 0.151, 0.146]
+q226 [job]: [0.927, 0.174, 0.153, 0.149, 0.142, 0.136]
+q227 [job]: [1.103, 0.257, 0.219, 0.198, 0.191, 0.187]
+q228 [job]: [1.512, 0.167, 0.159, 0.146, 0.141, 0.140]
+q229 [job]: [1.576, 0.191, 0.185, 0.167, 0.148, 0.142]
+q230 [job]: [1.514, 0.173, 0.165, 0.147, 0.148, 0.139]
+q231 [job]: [1.572, 0.170, 0.163, 0.144, 0.136, 0.135]
+q232 [job]: [1.735, 0.187, 0.178, 0.157, 0.143, 0.146]
+q233 [job]: [1.852, 0.247, 0.232, 0.206, 0.200, 0.192]
+q234 [job]: [0.226, 0.089, 0.068, 0.065, 0.058, 0.048]
+q235 [job]: [0.524, 0.179, 0.159, 0.157, 0.139, 0.139]
+q236 [job]: [0.575, 0.263, 0.178, 0.150, 0.143, 0.139]
+q237 [job]: [0.598, 0.208, 0.177, 0.166, 0.161, 0.158]
+q238 [job]: [0.589, 0.240, 0.165, 0.150, 0.148, 0.149]
+wrote /home/ubuntu/ClickBench/joins-focus/results/starrocks/20260909T131508Z.json
+StarRocks 4.1.4: tpch 0/22  tpcds 0/103  job 113/113   load_time {'job': 39}
+=== tpch: not loaded; no results dumped ===
+=== tpcds: not loaded; no results dumped ===
+=== dumping job results ===
+job q1: starrocks ok, 1 rows
+job q2: starrocks ok, 1 rows
+job q3: starrocks ok, 1 rows
+job q4: starrocks ok, 1 rows
+job q5: starrocks ok, 1 rows
+job q6: starrocks ok, 1 rows
+job q7: starrocks ok, 1 rows
+job q8: starrocks ok, 1 rows
+job q9: starrocks ok, 1 rows
+job q10: starrocks ok, 1 rows
+job q11: starrocks ok, 1 rows
+job q12: starrocks ok, 1 rows
+job q13: starrocks ok, 1 rows
+job q14: starrocks ok, 1 rows
+job q15: starrocks ok, 1 rows
+job q16: starrocks ok, 1 rows
+job q17: starrocks ok, 1 rows
+job q18: starrocks ok, 1 rows
+job q19: starrocks ok, 1 rows
+job q20: starrocks ok, 1 rows
+job q21: starrocks ok, 1 rows
+job q22: starrocks ok, 1 rows
+job q23: starrocks ok, 1 rows
+job q24: starrocks ok, 1 rows
+job q25: starrocks ok, 1 rows
+job q26: starrocks ok, 1 rows
+job q27: starrocks ok, 1 rows
+job q28: starrocks ok, 1 rows
+job q29: starrocks ok, 1 rows
+job q30: starrocks ok, 1 rows
+job q31: starrocks ok, 1 rows
+job q32: starrocks ok, 1 rows
+job q33: starrocks ok, 1 rows
+job q34: starrocks ok, 1 rows
+job q35: starrocks ok, 1 rows
+job q36: starrocks ok, 1 rows
+job q37: starrocks ok, 1 rows
+job q38: starrocks ok, 1 rows
+job q39: starrocks ok, 1 rows
+job q40: starrocks ok, 1 rows
+job q41: starrocks ok, 1 rows
+job q42: starrocks ok, 1 rows
+job q43: starrocks ok, 1 rows
+job q44: starrocks ok, 1 rows
+job q45: starrocks ok, 1 rows
+job q46: starrocks ok, 1 rows
+job q47: starrocks ok, 1 rows
+job q48: starrocks ok, 1 rows
+job q49: starrocks ok, 1 rows
+job q50: starrocks ok, 1 rows
+job q51: starrocks ok, 1 rows
+job q52: starrocks ok, 1 rows
+job q53: starrocks ok, 1 rows
+job q54: starrocks ok, 1 rows
+job q55: starrocks ok, 1 rows
+job q56: starrocks ok, 1 rows
+job q57: starrocks ok, 1 rows
+job q58: starrocks ok, 1 rows
+job q59: starrocks ok, 1 rows
+job q60: starrocks ok, 1 rows
+job q61: starrocks ok, 1 rows
+job q62: starrocks ok, 1 rows
+job q63: starrocks ok, 1 rows
+job q64: starrocks ok, 1 rows
+job q65: starrocks ok, 1 rows
+job q66: starrocks ok, 1 rows
+job q67: starrocks ok, 1 rows
+job q68: starrocks ok, 1 rows
+job q69: starrocks ok, 1 rows
+job q70: starrocks ok, 1 rows
+job q71: starrocks ok, 1 rows
+job q72: starrocks ok, 1 rows
+job q73: starrocks ok, 1 rows
+job q74: starrocks ok, 1 rows
+job q75: starrocks ok, 1 rows
+job q76: starrocks ok, 1 rows
+job q77: starrocks ok, 1 rows
+job q78: starrocks ok, 1 rows
+job q79: starrocks ok, 1 rows
+job q80: starrocks ok, 1 rows
+job q81: starrocks ok, 1 rows
+job q82: starrocks ok, 1 rows
+job q83: starrocks ok, 1 rows
+job q84: starrocks ok, 1 rows
+job q85: starrocks ok, 1 rows
+job q86: starrocks ok, 1 rows
+job q87: starrocks ok, 1 rows
+job q88: starrocks ok, 1 rows
+job q89: starrocks ok, 1 rows
+job q90: starrocks ok, 1 rows
+job q91: starrocks ok, 1 rows
+job q92: starrocks ok, 1 rows
+job q93: starrocks ok, 1 rows
+job q94: starrocks ok, 1 rows
+job q95: starrocks ok, 1 rows
+job q96: starrocks ok, 1 rows
+job q97: starrocks ok, 1 rows
+job q98: starrocks ok, 1 rows
+job q99: starrocks ok, 1 rows
+job q100: starrocks ok, 1 rows
+job q101: starrocks ok, 1 rows
+job q102: starrocks ok, 1 rows
+job q103: starrocks ok, 1 rows
+job q104: starrocks ok, 1 rows
+job q105: starrocks ok, 1 rows
+job q106: starrocks ok, 1 rows
+job q107: starrocks ok, 1 rows
+job q108: starrocks ok, 1 rows
+job q109: starrocks ok, 1 rows
+job q110: starrocks ok, 1 rows
+job q111: starrocks ok, 1 rows
+job q112: starrocks ok, 1 rows
+job q113: starrocks ok, 1 rows

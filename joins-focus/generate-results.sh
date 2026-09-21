@@ -16,7 +16,7 @@
 #
 #   ./generate-results.sh                 # every result file
 #   ./generate-results.sh --passed        # only systems that produced at least one timing
-#   ./generate-results.sh --exclude umbra # drop a system by name (repeatable, or comma-separated)
+#   ./generate-results.sh --exclude doris # drop a system by name (repeatable, or comma-separated)
 #   ./generate-results.sh --html          # -> report.html, self-contained
 #   ./generate-results.sh --html run.html
 #
@@ -189,6 +189,7 @@ for system, rs in runs.items():
     width = max((len(r) for _, o in rs for r in o["result"] if isinstance(r, list)), default=6)
     base["result"] = [[None] * width for _ in range(TOTAL)]
     base["load_time"], base["data_size"], base["stats_time"] = {}, {}, {}
+    base["cold_restart"] = {}
     base["error"], base["error_text"] = {}, {}
     used = {}
     for ds, (start, end) in span.items():
@@ -200,7 +201,7 @@ for system, rs in runs.items():
                 # rows, so taking them from the same file is what keeps them consistent. It is
                 # separate from load_time because statistics collection is not loading -- see the
                 # runners; folding them together made a STATISTICS=1 load_time incomparable.
-                for k in ("load_time", "data_size", "stats_time"):
+                for k in ("load_time", "data_size", "stats_time", "cold_restart"):
                     v = (o.get(k) or {}).get(ds)
                     if v is not None: base[k][ds] = v
                 # Reasons for this benchmark's untimed rows, from THIS file's log. Only attached

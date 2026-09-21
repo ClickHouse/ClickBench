@@ -1,0 +1,81 @@
+# queries that did not agree, 2026-09-21T18:39:49Z
+# systems: all in the dumps
+# rules: sig=6, max_diff=0.0, ignore_null_order=True
+# a system whose status is one of ['error', 'oom', 'timeout', 'unsupported'] produced no rows and is left out of its query, noted inline as [ignored: ...]
+tpch   q001   PRECISION                  6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpch   q003   SCALE                      2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+tpch   q005   PRECISION                  2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+tpch   q006   RECORDED(float-bound)      2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+tpch   q007   PRECISION                  2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+tpch   q008   RECORDED(decimal-scale)    6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpch   q009   PRECISION                  2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+tpch   q010   PRECISION                  2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+tpch   q014   PRECISION                  5 distinct answers: cedardb, clickhouse+duckdb, doris, firebolt, starrocks
+tpch   q015   PRECISION                  2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+tpch   q017   SCALE                      2 distinct answers: cedardb+doris, clickhouse+duckdb+firebolt+starrocks
+tpch   q019   PRECISION                  2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+tpch   q022   RECORDED(float-bound)      2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+tpcds  q002   RECORDED(decimal-scale)    2 distinct answers: cedardb+doris+duckdb+firebolt+starrocks, clickhouse
+tpcds  q005   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+tpcds  q007   PRECISION                  6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q009   PRECISION                  6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q012   SCALE                      6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q013   PRECISION                  6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q014   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb, doris+starrocks  [ignored: firebolt=error]
+tpcds  q016   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+tpcds  q018   NULLORDER                  3 distinct answers: cedardb+duckdb+starrocks, clickhouse, doris  [ignored: firebolt=error]
+tpcds  q019   NULLORDER                  3 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris, starrocks
+tpcds  q021   SCALE                      6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q022   RECORDED(int-division)     4 distinct answers: cedardb, clickhouse+duckdb, doris+starrocks, firebolt
+tpcds  q023   PRECISION                  4 distinct answers: cedardb, clickhouse+duckdb+firebolt, doris, starrocks
+tpcds  q025   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+tpcds  q029   PRECISION                  6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q030   SCALE                      5 distinct answers: cedardb, clickhouse+duckdb, doris, firebolt, starrocks
+tpcds  q031   PRECISION                  5 distinct answers: cedardb, clickhouse+duckdb, doris, firebolt, starrocks
+tpcds  q034   PRECISION                  3 distinct answers: cedardb, clickhouse+duckdb+firebolt+starrocks, doris
+tpcds  q037   RECORDED(int-division)     3 distinct answers: cedardb+firebolt, clickhouse+duckdb, doris+starrocks
+tpcds  q038   NULLORDER                  2 distinct answers: cedardb+duckdb+firebolt, doris+starrocks  [ignored: clickhouse=oom]
+tpcds  q039   PRECISION                  6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q042   PRECISION                  5 distinct answers: cedardb, clickhouse, doris, duckdb, starrocks  [ignored: firebolt=error]
+tpcds  q043   PRECISION                  5 distinct answers: cedardb, clickhouse, doris, duckdb, starrocks  [ignored: firebolt=error]
+tpcds  q048   RECORDED(rank-ties)        2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+tpcds  q049   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+tpcds  q050   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+tpcds  q051   PRECISION                  6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q053   RECORDED(rank-ties)        6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q054   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+tpcds  q057   SCALE                      2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+tpcds  q058   RECORDED(cast-rounding)    2 distinct answers: cedardb+duckdb+firebolt, clickhouse+doris+starrocks
+tpcds  q061   PRECISION                  6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q062   PRECISION                  6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q063   PRECISION                  6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q065   RECORDED(decimal-scale)    5 distinct answers: cedardb, clickhouse+firebolt, doris, duckdb, starrocks
+tpcds  q066   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+tpcds  q067   ROUNDING                   6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q069   ORDER                      6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q070   SCALE                      3 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris, starrocks
+tpcds  q071   NULLORDER                  2 distinct answers: clickhouse+duckdb+firebolt, doris+starrocks  [ignored: cedardb=error]
+tpcds  q072   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+tpcds  q075   ORDER                      6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q076   RECORDED(date-arithmetic)  3 distinct answers: clickhouse+duckdb+firebolt, doris, starrocks  [ignored: cedardb=oom]
+tpcds  q077   RECORDED(int-division)     6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q079   DIFFER                     2 distinct answers: cedardb+clickhouse+doris+duckdb+starrocks, firebolt
+tpcds  q080   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+tpcds  q081   RECORDED(null-order)       4 distinct answers: cedardb+clickhouse+duckdb, doris, firebolt, starrocks
+tpcds  q082   RECORDED(int-division)     4 distinct answers: cedardb, clickhouse+duckdb+starrocks, doris, firebolt
+tpcds  q083   NULLORDER                  3 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris, starrocks
+tpcds  q084   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+tpcds  q087   RECORDED(int-division)     5 distinct answers: cedardb, clickhouse+duckdb, doris, firebolt, starrocks
+tpcds  q088   RECORDED(padding)          2 distinct answers: cedardb+doris+duckdb+firebolt+starrocks, clickhouse
+tpcds  q089   PRECISION                  6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q090   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+tpcds  q093   PRECISION                  6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q094   SCALE                      6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q097   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+tpcds  q102   SCALE                      6 distinct answers: cedardb, clickhouse, doris, duckdb, firebolt, starrocks
+tpcds  q103   NULLORDER                  2 distinct answers: cedardb+clickhouse+duckdb+firebolt, doris+starrocks
+job    q007   RECORDED(empty-aggregate)  cedardb=ok, clickhouse=empty, doris=ok, duckdb=ok, firebolt=ok, starrocks=ok
+job    q015   RECORDED(empty-aggregate)  cedardb=ok, clickhouse=empty, doris=ok, duckdb=ok, firebolt=ok, starrocks=ok
+job    q016   RECORDED(empty-aggregate)  cedardb=ok, clickhouse=empty, doris=ok, duckdb=ok, firebolt=ok, starrocks=ok
+job    q036   RECORDED(empty-aggregate)  2 distinct answers: cedardb+doris+duckdb+firebolt+starrocks, clickhouse
+job    q109   RECORDED(empty-aggregate)  2 distinct answers: cedardb+doris+duckdb+firebolt+starrocks, clickhouse

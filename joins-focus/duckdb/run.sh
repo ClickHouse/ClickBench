@@ -101,7 +101,9 @@ ensure_binary() {
     local zip="${WORK}/duckdb-${VERSION}.zip"
     echo "downloading DuckDB ${VERSION} CLI: ${CLI_URL}" >&2
     curl -fsSL "${CLI_URL}" -o "${zip}" || { echo "download failed" >&2; return 1; }
-    ( cd "${WORK}" && unzip -oq "${zip}" && mv duckdb "${BIN}" ) || { echo "unzip failed" >&2; return 1; }
+    ( cd "${WORK}" && { unzip -oq "${zip}" 2>/dev/null \
+          || python3 -c 'import sys,zipfile; zipfile.ZipFile(sys.argv[1]).extractall(".")' "${zip}"; } \
+      && mv duckdb "${BIN}" ) || { echo "could not extract ${zip} (need unzip or python3)" >&2; return 1; }
     chmod +x "${BIN}"; rm -f "${zip}"
     [ -x "${BIN}" ]
 }
@@ -238,6 +240,16 @@ run_query() {
 
 actual_version() { DBFILE=":memory:"; scalar "SELECT version();" | tr -d '"[:space:]'; }
 
+# The same field the server runners write, always true: DuckDB has no daemon to restart.
+emit_cold_restart_json() {  # $1 = fully-loaded benchmarks
+    local loaded=" ${1:-} " ds sep=""
+    printf '{'
+    for ds in ${QUERY_ORDER}; do
+        case "${loaded}" in *" ${ds} "*) printf '%s"%s": true' "${sep}" "${ds}"; sep=", " ;; esac
+    done
+    printf '}'
+}
+
 emit_load_time_json() {  # $1 = fully-loaded benchmarks
     local loaded=" ${1:-} "
     [ -s "${LOAD_STATS}" ] && awk -F'\t' -v L="${loaded}" 'index(L," "$1" ")>0{s[$1]+=$2} END{printf "{"; for(d in s)printf "%s\"%s\": %s",(n++?", ":""),d,s[d]; printf "}"}' "${LOAD_STATS}" || printf '{}'
@@ -308,6 +320,7 @@ run_benchmark() {
         echo "    \"release_date\": \"${RELEASE_DATE}\","
         echo "    \"machine\": \"${MACHINE}\","
         echo "    \"kind\": \"dbbench\","
+        echo "    \"cold_restart\": $(emit_cold_restart_json "${FULLY_LOADED}"),"
         echo "    \"load_time\": $(emit_load_time_json "${FULLY_LOADED}"),"
         echo "    \"stats_time\": $(emit_stats_time_json "${FULLY_LOADED}"),"
         echo "    \"data_size\": $(emit_data_size_json "${FULLY_LOADED}"),"

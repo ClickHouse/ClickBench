@@ -507,12 +507,11 @@
     <code>segment_cache_capacity=0</code> (Doris); <code>enable_result_cache</code>,
     <code>enable_subresult_cache</code> and <code>enable_scan_cache</code> (Firebolt).
     ClickHouse's query cache is off by default and its uncompressed cache unused. The OS page
-    cache is dropped before each query, but a buffer pool is not an optional layer &mdash;
-    DuckDB, CedarDB and Umbra serve their hot runs from one.</p>
+    cache is dropped before each query.</p>
     <p>Statistics are opt-in (<code>STATISTICS=1</code>), timed separately and reported as
     <code>stats_time</code>. Each engine uses its own
     statement: <code>MATERIALIZE STATISTICS ALL</code> (ClickHouse), <code>ANALYZE</code> (DuckDB,
-    CedarDB, Umbra), <code>ANALYZE TABLE</code> (StarRocks, Doris), and one
+    CedarDB), <code>ANALYZE TABLE</code> (StarRocks, Doris), and one
     <code>ALTER TABLE &hellip; ADD STATISTICS</code> per column for Firebolt.</p>
 </div>
 
@@ -589,9 +588,9 @@ if (stored_theme) {
 let datasets_elem = document.getElementById('selectors_dataset');
 
 /// Systems in a friendly order (ClickHouse first, then the others), plus any not listed.
-const SYSTEM_ORDER = ['ClickHouse', 'DuckDB', 'StarRocks', 'CedarDB', 'Doris', 'Firebolt', 'Umbra'];
+const SYSTEM_ORDER = ['ClickHouse', 'DuckDB', 'StarRocks', 'CedarDB', 'Doris', 'Firebolt'];
 /// Per-system hue for colouring the chart/table/selectors (used by sysHue/systemColor/systemBands).
-const SYSTEM_HUE = { ClickHouse: 75, DuckDB: 255, StarRocks: 152, CedarDB: 330, Doris: 25, Firebolt: 195, Umbra: 285 };
+const SYSTEM_HUE = { ClickHouse: 75, DuckDB: 255, StarRocks: 152, CedarDB: 330, Doris: 25, Firebolt: 195 };
 let systems = [...new Set(data.map(e => e.system))].sort((a, b) => {
     let ia = SYSTEM_ORDER.indexOf(a), ib = SYSTEM_ORDER.indexOf(b);
     if (ia < 0) ia = 99; if (ib < 0) ib = 99;

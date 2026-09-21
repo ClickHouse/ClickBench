@@ -15,7 +15,8 @@ all the same kind of thing. Each query gets the WEAKEST level at which all syste
               computed the same value and declared a narrower result type.
   DIFF_BELOW_<n>  the numbers differ by no more than the --max-diff of <n> that was passed, so
               they were accepted as agreeing. Absent unless --max-diff is given.
-  RECORDED    listed in recorded-issues.txt with an established cause, so it is not DIFFER.
+  RECORDED(<cause>)  listed in recorded-issues.txt with an established cause, named in the
+              verdict itself, so it is not DIFFER.
               The category from that file is shown instead.
   PADDING     the strings are equal once NUL padding is removed: ClickHouse's FixedString(N)
               padding surviving inside a concatenation, one value spelled two ways.
@@ -37,6 +38,11 @@ Statuses are compared too: a system that timed out and one that answered do not 
 import argparse, collections, datetime, decimal, math, pathlib, re, sys
 
 HDR = '=== '
+
+# Statuses that mean the system produced NO answer: the query hit an engine limitation, a
+# timeout or an OOM. There is nothing to compare against, so the system is dropped from that
+# query rather than reported as disagreeing.
+FAILED_STATUS = {'timeout', 'oom', 'error', 'unsupported'}
 NUMERIC = re.compile(r'^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$')
 RANK = {'IDENTICAL': 0, 'SAME': 0, 'RECORDED': 1, 'ORDER': 1, 'NULLORDER': 1, 'PADDING': 2, 'SCALE': 2,
         'ROUNDING': 3, 'PRECISION': 4, 'TRUNCATED': 5, 'DIFFER': 6}
@@ -280,11 +286,18 @@ def field_pass(ra, rb, ca, cb, o):
     return worst
 
 def mark_recorded(recorded, bench, stem, verdict, detail):
-    """A listed query becomes RECORDED, labelled with its category from recorded-issues.txt."""
+    """A listed query becomes RECORDED(<category>), naming its cause from recorded-issues.txt.
+
+    The category goes in the VERDICT, not just the note: a bare RECORDED lumps unrelated causes
+    into one bucket, so the tally could not tell five integer-division cases from five empty
+    aggregates. Every tag ranks where RECORDED did, and registers itself so RANK lookups on it
+    work the same way as for the --max-diff verdict."""
     hit = recorded.get((bench, stem))
     if not hit or verdict in ('SAME', 'IDENTICAL'):
         return verdict, detail
-    return 'RECORDED', f'{hit[0]} {detail}'
+    tag = f'RECORDED({hit[0]})'
+    RANK.setdefault(tag, RANK['RECORDED'])
+    return tag, detail
 
 def main():
     ap = argparse.ArgumentParser()
@@ -295,14 +308,19 @@ def main():
     ap.add_argument('--max-diff', type=float, default=0.0,
                     help='treat numbers no further apart than this as agreeing, e.g. --max-diff 0.01')
     ap.add_argument('--recorded', default='recorded-issues.txt',
-                    help="established causes, reported as RECORDED instead of DIFFER ('' to ignore)")
-    ap.add_argument('--ignore-null-order', action='store_true',
-                    help='do not call it a difference when a LIMIT kept different NULL-keyed rows')
+                    help="established causes, reported as RECORDED(<category>) instead of DIFFER ('' to ignore)")
+    # On by default: when the rule can PROVE the cause -- equal row counts, every row unique to
+    # one side NULL-bearing, and the shared rows agreeing -- naming it NULLORDER beats reporting
+    # DIFFER, which is reserved for something unexplained. Pass the flag to get the old behaviour.
+    ap.add_argument('--null-order-is-diff', action='store_true',
+                    help='report NULL-placement differences as DIFFER instead of naming them '
+                         'NULLORDER (they are named by default)')
     ap.add_argument('--verbose', action='store_true', help='show agreeing queries too')
     ap.add_argument('--root', default=pathlib.Path(__file__).resolve().parent)
     ap.add_argument('--out', default='query-results/comparison.txt',
                     help="write the list of non-agreeing queries here ('' to skip)")
     a = ap.parse_args()
+    a.ignore_null_order = not a.null_order_is_diff
     keep = set(filter(None, a.only.split(',')))
     # The verdict for an accepted difference states the threshold it was accepted under, so the
     # output can never be read without knowing the rule that produced it.
@@ -318,14 +336,22 @@ def main():
             continue
         print(f'== {bench}: {len(files)} queries with dumps')
         tally = collections.Counter()
+        ignored = 0       # queries where at least one system's failure was left out
         for path in files:
             got = parse(path)
             if keep:
                 got = {k: v for k, v in got.items() if k in keep}
+            # Systems that failed this query have no rows to compare; see FAILED_STATUS.
+            failed = {k: v['status'] for k, v in got.items() if v['status'] in FAILED_STATUS}
+            got = {k: v for k, v in got.items() if k not in failed}
+            note = ''
+            if failed:
+                ignored += 1
+                note = '  [ignored: ' + ', '.join(f'{k}={v}' for k, v in sorted(failed.items())) + ']'
             if len(got) < 2:
-                tally['single system'] += 1
+                tally['nothing to compare' if not got else 'single system'] += 1
                 if a.verbose:
-                    print(f'  {path.stem}  only {",".join(got) or "-"}')
+                    print(f'  {path.stem}  only {",".join(got) or "-"}{note}')
                 continue
 
             # Group by (status, canonicalised rows); systems in one group returned one answer.
@@ -340,18 +366,18 @@ def main():
                 verdict = 'IDENTICAL' if verbatim else 'SAME'
                 tally[verdict] += 1
                 if a.verbose:
-                    print(f'  {path.stem}  {verdict:<16} all {len(got)} agree, '
-                          f'{len(next(iter(groups))[1])} rows')
+                    print(f'  {path.stem}  {verdict:<26} all {len(got)} agree, '
+                          f'{len(next(iter(groups))[1])} rows{note}')
                 continue
 
             statuses = {v['status'] for v in got.values()}
             if len(statuses) > 1:
                 detail = ', '.join(f'{s}={v["status"]}' for s, v in sorted(got.items()))
-                verdict, detail = mark_recorded(recorded, bench, path.stem, 'STATUS', detail)
+                verdict, detail = mark_recorded(recorded, bench, path.stem, 'STATUS', detail + note)
                 tally[verdict] += 1
-                print(f'  {path.stem}  {verdict:<16} ' + detail)
+                print(f'  {path.stem}  {verdict:<26} ' + detail)
                 listing.append((bench, path.stem, verdict, detail))
-                if verdict != 'RECORDED':
+                if not verdict.startswith('RECORDED'):
                     exit_code = 1
                 continue
 
@@ -370,16 +396,17 @@ def main():
                 lines.append(f'      {"+".join(syss)} vs {"+".join(base_sys)}: {tag}' +
                              (f'  {ex}' if ex else ''))
             worst, shown = mark_recorded(recorded, bench, path.stem, worst,
-                                      f'{len(groups)} distinct answers: {", ".join(names)}')
+                                      f'{len(groups)} distinct answers: {", ".join(names)}{note}')
             tally[worst] += 1
             if worst != 'SAME':
                 listing.append((bench, path.stem, worst, shown))
             if worst != 'SAME' or a.verbose:
-                print(f'  {path.stem}  {worst:<16} {shown}')
+                print(f'  {path.stem}  {worst:<26} {shown}')
                 print('\n'.join(lines))
             if worst == 'DIFFER':
                 exit_code = 1
-        print('   ' + ', '.join(f'{k} {n}' for k, n in sorted(tally.items())) + '\n')
+        print('   ' + ', '.join(f'{k} {n}' for k, n in sorted(tally.items()))
+              + (f'   ({ignored} with a failed system ignored)' if ignored else '') + '\n')
 
     if a.out:
         out = pathlib.Path(a.root) / a.out
@@ -389,8 +416,12 @@ def main():
             f.write(f'# systems: {", ".join(sorted(keep)) if keep else "all in the dumps"}\n')
             f.write(f'# rules: sig={a.sig}, max_diff={a.max_diff}, '
                     f'ignore_null_order={a.ignore_null_order}\n')
+            # Unconditional, so it belongs next to the flags: a reader cannot tell from a
+            # verdict alone that a system was left out of it.
+            f.write(f'# a system whose status is one of {sorted(FAILED_STATUS)} produced no rows'
+                    f' and is left out of its query, noted inline as [ignored: ...]\n')
             for b, q, v, detail in listing:
-                f.write(f'{b:6} {q:6} {v:<16} {detail}\n')
+                f.write(f'{b:6} {q:6} {v:<26} {detail}\n')
         print(f'wrote {a.out}: {len(listing)} queries that did not agree')
     return exit_code
 

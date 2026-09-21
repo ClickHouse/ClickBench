@@ -32,6 +32,17 @@ DROP_CACHES="${DROP_CACHES:-1}"
 # COLD_RESTART=1 restarts the server before each query's cold try, so the cold number is not
 # served from the engine's own memory. Off by default.
 COLD_RESTART="${COLD_RESTART:-0}"
+# Grace period for the cold-restart `docker stop`. Docker's default is 10s, which is not enough
+# for an engine to checkpoint a big dataset: with TPC-DS (58 GB) loaded CedarDB was SIGKILLed
+# mid-checkpoint, flagged an unexpected shutdown, and the next start went into crash recovery
+# that grew to 62 GB anon RSS and was OOM-killed. A clean stop costs nothing when the engine
+# exits promptly -- `docker stop` returns as soon as the process is gone.
+COLD_STOP_TIMEOUT="${COLD_STOP_TIMEOUT:-300}"
+# cold_reset usually runs inside run_query, which the query loop calls in a command
+# substitution -- a subshell, so it cannot exit the run itself. It drops this file instead
+# and the loop aborts on it, rather than paying the 600s budget for every query left.
+COLD_FAIL="/tmp/${SYSTEM:-bench}_cold_restart_failed.$$"
+rm -f "${COLD_FAIL}"
 # The BE's own data caches. Default 0 disables them the way ClickBench's starrocks/install does
 # (be.conf: disable_storage_page_cache, datacache_enable).
 ENGINE_CACHES="${ENGINE_CACHES:-0}"
@@ -131,7 +142,7 @@ drop_caches() {
 # Say once, at the start, what the cold column actually means in this run.
 cold_check() { docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N \
                      --connect-timeout=5 -e 'SET query_timeout=10; SELECT 1' </dev/null \
-                     2>/dev/null | grep -q '^1$'; }
+                     | grep -q '^1$'; }
 
 cold_wait_stopped() {
     local i
@@ -145,24 +156,37 @@ cold_wait_stopped() {
 
 cold_check_loop() {
     local i last_err
-    for i in $(seq 1 300); do
+    for i in $(seq 1 600); do
         if last_err=$(cold_check 2>&1 >/dev/null); then
             return 0
         fi
         sleep 1
     done
-    echo "cold restart: check did not succeed within 300s" >&2
+    echo "cold restart: check did not succeed within 600s" >&2
     [ -n "${last_err}" ] && printf '%s\n' "${last_err}" | sed 's/^/    /' >&2
+    # The probe's stderr only says the port is shut; what matters is why the SERVER did not come
+    # up, so dump its own log -- as versions/run-version.sh's revive_server does.
+    echo "cold restart: container log:" >&2
+    docker logs --tail 20 "${CONTAINER}" 2>&1 | sed 's/^/      | /' >&2 || true
     return 1
 }
 
 cold_reset() {
     if [ "${COLD_RESTART}" != 1 ]; then drop_caches; return 0; fi
-    docker stop "${CONTAINER}" >/dev/null 2>&1 || true
+    docker stop -t "${COLD_STOP_TIMEOUT}" "${CONTAINER}" >/dev/null 2>&1 || echo "cold restart: docker stop failed" >&2
     cold_wait_stopped
+    # `docker stop` exits 0 even when the grace expired and it had to SIGKILL, so an unclean
+    # shutdown is otherwise silent. 137 = SIGKILL: the next start would pay crash recovery, so
+    # stop here instead of waiting out cold_check_loop against a server that cannot come back.
+    if [ "$(docker inspect -f '{{.State.ExitCode}}' "${CONTAINER}" 2>/dev/null)" = 137 ]; then
+        echo "cold restart: the engine did not shut down within ${COLD_STOP_TIMEOUT}s and was" >&2
+        echo "killed, so the next start would run crash recovery. Not restarting." >&2
+        : > "${COLD_FAIL}"; return 1
+    fi
     drop_caches
-    docker start "${CONTAINER}" >/dev/null 2>&1 || true
-    cold_check_loop
+    local start_err
+    start_err=$(docker start "${CONTAINER}" 2>&1 >/dev/null) || echo "cold restart: docker start FAILED: ${start_err}" >&2
+    cold_check_loop || { : > "${COLD_FAIL}"; return 1; }
 }
 
 announce_cache_mode() {
@@ -349,11 +373,13 @@ run_query() {
     local ds="$1" query="$2" label="${3:-query}" db i out qid t t0 t1 reals=()
     db="${ds}"   # ddl/<benchmark>.sql creates a database named after the benchmark
     for i in $(seq 1 "${TRIES}"); do
-        [ "${i}" = 1 ] && cold_reset
+        # A failed cold restart leaves the server stopped, so the remaining tries would
+        # each query a dead container. Stop at the first one instead.
+        [ "${i}" = 1 ] && { cold_reset || break; }
         if [ "${USE_PROFILE}" = 1 ]; then
             out=$(timeout -k 10 "$((QUERY_TIMEOUT + 30))" docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N --connect-timeout=30 \
                   -e "SET enable_profile=true; SET query_timeout=${QUERY_TIMEOUT}; USE ${db}; ${query}; SELECT concat('__QID__:', last_query_id());" </dev/null 2>&1)
-            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
+            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \(|Error response from daemon'; then
                 echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oE 'ERROR [0-9].*' | head -1 | cut -c1-160)" >&2
                 reals=(); break
             fi
@@ -378,7 +404,7 @@ run_query() {
             out=$(timeout -k 10 "$((QUERY_TIMEOUT + 30))" docker exec -i "${CONTAINER}" mysql -h127.0.0.1 -P9030 -uroot -N --connect-timeout=30 -D "${db}" \
                   -e "SET query_timeout=${QUERY_TIMEOUT}; ${query};" </dev/null 2>&1)
             t1=$(date +%s.%N)
-            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \('; then
+            if printf '%s' "${out}" | grep -qE 'ERROR [0-9]+ \(|Error response from daemon'; then
                 echo "${label}: FAILED: $(printf '%s' "${out}" | tr '\n' ' ' | grep -oE 'ERROR [0-9].*' | head -1 | cut -c1-160)" >&2
                 reals=(); break
             fi
@@ -392,6 +418,19 @@ run_query() {
 }
 
 actual_version() { Mq 'SELECT current_version()' 2>/dev/null | head -1; }
+
+# Whether each benchmark's cold try was measured against a freshly restarted server
+# (COLD_RESTART=1) or only with the OS page cache dropped. Per benchmark, like load_time,
+# because the fold takes each benchmark from whichever run produced its rows.
+emit_cold_restart_json() {  # $1 = fully-loaded benchmarks
+    local loaded=" ${1:-} " ds sep="" val
+    val=$([ "${COLD_RESTART}" = 1 ] && echo true || echo false)
+    printf '{'
+    for ds in ${QUERY_ORDER}; do
+        case "${loaded}" in *" ${ds} "*) printf '%s"%s": %s' "${sep}" "${ds}" "${val}"; sep=", " ;; esac
+    done
+    printf '}'
+}
 
 emit_load_time_json() {  # $1 = fully-loaded benchmarks
     local loaded=" ${1:-} "
@@ -467,6 +506,12 @@ run_benchmark() {
             [ -z "${query}" ] && continue
             query="${query%;}"
             qnum=$((qnum + 1)); n=$((n + 1))
+            if [ -f "${COLD_FAIL}" ]; then
+                echo "aborting: the cold restart failed, so every remaining query would just" >&2
+                echo "wait out the 600s budget against a server that is not coming back. The" >&2
+                echo "container is left as it is -- see the log dumped above." >&2
+                rm -f "${COLD_FAIL}"; trap - EXIT; exit 1
+            fi
             if [ "${ds_loaded}" = 0 ]; then
                 row="$(null_row)"
                 echo "q${qnum} [${ds}]: SKIPPED (not loaded); recording null" >&2
@@ -496,6 +541,7 @@ run_benchmark() {
         echo "    \"release_date\": \"${RELEASE_DATE}\","
         echo "    \"machine\": \"${MACHINE}\","
         echo "    \"kind\": \"dbbench\","
+        echo "    \"cold_restart\": $(emit_cold_restart_json "${FULLY_LOADED}"),"
         echo "    \"load_time\": $(emit_load_time_json "${FULLY_LOADED}"),"
         echo "    \"stats_time\": $(emit_stats_time_json "${FULLY_LOADED}"),"
         echo "    \"data_size\": $(emit_data_size_json "${FULLY_LOADED}"),"

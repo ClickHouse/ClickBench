@@ -25,6 +25,11 @@ DROP_CACHES="${DROP_CACHES:-1}"
 # COLD_RESTART=1 restarts the server before each query's cold try, so the cold number is not
 # served from the engine's own memory. Off by default.
 COLD_RESTART="${COLD_RESTART:-0}"
+# Grace period for the cold-restart.
+COLD_STOP_TIMEOUT="${COLD_STOP_TIMEOUT:-300}"
+# cold_reset drops this file when it fails to signal aborting the benchmark.
+COLD_FAIL="/tmp/${SYSTEM:-bench}_cold_restart_failed.$$"
+rm -f "${COLD_FAIL}"
 QUERY_TIMEOUT="${QUERY_TIMEOUT:-300}"   # seconds
 LOAD_TIMEOUT="${LOAD_TIMEOUT:-1200}"            # per-statement load cap (server-side + client backstop)
 # STATISTICS=1 runs one ANALYZE per loaded table (see load_one_dataset).
@@ -122,7 +127,7 @@ drop_caches() {
 cold_check() { docker run --rm -i --network host -e PGPASSWORD="${PASSWORD}" \
                    -e PGCONNECT_TIMEOUT=5 "${PSQL_IMAGE}" psql -h127.0.0.1 -p5432 -U postgres \
                    -d postgres -q -tAc "SET statement_timeout=5000; SELECT 1" </dev/null \
-                   2>/dev/null | grep -q '^1$'; }
+                   | grep -q '^1$'; }
 
 cold_wait_stopped() {
     local i
@@ -136,24 +141,31 @@ cold_wait_stopped() {
 
 cold_check_loop() {
     local i last_err
-    for i in $(seq 1 300); do
+    for i in $(seq 1 600); do
         if last_err=$(cold_check 2>&1 >/dev/null); then
             return 0
         fi
         sleep 1
     done
-    echo "cold restart: check did not succeed within 300s" >&2
+    echo "cold restart: check did not succeed within 600s" >&2
     [ -n "${last_err}" ] && printf '%s\n' "${last_err}" | sed 's/^/    /' >&2
+    echo "cold restart: container log:" >&2
+    docker logs --tail 20 "${CONTAINER}" 2>&1 | sed 's/^/      | /' >&2 || true
     return 1
 }
 
 cold_reset() {
     if [ "${COLD_RESTART}" != 1 ]; then drop_caches; return 0; fi
-    docker stop "${CONTAINER}" >/dev/null 2>&1 || true
+    docker stop -t "${COLD_STOP_TIMEOUT}" "${CONTAINER}" >/dev/null 2>&1 || echo "cold restart: docker stop failed" >&2
     cold_wait_stopped
+    if [ "$(docker inspect -f '{{.State.ExitCode}}' "${CONTAINER}" 2>/dev/null)" = 137 ]; then
+        echo "cold restart: the engine did not shut down within ${COLD_STOP_TIMEOUT}s and was killed." >&2
+        : > "${COLD_FAIL}"; return 1
+    fi
     drop_caches
-    docker start "${CONTAINER}" >/dev/null 2>&1 || true
-    cold_check_loop
+    local start_err
+    start_err=$(docker start "${CONTAINER}" 2>&1 >/dev/null) || echo "cold restart: docker start FAILED: ${start_err}" >&2
+    cold_check_loop || { : > "${COLD_FAIL}"; return 1; }
 }
 
 announce_cache_mode() {
@@ -297,7 +309,7 @@ null_row() { local i out="["; for i in $(seq 1 "${TRIES}"); do out+="null"; [ "$
 # seconds.
 run_query() {
     local ds="$1" query="$2" label="${3:-query}" i script out reals
-    cold_reset
+    cold_reset || { echo "${label}: cold restart failed; recording null" >&2; null_row; return; }
     script="SET search_path TO \"${ds}\";"$'\n'"SET statement_timeout=${QUERY_TIMEOUT}000;"$'\n'"\\timing on"$'\n'
     for i in $(seq 1 "${TRIES}"); do script+="${query};"$'\n'; done
     out=$(printf '%s' "${script}" | timeout -k 10 "$((QUERY_TIMEOUT * (TRIES > 0 ? TRIES : 1) + 60))" docker run --rm -i --network host \
@@ -324,6 +336,18 @@ run_query() {
 }
 
 actual_version() { PG 'SELECT version()' 2>/dev/null | head -1; }
+
+# Whether each benchmark's cold try was measured against a freshly restarted server
+# (COLD_RESTART=1) or only with the OS page cache dropped.
+emit_cold_restart_json() {  # $1 = fully-loaded benchmarks
+    local loaded=" ${1:-} " ds sep="" val
+    val=$([ "${COLD_RESTART}" = 1 ] && echo true || echo false)
+    printf '{'
+    for ds in ${QUERY_ORDER}; do
+        case "${loaded}" in *" ${ds} "*) printf '%s"%s": %s' "${sep}" "${ds}" "${val}"; sep=", " ;; esac
+    done
+    printf '}'
+}
 
 emit_load_time_json() {  # $1 = fully-loaded benchmarks
     local loaded=" ${1:-} "
@@ -356,6 +380,7 @@ run_benchmark() {
         echo "    \"release_date\": \"${RELEASE_DATE}\","
         echo "    \"machine\": \"${MACHINE}\","
         echo "    \"kind\": \"dbbench\","
+        echo "    \"cold_restart\": $(emit_cold_restart_json "${FULLY_LOADED}"),"
         echo "    \"load_time\": $(emit_load_time_json "${FULLY_LOADED}"),"
         echo "    \"stats_time\": $(emit_stats_time_json "${FULLY_LOADED}"),"
         echo "    \"data_size\": $(emit_data_size_json "${FULLY_LOADED}"),"
@@ -370,6 +395,11 @@ run_benchmark() {
                 [ -z "${query}" ] && continue
                 query="${query%;}"
                 qnum=$((qnum + 1)); n=$((n + 1))
+                if [ -f "${COLD_FAIL}" ]; then
+                    echo "aborting: the cold restart failed." >&2
+                    echo "container is left as it is." >&2
+                    rm -f "${COLD_FAIL}"; trap - EXIT; exit 1
+                fi
                 if [ "${ds_loaded}" = 0 ]; then
                     row="$(null_row)"
                     echo "q${qnum} [${ds}]: SKIPPED (not loaded); recording null" >&2

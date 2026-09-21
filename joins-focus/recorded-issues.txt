@@ -1,5 +1,6 @@
-# Divergences whose cause has been established, so a run reports them as RECORDED and reserves
-# DIFFER for something new. Format: <bench> <query> <category> <note>
+# Divergences whose cause has been established, so a run reports them as RECORDED(<category>)
+# and reserves DIFFER for something new. Format: <bench> <query> <category> <note>
+# The category is the verdict's tag, so keep it short and reusable -- the summary counts by it.
 #
 # These are NOT mechanically detectable from the dumps -- integer division leaves no numeric
 # trace when it changes which rows pass a predicate -- which is why they are listed by hand
@@ -32,3 +33,29 @@ tpcds q088 padding        'Benson\0\0...\0, Floyd' against 'Benson, Floyd' on 15
 # 19991131 on Doris and 19991131.0 on StarRocks. Both MySQL-family engines add numerically on the
 # YYYYMMDD form, so the result is an invalid date whenever d_date is within 5 days of a month end.
 tpcds q076 date-arithmetic  d1.d_date + 5: Doris compares the invalid value as a date, so the predicate is NULL and the row drops -- it loses the two count=2 groups at d_week_seq 5213 (1999-11-23..29) and all of 5218 (1999-12-28..2000-01-03). StarRocks compares numerically, which over-includes instead: '1999-12-01' > ('1999-11-26' + 5) returns true where the answer is false
+
+# ClickHouse aggregates over an EMPTY set return the type's default, not NULL: min(String) gives
+# '' and min(Int) gives 0, where the other five follow the standard and give NULL. Probed on
+# 26.7.5.10. Intentional -- `aggregate_functions_null_for_empty=1` switches it -- but that makes
+# every aggregate Nullable across all 238 queries, which would change the measured plan to fix a
+# sentinel in two of them, so it is left at the default and recorded here instead.
+job   q036 empty-aggregate MIN(chn.name), MIN(t.title) over a join matching zero rows: ClickHouse prints two empty fields, the other five print <NULL> twice
+job   q109 empty-aggregate same shape, same cause
+job   q007 empty-aggregate single-column MIN over a zero-row join: ClickHouse's default is '' not NULL, and a one-field row of '' IS an empty line, which `out=$(...)` strips as a trailing newline before emit-result.py sees it -- so it records 0 rows (status=empty) where the other five record one <NULL> row. Same cause as q036, made invisible by the column count
+job   q015 empty-aggregate same shape, same cause
+job   q016 empty-aggregate same shape, same cause
+
+# rank() over a measure whose precision differs between engines: the rank counts how many rows
+# are strictly ahead, so a measure that ties on one engine and not another shifts the numbers,
+# and with a rank filter it shifts the row count too.
+tpcds q048 rank-ties      Firebolt's rank() ties where the others do not: ranks 1,2,2,4,5,5,5,8,9,9,9 (11 rows) against CedarDB's 1..10 (10 rows), and no row matches because the tied items differ. rnk<11 keeps 11 rows once ties exist
+tpcds q053 rank-ties      30 of 100 rows differ ONLY in currency_rank (298 vs 296, 883 vs 879, 887 vs 879, 921 vs 919), DuckDB higher on every one. All 100 rows share their (channel, item) key and return_rank agrees on all of them, so the aggregates match; the rank that moves is over currency_ratio, which the query does not output, so the tie structure cannot be read off the dump. A one-directional shift is what a coarser measure on CedarDB's side gives: rows it truncates to equal, DuckDB keeps distinct and counts as strictly ahead
+
+# NULL placement under a LIMIT, same cause the NULLORDER verdict names -- listed by hand where
+# the rule cannot prove it.
+tpcds q081 null-order     WITH ROLLUP ... ORDER BY channel, id LIMIT 100: the 4 NULL-keyed ROLLUP rows displace 2 real rows, as in q005. Doris and StarRocks return the SAME 100 rows in a DIFFERENT order -- row 2 is a different 'catalog channel <NULL>' subtotal in each, because id is NULL for both and the tie breaks arbitrarily -- which is why the rule names StarRocks's case and not Doris's
+
+# Firebolt evaluates a comparison bound in binary floating point where the others keep decimal,
+# so a value sitting exactly on the bound falls on the other side of it.
+tpch  q006 float-bound    l_discount BETWEEN 0.06 - 0.01 AND 0.06 + 0.01: Firebolt returns 7534759983.15 against 12330426888.4637. The ratio 0.611 is what keeping discounts 0.05 and 0.06 while dropping 0.07 gives, i.e. 0.06 + 0.01 lands just above 0.07 in float so l_discount = 0.07 fails the upper bound
+tpch  q022 float-bound    c_acctbal > (SELECT AVG(c_acctbal) ...): only cntrycode 29 differs, numcust 91123 against 91124 and totacctbal 683678024.88 against 683683023.65 -- a gap of exactly 4998.77, one customer sitting within rounding distance of the average. The other six country codes are byte-identical

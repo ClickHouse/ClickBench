@@ -9,27 +9,22 @@
 #   ./generate-data.sh                # all three, at the default scale
 #   ./generate-data.sh tpch tpcds     # only these
 #   SCALE=10 ./generate-data.sh tpch  # a different scale factor
-#   CSV=0 ./generate-data.sh          # Parquet only, no CSV (skips Umbra's input; see CSV below)
 #
-# Output: data/parquet/<benchmark>/<table>.parquet, plus data/csv/<benchmark>/<table>.csv for
-# Umbra.
+# Output: data/parquet/<benchmark>/<table>.parquet
 
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DUCKDB="${DUCKDB:-$(command -v duckdb || echo "$HOME/.local/bin/duckdb")}"
 SCALE="${SCALE:-1}"                       # TPC-H / TPC-DS scale factor (spec: 1,10,30,100,...)
 JOB_SRC="${JOB_SRC:-https://event.cwi.nl/da/job/imdb.tgz}"
-# CSV=0 skips the CSV copies entirely. They exist for Umbra.
-CSV="${CSV:-1}"
 PARQUET="${HERE}/data/parquet"
-CSVDIR="${HERE}/data/csv"
 WORK="${HERE}/data/work"
 
 COPY_THREADS="${COPY_THREADS:-4}"
 COPY_MEMORY="${COPY_MEMORY:-32GB}"
 COPY_TUNE="SET threads=${COPY_THREADS}; SET memory_limit='${COPY_MEMORY}';"
 [ -x "${DUCKDB}" ] || { echo "duckdb not found; set DUCKDB=<path>" >&2; exit 1; }
-mkdir -p "${PARQUET}" "${CSVDIR}" "${WORK}"
+mkdir -p "${PARQUET}" "${WORK}"
 
 TPCH_TABLES="nation region part supplier partsupp customer orders lineitem"
 TPCDS_TABLES="call_center catalog_page catalog_returns catalog_sales customer_address \
@@ -39,20 +34,6 @@ web_returns web_sales web_site"
 JOB_TABLES="aka_name aka_title cast_info char_name comp_cast_type company_name company_type \
 complete_cast info_type keyword kind_type link_type movie_companies movie_info movie_info_idx \
 movie_keyword movie_link name person_info role_type title"
-
-# A CSV copy of one table, for Umbra. NULL is written as \N so it stays distinguishable from an
-# empty string, which is written as a bare empty field -- the same distinction the JOB source
-# makes, and the reason allow_quoted_nulls is off above.
-emit_csv() {
-    [ "${CSV}" = 0 ] && return 0
-    local bench="$1" table="$2" src="$3"
-    local out="${CSVDIR}/${bench}/${table}.csv"
-    mkdir -p "${CSVDIR}/${bench}"
-    [ -f "${out}" ] && return 0
-    "${DUCKDB}" -c "${COPY_TUNE} COPY (SELECT * FROM read_parquet('${src}')) TO '${out}.tmp'
-                    (FORMAT csv, HEADER false, NULLSTR '\N');" >/dev/null
-    mv "${out}.tmp" "${out}"
-}
 
 # TPC-H / TPC-DS: run the generator into a scratch database, then COPY each table out.
 gen_tpc() {
@@ -76,7 +57,6 @@ gen_tpc() {
         done
         rm -f "${db}"
     fi
-    for t in ${tables}; do emit_csv "${bench}" "${t}" "${PARQUET}/${bench}/${t}.parquet"; done
 }
 
 # JOB: the real IMDB snapshot, no scale factor. Column types are declared per table (below)
@@ -113,7 +93,6 @@ gen_job() {
     else
         echo "job: all tables present, skipping"
     fi
-    for t in ${JOB_TABLES}; do emit_csv job "${t}" "${PARQUET}/job/${t}.parquet"; done
 }
 
 # Column types for the JOB tables.
@@ -156,8 +135,3 @@ done
 rm -rf "${WORK}"
 echo
 echo "parquet: $(find "${PARQUET}" -name '*.parquet' | wc -l) files, $(du -sh "${PARQUET}" | cut -f1)"
-if [ "${CSV}" = 0 ]; then
-    echo "csv:     skipped (CSV=0); Umbra cannot be loaded from this data"
-else
-    echo "csv:     $(find "${CSVDIR}" -name '*.csv' | wc -l) files, $(du -sh "${CSVDIR}" | cut -f1)"
-fi

@@ -15,7 +15,7 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-ALL_SYSTEMS="clickhouse duckdb starrocks cedardb doris umbra firebolt"
+ALL_SYSTEMS="clickhouse duckdb starrocks cedardb doris firebolt"
 SYSTEMS="${SYSTEMS:-${ALL_SYSTEMS}}"
 BENCHMARKS="${BENCHMARKS:-tpch tpcds job}"
 

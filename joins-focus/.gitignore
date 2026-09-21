@@ -1,5 +1,5 @@
 # Generated data -- 75 GB, and reproducible with ./generate-data.sh. The repo root's .gitignore
-# already matches *.parquet, but data/csv (6 GB, Umbra's input) and data/bin are not parquet, so
+# already matches *.parquet, but data/bin is not parquet, so
 # the whole tree is ignored here rather than relying on that.
 data/
 
@@ -32,5 +32,7 @@ __pycache__/
 #   data.generated.js             what index.html loads; the page shows nothing without it.
 
 # Query result dumps from RESULTS=1 -- full result sets for every query, every system, so
-# unbounded in size and regenerable. Diagnostic output, not measurements.
-query-results/
+# unbounded in size and regenerable (60 MB, one file 28 MB).
+# The comparison summary is kept.
+query-results/*
+!query-results/comparison.txt

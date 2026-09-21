@@ -1,6 +1,6 @@
 # Joins-Focus Benchmark
 
-TPC-H, TPC-DS and JOB across seven database systems.
+TPC-H, TPC-DS and JOB across six database systems.
 
 | system | version | how it runs |
 |---|---|---|
@@ -9,7 +9,6 @@ TPC-H, TPC-DS and JOB across seven database systems.
 | StarRocks | 4.1.4 | official image; MySQL protocol |
 | CedarDB | v2026-08-20 | official image; PostgreSQL protocol |
 | Doris | 4.1.3 | FE + BE containers; MySQL protocol |
-| Umbra | 26.08 | official image; PostgreSQL protocol |
 | Firebolt | 4.31.13 | Firebolt Core image; HTTP + SQL |
 
 Everything runs locally in Docker.
@@ -60,11 +59,11 @@ STATISTICS=1 ./run-all.sh           # collect statistics after loading
 | `TRIES` | `6` | how many times each query runs — one cold, the rest hot |
 | `DROP_CACHES` | `1` | drop the page cache before each query. `0` skips it, so no run is cold |
 | `COLD_RESTART` | `0` | restart the server before each query's cold try, so the cold number is not served from the engine's own buffer pool — `docker stop`/`start`, which keeps the loaded data. Off by default. No effect on DuckDB, which has no daemon |
+| `COLD_STOP_TIMEOUT` | `300` | seconds `docker stop` waits for the engine to shut down during a cold restart, before Docker SIGKILLs it. |
 | `ENGINE_CACHES` | `0` | the engines' own data caches. `0` disables them: `disable_storage_page_cache=true` and `datacache_enable=false` (StarRocks), `disable_storage_page_cache=true` and `segment_cache_capacity=0` (Doris), `enable_scan_cache=false` (Firebolt). |
 | `QUERY_TIMEOUT` | `300` | per-query cap **in seconds**; a query that exceeds it records null |
 | `LOAD_TIMEOUT` | `1200` (ClickHouse `2400`, DuckDB `3600`) | per-table load cap; on DuckDB it bounds a whole benchmark's load, which runs in one process. On ClickHouse it is the client's `receive_timeout` — how long to wait on the server, so a long-but-progressing statement is never cut short |
 | `SCALE` | `1` | TPC-H / TPC-DS scale factor (`generate-data.sh` only) |
-| `CSV` | `1` | `generate-data.sh` only. `0` skips the CSV copies — they are for Umbra alone, and as uncompressed text they are far larger than the Parquet (TPC-H SF100: ~35 GB vs ~80 GB) |
 | `STATISTICS` | off | collect statistics after loading. Timed **separately** and reported as `stats_time`, not inside `load_time`, so a `STATISTICS=1` run stays load-time comparable with one without it. |
 | `KEEP_DATA` | off | leave a system's loaded data on disk when its run ends |
 | `LOAD_ONLY` | off | start the server and load, then stop — server left running, no queries, no results file |
@@ -92,7 +91,7 @@ run-all.sh                runs every system in turn, then regenerates the page
 <system>/load/*.sql       the load statements
 <system>/queries/*.sql    one query per line
 clickhouse/config/        the IPv4 listen override mounted into the server
-data/parquet, data/csv    generated data, shared by every system
+data/parquet              generated data, shared by every system
 results/<system>/<ts>.json one file per run; the generator folds them per system
 generate-results.sh       results/*.json -> data.generated.js -> index.html
 emit-result.py            records one query's rows into query-results/, called by the runners
@@ -113,7 +112,6 @@ a type or a NULL cannot differ between systems by accident.
   types are the spec's type list — `BIGINT`, `DECIMAL(15,2)`, `VARCHAR`, `DATE`.
 - **JOB** is the canonical IMDB snapshot — real data, no scale factor. Its CSV is Postgres-COPY
   format, not RFC 4180, and `generate-data.sh` documents the two ways that matters.
-- Umbra gets a CSV copy as well: it is the one system here with no Parquet reader.
 
 ## Schema and queries are explicit
 
@@ -127,19 +125,19 @@ Two details worth knowing before editing them:
   exception: it requires `DUPLICATE KEY` columns to be a table prefix, so its DDL puts them
   first and its load statements name every column to compensate.
 - **Every table declares the spec primary key** — as `ORDER BY` (ClickHouse, StarRocks),
-  `DUPLICATE KEY` (Doris), `PRIMARY INDEX` (Firebolt) or `PRIMARY KEY` (DuckDB, CedarDB,
-  Umbra). All seven declare the same columns.
+  `DUPLICATE KEY` (Doris), `PRIMARY INDEX` (Firebolt) or `PRIMARY KEY` (DuckDB, CedarDB).
+  All six declare the same columns.
 
 ## Disk
 
 Every system's loaded data is removed when its run ends, so only one system's copy is on disk at
 a time. The container-based ones (ClickHouse, StarRocks, Doris, CedarDB) get that from
-`docker rm -f`; DuckDB, Umbra and Firebolt keep their data in the working tree, so their runners
+`docker rm -f`; DuckDB and Firebolt keep their data in the working tree, so their runners
 delete it explicitly on exit. `KEEP_DATA=1` leaves it in place when you want to inspect a loaded
 database afterwards.
 
 The generated data under `data/` is *not* removed automatically: every system reads it, so it has
-to outlive them. Delete a benchmark's Parquet and CSV once all seven have run it.
+to outlive them. Delete a benchmark's Parquet once all six have run it.
 
 ## Results
 
