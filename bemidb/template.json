@@ -7,7 +7,6 @@
     "Go",
     "column-oriented",
     "DuckDB derivative",
-    "PostgreSQL compatible",
-    "Iceberg"
+    "PostgreSQL compatible"
   ]
 }
