@@ -6,8 +6,6 @@
   "tags": [
     "Rust",
     "column-oriented",
-    "PostgreSQL compatible",
-    "UTAP",
-    "JIT"
+    "PostgreSQL compatible"
   ]
 }

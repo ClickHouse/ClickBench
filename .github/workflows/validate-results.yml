@@ -12,3 +12,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: python3 validate-results.py
+        if: github.event_name != 'pull_request'
+      - uses: actions/checkout@v3
+        if: github.event_name == 'pull_request'
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .base
+      - run: python3 validate-results.py --base .base
+        if: github.event_name == 'pull_request'
