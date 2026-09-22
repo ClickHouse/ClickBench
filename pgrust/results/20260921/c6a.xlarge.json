@@ -3,7 +3,7 @@
       "date": "2026-09-21",
       "machine": "c6a.xlarge",
       "cluster_size": 1,
-      "proprietary": "no",
+      "proprietary": "yes",
       "hardware": "cpu",
       "tuned": "no",
       "tags": ["Rust","PostgreSQL compatible","column-oriented"],
