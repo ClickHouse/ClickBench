@@ -6,7 +6,7 @@
       "proprietary": "yes",
       "hardware": "cpu",
       "tuned": "no",
-      "tags": ["Rust","column-oriented","PostgreSQL compatible","UTAP","JIT"],
+      "tags": ["Rust","column-oriented","PostgreSQL compatible"],
       "load_time": 657,
       "data_size": 16123516657,
       "concurrent_qps": 3.422,
