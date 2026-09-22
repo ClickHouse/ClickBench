@@ -1,4 +1,0 @@
-#!/bin/bash
-set -eu
-. "$(dirname "$0")/env.sh"
-du -bs "$PGDATA" | awk '{print $1}'
