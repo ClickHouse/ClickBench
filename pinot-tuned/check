@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+# The QuickStart process only registers its clean-shutdown hook after
+# ./start's launched process finishes starting every component AND
+# bootstrapping every sample table (including waiting for each table's
+# async minion segment-generation-and-push task to finish). If ./stop
+# sends SIGTERM any earlier than that, either shutdown-hook registration
+# itself throws (component startup still in flight) or an in-flight
+# minion task gets killed (bootstrap still in flight) -- either way the
+# process dies without a clean stop and corrupts the next ./start.
+#
+# Broker readiness alone is not a safe proxy for "fully done starting":
+# it comes up long before bootstrap finishes. The only reliable signal is
+# the "Quick start setup complete" line QuickStart itself prints right
+# after runner.bootstrapTable() + waitForBootstrapToComplete() return
+# (see pinot-tools Quickstart.java, method execute()). Since pinot.log is
+# appended across restarts, only look at what was appended after the
+# offset ./start recorded for this invocation.
+BROKER_RES=$(curl -sf -o /dev/null -w '%{http_code}' \
+    -XPOST -H'Content-Type: application/json' \
+    http://localhost:8000/query/sql/ \
+    -d '{"sql":"SELECT 1"}' 2>/dev/null || echo "000")
+
+OFFSET=$(cat pinot.log.offset 2>/dev/null || echo 0)
+SETUP_DONE=$(tail -c +"$((OFFSET + 1))" pinot.log 2>/dev/null | grep -c 'Quick start setup complete' || true)
+
+[ "$BROKER_RES" = "200" ] && [ "${SETUP_DONE:-0}" -ge 1 ]
