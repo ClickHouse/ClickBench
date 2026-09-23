@@ -1,0 +1,19 @@
+#!/bin/bash
+set -eu
+
+[ -f server.pid ] || exit 0
+pid=$(cat server.pid)
+
+kill "$pid" 2>/dev/null || true
+
+# The server can hold most of the machine's memory, which only comes back once
+# the process is gone; a successor started before that risks an OOM kill.
+for _ in $(seq 1 300); do
+    if ! kill -0 "$pid" 2>/dev/null; then
+        rm -f server.pid
+        exit 0
+    fi
+    sleep 0.2
+done
+echo "stop: pivot (pid $pid) is still running after 60s" >&2
+exit 1

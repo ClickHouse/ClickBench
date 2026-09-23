@@ -43,3 +43,9 @@ arcticdb/store
 
 # Python venvs created by install scripts
 myenv
+
+# Pivot's local datastores and generated server configs
+pivot-parquet/catalog
+pivot-parquet/config.yaml
+pivot-parquet-partitioned/catalog
+pivot-parquet-partitioned/config.yaml

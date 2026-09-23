@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+: "${PIVOT_PORT:=5432}"
+
+psql -h 127.0.0.1 -p "$PIVOT_PORT" -U pivot -d postgres -c 'SELECT 1' >/dev/null
