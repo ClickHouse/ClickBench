@@ -31,7 +31,7 @@ _EXTERNAL = {
     # Managed cloud services / require API keys / external infra.
     "alloydb", "athena", "athena-partitioned", "aurora-mysql",
     "aurora-postgresql", "bigquery", "brytlytdb", "bytehouse", "chyt",
-    "clickhouse-cloud", "clickhouse-tencent",
+    "clickhouse-cloud",
     "crunchy-bridge-for-analytics", "databricks", "exasol",
     "gravitons", "hologres", "hydrolix",
     "motherduck", "pgpro_tam", "redshift", "redshift-serverless",
