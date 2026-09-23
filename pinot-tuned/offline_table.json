@@ -1,0 +1,43 @@
+{
+  "tableName": "hits",
+  "tableType": "OFFLINE",
+  "segmentsConfig": {
+    "segmentPushType": "APPEND",
+    "segmentAssignmentStrategy": "BalanceNumSegmentAssignmentStrategy",
+    "schemaName": "hits",
+    "replication": "1"
+  },
+  "tableIndexConfig": {
+    "starTreeIndexConfigs": [
+      {
+        "dimensionsSplitOrder": [
+          "AdvEngineID"
+        ],
+        "skipStarNodeCreationForDimensions": [],
+        "functionColumnPairs": [
+          "COUNT__*",
+          "SUM__AdvEngineID",
+          "AVG__ResolutionWidth"
+        ],
+        "maxLeafRecords": 10000
+      },
+      {
+        "dimensionsSplitOrder": [
+          "SearchEngineID",
+          "SearchPhrase"
+        ],
+        "skipStarNodeCreationForDimensions": [],
+        "functionColumnPairs": [
+          "COUNT__*"
+        ],
+        "maxLeafRecords": 10000
+      }
+    ]
+  },
+  "metadata": {},
+  "tenants":
+  {
+	  "server": "DefaultTenant",
+	  "broker": "DefaultTenant"
+  }
+}

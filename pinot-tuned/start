@@ -1,0 +1,55 @@
+#!/bin/bash
+set -e
+
+PINOT_VERSION=1.5.1
+PINOT_DIR="apache-pinot-$PINOT_VERSION-bin"
+
+# Idempotent: if broker query endpoint is up, do nothing (leave the
+# existing pinot.log offset marker as-is; ./check will find the earlier
+# "setup complete" marker in the untouched log).
+if curl -sf -o /dev/null -w '%{http_code}' \
+    -XPOST -H'Content-Type: application/json' \
+    http://localhost:8000/query/sql/ \
+    -d '{"sql":"SELECT 1"}' 2>/dev/null | grep -q '^200'; then
+    exit 0
+fi
+
+# Record the current end of pinot.log so ./check can look only at what
+# this invocation appends, not a "setup complete" line left over from an
+# earlier run of the log-appending (>>) QuickStart process.
+touch pinot.log
+wc -c < pinot.log | tr -d ' ' > pinot.log.offset
+
+# pinot-admin.sh's own default is -Xms4G with NO -Xmx (falls back to the
+# JVM's default of ~25% of physical RAM). On a 100-segment/~74GB ClickBench
+# run this OOMed mid-LaunchDataIngestionJob around segment 60/100 on a
+# 30GB-RAM c6a.4xlarge (observed: OutOfMemoryError in
+# SegmentDictionaryCreator, job silently reported success anyway).
+#
+# A fixed -Xmx20G (this PR's original fix) instead broke every machine
+# smaller than c6a.4xlarge: on c6a.large (4GiB)/t3a.small (2GiB)/
+# c6a.xlarge (8GiB), the JVM can't even reserve the requested heap and
+# QuickStart fails to start at all (confirmed via ClickHouse/ClickBench's
+# own machine:all CI run on PR #2126). Size the heap off actual physical
+# RAM instead of hard-coding one instance's value.
+#
+# 64% of RAM, capped at 20G — chosen so a 32GiB c6a.4xlarge (this fix's
+# only end-to-end-verified machine: 43/43 queries passed 3/3 tries) gets
+# back exactly the already-proven 20G, while smaller machines scale down
+# instead of over-requesting. Not Presto's 70%/install pattern: Pinot
+# keeps segments memory-mapped/off-heap, so a heap that large would fight
+# the OS page cache on machines above 32GiB instead of helping — the 20G
+# cap keeps larger machines at the proven-safe ceiling rather than
+# growing further. No 4G floor on -Xms either (a 4G floor is what killed
+# t3a.small in the first place); -Xms only reaches 4G once the machine
+# can actually spare it.
+RAM_MB=$(awk '/MemTotal/{ printf "%d", $2 / 1024 }' /proc/meminfo)
+XMX_MB=$(( RAM_MB * 64 / 100 ))
+[ "$XMX_MB" -gt 20480 ] && XMX_MB=20480
+XMS_MB=$XMX_MB
+[ "$XMS_MB" -gt 4096 ] && XMS_MB=4096
+export JAVA_OPTS="-Xms${XMS_MB}m -Xmx${XMX_MB}m"
+
+nohup "./${PINOT_DIR}/bin/pinot-admin.sh" QuickStart -type batch \
+    >> pinot.log 2>&1 < /dev/null &
+disown
