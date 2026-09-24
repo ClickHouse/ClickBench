@@ -1,0 +1,13 @@
+{
+  "system": "ClickHouse (Parquet, partitioned) (PR 115798)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "embedded",
+    "stateless",
+    "ClickHouse derivative"
+  ]
+}

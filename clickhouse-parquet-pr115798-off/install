@@ -1,0 +1,34 @@
+#!/bin/bash
+set -e -o pipefail
+
+# Install the release build of ClickHouse/ClickHouse#115798 ("TopN dynamic
+# filtering for reading Parquet files"), head 1250b09e09f373c19b706c89324593c7ab157cb2,
+# instead of the published binary. This directory exists only to benchmark
+# that build; it is not part of the published results.
+#
+# The package name carries the version and master bumps it, so resolve the
+# exact file from the build's artifact report rather than pinning a version.
+# The parquet entries run clickhouse-local out of the entry directory, so the
+# binary is placed at ./clickhouse instead of being installed system-wide.
+BUILD=https://clickhouse-builds.s3.amazonaws.com/PRs/115798/1250b09e09f373c19b706c89324593c7ab157cb2/pr
+
+if [ ! -x ./clickhouse ]; then
+    case "$(uname -m)" in
+        x86_64)  job=build_amd_release; arch=amd64 ;;
+        aarch64) job=build_arm_release; arch=arm64 ;;
+        *) echo "no PR build for $(uname -m)" >&2; exit 1 ;;
+    esac
+    pkg=$(curl -fsSL --retry 10 --retry-delay 30 --retry-all-errors "$BUILD/$job/artifact_report_$job.json" \
+        | jq -r '.build_urls[]' | grep -E "clickhouse-common-static-[0-9.]+-${arch}\.tgz$" | head -n1)
+    if [ -z "$pkg" ]; then
+        echo "no clickhouse-common-static tarball in the report of $job" >&2
+        exit 1
+    fi
+    echo "Installing $pkg"
+    wget --continue --progress=dot:giga "$pkg" -O clickhouse-pr.tgz
+    mkdir -p clickhouse-pr
+    tar -xzf clickhouse-pr.tgz -C clickhouse-pr --wildcards '*/usr/bin/clickhouse'
+    mv "$(find clickhouse-pr -type f -path '*/usr/bin/clickhouse' | head -n1)" ./clickhouse
+    chmod +x ./clickhouse
+    rm -rf clickhouse-pr.tgz clickhouse-pr
+fi
