@@ -825,7 +825,7 @@ const aws_machine_regexp = /^[a-z]+[0-9]+[a-z]*\.[0-9a-z-]+$/;
     const count_diff = data.filter(elem => elem.machine === b).length - data.filter(elem => elem.machine === a).length;
     return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
 }).map(elem => {
-    const selected = elem != 'c6a.2xlarge' && elem != 'c6a.xlarge' && elem != 'c6a.large' && elem != 'c8g.4xlarge' && elem != 't3a.small' && elem != 'c6a.metal';
+    const selected = elem != 'c6a.2xlarge' && elem != 'c6a.xlarge' && elem != 'c6a.large' && elem != 'c6a.4xlarge' && elem != 't3a.small' && elem != 'c6a.metal';
     let selector = document.createElement('a');
     selector.className = selected ? 'selector selector-active' : 'selector';
     selector.appendChild(document.createTextNode(elem));
