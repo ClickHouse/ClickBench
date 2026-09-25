@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# CORTEX CLICKBENCH HARNESS — DATA SIZE (DISK FOOTPRINT PROBE)
+# Patent: CIPO CA 3,322,620 | License: FCSL-1.0 / MIT
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ARENA_DIR="${CORTEX_ARENA:-$SCRIPT_DIR/cortex_arena}"
+
+
+if [ -d "$ARENA_DIR" ]; then
+    du -sb -L "$ARENA_DIR" | awk '{print $1}'
+else
+    echo 0
+fi

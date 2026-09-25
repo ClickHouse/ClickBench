@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# CORTEX CLICKBENCH HARNESS — INSTALL (RUNTIME SETUP)
+# Patent: CIPO CA 3,322,620 | License: FCSL-1.0 / MIT
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Architecture Guard: CORTEX requires x86_64 for AVX2/AVX-512 micro-kernels
+if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "amd64" ]; then
+    echo "cortex: x86_64 architecture required for AVX2/AVX-512 kernels; current architecture is $(uname -m). Skipping." >&2
+    exit 1
+fi
+
+echo "================================================================================"
+echo "⚡ CORTEX CLICKBENCH INSTALL : TÉLÉCHARGEMENT BINAIRES & PRÉPARATION RUNNER"
+echo "================================================================================"
+
+if ! command -v gcc >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y gcc build-essential
+fi
+
+# Téléchargement déterministe des binaires d'évaluation CORTEX (Pattern Umbra/KDB)
+CORTEX_VERSION="v1.0.0"
+CORTEX_TARBALL="cortex-clickbench-x86_64-${CORTEX_VERSION}.tar.gz"
+CORTEX_URL="https://github.com/cortexLab011/ClickBench/releases/download/${CORTEX_VERSION}/${CORTEX_TARBALL}"
+CORTEX_SHA256="5a04643ceb51954f47acd0ff8a9171185382ff4eedff3d5888cb77829cc1c9ea"
+
+mkdir -p bin
+
+if [ ! -f "bin/libcortex_clickbench_arena.so" ] || [ ! -f "bin/cortex_ingest" ]; then
+    echo "📦 Téléchargement des binaires d'évaluation CORTEX (${CORTEX_VERSION})..."
+    curl -sSL -f -o "${CORTEX_TARBALL}" "${CORTEX_URL}"
+    
+    if command -v sha256sum >/dev/null 2>&1; then
+        echo "🔒 Vérification de l'intégrité SHA-256..."
+        echo "${CORTEX_SHA256}  ${CORTEX_TARBALL}" | sha256sum -c -
+    fi
+    
+    tar -xzf "${CORTEX_TARBALL}" -C bin/
+    rm -f "${CORTEX_TARBALL}"
+fi
+
+# Permissions sur les binaires hermétiques
+chmod +x bin/libcortex_clickbench_arena.so 2>/dev/null || true
+chmod +x bin/cortex_ingest 2>/dev/null || true
+
+# Compilation du runner d'interface standard ClickBench (Monolithe Statique Tier S++++)
+if [ -f "bin/libcortex_clickbench_arena.a" ]; then
+    echo "🔨 Compilation de ./query en Monolithe Statique (0 symbole exporté)..."
+    gcc -O3 -march=native -mtune=native -fno-plt -Wl,-z,relro -Wl,-z,now -s query.c ./bin/libcortex_clickbench_arena.a -lpthread -ldl -lm -o query
+else
+    echo "🔨 Compilation de ./query avec bibliothèque dynamique..."
+    gcc -O3 -march=native -mtune=native -fno-plt -Wl,-z,relro -Wl,-z,now -s query.c -L./bin -lcortex_clickbench_arena -Wl,-rpath,'$ORIGIN/bin' -o query
+fi
+chmod +x query
+
+# Rendre tous les scripts ClickBench exécutables
+chmod +x benchmark.sh check data-size install load start stop 2>/dev/null || true
+
+echo "✅ Binaire ./query compilé avec succès."
+echo "🎉 INSTALLATION CORTEX TERMINÉE AVEC SUCCÈS"
+echo "================================================================================"

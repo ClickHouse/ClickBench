@@ -1,0 +1,11 @@
+{
+  "system": "CORTEX",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "embedded"
+  ]
+}

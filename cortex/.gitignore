@@ -1,0 +1,7 @@
+# Benchmark and build artifacts
+query
+bin/
+cortex_arena/
+hits.parquet
+*.log
+*.tar.gz

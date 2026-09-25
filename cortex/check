@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# CORTEX CLICKBENCH HARNESS — CHECK (LIVENESS PROBE)
+# Patent: CIPO CA 3,322,620 | License: FCSL-1.0 / MIT
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+if [ ! -x "./query" ]; then
+    echo "❌ Binaire ./query introuvable ou non exécutable." >&2
+    exit 1
+fi
+
+# Détection de l'arène (par défaut cortex_arena relatif)
+export CORTEX_ARENA="${CORTEX_ARENA:-$SCRIPT_DIR/cortex_arena}"
+
+
+# Liveness probe : exécution d'un SELECT COUNT(*) sur stdin
+printf "SELECT COUNT(*) FROM hits;\n" | ./query >/dev/null 2>&1
+exit 0

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# CORTEX CLICKBENCH HARNESS — START (IN-PROCESS EMBEDDED ENGINE)
+# Patent: CIPO CA 3,322,620 | License: FCSL-1.0 / MIT
+# ==============================================================================
+exit 0

@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# CORTEX CLICKBENCH HARNESS — LOAD & INGESTION (TIER S++++)
+# Patent: CIPO CA 3,322,620 | License: FCSL-1.0 / MIT
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+ARENA_DIR="${CORTEX_ARENA:-cortex_arena}"
+PARQUET_FILE="${1:-hits.parquet}"
+
+# Cas 1 : Si hits.parquet est présent, exécuter l'ingestion native
+if [ -f "$PARQUET_FILE" ]; then
+    echo "================================================================================"
+    echo "⚡ CORTEX CLICKBENCH LOAD : INGESTION NATIVE PARQUET ➔ ARÈNE MMAP"
+    echo "   Source : $PARQUET_FILE"
+    echo "   Cible  : $ARENA_DIR"
+    echo "================================================================================"
+
+    rm -rf "$ARENA_DIR"
+    mkdir -p "$ARENA_DIR"
+
+    ./bin/cortex_ingest "$PARQUET_FILE" "$ARENA_DIR"
+
+    ARENA_SIZE=$(du -sb -L "$ARENA_DIR" | awk '{print $1}')
+    echo "✅ Arène CORTEX ingérée avec succès : $ARENA_SIZE octets."
+
+    if [ "$ARENA_SIZE" -lt 5000000000 ]; then
+        echo "❌ ERREUR : Taille de l'arène ($ARENA_SIZE octets) < seuil minimum ClickBench (5 Go)." >&2
+        exit 1
+    fi
+
+    # Nettoyage conforme standard ClickBench
+    rm -f "$PARQUET_FILE"
+    sync
+    exit 0
+fi
+
+# Cas 2 : Arène existante en local
+if [ -d "$ARENA_DIR" ]; then
+    echo "✅ Arène CORTEX déjà disponible pour exécution."
+    exit 0
+fi
+
+echo "❌ Fichier source $PARQUET_FILE introuvable et aucune arène existante." >&2
+exit 1
