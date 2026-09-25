@@ -42,7 +42,7 @@ if ! command -v aws >/dev/null 2>&1; then
 fi
 aws --version
 
-RAVEL_VERSION="${RAVEL_VERSION:-v0.15.0}"
+RAVEL_VERSION="${RAVEL_VERSION:-v0.16.1}"
 RAVEL_REPO="${RAVEL_REPO:-https://github.com/NOFireAI/ravel}"
 
 case "$(uname -m)" in
@@ -103,54 +103,62 @@ fi
 # What will run, by content rather than by a version string.
 sha256sum "$RAVEL_SERVER" "$RAVEL_CLI"
 
-# The object store: a single-node MinIO on this machine's disk, so the entry
+# The object store: a single-node RustFS on this machine's disk, so the entry
 # is comparable with the local-disk systems in this repository and needs no
-# cloud account. A pinned release, verified against its published checksum.
-# A loopback RAVEL_S3_ENDPOINT means the MinIO this entry manages; anything
-# else is an external S3-compatible store the operator provisioned, and this
-# section is skipped.
-MINIO_RELEASE="${MINIO_RELEASE:-RELEASE.2025-09-07T16-13-09Z}"
+# cloud account. A pinned release from GitHub, verified against the release's
+# own SHA256SUMS. A loopback RAVEL_S3_ENDPOINT means the RustFS this entry
+# manages; anything else is an external S3-compatible store the operator
+# provisioned, and this section is skipped.
+RUSTFS_VERSION="${RUSTFS_VERSION:-1.0.0}"
 case "$RAVEL_S3_ENDPOINT" in
-    http://127.0.0.1:*|http://localhost:*) local_minio=yes ;;
-    *) local_minio=no ;;
+    http://127.0.0.1:*|http://localhost:*) local_store=yes ;;
+    *) local_store=no ;;
 esac
-if [ "$local_minio" = yes ]; then
-    mkdir -p "$MINIO_DIR"
-    if ! [ -x "$MINIO_DIR/minio" ] || ! "$MINIO_DIR/minio" --version 2>/dev/null | grep -q "$MINIO_RELEASE"; then
-        mbase="https://dl.min.io/server/minio/release/linux-${arch}/archive"
-        curl -fsSL --retry 3 -o "$MINIO_DIR/minio.new" "${mbase}/minio.${MINIO_RELEASE}"
-        want=$(curl -fsSL --retry 3 "${mbase}/minio.${MINIO_RELEASE}.sha256sum" | awk '{print $1}')
-        have=$(sha256sum "$MINIO_DIR/minio.new" | awk '{print $1}')
-        [ -n "$want" ] && [ "$want" = "$have" ] || { echo "install: checksum mismatch for minio ${MINIO_RELEASE}" >&2; exit 1; }
-        chmod +x "$MINIO_DIR/minio.new"
-        # A running MinIO keeps serving from the replaced inode; ./minio-start
+if [ "$local_store" = yes ]; then
+    mkdir -p "$RUSTFS_DIR"
+    if ! [ -x "$RUSTFS_DIR/rustfs" ] || ! "$RUSTFS_DIR/rustfs" --version 2>/dev/null | grep -q "^rustfs ${RUSTFS_VERSION}\$"; then
+        case "$arch" in
+            amd64) rarch=x86_64 ;;
+            arm64) rarch=aarch64 ;;
+        esac
+        zip="rustfs-linux-${rarch}-gnu-v${RUSTFS_VERSION}.zip"
+        rbase="https://github.com/rustfs/rustfs/releases/download/${RUSTFS_VERSION}"
+        curl -fsSL --retry 3 -o "$RUSTFS_DIR/$zip" "${rbase}/${zip}"
+        want=$(curl -fsSL --retry 3 "${rbase}/SHA256SUMS" | awk -v n="$zip" '$2 == n {print $1}')
+        have=$(sha256sum "$RUSTFS_DIR/$zip" | awk '{print $1}')
+        [ -n "$want" ] && [ "$want" = "$have" ] || { echo "install: checksum mismatch for $zip" >&2; exit 1; }
+        rm -rf "$RUSTFS_DIR/unpack"
+        unzip -q -o "$RUSTFS_DIR/$zip" -d "$RUSTFS_DIR/unpack"
+        chmod +x "$RUSTFS_DIR/unpack/rustfs"
+        # A running RustFS keeps serving from the replaced inode; ./rustfs-start
         # only launches a new one when the health check fails.
-        mv -f "$MINIO_DIR/minio.new" "$MINIO_DIR/minio"
+        mv -f "$RUSTFS_DIR/unpack/rustfs" "$RUSTFS_DIR/rustfs"
+        rm -rf "$RUSTFS_DIR/unpack" "$RUSTFS_DIR/$zip"
     fi
-    "$MINIO_DIR/minio" --version | head -n 1
+    "$RUSTFS_DIR/rustfs" --version | head -n 1
     # Credentials: generated once, readable by this user only, handed to
-    # MinIO and to Ravel through the environment. Nothing in this repository
+    # RustFS and to Ravel through the environment. Nothing in this repository
     # or in a process argument list carries a key.
-    if [ ! -f "$MINIO_DIR/credentials.env" ]; then
+    if [ ! -f "$RUSTFS_DIR/credentials.env" ]; then
         ( umask 077
-          printf 'MINIO_ROOT_USER=%s\nMINIO_ROOT_PASSWORD=%s\n' \
+          printf 'RUSTFS_ACCESS_KEY=%s\nRUSTFS_SECRET_KEY=%s\n' \
               "ravel-$(head -c 6 /dev/urandom | od -An -tx1 | tr -d ' \n')" \
               "$(head -c 30 /dev/urandom | base64 | tr -d '/+=\n')" \
-              > "$MINIO_DIR/credentials.env" )
+              > "$RUSTFS_DIR/credentials.env" )
     fi
     # The server records query text on its audit trail tokenized under a
     # key. A keyed deployment derives it; this entry runs unkeyed (see
     # ./start), so it needs one of its own. Generated once, kept beside the
-    # MinIO credentials, handed to the server through the environment.
-    if ! grep -q '^RAVEL_AUDIT_TOKEN_KEY=' "$MINIO_DIR/credentials.env"; then
+    # RustFS credentials, handed to the server through the environment.
+    if ! grep -q '^RAVEL_AUDIT_TOKEN_KEY=' "$RUSTFS_DIR/credentials.env"; then
         ( umask 077
           printf 'RAVEL_AUDIT_TOKEN_KEY=%s\n' \
               "$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')" \
-              >> "$MINIO_DIR/credentials.env" )
+              >> "$RUSTFS_DIR/credentials.env" )
     fi
     # Re-source so the keys just written are exported for the steps below.
     . ./ravel-env.sh
-    ./minio-start
+    ./rustfs-start
 fi
 
 # The bucket. Everything Ravel writes lands under a t/<tenant hash>/ prefix in

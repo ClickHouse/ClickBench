@@ -53,10 +53,15 @@ fi
 log="server.$(date -u +%Y%m%dT%H%M%SZ).log"
 ln -sfn "$log" server.log
 
-# The store must be up before the server: a MinIO that died between queries
+# The store must be up before the server: a RustFS that died between queries
 # would otherwise turn every later statement into an error. No-op when it is
 # already serving.
-./minio-start
+./rustfs-start
+
+# Each in-flight object-store request holds a socket, and at startup the
+# server has exited with EMFILE under the common 1024 soft limit. Raise the
+# soft limit to the hard one.
+ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
 
 # The disk cache tier is opt-in and off by default; see RAVEL_CACHE_DIR in
 # ravel-env.sh for what it does against a local store.
