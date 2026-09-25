@@ -42,7 +42,7 @@ if ! command -v aws >/dev/null 2>&1; then
 fi
 aws --version
 
-RAVEL_VERSION="${RAVEL_VERSION:-v0.16.1}"
+RAVEL_VERSION="${RAVEL_VERSION:-v0.17.0}"
 RAVEL_REPO="${RAVEL_REPO:-https://github.com/NOFireAI/ravel}"
 
 case "$(uname -m)" in
