@@ -16,4 +16,16 @@ if [ -f server.pid ]; then
     rm -f server.pid
 fi
 pkill -x -f "rayforce -p $port server.rfl" 2>/dev/null || true
+
+# The signal only starts the shutdown: the process keeps the listening socket
+# while it unmaps the table, and its command line is already cleared, so a
+# ./start that follows immediately could bind neither the port nor see the
+# process. Wait until both the process and the port are gone.
+for i in $(seq 1 300); do
+    if ! pgrep -x -f "rayforce -p $port server.rfl" >/dev/null 2>&1 \
+       && ! ss -ltn 2>/dev/null | grep -q ":$port "; then
+        break
+    fi
+    sleep 1
+done
 exit 0
