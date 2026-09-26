@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+# Convert source parquet to Vortex format. `duckdb-vortex` (default
+# settings) OOM-kills on hosts with ~7.6 GiB usable RAM: even lowering
+# `memory_limit` does not prevent it (see
+# https://github.com/vortex-data/vortex/issues/10046 for the full
+# investigation and raw evidence). `threads=2` is the largest thread
+# count that completed in our testing; default (`threads=4`) OOMs.
+duckdb -c "LOAD vortex; SET threads = 2; COPY 'hits.parquet' TO 'hits.vortex' (FORMAT vortex);"
+
+# Create the persistent VIEW (over hits.vortex) in hits.db.
+rm -f hits.db
+duckdb hits.db -f create.sql
+
+# Source parquet no longer needed.
+rm -f hits.parquet
+sync
