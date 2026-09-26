@@ -1,0 +1,586 @@
+# ClickBench `hits` schema mapping for `ravel-cli load --parquet` (ADR-0100, issue #430).
+#
+# Source of truth for the column names and their upstream SQL types:
+# https://github.com/ClickHouse/ClickBench/blob/main/postgresql/create.sql
+# (105 columns). This mapping is checked in so a ClickBench load is repeatable;
+# it is consumed twice, with the SAME key/type information:
+#   1. `ravel-cli load --parquet --mapping hits.mapping.toml` writes the records.
+#   2. `ravel-cli typed-attr-column set --from-mapping hits.mapping.toml` declares
+#      the typed attribute columns the SQL layer accelerates (ADR-0100 decision 2).
+#
+# Type mapping (upstream SQL type -> loader ColType -> ravel-sql DeclaredType):
+#   BIGINT / INTEGER / SMALLINT -> i64  -> I64
+#   TEXT / VARCHAR(n) / CHAR    -> str  -> Str
+#   Date / TIMESTAMP            -> i64  -> I64   (see EventTime / secondary-time note)
+#
+# EventTime is the primary event-time column: it rides the native typed `ts`
+# path (ts_column below) and is NOT declared as an attribute. Every OTHER column
+# becomes a typed attribute with its ColType.
+#
+# F64 note (ADR-0101 / #431): ColType::F64 attributes CANNOT be declared as typed
+# columns -- ravel-sql `DeclaredType` has no F64 variant (Str/I64/Bool/Bytes only),
+# so `typed-attr-column set --from-mapping` skips an f64 entry with a stderr warning
+# and a float attribute stays queryable only through `attrs['<key>']`. This mapping
+# declares NO f64 column: the `hits` schema is entirely integer, string, and
+# date/time columns (77 integer/date/time, 28 text; 0 float), so the F64 gap affects
+# 0 of the 105 columns here. The note is kept because a different dataset would hit it.
+#
+# Secondary time columns EventDate, ClientEventTime, LocalEventTime are declared i64.
+# EventDate is a Date column: the loader stores it as its native unit, epoch DAYS
+# (Date32 = days since 1970-01-01), NOT nanoseconds (load.rs read_i64). A date-literal
+# comparison in a query therefore becomes an epoch-DAY integer comparison; the corpus
+# flags those statements `modified` (ADR-0100 decision 3). ClientEventTime and
+# LocalEventTime are TIMESTAMP in the schema: the loader `i64` path accepts integer
+# and Date32/Date64 columns but NOT a native Arrow Timestamp column, so these two load
+# only if the operator's hits.parquet encodes them as an integer/date column. None of
+# the 43 ClickBench statements reference them, so this does not affect the suite.
+
+ts_column = "EventTime"
+# EventTime in the original data is a Unix-seconds datetime. If the operator's
+# hits.parquet stores EventTime as a native Arrow Timestamp, the loader uses the
+# column's own unit and this ts_unit is ignored (load.rs read_ts); set it to match
+# the parquet only when EventTime is stored as an integer.
+ts_unit = "seconds"
+
+# CounterID (issue #519): the one column in `hits` that acts as a per-entity
+# key -- ClickBench's "counter" is the site/tag being measured, so CounterID
+# is the natural stream boundary. Declared as a resource_attribute rather than
+# an attribute so it becomes part of stream identity (ADR-0029 log_stream_id):
+# `shard_for_log` hashes resource attributes, so this is what actually spreads
+# ingest across `--shards`. In the pre-#519 mapping, CounterID was a record
+# attribute: every row's resource-attribute set was empty, so every row hashed
+# to the same stream and 100% of writes landed on one shard regardless of
+# --shards -- one core did all merge+encode work no matter how many shards
+# were provisioned.
+#
+# `ravel-cli load` runs with a fixed `target_bytes: 1` (one Strict flush per
+# batch), so raising --shards without raising --batch-rows to compensate
+# produces MORE, SMALLER objects: a batch's rows now split across shards by
+# CounterID hash, and each shard's slice flushes immediately as its own
+# object, before it can reach the `block_target_records` target (8192). See
+# docs/guides/clickbench.md step 2 for the --batch-rows this requires.
+#
+# The other 103 non-EventTime columns stay record attributes (typed values in
+# `attrs`, not part of stream identity). 104 declared columns total (103
+# attribute + 1 resource_attribute) sit far under the per-object dynamic-column
+# budget of 1000 (RlogConfig::max_dynamic_columns).
+
+[[resource_attribute]]
+key = "CounterID"
+column = "CounterID"
+type = "i64"
+
+[[attribute]]
+key = "WatchID"
+column = "WatchID"
+type = "i64"
+
+[[attribute]]
+key = "JavaEnable"
+column = "JavaEnable"
+type = "i64"
+
+[[attribute]]
+key = "Title"
+column = "Title"
+type = "str"
+
+[[attribute]]
+key = "GoodEvent"
+column = "GoodEvent"
+type = "i64"
+
+[[attribute]]
+key = "EventDate"
+column = "EventDate"
+type = "i64"
+
+[[attribute]]
+key = "ClientIP"
+column = "ClientIP"
+type = "i64"
+
+[[attribute]]
+key = "RegionID"
+column = "RegionID"
+type = "i64"
+
+[[attribute]]
+key = "UserID"
+column = "UserID"
+type = "i64"
+
+[[attribute]]
+key = "CounterClass"
+column = "CounterClass"
+type = "i64"
+
+[[attribute]]
+key = "OS"
+column = "OS"
+type = "i64"
+
+[[attribute]]
+key = "UserAgent"
+column = "UserAgent"
+type = "i64"
+
+[[attribute]]
+key = "URL"
+column = "URL"
+type = "str"
+
+[[attribute]]
+key = "Referer"
+column = "Referer"
+type = "str"
+
+[[attribute]]
+key = "IsRefresh"
+column = "IsRefresh"
+type = "i64"
+
+[[attribute]]
+key = "RefererCategoryID"
+column = "RefererCategoryID"
+type = "i64"
+
+[[attribute]]
+key = "RefererRegionID"
+column = "RefererRegionID"
+type = "i64"
+
+[[attribute]]
+key = "URLCategoryID"
+column = "URLCategoryID"
+type = "i64"
+
+[[attribute]]
+key = "URLRegionID"
+column = "URLRegionID"
+type = "i64"
+
+[[attribute]]
+key = "ResolutionWidth"
+column = "ResolutionWidth"
+type = "i64"
+
+[[attribute]]
+key = "ResolutionHeight"
+column = "ResolutionHeight"
+type = "i64"
+
+[[attribute]]
+key = "ResolutionDepth"
+column = "ResolutionDepth"
+type = "i64"
+
+[[attribute]]
+key = "FlashMajor"
+column = "FlashMajor"
+type = "i64"
+
+[[attribute]]
+key = "FlashMinor"
+column = "FlashMinor"
+type = "i64"
+
+[[attribute]]
+key = "FlashMinor2"
+column = "FlashMinor2"
+type = "str"
+
+[[attribute]]
+key = "NetMajor"
+column = "NetMajor"
+type = "i64"
+
+[[attribute]]
+key = "NetMinor"
+column = "NetMinor"
+type = "i64"
+
+[[attribute]]
+key = "UserAgentMajor"
+column = "UserAgentMajor"
+type = "i64"
+
+[[attribute]]
+key = "UserAgentMinor"
+column = "UserAgentMinor"
+type = "str"
+
+[[attribute]]
+key = "CookieEnable"
+column = "CookieEnable"
+type = "i64"
+
+[[attribute]]
+key = "JavascriptEnable"
+column = "JavascriptEnable"
+type = "i64"
+
+[[attribute]]
+key = "IsMobile"
+column = "IsMobile"
+type = "i64"
+
+[[attribute]]
+key = "MobilePhone"
+column = "MobilePhone"
+type = "i64"
+
+[[attribute]]
+key = "MobilePhoneModel"
+column = "MobilePhoneModel"
+type = "str"
+
+[[attribute]]
+key = "Params"
+column = "Params"
+type = "str"
+
+[[attribute]]
+key = "IPNetworkID"
+column = "IPNetworkID"
+type = "i64"
+
+[[attribute]]
+key = "TraficSourceID"
+column = "TraficSourceID"
+type = "i64"
+
+[[attribute]]
+key = "SearchEngineID"
+column = "SearchEngineID"
+type = "i64"
+
+[[attribute]]
+key = "SearchPhrase"
+column = "SearchPhrase"
+type = "str"
+
+[[attribute]]
+key = "AdvEngineID"
+column = "AdvEngineID"
+type = "i64"
+
+[[attribute]]
+key = "IsArtifical"
+column = "IsArtifical"
+type = "i64"
+
+[[attribute]]
+key = "WindowClientWidth"
+column = "WindowClientWidth"
+type = "i64"
+
+[[attribute]]
+key = "WindowClientHeight"
+column = "WindowClientHeight"
+type = "i64"
+
+[[attribute]]
+key = "ClientTimeZone"
+column = "ClientTimeZone"
+type = "i64"
+
+[[attribute]]
+key = "ClientEventTime"
+column = "ClientEventTime"
+type = "i64"
+
+[[attribute]]
+key = "SilverlightVersion1"
+column = "SilverlightVersion1"
+type = "i64"
+
+[[attribute]]
+key = "SilverlightVersion2"
+column = "SilverlightVersion2"
+type = "i64"
+
+[[attribute]]
+key = "SilverlightVersion3"
+column = "SilverlightVersion3"
+type = "i64"
+
+[[attribute]]
+key = "SilverlightVersion4"
+column = "SilverlightVersion4"
+type = "i64"
+
+[[attribute]]
+key = "PageCharset"
+column = "PageCharset"
+type = "str"
+
+[[attribute]]
+key = "CodeVersion"
+column = "CodeVersion"
+type = "i64"
+
+[[attribute]]
+key = "IsLink"
+column = "IsLink"
+type = "i64"
+
+[[attribute]]
+key = "IsDownload"
+column = "IsDownload"
+type = "i64"
+
+[[attribute]]
+key = "IsNotBounce"
+column = "IsNotBounce"
+type = "i64"
+
+[[attribute]]
+key = "FUniqID"
+column = "FUniqID"
+type = "i64"
+
+[[attribute]]
+key = "OriginalURL"
+column = "OriginalURL"
+type = "str"
+
+[[attribute]]
+key = "HID"
+column = "HID"
+type = "i64"
+
+[[attribute]]
+key = "IsOldCounter"
+column = "IsOldCounter"
+type = "i64"
+
+[[attribute]]
+key = "IsEvent"
+column = "IsEvent"
+type = "i64"
+
+[[attribute]]
+key = "IsParameter"
+column = "IsParameter"
+type = "i64"
+
+[[attribute]]
+key = "DontCountHits"
+column = "DontCountHits"
+type = "i64"
+
+[[attribute]]
+key = "WithHash"
+column = "WithHash"
+type = "i64"
+
+[[attribute]]
+key = "HitColor"
+column = "HitColor"
+type = "str"
+
+[[attribute]]
+key = "LocalEventTime"
+column = "LocalEventTime"
+type = "i64"
+
+[[attribute]]
+key = "Age"
+column = "Age"
+type = "i64"
+
+[[attribute]]
+key = "Sex"
+column = "Sex"
+type = "i64"
+
+[[attribute]]
+key = "Income"
+column = "Income"
+type = "i64"
+
+[[attribute]]
+key = "Interests"
+column = "Interests"
+type = "i64"
+
+[[attribute]]
+key = "Robotness"
+column = "Robotness"
+type = "i64"
+
+[[attribute]]
+key = "RemoteIP"
+column = "RemoteIP"
+type = "i64"
+
+[[attribute]]
+key = "WindowName"
+column = "WindowName"
+type = "i64"
+
+[[attribute]]
+key = "OpenerName"
+column = "OpenerName"
+type = "i64"
+
+[[attribute]]
+key = "HistoryLength"
+column = "HistoryLength"
+type = "i64"
+
+[[attribute]]
+key = "BrowserLanguage"
+column = "BrowserLanguage"
+type = "str"
+
+[[attribute]]
+key = "BrowserCountry"
+column = "BrowserCountry"
+type = "str"
+
+[[attribute]]
+key = "SocialNetwork"
+column = "SocialNetwork"
+type = "str"
+
+[[attribute]]
+key = "SocialAction"
+column = "SocialAction"
+type = "str"
+
+[[attribute]]
+key = "HTTPError"
+column = "HTTPError"
+type = "i64"
+
+[[attribute]]
+key = "SendTiming"
+column = "SendTiming"
+type = "i64"
+
+[[attribute]]
+key = "DNSTiming"
+column = "DNSTiming"
+type = "i64"
+
+[[attribute]]
+key = "ConnectTiming"
+column = "ConnectTiming"
+type = "i64"
+
+[[attribute]]
+key = "ResponseStartTiming"
+column = "ResponseStartTiming"
+type = "i64"
+
+[[attribute]]
+key = "ResponseEndTiming"
+column = "ResponseEndTiming"
+type = "i64"
+
+[[attribute]]
+key = "FetchTiming"
+column = "FetchTiming"
+type = "i64"
+
+[[attribute]]
+key = "SocialSourceNetworkID"
+column = "SocialSourceNetworkID"
+type = "i64"
+
+[[attribute]]
+key = "SocialSourcePage"
+column = "SocialSourcePage"
+type = "str"
+
+[[attribute]]
+key = "ParamPrice"
+column = "ParamPrice"
+type = "i64"
+
+[[attribute]]
+key = "ParamOrderID"
+column = "ParamOrderID"
+type = "str"
+
+[[attribute]]
+key = "ParamCurrency"
+column = "ParamCurrency"
+type = "str"
+
+[[attribute]]
+key = "ParamCurrencyID"
+column = "ParamCurrencyID"
+type = "i64"
+
+[[attribute]]
+key = "OpenstatServiceName"
+column = "OpenstatServiceName"
+type = "str"
+
+[[attribute]]
+key = "OpenstatCampaignID"
+column = "OpenstatCampaignID"
+type = "str"
+
+[[attribute]]
+key = "OpenstatAdID"
+column = "OpenstatAdID"
+type = "str"
+
+[[attribute]]
+key = "OpenstatSourceID"
+column = "OpenstatSourceID"
+type = "str"
+
+[[attribute]]
+key = "UTMSource"
+column = "UTMSource"
+type = "str"
+
+[[attribute]]
+key = "UTMMedium"
+column = "UTMMedium"
+type = "str"
+
+[[attribute]]
+key = "UTMCampaign"
+column = "UTMCampaign"
+type = "str"
+
+[[attribute]]
+key = "UTMContent"
+column = "UTMContent"
+type = "str"
+
+[[attribute]]
+key = "UTMTerm"
+column = "UTMTerm"
+type = "str"
+
+[[attribute]]
+key = "FromTag"
+column = "FromTag"
+type = "str"
+
+[[attribute]]
+key = "HasGCLID"
+column = "HasGCLID"
+type = "i64"
+
+[[attribute]]
+key = "RefererHash"
+column = "RefererHash"
+type = "i64"
+
+[[attribute]]
+key = "URLHash"
+column = "URLHash"
+type = "i64"
+
+[[attribute]]
+key = "CLID"
+column = "CLID"
+type = "i64"
