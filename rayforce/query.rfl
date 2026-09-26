@@ -4,7 +4,10 @@
 ; back so ./query can print it. The elapsed milliseconds are written to
 ; $RAYFORCE_MS; ./query converts them to the fractional seconds the benchmark
 ; driver expects.
-(set h (.ipc.open (format "127.0.0.1:%" (.os.getenv "RAYFORCE_PORT")) 60000))
+; The connect timeout also covers the wait behind other clients' queries
+; (the server is single-threaded on IPC), so it spans the whole 600 s
+; concurrent window rather than a fixed 60 s.
+(set h (.ipc.open (format "127.0.0.1:%" (.os.getenv "RAYFORCE_PORT")) 600000))
 (set ms (.ipc.send h
     (format "(timeit (set rf-result %))" (read (.os.getenv "RAYFORCE_QUERY")))))
 (show (.ipc.send h "rf-result"))
