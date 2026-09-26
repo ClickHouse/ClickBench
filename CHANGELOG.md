@@ -13,17 +13,14 @@ All six kinds are selected by default, so the default report is unchanged, and t
 
 (Alexey Milovidov)
 
-### 2026-08-29
-Firebolt now does a true cold run. The three self-hosted firebolt-core entries (`firebolt`, `firebolt-parquet`, `firebolt-parquet-partitioned`) set `BENCH_RESTARTABLE=no` and therefore only got their page cache flushed before each first run; they now go through the common runner's full `./stop` → `drop_caches` → `./start` cycle like every other daemon, and lost the `no-cold` tag. The engine handles `SIGTERM` and shuts down cleanly, and the database lives on a bind-mounted volume, so it is still there when the container is started back up. The result files produced before this change keep the tag. The managed-cloud Firebolt results from 2025-06-07 also keep it: those ran against the hosted service, which cannot be restarted.
-
 ### 2026-08-28
-Renamed the `lukewarm-cold-run` tag to `no-cold` — a shorter name for the same thing: an entry whose first run of each query is not a true cold run, because the system is not restarted before it. The classification was also brought up to date. The 37 systems that the common runner in `lib/` already stops, page-cache-flushes and restarts before every cold run lost the tag, as did the 82 result files it had already produced; the managed services that clear nothing at all before a first run (ClickHouse Cloud, Databricks, MotherDuck, Hologres, AlloyDB) gained it, as [#1646](https://github.com/ClickHouse/ClickBench/pull/1646) requires.
+Renamed the `lukewarm-cold-run` tag to `no-cold` — a shorter name for the same thing: an entry whose first run of each query is not a true cold run, because the system is not restarted before it. The classification was also brought up to date. The 37 systems that the common runner in `lib/` already stops, page-cache-flushes and restarts before every cold run lost the tag, as did the 82 result files it had already produced; the managed services that clear nothing at all before a first run (ClickHouse Cloud, Databricks, MotherDuck, Hologres, AlloyDB) gained it, as [#1646](https://github.com/ClickHouse/ClickBench/pull/1646) requires. (Alexey Milovidov)
 
 ### 2026-07-22
-Introducing [ClickBench Playground](https://benchmark.clickhouse.com/playground/), which allows you to run arbitrary SQL queries on 110+ databases using a pre-loaded ClickBench dataset.
+Introducing [ClickBench Playground](https://benchmark.clickhouse.com/playground/), which allows you to run arbitrary SQL queries on 110+ databases using a pre-loaded ClickBench dataset. (Alexey Milovidov)
 
 ### 2026-07-03
-The [versions benchmark](https://benchmark.clickhouse.com/versions/) is reworked. Now it contains 10 datasets and runs every ClickHouse version since [ten years of open source](https://clickhouse.com/blog/open-source-10) and even early historical builds. The visualization was also improved.
+The [versions benchmark](https://benchmark.clickhouse.com/versions/) is reworked. Now it contains 10 datasets and runs every ClickHouse version since [ten years of open source](https://clickhouse.com/blog/open-source-10) and even early historical builds. The visualization was also improved. (Alexey Milovidov)
 
 ### 2026-05-11
 Unified benchmark scripts for different systems by providing a common interface in a set of scripts: `install`, `start`, `check`, `stop`, `load`, `query`, and `data-size`. Make the dataset download scripts common as well. Use a general benchmark runner in `lib/` to ensure different systems get equal treatment. This makes it easier to add more ways of testing, different datasets, and scenarios to the benchmark, and simplifies support of all 88 systems presented. Note: for embedded systems, such as pandas, polars, and the Python duckdb module, wrap them into a Python HTTP server, so that the benchmark can run each query separately.
