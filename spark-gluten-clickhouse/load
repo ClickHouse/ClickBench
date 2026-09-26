@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# Nothing to load: query.py reads hits.parquet directly. Just flush writeback
+# so the parquet the harness downloaded is durably on disk before queries run.
+sync
