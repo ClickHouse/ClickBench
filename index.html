@@ -407,6 +407,43 @@
             filter: brightness(125%);
         }
 
+        /* An on/off switch: a pill-shaped track with a knob that slides right when on. */
+        #toggle-breakdown {
+            float: right;
+            position: relative;
+            width: 2.2rem;
+            height: 1.2rem;
+            padding: 0;
+            border: none;
+            border-radius: 0.6rem;
+            background: var(--selector-background-color);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        #toggle-breakdown::after {
+            content: '';
+            position: absolute;
+            top: 0.15rem;
+            left: 0.15rem;
+            width: 0.9rem;
+            height: 0.9rem;
+            border-radius: 50%;
+            background: var(--background-color);
+            box-shadow: 0 0 2px var(--shadow-color);
+            transition: transform 0.15s;
+            /* Let the pointer fall through the knob to the button, so its title tooltip still shows. */
+            pointer-events: none;
+        }
+
+        #toggle-breakdown[aria-checked="true"] {
+            background: var(--selector-active-background-color);
+        }
+
+        #toggle-breakdown[aria-checked="true"]::after {
+            transform: translateX(1rem);
+        }
+
         #scale_hint {
             font-weight: normal;
             font-size: 80%;
@@ -560,6 +597,7 @@ const additional_data_size_points = [
                 System &amp; Machine
             </th>
             <th colspan="2">
+                <button id="toggle-breakdown" role="switch" aria-checked="false" aria-label="Show the hot, cold, load and storage ratios behind the combined score" title="Show the hot, cold, load and storage ratios behind the combined score"></button>
                 Relative <span id="time-or-size">time</span> (lower is better).<br/>
                 <span id="scale_hint"></span>
             </th>
@@ -618,6 +656,24 @@ function setTheme(new_theme) {
 
 document.getElementById('toggle-light').addEventListener('click', e => setTheme('light'));
 document.getElementById('toggle-dark').addEventListener('click', e => setTheme('dark'));
+
+/// Whether the Combined view also lists the component ratios behind the score.
+/// A display preference like the theme, so it's kept in localStorage rather
+/// than in the URL state.
+let show_breakdown = window.localStorage.getItem('show_breakdown') === 'true';
+
+function updateBreakdownToggle() {
+    document.getElementById('toggle-breakdown').setAttribute('aria-checked', show_breakdown);
+}
+
+document.getElementById('toggle-breakdown').addEventListener('click', e => {
+    show_breakdown = !show_breakdown;
+    window.localStorage.setItem('show_breakdown', show_breakdown);
+    updateBreakdownToggle();
+    render();
+});
+
+updateBreakdownToggle();
 
 let new_theme = window.localStorage.getItem('theme');
 if (new_theme && new_theme != theme) {
@@ -1181,6 +1237,9 @@ function renderSummary(filtered_data) {
         document.getElementById('time-or-size').innerText = 'time and data size';
     }
 
+    /// The breakdown only exists for the combined score.
+    document.getElementById('toggle-breakdown').style.display = selectors.metric == 'combined' ? '' : 'none';
+
     const sorted_indices = [...summaries.keys()].sort((a, b) => summaries[a] - summaries[b]);
     const max_ratio = 10000;
 
@@ -1239,8 +1298,26 @@ function renderSummary(filtered_data) {
 
         const text = selectors.metric == 'load' ? (elem.load_time ? `${Math.round(elem.load_time)}s (×${ratio.toFixed(2)})` : 'stateless')
             :  selectors.metric == 'size' ? `${(elem.data_size / 1024 / 1024 / 1024).toFixed(2)} GiB (×${ratio.toFixed(2)})`
+            :  selectors.metric == 'combined' && show_breakdown ? (() => {
+                    /// Break the combined score into the components it's built
+                    /// from (hot, cold, load, storage) as the relative "×N"
+                    /// ratios that feed the weighted score. Pad each to a fixed
+                    /// width so the columns line up in the monospace cell.
+                    const fmt = (v, n) => ((v == null || !isFinite(v)) ? 'n/a' : `×${v.toFixed(2)}`).padStart(n, ' ');
+                    const hot = fmt(relativeQueryTime(num_queries, baseline_data, elem, 'hot'), 6);
+                    const cold = fmt(metricExcludes(elem, 'cold') ? null : relativeQueryTime(num_queries, baseline_data, elem, 'cold'), 6);
+                    const load = fmt(metricExcludes(elem, 'load') ? null : elem.load_time / min_load_time, 6);
+                    const size = fmt(metricExcludes(elem, 'size') ? null : elem.data_size / min_data_size, 5);
+                    return `  (hot ${hot}, cold ${cold}, load ${load}, storage ${size})`;
+                })()
             : `×${ratio.toFixed(2)}`;
 
+        // Combined shows a bold overall score followed by the (plain) breakdown.
+        if (selectors.metric == 'combined' && show_breakdown) {
+            let score = document.createElement('strong');
+            score.appendChild(document.createTextNode(`×${ratio.toFixed(2)}`));
+            td_number.appendChild(score);
+        }
         td_number.appendChild(document.createTextNode(text));
 
         let td_bar = document.createElement('td');
