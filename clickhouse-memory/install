@@ -6,6 +6,10 @@ if [ ! -x /usr/bin/clickhouse ]; then
     sudo ./clickhouse install --noninteractive
 fi
 
+# The master build is served through a CDN that may hand out a stale binary,
+# so record which build actually got installed.
+clickhouse --version
+
 # Unlike the MergeTree entry, there is nothing to eager-load here: a Memory
 # table has no parts, no primary key on disk and no column size streams, so
 # the startup laziness that entry disables does not exist. The data itself is
