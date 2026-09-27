@@ -22,6 +22,14 @@ if pgrep -x -f "rayforce -p $port server.rfl" >/dev/null 2>&1; then
     exit 0
 fi
 
+# A server that has just been stopped keeps its listening socket open while
+# it unmaps the table on exit, so a start issued right after ./stop could
+# fail with "Address already in use". Wait for the port to be released.
+for i in $(seq 1 300); do
+    ss -ltn 2>/dev/null | grep -q ":$port " || break
+    sleep 1
+done
+
 # Tell server.rfl whether a table is supposed to be there: the driver starts
 # the server once before ./load, when ./hits legitimately does not exist yet,
 # and again before every query, when it must open successfully.

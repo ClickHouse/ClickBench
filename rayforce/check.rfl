@@ -2,7 +2,10 @@
 ; The server binds its socket before running server.rfl but only accepts
 ; connections once that script has finished opening the table, so a successful
 ; round trip means "table open, ready to query".
-(set h (.ipc.open (format "127.0.0.1:%" (.os.getenv "RAYFORCE_PORT")) 2000))
+; The server answers one request at a time, so during the concurrent phase
+; the handshake waits behind whatever query is running; the timeout must
+; cover a long query, or a busy server is mistaken for a dead one.
+(set h (.ipc.open (format "127.0.0.1:%" (.os.getenv "RAYFORCE_PORT")) 300000))
 (set ok (.ipc.send h "(+ 1 1)"))
 (.ipc.close h)
 (if (== ok 2) (exit 0) (exit 1))
