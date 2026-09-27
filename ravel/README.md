@@ -93,12 +93,15 @@ reads whole objects, so a statement that touches the table reads the whole
 11.2 GB dataset from the volume, whatever the statement computes. Measured on
 v0.16.1, 40 of the 42 statements that return a number take 42.6 to 46.6 s
 cold, consistent with reading the dataset at about 250 MB/s each time; the
-other two (q1 and q7) take about 0.5 s.
+other two (q1 and q7) take about 0.5 s. A 0.19.0 build measured 42.6 to 43.3 s
+for the same 40.
 
-The stock warm runs re-read every object as well. Ravel holds no data on local
-disk, so a warm run is served from the read cache or not at all, and the
-derived cache (7.7 GB here) is smaller than the dataset; on this machine the
-re-read comes from RustFS through the page cache.
+Ravel holds no data on local disk, so a warm run is served from the read cache
+or from RustFS. Since 0.19.0, a server whose store is on loopback derives its
+fetch cache at 40% of its memory budget instead of 25%: 12.3 GB on this
+machine, above the 11.2 GB dataset, so the warm runs are served from the
+cache. Before 0.19.0 the derived cache was 7.7 GB, and warm runs re-read the
+dataset from RustFS through the page cache.
 
 ### The tuned configuration
 
@@ -135,7 +138,7 @@ of the first and third run over the statements that returned a number.
 |---|---|---|---|---|
 | stock, real S3 | 1,191 s | 483 s | 430 s | 42 of 43, q33 refused |
 | tuned, real S3 | (same tenant) | 201 s | 99 s | 43 of 43 |
-| stock, local RustFS (this result) | 1,236 s | 1,720 s | 272 s | 42 of 43, q33 refused |
+| stock, local RustFS, v0.16.1 | 1,236 s | 1,720 s | 272 s | 42 of 43, q33 refused |
 
 ## Notes
 
