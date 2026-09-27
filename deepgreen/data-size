@@ -1,0 +1,11 @@
+#!/bin/bash
+# The cluster's data lives inside the container under /data0, not on the
+# host: the coordinator catalog, all 14 segments' append-optimized column
+# files, their indexes and their write-ahead logs. Run du inside the
+# container.
+set -eu
+
+NAME=clickbench-deepgreen
+
+sudo docker exec "$NAME" du -bcs /data0 2>/dev/null | \
+    awk '/total$/ { print $1 }'

@@ -11,7 +11,7 @@
         "C++",
         "column-oriented",
         "MySQL compatible",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 2508,
     "data_size": 19712857022,

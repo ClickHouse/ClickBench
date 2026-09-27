@@ -7,8 +7,6 @@
     "Go",
     "column-oriented",
     "DuckDB derivative",
-    "PostgreSQL compatible",
-    "Iceberg",
-    "lukewarm-cold-run"
+    "PostgreSQL compatible"
   ]
 }

@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
-# Firebolt-core writes its database state under /firebolt-core/volume
-# inside the container, which we bind-mount to ./fb-volume on the host.
-du -bcs fb-volume 2>/dev/null | awk '/total$/ { print $1 }'
+# The engine writes its database state under /var/lib/firebolt inside the
+# container, which we bind-mount to ./fb-volume on the host. It owns that
+# directory as uid 3473 mode 2770, so du without sudo reports 0.
+sudo du -bcs fb-volume | awk '/total$/ { print $1 }'

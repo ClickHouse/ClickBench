@@ -37,8 +37,8 @@ counted.
   (`amd64`/`arm64` auto-detected) and PostgreSQL is installed from the PGDG apt
   repository.
 - Each query is run through the shared driver's cold/warm cycle. BemiDB is a
-  daemon that reads Parquet from the local disk, so the cold run is genuinely
-  cold after `drop_caches` (hence the `lukewarm-cold-run` tag, matching the
-  other DuckDB-backed, on-disk systems).
+  daemon that reads Parquet from the local disk, and the driver stops it and
+  restarts it before each query's first try, so the cold run is a true cold
+  run and no `no-cold` tag is set.
 - Queries and the table schema are the standard PostgreSQL-compatible ClickBench
   files, unchanged. Any query the engine cannot execute is recorded as `null`.

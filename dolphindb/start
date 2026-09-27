@@ -1,0 +1,42 @@
+#!/bin/bash
+set -e
+
+mkdir -p db
+
+# "The number of files open simultaneously when running DolphinDB may exceed
+# the default maximum number 1024 ... It is recommended to configure the
+# maximum number of open files to 102400"
+# https://docs.dolphindb.com/en/Tutorials/prep_linux_for_deploy.html
+# The table is 30 daily partitions x 105 columns, so the default soft limit
+# is well within reach. Raising the soft limit needs no privileges as long as
+# the hard limit allows it (Ubuntu's is 1048576); if it does not, carry on
+# with whatever we have rather than refusing to start.
+ulimit -Sn 102400 2>/dev/null || true
+
+# DolphinDB resolves dolphindb.dos (its startup script) and dolphindb.lic
+# relative to the working directory, so run from the server tree and point
+# -home at the data directory we measure in ./data-size.
+cd dolphindb/server
+# </dev/null so the daemon never inherits the harness's queries.sql on
+# stdin (bench_main pipes it into the loop that calls ./start).
+nohup ./dolphindb \
+    -console 0 \
+    -config ../../clickbench.cfg \
+    -home ../../db \
+    < /dev/null > ../../db/stdout.log 2>&1 &
+pid=$!
+echo "$pid" > ../../db/dolphindb.pid
+
+# DolphinDB reports a few startup failures on stdout and then exits, rather
+# than on stderr or in its log: a port that is still bound from a previous
+# instance ("Failed to bind the socket on port 8848"), and a missing or
+# expired dolphindb.lic (which exits silently). The caller redirects our
+# output to /dev/null and then waits on ./check, so without this the only
+# symptom is a readiness timeout minutes later with no reason given. Give it
+# a moment, and if the server is already gone, say why on stderr.
+sleep 2
+if ! kill -0 "$pid" 2>/dev/null; then
+    echo "start: dolphindb exited immediately. Its stdout was:" >&2
+    sed 's/^/    /' ../../db/stdout.log >&2
+    exit 1
+fi

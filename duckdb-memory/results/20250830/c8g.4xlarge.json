@@ -12,7 +12,7 @@
         "DuckDB derivative",
         "embedded",
         "in-memory",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 452,
     "data_size": 27880833024,

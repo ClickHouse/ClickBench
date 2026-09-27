@@ -1,0 +1,13 @@
+{
+  "system": "DuckDB (Vortex, single, load threads=2)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "yes",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "DuckDB derivative",
+    "embedded",
+    "stateless"
+  ]
+}

@@ -1,0 +1,75 @@
+#!/bin/bash
+set -euo pipefail
+
+: "${HOME:?HOME must be set: the install directory lives under it}"
+
+BENCH_DIR="$(cd "$(dirname "$0")" && pwd)"
+INSTALL_DIR="${SCRAMDB_INSTALL_DIR:-$HOME/.scramdb}"
+BIN="$INSTALL_DIR/bin/scramdb"
+CONFIG="${SCRAMDB_CONFIG:-$BENCH_DIR/scramdb-config.toml}"
+PIDFILE="$BENCH_DIR/scramdb.pid"
+LOGFILE="$BENCH_DIR/scramdb.log"
+READY_TIMEOUT="${SCRAMDB_START_TIMEOUT:-120}"
+
+# The driver calls ./start on a server that may already be up.
+if "$BENCH_DIR/check" >/dev/null 2>&1; then
+    exit 0
+fi
+
+if [ ! -x "$BIN" ]; then
+    echo "start: $BIN is missing; run ./install first" >&2
+    exit 1
+fi
+if [ ! -f "$CONFIG" ]; then
+    echo "start: $CONFIG is missing; run ./install first" >&2
+    exit 1
+fi
+
+# A stock Ubuntu gives a shell 1024 descriptors; the server holds one per
+# segment file plus one per connection. Raising the soft limit to this user's
+# hard limit is always permitted, and the server inherits it.
+ulimit -n "$(ulimit -Hn)"
+
+# The log is appended across the cold cycle's many restarts, so each boot is
+# marked to keep it readable.
+printf '=== start %s ===\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$LOGFILE"
+
+# With --config the server stays in the foreground (a bare `scramdb` would
+# daemonize instead and own its own lifetime), so nohup plus a pidfile is what
+# start and stop share.
+#
+# NO TUNING ENV. `results.json` declares "tuned": "no", so this script must
+# start the shipped binary the way any user would. The allocator settings
+# that used to live here (MIMALLOC_PURGE_DELAY / _ABANDONED_PAGE_PURGE) are
+# now engine defaults applied in `main`, so every deployment gets them; and
+# SCRAMDB_VACUUM_PARALLEL_WRITE=1 is GONE, not promoted - it re-arms a
+# route whose lost-header-increment race is not root-caused yet, and a
+# benchmark must never enable a path the engine itself keeps off.
+SCRAMDB_LOG="${SCRAMDB_LOG:-warn}" \
+    nohup "$BIN" --config "$CONFIG" </dev/null >>"$LOGFILE" 2>&1 &
+pid=$!
+echo "$pid" > "$PIDFILE"
+
+# Bounded wait for pgwire: ready the moment it accepts a connection, and a
+# server that dies during startup is reported instead of waited on.
+deadline=$(( $(date +%s) + READY_TIMEOUT ))
+delay_ms=100
+while [ "$(date +%s)" -lt "$deadline" ]; do
+    if "$BENCH_DIR/check" >/dev/null 2>&1; then
+        exit 0
+    fi
+    if ! kill -0 "$pid" 2>/dev/null; then
+        echo "start: the server exited during startup; last lines of $LOGFILE:" >&2
+        tail -n 20 "$LOGFILE" >&2
+        exit 1
+    fi
+    printf -v delay '%d.%03d' $(( delay_ms / 1000 )) $(( delay_ms % 1000 ))
+    sleep "$delay"
+    if [ "$delay_ms" -lt 1000 ]; then
+        delay_ms=$(( delay_ms * 2 ))
+    fi
+done
+
+echo "start: pgwire did not accept a connection within ${READY_TIMEOUT}s; last lines of $LOGFILE:" >&2
+tail -n 20 "$LOGFILE" >&2
+exit 1

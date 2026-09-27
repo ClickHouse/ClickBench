@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eu
+
+. ./util.sh
+
+# Idempotent: if port 31337 is already open, do nothing.
+if nc -z localhost 31337 2>/dev/null; then
+    exit 0
+fi
+
+start_gizmosql

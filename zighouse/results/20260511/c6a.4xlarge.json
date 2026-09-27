@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "yes",
-    "tags": ["Zig","column-oriented","embedded","parquet","tuned"],
+    "tags": ["Zig","column-oriented","embedded"],
     "load_time": 86,
     "data_size": 10907660070,
     "concurrent_qps": null,

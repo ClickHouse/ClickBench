@@ -6,7 +6,7 @@
     "proprietary": "yes",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["column-oriented","lukewarm-cold-run"],
+    "tags": ["column-oriented"],
     "load_time": 870,
     "data_size": 58210309151,
     "concurrent_qps": 0.223,

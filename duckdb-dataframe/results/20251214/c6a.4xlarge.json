@@ -14,7 +14,7 @@
         "Python",
         "dataframe",
         "in-memory",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 1960,
     "data_size": 31883952128,

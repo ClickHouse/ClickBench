@@ -31,13 +31,16 @@ _EXTERNAL = {
     # Managed cloud services / require API keys / external infra.
     "alloydb", "athena", "athena-partitioned", "aurora-mysql",
     "aurora-postgresql", "bigquery", "brytlytdb", "bytehouse", "chyt",
-    "clickhouse-cloud", "clickhouse-tencent",
+    "clickhouse-cloud",
     "crunchy-bridge-for-analytics", "databricks", "exasol",
     "gravitons", "hologres", "hydrolix",
     "motherduck", "pgpro_tam", "redshift", "redshift-serverless",
     "s3select", "singlestore", "snowflake", "supabase",
     "tembo-olap", "timescale-cloud", "tinybird", "velodb",
     "vertica", "ydb",
+    # hyper-web reads its database from public S3 at query time. Keep the
+    # benchmark reproducible, but do not expose it through the playground.
+    "hyper-web",
     # duckdb-memory runs duckdb with the database in :memory:. Even with
     # a generous swap drive, the 100M-row hits set blows past anything
     # reasonable here; duckdb has an on-disk fallback that we use via
@@ -67,6 +70,21 @@ _EXTERNAL = {
     # The kdb/ scripts stay so an operator can reproduce results
     # locally, but the playground never exposes it.
     "kdb",
+    # dolphindb: same situation. The download is covered by the DolphinDB
+    # Software Evaluation License Agreement, which grants use "internally
+    # within Your facilities solely for the purpose of evaluation" (§3) and
+    # forbids distributing "any portion of the Evaluation Software ... to any
+    # third party" (§5). Serving it from the playground would be exactly that.
+    # The dolphindb/ scripts stay for local reproduction only.
+    "dolphindb",
+    # deepgreen: same situation, plus the software is x86-64 only and no
+    # longer distributed by its (defunct) vendor. The Vitesse Deepgreen DB
+    # 18.16 licence limits use to "a single Node ... for EVALUATION purpose
+    # only" and forbids making the Software "available in any form to anyone
+    # other than Customer's" own people (§3.1, §3.3); it also forbids
+    # disclosing benchmark results, which is why deepgreen/results is
+    # gitignored. The deepgreen/ scripts stay for local reproduction only.
+    "deepgreen",
 }
 
 # Systems that need outbound access at query time get routed through
@@ -117,6 +135,20 @@ NEEDS_SWAP: frozenset[str] = frozenset({
     # The docker container has no memory.swap.max set, so the guest
     # kernel will swap it the same as any process.
     "umbra",
+    # arcticdb's python server keeps the whole Arctic Library in
+    # process memory during load — 16 GB RSS on the full hits set
+    # triggers the guest's OOM killer, python3 dies mid-load, the
+    # host sees ServerDisconnectedError (empty provision-log).
+    # Guest kernel dmesg:
+    #   Out of memory: Killed process 1952 (python3)
+    #   total-vm:414791488kB anon-rss:16045040kB
+    "arcticdb",
+    # rayforce also OOMed at ~16 GB RSS on load:
+    #   Out of memory: Killed process 2227 (rayforce) anon-rss:15943296kB
+    # Same class as arcticdb / dataframe engines — in-process load
+    # of the full 100M-row hits set doesn't fit the 16 GiB VM cap
+    # without swap.
+    "rayforce",
 })
 
 # Sparse size of the swap.raw block device handed to NEEDS_SWAP systems.

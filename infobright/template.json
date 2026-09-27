@@ -6,7 +6,6 @@
   "tags": [
     "C++",
     "column-oriented",
-    "MySQL compatible",
-    "lukewarm-cold-run"
+    "MySQL compatible"
   ]
 }

@@ -1,0 +1,45 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it through taosadapter's REST endpoint.
+# Stdout: query result (JSON). Stderr: query runtime in fractional seconds on
+# the last line. Exit non-zero on error.
+#
+# TDengine has no result-set streaming over REST: taosadapter builds the whole
+# JSON document and curl reads all of it, so time_total is the honest
+# back-to-back number -- send, execute, receive every row. The response also
+# carries a server-side "timing" field, which is not used here because it
+# stops before the rows reach the client.
+set -e
+
+query=$(cat)
+
+body=$(mktemp)
+trap 'rm -f "$body"' EXIT
+
+# 1860s: taosadapter aborts the query itself at queryWaitTimeout (1800s, set
+# by ./install), and curl is given a minute of slack on top so the server's
+# own error message surfaces instead of a bare client timeout. Nothing that
+# completes at 100M rows comes close -- the slowest is Q6 at ~870s -- but
+# several of the queries that cannot complete would otherwise grind for hours.
+status=$(curl -sS -o "$body" -w '%{http_code} %{time_total}' --max-time 1860 \
+    -u "root:${TDENGINE_PASSWORD:-taosdata}" --data-binary "$query" \
+    "http://localhost:${TDENGINE_REST_PORT:-6041}/rest/sql/${TDENGINE_DB:-clickbench}")
+
+http_code=${status%% *}
+time_total=${status##* }
+
+cat "$body"
+
+if [ "$http_code" != "200" ]; then
+    echo "query: HTTP $http_code" >&2
+    exit 1
+fi
+
+# A rejected statement still comes back as HTTP 200; the status is the "code"
+# field, which taosadapter always emits first in the document.
+if ! head -c 64 "$body" | grep -q '"code":0[,}]'; then
+    head -c 500 "$body" >&2
+    echo >&2
+    exit 1
+fi
+
+printf '%s\n' "$time_total" >&2

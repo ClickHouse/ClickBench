@@ -1,0 +1,7 @@
+{
+    "system": "ArcticDB",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "no",
+    "tags": ["C++", "column-oriented", "embedded", "dataframe", "time-series"]
+}

@@ -2,11 +2,25 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-09-18
+Added a "Storage" selector to the report, as requested in [#2048](https://github.com/ClickHouse/ClickBench/issues/2048). Every benchmark entry is now classified by where it keeps its data, and each kind can be enabled and disabled individually: `Native` — the database native format on local storage; `Cloud` — a cloud service, as its storage is opaque; `Memory` — the full dataset has to be represented in memory for the system to operate; `Parquet` — Parquet files on local storage, either the benchmark-provided ones, or converted on load, in which case the conversion is accounted as the load time; `Data Lake` — Parquet or a bunch of other files in a bucket on AWS S3 (it is a simplification to call it a data lake, but this simplification is good to allow many systems and distill what matters); `Web` — the database native format on a remote HTTP server represented as a bucket on AWS S3.
+
+All six kinds are selected by default, so the default report is unchanged, and the links shared before this change keep working. The notable classification decisions:
+- an entry that converts the dataset into a columnar format of its own on load is `Native` — Vortex, Opteryx's skene, pgpro_tam's feather;
+- an entry that ends up with Parquet files on local storage is `Parquet`, even when the format has another name on top of them — `pg_ducklake`, `pg_mooncake`, and BemiDB with its local Iceberg tables;
+- a managed service is `Cloud` even when it reads the benchmark's Parquet files from an S3 bucket, because everything around its storage — caching, tiering, prewarming — is opaque to us: Athena, Crunchy Bridge for Analytics, S3 Select. `Data Lake` is for the engines that we run ourselves over the files in a bucket;
+- `Memory` is for the systems that have to hold the whole dataset in RAM to answer at all: pandas, Dask, the Polars, DuckDB and chDB DataFrames, `DuckDB (memory)`, Hyrise, and Sirius. Daft is `Parquet` instead, despite its `in-memory` tag, because its data lives in local Parquet files.
+
+(Alexey Milovidov)
+
+### 2026-08-28
+Renamed the `lukewarm-cold-run` tag to `no-cold` — a shorter name for the same thing: an entry whose first run of each query is not a true cold run, because the system is not restarted before it. The classification was also brought up to date. The 37 systems that the common runner in `lib/` already stops, page-cache-flushes and restarts before every cold run lost the tag, as did the 82 result files it had already produced; the managed services that clear nothing at all before a first run (ClickHouse Cloud, Databricks, MotherDuck, Hologres, AlloyDB) gained it, as [#1646](https://github.com/ClickHouse/ClickBench/pull/1646) requires. (Alexey Milovidov)
+
 ### 2026-07-22
-Introducing [ClickBench Playground](https://benchmark.clickhouse.com/playground/), which allows you to run arbitrary SQL queries on 110+ databases using a pre-loaded ClickBench dataset.
+Introducing [ClickBench Playground](https://benchmark.clickhouse.com/playground/), which allows you to run arbitrary SQL queries on 110+ databases using a pre-loaded ClickBench dataset. (Alexey Milovidov)
 
 ### 2026-07-03
-The [versions benchmark](https://benchmark.clickhouse.com/versions/) is reworked. Now it contains 10 datasets and runs every ClickHouse version since [ten years of open source](https://clickhouse.com/blog/open-source-10) and even early historical builds. The visualization was also improved.
+The [versions benchmark](https://benchmark.clickhouse.com/versions/) is reworked. Now it contains 10 datasets and runs every ClickHouse version since [ten years of open source](https://clickhouse.com/blog/open-source-10) and even early historical builds. The visualization was also improved. (Alexey Milovidov)
 
 ### 2026-05-11
 Unified benchmark scripts for different systems by providing a common interface in a set of scripts: `install`, `start`, `check`, `stop`, `load`, `query`, and `data-size`. Make the dataset download scripts common as well. Use a general benchmark runner in `lib/` to ensure different systems get equal treatment. This makes it easier to add more ways of testing, different datasets, and scenarios to the benchmark, and simplifies support of all 88 systems presented. Note: for embedded systems, such as pandas, polars, and the Python duckdb module, wrap them into a Python HTTP server, so that the benchmark can run each query separately.

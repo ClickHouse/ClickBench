@@ -10,7 +10,7 @@
         "Java",
         "column-oriented",
         "stateless",
-        "lukewarm-cold-run",
+        "no-cold",
         "historical"
     ],
     "load_time": 0,

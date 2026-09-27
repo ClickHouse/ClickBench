@@ -1,0 +1,30 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via gsql against the `test` DB.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# gsql's `\timing` output).
+# Exit non-zero on error.
+set -e
+
+OG_ROOT=${OG_ROOT:-/opt/opengauss}
+OG_USER=${OG_USER:-omm}
+
+query=$(cat)
+
+out=$(printf '\\timing\n%s\n' "$query" |
+    sudo -u "$OG_USER" "$OG_ROOT/run" gsql -d test -t 2>&1) || true
+
+# gsql prints "ERROR:"/"FATAL:" on a failed query but still exits 0.
+if printf '%s\n' "$out" | grep -q '^ERROR\|^FATAL\|^gsql: '; then
+    printf '%s\n' "$out" >&2
+    exit 1
+fi
+
+printf '%s\n' "$out" | grep -v '^Time:' || true
+
+time_ms=$(printf '%s\n' "$out" | grep -oP 'Time:\s+\K[0-9]+\.[0-9]+' | tail -n1)
+if [ -z "$time_ms" ]; then
+    echo "no timing in gsql output" >&2
+    exit 1
+fi
+awk -v ms="$time_ms" 'BEGIN { printf "%.3f\n", ms / 1000 }' >&2

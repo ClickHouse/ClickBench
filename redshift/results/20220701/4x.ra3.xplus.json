@@ -10,7 +10,8 @@
     "tags": [
         "managed",
         "column-oriented",
-        "aws"
+        "aws",
+        "no-cold"
     ],
     "load_time": 2136,
     "data_size": 30794579968,

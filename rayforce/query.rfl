@@ -1,0 +1,13 @@
+; Per-query client. Sends the Rayfall expression in $RAYFORCE_QUERY to the
+; server, which times it with `timeit` (nanosecond clock, result in ms) and
+; keeps the result in `rf-result`. A second, untimed round trip pulls the result
+; back so ./query can print it. The elapsed milliseconds are written to
+; $RAYFORCE_MS; ./query converts them to the fractional seconds the benchmark
+; driver expects.
+(set h (.ipc.open (format "127.0.0.1:%" (.os.getenv "RAYFORCE_PORT")) 60000))
+(set ms (.ipc.send h
+    (format "(timeit (set rf-result %))" (read (.os.getenv "RAYFORCE_QUERY")))))
+(show (.ipc.send h "rf-result"))
+(write (.os.getenv "RAYFORCE_MS") (format "%" ms))
+(.ipc.close h)
+(exit 0)

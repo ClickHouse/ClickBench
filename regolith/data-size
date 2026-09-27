@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Size of the regolith database: SSTables, WAL, and the manifest.
+du -sb db | awk '{print $1}'

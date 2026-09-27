@@ -10,7 +10,7 @@
         "column-oriented",
         "DuckDB derivative",
         "PostgreSQL compatible",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 10762,
     "data_size": 123194382472,

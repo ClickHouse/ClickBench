@@ -8,7 +8,8 @@
         "C++",
         "column-oriented",
         "ClickHouse derivative",
-        "historical"
+        "historical",
+        "no-cold"
     ],
     "load_time": 0,
     "data_size": 14730000000,

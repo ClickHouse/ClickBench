@@ -1,16 +1,39 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-# install.spiceai.org ships the CLI only; `spice install` then downloads
-# the runtime binary (spiced) into ~/.spice/bin.
-if [ ! -x "$HOME/.spice/bin/spice" ]; then
-    curl https://install.spiceai.org | /bin/bash
-fi
-"$HOME/.spice/bin/spice" install v2.1.1 --force >/dev/null 2>&1
+case "$(uname -m)" in
+    x86_64)
+        arch=x86_64
+        runtime_sha=38f1864aed0db336bab84effc3e42078021c8077f0f92dd3b092aa133b85e530
+        cli_sha=4111ff84d29423b8b973d486f8da7a089b4268dfc58fb0aeae977689ea833c23
+        ;;
+    aarch64)
+        arch=aarch64
+        runtime_sha=063ec415e8a3ff74acf93d1add5046d20b651bfc910ab969adfeaf6485e5bc31
+        cli_sha=58e0edc847ab5c4723a3fa0da3e1946b447da068553ac5544dd9417581329b70
+        ;;
+    *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+esac
 
-# Symlink into /usr/local/bin so sibling scripts (check, load, query,
-# start) find them unconditionally.
-sudo ln -sf "$HOME/.spice/bin/spiced" /usr/local/bin/spiced
-sudo ln -sf "$HOME/.spice/bin/spice" /usr/local/bin/spice
+asset_dir="${CLICKBENCH_RELEASE_ASSET_DIR:-/opt/clickbench-release-2.3.1}"
+mkdir -p "$asset_dir" "$HOME/.spice/bin"
+for binary in spice spiced; do
+    asset="${binary}_linux_${arch}.tar.gz"
+    sha="$cli_sha"
+    [ "$binary" != spiced ] || sha="$runtime_sha"
+    if [ ! -f "$asset_dir/$asset" ]; then
+        curl --fail --location --retry 2 --connect-timeout 20 --max-time 900 \
+            "https://github.com/spiceai/spiceai/releases/download/v2.3.1/$asset" \
+            --output "$asset_dir/$asset"
+    fi
+    printf '%s  %s\n' "$sha" "$asset_dir/$asset" | sha256sum --check
+    tar -xzf "$asset_dir/$asset" -C "$HOME/.spice/bin" "$binary"
+    sudo ln -sf "$HOME/.spice/bin/$binary" "/usr/local/bin/$binary"
+done
 
-spiced --version
+runtime_version=$(spiced --version)
+printf '%s\n' "$runtime_version"
+printf '%s\n' "$runtime_version" | grep -Eq '(^|[^0-9])v?2\.3\.1([+[:space:]]|$)'
+cli_version=$(spice version)
+printf '%s\n' "$cli_version"
+printf '%s\n' "$cli_version" | grep -Eq '(^|[^0-9])v?2\.3\.1([+[:space:]]|$)'

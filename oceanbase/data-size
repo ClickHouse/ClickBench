@@ -1,0 +1,14 @@
+#!/bin/bash
+# The observer preallocates both its data file (datafile_size) and its redo log
+# pool (log_disk_size) at startup, so `du` on the store directory reports the
+# reservation rather than the dataset -- tens of gigabytes of untouched zeroes.
+# DATA_DISK_IN_USE and LOG_DISK_IN_USE are the macroblocks and log blocks
+# actually occupied, which is the number this benchmark asks for: user data,
+# indexes, and transaction log.
+set -eu
+
+OB_HOME=${OB_HOME:-/opt/oceanbase}
+source "$OB_HOME/bench.env"
+
+"$OB_HOME/obc" -h127.0.0.1 -P"$OB_MYSQL_PORT" -uroot@sys -A -Doceanbase -N \
+    -e 'SELECT SUM(DATA_DISK_IN_USE) + SUM(LOG_DISK_IN_USE) FROM GV$OB_SERVERS'

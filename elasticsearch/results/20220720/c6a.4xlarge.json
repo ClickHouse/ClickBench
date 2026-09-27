@@ -9,7 +9,7 @@
     "tags": [
         "Java",
         "search",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 10072,
     "data_size": 76633643596,

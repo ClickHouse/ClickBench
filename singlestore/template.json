@@ -6,6 +6,6 @@
   "tags": [
     "MySQL compatible",
     "column-oriented",
-    "lukewarm-cold-run"
+    "no-cold"
   ]
 }

@@ -299,6 +299,29 @@
             padding: 0.1rem 0.5rem 0.1rem 0.5rem;
         }
 
+        /* The query checkbox and number stay put while the table is scrolled
+           horizontally, so it is always clear which query a row belongs to.
+           The outline covers the table's 1px border-spacing and the
+           pseudo-element covers the body padding left of the table — without
+           them the cells scrolling underneath shine through around it. */
+        #details .details-query {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background-color: var(--background-color);
+            outline: 1px solid var(--background-color);
+        }
+
+        #details .details-query::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            bottom: -1px;
+            right: 100%;
+            width: 100vw;
+            background-color: var(--background-color);
+        }
+
         .shadow:hover {
             box-shadow: 0 0 1rem var(--shadow-color);
             position: relative;
@@ -339,7 +362,6 @@
         .tooltip-query {
             left: 0;
             width: 40rem;
-            margin-left: -3rem;
         }
 
         .note:hover .tooltip, .note:active .tooltip {
@@ -361,8 +383,7 @@
         }
 
         .tooltip-query::after {
-            left: 3rem;
-            margin-left: 0.5rem;
+            left: 0.5rem;
         }
 
         .nowrap {
@@ -485,6 +506,15 @@ const additional_data_size_points = [
                 <a id="selector-tuned-no" class="selector">No</a>
                 <a id="selector-tuned-yes" class="selector selector-active">Yes</a>
             </span>
+            <span class="inline-filter" id="selectors_storage">
+                <span class="inline-filter-label">Storage:</span>
+                <a id="selector-storage-native" class="selector selector-active">Native</a>
+                <a id="selector-storage-cloud" class="selector selector-active">Cloud</a>
+                <a id="selector-storage-memory" class="selector selector-active">Memory</a>
+                <a id="selector-storage-parquet" class="selector selector-active">Parquet</a>
+                <a id="selector-storage-datalake" class="selector selector-active">Data Lake</a>
+                <a id="selector-storage-web" class="selector selector-active">Web</a>
+            </span>
         </td>
     </tr>
     <tr>
@@ -560,6 +590,10 @@ const constant_time_add = 0.01;
 const missing_result_penalty = 2;
 const missing_result_time = 300;
 
+/// Every storage kind is enabled by default: the selector is for narrowing the
+/// report down to a single way of keeping the data, not for the default view.
+const default_storage = {"native": true, "cloud": true, "memory": true, "parquet": true, "datalake": true, "web": true};
+
 let selectors = {
     "system": {},
     "type": {},
@@ -568,6 +602,7 @@ let selectors = {
     "opensource": {"yes": true, "no": true},
     "hardware": {"cpu": true, "gpu": false},
     "tuned": {"no": true, "yes": false},
+    "storage": {...default_storage},
     "metric": "combined",
     "queries": [],
 };
@@ -690,7 +725,103 @@ data.forEach(d => {
     });
 });
 
-[... new Set(data.map(elem => elem.machine))].sort((a, b) => {
+/// Where a benchmark entry keeps its data, see
+/// https://github.com/ClickHouse/ClickBench/issues/2048:
+/// - native — the database native format on local storage; formats like Vortex or Lance
+///   are also here, when the entry creates the data in them on load;
+/// - cloud — a cloud service, as its storage is opaque;
+/// - memory — the full dataset has to be represented in memory for the system to operate;
+/// - parquet — Parquet files on local storage: either the benchmark-provided ones, or
+///   converted on load, in which case the conversion is accounted as the load time;
+/// - datalake — Parquet or a bunch of other files in a bucket on AWS S3 (it is a
+///   simplification to call it a data lake, but it distills what matters);
+/// - web — the database native format on a remote HTTP server, a bucket on AWS S3.
+///
+/// The classification is keyed by the directory of the benchmark entry; everything
+/// not listed here is `native`, unless one of the rules in `storageOf` recognizes it.
+const storage_by_directory = {};
+Object.entries({
+    parquet: [
+        'bemidb', /// Iceberg, but on local storage.
+        'cedardb-parquet', 'chdb-parquet-partitioned', 'clickhouse-parquet',
+        'clickhouse-parquet-partitioned', 'ctrlb', 'daft-parquet', 'daft-parquet-partitioned',
+        'datafusion', 'datafusion-partitioned', 'doris-parquet', 'doris-parquet-single',
+        'drill', 'duckdb-parquet', 'duckdb-parquet-partitioned', 'firebolt-parquet',
+        'firebolt-parquet-partitioned', 'glaredb', 'glaredb-partitioned', 'hive',
+        'hyper-parquet-partitioned', 'hyper-parquet-single', 'impala', 'octosql', 'opteryx',
+        'paradedb', 'paradedb-partitioned', 'parseable', 'pg_duckdb-parquet', 'pg_ducklake',
+        'pg_mooncake', 'polars', 'presto', 'presto-partitioned', 'sail', 'sail-partitioned',
+        'spark', 'spark-auron', 'spark-comet', 'spark-gluten', 'spark-velox', 'spiceai-parquet',
+        'spiceai-parquet-partitioned', 'starrocks-parquet', 'starrocks-parquet-partitioned',
+        'trino', 'trino-partitioned', 'velox',
+    ],
+    /// Only the engines that we run ourselves over the files in a bucket: a managed
+    /// service that reads the same files is `cloud`, as everything around its storage
+    /// - caching, tiering, prewarming - is opaque to us.
+    datalake: [
+        'clickhouse-datalake', 'clickhouse-datalake-partitioned', 'duckdb-datalake',
+        'duckdb-datalake-partitioned', 'presto-datalake', 'presto-datalake-partitioned',
+        'trino-datalake', 'trino-datalake-partitioned',
+    ],
+    memory: [
+        'chdb-dataframe', 'dask', 'duckdb-dataframe', 'duckdb-memory', 'hyrise', 'pandas',
+        'polars-dataframe', 'sirius',
+    ],
+    web: ['clickhouse-web', 'hyper-web'],
+    /// The rest of the cloud services is recognized by their tags, see `storageOf`.
+    cloud: ['bytehouse', 'crunchy-bridge-for-analytics', 's3select', 'supabase', 'tembo-olap'],
+}).forEach(([storage, directories]) => directories.forEach(dir => { storage_by_directory[dir] = storage }));
+
+/// A few directories contain entries with different storage.
+const storage_by_system = {
+    'pgpro_tam (parquet, local storage)': 'parquet',
+    'pgpro_tam (parquet, local + cache)': 'parquet',
+    'pgpro_tam (parquet, local, parallel)': 'parquet',
+};
+
+function storageOf(elem) {
+    /// A result file can state the storage explicitly.
+    if (elem.storage) return elem.storage;
+    if (storage_by_system[elem.system]) return storage_by_system[elem.system];
+
+    const directory = (elem.source || '').split('/')[0];
+    if (storage_by_directory[directory]) return storage_by_directory[directory];
+
+    /// The rules for the entries added after the lists above were written — they
+    /// follow the naming conventions and the tags of the existing entries.
+    /// A managed service is `cloud` no matter what it reads, hence the rule is first.
+    if ((elem.tags || []).some(tag => tag == 'managed' || tag == 'serverless')) return 'cloud';
+    if (/\(web\)/i.test(elem.system)) return 'web';
+    if (/data.?lake/i.test(elem.system + ' ' + directory)) return 'datalake';
+    if (/parquet/i.test(elem.system + ' ' + directory)) return 'parquet';
+    if (/dataframe|\(memory\)/i.test(elem.system) || (elem.tags || []).includes('in-memory')) return 'memory';
+
+    return 'native';
+}
+
+data.forEach(elem => { elem.storage_class = storageOf(elem) });
+
+/// The whitelist of AWS machines: results on any other EC2 instance type are hidden,
+/// so that the set of compared machines stays consistent.
+const aws_machines_whitelist = new Set([
+    't3a.small',
+    'c6a.large',
+    'c6a.xlarge',
+    'c6a.2xlarge',
+    'c6a.4xlarge',
+    'c8g.4xlarge',
+    'c6a.metal',
+    'c7a.metal-48xl',
+    'c8g.metal-48xl',
+    'p5.4xlarge', /// GPU, the only notable demo for Sirius.
+]);
+
+/// Matches EC2 instance type names, e.g. `c6a.4xlarge` or `m9gd.xlarge`,
+/// but not the names of cloud service sizes, e.g. `64GiB` or `Motherduck: jumbo`.
+const aws_machine_regexp = /^[a-z]+[0-9]+[a-z]*\.[0-9a-z-]+$/;
+
+[... new Set(data.map(elem => elem.machine))].filter(
+    elem => aws_machines_whitelist.has(elem) || !aws_machine_regexp.test(elem)).sort((a, b) => {
     const count_diff = data.filter(elem => elem.machine === b).length - data.filter(elem => elem.machine === a).length;
     return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
 }).map(elem => {
@@ -779,6 +910,19 @@ document.getElementById('selector-tuned-no').addEventListener('click', e => {
     updateHistory();
 });
 
+Object.keys(default_storage).forEach(key => {
+    document.getElementById('selector-storage-' + key).addEventListener('click', e => {
+        selectors.storage[key] = !selectors.storage[key];
+        if (selectors.storage[key]) {
+            e.target.classList.add('selector-active');
+        } else {
+            e.target.classList.remove('selector-active');
+        }
+        render();
+        updateHistory();
+    });
+});
+
 document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
 document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
 document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
@@ -815,13 +959,18 @@ function updateSelectors() {
 
     document.getElementById('selector-tuned-yes').className = selectors.tuned.yes ? 'selector selector-active' : 'selector';
     document.getElementById('selector-tuned-no').className = selectors.tuned.no ? 'selector selector-active' : 'selector';
+
+    Object.keys(default_storage).forEach(key => {
+        document.getElementById('selector-storage-' + key).className =
+            selectors.storage[key] ? 'selector selector-active' : 'selector' });
 }
 
 function applyTopRowFilters() {
     const matches = data.filter(elem =>
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
-        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")));
+        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
+        selectors.storage[elem.storage_class]);
 
     function apply(container, getValues) {
         const allowed = new Set(matches.flatMap(getValues).map(x => String(x)));
@@ -926,6 +1075,37 @@ function nameToColor(str) {
     return 60 + Math.abs(x % 240);
 }
 
+/// Whether a system is excluded from a given metric. Single source of truth
+/// shared by the top-level metric filter (render) and the per-run baseline
+/// used inside the Combined metric (renderSummary) so the two never drift.
+function metricExcludes(elem, metric) {
+    const tags = elem.tags || [];
+    switch (metric) {
+        case 'size':
+            /// Can't rank a system that didn't report a data size.
+            /// The thresholds here must match the ones used where the minimums serve as baselines
+            /// (e.g. the load-time baseline in the details table): otherwise a system sitting exactly
+            /// on the boundary is compared against a baseline of Infinity, its ratio becomes zero,
+            /// and the bar collapses to nothing.
+            return !(elem.data_size >= 1e9);
+        case 'load':
+            /// Needs a real load step: skip trivially-fast loads and
+            /// stateless / in-memory engines that don't persist data.
+            return !(elem.load_time >= 5) || tags.includes('stateless') || tags.includes('in-memory');
+        case 'cold':
+            /// True cold-cache reads only: in-memory engines have nothing to
+            /// read from storage, and lukewarm (no-cold) runs never flush engine caches.
+            return tags.includes('in-memory') || tags.includes('no-cold');
+        case 'combined':
+            /// Combined still scores lukewarm (no-cold) systems (with the cold component
+            /// dropped, see below), but in-memory engines are excluded.
+            return tags.includes('in-memory');
+        case 'hot':
+        default:
+            return false;
+    }
+}
+
 function renderSummary(filtered_data) {
     let table = document.getElementById('summary');
     clearElement(table);
@@ -941,10 +1121,18 @@ function renderSummary(filtered_data) {
 
     const baseline_data = [...filtered_data[0].result.keys()].map(query_num =>
         [...Array(3).keys()].map(run_num =>
-            Math.min(...filtered_data.filter(elem => !elem.fake).map(elem => elem.result[query_num]?.[run_num]).filter(x => x != null))));
+            Math.min(...filtered_data.filter(elem => !elem.fake)
+                // Apply the same per-metric exclusions to the baseline that the
+                // standalone metric uses: run 0 is the cold run, runs 1/2 are
+                // hot. This keeps lukewarm/in-memory systems out of the cold
+                // baseline so they can't depress the per-query minimum and
+                // inflate every true-cold system's cold ratio in Combined. In
+                // the standalone Cold Run metric they're already filtered out.
+                .filter(elem => !metricExcludes(elem, run_num === 0 ? 'cold' : 'hot'))
+                .map(elem => elem.result[query_num]?.[run_num]).filter(x => x != null))));
 
-    const min_load_time = Math.min(...filtered_data.map(elem => elem.load_time).filter(x => x && x > 5));
-    const min_data_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x && x > 1e9));
+    const min_load_time = Math.min(...filtered_data.filter(elem => !metricExcludes(elem, 'load')).map(elem => elem.load_time));
+    const min_data_size = Math.min(...filtered_data.filter(elem => !metricExcludes(elem, 'size')).map(elem => elem.data_size));
 
     let summaries;
     if (selectors.metric == 'load') {
@@ -957,11 +1145,39 @@ function renderSummary(filtered_data) {
         summaries = filtered_data.map(elem => relativeQueryTime(num_queries, baseline_data, elem, selectors.metric));
         document.getElementById('time-or-size').innerText = 'time';
     } else if (selectors.metric == 'combined') {
-        summaries = filtered_data.map(elem => Math.exp(
-            combined_load_time_share * Math.log(elem.load_time >= 5 ? (elem.load_time / min_load_time) : 1) +
-            combined_data_size_share * Math.log(elem.data_size >= 1e9 ? (elem.data_size / min_data_size) : 2) +
-            combined_cold_share * Math.log(relativeQueryTime(num_queries, baseline_data, elem, 'cold')) +
-            combined_hot_share * Math.log(relativeQueryTime(num_queries, baseline_data, elem, 'hot'))));
+        summaries = filtered_data.map(elem => {
+            // Exclude metrics that are not applicable to this system from the combined score,
+            // and reweight the rest so the final score is still on a similar scale. For example,
+            // lukewarm systems that don't have a true cold run get their cold weight folded
+            // into hot, so they can still be compared against true cold systems on the hot
+            // performance they do have without being penalized for the cold performance they
+            // can't have.
+            const exclude_cold = metricExcludes(elem, 'cold');
+            const exclude_load = metricExcludes(elem, 'load');
+            const exclude_size = metricExcludes(elem, 'size');
+
+            const hot_share = exclude_cold ? combined_cold_share + combined_hot_share : combined_hot_share;
+            let log_sum = hot_share * Math.log(relativeQueryTime(num_queries, baseline_data, elem, 'hot'));
+
+            if (!exclude_cold) {
+                log_sum += combined_cold_share * Math.log(relativeQueryTime(num_queries, baseline_data, elem, 'cold'));
+            }
+
+            if (!exclude_load) {
+                log_sum += combined_load_time_share * Math.log(elem.load_time / min_load_time);
+            }
+
+            if (!exclude_size) {
+                log_sum += combined_data_size_share * Math.log(elem.data_size / min_data_size);
+            }
+
+            if (exclude_load || exclude_size) {
+                const correction = 1 - (exclude_load ? combined_load_time_share : 0) - (exclude_size ? combined_data_size_share : 0);
+                log_sum = log_sum / correction;
+            }
+
+            return Math.exp(log_sum);
+        });
         document.getElementById('time-or-size').innerText = 'time and data size';
     }
 
@@ -1127,19 +1343,13 @@ function render() {
         elem.tags.filter(type => selectors.type[type]).length > 0 &&
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
-        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu"))
+        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
+        selectors.storage[elem.storage_class]
         );
 
-    /// Filter out unreasonable entries
-    if (selectors.metric == 'size') {
-        filtered_data = filtered_data.filter(elem => elem.data_size);
-    }
-    if (selectors.metric == 'load') {
-        filtered_data = filtered_data.filter(elem => elem.load_time >= 5 && !elem.tags.includes('stateless'));
-    }
-    if (selectors.metric == 'cold' || selectors.metric == 'combined' || selectors.metric == 'load') {
-        filtered_data = filtered_data.filter(elem => !elem.tags.includes('in-memory'));
-    }
+    /// Filter out entries that can't be ranked under the selected metric
+    /// (see metricExcludes for the per-metric rules).
+    filtered_data = filtered_data.filter(elem => !metricExcludes(elem, selectors.metric));
 
     let nothing_selected_elem = document.getElementById('nothing-selected');
     if (filtered_data.length == 0) {
@@ -1164,16 +1374,15 @@ function render() {
         let th_checkbox = document.createElement('th');
         let checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.checked = true;
+        checkbox.checked = selectors.queries.every(selected => selected);
         checkbox.addEventListener('change', e => {
-            [...document.querySelectorAll('.query-checkbox')].map(elem => { elem.checked = e.target.checked });
-            selectors.queries.map((_, i) => { selectors.queries[i] = e.target.checked });
-            renderSummary(filtered_data);
+            selectors.queries.fill(e.target.checked);
+            render();
             updateHistory();
         });
+        th_checkbox.className = 'details-query';
         th_checkbox.appendChild(checkbox);
         details_head.appendChild(th_checkbox);
-        details_head.appendChild(document.createElement('th'));
     }
 
     /// Table header
@@ -1194,7 +1403,7 @@ function render() {
         tr.className = 'shadow';
 
         let td_title = document.createElement('td');
-        td_title.colSpan = 2;
+        td_title.className = 'details-query';
         td_title.appendChild(document.createTextNode('Load time: '));
         tr.appendChild(td_title);
 
@@ -1219,7 +1428,7 @@ function render() {
         tr.className = 'shadow';
 
         let td_title = document.createElement('td');
-        td_title.colSpan = 2;
+        td_title.className = 'details-query';
         td_title.appendChild(document.createTextNode('Data size: '));
         tr.appendChild(td_title);
 
@@ -1245,29 +1454,32 @@ function render() {
         let tr = document.createElement('tr');
         tr.className = 'shadow';
 
-        let td_checkbox = document.createElement('td');
+        let td_query = document.createElement('td');
+        td_query.className = 'details-query';
+
         let checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'query-checkbox';
         checkbox.checked = selectors.queries[query_num];
         checkbox.addEventListener('change', e => {
             selectors.queries[query_num] = e.target.checked;
-            renderSummary(filtered_data);
+            render();
             updateHistory();
         });
-        td_checkbox.appendChild(checkbox);
-        tr.appendChild(td_checkbox);
+        td_query.appendChild(checkbox);
 
-        let td_query_num = document.createElement('td');
-        td_query_num.className = 'note';
-        td_query_num.appendChild(document.createTextNode(`Q${query_num}. `));
+        /// Padded to a fixed width so the checkboxes of Q0..Q9 line up with the rest.
+        let query_name = document.createElement('span');
+        query_name.className = 'note';
+        query_name.appendChild(document.createTextNode(` ${`Q${query_num}.`.padStart(4)}`));
 
         let tooltip = document.createElement('span');
         tooltip.className = 'tooltip tooltip-query';
         tooltip.appendChild(document.createTextNode(`Query ${query_num}: ${queries[query_num]}`));
-        td_query_num.appendChild(tooltip);
+        query_name.appendChild(tooltip);
 
-        tr.appendChild(td_query_num);
+        td_query.appendChild(query_name);
+        tr.appendChild(td_query);
 
         sorted_indices.map(idx => {
             const curr_timing = selectRun(filtered_data[idx].result[query_num], selectors.metric);
@@ -1391,6 +1603,9 @@ window.onpopstate = function(event) {
     if (!selectors.tuned) {
         selectors.tuned = {"no": true, "yes": false};
     }
+    if (!selectors.storage) {
+        selectors.storage = {...default_storage};
+    }
     updateSelectors();
     render();
 };
@@ -1406,6 +1621,9 @@ if (window.location.hash) {
         }
         if (!selectors.tuned) {
             selectors.tuned = {"no": true, "yes": false};
+        }
+        if (!selectors.storage) {
+            selectors.storage = {...default_storage};
         }
     } catch {}
 }

@@ -1,0 +1,83 @@
+#!/bin/bash
+# Stops the server started by ./start, by pid, and does not return until its
+# listen ports are free.
+#
+# This deliberately does not pgrep for the server's command line. The driver
+# calls ./stop before every cold try, and a pattern like "ravel-server.*--listen"
+# also matches any shell whose own argv happens to contain it — including the
+# ssh command of whoever is driving the run, which is a remarkably effective way
+# to kill your own session instead of the server.
+#
+# It also deliberately does not source ravel-env.sh. That file requires
+# RAVEL_S3_BUCKET and aborts the shell that sources it when the variable is
+# unset, which turned ./stop into a silent no-op that returned 1 and left the
+# server running. Stopping a process needs its pid and nothing else; the port
+# comes from RAVEL_HTTP if set, else the default the env file would give.
+#
+# Waiting for the ports, not only the pid, is the part that matters for a cold
+# try. A killed server holds its listen sockets during exit for a while after
+# `kill -0` stops seeing it; a ./start issued in that window fails with
+# EADDRINUSE and the driver, which swallows ./start's exit code, then times out
+# its check loop without a cause. A trend runner built on the same pattern lost
+# 27 consecutive cold starts to exactly this before it waited on the ports.
+set -u
+PIDFILE="${RAVEL_PIDFILE:-server.pid}"
+http_port="${RAVEL_HTTP:-127.0.0.1:9080}"
+http_port="${http_port##*:}"
+
+ports_busy() {
+    ss -ltnH "( sport = :$http_port or sport = :4317 )" 2>/dev/null | grep -q .
+}
+wait_ports_free() {
+    for _ in $(seq 1 30); do
+        ports_busy || return 0
+        sleep 1
+    done
+    echo "stop: :$http_port or :4317 still held 30s after the server was gone:" >&2
+    ss -ltnpH "( sport = :$http_port or sport = :4317 )" 2>/dev/null | sed 's/^/stop:   /' >&2
+    return 1
+}
+
+if [ ! -f "$PIDFILE" ]; then
+    # Nothing of ours is recorded. If the ports are nonetheless held, a server
+    # this harness does not own is serving, and returning 0 would let the
+    # driver's next ./start find it and the next "cold" try run warm. Say so
+    # and fail; the driver's cold cycle tolerates the exit, but ./check will
+    # refuse the foreign server and the run stops there instead of silently.
+    if ports_busy; then
+        echo "stop: no pidfile at $PIDFILE but a server is listening; this harness does not own it:" >&2
+        ss -ltnpH "( sport = :$http_port or sport = :4317 )" 2>/dev/null | sed 's/^/stop:   /' >&2
+        exit 1
+    fi
+    exit 0
+fi
+
+pid=$(cat "$PIDFILE" 2>/dev/null || true)
+case "$pid" in
+    ''|*[!0-9]*) rm -f "$PIDFILE"; wait_ports_free; exit $? ;;
+esac
+
+# Only signal it if it is still the server: a recycled pid belonging to
+# something else must not be killed.
+if ! grep -qs 'ravel-server' "/proc/$pid/cmdline" 2>/dev/null; then
+    rm -f "$PIDFILE"
+    wait_ports_free
+    exit $?
+fi
+
+kill "$pid" 2>/dev/null || true
+for _ in $(seq 1 30); do
+    if ! kill -0 "$pid" 2>/dev/null; then
+        rm -f "$PIDFILE"
+        wait_ports_free
+        exit $?
+    fi
+    sleep 1
+done
+kill -9 "$pid" 2>/dev/null || true
+for _ in $(seq 1 10); do
+    kill -0 "$pid" 2>/dev/null || break
+    sleep 1
+done
+rm -f "$PIDFILE"
+wait_ports_free

@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
-# Firebolt-core writes its database state under /firebolt-core/volume
-# inside the container, which we bind-mount to ./fb-volume on the host.
-du -bcs fb-volume 2>/dev/null | awk '/total$/ { print $1 }'
+# Nothing is ingested: create.sql declares an external table over the
+# Parquet files, which ./load leaves in ./data (bind-mounted into the
+# container as /firebolt-core/clickbench). Report the source size, like
+# the other Parquet entries do -- fb-volume only holds a few hundred KB
+# of catalog metadata, which the driver rejects as a partial load.
+du -bcs data/hits_*.parquet | awk '/total$/ { print $1 }'

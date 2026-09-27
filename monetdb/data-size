@@ -1,7 +1,6 @@
 #!/bin/bash
 set -eu
 
-# install creates the dbfarm under /var/lib/monetdb (the package's
-# default), not the older /var/monetdb5/ path the original benchmark
-# assumed.
-sudo du -bcs /var/lib/monetdb/ | grep total | awk '{print $1}'
+# The dbfarm is the packaged/systemd default, /var/monetdb5/dbfarm —
+# not /var/lib/monetdb, which is just the `monetdb` user's home.
+sudo du -bcs /var/monetdb5/dbfarm | grep total | awk '{print $1}'

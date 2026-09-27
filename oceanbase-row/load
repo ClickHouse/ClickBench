@@ -1,0 +1,72 @@
+#!/bin/bash
+set -eu
+
+OB_HOME=${OB_HOME:-/opt/oceanbase}
+source "$OB_HOME/bench.env"
+
+ten() { "$OB_HOME/obc" -h127.0.0.1 -P"$OB_MYSQL_PORT" -uroot@"$OB_TENANT" -A "$@"; }
+sys() { "$OB_HOME/obc" -h127.0.0.1 -P"$OB_MYSQL_PORT" -uroot@sys -A "$@"; }
+
+# Drop+create so the script is idempotent.
+ten -e "DROP DATABASE IF EXISTS hits"
+ten -e "CREATE DATABASE hits"
+ten -Dhits < create.sql
+
+# LOAD DATA over a bypass ("direct") load: the rows are converted, sorted by
+# primary key and written straight into major SSTables, skipping the SQL layer,
+# the transaction layer and the memtable. That is the vendor's documented path
+# for initial bulk loads, and for a columnstore table it is also what puts the
+# data in its final columnar layout without waiting for a major compaction.
+#
+# APPEND is the shorthand for direct(true, 0) and additionally turns on online
+# statistics collection, so the optimizer has table and column statistics by
+# the time the first query arrives -- no separate ANALYZE pass.
+#
+# INFILE (server side) rather than LOCAL INFILE: a client-side load is fed
+# through the SQL layer in packets and cannot use the direct path at all.
+ten -Dhits -e "LOAD DATA /*+ APPEND parallel($OB_LOAD_PARALLEL) */
+    INFILE '$(pwd)/hits.tsv'
+    INTO TABLE hits
+    FIELDS TERMINATED BY '\t' ESCAPED BY '\\\\'
+    LINES TERMINATED BY '\n'"
+
+rows=$(ten -Dhits -N -e 'SELECT COUNT(*) FROM hits')
+echo "oceanbase: loaded $rows rows" >&2
+if [ "$rows" != "99997497" ]; then
+    echo "oceanbase: expected 99997497 rows, got $rows" >&2
+    exit 1
+fi
+
+# Push the log-stream checkpoints forward before the driver starts stopping and
+# starting the server between queries. Without this the entry cannot produce a
+# result at all, and the failure is not obvious:
+#
+# The direct load leaves about a hundred megabytes of redo log on the *meta*
+# tenant that every user tenant carries, and that stream's base_lsn -- its
+# checkpoint -- stays at 0, so every ./start replays the whole thing. How much
+# replay a tenant can buffer is bounded by its memtable, and the meta tenant's
+# memtable is roughly 4% of the resource unit's memory: 410 MB on a 9 GB unit.
+# The backlog does not fit, replay stalls with "CLOG pending size in task queue
+# exceeds limit", the observer never reaches "start success", and ./check times
+# out on every one of the 43 queries. Measured on a 9 GB unit: without the
+# freeze the server never finished starting in 10 minutes; with it, 27 seconds.
+#
+# TENANT = all covers the sys and user tenants; the meta tenants need all_meta,
+# which `all` does not include.
+sys -e "ALTER SYSTEM MINOR FREEZE TENANT = all"
+sys -e "ALTER SYSTEM MINOR FREEZE TENANT = all_meta"
+# A minor freeze returns as soon as it is queued, so wait for the dump: every
+# log stream outside the sys tenant should have a base_lsn that has moved off
+# zero, which is what says its checkpoint is no longer at the beginning of the
+# log. Streams shorter than one 64 MB log block never move it and are skipped.
+for i in $(seq 1 300); do
+    stalled=$(sys -N -e "SELECT COUNT(*) FROM oceanbase.GV\$OB_LOG_STAT
+                         WHERE tenant_id <> 1 AND base_lsn = 0
+                           AND end_lsn > 67108864" 2>/dev/null || echo 1)
+    [ "$stalled" = "0" ] && break
+    sleep 1
+done
+
+# Only remove inputs once the load has been confirmed complete.
+rm -f hits.tsv
+sync

@@ -1,0 +1,24 @@
+#!/bin/bash
+set -euo pipefail
+
+BENCH_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+psql -v ON_ERROR_STOP=1 -f "$BENCH_DIR/create.sql"
+# Server-side COPY: the server runs on this machine as this user, so it reads
+# the downloaded file directly.
+psql -v ON_ERROR_STOP=1 -c "COPY hits FROM '$BENCH_DIR/hits.csv' WITH (FORMAT CSV)"
+psql -v ON_ERROR_STOP=1 -c "CHECKPOINT"
+# Post-load housekeeping, the same way other systems end their load. A failed
+# VACUUM is reported but must never strand a fully loaded database.
+psql -c "VACUUM hits" || echo "load: VACUUM hits failed; continuing" >&2
+psql -v ON_ERROR_STOP=1 -c "ANALYZE hits"
+
+# The dataset is exactly 99,997,497 rows; refuse to benchmark a partial load.
+rows=$(psql -t -A -c "SELECT count(*) FROM hits")
+if [ "$rows" != "99997497" ]; then
+    echo "load: hits has $rows rows, expected 99997497 (partial load)" >&2
+    exit 1
+fi
+
+rm -f "$BENCH_DIR/hits.csv"
+sync

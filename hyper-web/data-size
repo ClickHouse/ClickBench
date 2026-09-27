@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eo pipefail
+
+# shellcheck disable=SC1091
+source ./s3-config.sh
+
+object_url="https://${HYPER_WEB_S3_BUCKET}.s3.${HYPER_WEB_S3_REGION}.amazonaws.com/${HYPER_WEB_S3_PREFIX}${HYPER_WEB_S3_DATABASE}"
+
+curl --fail --silent --show-error --head "$object_url" |
+    awk '
+        tolower($1) == "content-length:" {
+            sub(/\r$/, "", $2)
+            size = $2
+        }
+        END {
+            if (size !~ /^[0-9]+$/)
+                exit 1
+            print size
+        }
+    '

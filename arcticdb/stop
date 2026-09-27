@@ -1,0 +1,21 @@
+#!/bin/bash
+
+if [ -f server.pid ]; then
+    pid=$(cat server.pid)
+    if kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" || true
+        # Wait up to 60s for graceful exit rather than the 10s the
+        # in-memory ports use: the process holds the whole LMDB store
+        # mapped, and the common runner cannot make the cold run cold
+        # until it is gone — drop_caches cannot evict pages that a live
+        # mapping still pins.
+        for _ in $(seq 1 60); do
+            if ! kill -0 "$pid" 2>/dev/null; then
+                break
+            fi
+            sleep 1
+        done
+        kill -9 "$pid" 2>/dev/null || true
+    fi
+    rm -f server.pid
+fi

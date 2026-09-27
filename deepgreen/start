@@ -1,0 +1,19 @@
+#!/bin/bash
+set -eu
+
+NAME=clickbench-deepgreen
+
+sudo docker start "$NAME" >/dev/null
+
+# The container's sshd does not survive a docker stop, and gpstart reaches
+# every segment host (localhost) over ssh.
+sudo docker exec "$NAME" bash -c 'pgrep sshd >/dev/null || /usr/sbin/sshd'
+
+# `sudo -H -u`, not `sudo -iu`: with -i sudo builds a login shell command
+# line by re-escaping and joining its arguments, which silently mangles any
+# multi-line script (a trailing `&` becomes `\&`, newlines become line
+# continuations, and the next line runs as arguments to the previous
+# command). Without -i, argv is passed through untouched; `bash -lc` still
+# sources /etc/profile and ~/.bash_profile, so the Deepgreen environment
+# from ~/.dgenv is there either way.
+sudo docker exec "$NAME" sudo -H -u gpadmin bash -lc 'ulimit -n 65536; gpstart -a' || true

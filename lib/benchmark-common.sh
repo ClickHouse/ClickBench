@@ -140,6 +140,12 @@ bench_flush_caches() {
 
 bench_install() {
     ./install
+    # Flush the installation's writeback here, where nothing is measured.
+    # Unpacking packages, Docker images and binaries leaves dirty pages
+    # behind, and whoever calls sync next pays for writing them out — which
+    # used to be the sync at the end of bench_load, charging an install to
+    # Load time. See the comment in bench_download.
+    sync
 }
 
 bench_start() {
@@ -164,6 +170,55 @@ bench_download() {
         return 0
     fi
     "$LIB_DIR/$BENCH_DOWNLOAD_SCRIPT"
+    # Same reasoning as in bench_install, and the effect is much larger here.
+    # Fetching and decompressing the dataset leaves tens of GB of dirty pages
+    # behind; the next sync writes them out. Until now that next sync was the
+    # one at the end of bench_load, so every system paid for its download's
+    # writeback inside its measured load window — and paid unevenly, because
+    # the volume depends on the input format the system happens to ingest
+    # (~70 GB of uncompressed TSV/CSV against ~14 GB of Parquet) rather than
+    # on anything the system did. The leftover dirty pages also made the
+    # first ./drop_caches cycle slower for the TSV/CSV systems. Syncing here,
+    # outside every measured window, keeps Load time about the load.
+    sync
+}
+
+# Wait for the kernel to finish initializing the root filesystem.
+#
+# The benchmark VM's root volume is created from the Ubuntu image and grown
+# to 500 GB at first boot. ext4 does not zero the inode tables of the new
+# block groups at that point; the ext4lazyinit kernel thread does it in the
+# background afterwards. On a 500 GB gp2 root that is ~16.7 GB of writes
+# (65,404,928 inodes x 256 bytes), issued at ~60 MB/s, and it finishes about
+# 280 s after boot on c8g.4xlarge. gp2 gives a 500 GB volume 250 MB/s in
+# total, so while the thread runs it takes about a quarter of the disk away
+# from whatever else is writing.
+#
+# Whether a system's load overlaps it therefore depends on how long its
+# install and download took, not on anything the system does: a small
+# binary plus the 14 GB Parquet file reaches ./load while the thread is
+# still running, while a large install or the 75 GB TSV reaches it after.
+# On c8g.4xlarge the Parquet download ends ~210 s after boot, so a short
+# install leaves roughly a minute of the thread, several GB of writes,
+# inside the measured load window. Waiting here,
+# after the download and before the timer, keeps Load time about the load,
+# for the same reason bench_install and bench_download sync.
+#
+# The wait is bounded, costs nothing where there is no such thread (any
+# other filesystem, or an already initialized one), and is reported in the
+# log.
+bench_wait_fs_init() {
+    local waited=0 limit=900
+    while [ "$waited" -lt "$limit" ]; do
+        if ! grep -qsx 'ext4lazyinit' /proc/[0-9]*/comm; then
+            break
+        fi
+        sleep 5
+        waited=$((waited + 5))
+    done
+    if [ "$waited" -gt 0 ]; then
+        echo "bench: waited ${waited}s for ext4lazyinit to finish before the load" >&2
+    fi
 }
 
 bench_load() {
@@ -472,6 +527,7 @@ bench_main() {
     bench_start
 
     bench_download
+    bench_wait_fs_init
     bench_load
 
     : > result.csv

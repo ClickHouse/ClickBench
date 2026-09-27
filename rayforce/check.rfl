@@ -1,0 +1,8 @@
+; Readiness probe: connect over IPC and evaluate a trivial expression.
+; The server binds its socket before running server.rfl but only accepts
+; connections once that script has finished opening the table, so a successful
+; round trip means "table open, ready to query".
+(set h (.ipc.open (format "127.0.0.1:%" (.os.getenv "RAYFORCE_PORT")) 2000))
+(set ok (.ipc.send h "(+ 1 1)"))
+(.ipc.close h)
+(if (== ok 2) (exit 0) (exit 1))

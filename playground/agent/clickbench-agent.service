@@ -18,6 +18,17 @@ Environment=HOME=/root
 # correct.
 Environment=USER=root
 Environment=LOGNAME=root
+# needrestart's default mode on Ubuntu 24.04 is 'i' (interactive) which
+# in non-tty contexts falls back to 'a' (automatically restart every
+# service whose libs were upgraded). apt install inside install/ can
+# then restart our own clickbench-agent.service — the /provision HTTP
+# connection drops mid-flight and the host sees ServerDisconnectedError.
+# 'l' = list only: needrestart still scans and reports, restarts
+# nothing. Seen on arcticdb and rayforce; will bite any future system
+# whose install path upgrades libpython or another lib the agent
+# links against.
+Environment=NEEDRESTART_MODE=l
+Environment=NEEDRESTART_SUSPEND=1
 ExecStart=/usr/bin/python3 /opt/clickbench-agent/agent.py
 Restart=on-failure
 RestartSec=2

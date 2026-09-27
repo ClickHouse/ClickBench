@@ -1,8 +1,15 @@
 #!/bin/bash
 set -e
 
-# Plain stop — leave the container in place so its bind-mounted
-# fb-volume keeps the loaded database for the next ./start. The
-# container is removed and the volume re-initialised only on
-# explicit re-provision.
-sudo docker container stop firebolt-core >/dev/null 2>&1 || true
+# Full engine restart is what the cold cycle needs, so stop the process
+# but leave the container in place: the database lives on the
+# bind-mounted fb-volume and has to still be there when ./start brings
+# the engine back up. The container is removed and the volume
+# re-initialised only on an explicit re-provision.
+#
+# -t 120 instead of docker's default 10 s grace period: firebolt-core
+# handles SIGTERM and shuts down cleanly (flushes tablets, exits 0), but
+# with the full dataset ingested that takes longer than 10 s. A SIGKILL
+# there would leave the engine recovering on the next ./start, and the
+# recovery work would land inside the next query's cold measurement.
+sudo docker container stop -t 120 firebolt-core >/dev/null 2>&1 || true
