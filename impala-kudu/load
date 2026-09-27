@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+if docker info >/dev/null 2>&1; then
+    DOCKER=(docker)
+else
+    DOCKER=(sudo docker)
+fi
+
+# Place the benchmark input inside the external Parquet table location. Kudu
+# is loaded from this table, and the same table remains available for the
+# post-benchmark result validator.
+ln -f hits.parquet data/hits/hits.parquet
+if [ "$(uname -s)" != "Darwin" ]; then
+    sudo chown -R 1000:1000 data
+fi
+
+"${DOCKER[@]}" cp create.sql impala-client:/tmp/create.sql
+"${DOCKER[@]}" exec -i impala-client impala-shell \
+    -i impalad-1:21050 -B --quiet -f /tmp/create.sql < /dev/null
+
+./load_kudu.sh
+
+rm -f hits.parquet
+sync

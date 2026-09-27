@@ -1,0 +1,59 @@
+#!/bin/bash
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+if docker info >/dev/null 2>&1; then
+    DOCKER=(docker)
+else
+    DOCKER=(sudo docker)
+fi
+
+# Start storage and metadata dependencies first. Compose's depends_on only
+# waits for process creation, not for HMS to accept Thrift connections.
+"${DOCKER[@]}" compose -f docker-compose.yml up -d hms statestored kudu-master kudu-tserver
+
+# The quickstart HMS image does not create the local warehouse path with
+# writable Hive ownership. Without this, Kudu CREATE TABLE fails during HMS
+# registration even when Kudu itself is healthy.
+"${DOCKER[@]}" exec -u root impala-hms sh -c \
+    'mkdir -p /user/hive/warehouse && chown -R hive:hive /user'
+
+prerequisites_ready=0
+for _ in $(seq 1 60); do
+    hms_ready=0
+    kudu_ready=0
+    "${DOCKER[@]}" exec impala-hms bash -c \
+        'exec 3<>/dev/tcp/127.0.0.1/9083' >/dev/null 2>&1 && hms_ready=1
+    "${DOCKER[@]}" exec kudu-master \
+        kudu cluster ksck kudu-master:7051 >/dev/null 2>&1 && kudu_ready=1
+    if [ "$hms_ready" -eq 1 ] && [ "$kudu_ready" -eq 1 ]; then
+        prerequisites_ready=1
+        break
+    fi
+    sleep 2
+done
+
+if [ "$prerequisites_ready" -ne 1 ]; then
+    "${DOCKER[@]}" ps >&2
+    "${DOCKER[@]}" logs --tail 100 impala-hms >&2 || true
+    "${DOCKER[@]}" logs --tail 100 kudu-master >&2 || true
+    "${DOCKER[@]}" logs --tail 100 kudu-tserver >&2 || true
+    echo "HMS or Kudu did not become healthy within 120 seconds" >&2
+    exit 1
+fi
+
+"${DOCKER[@]}" compose -f docker-compose.yml up -d catalogd impalad-1 client
+
+for _ in $(seq 1 90); do
+    if curl -fsS http://localhost:25000/healthz 2>/dev/null | grep -q '^OK$'; then
+        exit 0
+    fi
+    sleep 2
+done
+
+"${DOCKER[@]}" ps >&2
+"${DOCKER[@]}" logs --tail 100 impala-catalogd >&2 || true
+"${DOCKER[@]}" logs --tail 100 impala-impalad-1 >&2 || true
+echo "Impala did not become healthy within 180 seconds" >&2
+exit 1
