@@ -15,6 +15,7 @@ cur = con.cursor()
 
 cur.execute(open("create.sql").read())
 cur.execute(open("insert.sql").read())
+cur.execute("OPTIMIZE TABLE clickbench.hits FINAL")
 
 cur.close()
 con.close()

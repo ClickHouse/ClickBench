@@ -111,4 +111,5 @@ CREATE TABLE IF NOT EXISTS hits
     CLID INTEGER NOT NULL,
     PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID)
 )
-ENGINE = MergeTree;
+ENGINE = MergeTree
+SETTINGS auto_statistics_types = '';

@@ -34,3 +34,10 @@ if [ -n "$RELEASE_WHEEL_URL" ]; then
     pip uninstall --quiet -y chdb-core || true
     pip install --quiet "./$RELEASE_WHEEL"
 fi
+
+python3 - <<'PY'
+from importlib.metadata import version
+
+print(f"Installed chdb: {version('chdb')}")
+print(f"Installed chdb-core: {version('chdb-core')}")
+PY
