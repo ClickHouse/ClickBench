@@ -9,6 +9,10 @@
 # RAYFORCE_VERSION pins the release tag; unset means "latest GitHub release"
 # (falling back to a known-good tag when the unauthenticated API call is rate
 # limited).
+#
+# Last benchmarked release: v2.10.0. Bump this line to request a new run:
+# the benchmark automation reruns a system when a file in its directory
+# changes.
 set -e
 
 RAYFORCE_FALLBACK_VERSION=v2.5.14
