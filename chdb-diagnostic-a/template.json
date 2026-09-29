@@ -1,0 +1,7 @@
+{
+    "system": "chDB diagnostic A (DO NOT MERGE)",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "yes",
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "embedded", "stateless"]
+}

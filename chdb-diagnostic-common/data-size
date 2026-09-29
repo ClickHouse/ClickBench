@@ -1,0 +1,14 @@
+#!/bin/bash
+set -euo pipefail
+
+size=$(du -bcs .data-* | awk '/total$/ { print $1 }')
+printf '%s\n' "$size"
+
+# benchmark-common calls data-size once as a post-load guard and once for the
+# final report. Emit diagnostics only on the latter so the guard sees one
+# numeric value, while the collector still preserves all diagnostic records.
+if [ -f .data-size-called ]; then
+    cat diagnostics.jsonl
+else
+    touch .data-size-called
+fi

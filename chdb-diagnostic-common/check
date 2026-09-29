@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+myenv-2673/bin/python3 -c "import chdb; chdb.query('SELECT 1')" >/dev/null
+myenv-2690/bin/python3 -c "import chdb; chdb.query('SELECT 1')" >/dev/null

@@ -1,0 +1,4 @@
+#!/bin/bash
+export DIAG_REPLICA=A
+export DIAG_ORDER=forward
+exec ../chdb-diagnostic-common/query

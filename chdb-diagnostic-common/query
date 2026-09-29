@@ -1,0 +1,100 @@
+#!/bin/bash
+set -euo pipefail
+
+query_file=$(mktemp)
+trap 'rm -f "$query_file"' EXIT
+cat > "$query_file"
+
+query_index=$(python3 - "$query_file" <<'PY'
+from pathlib import Path
+import sys
+
+query = Path(sys.argv[1]).read_text().strip()
+queries = [line.strip() for line in Path("../chdb/queries.sql").read_text().splitlines() if line.strip()]
+try:
+    print(queries.index(query))
+except ValueError:
+    print(-1)
+PY
+)
+
+run_cell() {
+    local label="$1"
+    local env_dir="$2"
+    local data_dir="$3"
+    local threads="$4"
+    local result
+    local status
+
+    if result=$("$env_dir/bin/python3" ../chdb-diagnostic-common/run-query.py \
+        "$data_dir" "$threads" "$query_file"); then
+        :
+    else
+        status=$?
+        result=$(printf '{"seconds":null,"error":"query process exited with status %s"}' "$status")
+    fi
+    printf 'DIAG_QUERY {"replica":"%s","query":%s,"try":%s,"cell":"%s","max_threads":%s,"result":%s}\n' \
+        "$DIAG_REPLICA" "$query_index" "$query_try" "$label" "$threads" "$result" \
+        >> diagnostics.jsonl
+
+    if [ "$label" = "data2690-query2690" ] && [ "$threads" = "2" ]; then
+        primary_result="$result"
+    fi
+}
+
+counter_file=".diag-count-${query_index}"
+query_count=0
+if [ -f "$counter_file" ]; then
+    query_count=$(cat "$counter_file")
+fi
+query_count=$((query_count + 1))
+printf '%s\n' "$query_count" > "$counter_file"
+query_try=$(( (query_count - 1) % 3 + 1 ))
+
+target=no
+case "$query_index" in
+    13|17|24|26|32|40|41|42) target=yes ;;
+esac
+
+primary_result=""
+if [ "$target" = yes ]; then
+    cells=(
+        "data2673-query2673 myenv-2673 .data-2673-q2673"
+        "data2673-query2690 myenv-2690 .data-2673-q2690"
+        "data2690-query2673 myenv-2673 .data-2690-q2673"
+        "data2690-query2690 myenv-2690 .data-2690-q2690"
+        "data2690-insert1-query2690 myenv-2690 .data-2690-i1-q2690"
+    )
+    threads=(1 2)
+    if [ "$DIAG_ORDER" = reverse ]; then
+        cells=(
+            "data2690-insert1-query2690 myenv-2690 .data-2690-i1-q2690"
+            "data2690-query2690 myenv-2690 .data-2690-q2690"
+            "data2690-query2673 myenv-2673 .data-2690-q2673"
+            "data2673-query2690 myenv-2690 .data-2673-q2690"
+            "data2673-query2673 myenv-2673 .data-2673-q2673"
+        )
+        threads=(2 1)
+    fi
+
+    for cell in "${cells[@]}"; do
+        read -r label env_dir data_dir <<< "$cell"
+        for thread_count in "${threads[@]}"; do
+            run_cell "$label" "$env_dir" "$data_dir" "$thread_count"
+        done
+    done
+else
+    run_cell data2690-query2690 myenv-2690 .data-2690-q2690 2
+fi
+
+primary_seconds=$(python3 - "$primary_result" <<'PY'
+import json
+import sys
+
+result = json.loads(sys.argv[1])
+if result["error"] is not None:
+    raise SystemExit(result["error"])
+print(result["seconds"])
+PY
+)
+printf '%s\n' "$primary_seconds" >&2

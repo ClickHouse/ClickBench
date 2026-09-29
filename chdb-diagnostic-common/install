@@ -1,0 +1,58 @@
+#!/bin/bash
+set -euo pipefail
+
+sudo apt-get update -y
+sudo apt-get install -y python3-pip python3-venv
+
+install_version() {
+    local env_dir="$1"
+    local core_version="$2"
+
+    python3 -m venv "$env_dir"
+    # shellcheck disable=SC1091
+    source "$env_dir/bin/activate"
+    pip install --upgrade pip
+    pip install psutil pyarrow "chdb==4.4.0"
+    wheel_url=$(python3 - "$core_version" <<'PY'
+import json
+import platform
+import sys
+import urllib.request
+
+version = sys.argv[1]
+release = json.load(
+    urllib.request.urlopen(
+        f"https://api.github.com/repos/chdb-io/chdb-core/releases/tags/v{version}",
+        timeout=30,
+    )
+)
+arch = platform.machine()
+for asset in release["assets"]:
+    name = asset["name"]
+    if name.endswith(".whl") and "_lite" not in name and "linux" in name and arch in name:
+        print(asset["browser_download_url"])
+        break
+else:
+    raise SystemExit(f"no full Linux wheel for chdb-core {version} on {arch}")
+PY
+    )
+    wheel=$(basename "$wheel_url")
+    curl -fSL --retry 3 -o "$wheel" "$wheel_url"
+    pip uninstall --quiet -y chdb-core
+    pip install --quiet "./$wheel"
+    python3 - "$core_version" <<'PY'
+from importlib.metadata import version
+import sys
+
+expected = sys.argv[1]
+actual = version("chdb-core")
+if actual != expected:
+    raise SystemExit(f"expected chdb-core {expected}, got {actual}")
+print(f"Installed chdb: {version('chdb')}")
+print(f"Installed chdb-core: {actual}")
+PY
+    deactivate
+}
+
+install_version myenv-2673 26.7.3
+install_version myenv-2690 26.9.0

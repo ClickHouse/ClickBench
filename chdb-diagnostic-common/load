@@ -1,0 +1,31 @@
+#!/bin/bash
+set -euo pipefail
+
+: > diagnostics.jsonl
+rm -f .data-size-called .diag-count-*
+
+load_one() {
+    local env_dir="$1"
+    local data_dir="$2"
+    local insert_threads="$3"
+
+    # shellcheck disable=SC1091
+    source "$env_dir/bin/activate"
+    python3 ../chdb-diagnostic-common/load.py "$data_dir" "$insert_threads" \
+        >> diagnostics.jsonl
+    deactivate
+}
+
+# Keep hits.csv until every layout has been generated.
+load_one myenv-2673 .data-2673-source default
+mv .data-2673-source .data-2673-q2673
+cp -a .data-2673-q2673 .data-2673-q2690
+
+load_one myenv-2690 .data-2690-source default
+mv .data-2690-source .data-2690-q2690
+cp -a .data-2690-q2690 .data-2690-q2673
+
+load_one myenv-2690 .data-2690-i1-q2690 1
+
+rm -f hits.csv
+sync
