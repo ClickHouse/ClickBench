@@ -1,0 +1,40 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# Idempotent: blow away any prior data dir.
+rm -rf .clickbench
+
+export CLICKBENCH_INSTANCE_TYPE="${CLICKBENCH_INSTANCE_TYPE:-$(cat /sys/devices/virtual/dmi/id/product_name 2>/dev/null || true)}"
+
+python3 - <<'PY'
+import os
+
+from chdb import dbapi
+
+con = dbapi.connect(path=".clickbench")
+cur = con.cursor()
+
+create_sql = open("create.sql").read().rstrip().removesuffix(";")
+instance_type = os.environ.get("CLICKBENCH_INSTANCE_TYPE", "")
+if instance_type in {"t3a.small", "c6a.large"}:
+    create_sql += (
+        ", default_compression_codec = 'LZ4'"
+        ", enable_adaptive_codec_selection = 0"
+    )
+    print(f"Compression tuning: forced LZ4 for {instance_type}")
+else:
+    print(f"Compression tuning: default ZSTD path for {instance_type or 'unknown machine'}")
+
+cur.execute(create_sql)
+cur.execute(open("insert.sql").read())
+cur.execute("OPTIMIZE TABLE clickbench.hits FINAL")
+
+cur.close()
+con.close()
+PY
+
+rm -f hits.csv
+sync
