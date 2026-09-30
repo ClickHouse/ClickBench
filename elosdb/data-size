@@ -1,0 +1,4 @@
+#!/bin/bash
+# data-size — the store on disk, in bytes: one file per column plus its dictionaries.
+. "$(dirname "$0")/common.sh"
+du -bs "$ELOSDB_DATA/elosdb" | cut -f1

@@ -1,0 +1,97 @@
+#!/bin/bash
+# install — fetch one verified file and make sure there is a psql to talk to it.
+# NOTHING IS COMPILED ON THIS BOX.
+#
+# elosdb ships as a single statically-linked executable: libstdc++ and libgcc are
+# inside it, and it imports nothing newer than GLIBC_2.38, so the four things it
+# asks the machine for are libc, libm, libgcc_s and the loader. There is no library
+# to place beside it, no RUNPATH to get right and no C++ runtime to match.
+#
+# A BINARY OFF THE NETWORK WITH NOTHING TO CHECK IT AGAINST IS NOT A DEPLOYMENT, so
+# the digest below is pinned in this file and compared before the file is ever
+# executed. Point ELOSDB_URL somewhere else and you must supply ELOSDB_SHA256 with
+# it: a URL without a digest is refused rather than trusted.
+set -eu
+cd "$(dirname "$0")"
+
+# THE RELEASE THIS SUBMISSION IS. Both lines move together or neither does.
+RELEASE_URL="https://github.com/decster/elosdb/releases/download/v0.1.7/elosdb-v0.1.7-linux-aarch64"
+RELEASE_SHA256="be64922804e725da6b524b8b4cef31c584ab0d0debd259461f70c1992d5557a1"
+
+url="${ELOSDB_URL:-}"
+sha="${ELOSDB_SHA256:-}"
+if [ -z "$url" ]; then
+  url="$RELEASE_URL"; sha="$RELEASE_SHA256"
+elif [ -z "$sha" ]; then
+  echo "install: ELOSDB_URL is set but ELOSDB_SHA256 is not." >&2
+  echo "install: refusing to run a binary this box cannot verify." >&2
+  exit 1
+fi
+
+# THE ARTIFACT IS aarch64 AND IT NAMES ITS CORE. It is built -mcpu=neoverse-v2 and
+# refuses to start on a CPU that reports no SVE2, because "built for this core" in a
+# published header has to mean it. Fail here, by name, rather than three phases in.
+arch="$(uname -m)"
+[ "$arch" = "aarch64" ] || {
+  echo "install: this release is aarch64 only and this box is $arch." >&2
+  echo "install: the published result is c8g.4xlarge (Graviton4)." >&2
+  exit 1
+}
+
+mkdir -p bin
+tmp="bin/.elosdb.download"
+rm -f "$tmp"
+echo "install: fetching $url"
+case "$url" in
+  http://*|https://*) curl -fsSL --retry 3 -o "$tmp" "$url" ;;
+  s3://*)  command -v aws >/dev/null 2>&1 || { echo "install: $url needs the aws CLI on PATH" >&2; exit 1; }
+           aws s3 cp "$url" "$tmp" --only-show-errors ;;
+  *)       [ -f "$url" ] || { echo "install: no such file: $url" >&2; exit 1; }
+           cp -f "$url" "$tmp" ;;
+esac
+got="$(sha256sum "$tmp" | cut -d' ' -f1)"
+if [ "$got" != "$sha" ]; then
+  rm -f "$tmp"
+  echo "install: sha256 mismatch for $url" >&2
+  echo "install:   expected $sha" >&2
+  echo "install:   got      $got" >&2
+  exit 1
+fi
+chmod +x "$tmp"
+# Replaced last, so an interrupted fetch leaves the previous binary in place rather
+# than half of the next one.
+mv -f "$tmp" bin/elosdb
+echo "install: bin/elosdb — $(du -h bin/elosdb | cut -f1), sha256 ok"
+
+# psql is the only other thing this deployment needs: `load`, `query` and `check`
+# all go through it. RUN it rather than look for it — a psql on PATH whose libpq is
+# not loadable answers `command -v` and dies on every invocation.
+if ! psql --version >/dev/null 2>&1; then
+  if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+    export DEBIAN_FRONTEND=noninteractive
+    sudo apt-get update -y >/dev/null
+    sudo apt-get install -y postgresql-client
+  else
+    echo "install: no psql and no sudo to install one" >&2
+    exit 1
+  fi
+fi
+
+# NEEDED entries, printed rather than assumed: this is the one place a reader can
+# see that the file this box is about to run asks for nothing but libc, libm,
+# libgcc_s and the loader.
+command -v readelf >/dev/null 2>&1 && \
+  echo "install: needs $(readelf -d bin/elosdb | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p' | paste -sd' ')"
+# The smoke test, and the build stamp: a truncated download or a binary for another
+# machine fails here and not in `start`.
+./bin/elosdb --version
+
+# THE PATH THIS WROTE AND THE PATH `start` LAUNCHES ARE ONE FACT, so it is asserted
+# rather than assumed — common.sh is sourced only here, at the end, because it needs
+# the psql that the block above may have just installed.
+. ./common.sh
+[ "$ELOSDB_BIN" -ef bin/elosdb ] || {
+  echo "install: common.sh points \$ELOSDB_BIN at $ELOSDB_BIN, not at the binary this installed" >&2
+  exit 1
+}
+echo "install: elosdb ready — nothing was compiled on this box"
