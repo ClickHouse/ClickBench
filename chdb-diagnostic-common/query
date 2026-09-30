@@ -75,6 +75,7 @@ if [ "$target" = yes ]; then
             "data2673-query2673 myenv-2673 .data-2673-q2673"
         )
         threads=(2 1)
+        run_cell data2690-lz4-query2690 myenv-2690 .data-2690-lz4-q2690 2
     fi
 
     for cell in "${cells[@]}"; do
@@ -83,8 +84,17 @@ if [ "$target" = yes ]; then
             run_cell "$label" "$env_dir" "$data_dir" "$thread_count"
         done
     done
+    if [ "$DIAG_ORDER" != reverse ]; then
+        run_cell data2690-lz4-query2690 myenv-2690 .data-2690-lz4-q2690 2
+    fi
 else
-    run_cell data2690-query2690 myenv-2690 .data-2690-q2690 2
+    if [ "$DIAG_ORDER" = reverse ]; then
+        run_cell data2690-lz4-query2690 myenv-2690 .data-2690-lz4-q2690 2
+        run_cell data2690-query2690 myenv-2690 .data-2690-q2690 2
+    else
+        run_cell data2690-query2690 myenv-2690 .data-2690-q2690 2
+        run_cell data2690-lz4-query2690 myenv-2690 .data-2690-lz4-q2690 2
+    fi
 fi
 
 primary_seconds=$(python3 - "$primary_result" <<'PY'

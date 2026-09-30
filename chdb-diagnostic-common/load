@@ -8,24 +8,29 @@ load_one() {
     local env_dir="$1"
     local data_dir="$2"
     local insert_threads="$3"
+    local compression_mode="$4"
 
     # shellcheck disable=SC1091
     source "$env_dir/bin/activate"
-    python3 ../chdb-diagnostic-common/load.py "$data_dir" "$insert_threads" \
+    python3 ../chdb-diagnostic-common/load.py \
+        "$data_dir" "$insert_threads" "$compression_mode" \
         >> diagnostics.jsonl
     deactivate
 }
 
 # Keep hits.csv until every layout has been generated.
-load_one myenv-2673 .data-2673-source default
+load_one myenv-2673 .data-2673-source default default
 mv .data-2673-source .data-2673-q2673
 cp -a .data-2673-q2673 .data-2673-q2690
 
-load_one myenv-2690 .data-2690-source default
+load_one myenv-2690 .data-2690-source default default
 mv .data-2690-source .data-2690-q2690
 cp -a .data-2690-q2690 .data-2690-q2673
 
-load_one myenv-2690 .data-2690-i1-q2690 1
+load_one myenv-2690 .data-2690-i1-q2690 1 default
+
+# Force the pre-adaptive behavior for the small-machine compression A/B.
+load_one myenv-2690 .data-2690-lz4-q2690 default lz4
 
 rm -f hits.csv
 sync

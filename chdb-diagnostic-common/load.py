@@ -9,13 +9,23 @@ from chdb import dbapi
 
 target = Path(sys.argv[1])
 max_insert_threads = sys.argv[2]
+compression_mode = sys.argv[3]
 
 shutil.rmtree(target, ignore_errors=True)
 started = time.perf_counter()
 con = dbapi.connect(path=str(target))
 cur = con.cursor()
 try:
-    cur.execute(Path("../chdb/create.sql").read_text())
+    create_sql = Path("../chdb/create.sql").read_text()
+    if compression_mode == "lz4":
+        create_sql = create_sql.rstrip().removesuffix(";")
+        create_sql += (
+            "\nSETTINGS default_compression_codec = 'LZ4', "
+            "enable_adaptive_codec_selection = 0"
+        )
+    elif compression_mode != "default":
+        raise ValueError(f"unknown compression mode: {compression_mode}")
+    cur.execute(create_sql)
     if max_insert_threads != "default":
         cur.execute(f"SET max_insert_threads = {int(max_insert_threads)}")
     cur.execute(Path("../chdb/insert.sql").read_text())
@@ -27,7 +37,8 @@ try:
             sum(bytes_on_disk) AS bytes_on_disk,
             sum(data_compressed_bytes) AS compressed_bytes,
             sum(data_uncompressed_bytes) AS uncompressed_bytes,
-            sum(marks) AS marks
+            sum(marks) AS marks,
+            groupUniqArray(default_compression_codec) AS default_codecs
         FROM system.parts
         WHERE active AND database = 'clickbench' AND table = 'hits'
         """
@@ -49,6 +60,7 @@ print(
         {
             "data_dir": str(target),
             "max_insert_threads": max_insert_threads,
+            "compression_mode": compression_mode,
             "seconds": round(elapsed, 6),
             "system_parts": stats,
         },
