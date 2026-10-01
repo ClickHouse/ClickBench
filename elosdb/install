@@ -14,29 +14,47 @@
 set -eu
 cd "$(dirname "$0")"
 
-# THE RELEASE THIS SUBMISSION IS. Both lines move together or neither does.
-RELEASE_URL="https://github.com/decster/elosdb/releases/download/v0.1.7/elosdb-v0.1.7-linux-aarch64"
-RELEASE_SHA256="be64922804e725da6b524b8b4cef31c584ab0d0debd259461f70c1992d5557a1"
+# THE RELEASE THIS SUBMISSION IS, PER ARCHITECTURE: a tag and that tag's asset digest,
+# pinned here, and a pair moves together or not at all. The two arches may name
+# different tags — each pins the release that carries ITS asset and was measured with
+# it (v0.1.7 shipped aarch64 only; v0.1.8 is the x86_64 port, built on an
+# x86 box; an aarch64 v0.1.8 asset is built on the aarch64 box and moves the pair
+# below when it is). An empty digest means no asset for that arch, and install
+# refuses below rather than fetching a file it cannot check.
+RELEASE_TAG_aarch64="v0.1.7"
+RELEASE_SHA256_aarch64="be64922804e725da6b524b8b4cef31c584ab0d0debd259461f70c1992d5557a1"
+RELEASE_TAG_x86_64="v0.1.8"
+RELEASE_SHA256_x86_64="70ab3c7f794999af1cca60a5651c86cc0f6414d6577a38b4ac4325c993779e1c"
+release_url() { echo "https://github.com/decster/elosdb/releases/download/$2/elosdb-$2-linux-$1"; }
+
+# THE ARTIFACT NAMES ITS ARCHITECTURE AND ITS CORE. aarch64 is built -mcpu=neoverse-v2
+# and refuses to start on a CPU that reports no SVE2; x86_64 is built -march=x86-64-v3
+# (AVX2/FMA/BMI2, no AVX-512 — c6a.4xlarge's Zen 3) and refuses on a CPU without
+# those. "Built for this core" in a published header has to mean it, so a box this
+# release has no asset for fails here, by name, rather than three phases in.
+arch="$(uname -m)"
+case "$arch" in
+  aarch64) tag="$RELEASE_TAG_aarch64"; pinned="$RELEASE_SHA256_aarch64" ;;
+  x86_64)  tag="$RELEASE_TAG_x86_64";  pinned="$RELEASE_SHA256_x86_64" ;;
+  *)       echo "install: this release has no asset for $arch (aarch64 and x86_64 only)." >&2
+           echo "install: the published results are c8g.4xlarge, c8g.metal-48xl and c6a.4xlarge." >&2
+           exit 1 ;;
+esac
 
 url="${ELOSDB_URL:-}"
 sha="${ELOSDB_SHA256:-}"
 if [ -z "$url" ]; then
-  url="$RELEASE_URL"; sha="$RELEASE_SHA256"
+  if [ -z "$pinned" ]; then
+    echo "install: release $tag pins no $arch asset yet." >&2
+    echo "install: to run an unreleased build, set ELOSDB_URL and ELOSDB_SHA256 together." >&2
+    exit 1
+  fi
+  url="$(release_url "$arch" "$tag")"; sha="$pinned"
 elif [ -z "$sha" ]; then
   echo "install: ELOSDB_URL is set but ELOSDB_SHA256 is not." >&2
   echo "install: refusing to run a binary this box cannot verify." >&2
   exit 1
 fi
-
-# THE ARTIFACT IS aarch64 AND IT NAMES ITS CORE. It is built -mcpu=neoverse-v2 and
-# refuses to start on a CPU that reports no SVE2, because "built for this core" in a
-# published header has to mean it. Fail here, by name, rather than three phases in.
-arch="$(uname -m)"
-[ "$arch" = "aarch64" ] || {
-  echo "install: this release is aarch64 only and this box is $arch." >&2
-  echo "install: the published result is c8g.4xlarge (Graviton4)." >&2
-  exit 1
-}
 
 mkdir -p bin
 tmp="bin/.elosdb.download"

@@ -8,13 +8,16 @@ protocol. All 43 ClickBench queries are answered by the engine.
 > result can be reproduced — **not for production use**.
 
 Results are in [`results/`](results/), one JSON per machine in ClickBench's own
-format: every query's three tries, the load time and the data size. The totals, for
-`elosdb v0.1.7` installed from [its release](https://github.com/decster/elosdb/releases/tag/v0.1.7) by `./install`:
+format: every query's three tries, the load time and the data size. The totals, each
+installed by `./install` from the release it pins for that architecture —
+[`v0.1.7`](https://github.com/decster/elosdb/releases/tag/v0.1.7) on aarch64,
+[`v0.1.8`](https://github.com/decster/elosdb/releases/tag/v0.1.8) on x86_64:
 
-| machine | load | data size | cold (sum of 43 first tries) | hot (sum of 43 best-of-rest) | concurrent QPS |
-|---|---:|---:|---:|---:|---:|
-| c8g.4xlarge (16 vCPU, 32 GiB) | 43.85 s | 7,668,470,465 B | 30.08 s | 2.31 s | 8.15 |
-| c8g.metal-48xl (192 vCPU, 384 GiB) | 34.73 s | 7,668,470,465 B | 29.68 s | 1.00 s | 31.17 |
+| machine | release | load | data size | cold (sum of 43 first tries) | hot (sum of 43 best-of-rest) | concurrent QPS |
+|---|---|---:|---:|---:|---:|---:|
+| c8g.4xlarge (16 vCPU, 32 GiB) | v0.1.7 aarch64 | 43.85 s | 7,668,470,465 B | 30.08 s | 2.31 s | 8.15 |
+| c8g.metal-48xl (192 vCPU, 384 GiB) | v0.1.7 aarch64 | 34.73 s | 7,668,470,465 B | 29.68 s | 1.00 s | 31.17 |
+| c6a.4xlarge (16 vCPU, 32 GiB) | v0.1.8 x86_64 | 83.55 s | 7,668,470,506 B | 35.66 s | 6.35 s | 3.21 |
 
 On the two-socket 48xl the server defaults to one NUMA node's 96 cores.
 Cold is the first try after the server was restarted and the OS page cache dropped;
@@ -29,12 +32,16 @@ From this directory:
 
 `install` compiles nothing. It fetches one statically-linked executable from
 [github.com/decster/elosdb's releases](https://github.com/decster/elosdb/releases); the URL and
-its sha256 are pinned in `install` itself and a mismatch is a refusal. Set
+its sha256 are pinned in `install` itself, per architecture, and a mismatch is a refusal. Set
 `ELOSDB_URL` (with `ELOSDB_SHA256`) to run a different build.
 
-**aarch64 only**, and the artifact names its core: it is built `-mcpu=neoverse-v2`
-and refuses to start where SVE2 is absent. It needs `glibc >= 2.38` and nothing
-else — libstdc++ and libgcc are linked in, there is no shared library to place
+**One asset per architecture, and each names its core.** The aarch64 asset is built
+`-mcpu=neoverse-v2` and refuses to start where SVE2 is absent; the x86_64 asset is built
+`-march=x86-64-v3` (AVX2/FMA/BMI2, no AVX-512) and refuses on a CPU without those.
+`install` selects by `uname -m`, and an architecture with no pinned asset is refused by
+name. The two releases differ only in changes no ClickBench query reaches (TPC-H join
+work and two x86-only fixes); all 43 plans are the same. Each needs
+`glibc >= 2.38` and nothing else — libstdc++ and libgcc are linked in, there is no shared library to place
 beside it, and it exports no global dynamic symbols. The other requirement is a
 `psql`, which `install` apt-gets.
 
