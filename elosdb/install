@@ -17,14 +17,13 @@ cd "$(dirname "$0")"
 # THE RELEASE THIS SUBMISSION IS, PER ARCHITECTURE: a tag and that tag's asset digest,
 # pinned here, and a pair moves together or not at all. The two arches may name
 # different tags — each pins the release that carries ITS asset and was measured with
-# it (v0.1.7 shipped aarch64 only; v0.1.8 is the x86_64 port, built on an
-# x86 box; an aarch64 v0.1.8 asset is built on the aarch64 box and moves the pair
-# below when it is). An empty digest means no asset for that arch, and install
-# refuses below rather than fetching a file it cannot check.
-RELEASE_TAG_aarch64="v0.1.7"
-RELEASE_SHA256_aarch64="be64922804e725da6b524b8b4cef31c584ab0d0debd259461f70c1992d5557a1"
-RELEASE_TAG_x86_64="v0.1.8"
-RELEASE_SHA256_x86_64="70ab3c7f794999af1cca60a5651c86cc0f6414d6577a38b4ac4325c993779e1c"
+# it (v0.1.9 carries both: the aarch64 asset built on an aarch64 box, the x86_64 asset
+# on an x86 box, from the same source). An empty digest means no asset for that arch,
+# and install refuses below rather than fetching a file it cannot check.
+RELEASE_TAG_aarch64="v0.1.9"
+RELEASE_SHA256_aarch64="0f69fac715b5fecca7f225681a32e6533c3a350b0a38f76f93ffa0449714f509"
+RELEASE_TAG_x86_64="v0.1.9"
+RELEASE_SHA256_x86_64="1ec9f68b8725ed22b1e5234cb79616405aeea6a72133bfc1919b1bea6f595506"
 release_url() { echo "https://github.com/decster/elosdb/releases/download/$2/elosdb-$2-linux-$1"; }
 
 # THE ARTIFACT NAMES ITS ARCHITECTURE AND ITS CORE. aarch64 is built -mcpu=neoverse-v2

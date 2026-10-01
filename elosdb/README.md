@@ -9,15 +9,14 @@ protocol. All 43 ClickBench queries are answered by the engine.
 
 Results are in [`results/`](results/), one JSON per machine in ClickBench's own
 format: every query's three tries, the load time and the data size. The totals, each
-installed by `./install` from the release it pins for that architecture —
-[`v0.1.7`](https://github.com/decster/elosdb/releases/tag/v0.1.7) on aarch64,
-[`v0.1.8`](https://github.com/decster/elosdb/releases/tag/v0.1.8) on x86_64:
+installed by `./install` from the release it pins for each architecture —
+[`v0.1.9`](https://github.com/decster/elosdb/releases/tag/v0.1.9), on aarch64 and on x86_64:
 
 | machine | release | load | data size | cold (sum of 43 first tries) | hot (sum of 43 best-of-rest) | concurrent QPS |
 |---|---|---:|---:|---:|---:|---:|
-| c8g.4xlarge (16 vCPU, 32 GiB) | v0.1.7 aarch64 | 43.85 s | 7,668,470,465 B | 30.08 s | 2.31 s | 8.15 |
-| c8g.metal-48xl (192 vCPU, 384 GiB) | v0.1.7 aarch64 | 34.73 s | 7,668,470,465 B | 29.68 s | 1.00 s | 31.17 |
-| c6a.4xlarge (16 vCPU, 32 GiB) | v0.1.8 x86_64 | 83.55 s | 7,668,470,506 B | 35.66 s | 6.35 s | 3.21 |
+| c8g.4xlarge (16 vCPU, 32 GiB) | v0.1.9 aarch64 | 43.82 s | 7,668,470,464 B | 30.18 s | 2.11 s | 10.97 |
+| c8g.metal-48xl (192 vCPU, 384 GiB) | v0.1.9 aarch64 | 35.14 s | 7,668,470,469 B | 28.56 s | 0.89 s | 37.02 |
+| c6a.4xlarge (16 vCPU, 32 GiB) | v0.1.9 x86_64 | 82.71 s | 7,668,470,506 B | 37.09 s | 6.19 s | 4.21 |
 
 On the two-socket 48xl the server defaults to one NUMA node's 96 cores.
 Cold is the first try after the server was restarted and the OS page cache dropped;
@@ -39,8 +38,7 @@ its sha256 are pinned in `install` itself, per architecture, and a mismatch is a
 `-mcpu=neoverse-v2` and refuses to start where SVE2 is absent; the x86_64 asset is built
 `-march=x86-64-v3` (AVX2/FMA/BMI2, no AVX-512) and refuses on a CPU without those.
 `install` selects by `uname -m`, and an architecture with no pinned asset is refused by
-name. The two releases differ only in changes no ClickBench query reaches (TPC-H join
-work and two x86-only fixes); all 43 plans are the same. Each needs
+name. Each needs
 `glibc >= 2.38` and nothing else — libstdc++ and libgcc are linked in, there is no shared library to place
 beside it, and it exports no global dynamic symbols. The other requirement is a
 `psql`, which `install` apt-gets.
