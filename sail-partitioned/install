@@ -50,4 +50,4 @@ source myenv/bin/activate
 # avoids the uninstall and just lays a fresh copy in the venv.
 pip install --upgrade --ignore-installed setuptools wheel
 pip install --no-cache-dir "pysail==0.7.2"
-pip install "pyspark-client==4.1.1" pandas psutil
+pip install "pyspark-client==4.2.0" pandas psutil
