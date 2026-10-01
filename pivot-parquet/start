@@ -1,0 +1,25 @@
+#!/bin/bash
+set -eu
+: "${PIVOT_HOME:=$HOME/.pivot}"
+: "${PIVOT_PORT:=5432}"
+
+BIN="$PIVOT_HOME/cli/latest/pivot"
+
+if psql -h 127.0.0.1 -p "$PIVOT_PORT" -U pivot -d postgres -c 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+mkdir -p catalog
+
+cat > config.yaml <<CONFIG
+server:
+  bind: 127.0.0.1:$PIVOT_PORT
+datastores:
+  default:
+    kind: pivot
+    location: $PWD/catalog
+    default: true
+CONFIG
+
+nohup "$BIN" server --config "$PWD/config.yaml" > server.log 2>&1 &
+echo $! > server.pid
