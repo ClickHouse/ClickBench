@@ -60,13 +60,33 @@ template="$(< upsert_batch_template.sql)"
 for ((bucket = 0; bucket < BUCKETS; bucket++)); do
     sql="${template//__BUCKETS__/$BUCKETS}"
     sql="${sql//__BUCKET__/$bucket}"
+    if [[ -z "${sql//[[:space:]]/}" ]]; then
+        echo "bucket=$bucket: rendered SQL is empty, refusing to run" >&2
+        exit 1
+    fi
     log="$LOG_DIR/bucket-$(printf '%02d' "$bucket").log"
+    # -f (file mode) is required here, not piped stdin with no -f/-q. Without
+    # one of those two flags, impala-shell enters its interactive cmd.Cmd
+    # REPL loop instead of execute_queries_non_interactive_mode(). The REPL
+    # prints query errors (e.g. OOM) to stderr but always exits 0 on EOF, so
+    # a failed UPSERT batch was previously swallowed silently and the exit
+    # code was never actually checked. -f restores the exit-code propagation
+    # that run_sql_file()/query_scalar() above already rely on, and
+    # set -euo pipefail (top of this script) then aborts the whole load.
+    sql_file="$(mktemp)"
+    printf '%s\n' "$sql" > "$sql_file"
+    chmod 0644 "$sql_file"
     {
         echo "bucket=$bucket start=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        printf '%s\n' "$sql" | "${DOCKER[@]}" exec -i impala-client impala-shell \
-            -i impalad-1:21050 -B --quiet
-        echo "bucket=$bucket exit=0 end=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        "${DOCKER[@]}" cp "$sql_file" "impala-client:/tmp/$(basename "$sql_file")"
+        "${DOCKER[@]}" exec -i impala-client impala-shell \
+            -i impalad-1:21050 -B --quiet \
+            -f "/tmp/$(basename "$sql_file")" < /dev/null
+        echo "bucket=$bucket end=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     } 2>&1 | tee "$log"
+    "${DOCKER[@]}" exec -u 0 impala-client rm -f "/tmp/$(basename "$sql_file")" \
+        || { echo "warning: failed to remove container tmp file for bucket=$bucket" | tee -a "$log" >&2 || true; }
+    rm -f "$sql_file"
 done
 
 TARGET_ROWS="$(query_scalar 'SELECT COUNT(*) FROM hits_kudu_raw;')"

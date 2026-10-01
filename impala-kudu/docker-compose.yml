@@ -143,7 +143,11 @@ services:
       - "-logtostderr"
       - "-kudu_master_hosts="
       - "-mt_dop_auto_fallback=true"
-      - "-mem_limit=14gb"
+      - "-mem_limit=80%"
+      # Percentage form resolves against host physical memory (or the
+      # container's cgroup limit if set; none is set here), scaling safely
+      # across machine sizes instead of a fixed value sized for one host.
+      # Matches Cloudera's documented ~80%-of-physical-memory guidance.
       - "--default_query_options=default_file_format=parquet"
       # See catalogd above — same FQDN-underscore problem applies here.
       - "-use_resolved_hostname=false"
