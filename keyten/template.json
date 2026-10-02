@@ -1,0 +1,7 @@
+{
+  "system": "Keyten",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": ["Rust", "column-oriented", "dataframe", "embedded"]
+}

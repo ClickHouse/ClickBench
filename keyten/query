@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
+
+code = sys.stdin.buffer.read()
+port = os.environ.get("BENCH_KEYTEN_PORT", "8000")
+request = urllib.request.Request(f"http://127.0.0.1:{port}/query", data=code)
+start = time.perf_counter()
+try:
+    with urllib.request.urlopen(request, timeout=1800) as response:
+        body = response.read()
+except urllib.error.HTTPError as error:
+    sys.stderr.buffer.write(error.read() + b"\n")
+    sys.exit(1)
+elapsed = time.perf_counter() - start
+sys.stdout.buffer.write(body + b"\n")
+print(f"{elapsed:.9f}", file=sys.stderr)

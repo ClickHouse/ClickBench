@@ -1,0 +1,4 @@
+#!/bin/bash
+export KEYTEN_PARQUET="$PWD/hits.parquet"
+export KEYTEN_SERVER_SCRIPT=../keyten/server.py
+exec ../keyten/start
