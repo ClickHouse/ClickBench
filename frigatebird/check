@@ -1,0 +1,6 @@
+#!/bin/bash
+# Called after ./load to confirm the table is queryable. frigatebird's
+# SELECT requires a FROM clause, so we hit the loaded hits table.
+set -e
+
+WALRUS_QUIET=1 frigatebird -c "SELECT COUNT(*) FROM hits" >/dev/null
