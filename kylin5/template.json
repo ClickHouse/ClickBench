@@ -1,0 +1,12 @@
+{
+  "system": "Apache Kylin 5.0.2-GA (Parquet, single, no cube)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "Spark derivative",
+    "stateless",
+    "no-cold"
+  ]
+}

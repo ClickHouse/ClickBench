@@ -1,0 +1,8 @@
+#!/bin/bash
+# Same readiness probe ./start uses.
+KYLIN_TOKEN=$(printf 'ADMIN:KYLIN' | base64)
+REQUEST_AUTH_HEADER_NAME=Authorization
+HTTP_AUTH_SCHEME=Basic
+curl -sf -m 5 http://localhost:7070/kylin/api/user/authentication \
+    -X POST -H "${REQUEST_AUTH_HEADER_NAME}: ${HTTP_AUTH_SCHEME} ${KYLIN_TOKEN}" \
+    -H 'Content-Type: application/json' >/dev/null
