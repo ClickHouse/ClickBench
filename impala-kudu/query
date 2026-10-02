@@ -1,0 +1,29 @@
+#!/bin/bash
+set -euo pipefail
+
+# ClickBench's shared driver supplies SQL on stdin. Keeping a single argument
+# supported makes the script convenient for direct probes and preserves the
+# local prototype interface.
+if [ -n "${1:-}" ]; then
+    query_sql="$1"
+else
+    query_sql=$(cat)
+fi
+[ -n "$query_sql" ] || {
+    echo "query SQL is required on stdin or as one argument" >&2
+    exit 2
+}
+
+if docker info >/dev/null 2>&1; then
+    DOCKER=(docker)
+else
+    DOCKER=(sudo docker)
+fi
+
+start=$(date +%s.%N)
+"${DOCKER[@]}" exec -i impala-client impala-shell \
+    -i impalad-1:21050 -d clickbench -B --quiet \
+    -q "$query_sql" < /dev/null
+end=$(date +%s.%N)
+
+awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2

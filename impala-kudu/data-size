@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+# Count allocated blocks for every persistent service path required by this
+# Kudu-backed configuration. Input Parquet under data/hits is excluded.
+if docker info >/dev/null 2>&1; then
+    DOCKER=(docker)
+else
+    DOCKER=(sudo docker)
+fi
+
+read -r master_bytes _ < <("${DOCKER[@]}" exec kudu-master du -s -B1 /var/lib/kudu/master)
+read -r tserver_bytes _ < <("${DOCKER[@]}" exec kudu-tserver du -s -B1 /var/lib/kudu/tserver)
+read -r hms_bytes _ < <("${DOCKER[@]}" exec impala-hms du -s -B1 /var/lib/hive/metastore)
+printf '%s\n' "$((master_bytes + tserver_bytes + hms_bytes))"

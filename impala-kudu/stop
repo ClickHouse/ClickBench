@@ -1,0 +1,14 @@
+#!/bin/bash
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+if docker info >/dev/null 2>&1; then
+    DOCKER=(docker)
+else
+    DOCKER=(sudo docker)
+fi
+
+# Preserve persistent Kudu/HMS data so the benchmark driver can restart the
+# services without changing the measured dataset.
+"${DOCKER[@]}" compose -f docker-compose.yml stop
