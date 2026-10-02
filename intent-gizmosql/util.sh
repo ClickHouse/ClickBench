@@ -27,6 +27,17 @@ wait_for_gizmosql() {
 # releasing the lock).
 start_gizmosql() {
     local attempt
+    # More than 64 CPUs (README.md): one DuckDB thread per two CPUs (similar
+    # to the mariadb-duckdb entry's start, which caps DuckDB at nproc/2 above
+    # 32 CPUs) and the allocator settings of a large dedicated server.
+    # Smaller machines run the defaults.
+    local ncpu
+    ncpu=$(nproc)
+    if [ "${ncpu}" -gt 64 ]; then
+        export INIT_SQL_COMMANDS="SET threads=$(( ncpu / 2 )); SET allocator_flush_threshold='64GiB'; SET allocator_bulk_deallocation_flush_threshold='64GiB';"
+        export DUCKDB_JE_MALLOC_CONF="dirty_decay_ms:10000,muzzy_decay_ms:10000,thp:always,metadata_thp:auto"
+        echo "cpus: ${ncpu}; init-sql: threads $(( ncpu / 2 )) and allocator settings"
+    fi
     for attempt in 1 2 3 4 5; do
         nohup gizmosql_server \
             --username ${GIZMOSQL_USER} \
