@@ -10,15 +10,13 @@ protocol. All 43 ClickBench queries are answered by the engine.
 Results are in [`results/`](results/), one JSON per machine in ClickBench's own
 format: every query's three tries, the load time and the data size. The totals, each
 installed by `./install` from the release it pins for each architecture —
-[`v0.1.9`](https://github.com/decster/elosdb/releases/tag/v0.1.9), on aarch64 and on x86_64:
+[`v0.1.10`](https://github.com/decster/elosdb/releases/tag/v0.1.10), on aarch64 and on x86_64:
 
 | machine | release | load | data size | cold (sum of 43 first tries) | hot (sum of 43 best-of-rest) | concurrent QPS |
 |---|---|---:|---:|---:|---:|---:|
-| c8g.4xlarge (16 vCPU, 32 GiB) | v0.1.9 aarch64 | 43.82 s | 7,668,470,464 B | 30.18 s | 2.11 s | 10.97 |
-| c8g.metal-48xl (192 vCPU, 384 GiB) | v0.1.9 aarch64 | 35.14 s | 7,668,470,469 B | 28.56 s | 0.89 s | 37.02 |
-| c6a.4xlarge (16 vCPU, 32 GiB) | v0.1.9 x86_64 | 82.71 s | 7,668,470,506 B | 37.09 s | 6.19 s | 4.21 |
+| c8g.4xlarge (16 vCPU, 32 GiB) | v0.1.10 aarch64 | 44.94 s | 7,668,470,509 B | 29.66 s | 2.00 s | 12.05 |
+| c6a.4xlarge (16 vCPU, 32 GiB) | v0.1.10 x86_64 | 90.22 s | 7,668,470,549 B | 34.66 s | 5.34 s | 4.95 |
 
-On the two-socket 48xl the server defaults to one NUMA node's 96 cores.
 Cold is the first try after the server was restarted and the OS page cache dropped;
 it varies noticeably between instances of the same machine type, hot much less.
 
