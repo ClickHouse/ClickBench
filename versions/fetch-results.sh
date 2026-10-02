@@ -10,10 +10,20 @@
 #       ./fetch-results.sh
 #
 # Then regenerate the page data with ./generate-results.sh.
+#
+# By default every version in the sink is refetched and results/ is rebuilt from
+# scratch. SINCE_HOURS=<n> instead fetches only the versions that sent a result within
+# the last n hours and leaves the other files alone -- the incremental mode the hourly
+# collector uses (collect-new-results.sh).
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${HERE}"
 CH() { clickhouse-client ${CONNECTION_PARAMS} "$@"; }
+
+SINCE_HOURS="${SINCE_HOURS:-}"
+[[ "${SINCE_HOURS}" =~ ^[0-9]*$ ]] || { echo "SINCE_HOURS must be a number of hours" >&2; exit 1; }
+WINDOW=""
+if [ -n "${SINCE_HOURS}" ]; then WINDOW="AND time >= now() - INTERVAL ${SINCE_HOURS} HOUR"; fi
 
 mkdir -p results
 
@@ -52,11 +62,14 @@ mapfile -t VERSIONS < <(CH --query "
     FROM sink.data
     WHERE JSONExtractString(content, 'kind') = 'versions-benchmark' AND v != ''
       AND length(JSONExtractArrayRaw(content, 'result')) = 344
+      ${WINDOW}
     ORDER BY v
     FORMAT TSV")
 
-echo "fetching ${#VERSIONS[@]} versions from the sink" >&2
-rm -f results/*.json
+echo "fetching ${#VERSIONS[@]} versions from the sink${SINCE_HOURS:+ (results of the last ${SINCE_HOURS}h)}" >&2
+# A full fetch rebuilds the directory; an incremental one only overwrites the versions
+# it fetched, keeping the files of everything that did not run in the window.
+if [ -z "${SINCE_HOURS}" ]; then rm -f results/*.json; fi
 for v in "${VERSIONS[@]}"; do
     [ -z "${v}" ] && continue
     # argMax over time keeps the most recent run for this version.

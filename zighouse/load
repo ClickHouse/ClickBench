@@ -2,5 +2,6 @@
 set -e
 
 rm -rf zighouse-store
-ZIGHOUSE_CLICKBENCH_SUBMIT=1 ZIGHOUSE_IMPORT_TRACE=1 ./zighouse import-clickbench-parquet-hot hits.parquet zighouse-store
+ZIGHOUSE_CLICKBENCH_SUBMIT=1 ZIGHOUSE_IMPORT_TRACE=1 \
+  ./zighouse import-parquet --format=generic hits.parquet zighouse-store hits
 sync

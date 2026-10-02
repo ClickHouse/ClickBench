@@ -10,7 +10,7 @@
     "tags": [
         "C++",
         "column-oriented",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 573,
     "data_size": 50887437386,

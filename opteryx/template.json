@@ -1,9 +1,10 @@
 {
-  "system": "Opteryx",
+  "system": "Opteryx (Parquet, partitioned)",
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
   "tags": [
+    "C++",
     "stateless",
     "column-oriented",
     "embedded"

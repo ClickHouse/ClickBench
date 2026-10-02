@@ -1,0 +1,3 @@
+#!/bin/bash
+set -e
+psql "postgres://127.0.0.1:54321/bemidb" -c 'SELECT 1' >/dev/null

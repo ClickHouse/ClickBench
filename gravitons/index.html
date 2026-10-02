@@ -81,6 +81,43 @@
             color: var(--title-color);
         }
 
+        .title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .github-stars {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4em;
+            font-size: 0.95rem;
+            line-height: 1;
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid rgba(127, 127, 127, 0.4);
+            border-radius: 6px;
+            padding: 0.4em 0.7em;
+            background: rgba(127, 127, 127, 0.08);
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+
+        .github-stars:hover {
+            background: rgba(127, 127, 127, 0.18);
+        }
+
+        .github-stars-icon {
+            width: 1.1em;
+            height: 1.1em;
+            fill: currentColor;
+        }
+
+        .github-stars-count {
+            font-weight: 600;
+        }
+
         table {
              border-spacing: 1px;
         }
@@ -354,7 +391,14 @@ const data = [
 
 <div class="header stick-left">
     <span class="nowrap themes"><span id="toggle-dark">🌚</span><span id="toggle-light">🌞</span></span>
-    <h1>ClickHouse Hardware Benchmark</h1>
+    <div class="title-row">
+        <h1>ClickHouse Hardware Benchmark</h1>
+        <a class="github-stars" href="https://github.com/ClickHouse/ClickBench/" target="_blank" rel="noopener noreferrer" aria-label="Star ClickBench on GitHub" title="Star ClickBench on GitHub">
+            <svg class="github-stars-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
+            <span>Star</span>
+            <span class="github-stars-count" id="github-stars-count"></span>
+        </a>
+    </div>
     <a href="https://github.com/ClickHouse/ClickBench/">Source</a> | <a href="https://clickhouse.com/docs/en/operations/performance-test/">Add a New Result</a> | <a href="https://github.com/ClickHouse/ClickBench/">Report Mistake</a> | <a href="https://benchmark.clickhouse.com/">Benchmark For Analytical DBMS</a> | <a href="https://benchmark.clickhouse.com/versions/">Versions Benchmark</a>
 </div>
 
@@ -807,6 +851,34 @@ if (window.location.hash) {
 render();
 updateSelectors();
 
+</script>
+<script>
+(function () {
+    var el = document.getElementById('github-stars-count');
+    if (!el) return;
+    var REPO = 'ClickHouse/ClickBench';
+    var CACHE_KEY = 'github-stars-' + REPO;
+    var TTL = 6 * 3600 * 1000;
+
+    function format(n) {
+        return '' + n;
+    }
+    function show(n) { el.textContent = format(n); }
+
+    try {
+        var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (cached && (Date.now() - cached.t) < TTL) { show(cached.n); return; }
+    } catch (e) {}
+
+    fetch('https://api.github.com/repos/' + REPO)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+            if (!d || typeof d.stargazers_count !== 'number') return;
+            show(d.stargazers_count);
+            try { localStorage.setItem(CACHE_KEY, JSON.stringify({ n: d.stargazers_count, t: Date.now() })); } catch (e) {}
+        })
+        .catch(function () {});
+})();
 </script>
 </body>
 </html>

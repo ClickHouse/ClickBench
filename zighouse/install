@@ -1,10 +1,11 @@
 #!/bin/bash
 set -e
 
-: "${ZIGHOUSE_VERSION:=v0.1.0-clickbench}"
-: "${ZIGHOUSE_SHA256:=5a779eacf87082eeeb13b336d6f798a0399593c29b5a586ab67202104396dc83}"
+: "${ZIGHOUSE_VERSION:=v1.0.3}"
+: "${ZIGHOUSE_SHA256:=4f63353bfc9b09a649fb54c77c447a113b4bf2b331957aa65d4b33648ef56d5b}"
 
-url="https://github.com/donge/zighouse/releases/download/${ZIGHOUSE_VERSION}/zighouse-linux-x86_64"
-curl -L --fail -o zighouse "$url"
-printf '%s  zighouse\n' "$ZIGHOUSE_SHA256" | sha256sum -c -
+url="https://github.com/donge/zighouse/releases/download/${ZIGHOUSE_VERSION}/zighouse-linux-x86_64.gz"
+curl -L --fail -o zighouse.gz "$url"
+printf '%s  zighouse.gz\n' "$ZIGHOUSE_SHA256" | sha256sum -c -
+gunzip zighouse.gz
 chmod +x zighouse

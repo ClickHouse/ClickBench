@@ -1,0 +1,28 @@
+#!/bin/bash
+# Launch the infino server: it opens the table once and holds it warm, then
+# listens on a unix socket. Wait for the socket before returning so the shared
+# driver's ./check loop finds a live server.
+set -e
+
+# Same tuning as the load (cache dir + budget); benchmark.sh sources this too.
+. "$(dirname "$0")/config.sh"
+
+BIN=./bench/target/release/clickbench-infino
+
+rm -f infino.sock
+nohup "$BIN" serve > serve.log 2>&1 &
+echo $! > infino.pid
+
+for _ in $(seq 1 240); do
+    [ -S infino.sock ] && exit 0
+    # Bail early if the server process died during startup.
+    if ! kill -0 "$(cat infino.pid)" 2>/dev/null; then
+        echo "infino server exited during startup; serve.log:" >&2
+        cat serve.log >&2
+        exit 1
+    fi
+    sleep 0.5
+done
+
+echo "infino server socket did not appear within 120s" >&2
+exit 1

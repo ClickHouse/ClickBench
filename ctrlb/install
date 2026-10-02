@@ -1,0 +1,46 @@
+#!/bin/bash
+# ClickBench install hook — run once, before the benchmark.
+#
+# REQUIRES passwordless sudo — to install Docker if absent and to drop the OS
+# page cache (`echo 3 > /proc/sys/vm/drop_caches`), which needs root. The
+# ClickBench driver already assumes passwordless sudo (its bench_flush_caches
+# runs `sudo tee /proc/sys/vm/drop_caches`), so this is consistent with every
+# other system. If sudo is missing we abort before doing anything.
+set -eu
+# shellcheck disable=SC1091
+source "$(dirname "$0")/config.sh"   # CTRLB_IMAGE is defined here (single source)
+
+# --- passwordless sudo (needed to install Docker if missing + drop the cache) -
+if ! sudo -n true 2>/dev/null; then
+  echo "ERROR: passwordless sudo is required (to install Docker if missing and to" >&2
+  echo "       drop the OS page cache). Configure sudo, or run as root." >&2
+  exit 1
+fi
+
+# --- Docker: install if missing on this fresh VM, then verify it is usable ----
+if ! command -v docker > /dev/null 2>&1; then
+  echo "Docker not found — installing via https://get.docker.com ..." >&2
+  curl -fsSL https://get.docker.com | sudo sh
+fi
+# Make sure the daemon is up (systemd or sysv), then confirm we can talk to it.
+# `dkr` (config.sh) uses the daemon directly if this user can reach it, else via
+# sudo — so being outside the 'docker' group is fine as long as sudo works.
+sudo systemctl enable --now docker > /dev/null 2>&1 \
+  || sudo service docker start > /dev/null 2>&1 || true
+if ! dkr info > /dev/null 2>&1; then
+  echo "ERROR: Docker is installed but the daemon is not reachable, even via sudo." >&2
+  echo "       Ensure the Docker service is running. Refusing to run." >&2
+  exit 1
+fi
+
+# 1) Pull the CtrlB image.
+dkr pull "$CTRLB_IMAGE"
+
+# 2) Right after the pull and before the container is spun up (in ./start):
+#    flush dirty pages to disk (sync), then drop the page cache. The pull dirties
+#    a large amount of memory; flushing here keeps ./load's own sync cheap so the
+#    load time stays honest instead of blowing up as writeback of the pull.
+sync
+echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+
+exit 0

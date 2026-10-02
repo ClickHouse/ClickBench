@@ -29,6 +29,14 @@ from fastapi import FastAPI, HTTPException, Request
 # Streaming engine will be the default soon.
 pl.Config.set_engine_affinity("streaming")
 
+# ClickBench timings must include serializing the full query result back
+# to the client (README, "Output Suppression"), so render tables without
+# any row/column/cell truncation — nothing may be suppressed.
+pl.Config.set_tbl_rows(-1)
+pl.Config.set_tbl_cols(-1)
+pl.Config.set_tbl_width_chars(-1)
+pl.Config.set_fmt_str_lengths(65535)
+
 app = FastAPI()
 hits: pl.LazyFrame | None = None
 parquet_path: str = "hits.parquet"
@@ -65,15 +73,16 @@ async def query(request: Request):
         raise HTTPException(status_code=400, detail=f"syntax error: {e}")
     start = timeit.default_timer()
     value = eval(compiled, {"hits": hits, "pl": pl, "date": date})
-    elapsed = round(timeit.default_timer() - start, 3)
-    # Render the eval result so the playground UI shows something
-    # instead of just a timing line. polars DataFrames / Series /
-    # LazyFrames have a useful __str__; everything else (scalar,
-    # tuple, dict, ...) falls through repr.
+    # Rendering the result is part of the timed run: ClickBench measures
+    # back-to-back runtimes including returning the result to the client
+    # (issue #1397). polars DataFrames / Series / LazyFrames have a useful
+    # __str__; everything else (scalar, tuple, dict, ...) falls through
+    # repr.
     if isinstance(value, (pl.DataFrame, pl.Series, pl.LazyFrame)):
         result = str(value)
     else:
         result = repr(value)
+    elapsed = round(timeit.default_timer() - start, 3)
     return {"elapsed": elapsed, "result": result}
 
 

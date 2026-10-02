@@ -1,0 +1,45 @@
+#!/bin/bash
+# Brings up the local RustFS this entry runs against, if it is not already up.
+# Idempotent: ./install calls it after downloading RustFS, and ./start calls it
+# before every server start, so a RustFS that died between queries is restarted
+# rather than turning the rest of the run into errors. Its data directory is
+# on this machine's disk; ./stop leaves RustFS running on purpose, the driver's
+# restart cycle is for the database, and the page-cache drop before each cold
+# run reaches RustFS's files the same as any local-disk engine's.
+set -eu
+. ./ravel-env.sh
+
+# Unauthenticated, so a 200 cannot be confused with a credential problem.
+health="${RAVEL_S3_ENDPOINT}/health"
+if curl -fsS -o /dev/null "$health" 2>/dev/null; then
+    exit 0
+fi
+
+[ -x "$RUSTFS_DIR/rustfs" ] || { echo "rustfs-start: $RUSTFS_DIR/rustfs missing; run ./install first" >&2; exit 1; }
+[ -f "$RUSTFS_DIR/credentials.env" ] || { echo "rustfs-start: $RUSTFS_DIR/credentials.env missing; run ./install first" >&2; exit 1; }
+mkdir -p "$RUSTFS_DIR/data"
+
+# Credentials reach RustFS through its environment, never its argument list.
+# The console is disabled explicitly: left unset, RustFS still opens its
+# console listener on :9001 on every interface. Nothing here uses it, and the
+# entry should open exactly two loopback ports, the store's and the database's.
+(
+    set -a
+    # shellcheck disable=SC1091
+    . "$RUSTFS_DIR/credentials.env"
+    set +a
+    export RUSTFS_ADDRESS="${RAVEL_S3_ENDPOINT#http://}"
+    export RUSTFS_CONSOLE_ENABLE=false
+    nohup "$RUSTFS_DIR/rustfs" server "$RUSTFS_DIR/data" \
+        > "$RUSTFS_DIR/rustfs.log" 2>&1 &
+    echo $! > "$RUSTFS_DIR/rustfs.pid"
+)
+
+for _ in $(seq 1 60); do
+    if curl -fsS -o /dev/null "$health" 2>/dev/null; then
+        exit 0
+    fi
+    sleep 1
+done
+echo "rustfs-start: RustFS did not answer $health within 60s; see $RUSTFS_DIR/rustfs.log" >&2
+exit 1

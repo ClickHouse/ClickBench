@@ -37,7 +37,8 @@ export LOAD_DATASETS="${DATASETS}"
 
 DATADIR=prepare-data/data
 mkdir -p "${DATADIR}"
-BUCKET='https://clickhouse-public-datasets.s3.amazonaws.com/versions-benchmark'
+. ../lib/dataset-bucket.sh
+BUCKET="https://${DATASET_HOST}/versions-benchmark"
 
 # Download the files for the datasets we will load, in parallel. A missing file
 # (e.g. ssb/taxi not uploaded yet) just fails its own wget and is skipped, so

@@ -1,0 +1,5 @@
+#!/bin/bash
+# Embedded engine: nothing to probe beyond the binary being built.
+set -e
+
+test -x hits-slatedb/target/release/hits-slatedb

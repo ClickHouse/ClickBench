@@ -1,0 +1,13 @@
+#!/bin/bash
+set -eu
+: "${PIVOT_PORT:=5432}"
+
+# No ingestion: the table adopts the parquet files in place, so the files the
+# driver downloaded have to stay around for the whole run.
+mkdir -p data
+mv hits_*.parquet data/
+
+sed "s|{source}|$PWD/data|g" create.sql |
+    psql -h 127.0.0.1 -p "$PIVOT_PORT" -U pivot -d postgres -v ON_ERROR_STOP=1 -f -
+
+sync

@@ -1,0 +1,30 @@
+[package]
+name = "hits-slatedb"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# SlateDB is the system under test: an embedded LSM-tree key-value store on
+# top of an object store (the local filesystem here). `zstd` enables SST
+# block compression, `wal_disable` allows turning the WAL off for the bulk
+# load, `foyer` provides the default in-memory block cache.
+# Pinned to v0.15.0 + the fix for a compactor panic that kills long bulk
+# loads ("compaction source view not found in L0", fixed upstream in
+# slatedb/slatedb#2002); switch back to a crates.io release once one
+# containing that fix is published.
+slatedb = { git = "https://github.com/slatedb/slatedb.git", rev = "d0c3d635b6d5d69053f52fe15bdd3ee4487e28ed", default-features = false, features = ["zstd", "wal_disable", "foyer"] }
+# DataFusion provides the SQL frontend; all table data is scanned out of
+# SlateDB through a custom TableProvider.
+datafusion = "55"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+futures = "0.3"
+async-trait = "0.1"
+anyhow = "1"
+# glibc malloc fragments badly under the allocation churn of the load path
+# (row buffers + SST builds across many threads), growing RSS without bound;
+# jemalloc keeps it flat.
+tikv-jemallocator = "0.6"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

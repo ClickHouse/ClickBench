@@ -2,12 +2,10 @@
   "system": "ZigHouse",
   "proprietary": "no",
   "hardware": "cpu",
-  "tuned": "yes",
+  "tuned": "no",
   "tags": [
     "Zig",
     "column-oriented",
-    "embedded",
-    "parquet",
-    "tuned"
+    "ClickHouse-compatible"
   ]
 }

@@ -1,0 +1,12 @@
+{
+  "system": "Regolith",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "key-value",
+    "row-oriented",
+    "embedded"
+  ]
+}

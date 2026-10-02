@@ -123,14 +123,49 @@ retry). The VM installs Docker, downloads the prepared Native files from
 image from source if the version has none (`clickhouse-built:*`, using the tag +
 GCC from `build-from-source/versions.txt`), runs `run-version.sh`, and POSTs the
 result JSON (enriched with the machine type, `kind:"versions-benchmark"`) plus
-the log to `sink.data` on play.clickhouse.com. A server-side materialized view
-turns those into the published report, exactly as the main benchmark does.
+the log to `sink.data` on play.clickhouse.com. Unlike the main benchmark, there
+is no materialized view here: the whole result is one row of `sink.data`, and
+`fetch-results.sh` reads it back out of those rows (see below).
+
+The same thing on demand from GitHub: the **Run the versions benchmark**
+workflow (`.github/workflows/versions-benchmark.yml`, `workflow_dispatch`) takes
+the versions (exact, a prefix, or `master`), the machine types, and optionally
+the datasets / tries / timeout / repository / branch, and launches one machine
+per (version, machine type) with `run-benchmark.sh`. Its defaults for the
+repository and branch are the ones the workflow was dispatched from, so a branch
+can be tested without merging it first.
 
 Notes: all datasets run by default (`datasets="hits ssb mgbench tpch tpcds
 coffeeshop taxi"`); the taxi table is narrowed to the five columns its queries
 use (~15 GB), so it no longer dominates. Pass a subset via `datasets=` to skip
 some. While this branch is unmerged, pass `branch=versions-benchmark-rework`.
 Missing dataset files in the bucket are skipped (their queries report null).
+
+## Collecting the results
+
+`fetch-results.sh` reads the results back from the sink — for each version the
+latest complete run (`argMax(content, time)` over the `kind: versions-benchmark`
+rows) — adds the release date, drops incomplete loads, and writes
+`results/<version>.json`; `apply-minvers.py` then normalises every file to the
+current `queries/*.minver`. The committed result files are produced solely by
+this script; don't edit them by hand.
+
+```bash
+CONNECTION_PARAMS='--user clickbench --password *** --host play.clickhouse.com --secure' \
+    ./fetch-results.sh              # every version; rebuilds results/ from scratch
+SINCE_HOURS=24 ... ./fetch-results.sh   # only what arrived in the last 24 hours
+./generate-results.sh               # rebuild data.generated.js for the page
+```
+
+This runs by itself: the **Collect versions benchmark results** workflow
+(`.github/workflows/versions-collect-results.yml`) calls
+`collect-new-results.sh` every hour, which fetches the last day's results,
+rebuilds `data.generated.js` when they changed, and commits both as an
+automated, auto-merged pull request (branch `auto-results/versions`). Runs that
+sent a log but no complete result — still running, crashed, or an incomplete
+load — are listed in the job summary. Dispatch it manually with `full: true` to
+refetch every version (it refuses to publish if that loses more than a tenth of
+the result files, which would mean a broken query rather than lost results).
 
 ## Query set
 

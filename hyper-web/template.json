@@ -1,0 +1,11 @@
+{
+  "system": "Salesforce Hyper (web)",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "stateless"
+  ]
+}

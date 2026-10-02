@@ -1,0 +1,10 @@
+#!/bin/bash
+# Load hits.parquet into a regolith database at ./db: one key-value pair per
+# row (key = 8-byte big-endian row index, value = compact row encoding).
+set -e
+
+rm -rf db
+hits-regolith/target/release/hits-regolith load hits.parquet db
+
+rm -f hits.parquet
+sync

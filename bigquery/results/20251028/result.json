@@ -10,7 +10,8 @@
         "serverless",
         "column-oriented",
         "gcp",
-        "managed"
+        "managed",
+        "no-cold"
     ],
     "load_time": 777,
     "data_size": 8760000000,

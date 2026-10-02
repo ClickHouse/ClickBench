@@ -1,0 +1,11 @@
+#!/bin/bash
+# Readiness probe. Exit 0 once the engine answers a health check. This is a
+# SELECT 1-level signal that does NOT require the `hits` view, so the initial
+# pre-download (viewless) start still passes. bench_check_loop calls this
+# repeatedly until it succeeds or times out.
+set -e
+# shellcheck disable=SC1091
+source "$(dirname "$0")/config.sh"
+
+curl -sf -o /dev/null "$BASE_URL/healthz" 2>/dev/null \
+  || curl -sf -o /dev/null "$BASE_URL/api/health"

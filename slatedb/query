@@ -1,0 +1,10 @@
+#!/bin/bash
+# Reads a SQL query from stdin and runs it with the hits-slatedb binary
+# (DataFusion SQL over parallel SlateDB range scans).
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (printed by
+# the binary itself; it measures SQL execution, not process startup).
+# Exit non-zero on error.
+set -e
+
+hits-slatedb/target/release/hits-slatedb query db create.sql

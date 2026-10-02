@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Size of the SlateDB database: SSTs, manifests, and checkpoint state.
+du -sb db | awk '{print $1}'

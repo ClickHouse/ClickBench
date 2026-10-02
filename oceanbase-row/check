@@ -1,0 +1,16 @@
+#!/bin/bash
+set -eu
+
+OB_HOME=${OB_HOME:-/opt/oceanbase}
+source "$OB_HOME/bench.env"
+
+# obclient talks to the server over TCP and needs no privileges of its own;
+# only ./start, ./stop and ./install (which writes under $OB_HOME and has to
+# reach the Unix socket) need root.
+#
+# Check the user tenant, not the sys tenant: after a restart the server accepts
+# root@sys well before the tenant's log stream has replayed and its tablets are
+# readable, and a query issued in that window fails.
+out=$("$OB_HOME/obc" -h127.0.0.1 -P"$OB_MYSQL_PORT" -uroot@"$OB_TENANT" \
+        -A -N -e 'SELECT 1' 2>&1)
+[ "$out" = "1" ]

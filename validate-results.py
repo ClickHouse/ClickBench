@@ -38,6 +38,41 @@ def active_result_files(files):
     return set(latest.values())
 
 
+def collect_tags(root):
+    tags = set()
+    paths = list(root.glob("*/template.json")) + list(root.glob("*/results/**/*.json"))
+    for path in paths:
+        try:
+            with path.open(encoding="utf-8") as handle:
+                data = json.load(handle)
+        except (OSError, ValueError):
+            continue
+        if isinstance(data, dict) and isinstance(data.get("tags"), list):
+            tags.update(tag for tag in data["tags"] if isinstance(tag, str))
+    return tags
+
+
+def validate_no_new_tags(root, base, problems):
+    known = collect_tags(base)
+    paths = sorted(root.glob("*/template.json")) + sorted(root.glob("*/results/**/*.json"))
+    for path in paths:
+        try:
+            with path.open(encoding="utf-8") as handle:
+                data = json.load(handle)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(data, dict) or not isinstance(data.get("tags"), list):
+            continue
+        for tag in data["tags"]:
+            if isinstance(tag, str) and tag not in known:
+                add(
+                    problems,
+                    "error",
+                    path.relative_to(root),
+                    f"new tag {tag!r} is not allowed; use one of the existing tags",
+                )
+
+
 def is_iso_date(value):
     if not isinstance(value, str) or not ISO_DATE_RE.match(value):
         return False
@@ -138,6 +173,7 @@ def validate_file(root, path, active, problems):
 def main():
     parser = argparse.ArgumentParser(description="Validate main ClickBench result JSON files.")
     parser.add_argument("root", nargs="?", default=".", help="repository root")
+    parser.add_argument("--base", help="checkout of the base revision; tags not present there are rejected")
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -147,6 +183,9 @@ def main():
 
     for path in files:
         validate_file(root, path, path in active_files, problems)
+
+    if args.base:
+        validate_no_new_tags(root, Path(args.base).resolve(), problems)
 
     warnings = [problem for problem in problems if problem[0] == "warning"]
     errors = [problem for problem in problems if problem[0] == "error"]

@@ -63,8 +63,18 @@ RUN git clone https://github.com/hyrise/hyrise.git \
 # unencoded value segments, which would make the snapshot raw-sized and make
 # it re-import unencoded. See ./load.
 WORKDIR /opt/hyrise/cmake-build-release
+# ninja's default parallelism = nproc kills cc1plus on 16 GiB / 4-vCPU
+# playground VMs: aggregate_hash.cpp under -O3 with heavy template
+# instantiation peaks at ~4 GB per translation unit, so 4 concurrent
+# cc1plus × ~4 GB > 16 GB and the guest kernel SIGKILLs the loser with
+# "fatal error: Killed signal terminated program cc1plus". Cap to 2 —
+# hyriseServer/hyriseConsole still build in ~15 min at that width.
+# Auto-widen when the host has enough RAM per core to safely parallelize.
 RUN cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DNO_LTO=${NO_LTO} .. \
-    && ninja hyriseServer hyriseConsole
+    && jobs=2 \
+    && total_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo) \
+    && if [ "$total_kb" -gt $((24 * 1024 * 1024)) ]; then jobs=$(nproc); fi \
+    && ninja -j"$jobs" hyriseServer hyriseConsole
 
 FROM ubuntu:25.04
 ENV DEBIAN_FRONTEND=noninteractive

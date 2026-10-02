@@ -1,4 +1,8 @@
 #!/bin/bash
 set -e
 
-du -sb zighouse-store 2>/dev/null | awk '{ print $1 }' || du -sk zighouse-store | awk '{ print $1 * 1024 }'
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+: "${ZIGHOUSE_DATA_DIR:=${SCRIPT_DIR}/zighouse-store}"
+
+du -sb "$ZIGHOUSE_DATA_DIR" 2>/dev/null | awk '{ print $1 }' \
+    || du -sk "$ZIGHOUSE_DATA_DIR" | awk '{ print $1 * 1024 }'

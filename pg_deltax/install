@@ -20,10 +20,27 @@ sudo apt-get update -y
 sudo apt-get install -y postgresql-$PGVERSION postgresql-client-$PGVERSION postgresql-server-dev-$PGVERSION
 
 # PostgreSQL runs with stock configuration except work_mem=64MB, the same
-# value the vanilla postgresql/ benchmark uses.
-sudo tee /etc/postgresql/$PGVERSION/main/conf.d/clickbench.conf <<EOF
+# value the vanilla postgresql/ benchmark uses. On the 16 GiB playground
+# VM we also cap shared_buffers + parallel-workers so pg_deltax's own
+# parallel-decoder pipeline doesn't push the backend past physical RAM
+# during the direct-backfill COPY (previously visible as
+# "server closed the connection unexpectedly" after ~6 min of load).
+# Skip the overrides on hosts with ≥24 GiB RAM so the standalone
+# benchmark keeps its historical defaults.
+mem_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo)
+if [ "$mem_kb" -lt $((24 * 1024 * 1024)) ]; then
+    sudo tee /etc/postgresql/$PGVERSION/main/conf.d/clickbench.conf <<EOF
+work_mem=64MB
+shared_buffers=1GB
+max_worker_processes=8
+max_parallel_workers=2
+max_parallel_workers_per_gather=2
+EOF
+else
+    sudo tee /etc/postgresql/$PGVERSION/main/conf.d/clickbench.conf <<EOF
 work_mem=64MB
 EOF
+fi
 
 # pg_deltax must be preloaded.
 if ! sudo grep -q "shared_preload_libraries.*pg_deltax" /etc/postgresql/$PGVERSION/main/postgresql.conf; then

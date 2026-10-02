@@ -5,7 +5,6 @@
   "tuned": "no",
   "tags": [
     "Java",
-    "column-oriented",
-    "lukewarm-cold-run"
+    "column-oriented"
   ]
 }

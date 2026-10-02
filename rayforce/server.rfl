@@ -1,0 +1,28 @@
+; Init script for the Rayforce IPC server (see ./start).
+;
+; Opening the splayed table is eager: Rayforce validates every column file and
+; loads the symbol dictionary up front, so this costs seconds-to-minutes on the
+; 100M-row dataset. Doing it here, once per server start, keeps that cost out of
+; the per-query numbers instead of paying it in every one of the 129 query
+; invocations a benchmark run makes.
+;
+; ./start runs before ./load in the benchmark driver, so the table directory may
+; not exist yet on the very first start; `try` keeps the server up in that case.
+; The driver stops and starts the server again before each query, and that later
+; start picks the table up.
+;
+; The listening socket only starts accepting after this script returns, which is
+; exactly the readiness signal ./check needs.
+
+(set hits (try (.db.splayed.get "hits") (fn [e] (println "hits not loaded yet") 0)))
+(set hits-ready (== (type hits) 'TABLE))
+(if hits-ready (println (format "loaded % rows" (count hits))) 0)
+
+; Once ./hits exists on disk a failed open is fatal, and ./start says so with
+; RAYFORCE_REQUIRE_TABLE=1. Staying up with `hits` bound to 0 would look healthy
+; to any liveness probe, while query 1 — `(count hits)` — returned 1 in
+; microseconds and got recorded as a valid timing (every other query would error
+; out). Exiting instead keeps ./check failing, which the driver reports as a
+; start failure rather than as benchmark results.
+(set fatal (and (not hits-ready) (== (.os.getenv "RAYFORCE_REQUIRE_TABLE") "1")))
+(if fatal (do (println "./hits exists but could not be opened; refusing to serve") (exit 1)) 0)

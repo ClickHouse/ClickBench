@@ -1,0 +1,33 @@
+#!/bin/bash
+set -e
+
+# Build the benchmark harness (regolith + DataFusion embedded in one binary).
+# Idempotent: skip the build if the binary is already present.
+
+if [ -x hits-regolith/target/release/hits-regolith ]; then
+    exit 0
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rust-init.sh
+    bash rust-init.sh -y
+fi
+export HOME=${HOME:=~}
+# shellcheck disable=SC1091
+source "$HOME/.cargo/env"
+
+# Low-memory hosts need swap to compile DataFusion.
+if [ "$(free -g | awk '/^Mem:/{print $2}')" -lt 12 ]; then
+    if [ "$(swapon --noheadings --show | wc -l)" -eq 0 ]; then
+        sudo fallocate -l 8G /swapfile
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+    fi
+fi
+
+# gcc + make: tikv-jemalloc-sys compiles jemalloc's C sources at build time.
+sudo apt-get update -y
+sudo apt-get install -y gcc make
+
+cargo build --release --locked --manifest-path hits-regolith/Cargo.toml

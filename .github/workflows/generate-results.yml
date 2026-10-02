@@ -1,12 +1,23 @@
 name: "Build the website"
 on:
   workflow_dispatch:  # This allows manual trigger from the UI
+  # Most pushes to main come from automation authenticated with GITHUB_TOKEN
+  # (the auto-merged `auto-results/*` PRs and the daily ClickHouse Cloud
+  # commit). GitHub does not emit workflow-triggering events for those, so the
+  # `push` trigger below only fires for human pushes. The schedule makes sure
+  # the site picks up automated results as well.
+  schedule:
+    - cron: '25 * * * *'
   push:
     branches:
       - main
 
 permissions:
   contents: write
+
+# The scheduled run and a push run must not race on `git push`.
+concurrency:
+  group: generate-results
 
 jobs:
   build:
@@ -28,5 +39,7 @@ jobs:
         if git status | grep -q modified
         then
           git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
+          # Results can land between the checkout and the push.
+          git pull --rebase
           git push
         fi

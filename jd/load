@@ -1,0 +1,165 @@
+#!/bin/bash
+# Load hits.csv into a Jd database via Jd's CSV loader, using an
+# explicit column schema instead of csvcdefs' auto-inference.
+#
+# Why explicit: the high-level csvload_jd_ samples the first 5000
+# rows to pick types, then csvscan widens any column it inferred as
+# `byte` to the full-file max width. ClickBench has very sparse
+# text columns (OpenstatServiceName, SocialNetwork, …) that look
+# empty in the sample → typed as `byte`, then later scan widens
+# them to hundreds of chars × 100M rows. With 30 such columns the
+# splayed table grew past 500 GB during the load and segfaulted.
+# Declaring text columns as `varbyte` (variable-length, per-row
+# offset + concatenated data) keeps storage proportional to actual
+# string content.
+set -e
+
+# Reset any prior csvload DB so we measure a clean load.
+# J's ~temp resolves to /tmp under root (cloud-init) and to
+# ~/j9.6-user/temp under a normal user — see j9.6/bin/profile.ijs.
+rm -rf "$HOME/j9.6-user/temp/jd/csvload" \
+       "${TMPDIR:-/tmp}/jd/csvload" \
+       "$HOME/j9.6/user/temp/jd/csvload"
+
+ijconsole </dev/null <<'JEOF'
+load 'data/jd/jd'
+
+NB. Open (create on first use) the csvload DB and prep its jdcsv folder.
+NB. We replicate what csvprepare_jd_ does — admin + jdcsvfolder + write the
+NB. csvlink — then write our own cdefs file and call csvrd directly,
+NB. skipping csvcdefs (auto-type) and csvscan (byte-width widening).
+csvadmin_jd_ 'csvload'
+jdcsvfolder_jd_ ''
+
+'hits.csv' fwrite CSVFOLDER,'hits.csvlink'
+
+NB. Column schema. Types:
+NB.   int       — 8-byte signed; all SMALLINT / INTEGER / BIGINT columns.
+NB.               (Jd's int1/int2/int4 leave per-row data as n,x char
+NB.                matrices and the `<>` predicate then sees a shape-2 col
+NB.                vs a shape-0 scalar, so we use the flat 8-byte JINT
+NB.                form for every numeric column.)
+NB.   varbyte   — variable-length string; TEXT / VARCHAR / CHAR
+NB.   edate     — 8-byte epoch-nanos; DATE (EventDate)
+NB.   edatetime — 8-byte epoch-nanos; TIMESTAMP (EventTime, ClientEventTime,
+NB.               LocalEventTime). Iso8601-char parses the `YYYY-MM-DD HH:MM:SS`
+NB.               form in the csv.
+cdefs =: 0 : 0
+1  WatchID  int
+2  JavaEnable  int
+3  Title  varbyte
+4  GoodEvent  int
+5  EventTime  edatetime
+6  EventDate  edate
+7  CounterID  int
+8  ClientIP  int
+9  RegionID  int
+10  UserID  int
+11  CounterClass  int
+12  OS  int
+13  UserAgent  int
+14  URL  varbyte
+15  Referer  varbyte
+16  IsRefresh  int
+17  RefererCategoryID  int
+18  RefererRegionID  int
+19  URLCategoryID  int
+20  URLRegionID  int
+21  ResolutionWidth  int
+22  ResolutionHeight  int
+23  ResolutionDepth  int
+24  FlashMajor  int
+25  FlashMinor  int
+26  FlashMinor2  varbyte
+27  NetMajor  int
+28  NetMinor  int
+29  UserAgentMajor  int
+30  UserAgentMinor  varbyte
+31  CookieEnable  int
+32  JavascriptEnable  int
+33  IsMobile  int
+34  MobilePhone  int
+35  MobilePhoneModel  varbyte
+36  Params  varbyte
+37  IPNetworkID  int
+38  TraficSourceID  int
+39  SearchEngineID  int
+40  SearchPhrase  varbyte
+41  AdvEngineID  int
+42  IsArtifical  int
+43  WindowClientWidth  int
+44  WindowClientHeight  int
+45  ClientTimeZone  int
+46  ClientEventTime  edatetime
+47  SilverlightVersion1  int
+48  SilverlightVersion2  int
+49  SilverlightVersion3  int
+50  SilverlightVersion4  int
+51  PageCharset  varbyte
+52  CodeVersion  int
+53  IsLink  int
+54  IsDownload  int
+55  IsNotBounce  int
+56  FUniqID  int
+57  OriginalURL  varbyte
+58  HID  int
+59  IsOldCounter  int
+60  IsEvent  int
+61  IsParameter  int
+62  DontCountHits  int
+63  WithHash  int
+64  HitColor  varbyte
+65  LocalEventTime  edatetime
+66  Age  int
+67  Sex  int
+68  Income  int
+69  Interests  int
+70  Robotness  int
+71  RemoteIP  int
+72  WindowName  int
+73  OpenerName  int
+74  HistoryLength  int
+75  BrowserLanguage  varbyte
+76  BrowserCountry  varbyte
+77  SocialNetwork  varbyte
+78  SocialAction  varbyte
+79  HTTPError  int
+80  SendTiming  int
+81  DNSTiming  int
+82  ConnectTiming  int
+83  ResponseStartTiming  int
+84  ResponseEndTiming  int
+85  FetchTiming  int
+86  SocialSourceNetworkID  int
+87  SocialSourcePage  varbyte
+88  ParamPrice  int
+89  ParamOrderID  varbyte
+90  ParamCurrency  varbyte
+91  ParamCurrencyID  int
+92  OpenstatServiceName  varbyte
+93  OpenstatCampaignID  varbyte
+94  OpenstatAdID  varbyte
+95  OpenstatSourceID  varbyte
+96  UTMSource  varbyte
+97  UTMMedium  varbyte
+98  UTMCampaign  varbyte
+99  UTMContent  varbyte
+100  UTMTerm  varbyte
+101  FromTag  varbyte
+102  HasGCLID  int
+103  RefererHash  int
+104  URLHash  int
+105  CLID  int
+options , LF " NO 0 iso8601-char
+)
+
+cdefs fwrite CSVFOLDER,'hits.cdefs'
+
+NB. Read csv into the `hits` table using our cdefs.
+jd 'csvrd hits.csvlink hits'
+jd 'csvreport /f hits'
+exit ''
+JEOF
+
+rm -f hits.csv
+sync

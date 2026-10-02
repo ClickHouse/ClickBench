@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+curl -sS http://127.0.0.1:8000/data-size | python3 -c 'import json,sys; print(json.load(sys.stdin)["bytes"])'

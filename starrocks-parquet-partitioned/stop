@@ -1,0 +1,6 @@
+#!/bin/bash
+
+SR_DIR=$(cat .sr_dir 2>/dev/null) || exit 0
+"$SR_DIR/fe/bin/stop_fe.sh" 2>/dev/null || true
+"$SR_DIR/be/bin/stop_be.sh" 2>/dev/null || true
+exit 0

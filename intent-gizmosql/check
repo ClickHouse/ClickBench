@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# A simple TCP probe is the cheapest health check; the JDBC arrow-flight URI
+# is auth-gated, so we just check the listener is up.
+exec nc -z localhost 31337

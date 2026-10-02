@@ -45,7 +45,10 @@ def _terminate(*_):
 signal.signal(signal.SIGTERM, _terminate)
 signal.signal(signal.SIGINT, _terminate)
 
-with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU) as hyper:
+with HyperProcess(
+    telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU,
+    parameters={"single_file_storage_implementation": "psync"},
+) as hyper:
     # Keep-alive: hold hits.hyper attached for the server's lifetime so its
     # buffer pool isn't torn down between per-try ./query processes. Skipped
     # on the pre-load ./start (file not yet created). Established BEFORE

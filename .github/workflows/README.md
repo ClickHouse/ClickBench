@@ -16,6 +16,8 @@ apart from the runs of main and are excluded by `collect-results.sh`.
 | `benchmark-daily.yml` | daily, 02:00 UTC | the ClickHouse variants, each on the whole set of machine types, from main |
 | `benchmark-manual.yml` | manual | any systems, machines, repository and branch |
 | `benchmark-pr.yml` | pull requests | the systems whose directories the PR changes (results and *.md files don't count), from the PR's repository and branch, after manual approval. A `machine:<ec2-type>` label overrides the default c6a.4xlarge (one run per label; `machine:all`, `machine:all-amd` and `machine:all-arm` expand to the daily-run machine sets); adding such a label relaunches the benchmark |
+| `versions-benchmark.yml` | manual | the [versions benchmark](../../versions/README.md) (`versions/run-benchmark.sh`): one machine per (ClickHouse version, machine type), for an exact version, a version prefix, or `master` (the development build, installed on the machine with `curl https://clickhouse.com/ \| sh`). Sends its result to the same sink, tagged `kind: versions-benchmark` |
+| `versions-collect-results.yml` | hourly | nothing - it collects the versions benchmark results of the last day (`versions/collect-new-results.sh`). That benchmark has no materialized view: every machine POSTs its whole result JSON to `sink.data` with `kind: versions-benchmark`, so the results are read out of those rows by `versions/fetch-results.sh`, `versions/data.generated.js` is rebuilt from them, and the changes are committed as one automated, auto-merged pull request (branch `auto-results/versions`). Runs that sent a log but no complete result are reported in the job summary |
 | `collect-results.yml` | every 30 minutes | nothing - it collects the runs of the last day from the sink database (`collect-new-results.py`): commits result files and posts pastila.nl log links to the corresponding PR, or maintains one automated results PR per system for the runs of main |
 
 ## Setup
@@ -41,7 +43,8 @@ apart from the runs of main and are excluded by `collect-results.sh`.
    `ec2:DescribeImages`, and `ec2:DescribeInstanceTypes`.
 
    The role's ARN and the region (us-east-1) are set in
-   `.github/actions/launch-benchmark/action.yml`.
+   `.github/actions/launch-benchmark/action.yml` and, for the versions
+   benchmark, in `.github/workflows/versions-benchmark.yml`.
 
 2. An environment named `benchmark-approval` with required reviewers. It
    gates the PR workflow: nothing is launched for a pull request until a

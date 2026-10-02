@@ -1,0 +1,7 @@
+#!/bin/bash
+# Storage size in bytes: CtrlB queries the parquet in place, so its "size" is
+# the parquet file itself (same basis as the other in-place Parquet engines).
+set -e
+# shellcheck disable=SC1091
+source "$(dirname "$0")/config.sh"
+wc -c < "$PARQUET_PATH"

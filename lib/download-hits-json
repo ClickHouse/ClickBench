@@ -1,0 +1,13 @@
+#!/bin/bash
+# Standalone version: the ClickBench Playground bakes a pre-decompressed
+# hits.json into /opt/clickbench/datasets_ro and symlinks to it here. Outside
+# the Playground that path doesn't exist, and parseable/load already falls
+# back to downloading+decompressing hits.json.gz itself, so this script is a
+# no-op there. Kept as a stub only so bench_download() has something to call.
+set -e
+if [ -d /opt/clickbench/datasets_ro ]; then
+    dir="${1:-.}"
+    mkdir -p "$dir"
+    cd "$dir"
+    ln -sf /opt/clickbench/datasets_ro/hits.json hits.json
+fi

@@ -1,0 +1,9 @@
+; Stream hits.csv into a splayed on-disk table under ./hits.
+;
+; `.csv.splayed` mmaps the CSV, parses chunks in parallel and writes one column
+; file per field plus the `.sym` dictionary, without materialising the whole
+; table in memory. The name vector implies the input has no header row, which is
+; the shape of the published hits.csv.
+(load "create.rfl")
+(.csv.splayed hits-names hits-types "hits.csv" "hits")
+(exit 0)

@@ -8,9 +8,11 @@ PROVIDER=aws
 REGION='ap-southeast-2'
 PARALLEL_REPLICA=false
 
-for REPLICAS in 1
+# The Scale tier supports single-replica services of every size,
+# so all replica counts run over the full range of memory sizes.
+for REPLICAS in 1 2 3
 do
-    for MEMORY in 8 12
+    for MEMORY in 8 12 16 32 64 120 236 356
     do
         export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
         ./cloud-api.sh &
@@ -18,30 +20,10 @@ do
     done
 done
 
-for REPLICAS in 2 3
-do
-    for MEMORY in 8 12 16 32 64 120 236 356
-    do
-        export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
-        ./cloud-api.sh &
-        sleep 10
-    done
-done
-
 PROVIDER=gcp
 REGION='us-east1'
 
-for REPLICAS in 1
-do
-    for MEMORY in 8 12
-    do
-        export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
-        ./cloud-api.sh &
-        sleep 10
-    done
-done
-
-for REPLICAS in 2 3
+for REPLICAS in 1 2 3
 do
     for MEMORY in 8 12 16 32 64 120 236 356
     do
@@ -54,17 +36,7 @@ done
 PROVIDER=azure
 REGION='westus3'
 
-for REPLICAS in 1
-do
-    for MEMORY in 8 12
-    do
-        export PROVIDER REPLICAS REGION MEMORY PARALLEL_REPLICA
-        ./cloud-api.sh &
-        sleep 10
-    done
-done
-
-for REPLICAS in 2 3
+for REPLICAS in 1 2 3
 do
     for MEMORY in 8 12 16 32 64 120 236 356
     do

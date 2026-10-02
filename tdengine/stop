@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Stop the gateway first so no request arrives at a server that is going
+# down. SIGTERM makes taosd commit its write buffers and close the vnodes;
+# a kill would leave a WAL replay for the next ./start.
+sudo systemctl stop taosadapter 2>/dev/null || true
+sudo systemctl stop taosd 2>/dev/null || true
+
+# systemctl stop returns when the unit is inactive, but a crashed taosd
+# leaves the unit "failed" and systemd refuses to start it again after five
+# restarts in a row ("Start request repeated too quickly"). Clear that here
+# so the next ./start is not a no-op.
+sudo systemctl reset-failed taosd taosadapter 2>/dev/null || true

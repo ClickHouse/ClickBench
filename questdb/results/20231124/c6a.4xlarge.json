@@ -10,7 +10,7 @@
     "tags": [
         "Java",
         "time-series",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 878,
     "data_size": 95916929061,

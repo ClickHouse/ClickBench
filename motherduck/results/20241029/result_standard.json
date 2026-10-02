@@ -7,7 +7,8 @@
         "C++",
         "column-oriented",
         "DuckDB derivative",
-        "serverless"
+        "serverless",
+        "no-cold"
     ],
     "load_time": 57,
     "data_size": 23620000000,

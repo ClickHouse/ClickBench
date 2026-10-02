@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+# Superfiles (Parquet + embedded indexes) + catalog metadata under data/.
+du -sb data | cut -f1

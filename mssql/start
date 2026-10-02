@@ -18,10 +18,18 @@ if ! sudo docker ps -a --format '{{.Names}}' | grep -qx mssql1; then
     # would double disk usage during load: ~75 GB on the host + the copy in
     # the container's writable layer). The mssql process runs as UID 10001
     # in the container, so ./load chmods hits.tsv to 644 before bcp runs.
+    # Cap SQL Server's Max Server Memory to leave enough headroom for the
+    # guest kernel + docker + the load-side bcp process. SQL Server on
+    # ClickBench happily grows to the full container memory; on a 16 GiB
+    # microVM that ends in an OOM-kill (load exited rc=137 after ~19 min
+    # of columnstore build). Scale to 75% of MemTotal, floor 8 GiB.
+    mem_mib=$(awk '/MemTotal/{ printf "%d", $2/1024 * 75/100 }' /proc/meminfo)
+    [ "$mem_mib" -lt 8192 ] && mem_mib=8192
     sudo docker run -d --name mssql1 \
         -e 'ACCEPT_EULA=Y' \
         -e "MSSQL_SA_PASSWORD=$PASSWORD" \
         -e 'MSSQL_PID=Developer' \
+        -e "MSSQL_MEMORY_LIMIT_MB=$mem_mib" \
         -p 1433:1433 \
         -v "$DATA_DIR":/clickbench \
         mcr.microsoft.com/mssql/server:2025-latest >/dev/null

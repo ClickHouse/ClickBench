@@ -1,6 +1,10 @@
 #!/bin/bash
 set -eu
 
+# Must match install/stop/data-size: the packaged dbfarm, served by
+# monetdbd running as the `monetdb` user (11.55 refuses to run as root).
+DBFARM=/var/monetdb5/dbfarm
+
 # Idempotent: if mserver is already serving the test DB, do nothing.
 # Both user and password come from /root/.monetdb (stamped by install).
 # Don't pass -u — that disables the file's password and forces an
@@ -10,19 +14,23 @@ if echo 'SELECT 1;' | \
     exit 0
 fi
 
-# After a Firecracker snapshot+restore monetdbd's pid file
-# (.merovingian.lock + .gdk_lock) is preserved on disk but the actual
-# process is gone. `monetdbd start` then exits with "another monetdbd
-# is already running" and doesn't relaunch, so `mclient` never gets a
-# server to talk to and ./check spins for 15 minutes. Force a clean
-# slate: kill any leftover mserver/monetdbd, clear lock files, then
-# (re)start.
+# /run is a tmpfs: after a reboot the pidfile directory monetdbd's
+# properties point at is gone until systemd-tmpfiles recreates it.
+sudo mkdir -p /run/monetdb
+sudo chown monetdb:monetdb /run/monetdb
+
+# A hard kill (or a Firecracker snapshot+restore) leaves monetdbd's
+# lock files (.merovingian.lock + .gdk_lock) on disk while the
+# processes themselves are gone. `monetdbd start` then exits with
+# "another monetdbd is already running" and doesn't relaunch, so
+# `mclient` never gets a server to talk to and ./check spins for its
+# whole timeout. Force a clean slate when nothing is actually alive.
 if ! pgrep -x monetdbd >/dev/null; then
-    sudo rm -f /var/lib/monetdb/.merovingian.lock /var/lib/monetdb/.gdk_lock
+    sudo rm -f "$DBFARM/.merovingian.lock" "$DBFARM/.gdk_lock"
     sudo pkill -KILL -x mserver5 2>/dev/null || true
 fi
 
-sudo monetdbd start /var/lib/monetdb || true
+sudo -u monetdb monetdbd start "$DBFARM" || true
 
 # After daemon-side restart the test DB lands "stopped"; release +
 # start to bring it back online. (release alone is not enough — it

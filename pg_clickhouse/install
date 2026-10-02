@@ -26,6 +26,8 @@ sudo apt-get install -y \
     libcurl4-openssl-dev \
     uuid-dev \
     libssl-dev \
+    liblz4-dev \
+    libzstd-dev \
     make \
     cmake \
     g++ \
@@ -51,5 +53,10 @@ EOF
 
 sudo systemctl restart postgresql@$PGVERSION-main
 
-# Build/install the pg_clickhouse extension (idempotent on rerun).
-pgxn install pg_clickhouse || true
+# Build/install the pg_clickhouse extension. Not idempotent-swallowed
+# any more — pgxn silently reports a failed compile with rc=2 while the
+# install phase returns rc=0 to the harness, and the caller only finds
+# out at load time via `extension "pg_clickhouse" is not available`.
+# `pgxn install` re-fetches + rebuilds cheaply on rerun, so it's safe
+# to let a real error propagate.
+sudo pgxn install pg_clickhouse

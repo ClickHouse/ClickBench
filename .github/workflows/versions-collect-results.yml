@@ -1,0 +1,50 @@
+name: "Collect versions benchmark results"
+
+on:
+  workflow_dispatch:
+    inputs:
+      since_hours:
+        description: "Look at the results that arrived in the last N hours"
+        default: "24"
+      full:
+        description: "Refetch every version and rebuild versions/results from scratch"
+        type: boolean
+        default: false
+  schedule:
+    - cron: '23 * * * *'
+
+permissions:
+  contents: write       # To push the results branch.
+  pull-requests: write  # To open and merge the automated pull request.
+
+# Two overlapping runs would fetch and publish the same results twice.
+concurrency:
+  group: versions-collect-results
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # The versions benchmark has no materialized view: results are read out of the
+      # raw sink.data rows (kind: versions-benchmark) with clickhouse-client.
+      - name: Install the ClickHouse client
+        working-directory: ${{ runner.temp }}   # not the checkout: it must stay clean
+        run: |
+          curl -fsSL https://clickhouse.com/ | sh
+          sudo ln -sf "$PWD/clickhouse" /usr/local/bin/clickhouse-client
+
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          CLICKBENCH_DB_PASSWORD: ${{ secrets.CLICKBENCH_DB_PASSWORD }}
+          SINCE_HOURS: ${{ inputs.since_hours || '24' }}
+          FULL: ${{ inputs.full && '1' || '' }}
+        run: |
+          if [ -z "$CLICKBENCH_DB_PASSWORD" ]; then
+              echo "CLICKBENCH_DB_PASSWORD is not set. Skipping."
+              exit 0
+          fi
+          export CONNECTION_PARAMS="--user clickbench --password $CLICKBENCH_DB_PASSWORD --host play.clickhouse.com --secure"
+          ./versions/collect-new-results.sh

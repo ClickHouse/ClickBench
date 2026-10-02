@@ -1,0 +1,38 @@
+#!/bin/bash
+set -eu
+
+OG_ROOT=${OG_ROOT:-/opt/opengauss}
+OG_USER=${OG_USER:-omm}
+
+# The checkout lives under root's home on the benchmark VMs, which omm cannot
+# traverse, so every file reaches gsql through stdin rather than by path.
+og() { sudo -u "$OG_USER" "$OG_ROOT/run" "$@"; }
+
+# Drop+create the test DB so this is idempotent.
+#
+# DBCOMPATIBILITY = 'PG' is the important part. openGauss defaults to 'A'
+# (Oracle) compatibility, where the empty string *is* NULL: loading hits.tsv
+# into a NOT NULL column then fails outright, and `WHERE SearchPhrase <> ''`
+# would stop meaning what it means in every other entry.
+og gsql -d postgres -c "DROP DATABASE IF EXISTS test"
+og gsql -d postgres -c "CREATE DATABASE test DBCOMPATIBILITY = 'PG'"
+
+og gsql -v ON_ERROR_STOP=1 -d test -t < create.sql
+
+# TRUNCATE and COPY FREEZE in one transaction, as in the postgresql entry:
+# openGauss only allows COPY FREEZE when the table was created or truncated
+# in the current subtransaction.
+{
+    echo 'BEGIN;'
+    echo 'TRUNCATE TABLE hits;'
+    echo "COPY hits FROM STDIN WITH (FREEZE);"
+    cat hits.tsv
+    echo '\.'
+    echo 'COMMIT;'
+} | og gsql -v ON_ERROR_STOP=1 -d test -t
+
+og gsql -v ON_ERROR_STOP=1 -d test -t -c 'ANALYZE hits'
+
+# Only remove inputs once load completes successfully.
+rm -f hits.tsv
+sync

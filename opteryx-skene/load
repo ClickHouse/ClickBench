@@ -1,0 +1,19 @@
+#!/bin/bash
+# ClickBench ships parquet; skene is Opteryx's native format, so the dataset has
+# to be converted before it can be queried. That conversion IS the load step,
+# and its wall-clock is what `Load time` reports -- the same shape as any entry
+# that ingests the source data into a native store.
+set -e
+
+mkdir -p parquet_src
+mv hits_*.parquet parquet_src/ 2>/dev/null || true
+
+# lz4 is the engine's read-first ("performance") posture. See README.md: it is
+# deliberately NOT the codec the published parquet corpus uses, so this entry
+# and `Opteryx (Parquet, partitioned)` differ in codec as well as in format.
+"$HOME/opteryx_venv/bin/python" convert.py parquet_src hits lz4
+
+# Drop the source once converted: `data-size` must measure the skene dataset,
+# not skene plus a parquet copy, and 500 GB does not need to hold both.
+rm -rf parquet_src
+sync

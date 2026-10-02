@@ -7,7 +7,7 @@
     "hardware": "cpu",
     "tuned": "no",
     "comment": "",
-    "tags": ["column-oriented", "lukewarm-cold-run", "stateless"],
+    "tags": ["column-oriented", "no-cold", "stateless"],
     "load_time": null,
     "data_size": 14779976446,
     "result": [
