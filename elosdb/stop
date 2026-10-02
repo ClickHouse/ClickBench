@@ -1,0 +1,12 @@
+#!/bin/bash
+# stop — SIGTERM the server and wait until it is gone, so the driver's drop_caches
+# finds no process still holding the store's pages mapped.
+. "$(dirname "$0")/common.sh"
+cd "$ELOSDB_HOME"
+if [ -f elosdb.pid ]; then kill "$(cat elosdb.pid)" 2>/dev/null || true; fi
+pkill -f "^$ELOSDB_BIN --port " 2>/dev/null || true
+for _ in $(seq 1 60); do
+  pgrep -f "^$ELOSDB_BIN --port " >/dev/null 2>&1 || break
+  sleep 0.5
+done
+rm -f elosdb.pid

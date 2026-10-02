@@ -1,0 +1,12 @@
+{
+  "system": "elosdb",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "Rust",
+    "column-oriented",
+    "PostgreSQL compatible"
+  ]
+}

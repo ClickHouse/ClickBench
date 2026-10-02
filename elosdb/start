@@ -1,0 +1,33 @@
+#!/bin/bash
+# start — one elosdb on 127.0.0.1:$ELOSDB_PORT. Returns at once; ./check is the
+# readiness signal.
+#
+# `tuned: no` is a claim this script has to keep, so the only flags are the two
+# facts that are about THIS deployment: which port to answer on and where the data
+# is. Everything else is a default in the binary — every core, the workers pinned,
+# and a memory ceiling read from the cgroup.
+. "$(dirname "$0")/common.sh"
+cd "$ELOSDB_HOME"
+./check >/dev/null 2>&1 && exit 0
+
+nohup "$ELOSDB_BIN" --port "$ELOSDB_PORT" --data-dir "$ELOSDB_DATA/elosdb" \
+  --log "$ELOSDB_HOME/serve.tsv" >> "$ELOSDB_HOME/serve.log" 2>&1 &
+echo $! > elosdb.pid
+
+# One banner line reports whether large allocations got 2 MB pages. When they do
+# not, a quarter of the queries run several times slower with nothing else in the
+# output saying so — so a run that cannot make that claim fails here, and a line
+# that never arrives fails too, because a dead server would otherwise read as a pass.
+seen=""
+for _ in $(seq 1 40); do
+  grep -q "^  malloc:" serve.log && { seen=1; break; }
+  sleep 0.25
+done
+if [ -z "$seen" ]; then
+  echo "start: elosdb printed no 'malloc:' banner line in 10 s — see serve.log" >&2
+  exit 1
+fi
+if grep -q "^  malloc: WARNING" serve.log; then
+  echo "start: elosdb could not get 2 MB pages — see serve.log" >&2
+  exit 1
+fi
