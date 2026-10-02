@@ -21,9 +21,9 @@ cd "$(dirname "$0")"
 # on an x86 box, from the same source). An empty digest means no asset for that arch,
 # and install refuses below rather than fetching a file it cannot check.
 RELEASE_TAG_aarch64="v0.1.9"
-RELEASE_SHA256_aarch64="0f69fac715b5fecca7f225681a32e6533c3a350b0a38f76f93ffa0449714f509"
+RELEASE_SHA256_aarch64="928f28129241cae5b06d6d107ff419f0e029e6da284ee65b60b598e28aa01cf1"
 RELEASE_TAG_x86_64="v0.1.9"
-RELEASE_SHA256_x86_64="1ec9f68b8725ed22b1e5234cb79616405aeea6a72133bfc1919b1bea6f595506"
+RELEASE_SHA256_x86_64="40981ca649fc58b8d30f4323f412b66f326316560c3b2c7709092c7dc02439fb"
 release_url() { echo "https://github.com/decster/elosdb/releases/download/$2/elosdb-$2-linux-$1"; }
 
 # THE ARTIFACT NAMES ITS ARCHITECTURE AND ITS CORE. aarch64 is built -mcpu=neoverse-v2
