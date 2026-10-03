@@ -1,0 +1,12 @@
+{
+  "system": "Turso",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "embedded",
+    "row-oriented",
+    "SQLite compatible"
+  ]
+}
