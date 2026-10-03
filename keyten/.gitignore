@@ -1,0 +1,7 @@
+myenv/
+__pycache__/
+hits.parquet
+hits.k10dir/
+server.pid
+server.log
+result.csv

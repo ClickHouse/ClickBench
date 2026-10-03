@@ -1,0 +1,7 @@
+#!/bin/bash
+set -eu
+if [ -f server.pid ] && kill -0 "$(cat server.pid)" 2>/dev/null; then
+    exit 0
+fi
+nohup myenv/bin/python "${KEYTEN_SERVER_SCRIPT:-server.py}" >server.log 2>&1 &
+echo $! >server.pid

@@ -1,0 +1,14 @@
+#!/bin/bash
+set -eu
+if [ -f server.pid ]; then
+    pid=$(cat server.pid)
+    if kill -0 "$pid" 2>/dev/null; then
+        kill "$pid"
+        for _ in $(seq 1 10); do
+            if ! kill -0 "$pid" 2>/dev/null; then break; fi
+            sleep 1
+        done
+        kill -9 "$pid" 2>/dev/null || true
+    fi
+    rm -f server.pid
+fi
