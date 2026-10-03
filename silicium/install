@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# SILICIUM CLICKBENCH HARNESS — INSTALL (RUNTIME SETUP)
+# License: SCSL-1.0 / MIT Evaluation License
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Architecture Guard: Silicium requires x86_64 for AVX2/AVX-512 micro-kernels
+if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "amd64" ]; then
+    echo "silicium: x86_64 architecture required for AVX2/AVX-512 kernels; current architecture is $(uname -m). Skipping." >&2
+    exit 1
+fi
+
+echo "================================================================================"
+echo "⚡ SILICIUM CLICKBENCH INSTALL : TÉLÉCHARGEMENT BINAIRES & PRÉPARATION RUNNER"
+echo "================================================================================"
+
+if ! command -v gcc >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y gcc build-essential
+fi
+
+# ==============================================================================
+# 0. ACTIVE SILICON COLD-PROBE (Zero-SIGILL Guaranteed)
+# ==============================================================================
+probe_target_isa() {
+    local tmp_dir
+    tmp_dir="$(mktemp -d -t silicium_probe_XXXXXX 2>/dev/null || mktemp -d)"
+    
+    # Test AVX-512 (Ice Lake / Zen 4 / Sapphire Rapids)
+    cat << 'EOF' > "$tmp_dir/probe_avx512.c"
+#include <immintrin.h>
+int main(void) {
+    __m512i a = _mm512_setzero_si512();
+    __m512i b = _mm512_set1_epi32(42);
+    __m512i c = _mm512_add_epi32(a, b);
+    return (int)_mm512_cvtsi512_si32(c) == 42 ? 0 : 1;
+}
+EOF
+    if gcc -O2 -mavx512f -mavx512dq "$tmp_dir/probe_avx512.c" -o "$tmp_dir/probe_avx512" >/dev/null 2>&1; then
+        if "$tmp_dir/probe_avx512" >/dev/null 2>&1; then
+            rm -rf "$tmp_dir"
+            echo "avx512"
+            return 0
+        fi
+    fi
+
+    # Test AVX2 + FMA
+    cat << 'EOF' > "$tmp_dir/probe_avx2.c"
+#include <immintrin.h>
+int main(void) {
+    __m256i a = _mm256_setzero_si256();
+    __m256i b = _mm256_set1_epi32(42);
+    __m256i c = _mm256_add_epi32(a, b);
+    return (int)_mm256_extract_epi32(c, 0) == 42 ? 0 : 1;
+}
+EOF
+    if gcc -O2 -mavx2 -mfma "$tmp_dir/probe_avx2.c" -o "$tmp_dir/probe_avx2" >/dev/null 2>&1; then
+        if "$tmp_dir/probe_avx2" >/dev/null 2>&1; then
+            rm -rf "$tmp_dir"
+            echo "avx2"
+            return 0
+        fi
+    fi
+
+    rm -rf "$tmp_dir"
+    echo "generic"
+    return 0
+}
+
+TARGET_ISA="$(probe_target_isa)"
+echo "⚡ Sonde Silicium Active : ISA certifiée sans SIGILL = ${TARGET_ISA}"
+
+# Téléchargement déterministe des binaires d'évaluation SILICIUM (Pattern Umbra/KDB)
+SILICIUM_VERSION="v1.0.0"
+SILICIUM_TARBALL="silicium_clickbench-x86_64-${SILICIUM_VERSION}.tar.gz"
+SILICIUM_DIST_REPO="${SILICIUM_DIST_REPO:-silicium369-spec/silicium-dist}"
+SILICIUM_URL="${SILICIUM_DIST_URL:-https://github.com/${SILICIUM_DIST_REPO}/releases/download/${SILICIUM_VERSION}/${SILICIUM_TARBALL}}"
+SILICIUM_SHA256="7feab46ce4326a1e85eed32197a6a5881d40d74bbbf2d42f3ee1668d6d35f6e3"
+
+mkdir -p bin
+
+if [ -f "bin/libsilicium_clickbench.so" ] || [ -f "bin/libsilicium_clickbench.a" ]; then
+    echo "⚡ SILICIUM CLICKBENCH INSTALL : MODE LOCAL DÉTECTÉ (bin/ déjà présent)"
+    echo "✅ Bypass du téléchargement réseau. Utilisation directe des binaires d'évaluation locaux."
+else
+    echo "📦 Téléchargement des binaires d'évaluation Silicium (${SILICIUM_VERSION})..."
+    echo "   Source : ${SILICIUM_URL}"
+    if command -v gh >/dev/null 2>&1 && gh release download "${SILICIUM_VERSION}" -R "${SILICIUM_DIST_REPO}" -p "${SILICIUM_TARBALL}" --clobber >/dev/null 2>&1; then
+        echo "✅ Téléchargement réussi via GitHub CLI."
+    elif [ -n "${GH_TOKEN:-}" ]; then
+        curl -sSL -f -H "Authorization: token ${GH_TOKEN}" -o "${SILICIUM_TARBALL}" "${SILICIUM_URL}" 2>/dev/null || \
+        curl -sSL -f -o "${SILICIUM_TARBALL}" "${SILICIUM_URL}"
+    else
+        curl -sSL -f -o "${SILICIUM_TARBALL}" "${SILICIUM_URL}"
+    fi
+    
+    if command -v sha256sum >/dev/null 2>&1; then
+        echo "🔒 Vérification de l'intégrité SHA-256..."
+        echo "${SILICIUM_SHA256}  ${SILICIUM_TARBALL}" | sha256sum -c -
+    fi
+    
+    tar -xzf "${SILICIUM_TARBALL}" -C bin/
+    rm -f "${SILICIUM_TARBALL}"
+fi
+
+# Permissions sur les binaires hermétiques
+chmod +x bin/*.so bin/*ingest 2>/dev/null || true
+
+# Détection de l'allocateur mimalloc
+MIMALLOC_FLAG=""
+if echo 'int main(void){return 0;}' | gcc -lmimalloc -x c - -o /dev/null 2>/dev/null; then
+    MIMALLOC_FLAG="-lmimalloc"
+    echo "⚡ Allocateur mimalloc détecté et lié."
+fi
+
+# Compilation du runner d'interface standard ClickBench
+if [ -f "bin/libsilicium_clickbench.a" ]; then
+    STATIC_LIB="bin/libsilicium_clickbench.a"
+    echo "🔨 Compilation de ./query en Monolithe Statique (0 symbole exporté)..."
+    gcc -O3 -march=native -mtune=native -fno-plt -Wl,-z,relro -Wl,-z,now -s query.c "$STATIC_LIB" $MIMALLOC_FLAG -lpthread -ldl -lm -o query
+else
+    echo "🔨 Compilation de ./query avec bibliothèque dynamique (silicium_clickbench)..."
+    gcc -O3 -march=native -mtune=native -fno-plt -Wl,-z,relro -Wl,-z,now -s query.c -L./bin -lsilicium_clickbench $MIMALLOC_FLAG -Wl,-rpath,'$ORIGIN/bin' -o query
+fi
+chmod +x query
+
+# Rendre tous les scripts ClickBench exécutables
+chmod +x benchmark.sh check data-size install load start stop 2>/dev/null || true
+
+echo "✅ Binaire ./query compilé avec succès."
+echo "🎉 INSTALLATION SILICIUM TERMINÉE AVEC SUCCÈS"
+echo "================================================================================"

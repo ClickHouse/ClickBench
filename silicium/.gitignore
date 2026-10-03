@@ -1,0 +1,11 @@
+bin/
+query
+data/
+db/
+*.so
+*.a
+*.o
+*.tar.gz
+*.zip
+.cache/
+.DS_Store

@@ -1,0 +1,11 @@
+{
+  "system": "Silicium",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "embedded"
+  ]
+}

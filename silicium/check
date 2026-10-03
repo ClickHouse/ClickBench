@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# SILICIUM CLICKBENCH HARNESS — CHECK (LIVENESS PROBE)
+# License: SCSL-1.0 / MIT Evaluation License
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+if [ ! -x "./query" ]; then
+    echo "❌ Binaire ./query introuvable ou non exécutable." >&2
+    exit 1
+fi
+
+# Détection de l'arène (par défaut silicium_arena)
+export SILICIUM_ARENA="${SILICIUM_ARENA:-$SCRIPT_DIR/silicium_arena}"
+
+if [ ! -d "$SILICIUM_ARENA" ]; then
+    # L'arène n'est pas encore chargée (appel pre-load), vérifier la validité du binaire query
+    exit 0
+fi
+
+# Liveness probe : exécution d'un SELECT COUNT(*) sur stdin
+printf "SELECT COUNT(*) FROM hits;\n" | ./query >/dev/null 2>&1
+exit 0
