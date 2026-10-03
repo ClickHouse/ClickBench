@@ -68,10 +68,11 @@ container, less a fixed reserve), with a fixed segment cap and engine deadline.
 Every resolved value and its source is logged on a `performance default
 resolved` line in `server.log`; a published result should record those lines,
 because they are the configuration the numbers were measured at. On
-c6a.4xlarge the read cache resolves to 7.7 GB and the per-query SQL pool to
-8.2 GB. `./start` also raises the process's open-file soft limit to the hard
-limit, since the server has exited with `EMFILE` at startup under the common
-default of 1024.
+c6a.4xlarge, with the store on loopback, the fetch cache resolves to 12.3 GB and
+the per-query SQL pool to 16.5 GB. That is the tenant's whole SQL share since
+0.21.0; it was 8.2 GB before. `./start` also raises the process's open-file
+soft limit to the hard limit, since the server has exited with `EMFILE` at
+startup under the common default of 1024.
 
 `./load` declares the typed attribute columns and then loads the Parquet file.
 Object size is set at ingest by `--batch-rows`: one batch becomes one object per
@@ -90,18 +91,21 @@ The reference machine's disk is a 500 GB gp2 volume. Ravel holds no data on
 local disk, so a cold run (server restarted, page cache dropped) fetches what it
 needs from RustFS, and RustFS reads it from that volume. The stock fetch policy
 reads whole objects, so a statement that touches the table reads the whole
-11.2 GB dataset from the volume, whatever the statement computes. Measured on
-v0.16.1, 40 of the 42 statements that return a number take 42.6 to 46.6 s
-cold, consistent with reading the dataset at about 250 MB/s each time; the
-other two (q1 and q7) take about 0.5 s. A 0.19.0 build measured 42.6 to 43.3 s
-for the same 40.
+dataset from the volume, whatever the statement computes. The dataset is
+9.8 GB since 0.21.0, whose log format stores the same rows smaller; it was
+11.2 GB before. Measured on v0.16.1, 40 of the 42 statements that return a
+number take 42.6 to 46.6 s cold, consistent with reading the dataset at about
+250 MB/s each time; the other two (q1 and q7) take about 0.5 s. A 0.19.0 build
+measured 42.6 to 43.3 s for the same 40. On v0.21.0, in the same fresh-VM
+setup, the cold sum over those 42 statements was 1,252.7 s, against 1,712.1 s
+for 0.19.0.
 
 Ravel holds no data on local disk, so a warm run is served from the read cache
 or from RustFS. Since 0.19.0, a server whose store is on loopback derives its
 fetch cache at 40% of its memory budget instead of 25%: 12.3 GB on this
-machine, above the 11.2 GB dataset, so the warm runs are served from the
-cache. Before 0.19.0 the derived cache was 7.7 GB, and warm runs re-read the
-dataset from RustFS through the page cache.
+machine, above the dataset, so the warm runs are served from the cache.
+Before 0.19.0 the derived cache was 7.7 GB, and warm runs re-read the dataset
+from RustFS through the page cache.
 
 ### The tuned configuration
 
@@ -119,11 +123,13 @@ requests to save wall time, and resolves the byte quantities exactly as
 `byte-minimal` does, so a logs read takes ranged reads wherever they save
 bytes. It only pays off once fetch concurrency is raised with it, which is what
 the second flag does (it sets the object-store GET permits, the SQL partition
-count and the PromQL fan-out together). The third flag lifts the per-query
-memory pool from the derived 8.2 GB to 12 GiB, which is what lets the widest
-`GROUP BY` in the set (q33) complete instead of being refused. The trade is
-more object-store requests for less cold wall-clock. It has not been measured
-against RustFS; the real-S3 figures below are the reference for it.
+count and the PromQL fan-out together). The third flag lifted the per-query
+memory pool from the 8.2 GB that versions before 0.21.0 derived to 12 GiB,
+which let the widest `GROUP BY` in the set (q33) complete instead of being
+refused. Since 0.21.0 the derived pool is 16.5 GB on this machine, and q33
+completes without it. The trade is more object-store requests for less cold
+wall-clock. It has not been measured against RustFS; the real-S3 figures below
+are the reference for it.
 
 ### Reference: the same binaries on real S3
 
@@ -150,4 +156,5 @@ of the first and third run over the statements that returned a number.
   endpoint's window defaults to the last hour.
 - The heaviest whole-table aggregates can exceed the derived per-query memory
   pool on a small instance and are reported as errors rather than being run
-  with a raised limit; in the stock result that is q33.
+  with a raised limit. q33 reserves about 10.9 GB. Since 0.21.0 it completes on
+  c6a.4xlarge; on instances with less memory it can still be refused.
