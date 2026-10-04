@@ -19,19 +19,21 @@ unset, it takes the latest GitHub release.
 
 ## Data layout
 
-`./load` streams `hits.csv` into a splayed on-disk table under `./hits`
-with `.csv.splayed` — one file per column plus the `.sym` dictionary,
-parsed in parallel from an mmap of the CSV without materializing the
-table in memory. The column names come from `create.rfl`; passing an
-explicit name vector also tells the reader the input has no header row,
-which is the shape of the published `hits.csv`.
+`./load` streams `hits.parquet` into a splayed on-disk table under
+`./hits` with `.parquet.splayed` — one file per column plus the `.sym`
+dictionary, written row group by row group without materializing the
+table in memory. The column names come from the file; `create.rfl`
+gives the native type of each column in the file's order.
 
 Types follow `../clickhouse/create.sql`: `BIGINT` → `I64`, `INTEGER` →
 `I32`, `SMALLINT` → `I16`, `TIMESTAMP` → `TIMESTAMP`, `Date` → `DATE`.
-Rayforce's CSV reader parses the `YYYY-MM-DD` and `YYYY-MM-DD HH:MM:SS`
-forms in the file into its native date/timestamp types, so
-`EventDate >= '2013-07-01'`, `extract(minute FROM EventTime)` and
-`DATE_TRUNC('minute', EventTime)` all work on native values.
+The Parquet file keeps `EventDate` as integer days since 1970-01-01 and
+`EventTime`, `ClientEventTime` and `LocalEventTime` as integer Unix
+seconds; their entries in the type vector, `UNIX_DATE` and
+`UNIX_SECONDS`, make the reader convert them to Rayforce's native date
+and timestamp types, so `EventDate >= '2013-07-01'`,
+`extract(minute FROM EventTime)` and `DATE_TRUNC('minute', EventTime)`
+all work on native values.
 
 ### Why every text column is SYM
 

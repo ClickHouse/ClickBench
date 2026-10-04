@@ -1,5 +1,5 @@
 #!/bin/bash
-export BENCH_DOWNLOAD_SCRIPT="download-hits-csv"
+export BENCH_DOWNLOAD_SCRIPT="download-hits-parquet-single"
 # Rayforce runs as an IPC server here (./start), so the stop/drop_caches/start
 # cold cycle is meaningful and the concurrent-QPS test hits a shared process.
 export BENCH_RESTARTABLE=yes

@@ -1,13 +1,16 @@
 ; ClickBench `hits` schema for Rayforce.
 ;
-; `load` feeds these two vectors to `.csv.splayed`, which streams
-; hits.csv straight into the on-disk splayed table without a header row
-; (an explicit name vector implies headerless input).
+; `load` passes `hits-types` to `.parquet.splayed`, one entry per column
+; of hits.parquet in file order; `hits-names` lists that order.
 ;
 ; Types follow ../clickhouse/create.sql: BIGINT -> I64, INTEGER -> I32,
-; SMALLINT -> I16, TIMESTAMP -> TIMESTAMP, Date -> DATE.  Every TEXT /
-; VARCHAR / CHAR column is loaded as SYM (dictionary-encoded) rather
-; than STR -- see README.md "Why every text column is SYM".
+; SMALLINT -> I16, TIMESTAMP -> TIMESTAMP, Date -> DATE.  The Parquet
+; file keeps EventDate as integer days since 1970-01-01 and EventTime,
+; ClientEventTime and LocalEventTime as integer Unix seconds: UNIX_DATE
+; and UNIX_SECONDS make the reader convert them to native DATE and
+; TIMESTAMP.  Every TEXT / VARCHAR / CHAR column is loaded as SYM
+; (dictionary-encoded) rather than STR -- see README.md "Why every text
+; column is SYM".
 
 (set hits-names [
   WatchID JavaEnable Title GoodEvent EventTime EventDate CounterID ClientIP
@@ -32,10 +35,10 @@
 ])
 
 (set hits-types [
-  I64 I16 SYM I16 TIMESTAMP DATE I32 I32 I32 I64 I16 I16 I16 SYM SYM I16
+  I64 I16 SYM I16 UNIX_SECONDS UNIX_DATE I32 I32 I32 I64 I16 I16 I16 SYM SYM I16
   I16 I32 I16 I32 I16 I16 I16 I16 I16 SYM I16 I16 I16 SYM I16 I16 I16 I16
-  SYM SYM I32 I16 I16 SYM I16 I16 I16 I16 I16 TIMESTAMP I16 I16 I32 I16 SYM
-  I32 I16 I16 I16 I64 SYM I32 I16 I16 I16 I16 I16 SYM TIMESTAMP I16 I16 I16
+  SYM SYM I32 I16 I16 SYM I16 I16 I16 I16 I16 UNIX_SECONDS I16 I16 I32 I16 SYM
+  I32 I16 I16 I16 I64 SYM I32 I16 I16 I16 I16 I16 SYM UNIX_SECONDS I16 I16 I16
   I16 I16 I32 I32 I32 I16 SYM SYM SYM SYM I16 I32 I32 I32 I32 I32 I32 I16
   SYM I64 SYM SYM I16 SYM SYM SYM SYM SYM SYM SYM SYM SYM SYM I16 I64 I64
   I32

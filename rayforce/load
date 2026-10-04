@@ -1,5 +1,5 @@
 #!/bin/bash
-# Loads hits.csv into the splayed table ./hits.
+# Loads hits.parquet into the splayed table ./hits.
 #
 # The load runs in its own rayforce process, not through the server: the server
 # started by the driver before ./load has no table open yet and picks it up at
@@ -10,6 +10,6 @@ rm -rf hits
 
 rayforce load.rfl
 
-# The CSV is no longer needed once the columns are on disk.
-rm -f hits.csv
+# The Parquet file is no longer needed once the columns are on disk.
+rm -f hits.parquet
 sync
