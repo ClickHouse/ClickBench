@@ -29,16 +29,18 @@ if [ ! -d "$HOME/opteryx_venv" ]; then
 fi
 
 "$HOME/opteryx_venv/bin/python" -m pip install --upgrade pip
-# Pulls the cp314 wheel for the latest release.
-"$HOME/opteryx_venv/bin/python" -m pip install --upgrade opteryx-core
+# Pinned so a published result is reproducible against a named release.
+OPTERYX_VERSION=0.9.155
+"$HOME/opteryx_venv/bin/python" -m pip install "opteryx-core==${OPTERYX_VERSION}"
 
 # Fail loudly here rather than 43 queries later if pip silently fell back to a
 # source build or resolved an interpreter we did not expect.
-"$HOME/opteryx_venv/bin/python" - <<'PY'
+"$HOME/opteryx_venv/bin/python" - "$OPTERYX_VERSION" <<'PY'
 import sys
 
 import opteryx
 
 print(f"python  {sys.version.split()[0]}  (GIL enabled: {sys._is_gil_enabled()})")
 print(f"opteryx-core {opteryx.__version__}")
+assert opteryx.__version__ == sys.argv[1], f"expected opteryx-core {sys.argv[1]}, got {opteryx.__version__}"
 PY
