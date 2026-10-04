@@ -2,5 +2,5 @@
 # BENCH_RESTARTABLE=no (see ./benchmark.sh) means benchmark-common.sh
 # never calls this during the cold-cycle sweep. Provided anyway for
 # manual lifecycle management.
-sudo docker stop kylin5-clickbench 2>/dev/null || true
+sudo docker stop kylin-clickbench 2>/dev/null || true
 exit 0

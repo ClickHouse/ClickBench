@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-CONTAINER=kylin5-clickbench
+CONTAINER=kylin-clickbench
 
 # --- Dataset: expects hits.parquet already downloaded, no column rewrite needed ---
 # Official hits.parquet, unmodified. See README.md ("No Parquet

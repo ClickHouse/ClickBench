@@ -3,7 +3,7 @@ set -e
 
 # All-in-one container; create-or-start if needed.
 # -m 10G is the vendor default for this tag (see README.md).
-CONTAINER=kylin5-clickbench
+CONTAINER=kylin-clickbench
 if sudo docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
     exit 0
 fi

@@ -1,5 +1,5 @@
 {
-      "system": "Apache Kylin 5.0.2-GA (Parquet, single, no cube)",
+      "system": "Kylin",
       "date": "2026-10-04",
       "machine": "t3a.small",
       "cluster_size": 1,
