@@ -9,7 +9,8 @@ Good runs are parsed into sink.results by a materialized view
 - for runs launched for a pull request (clickbench_pr != 0): commits the
   result files to the PR branch like collect-results.sh would, removes result
   files that were added to the PR manually, and posts a comment with the list
-  of machines whose results are ready and pastila.nl links to both logs;
+  of machines whose results are ready, pastila.nl links to both logs and
+  to a preview of the benchmark page with the results (results_preview.py);
   runs that produced no results get a comment with the logs too;
 - for runs of main: keeps at most one open automated pull request per system
   (head branch auto-results/<system>), adding result files and log links to
@@ -42,10 +43,12 @@ import time as time_module
 import urllib.parse
 import urllib.request
 
+import pastila
+import results_preview
+
 DB_URL = os.environ.get("CLICKBENCH_DB_URL") or "https://play.clickhouse.com/"
 DB_USER = os.environ.get("CLICKBENCH_DB_USER") or "clickbench"
 DB_PASSWORD = os.environ.get("CLICKBENCH_DB_PASSWORD") or ""
-PASTILA_DB_URL = "https://uzg8q0g12h.eu-central-1.aws.clickhouse.cloud/?user=paste"
 REPO = os.environ.get("GITHUB_REPOSITORY") or "ClickHouse/ClickBench"
 FORK_PUSH_TOKEN = os.environ.get("CLICKBENCH_FORK_PUSH_TOKEN") or ""
 DRY_RUN = bool(os.environ.get("DRY_RUN"))
@@ -107,96 +110,6 @@ def ch(sql, **params):
 
 def ch_rows(sql, **params):
     return json.loads(ch(sql + " FORMAT JSON", **params))["data"]
-
-
-# === pastila.nl ===
-# A paste is an insert into pastila's ClickHouse instance; the URL is
-# https://pastila.nl/?<fingerprint>/<hash> where hash is ClickHouse-flavored
-# sipHash128 of the content and fingerprint groups revisions of similar texts.
-# Both are reimplementations of the functions in ClickHouse/pastila.
-
-def siphash128_hex(data):
-    mask = (1 << 64) - 1
-
-    def rotl(x, b):
-        return ((x << b) | (x >> (64 - b))) & mask
-
-    v = [0x736F6D6570736575, 0x646F72616E646F6D, 0x6C7967656E657261, 0x7465646279746573]
-
-    def compress():
-        v[0] = (v[0] + v[1]) & mask
-        v[2] = (v[2] + v[3]) & mask
-        v[1] = rotl(v[1], 13)
-        v[3] = rotl(v[3], 16)
-        v[1] ^= v[0]
-        v[3] ^= v[2]
-        v[0] = rotl(v[0], 32)
-        v[2] = (v[2] + v[1]) & mask
-        v[0] = (v[0] + v[3]) & mask
-        v[1] = rotl(v[1], 17)
-        v[3] = rotl(v[3], 21)
-        v[1] ^= v[2]
-        v[3] ^= v[0]
-        v[2] = rotl(v[2], 32)
-
-    n = len(data)
-    offset = 0
-    while offset + 8 <= n:
-        word = int.from_bytes(data[offset:offset + 8], "little")
-        v[3] ^= word
-        compress()
-        compress()
-        v[0] ^= word
-        offset += 8
-    tail = bytearray(8)
-    tail[:n - offset] = data[offset:]
-    tail[7] = n & 0xFF
-    word = int.from_bytes(tail, "little")
-    v[3] ^= word
-    compress()
-    compress()
-    v[0] ^= word
-    v[2] ^= 0xFF
-    for _ in range(4):
-        compress()
-    hex32 = format(((v[2] ^ v[3]) << 64) | (v[0] ^ v[1]), "032x")
-    return "".join(reversed([hex32[i:i + 2] for i in range(0, 32, 2)]))
-
-
-def get_fingerprint(text):
-    words = re.findall(r"[^\W\d_]{4,100}", text)
-    # The fingerprint only groups revisions of a paste for the history view,
-    # so unlike the hash it does not have to cover the whole text: cap the
-    # work to keep megabyte-sized logs fast.
-    triples = [",".join(words[i:i + 3]) for i in range(min(len(words) - 2, 5000))]
-    fingerprint = "ffffffff"
-    for triple in dict.fromkeys(triples):
-        candidate = siphash128_hex(triple.encode())[:8]
-        if candidate < fingerprint:
-            fingerprint = candidate
-    return fingerprint
-
-
-def pastila_post(text):
-    if not text:
-        return None
-    if DRY_RUN:
-        print(f"DRY_RUN: would post {len(text)} bytes to pastila.nl")
-        return "https://pastila.nl/?00000000/dryrun"
-    fingerprint = get_fingerprint(text)
-    content_hash = siphash128_hex(text.encode())
-    row = {
-        "fingerprint_hex": fingerprint,
-        "hash_hex": content_hash,
-        "prev_fingerprint_hex": "",
-        "prev_hash_hex": "",
-        "content": text,
-        "is_encrypted": False,
-    }
-    http_post(PASTILA_DB_URL, "INSERT INTO data (fingerprint_hex, hash_hex, "
-              "prev_fingerprint_hex, prev_hash_hex, content, is_encrypted) "
-              "FORMAT JSONEachRow " + json.dumps(row))
-    return f"https://pastila.nl/?{fingerprint}/{content_hash}"
 
 
 # === GitHub ===
@@ -323,8 +236,8 @@ def fetch_logs(run_row):
 
 def attach_logs(run_row):
     bench_log, cloud_init_log = fetch_logs(run_row)
-    run_row["bench_url"] = pastila_post(bench_log)
-    run_row["cloud_init_url"] = pastila_post(cloud_init_log)
+    run_row["bench_url"] = pastila.post(bench_log)
+    run_row["cloud_init_url"] = pastila.post(cloud_init_log)
 
 
 def log_links(run_row):
@@ -415,6 +328,20 @@ def manual_result_files(pr_number, systems, bot_paths):
     return removals
 
 
+def preview_line(pr_number, head, rows, removals=()):
+    """A line linking to the preview of the benchmark page with the results
+    of the PR (see results_preview.py): the result files the PR changes at
+    its head commit, if any, and the new results. None if it failed."""
+    try:
+        changes = results_preview.pr_changes(pr_number, head) if pr_number and head else {}
+        changes.update({result_path(r): r["output"].encode() for r in rows})
+        changes.update({path: None for path in removals})
+        return results_preview.preview_line(results_preview.publish("origin/main", changes))
+    except Exception as e:
+        note(f"Preview of #{pr_number or 'new PR'} failed: {e}")
+        return None
+
+
 # === processing ===
 
 def is_clickhouse_variant(system):
@@ -446,6 +373,7 @@ def process_pr(pr_number, rows):
     can_commit = bool(good) and meta["state"] == "open" and (same_repo or fork_push)
 
     commit = None
+    head = None
     removals = []
     if can_commit:
         head_ref = meta["head"]["ref"]
@@ -460,6 +388,7 @@ def process_pr(pr_number, rows):
             commit = commit_results(base_sha, good, removals,
                                     f"Add benchmark results for {', '.join(systems)} ({machines})",
                                     head_ref, remote=remote)
+            head = commit or base_sha
         except RuntimeError as e:
             # A fork push can fail even though maintainer_can_modify said
             # yes: the author may have unticked it meanwhile, the branch may
@@ -485,7 +414,7 @@ def process_pr(pr_number, rows):
             lines.append("The result files are already in the branch.")
         elif good and not same_repo:
             for r in good:
-                url = pastila_post(r["output"])
+                url = pastila.post(r["output"])
                 lines.append(f"This pull request is from a fork, so the automation cannot "
                              f"push to it; save [this result]({url}) as `{result_path(r)}`.")
             if FORK_PUSH_TOKEN and not meta.get("maintainer_can_modify"):
@@ -494,6 +423,11 @@ def process_pr(pr_number, rows):
         if removals:
             lines.append("Removed manually added result files: "
                          + ", ".join(f"`{path}`" for path in removals) + ".")
+        if meta["state"] == "open":
+            # Without a push to the branch, the preview has only the new results.
+            preview = preview_line(pr_number, head, good, removals)
+            if preview:
+                lines.append(preview)
     for system, machine in sorted({(r["system"], r["machine"]) for r in rows
                                    if not r["good"]}):
         lines.append(f"The run of `{system}` on `{machine}` did not produce results.")
@@ -547,16 +481,15 @@ def process_main(system, rows):
     machines = sorted({r["machine"] for r in good})
     if good:
         message = f"Add results for {system} ({', '.join(machines)})"
-        if pr:
-            commit = commit_results(fetch_branch(branch), good, [], message, branch)
-        else:
-            commit = commit_results(run("git", "rev-parse", "origin/main"),
-                                    good, [], message, branch, force=True)
-    if good:
+        base_sha = fetch_branch(branch) if pr else run("git", "rev-parse", "origin/main")
+        commit = commit_results(base_sha, good, [], message, branch, force=not pr)
         lines.append(f"Results for `{system}` are ready for: "
                      + ", ".join(f"`{m}`" for m in machines) + ".")
         if commit:
             lines.append(f"The result files are committed as {commit}.")
+        preview = preview_line(pr["number"] if pr else None, commit or base_sha, good)
+        if preview:
+            lines.append(preview)
     for machine in sorted({r["machine"] for r in failed}):
         lines.append(f"The run on `{machine}` did not produce results.")
     lines.append("")

@@ -1,0 +1,40 @@
+name: "Preview results"
+
+# Publishes the benchmark page with the results of a pull request on
+# pastila.nl and comments with the link (see results_preview.py).
+#
+# pull_request_target: the workflow and the script are taken from the trusted
+# base branch, and the token can comment on PRs from forks. Code from the PR
+# never runs: the script fetches the PR head and only reads result files from
+# git objects as data.
+#
+# Results committed by collect-new-results.py with GITHUB_TOKEN do not trigger
+# workflows; that script puts the preview link into its comments itself.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '*/results/**'
+
+permissions:
+  contents: read
+  pull-requests: write  # To comment.
+
+# A new push supersedes the preview of the previous one.
+concurrency:
+  group: results-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    if: github.event.pull_request.state == 'open'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python3 results_preview.py "$PR_NUMBER"
