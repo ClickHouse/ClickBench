@@ -1,0 +1,6 @@
+#!/bin/bash
+set -euo pipefail
+# HDFS logical length of the loaded file (hdfs dfs -du -s column 1,
+# not disk_space_consumed_with_all_replicas), not the host download.
+sudo docker exec kylin-clickbench hdfs dfs -du -s /clickbench/hits_dir/hits.parquet \
+    | awk '{print $1}'

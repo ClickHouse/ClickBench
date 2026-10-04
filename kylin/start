@@ -1,0 +1,67 @@
+#!/bin/bash
+set -e
+
+# All-in-one container; create-or-start if needed.
+# -m 10G is the vendor default for this tag (see README.md).
+CONTAINER=kylin-clickbench
+if sudo docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
+    exit 0
+fi
+
+already_existed=0
+if sudo docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER"; then
+    already_existed=1
+    sudo docker start "$CONTAINER"
+else
+    sudo docker run -d --name "$CONTAINER" \
+        --hostname localhost \
+        -m 10G \
+        -p 7070:7070 -p 8088:8088 -p 9870:9870 \
+        -p 8032:8032 -p 8042:8042 -p 2181:2181 \
+        apachekylin/apache-kylin-standalone:5.0.2-GA
+fi
+
+# Wait for Kylin's own first-boot REST API before touching kylin.properties.
+if [ "$already_existed" -eq 0 ]; then
+    echo "waiting for Kylin's own first-boot startup before patching kylin.properties..." >&2
+    KYLIN_TOKEN=$(printf 'ADMIN:KYLIN' | base64)
+    REQUEST_AUTH_HEADER_NAME=Authorization
+    HTTP_AUTH_SCHEME=Basic
+    up=0
+    for i in $(seq 1 300); do
+        if curl -sf -m 5 http://localhost:7070/kylin/api/user/authentication \
+            -X POST -H "${REQUEST_AUTH_HEADER_NAME}: ${HTTP_AUTH_SCHEME} ${KYLIN_TOKEN}" \
+            -H 'Content-Type: application/json' >/dev/null 2>&1; then
+            up=1
+            break
+        fi
+        sleep 1
+    done
+    if [ "$up" -ne 1 ]; then
+        echo "start: Kylin's first-boot REST API did not come up within 300 polling attempts (1s apart, each with a 5s curl timeout)" >&2
+        exit 1
+    fi
+
+    # Canary settings retained from the measured setup; see README.md
+    # "Canary config".
+    KYLIN_CONF=/home/kylin/apache-kylin-5.0.2-bin/conf/kylin.properties
+    sudo docker exec "$CONTAINER" bash -c "
+        printf '\nkylin.canary.sparder-context-canary-enabled=false\nkylin.canary.sqlcontext-enabled=false\n' >> $KYLIN_CONF
+        \$KYLIN_HOME/bin/kylin.sh stop
+        \$KYLIN_HOME/bin/kylin.sh start
+    "
+    up=0
+    for i in $(seq 1 300); do
+        if curl -sf -m 5 http://localhost:7070/kylin/api/user/authentication \
+            -X POST -H "${REQUEST_AUTH_HEADER_NAME}: ${HTTP_AUTH_SCHEME} ${KYLIN_TOKEN}" \
+            -H 'Content-Type: application/json' >/dev/null 2>&1; then
+            up=1
+            break
+        fi
+        sleep 1
+    done
+    if [ "$up" -ne 1 ]; then
+        echo "start: Kylin's REST API did not come back up within 300 polling attempts after the initial-setup restart" >&2
+        exit 1
+    fi
+fi

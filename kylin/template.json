@@ -1,0 +1,12 @@
+{
+  "system": "Kylin",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "Spark derivative",
+    "stateless",
+    "no-cold"
+  ]
+}
