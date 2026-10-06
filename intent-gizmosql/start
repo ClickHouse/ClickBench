@@ -9,3 +9,9 @@ if nc -z localhost 31337 2>/dev/null; then
 fi
 
 start_gizmosql
+
+# Read the program into the page cache: every file the server maps
+# executable (its binary and shared libraries) and the query client's
+# binary. Program files only; the database file is never read here.
+{ awk '$2 ~ /x/ && $6 ~ /^\// { print $6 }' "/proc/$(cat "${PID_FILE}")/maps"; command -v gizmosql_client; } \
+    | sort -u | xargs -r -d '\n' cat -- > /dev/null
