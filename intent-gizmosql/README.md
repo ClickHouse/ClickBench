@@ -7,30 +7,22 @@ v1.5.5, with server and engine changes:
   arm64 builds); changes in its `CHANGELOG.md` and `CLICKBENCH-FORK.md`.
 - DuckDB: https://github.com/bddppqs/intent-duckdb, tag `v1.5.5-intent.3`; changes in its `CLICKBENCH-FORK.md`.
 
-The scripts are the upstream `gizmosql` entry's except: `install` downloads the pinned release zip and verifies it and
-both binaries by SHA-256; `query` runs the release's `gizmosql_client`, which sends each query as one request, and
-detects a failed run from the client's exit status and its own error lines, not from result rows; `check` and `util.sh`
-are described below. The schema and load path are upstream's, with no extra index, pre-aggregation or
-query-specific setting.
+The scripts are the upstream `gizmosql` entry's except `install`, `query`, `util.sh` and `check`: `install` downloads the
+pinned release zip and verifies it and both binaries by SHA-256, `query` runs the release's `gizmosql_client`, `util.sh`
+applies the configuration below, and `check` runs `SELECT 1`. The schema and load path are upstream's.
 
 Configuration: on machines with more than 64 CPUs `util.sh` sets one DuckDB thread per two CPUs and allocator settings
-for a large dedicated host, as tuning for this benchmark and not suggested defaults; smaller machines run the defaults.
-`check` runs `SELECT 1` and does not read the database file.
+for a large dedicated host; smaller machines run the defaults.
 
-Caches: for its lifetime the server keeps decoded DICT_FSST dictionaries, column-wide string dictionaries and the
-stored code translations it has read, string-filter outcomes per dictionary entry (and the segments they let a scan
-skip), and optimized plans of repeated read-only statements. None holds a query result; every run still scans, filters
-and aggregates, and the restart before every cold run clears them. For a statement with a cached plan, the
-hash-aggregate state is released on a background thread after its result is sent.
+Caches: for its lifetime the server keeps decoded DICT_FSST dictionaries, column-wide string dictionaries, stored code
+translations, string-filter outcomes per dictionary entry (and the segments they let a scan skip) and optimized plans
+of repeated read-only statements. For a statement with a cached plan, the hash-aggregate state is released on a background thread after
+its result is sent.
 
-Storage: database files created at the latest storage version, as the entry's are, use storage version `0x40000002`,
-which upstream DuckDB does not open. Blocks are zstd-compressed (level 9 with 64 or more threads, otherwise 3;
-`zstd_block_compression_level` overrides it); at each checkpoint the engine stores large string columns' dictionary codes
-apart from the strings, with a column-wide numbering; string statistics also keep the smallest non-empty value.
+Storage: blocks are zstd-compressed at level 9 with 64 or more threads and 3 otherwise; `zstd_block_compression_level`
+overrides it.
 
-The entry is `tuned: yes`: for the configuration above, for a few engine thresholds and three per-architecture
-build-time defaults (on for x86-64, off for arm64; named in the fork documents), and because the changes were developed
-and evaluated against the 43 ClickBench queries on the ClickBench dataset. The ClickBench maintainers decide its final
-name and labels.
+The entry is `tuned: yes`: for the configuration above, for engine thresholds and three per-architecture build-time
+defaults (named in the fork documents), and because the changes were developed against the 43 ClickBench queries.
 
 Both repositories keep their upstream licenses (DuckDB: MIT; GizmoSQL: Apache-2.0).
