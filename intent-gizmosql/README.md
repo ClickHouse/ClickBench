@@ -9,14 +9,13 @@ v1.5.5, with server and engine changes:
 
 The scripts are the upstream `gizmosql` entry's except: `install` downloads the pinned release zip and verifies it and
 both binaries by SHA-256; `query` runs the release's `gizmosql_client`, which sends each query as one request, and
-detects a failed run from the client's exit status and its own error lines, not from result rows; `start`, `check` and
-`util.sh` are described below. The schema and load path are upstream's, with no extra index, pre-aggregation or
+detects a failed run from the client's exit status and its own error lines, not from result rows; `check` and `util.sh`
+are described below. The schema and load path are upstream's, with no extra index, pre-aggregation or
 query-specific setting.
 
 Configuration: on machines with more than 64 CPUs `util.sh` sets one DuckDB thread per two CPUs and allocator settings
 for a large dedicated host, as tuning for this benchmark and not suggested defaults; smaller machines run the defaults.
-`start` also reads the server and client binaries and the server's shared libraries into the page cache, and `check`
-runs `SELECT 1`; neither reads the database file.
+`check` runs `SELECT 1` and does not read the database file.
 
 Caches: for its lifetime the server keeps decoded DICT_FSST dictionaries, column-wide string dictionaries and the
 stored code translations it has read, string-filter outcomes per dictionary entry (and the segments they let a scan
