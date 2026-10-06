@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# SILICIUM CLICKBENCH HARNESS — CHECK (LIVENESS PROBE)
+# License: PolyForm Noncommercial / BSL 1.1 / MIT Evaluation
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+PORT="${SILICIUM_PORT:-5433}"
+ARENA_DIR="${SILICIUM_ARENA:-$SCRIPT_DIR/silicium_arena}"
+
+# If arena doesn't exist yet (pre-load check), verify that binary or query runner is executable
+if [ ! -d "$ARENA_DIR" ]; then
+    if [ -x "./query" ] || [ -x "./bin/silicium_runner" ]; then
+        exit 0
+    else
+        echo "❌ No runner binary found before load" >&2
+        exit 1
+    fi
+fi
+
+# Execute a real SQL probe query
+PROBE_SQL="SELECT COUNT(*) FROM hits;"
+
+# 1. Probe via psql if server is running on port
+if command -v psql >/dev/null 2>&1 && (nc -z 127.0.0.1 "$PORT" 2>/dev/null || (exec 3<>/dev/tcp/127.0.0.1/"$PORT") 2>/dev/null); then
+    if OUT=$(psql -h 127.0.0.1 -p "$PORT" -U postgres -d clickbench -t -A -c "$PROBE_SQL" 2>/dev/null); then
+        VAL=$(echo "$OUT" | tr -d '[:space:]')
+        if [[ "$VAL" =~ ^[0-9]+$ ]] && [ "$VAL" -gt 0 ]; then
+            echo "✅ Check passed via PostgreSQL wire protocol ($VAL rows)."
+            exit 0
+        fi
+    fi
+fi
+
+# 2. Probe via ./query script
+if [ -x "./query" ]; then
+    if OUT=$(printf "%s\n" "$PROBE_SQL" | ./query 2>/dev/null); then
+        VAL=$(echo "$OUT" | tail -n 1 | tr -d '[:space:]')
+        if [[ "$VAL" =~ ^[0-9]+$ ]] && [ "$VAL" -gt 0 ]; then
+            echo "✅ Check passed via query runner ($VAL rows)."
+            exit 0
+        fi
+    fi
+fi
+
+# 3. Direct probe via bin/silicium_runner
+if [ -x "./bin/silicium_runner" ]; then
+    if OUT=$("./bin/silicium_runner" --sql "$PROBE_SQL" "$ARENA_DIR" 2>/dev/null); then
+        VAL=$(echo "$OUT" | tail -n 1 | tr -d '[:space:]')
+        if [[ "$VAL" =~ ^[0-9]+$ ]] && [ "$VAL" -gt 0 ]; then
+            echo "✅ Check passed via silicium_runner ($VAL rows)."
+            exit 0
+        fi
+    fi
+fi
+
+echo "❌ Liveness probe failed on $PROBE_SQL" >&2
+exit 1

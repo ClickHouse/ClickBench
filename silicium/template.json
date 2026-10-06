@@ -1,0 +1,13 @@
+{
+  "system": "Silicium",
+  "version": "2026.2",
+  "description": "Silicium is a vectorized columnar analytical engine with PostgreSQL wire protocol and AVX2/AVX-512 SIMD kernels.",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "PostgreSQL compatible"
+  ]
+}

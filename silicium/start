@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# SILICIUM CLICKBENCH HARNESS — START (POSTGRESQL WIRE SERVER DAEMON)
+# License: PolyForm Noncommercial / BSL 1.1 / MIT Evaluation
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+ARENA_DIR="${SILICIUM_ARENA:-$SCRIPT_DIR/silicium_arena}"
+if [ ! -d "$ARENA_DIR" ]; then
+    for candidate in "$SCRIPT_DIR/silicium_arena" "$SCRIPT_DIR/arena" "$SCRIPT_DIR/db"; do
+        if [ -d "$candidate" ]; then
+            ARENA_DIR="$(cd "$candidate" && pwd)"
+            break
+        fi
+    done
+fi
+PORT="${SILICIUM_PORT:-5433}"
+PID_FILE="$SCRIPT_DIR/silicium_server.pid"
+LOG_FILE="$SCRIPT_DIR/silicium_server.log"
+
+if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+    echo "⚡ Silicium server is already running (PID $(cat "$PID_FILE"))."
+    exit 0
+fi
+
+echo "🚀 Starting Silicium ClickBench PostgreSQL v3 Server on port $PORT..."
+if [ -x "$SCRIPT_DIR/bin/silicium_runner" ]; then
+    RUNNER_BIN="$SCRIPT_DIR/bin/silicium_runner"
+elif [ -x "$SCRIPT_DIR/silicium_runner" ]; then
+    RUNNER_BIN="$SCRIPT_DIR/silicium_runner"
+elif [ -x "$SCRIPT_DIR/../../target/bench-apex/cb_runner" ]; then
+    RUNNER_BIN="$SCRIPT_DIR/../../target/bench-apex/cb_runner"
+elif [ -x "$SCRIPT_DIR/../../target/release/cb_runner" ]; then
+    RUNNER_BIN="$SCRIPT_DIR/../../target/release/cb_runner"
+else
+    echo "❌ Binaire runner introuvable." >&2
+    exit 1
+fi
+
+"$RUNNER_BIN" --server --port "$PORT" "$ARENA_DIR" > "$LOG_FILE" 2>&1 &
+SERVER_PID=$!
+echo "$SERVER_PID" > "$PID_FILE"
+
+# Wait up to 5s for server to start listening
+for i in $(seq 1 50); do
+    if nc -z 127.0.0.1 "$PORT" 2>/dev/null || (exec 3<>/dev/tcp/127.0.0.1/"$PORT") 2>/dev/null; then
+        echo "✅ Silicium server ready on port $PORT (PID $SERVER_PID)"
+        exit 0
+    fi
+    if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+        echo "❌ Silicium server failed to start. Logs:" >&2
+        cat "$LOG_FILE" >&2
+        exit 1
+    fi
+    sleep 0.1
+done
+
+echo "❌ Timeout waiting for Silicium server on port $PORT" >&2
+exit 1
