@@ -1,0 +1,13 @@
+#!/bin/bash
+# Stop the server: the watchdog parent, and with it its engine child (the child dies with its parent).
+cd "$(dirname "$0")"
+if [ -f wdb.pid ]; then
+    kill "$(cat wdb.pid)" 2>/dev/null || true
+    for i in $(seq 1 30); do
+        kill -0 "$(cat wdb.pid)" 2>/dev/null || break
+        sleep 0.5
+    done
+    rm -f wdb.pid
+fi
+pkill -f "wdb_server.py $PWD/cbdb" 2>/dev/null || true
+exit 0

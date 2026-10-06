@@ -1,0 +1,7 @@
+{
+    "system": "WaveDB",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "no",
+    "tags": ["Python", "column-oriented"]
+}
