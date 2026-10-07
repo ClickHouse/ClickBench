@@ -124,3 +124,15 @@ first. Retain source/results; discard private credential files and task SSH keys
 ## Performance patch refresh
 
 The current sweep pins connector `4aa71cea12abe7e2f1dc93a8f276418292edd915`, including safe integer-widening aggregation pushdown and per-query scan metrics. The superseded partial `83d05fc` baseline is retained under `evidence/20261007/baseline-83d05fc` and excluded from full benchmark results. The same loaded data and hardware are reused; results from different revisions are never mixed.
+
+## Running individual queries
+
+To run one query as a separate job while retaining earlier measurements:
+
+```sh
+RESULT_DIR=cloud-results-cluster .venv/bin/python run-one-query.py --mode cluster --query 6
+```
+
+Each job restarts Trino, clears the runner page cache and records three complete-result attempts for the selected query. Redis stays running. Existing attempts for that query are protected against overwriting. Query numbers range from 1 to 43; the cumulative result is finalized only when all 129 attempt records exist.
+
+The current patched sweep was stopped during Q5: attempts 1 and 2 timed out, and attempt 3 was cancelled by the user. That cancelled attempt is recorded as null with its cancellation reason. At the user's request, the sweep continues through Q6-Q43 in individual jobs, using the same revision, loaded data and hardware.
