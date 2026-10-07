@@ -50,11 +50,19 @@ def client():
 
 
 def load_group(task):
-    path, group, offset = task
+    path, group, offset, resume = task
     r = client()
     types = column_types()
+    source = pq.ParquetFile(path)
+    size = source.metadata.row_group(group).num_rows
+    # A row group is written in physical order with successful pipelines. If its
+    # last row survived an interruption, its earlier rows have already committed.
+    # Partial groups are rewritten idempotently; final global counts still apply.
+    if resume and r.exists(f'hits:{offset + size - 1}'):
+        r.close()
+        return size
     count = 0
-    for batch in pq.ParquetFile(path).iter_batches(batch_size=1000, row_groups=[group]):
+    for batch in source.iter_batches(batch_size=1000, row_groups=[group]):
         columns = {name.lower(): values for name, values in batch.to_pydict().items()}
         pipe = r.pipeline(transaction=False)
         for position in range(batch.num_rows):
@@ -66,7 +74,7 @@ def load_group(task):
     return count
 
 
-def load(path, expected_rows, limit=None, workers=1):
+def load(path, expected_rows, limit=None, workers=1, resume=False):
     r = client()
     types = column_types()
     source = pq.ParquetFile(path)
@@ -80,7 +88,7 @@ def load(path, expected_rows, limit=None, workers=1):
         tasks = []
         offset = 0
         for group in range(source.num_row_groups):
-            tasks.append((path, group, offset))
+            tasks.append((path, group, offset, resume))
             offset += source.metadata.row_group(group).num_rows
         with ProcessPoolExecutor(max_workers=workers) as pool:
             futures = [pool.submit(load_group, task) for task in tasks]
@@ -128,7 +136,10 @@ if __name__ == '__main__':
     parser.add_argument('--expected-rows', type=int, default=EXPECTED_ROWS)
     parser.add_argument('--limit', type=int, help='Smoke test only; never publish as ClickBench')
     parser.add_argument('--workers', type=int, default=1)
+    parser.add_argument('--resume', action='store_true', help='Resume an interrupted ordinal-key load of the same file; do not publish a fresh-load timing')
     args = parser.parse_args()
     if args.workers < 1:
         parser.error('--workers must be positive')
-    load(args.parquet, args.expected_rows, args.limit, args.workers)
+    if args.resume and (args.workers < 2 or args.limit is not None):
+        parser.error('--resume requires parallel full-dataset loading')
+    load(args.parquet, args.expected_rows, args.limit, args.workers, args.resume)

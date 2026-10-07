@@ -76,7 +76,10 @@ so partial results are not treated as valid. Preserve this setting with the run 
 
 `load-cloud` requires an empty dedicated database. It never flushes a database.
 For another run, create a fresh database or explicitly remove only the benchmark
-data. `load.py --limit` exists for smoke tests; never submit subset timings.
+data. An interrupted parallel load of the identical source file can use
+`load.py --workers 8 --resume`; completed row groups are reused, partial groups
+are rewritten by the same physical ordinals, and the final global index count
+is still required. Do not publish resumed wall time as a fresh-load measurement. `load.py --limit` exists for smoke tests; never submit subset timings.
 
 ## API comparison and result reporting
 
