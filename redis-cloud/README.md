@@ -120,3 +120,7 @@ Stop and remove the task's Trino container and delete the dedicated Redis Cloud
 subscription and runner after downloading results. Deleting the subscription's
 managed VPC also requires terminating the runner and deleting its security group
 first. Retain source/results; discard private credential files and task SSH keys.
+
+## Performance patch refresh
+
+The current sweep pins connector `4aa71cea12abe7e2f1dc93a8f276418292edd915`, including safe integer-widening aggregation pushdown and per-query scan metrics. The superseded partial `83d05fc` baseline is retained under `evidence/20261007/baseline-83d05fc` and excluded from full benchmark results. The same loaded data and hardware are reused; results from different revisions are never mixed.
