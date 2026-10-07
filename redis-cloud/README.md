@@ -19,8 +19,8 @@ The initial test deployment uses:
   enabled, default query performance factor, `noeviction`, AOF every second.
 - Redis hosts: three r8g.16xlarge instances. Each data disk is gp3, 1,598 GB,
   16,000 IOPS, 1,000 MiB/s. Root volumes retain their defaults.
-- Trino client: r7a.4xlarge (16 vCPUs, 128 GiB RAM); 500 GB gp3 disk, 16,000 IOPS,
-  1,000 MiB/s. Trino JVM: 96 GiB heap, 64 GB per-query memory, 24 GB heap headroom.
+- Trino client: r7a.4xlarge (16 vCPUs, 128 GiB RAM); 500 GB gp3 data disk, 16,000 IOPS,
+  1,000 MiB/s, plus a 20 GB gp3 boot disk with default 3,000 IOPS / 125 MiB/s. Trino JVM: 96 GiB heap, 64 GB per-query memory, 24 GB heap headroom.
 - Trino 483 and the exact connector revision in `versions.env`.
 
 These are provisioning settings, not measured results. Record actual versions,
@@ -110,7 +110,10 @@ After a full verified run, add two JSON files under `results/YYYYMMDD/`, labeled
 `Redis Cloud (Trino)` and `Redis Cloud (Trino, OSS Cluster API)`. Include all 43
 three-value arrays, load time, actual data size, machine metadata, and `no-cold`.
 For data size include hash/index memory and persistent log bytes where available;
-do not substitute provisioned capacity or the Parquet source size. Do not create
+do not substitute provisioned capacity or the Parquet source size. If persistent
+log size is unavailable, leave `data_size` null and record measured Redis RAM
+bytes separately; an AOF-enabled Cloud database reporting zero AOF bytes is not
+evidence that its transaction logs occupy zero bytes. Do not create
 result files until the full run and correctness checks finish.
 
 Stop and remove the task's Trino container and delete the dedicated Redis Cloud
