@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+sudo apt-get update
+sudo apt-get install -y docker.io python3-venv git curl wget
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+source ./versions.env
+if [ ! -d connector ]; then git clone https://github.com/redis-field-engineering/redis-sql-trino.git connector; fi
+git -C connector fetch origin "$CONNECTOR_REVISION"
+git -C connector checkout --detach "$CONNECTOR_REVISION"
+docker build -t "clickbench-connector:$CONNECTOR_REVISION" connector
+# Extract the platform-independent plugin into the location start-cloud mounts.
+mkdir -p plugin
+cid=$(docker create "clickbench-connector:$CONNECTOR_REVISION")
+docker cp "$cid:/usr/lib/trino/plugin/redisearch/." plugin/
+docker rm "$cid" >/dev/null

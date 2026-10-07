@@ -1,0 +1,8 @@
+/.venv/
+/hits.parquet
+/__pycache__/
+/cloud-etc/
+/cloud-results/
+/connector/
+/plugin/
+/*-count.csv

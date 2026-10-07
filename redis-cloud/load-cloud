@@ -1,0 +1,19 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+: "${REDIS_CONNECTION_FILE:?Set the private Redis connection file}"
+export TRINO_CATALOG=redis_default
+.venv/bin/python - <<'PYTHON'
+from load import client
+r=client()
+assert r.dbsize()==0, 'Load requires a fresh dedicated database'
+PYTHON
+./query < create.sql
+start=$(date +%s.%N)
+.venv/bin/python load.py "${HITS_PARQUET:-../hits.parquet}"
+end=$(date +%s.%N)
+awk -v s="$start" -v e="$end" 'BEGIN { printf "Load time: %.3f\n", e - s }'
+for mode in default cluster; do
+    printf 'SELECT count(*) FROM hits;' | TRINO_CATALOG="redis_$mode" ./query > "$mode-count.csv"
+    [ "$(tr -d '\r\n' < "$mode-count.csv")" = 99997497 ]
+done

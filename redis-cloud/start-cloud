@@ -1,0 +1,43 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+: "${REDIS_CONNECTION_FILE:?Set REDIS_CONNECTION_FILE to a private Redis connection JSON file}"
+: "${PLUGIN_DIR:?Set PLUGIN_DIR to the built connector directory}"
+source ./versions.env
+mkdir -p cloud-etc/catalog
+python3 - <<'PY'
+import json, os
+from pathlib import Path
+c=json.loads(Path(os.environ['REDIS_CONNECTION_FILE']).read_text())
+for mode in ('default','cluster'):
+    text='\n'.join(['connector.name=redisearch',
+        f'redisearch.uri={"rediss" if c.get("ssl") else "redis"}://{c["host"]}:{c["port"]}',
+        f'redisearch.password={c["password"]}',
+        f'redisearch.username={c.get("username","default")}',
+        f'redisearch.cluster={str(mode=="cluster").lower()}',
+        'redisearch.default-schema-name=default'])+'\n'
+    p=Path(f'cloud-etc/catalog/redis_{mode}.properties')
+    p.write_text(text); p.chmod(0o600)
+PY
+# The benchmark runner has 128 GiB RAM. Smaller hosts must reduce these settings.
+docker pull "$TRINO_IMAGE"
+cid=$(docker create "$TRINO_IMAGE")
+docker cp "$cid:/etc/trino/jvm.config" cloud-etc/jvm.config
+docker rm "$cid" >/dev/null
+sed -i 's/^-Xmx.*/-Xmx96G/' cloud-etc/jvm.config
+cat > cloud-etc/config.properties <<'EOF'
+coordinator=true
+node-scheduler.include-coordinator=true
+http-server.http.port=8080
+discovery.uri=http://localhost:8080
+query.max-memory=64GB
+query.max-memory-per-node=64GB
+memory.heap-headroom-per-node=24GB
+EOF
+docker run -d --name clickbench-cloud-trino --memory=120g \
+    -p 127.0.0.1:18080:8080 \
+    -v "$PLUGIN_DIR:/usr/lib/trino/plugin/redisearch:ro" \
+    -v "$PWD/cloud-etc/catalog:/etc/trino/catalog:ro" \
+    -v "$PWD/cloud-etc/jvm.config:/etc/trino/jvm.config:ro" \
+    -v "$PWD/cloud-etc/config.properties:/etc/trino/config.properties:ro" \
+    "$TRINO_IMAGE"
