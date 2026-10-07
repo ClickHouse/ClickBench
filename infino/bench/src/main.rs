@@ -10,14 +10,15 @@
 //! socket round-trip is never counted.
 //!
 //! Subcommands:
-//!   load   — ingest parquet (glob INFINO_SRC) into a persisted infino table.
+//!   load   — hydrate parquet (glob INFINO_SRC) into a persisted infino table.
 //!   serve  — open the table once and answer queries on a unix socket (daemon).
 //!   query  — client: read one SQL statement from stdin, send to the server,
 //!            print row count to stdout and elapsed seconds to stderr.
 //!   check  — client: ping the running server (used to detect up/down).
 //!
 //! Env: INFINO_URI (default ./data), INFINO_SRC (default hits.parquet),
-//!      INFINO_MAX_ROWS (0 = all), INFINO_STORAGE_* (storage_options),
+//!      INFINO_MAX_ROWS (0 = all), INFINO_HYDRATE_TARGET_ROWS (rows per
+//!      superfile, default 1.8M), INFINO_STORAGE_* (storage_options),
 //!      INFINO_CACHE_DIR, INFINO_SOCK (default ./infino.sock).
 
 use std::env;
@@ -26,26 +27,29 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::net::Shutdown;
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 use std::sync::Arc;
+use std::thread;
 use std::time::{Duration, Instant};
 
 use arrow::compute::cast;
-use arrow_array::RecordBatch;
-use arrow_schema::{DataType, Field, Schema, SchemaRef};
+use arrow_array::{RecordBatch, RecordBatchReader};
+use arrow_schema::{ArrowError, DataType, Field, Schema, SchemaRef};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 
-use infino::{
-    connect_with, CompactionSettings, ConnectOptions, Consistency, GcSettings, IndexSpec,
-    OptimizeOptions,
-};
+use infino::{connect_with, ConnectOptions, Consistency, IndexSpec};
 
 type R<T> = Result<T, Box<dyn Error>>;
 
-const BATCH_ROWS: usize = 1_000_000;
+/// Rows per superfile hydrate writes: ~256 MB each, ~56 files at 100M rows.
+const DEFAULT_TARGET_ROWS: usize = 1_800_000;
 
-/// Safety gap for the load's own garbage collection.
-const GC_SAFETY_GAP_SECS: u64 = 1;
+/// Rows per decoded batch. Small, so the batches in flight stay small.
+const DECODE_BATCH_ROWS: usize = 256_000;
+
+/// Decoded batches the channel holds before the decode threads wait.
+const CHANNEL_BATCHES: usize = 4;
 
 fn uri() -> String {
     env::var("INFINO_URI").unwrap_or_else(|_| "./data".to_string())
@@ -97,7 +101,7 @@ fn target_type(f: &Field) -> DataType {
     }
 }
 
-fn cast_batch(batch: &RecordBatch, target: &SchemaRef) -> R<RecordBatch> {
+fn cast_batch(batch: &RecordBatch, target: &SchemaRef) -> Result<RecordBatch, ArrowError> {
     let mut cols = Vec::with_capacity(target.fields().len());
     for (i, f) in target.fields().iter().enumerate() {
         let col = batch.column(i);
@@ -111,15 +115,32 @@ fn cast_batch(batch: &RecordBatch, target: &SchemaRef) -> R<RecordBatch> {
         };
         cols.push(out);
     }
-    Ok(RecordBatch::try_new(target.clone(), cols)?)
+    RecordBatch::try_new(target.clone(), cols)
 }
 
+/// Load the parquet with `hydrate`: one pass that writes a few big superfiles,
+/// with no per-batch append and no optimize after.
+///
+/// One parquet reader decodes too slowly to keep up, so the row groups are
+/// split across one thread per core:
+///
+///   decode thread 1 --\
+///   decode thread 2 ----> channel (bounded) --> Decoded --> table.hydrate
+///   decode thread N --/
+///
+/// The bounded channel keeps the decoded batches in memory small.
 fn load() -> R<()> {
     let src = env::var("INFINO_SRC").unwrap_or_else(|_| "hits.parquet".to_string());
-    let max_rows: Option<usize> = env::var("INFINO_MAX_ROWS")
+    let max_rows: usize = env::var("INFINO_MAX_ROWS")
         .ok()
         .and_then(|s| s.parse().ok())
-        .filter(|&n| n > 0);
+        .filter(|&n| n > 0)
+        .unwrap_or(usize::MAX);
+    let target_rows: usize = env::var("INFINO_HYDRATE_TARGET_ROWS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(DEFAULT_TARGET_ROWS);
 
     let mut files: Vec<PathBuf> = glob::glob(&src)?.filter_map(Result::ok).collect();
     files.sort();
@@ -144,58 +165,89 @@ fn load() -> R<()> {
     }
     let table = db.create_table("hits", target.clone(), IndexSpec::new())?;
 
-    let mut appended: usize = 0;
-    'files: for path in &files {
-        let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(path)?)?
-            .with_batch_size(BATCH_ROWS)
-            .build()?;
-        for batch in reader {
-            let mut batch = batch?;
-            if let Some(max) = max_rows {
-                if appended + batch.num_rows() > max {
-                    batch = batch.slice(0, max - appended);
+    let threads = thread::available_parallelism().map_or(1, |n| n.get());
+    let (tx, rx) = sync_channel(CHANNEL_BATCHES);
+    let mut handles = Vec::new();
+    for path in files {
+        let num_rg = ParquetRecordBatchReaderBuilder::try_new(File::open(&path)?)?
+            .metadata()
+            .num_row_groups();
+        let per_thread = num_rg.div_ceil(threads).max(1);
+        for first in (0..num_rg).step_by(per_thread) {
+            let row_groups: Vec<usize> = (first..(first + per_thread).min(num_rg)).collect();
+            let (tx, path, target) = (tx.clone(), path.clone(), target.clone());
+            handles.push(thread::spawn(move || {
+                // An error goes down the channel, so hydrate stops and returns it.
+                if let Err(e) = decode(&path, row_groups, &target, &tx) {
+                    let _ = tx.send(Err(e));
                 }
-            }
-            let n = batch.num_rows();
-            if n == 0 {
-                continue;
-            }
-            table.append(&cast_batch(&batch, &target)?)?;
-            appended += n;
-            if max_rows.is_some_and(|max| appended >= max) {
-                break 'files;
-            }
+            }));
         }
     }
+    // Only the decode threads hold a sender now, so the channel closes when they finish.
+    drop(tx);
 
-    // Compact per-batch superfiles into fewer, uniform segments. Part of the
-    // honest load cost.
-    table.optimize(&optimize_options())?;
-    println!("ingested {appended} rows");
+    let decoded = Decoded {
+        schema: target,
+        rx,
+        rows_left: max_rows,
+    };
+    let committed = table.hydrate(decoded, target_rows)?;
+    for h in handles {
+        let _ = h.join();
+    }
+    println!("ingested {committed} rows");
     Ok(())
 }
 
-/// INFINO_TARGET_SF_MB sizes the compacted superfiles. Unset = infino's own
-/// default (~1 GiB target). Set it to size segments to the machine — e.g. 256
-/// on an 8-core box yields several balanced segments for parallel scan instead
-/// of one large file plus small leftovers. min_fill_percent is dropped to 1 so
-/// a one-shot optimize actually merges the small tail rather than leaving it.
-fn optimize_options() -> OptimizeOptions {
-    // Reclaim the files this optimize supersedes instead of leaving them for a later sweep.
-    // The cost adds in "load" time.
-    let gc = GcSettings::default().with_safety_gap(Duration::from_secs(GC_SAFETY_GAP_SECS));
-    match env::var("INFINO_TARGET_SF_MB")
-        .ok()
-        .and_then(|s| s.parse::<u64>().ok())
-    {
-        Some(mb) => OptimizeOptions::compact(CompactionSettings {
-            target_superfile_size_mb: mb,
-            min_fill_percent: 1,
-            max_memory_mb: mb + 2048,
-            ..Default::default()
-        })
-        .with_gc(gc),
-        None => OptimizeOptions::default().with_gc(gc),
+/// Decode some row groups of one file, cast each batch and send it on.
+/// Stops early when the receiver is gone (hydrate returned).
+fn decode(
+    path: &Path,
+    row_groups: Vec<usize>,
+    target: &SchemaRef,
+    tx: &SyncSender<Result<RecordBatch, ArrowError>>,
+) -> Result<(), ArrowError> {
+    let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(path)?)?
+        .with_row_groups(row_groups)
+        .with_batch_size(DECODE_BATCH_ROWS)
+        .build()?;
+    for batch in reader {
+        if tx.send(Ok(cast_batch(&batch?, target)?)).is_err() {
+            break;
+        }
+    }
+    Ok(())
+}
+
+/// The channel as the `RecordBatchReader` hydrate takes. Ends after
+/// `rows_left` rows (INFINO_MAX_ROWS) or when every decode thread is done.
+struct Decoded {
+    schema: SchemaRef,
+    rx: Receiver<Result<RecordBatch, ArrowError>>,
+    rows_left: usize,
+}
+
+impl Iterator for Decoded {
+    type Item = Result<RecordBatch, ArrowError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.rows_left == 0 {
+            return None;
+        }
+        let batch = match self.rx.recv().ok()? {
+            Ok(batch) => batch,
+            Err(e) => return Some(Err(e)),
+        };
+        let n = batch.num_rows().min(self.rows_left);
+        self.rows_left -= n;
+        Some(Ok(batch.slice(0, n)))
+    }
+}
+
+impl RecordBatchReader for Decoded {
+    fn schema(&self) -> SchemaRef {
+        self.schema.clone()
     }
 }
 

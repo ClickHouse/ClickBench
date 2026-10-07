@@ -2105,9 +2105,9 @@ dependencies = [
 
 [[package]]
 name = "infino"
-version = "0.5.10"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a345862277a1a338d1e09a9aade7e1dfba5673a38b8f0d2d886989915edcaa68"
+checksum = "e3cca6961b2b40c0121571e3924286e2b0486875117496d1aba92a8ea4e502aa"
 dependencies = [
  "apache-avro",
  "arc-swap",
@@ -2142,6 +2142,7 @@ dependencies = [
  "rand_distr",
  "rayon",
  "roaring",
+ "rust-stemmers",
  "rustc-hash",
  "rustix",
  "serde",
@@ -2151,6 +2152,7 @@ dependencies = [
  "thiserror 2.0.20",
  "tokio",
  "tracing",
+ "unicode-properties",
  "unicode-segmentation",
  "uuid",
  "wide",
@@ -3143,6 +3145,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-stemmers"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e46a2036019fdb888131db7a4c847a1063a7493f971ed94ea82c67eada63ca54"
+dependencies = [
+ "serde",
+ "serde_derive",
+]
+
+[[package]]
 name = "rustc-hash"
 version = "2.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3846,6 +3858,12 @@ name = "unicode-ident"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
+
+[[package]]
+name = "unicode-properties"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7df058c713841ad818f1dc5d3fd88063241cc61f49f5fbea4b951e8cf5a8d71d"
 
 [[package]]
 name = "unicode-segmentation"
