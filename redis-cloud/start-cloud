@@ -11,7 +11,7 @@ from pathlib import Path
 c=json.loads(Path(os.environ['REDIS_CONNECTION_FILE']).read_text())
 for mode in ('default','cluster'):
     text='\n'.join(['connector.name=redisearch',
-        f'redisearch.uri={"rediss" if c.get("ssl") else "redis"}://{c["host"]}:{c["port"]}',
+        f'redisearch.uri={"rediss" if c.get("ssl") else "redis"}://{c["host"]}:{c["port"]}?timeout=1200s',
         f'redisearch.password={c["password"]}',
         f'redisearch.username={c.get("username","default")}',
         f'redisearch.cluster={str(mode=="cluster").lower()}',
