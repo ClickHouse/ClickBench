@@ -98,7 +98,9 @@ numbers. Check representative numeric aggregates against a reference engine.
 
 The connector revision includes a correctness fix for grouping NUMERIC BIGINTs:
 Redis's double-based grouping can merge adjacent IDs beyond 2^53. Those groups are
-computed by Trino from the exact hash values. See redis-sql-trino PR #125.
+computed by Trino from the exact hash values. See merged redis-sql-trino PR #125. The connector also sets an explicit 20-minute
+aggregation timeout (PR #127), because Redis Cloud rejects changing its server
+search timeout through `CONFIG SET`. Trino retains the same 20-minute query limit.
 
 After a full verified run, add two JSON files under `results/YYYYMMDD/`, labeled
 `Redis Cloud (Trino)` and `Redis Cloud (Trino, OSS Cluster API)`. Include all 43

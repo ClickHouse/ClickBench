@@ -15,7 +15,8 @@ for mode in ('default','cluster'):
         f'redisearch.password={c["password"]}',
         f'redisearch.username={c.get("username","default")}',
         f'redisearch.cluster={str(mode=="cluster").lower()}',
-        'redisearch.default-schema-name=default'])+'\n'
+        'redisearch.default-schema-name=default',
+        'redisearch.query-timeout-ms=1200000'])+'\n'
     p=Path(f'cloud-etc/catalog/redis_{mode}.properties')
     p.write_text(text); p.chmod(0o600)
 PY
