@@ -26,7 +26,7 @@ queries, so `tuned=no`.
 ```
 
 The release build is portable (no `-C target-cpu`), pinned to a published crate
-version (`infino = "0.5.10"`) so the result is reproducible from crates.io alone.
+version (`infino = "0.9.3"`) so the result is reproducible from crates.io alone.
 LTO is sized to the machine by `install`: fat LTO + `codegen-units = 1` at
 >= 12 GiB RAM (its single-pass link peaks ~7.6 GB), thin LTO below so the small
 VMs still build. Reads use strong consistency, so a query issued right after
@@ -72,7 +72,6 @@ pings the server so the driver can detect it coming up and going down.
 | `INFINO_SOCK` | `./infino.sock` | unix socket the server listens on |
 | `INFINO_CACHE_DIR` | `./cache` | disk cache so warm tries reuse cached column chunks |
 | `INFINO_CACHE_BUDGET` | infino default (10 GiB) | disk-cache budget in bytes; `benchmark.sh` sets ~75% of RAM so the dataset stays resident |
-| `INFINO_TARGET_SF_MB` | infino default (~1 GiB) | compacted superfile target size; `benchmark.sh` sets 256 for parallel scan |
 | `INFINO_STORAGE_*` | — | passed as `storage_options` (e.g. `INFINO_STORAGE_AZURE_STORAGE_ACCOUNT_NAME`) |
 
 ## Type handling
