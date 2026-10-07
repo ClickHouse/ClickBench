@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Compare APIs, preserving all 43 queries and three end-to-end tries each."""
-import csv
+import argparse
 import hashlib
 import json
 import os
@@ -24,16 +24,16 @@ def ready():
     raise RuntimeError('Trino failed to restart')
 
 
-def run():
+def run(mode):
     queries=Path('queries.sql').read_text().splitlines()
     assert len(queries)==43
     target=Path(os.environ.get('RESULT_DIR','cloud-results'))
     target.mkdir(exist_ok=True)
-    # Alternate which API goes first for each query, to balance server cache/order effects.
-    results={m:[] for m in ('default','cluster')}
+    # The Cloud database's OSS Cluster API flag must match this client mode.
+    results={mode:[]}
     samples=[]
     for i,sql in enumerate(queries,1):
-        modes=('default','cluster') if i%2 else ('cluster','default')
+        modes=(mode,)
         for mode in modes:
             os.environ['TRINO_CATALOG']=f'redis_{mode}'
             subprocess.run(['docker','restart','clickbench-cloud-trino'],check=True,stdout=subprocess.DEVNULL)
@@ -60,8 +60,10 @@ def run():
             for row in results[mode]: f.write(json.dumps(row)+',\n')
     # Redis Cloud cannot be restarted between queries: published results MUST use no-cold.
     (target/'complete.json').write_text(json.dumps({'queries':43,'tries':3,'tags':['no-cold'],
-        'api_order':'alternates per query','redis_restarted':False},indent=2)+'\n')
+        'mode':mode,'redis_restarted':False},indent=2)+'\n')
 
 
 if __name__=='__main__':
-    run()
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--mode', choices=('default','cluster'), required=True)
+    run(parser.parse_args().mode)

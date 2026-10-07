@@ -44,7 +44,7 @@ Use `"ssl": true` when connecting with TLS; the server certificate must validate
 The Cloud API account/user keys are provisioning credentials and are not needed
 by the benchmark runner. Never put any credentials in results or committed files.
 The default and OSS Cluster API paths use the same private endpoint, database,
-credentials, data and Trino settings; only `redisearch.cluster` changes.
+credentials, data and Trino settings; the database's `supportOSSClusterApi` flag and `redisearch.cluster` change together.
 
 ```sh
 export REDIS_CONNECTION_FILE=/secure/path/redis-connection.json
@@ -53,7 +53,9 @@ export PLUGIN_DIR="$PWD/plugin"
 curl --fail --location --output ../hits.parquet \
   https://datasets.clickhouse.com/hits_compatible/athena/hits.parquet
 ./load-cloud | tee load.log
-./run.sh | tee run.log
+RESULT_DIR=cloud-results-default ./run.sh --mode default | tee default-run.log
+# Enable supportOSSClusterApi on the Cloud database; wait until active.
+RESULT_DIR=cloud-results-cluster ./run.sh --mode cluster | tee cluster-run.log
 ```
 
 Wait for Trino `/v1/info` to report `starting: false` before loading. The dataset
@@ -71,14 +73,17 @@ data. `load.py --limit` exists for smoke tests; never submit subset timings.
 
 ## API comparison and result reporting
 
-`run-cloud.py` runs three tries per query in each mode, alternating which mode goes
-first on successive queries. It restarts Trino and clears the runner's page cache
+`run-cloud.py` runs three tries per query in the selected mode. Run the default
+API phase with Cloud OSS Cluster API disabled, then enable it for the cluster
+phase. Changing only the client flag while OSS Cluster API is enabled produces
+MOVED errors for ordinary clients. Preserve the same data and hardware across
+phases; record their order, and repeat in reverse order if comparing cache effects. It restarts Trino and clears the runner's page cache
 before each mode/query block. Redis Cloud remains running. Thus **both result files
 must have the `no-cold` tag**: the first try is not a true cold Redis measurement.
 There is no query-result cache. Each query consumes and writes all returned results.
 Failed queries have `null` timings, with errors retained in `samples.jsonl`.
 
-`cloud-results/` contains the three timings per query, result CSVs, errors, and
+The selected `RESULT_DIR` contains the three timings per query, result CSVs, errors, and
 checksums. Retain these as raw evidence. Compare successful query outputs between
 modes, accounting for unspecified order and ties at a LIMIT boundary, before
 publishing timings. Include correctness failures as `null`, not fast successful
