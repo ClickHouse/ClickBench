@@ -67,6 +67,13 @@ Parquet timestamp seconds become epoch milliseconds, as the connector requires.
 All 105 columns are created with the connector's standard schema; no extra
 materialized views, preaggregations, or manually tuned indexes are used.
 
+For a database already using OSS Cluster API, load with `BENCHMARK_MODE=cluster`.
+The default `LOAD_WORKERS=8` can load independent Parquet row groups in parallel; each
+row retains its original physical ordinal, and all worker errors abort the run.
+
+Redis query timeouts must fail explicitly (`CONFIG SET search-on-timeout fail`)
+so partial results are not treated as valid. Preserve this setting with the run metadata.
+
 `load-cloud` requires an empty dedicated database. It never flushes a database.
 For another run, create a fresh database or explicitly remove only the benchmark
 data. `load.py --limit` exists for smoke tests; never submit subset timings.

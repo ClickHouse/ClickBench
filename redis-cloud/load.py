@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Load all Parquet rows as hashes without rounding signed 64-bit IDs."""
 import argparse
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import datetime
 import json
 import os
@@ -42,12 +43,30 @@ def client():
     config = os.environ.get('REDIS_CONNECTION_FILE')
     if config:
         options = json.loads(Path(config).read_text())
-        return redis.Redis(**options, socket_connect_timeout=10, socket_timeout=1200)
+        cls = redis.RedisCluster if os.environ.get('REDIS_CLUSTER') == 'true' else redis.Redis
+        return cls(**options, socket_connect_timeout=10, socket_timeout=1200)
     return redis.Redis(host='127.0.0.1', port=16379,
                        socket_connect_timeout=10, socket_timeout=1200)
 
 
-def load(path, expected_rows, limit=None):
+def load_group(task):
+    path, group, offset = task
+    r = client()
+    types = column_types()
+    count = 0
+    for batch in pq.ParquetFile(path).iter_batches(batch_size=1000, row_groups=[group]):
+        columns = {name.lower(): values for name, values in batch.to_pydict().items()}
+        pipe = r.pipeline(transaction=False)
+        for position in range(batch.num_rows):
+            row = {name: encode(columns[name][position], typ) for name, typ in types}
+            pipe.hset(f'hits:{offset + count}', mapping=row)
+            count += 1
+        pipe.execute()
+    r.close()
+    return count
+
+
+def load(path, expected_rows, limit=None, workers=1):
     r = client()
     types = column_types()
     source = pq.ParquetFile(path)
@@ -55,7 +74,20 @@ def load(path, expected_rows, limit=None):
     if limit is None and total != expected_rows:
         raise ValueError(f'Parquet row count {total} != {expected_rows}')
     count = 0
-    for batch in source.iter_batches(batch_size=1000):
+    if workers > 1:
+        if limit is not None:
+            raise ValueError('Parallel loading requires the full dataset')
+        tasks = []
+        offset = 0
+        for group in range(source.num_row_groups):
+            tasks.append((path, group, offset))
+            offset += source.metadata.row_group(group).num_rows
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(load_group, task) for task in tasks]
+            for future in as_completed(futures):
+                count += future.result()
+                print(f'Loaded {count:,} rows', file=sys.stderr, flush=True)
+    for batch in (() if workers > 1 else source.iter_batches(batch_size=1000)):
         columns = {name.lower(): values for name, values in batch.to_pydict().items()}
         pipe = r.pipeline(transaction=False)
         for position in range(batch.num_rows):
@@ -95,5 +127,8 @@ if __name__ == '__main__':
     parser.add_argument('parquet')
     parser.add_argument('--expected-rows', type=int, default=EXPECTED_ROWS)
     parser.add_argument('--limit', type=int, help='Smoke test only; never publish as ClickBench')
+    parser.add_argument('--workers', type=int, default=1)
     args = parser.parse_args()
-    load(args.parquet, args.expected_rows, args.limit)
+    if args.workers < 1:
+        parser.error('--workers must be positive')
+    load(args.parquet, args.expected_rows, args.limit, args.workers)
