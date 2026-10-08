@@ -1,0 +1,25 @@
+#!/bin/bash
+# Repeat the load once more, outside every measured window, with part_log and
+# query_log on, and print where the parts and the time went.
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+rm -rf .clickbench .profile
+sync
+
+echo "=== load_profile begin ==="
+python3 load_profile.py \
+    --path .profile \
+    --create create.sql \
+    --load "$(tr '\n' ' ' < insert.sql | sed 's/;[[:space:]]*$//')" \
+    --table hits \
+    --final \
+    --out profile.json
+echo "=== load_profile json ==="
+python3 -c "import json; r = json.load(open('profile.json')); r['pipeline'].pop('explain_pipeline'); print(json.dumps(r))"
+echo "=== load_profile end ==="
+
+rm -rf .profile hits.csv
+sync

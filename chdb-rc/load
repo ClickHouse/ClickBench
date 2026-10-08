@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# Idempotent: blow away any prior data dir.
+rm -rf .clickbench
+
+python3 - <<'PY'
+from chdb import dbapi
+
+con = dbapi.connect(path=".clickbench")
+cur = con.cursor()
+
+cur.execute(open("create.sql").read())
+cur.execute(open("insert.sql").read())
+cur.execute("OPTIMIZE TABLE clickbench.hits FINAL")
+
+cur.close()
+con.close()
+PY
+
+# hits.csv stays for ./profile, which benchmark.sh runs after the measured flow.
+sync
