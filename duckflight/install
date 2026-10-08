@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eu
+cd "$(dirname "$0")"
+if ! command -v uv >/dev/null 2>&1; then
+    mkdir -p .tools
+    curl -LsSf https://astral.sh/uv/0.12.13/install.sh -o .tools/install-uv.sh
+    UV_INSTALL_DIR="$PWD/.tools" UV_NO_MODIFY_PATH=1 sh .tools/install-uv.sh
+    export PATH="$PWD/.tools:$PATH"
+fi
+uv sync --frozen --python 3.12
+exec uv run --frozen --no-sync python harness.py install

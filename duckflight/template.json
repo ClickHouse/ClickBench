@@ -1,0 +1,7 @@
+{
+  "system": "DuckFlight (Flight SQL)",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": ["Rust", "column-oriented", "DuckDB derivative"]
+}
