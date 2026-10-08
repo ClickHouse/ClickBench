@@ -7,11 +7,26 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 source ./versions.env
 if [ ! -d connector ]; then git clone https://github.com/redis-field-engineering/redis-sql-trino.git connector; fi
-git -C connector fetch origin "$CONNECTOR_REVISION"
-git -C connector checkout --detach "$CONNECTOR_REVISION"
-docker build -t "clickbench-connector:$CONNECTOR_REVISION" connector
-# Extract the platform-independent plugin into the location start-cloud mounts.
-mkdir -p plugin
+git -C connector fetch origin master
+latest=$(git -C connector rev-parse origin/master)
+[ "$latest" = "$CONNECTOR_REVISION" ] || { printf 'Update CONNECTOR_REVISION to latest master and rebuild\n' >&2; exit 1; }
+# Archive the pinned tree: ignored target/ and other local files cannot enter the build.
+context=$(mktemp -d)
+plugin_stage=$(mktemp -d)
+cid=
+cleanup() {
+    [ -z "$cid" ] || docker rm "$cid" >/dev/null 2>&1 || true
+    rm -rf "$context" "$plugin_stage"
+}
+trap cleanup EXIT
+git -C connector archive "$CONNECTOR_REVISION" | tar -x -C "$context"
+docker build --pull -t "clickbench-connector:$CONNECTOR_REVISION" "$context"
 cid=$(docker create "clickbench-connector:$CONNECTOR_REVISION")
-docker cp "$cid:/usr/lib/trino/plugin/redisearch/." plugin/
-docker rm "$cid" >/dev/null
+docker cp "$cid:/usr/lib/trino/plugin/redisearch/." "$plugin_stage/"
+image_id=$(docker image inspect --format '{{.Id}}' "clickbench-connector:$CONNECTOR_REVISION")
+.venv/bin/python benchmark_version.py record --plugin "$plugin_stage" \
+    --revision "$CONNECTOR_REVISION" --image-id "$image_id"
+.venv/bin/python benchmark_version.py verify --plugin "$plugin_stage" --revision "$CONNECTOR_REVISION"
+# Retain the previous build instead of mixing dependencies from two versions.
+if [ -e plugin ]; then mv plugin "plugin-previous-$(date +%s)"; fi
+mv "$plugin_stage" plugin

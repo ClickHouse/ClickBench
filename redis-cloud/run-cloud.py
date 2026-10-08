@@ -10,6 +10,7 @@ import sys
 import time
 import urllib.request
 from query import execute
+from benchmark_version import require_current_run
 
 
 def ready():
@@ -28,7 +29,7 @@ def run(mode):
     queries=Path('queries.sql').read_text().splitlines()
     assert len(queries)==43
     target=Path(os.environ.get('RESULT_DIR','cloud-results'))
-    target.mkdir(exist_ok=True)
+    require_current_run(target)
     # The Cloud database's OSS Cluster API flag must match this client mode.
     results={mode:[]}
     samples=[]

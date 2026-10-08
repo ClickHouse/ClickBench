@@ -4,6 +4,10 @@ cd "$(dirname "$0")"
 : "${REDIS_CONNECTION_FILE:?Set REDIS_CONNECTION_FILE to a private Redis connection JSON file}"
 : "${PLUGIN_DIR:?Set PLUGIN_DIR to the built connector directory}"
 source ./versions.env
+PLUGIN_DIR=$(cd "$PLUGIN_DIR" && pwd -P)
+export PLUGIN_DIR
+.venv/bin/python benchmark_version.py verify --plugin "$PLUGIN_DIR" --revision "$CONNECTOR_REVISION"
+manifest_sha=$(.venv/bin/python -c 'from pathlib import Path; from benchmark_version import digest; import os; print(digest(Path(os.environ["PLUGIN_DIR"]) / "connector-build.json"))')
 mkdir -p cloud-etc/catalog
 python3 - <<'PY'
 import json, os
@@ -36,6 +40,8 @@ query.max-memory-per-node=64GB
 memory.heap-headroom-per-node=24GB
 EOF
 docker run -d --name clickbench-cloud-trino --memory=120g \
+    --label "clickbench.connector-revision=$CONNECTOR_REVISION" \
+    --label "clickbench.plugin-manifest-sha256=$manifest_sha" \
     -p 127.0.0.1:18080:8080 \
     -v "$PLUGIN_DIR:/usr/lib/trino/plugin/redisearch:ro" \
     -v "$PWD/cloud-etc/catalog:/etc/trino/catalog:ro" \

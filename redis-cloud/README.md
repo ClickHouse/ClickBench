@@ -136,3 +136,28 @@ RESULT_DIR=cloud-results-cluster .venv/bin/python run-one-query.py --mode cluste
 Each job restarts Trino, clears the runner page cache and records three complete-result attempts for the selected query. Redis stays running. Existing attempts for that query are protected against overwriting. Query numbers range from 1 to 43; the cumulative result is finalized only when all 129 attempt records exist.
 
 The current patched sweep was stopped during Q5: attempts 1 and 2 timed out, and attempt 3 was cancelled by the user. That cancelled attempt is recorded as null with its cancellation reason. At the user's request, the sweep continues through Q6-Q43 in individual jobs, using the same revision, loaded data and hardware.
+
+## Current-code requirement
+
+New benchmark runs pin `dbcb518c541b3eba22b4471cb71509233ab09efa` (master checked
+on 2026-10-08), including automatic parallel scans. `install` checks the pin
+against current origin/master and builds a Git archive of that exact commit,
+excluding stale compiled files and local edits. It records every plugin JAR's
+SHA-256 and the build image ID in `plugin/connector-build.json`.
+
+`start-cloud` requires the pin to match live master and validates all plugin JARs.
+It labels the Trino container with the revision and manifest checksum. Both query
+runners recheck live master, plugin bytes, container labels and its read-only
+plugin mount before testing. If master advances, update `versions.env`, rebuild,
+and recreate Trino. Runs stay pinned once started; do not replace artifacts in an
+active run. Network verification failures stop the run rather than using stale code.
+
+Each results directory retains `connector-build.json`. Older results without
+provenance or with another build must use a separate directory. Historical
+measurements keep their original revisions: the 5M Cloud 129-output acceptance
+predates automatic parallel scans; the local parallel-scan tests are separate.
+No new cloud benchmark was launched by this update.
+
+```sh
+.venv/bin/python -m unittest discover -s . -p test_benchmark_version.py
+```

@@ -8,6 +8,7 @@ from pathlib import Path
 import runpy
 import subprocess
 from query import execute
+from benchmark_version import require_current_run
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=('default', 'cluster'), required=True)
@@ -16,7 +17,7 @@ a = parser.parse_args()
 queries = Path('queries.sql').read_text().splitlines()
 assert len(queries) == 43
 r = Path(os.environ.get('RESULT_DIR', 'cloud-results-' + a.mode))
-r.mkdir(exist_ok=True)
+require_current_run(r)
 samples = [json.loads(line) for line in (r / 'samples.jsonl').read_text().splitlines()] if (r / 'samples.jsonl').exists() else []
 assert not any(s['query'] == a.query and s['mode'] == a.mode for s in samples), 'Query already has attempts; preserve them'
 os.environ['TRINO_CATALOG'] = 'redis_' + a.mode
