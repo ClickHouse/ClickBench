@@ -1,0 +1,53 @@
+#!/bin/bash
+set -euo pipefail
+
+# Candidate chdb-core build under test; the stock chdb entry installs the latest release.
+CORE_TAG=v26.9.1-rc.1
+
+sudo apt-get update -y
+sudo apt-get install -y python3-pip python3-venv
+
+if [ ! -d myenv ]; then
+    python3 -m venv myenv
+fi
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+pip install --upgrade pip
+pip install psutil pyarrow "chdb==4.4.0"
+
+wheel_url=$(python3 - "$CORE_TAG" <<'PY'
+import json
+import platform
+import sys
+import urllib.request
+
+tag = sys.argv[1]
+release = json.load(urllib.request.urlopen(
+    f"https://api.github.com/repos/chdb-io/chdb-core/releases/tags/{tag}", timeout=30))
+arch = platform.machine()
+for asset in release["assets"]:
+    name = asset["name"]
+    if name.endswith(".whl") and "_lite" not in name and "linux" in name and arch in name:
+        print(asset["browser_download_url"])
+        break
+else:
+    raise SystemExit(f"no full Linux wheel for chdb-core {tag} on {arch}")
+PY
+)
+wheel=$(basename "$wheel_url")
+curl -fSL --retry 3 -o "$wheel" "$wheel_url"
+pip uninstall --quiet -y chdb-core || true
+pip install --quiet "./$wheel"
+
+# The profiling script ships in the same tag.
+curl -fSL --retry 3 -o load_profile.py \
+    "https://raw.githubusercontent.com/chdb-io/chdb-core/${CORE_TAG}/benchmark/load_profile.py"
+
+python3 - <<'PY'
+from importlib.metadata import version
+
+print(f"Installed chdb: {version('chdb')}")
+print(f"Installed chdb-core: {version('chdb-core')}")
+PY

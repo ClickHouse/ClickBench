@@ -1,0 +1,7 @@
+{
+    "system": "chDB (rc, no FINAL, default codec)",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "yes",
+    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless"]
+}

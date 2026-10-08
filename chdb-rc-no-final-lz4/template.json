@@ -1,0 +1,7 @@
+{
+    "system": "chDB (rc, no FINAL, LZ4)",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "yes",
+    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless"]
+}
