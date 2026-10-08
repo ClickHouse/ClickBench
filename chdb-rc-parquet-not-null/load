@@ -1,0 +1,5 @@
+#!/bin/bash
+# Queries use an explicit NOT NULL File(Parquet) table over hits_*.parquet.
+# Nothing to load; the dataset is already in CWD.
+set -e
+sync

@@ -1,0 +1,7 @@
+{
+    "system": "chDB (rc, Parquet partitioned, NOT NULL schema)",
+    "proprietary": "no",
+  "hardware": "cpu",
+    "tuned": "yes",
+    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless"]
+}
