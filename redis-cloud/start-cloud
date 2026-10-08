@@ -26,6 +26,13 @@ for mode in ('default','cluster'):
 PY
 # The benchmark runner has 128 GiB RAM. Smaller hosts must reduce these settings.
 docker pull "$TRINO_IMAGE"
+trino_uid=$(docker run --rm --entrypoint id "$TRINO_IMAGE" -u)
+if [ "$(id -u)" -eq 0 ]; then
+    chown "$trino_uid" cloud-etc/catalog/*.properties
+elif [ "$(id -u)" != "$trino_uid" ]; then
+    printf 'Catalog owner must match Trino UID %s; run setup with ownership permissions\n' "$trino_uid" >&2
+    exit 1
+fi
 cid=$(docker create "$TRINO_IMAGE")
 docker cp "$cid:/etc/trino/jvm.config" cloud-etc/jvm.config
 docker rm "$cid" >/dev/null
