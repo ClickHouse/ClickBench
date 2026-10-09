@@ -11,6 +11,14 @@
 # and mounted, and the data is placed there. Otherwise it stays on the root
 # EBS volume.
 
+# Make sure the machine terminates whatever happens to this script: a deadline
+# that systemd enforces even if the script hangs (a stalled download or upload,
+# or a background server holding the pipe of `timeout ... | tee` open) or is
+# killed, and a trap for early exits. The `shutdown now` at the end replaces
+# the deadline in the normal case.
+shutdown -P "+$(( @timeout@ / 60 + 120 ))"
+trap 'shutdown now' EXIT
+
 export HOME="${HOME:-/root}"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
@@ -109,18 +117,18 @@ jq -s -c \
     --argjson tags "$(printf '%s\n' cloud aws "${ARCH}" ${VENDOR} "${STORAGE_TAG}" | jq -R . | jq -s -c .)" \
     '{kind: $kind, instance_type: $instance_type, version: $version,
       machine: $machine, comment: $comment, time: $time, tags: $tags, result: .}' \
-    result.lines | tee result.json | curl "${RESULTS_URL}" --data-binary @-
+    result.lines | tee result.json | curl --max-time 300 "${RESULTS_URL}" --data-binary @-
 
 # Also send the (truncated) log for diagnostics, as the main benchmark does.
 send_log() {
     local f="$1" size
     size=$(stat -c%s "$f" 2>/dev/null || echo 0)
     if [ "$size" -le 1000000 ]; then
-        curl "${RESULTS_URL}" --data-binary @"$f"
+        curl --max-time 300 "${RESULTS_URL}" --data-binary @"$f"
     else
         { head -c 100000 "$f"
           printf '\n...[%d bytes truncated]...\n' "$((size - 1000000))"
-          tail -c 900000 "$f"; } | curl "${RESULTS_URL}" --data-binary @-
+          tail -c 900000 "$f"; } | curl --max-time 300 "${RESULTS_URL}" --data-binary @-
     fi
 }
 send_log "${LOG}"
