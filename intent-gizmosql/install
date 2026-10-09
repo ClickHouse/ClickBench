@@ -10,22 +10,22 @@ sudo apt-get update -y
 sudo apt-get install -y curl unzip netcat-openbsd
 
 # Install the released gizmosql_server + gizmosql_client of this entry from
-# https://github.com/bddppqs/intent-gizmosql (tag v1.38.0-intent.6): portable Linux builds
+# https://github.com/bddppqs/intent-gizmosql (tag v1.38.0-intent.8): portable Linux builds
 # (amd64 and arm64) with a glibc 2.28 baseline, so no loader shim is needed
 # on Ubuntu 24.04. Each zip is pinned by URL and SHA-256, and the two
 # binaries by their own SHA-256; a different file fails the install.
 case "$(uname -m)" in
     x86_64)
-        ZIP_URL="https://github.com/bddppqs/intent-gizmosql/releases/download/v1.38.0-intent.6/gizmosql_cli_linux_amd64.zip"
-        ZIP_SHA256="035f94451c7620a11efbd08f07e47f6d2348ba17cf77e0f3101e10e2cc07c497"
-        SERVER_SHA256="261b0e71a12f9834161b260f5f35516712f2d6306e0f8d483f2435149362763b"
-        CLIENT_SHA256="382dbe9b41b37c1bdb743296ddadfc20b865a3aa55a6a1985552c2fc7f27e19a"
+        ZIP_URL="https://github.com/bddppqs/intent-gizmosql/releases/download/v1.38.0-intent.8/gizmosql_cli_linux_amd64.zip"
+        ZIP_SHA256="4494673adfb02cebe1dbb64f778b54a3e283de78d37f8a8109559a4b440c9996"
+        SERVER_SHA256="bd85e46f14dd1471e18f0d71a2b7e9bfba750449fe4d803fb7074ca5c23a8fee"
+        CLIENT_SHA256="3812af0c473e740a2445e930a29c2e62dfd809348dc1cd57a142d31a90fc03dd"
         ;;
     aarch64)
-        ZIP_URL="https://github.com/bddppqs/intent-gizmosql/releases/download/v1.38.0-intent.6/gizmosql_cli_linux_arm64.zip"
-        ZIP_SHA256="64e651f664fec18ead9fe03c39f5a689037d31163ab621cba50afbbe749dac50"
-        SERVER_SHA256="be2c275e00b1e9ef0d1c9df1ce97ed53465019e0959693a7adf78d59eee7a0f5"
-        CLIENT_SHA256="5723542a8e348b85e48a596152b308e7b28c70d4036910b871bb36fbbecd6faa"
+        ZIP_URL="https://github.com/bddppqs/intent-gizmosql/releases/download/v1.38.0-intent.8/gizmosql_cli_linux_arm64.zip"
+        ZIP_SHA256="a31110137d20b3de43757409e9fa3f94f4bb92c674dedb6885cd9fb532eb7b39"
+        SERVER_SHA256="1d1215100b8ede996d0ac5ddbd9da4f4f204ae489826d40357cf967ad10de4c2"
+        CLIENT_SHA256="e38f6f6688ad0d06004f7d6c5c5360406f2992ee04be1d9136a5ce9d03cc792e"
         ;;
     *)
         echo "unsupported architecture: $(uname -m) (this entry ships amd64 and arm64 builds)" >&2

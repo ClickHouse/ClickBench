@@ -12,7 +12,18 @@ rm -f clickbench.db
 start_gizmosql
 
 gizmosql_client --file create.sql
-gizmosql_client --file load.sql
+# More than 64 CPUs and one thread per core (README.md): the bulk insert runs with
+# one DuckDB thread per CPU and writes its blocks at zstd level 13, both set at the
+# head of the load's own client session. With SMT (two or more threads per core),
+# or when lscpu cannot be read, the load keeps the defaults. Every query run
+# restarts the server (./stop, ./start), so queries run with the threads util.sh sets.
+ncpu=$(nproc)
+tpc=$(LC_ALL=C lscpu 2>/dev/null | awk -F: '/^Thread\(s\) per core:/ {gsub(/[ \t]/, "", $2); print $2}')
+if [ "${ncpu}" -gt 64 ] && [ "${tpc}" = 1 ]; then
+    { printf 'SET threads = %s;\nSET zstd_bulk_write_compression_level = 13;\n' "${ncpu}"; cat load.sql; } | gizmosql_client
+else
+    gizmosql_client --file load.sql
+fi
 
 rm -f hits.parquet
 sync
