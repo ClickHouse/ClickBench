@@ -271,6 +271,26 @@ bench_load() {
     fi
 }
 
+# Prints the timing from the stderr of ./query, or nothing if there is none,
+# which means the query has failed even if ./query exited with zero.
+#
+# The query script's contract is "fractional seconds on the last line", but
+# several systems (pyspark, JVM-based ones, anything that prints
+# SparkSession shutdown lines after the measurement) emit additional log
+# noise after the timing, so plain `tail -n1` was reading "Stopping
+# SparkContext" or similar and producing all-null result rows. Pull the LAST
+# numeric-looking line instead.
+#
+# Spark also prints its console progress bar with carriage returns instead
+# of newlines:
+#     [Stage 1:>... (0 + 96) / 111]\r\r   spaces   \r{timing}\n
+# so the timing ends up on the same logical line as the progress bar, and
+# the strict ^number$ regex misses it. Translating \r to \n splits those
+# updates into their own lines and the timing stands alone for matching.
+bench_extract_timing() {
+    printf '%s\n' "$1" | tr '\r' '\n' | grep -E '^[0-9]+(\.[0-9]+)?$' | tail -n1
+}
+
 # Run a single query script and emit a single JSON-array `[t1,t2,t3],` line.
 # Per-try timing is also appended to result.csv as `<num>,<try>,<seconds>`.
 bench_run_query() {
@@ -324,22 +344,7 @@ bench_run_query() {
         raw_stderr=$(printf '%s\n' "$query" | ./query 2>&1 >/dev/null) && exit_code=0 || exit_code=$?
 
         if [ "$exit_code" -eq 0 ]; then
-            # The query script's contract is "fractional seconds on the
-            # last line", but several systems (pyspark, JVM-based ones,
-            # anything that prints SparkSession shutdown lines after the
-            # measurement) emit additional log noise after the timing,
-            # so plain `tail -n1` was reading "Stopping SparkContext" or
-            # similar and producing all-null result rows. Pull the LAST
-            # numeric-looking line instead.
-            #
-            # Spark also prints its console progress bar with carriage
-            # returns instead of newlines:
-            #     [Stage 1:>... (0 + 96) / 111]\r\r   spaces   \r{timing}\n
-            # so the timing ends up on the same logical line as the
-            # progress bar, and the strict ^number$ regex misses it.
-            # Translating \r to \n splits those updates into their own
-            # lines and the timing stands alone for matching.
-            timing=$(printf '%s\n' "$raw_stderr" | tr '\r' '\n' | grep -E '^[0-9]+(\.[0-9]+)?$' | tail -n1)
+            timing=$(bench_extract_timing "$raw_stderr")
             [ -z "$timing" ] && timing="null"
         else
             timing="null"
@@ -479,11 +484,15 @@ print('\n'.join(map(str, xs)))
 PY
 )
 
-            local ok=0 err=0 idx=0 qi q_text
+            local ok=0 err=0 idx=0 qi q_text raw_stderr
             while [ "$(date +%s)" -lt "$deadline" ]; do
                 qi="${perm[$idx]}"
                 q_text="${queries[$qi]}"
-                if printf '%s\n' "$q_text" | ./query >/dev/null 2>&1; then
+                # Same success criterion as bench_run_query: some query
+                # scripts exit with zero on errors, and the error would
+                # count as a (very fast) successful query.
+                if raw_stderr=$(printf '%s\n' "$q_text" | ./query 2>&1 >/dev/null) \
+                    && [ -n "$(bench_extract_timing "$raw_stderr")" ]; then
                     ok=$((ok + 1))
                 else
                     err=$((err + 1))
