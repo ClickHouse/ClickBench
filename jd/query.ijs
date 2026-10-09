@@ -18,6 +18,6 @@ t1 =. 6!:1''
 
 echo ": result
 
-((": t1 - t0), 10{a.) 1!:2 (5)   NB. timing + newline to stderr (id 5)
+((0j6 ": t1 - t0), 10{a.) 1!:2 (5)   NB. timing (fixed-point, as J writes 1e_5 otherwise) + newline to stderr (id 5)
 
 exit ''
