@@ -165,3 +165,15 @@ The full-data latest-code OSS sweep completed on October 8, 2026 Pacific; see th
 ## Completed latest-code full-data run
 
 All 43 queries ran three times on 99,997,497 rows at `dbcb518`. 123 outputs passed independent references; Q24 timed out on all attempts and Q34 exceeded MAX_AGGREGATE_GROUPS on all attempts. These six attempts are null. Results require `no-cold`. Fresh Arrow ingestion plus indexing was 1036.954 seconds; source download/table creation excluded. Separate 10M encoder diagnostics do not enter query timings. An actual default server API switch failed with PROVISION_FAILURE; no client-only comparison is claimed. Validation/provenance evidence is retained in `evidence/latest-20261008`; result JSON is in `results/20261009`.
+
+## PR154 acceptance evidence
+
+October 9 full-data testing of merged PR154 (`d83d504d65cd5b3bd14fd9bd559f5acad6ffedf2`) validates Q24 and Q34 on all 99,997,497 rows, three attempts each. Q24 best warm: 3.914345 seconds; Q34: 61.687396 seconds. These previously timed out and exceeded the group limit, respectively. This targeted cohort is separate from the complete older result matrix; no mixed-revision matrix is submitted.
+
+| Query purpose | Attempt 1 (s) | Attempt 2 (s) | Attempt 3 (s) | Best warm (s) | Correctness |
+|---|---:|---:|---:|---:|---|
+| Q24: Earliest 10 full rows whose URL contains google | 4.065388 | 3.933026 | 3.914345 | 3.914345 | 3 independent reference matches |
+| Q34: Top 10 URLs by visit count | 75.063332 | 64.139660 | 61.687396 | 61.687396 | 3 independent reference matches |
+| Q35: Same URL grouping with a constant column (control) | 79.409368 | 62.152862 | 62.306080 | 62.152862 | 3 independent reference matches |
+
+[Independent correctness, CSV checksums, plans and metrics](evidence/acceptance-20261009/README.md). Backup/restore diagnostic is pending; no restore speedup is claimed.

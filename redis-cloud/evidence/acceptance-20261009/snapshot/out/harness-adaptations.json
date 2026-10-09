@@ -1,0 +1,5 @@
+{
+  "reason": "FT.INFO RESP2 arrays or RESP3 maps; connector and SQL unchanged",
+  "loader_original_sha256": "11185bfac504074865e0da6eb386dc7db763c5319c7c0c578c5e296631f3e0d4",
+  "loader_runtime_sha256": "7b0f7e31b0462753af8ed6dc03549f506768b41b282f7f060d11e853cf7fe039"
+}

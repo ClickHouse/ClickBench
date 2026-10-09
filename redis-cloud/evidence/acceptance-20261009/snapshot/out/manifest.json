@@ -1,0 +1,25 @@
+{
+  "build_method": "clean Maven package of git archive",
+  "query_limit_seconds": 1200,
+  "redis_api": "OSS Cluster API",
+  "loader": "Arrow/NumPy",
+  "dataset_rows_full": 99997497,
+  "connector_revision": "d83d504d65cd5b3bd14fd9bd559f5acad6ffedf2",
+  "queries": [
+    24,
+    34,
+    35
+  ],
+  "purpose": "Full-data acceptance of PR154",
+  "cache_tag": "no-cold",
+  "artifact_sha256": "a9e069c287a027b84be4e1bbe03ef2f6025d8e843e563e49cbde7c3d6e4e70eb",
+  "bucket": "trino-issues-3444273-735486936198",
+  "subscription_id": 3444273,
+  "database_id": 14680936,
+  "expires": "2026-10-10T04:15:52.879663+00:00",
+  "source": {
+    "sha256": "a390f6cb782f6aaef278c72fc1dd86c4f30bc843ebab3c159e9bd4d45ddb079f",
+    "rows": 99997497,
+    "bytes": 14779976446
+  }
+}
