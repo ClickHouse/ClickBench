@@ -9,6 +9,14 @@
 # bucket -> (build the image from source if this version has no published one)
 # -> run-version.sh -> POST the result JSON + log to the sink -> shutdown.
 
+# Make sure the machine terminates whatever happens to this script: a deadline
+# that systemd enforces even if the script hangs (a stalled download or upload,
+# or a background server holding the pipe of `timeout ... | tee` open) or is
+# killed, and a trap for early exits. The `shutdown now` at the end replaces
+# the deadline in the normal case.
+shutdown -P "+$(( @timeout@ / 60 + 120 ))"
+trap 'shutdown now' EXIT
+
 export HOME="${HOME:-/root}"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
@@ -91,7 +99,7 @@ RESULTS_URL='https://play.clickhouse.com/?user=sink&query=INSERT+INTO+data+FORMA
 if [ -f "results/${VERSION}.json" ]; then
     jq -c --arg machine "${MACHINE}" --arg kind 'versions-benchmark' \
         '. + {kind: $kind, machine: $machine}' "results/${VERSION}.json" \
-        | curl "${RESULTS_URL}" --data-binary @-
+        | curl --max-time 300 "${RESULTS_URL}" --data-binary @-
 fi
 
 # Also send the (truncated) log for diagnostics, as the main benchmark does.
@@ -99,11 +107,11 @@ send_log() {
     local f="$1" size
     size=$(stat -c%s "$f" 2>/dev/null || echo 0)
     if [ "$size" -le 1000000 ]; then
-        curl "${RESULTS_URL}" --data-binary @"$f"
+        curl --max-time 300 "${RESULTS_URL}" --data-binary @"$f"
     else
         { head -c 100000 "$f"
           printf '\n...[%d bytes truncated]...\n' "$((size - 1000000))"
-          tail -c 900000 "$f"; } | curl "${RESULTS_URL}" --data-binary @-
+          tail -c 900000 "$f"; } | curl --max-time 300 "${RESULTS_URL}" --data-binary @-
     fi
 }
 send_log log
