@@ -238,3 +238,5 @@ For future benchmark initialization, **always restore a verified compatible back
 | Q43 | 2.896885 | 2.226068 | 2.197874 | 2.197874 | 3 valid outputs |
 
 [Complete sweep evidence](evidence/full-d83d504-20261009/README.md). [Backup/restore evidence](evidence/backup-restore-20261009/README.md). The older dbcb518 result matrix is retained as historical evidence in `evidence/latest-20261008/leaderboard-result.json`, separate from the new submitted matrix.
+
+Dedicated Redis Cloud subscription/database, all four EC2 instances, security group, data volumes, ephemeral artifact bucket, deadline Lambda/rule, IAM roles and instance profile are confirmed deleted. The private encrypted 40-file backup is confirmed retained with 30-day object expiry; local raw archives and validation records remain retained.

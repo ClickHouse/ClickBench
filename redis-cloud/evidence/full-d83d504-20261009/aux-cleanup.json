@@ -1,0 +1,11 @@
+{
+  "bucket_deleted": true,
+  "deadline_rule_deleted": true,
+  "cleanup_function_deleted": true,
+  "instance_profile_deleted": true,
+  "roles_deleted": [
+    "trino-issues-3444273-runner",
+    "trino-issues-3444273-cleanup"
+  ],
+  "local_archive_retained": true
+}

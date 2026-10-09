@@ -1,0 +1,9 @@
+{
+  "backup_retained": true,
+  "files_verified": 40,
+  "total_bytes": 50181080429,
+  "encryption": "AES256",
+  "public_access_blocked": true,
+  "object_expiry_days": 30,
+  "verification": "sizes and ETags match retained SHA256 manifest; original SHA256 verification retained"
+}

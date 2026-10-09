@@ -1,5 +1,8 @@
 {
-  "README.md": "d9d0dce6a654eeecb801ce167768ea8862da473216bfbf009c8fc1b3d43a2975",
+  "README.md": "26c0effb48e29442f661d531457ff66f397c2e2c617f589d1db508190c64ab96",
+  "aux-absence-verification.json": "6a134ca87c23f176421c407129dac7fd9b31080a21f534e6e0c64241c5d3a93c",
+  "aux-cleanup.json": "a8166d4277a0198e0f041c2a8eaceddc0948a8097c9103c0ab576309e0332bde",
+  "cleanup-verification.json": "fe6009c380c9292abd06d0ba81feb327d51ef4c2dd69df71b43a71b085c9d726",
   "result.json": "2391a2e49a3188635c7b44ce0b1c41cd09f34e201fade0273d113be7cb845d44",
   "retention-verification.json": "00c4c8ad5c61f407bbed85fa5d26d956f6a46a2f897a631dd72a631747deedd1",
   "snapshot/out/connector-build.json": "6b787568fc1d3d7b5c5d22164f17a0501b12172516ad47b2707a03887f253186",

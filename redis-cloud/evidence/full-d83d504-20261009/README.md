@@ -59,3 +59,5 @@ For future benchmark initialization, **always restore a verified compatible back
 | Q43 | 2.896885 | 2.226068 | 2.197874 | 2.197874 | 3 valid outputs |
 
 Original CSVs, SQL, plans, metrics, provenance and correctness records are in `snapshot/out`. Archive and CSV checksums were verified.
+
+Dedicated Redis Cloud subscription/database, all four EC2 instances, security group, data volumes, ephemeral artifact bucket, deadline Lambda/rule, IAM roles and instance profile are confirmed deleted. The private encrypted 40-file backup is confirmed retained with 30-day object expiry; local raw archives and validation records remain retained.
