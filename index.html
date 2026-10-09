@@ -665,6 +665,21 @@ function clearSystemTagsHighlight() {
     }
 }
 
+/// Highlighting summary rows and table columns of a system, together with its tags.
+function highlightSystem(systemName) {
+    [...document.querySelectorAll('.summary-row')].map(row => {
+        row.className = row.dataset.system == systemName ? 'summary-row summary-row-hilite' : 'summary-row' });
+    [...document.querySelectorAll('.th-entry')].map(th => {
+        th.className = th.dataset.system == systemName ? 'th-entry th-entry-hilite' : 'th-entry' });
+    highlightSystemTags(systemName);
+}
+
+function clearSystemHighlight() {
+    [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
+    [...document.querySelectorAll('.th-entry')].map(th => { th.className = 'th-entry' });
+    clearSystemTagsHighlight();
+}
+
 function toggle(e, elem, selectors_map) {
     selectors_map[elem] = !selectors_map[elem];
     e.target.className = selectors_map[elem] ? 'selector selector-active' : 'selector';
@@ -691,18 +706,8 @@ unique_systems.map(elem => {
     selector.addEventListener('click', e => toggle(e, elem, selectors.system));
 
     /// Highlighting summary rows and table columns on hovering over the system selector.
-    selector.addEventListener('mouseover', e => {
-        [...document.querySelectorAll('.summary-row')].map(row => {
-            row.className = row.dataset.system == elem ? 'summary-row summary-row-hilite' : 'summary-row' });
-        [...document.querySelectorAll('.th-entry')].map(th => {
-            th.className = th.dataset.system == elem ? 'th-entry th-entry-hilite' : 'th-entry' });
-        highlightSystemTags(elem);
-    });
-    selector.addEventListener('mouseout', e => {
-        [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
-        [...document.querySelectorAll('.th-entry')].map(row => { row.className = 'th-entry' });
-        clearSystemTagsHighlight();
-    });
+    selector.addEventListener('mouseover', () => highlightSystem(elem));
+    selector.addEventListener('mouseout', clearSystemHighlight);
 });
 
 const tag_to_systems = {};
@@ -1244,8 +1249,8 @@ function renderSummary(filtered_data) {
         tr.className = 'summary-row';
 
         tr.dataset.system = elem.system;
-        tr.addEventListener('mouseover', () => highlightSystemTags(elem.system));
-        tr.addEventListener('mouseout', clearSystemTagsHighlight);
+        tr.addEventListener('mouseover', () => highlightSystem(elem.system));
+        tr.addEventListener('mouseout', clearSystemHighlight);
 
         let td_name = document.createElement('td');
         td_name.className = 'summary-name';
