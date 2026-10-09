@@ -558,6 +558,7 @@ const additional_data_size_points = [
             <a class="selector" id="selector-metric-load">Load Time</a>
             <a class="selector" id="selector-metric-size">Storage Size</a>
             <a class="selector" id="selector-metric-qps">Concurrent QPS</a>
+            <a class="selector" id="selector-metric-complexity">Complexity</a>
         </td>
     </tr>
 </table>
@@ -947,6 +948,7 @@ document.getElementById('selector-metric-hot').addEventListener('click', e => { 
 document.getElementById('selector-metric-load').addEventListener('click', e => { selectors.metric = 'load'; render(); updateHistory(); });
 document.getElementById('selector-metric-size').addEventListener('click', e => { selectors.metric = 'size'; render(); updateHistory(); });
 document.getElementById('selector-metric-qps').addEventListener('click', e => { selectors.metric = 'qps'; render(); updateHistory(); });
+document.getElementById('selector-metric-complexity').addEventListener('click', e => { selectors.metric = 'complexity'; render(); updateHistory(); });
 
 selectors.queries = [...data[0].result.keys()].map(k => true);
 
@@ -1104,6 +1106,10 @@ function metricExcludes(elem, metric) {
             return !(elem.load_time >= 5) || tags.includes('stateless') || tags.includes('in-memory');
         case 'qps':
             return validQPS(elem) === null;
+        case 'complexity':
+            /// Systems without scripts in the repository have no value. Cloud services are excluded,
+            /// as their setup is mostly done manually, in the web console, and is not scripted.
+            return !(elem.complexity > 0) || elem.storage_class == 'cloud';
         case 'cold':
             /// True cold-cache reads only: in-memory engines have nothing to
             /// read from storage, and lukewarm (no-cold) runs never flush engine caches.
@@ -1116,6 +1122,11 @@ function metricExcludes(elem, metric) {
         default:
             return false;
     }
+}
+
+/// Complexity is the zstd-compressed size of the system's scripts, see generate-results.sh.
+function formatComplexity(complexity) {
+    return complexity >= 10240 ? `${(complexity / 1024).toFixed(0)} KiB` : complexity >= 1024 ? `${(complexity / 1024).toFixed(1)} KiB` : `${complexity} B`;
 }
 
 function formatQPS(qps) {
@@ -1164,6 +1175,7 @@ function renderSummary(filtered_data) {
     const min_load_time = Math.min(...filtered_data.filter(elem => !metricExcludes(elem, 'load')).map(elem => elem.load_time));
     const min_data_size = Math.min(...filtered_data.filter(elem => !metricExcludes(elem, 'size')).map(elem => elem.data_size));
     const max_qps = Math.max(...filtered_data.map(validQPS).filter(x => x !== null));
+    const min_complexity = Math.min(...filtered_data.filter(elem => !metricExcludes(elem, 'complexity')).map(elem => elem.complexity));
 
     let summaries;
     if (selectors.metric == 'load') {
@@ -1176,6 +1188,9 @@ function renderSummary(filtered_data) {
         /// Inverse throughput, so that lower is better, as for the other metrics.
         summaries = filtered_data.map(elem => max_qps / validQPS(elem));
         document.getElementById('time-or-size').innerText = 'time per query under concurrent load';
+    } else if (selectors.metric == 'complexity') {
+        summaries = filtered_data.map(elem => elem.complexity / min_complexity);
+        document.getElementById('time-or-size').innerText = 'complexity';
     } else if (selectors.metric == 'hot' || selectors.metric == 'cold') {
         summaries = filtered_data.map(elem => relativeQueryTime(num_queries, baseline_data, elem, selectors.metric));
         document.getElementById('time-or-size').innerText = 'time';
@@ -1255,7 +1270,8 @@ function renderSummary(filtered_data) {
             td_name.appendChild(remove);
 
             let link = document.createElement('a');
-            link.appendChild(document.createTextNode(`${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+            link.appendChild(document.createTextNode(selectors.metric == 'complexity' ? elem.system
+                : `${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
             link.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + elem.source;
             link.style.color = `oklch(var(--hashed-link-lightness) 0.2018 ${nameToColor(elem.system.split(' ')[0])})`
             td_name.appendChild(link);
@@ -1275,6 +1291,7 @@ function renderSummary(filtered_data) {
         const text = selectors.metric == 'load' ? (elem.load_time ? `${Math.round(elem.load_time)}s (×${ratio.toFixed(2)})` : 'stateless')
             :  selectors.metric == 'size' ? `${(elem.data_size / 1024 / 1024 / 1024).toFixed(2)} GiB (×${ratio.toFixed(2)})`
             :  selectors.metric == 'qps' ? `${formatQPS(elem.concurrent_qps)} QPS (×${ratio.toFixed(2)})`
+            :  selectors.metric == 'complexity' ? `${formatComplexity(elem.complexity)} (×${ratio.toFixed(2)})`
             : `×${ratio.toFixed(2)}`;
 
         td_number.appendChild(document.createTextNode(text));
@@ -1400,6 +1417,16 @@ function render() {
     /// Filter out entries that can't be ranked under the selected metric
     /// (see metricExcludes for the per-metric rules).
     filtered_data = filtered_data.filter(elem => !metricExcludes(elem, selectors.metric));
+
+    /// Complexity does not depend on the machine: show each system once, by its latest result.
+    if (selectors.metric == 'complexity') {
+        const latest = new Map();
+        filtered_data.forEach(elem => {
+            const prev = latest.get(elem.system);
+            if (!prev || elem.date > prev.date) { latest.set(elem.system, elem); }
+        });
+        filtered_data = [...latest.values()];
+    }
 
     let nothing_selected_elem = document.getElementById('nothing-selected');
     if (filtered_data.length == 0) {
@@ -1637,7 +1664,8 @@ function renderDetails(filtered_data, sorted_indices, baseline_data) {
     const header = sorted_indices.map(idx => () => {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
-        th.appendChild(document.createTextNode(`${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+        th.appendChild(document.createTextNode(selectors.metric == 'complexity' ? elem.system
+            : `${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
         th.className = 'th-entry';
         th.dataset.system = elem.system;
         th.addEventListener('mouseover', () => highlightSystemTags(elem.system));
@@ -1703,6 +1731,27 @@ function renderDetails(filtered_data, sorted_indices, baseline_data) {
             const qps = validQPS(filtered_data[idx]);
             const ratio = qps !== null ? baseline_qps / qps : undefined;
             return {text: qps !== null ? `${formatQPS(qps)} (×${ratio.toFixed(2)})` : '—', ratio};
+        })});
+
+        details_body.appendChild(tr);
+    }
+
+    /// Complexity, if any of the systems has it
+    if (filtered_data.some(elem => !metricExcludes(elem, 'complexity'))) {
+        let tr = document.createElement('tr');
+        tr.className = 'shadow';
+
+        let td_title = document.createElement('td');
+        td_title.className = 'details-query';
+        td_title.appendChild(document.createTextNode('Complexity: '));
+        tr.appendChild(td_title);
+
+        const baseline_complexity = Math.min(...filtered_data.filter(elem => !metricExcludes(elem, 'complexity')).map(elem => elem.complexity));
+        rows.push({tr, cells: sorted_indices.map(idx => {
+            const elem = filtered_data[idx];
+            const has_complexity = !metricExcludes(elem, 'complexity');
+            const ratio = has_complexity ? elem.complexity / baseline_complexity : undefined;
+            return {text: has_complexity ? `${formatComplexity(elem.complexity)} (×${ratio.toFixed(2)})` : '—', ratio};
         })});
 
         details_body.appendChild(tr);
