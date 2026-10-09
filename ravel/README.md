@@ -151,18 +151,28 @@ answers, and more on 8 and 4 GB.
 
 ### Reference: the same binaries on real S3
 
-Measured by us on the same machine type against an S3 bucket in the instance's
-region, credentials from the instance role, with the same driver and the same
-true-cold protocol, on the released v0.16.1 binaries and a freshly loaded
-tenant. One pass each. Not reproducible by this harness, which does not run
-entries on real S3, and therefore not a results file. Cold and hot are the sums
-of the first and third run over the statements that returned a number.
+Measured by us on c6a.4xlarge against a fresh S3 bucket in the instance's
+region (us-east-1), credentials from the instance role, with the same driver
+and the same true-cold protocol, on the released v0.23.0 binaries and this
+entry's `./load` and `./start` unchanged except for the credential source
+(`--s3-auth instance-role`). One pass. Not reproducible by this harness, which
+does not run entries on real S3, and therefore not a results file. Cold is the
+sum of the first runs; hot is the sum of the better of the second and third
+runs.
 
-| configuration | load | cold | hot | statements |
-|---|---|---|---|---|
-| stock, real S3 | 1,191 s | 483 s | 430 s | 42 of 43, q33 refused |
-| tuned, real S3 | (same tenant) | 201 s | 99 s | 43 of 43 |
-| stock, local RustFS, v0.16.1 | 1,236 s | 1,720 s | 272 s | 42 of 43, q33 refused |
+| configuration | load | cold | hot | hot geomean | statements |
+|---|---|---|---|---|---|
+| stock, real S3, v0.23.0 | 932 s | 186 s | 63 s | 1.01 s | 43 of 43 |
+| stock, local RustFS, v0.23.0 | 924 s | 487 s | 57 s | 0.74 s | 43 of 43 |
+
+Cold is faster on S3 because nothing waits on the 250 MB/s gp2 volume: S3
+serves the ranged reads in parallel at network speed. Hot is slightly slower
+because the larger fetch cache share a loopback store gets does not apply to
+a remote endpoint: the derived cache was 7.5 GB on this machine, below the
+10.2 GB dataset, so part of each warm run goes back to S3.
+
+The earlier reference, v0.16.1 with ~4 MB objects, measured a 483 s cold and
+430 s hot sum on real S3, with q33 refused.
 
 ## Notes
 
