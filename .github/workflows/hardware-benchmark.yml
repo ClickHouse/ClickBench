@@ -1,0 +1,73 @@
+name: "Run the hardware benchmark"
+
+run-name: "Hardware benchmark on ${{ inputs.machines }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      machines:
+        description: "EC2 instance types (space-separated). all-general-purpose, all-compute-optimized, all-memory-optimized and all-storage-optimized expand to the largest size of every current family of that category"
+        required: true
+        default: "all-general-purpose"
+      volume:
+        description: "Root EBS volume, GB (it holds the data on machines without local SSDs)"
+        default: "500"
+      timeout:
+        description: "Time limit for hardware.sh on the machine, seconds"
+        default: "10800"
+      repo:
+        description: "Repository the machine will clone (empty: the repository of this workflow run)"
+        default: ""
+      branch:
+        description: "Branch to clone (empty: the branch this workflow was dispatched from)"
+        default: ""
+
+permissions:
+  id-token: write  # To assume the federated IAM role.
+  contents: read
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    # Machines are launched one by one, and run-benchmark.sh retries while the
+    # vCPU quota or the capacity is exhausted, so cap the job before the
+    # hour-long AWS session expires.
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+
+      # The same role as the main benchmark workflows; its trust policy only
+      # admits workflow runs of this repository.
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::264113785604:role/ClickBenchLauncher
+          aws-region: us-east-1
+          role-session-name: clickbench-hardware-${{ github.run_id }}
+
+      # One self-terminating machine per instance type: it assembles its local
+      # SSDs into RAID 0 if it has any, runs hardware/hardware.sh and sends the
+      # result to the sink. The runner only launches.
+      - shell: bash
+        env:
+          machines: ${{ inputs.machines }}
+          volume: ${{ inputs.volume }}
+          timeout: ${{ inputs.timeout }}
+          repo: ${{ inputs.repo || github.repository }}
+          branch: ${{ inputs.branch || github.ref_name }}
+        run: |
+          list=""
+          for m in $machines; do
+              case "$m" in
+                  all-*) list="$list $(./hardware/list-machines.sh "${m#all-}" | tr '\n' ' ')" ;;
+                  *)     list="$list $m" ;;
+              esac
+          done
+          echo "Machines:$list" | tee -a "$GITHUB_STEP_SUMMARY"
+          failed=""
+          for m in $list; do
+              ./hardware/run-benchmark.sh "$m" || failed="$failed $m"
+          done
+          if [ -n "$failed" ]; then
+              echo "Failed to launch:$failed" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 1
+          fi
