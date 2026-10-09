@@ -1,0 +1,44 @@
+name: "Collect hardware benchmark results"
+
+on:
+  workflow_dispatch:
+    inputs:
+      since_hours:
+        description: "Look at the results that arrived in the last N hours"
+        default: "24"
+  schedule:
+    - cron: '47 * * * *'
+
+permissions:
+  contents: write       # To push the results branch.
+  pull-requests: write  # To open and merge the automated pull request.
+  actions: write        # To start the website build after merging.
+
+# Two overlapping runs would publish the same results twice.
+concurrency:
+  group: hardware-collect-results
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the ClickHouse client
+        working-directory: ${{ runner.temp }}   # not the checkout: it must stay clean
+        run: |
+          curl -fsSL https://clickhouse.com/ | sh
+          sudo ln -sf "$PWD/clickhouse" /usr/local/bin/clickhouse-client
+
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          CLICKBENCH_DB_PASSWORD: ${{ secrets.CLICKBENCH_DB_PASSWORD }}
+          SINCE_HOURS: ${{ inputs.since_hours || '24' }}
+        run: |
+          if [ -z "$CLICKBENCH_DB_PASSWORD" ]; then
+              echo "CLICKBENCH_DB_PASSWORD is not set. Skipping."
+              exit 0
+          fi
+          export CONNECTION_PARAMS="--user clickbench --password $CLICKBENCH_DB_PASSWORD --host play.clickhouse.com --secure"
+          ./hardware/collect-new-results.sh

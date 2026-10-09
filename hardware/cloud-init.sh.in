@@ -1,0 +1,137 @@
+#!/bin/bash -x
+
+# Cloud-init for the hardware benchmark: run hardware.sh on a fresh VM,
+# unattended, send the result to the sink (sink.data on play.clickhouse.com),
+# then terminate. Rendered from this template by run-benchmark.sh
+# (placeholders @repo@ etc. are substituted there).
+#
+# Unlike the main ClickBench, the hardware benchmark measures the machine,
+# including its storage: if the machine has local SSDs (instance store), they
+# are assembled into a RAID 0 array (or used as is, if there is one), formatted
+# and mounted, and the data is placed there. Otherwise it stays on the root
+# EBS volume.
+
+# Make sure the machine terminates whatever happens to this script: a deadline
+# that systemd enforces even if the script hangs (a stalled download or upload,
+# or a background server holding the pipe of `timeout ... | tee` open) or is
+# killed, and a trap for early exits. The `shutdown now` at the end replaces
+# the deadline in the normal case.
+shutdown -P "+$(( @timeout@ / 60 + 120 ))"
+trap 'shutdown now' EXIT
+
+export HOME="${HOME:-/root}"
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y wget curl git jq mdadm
+
+git clone --depth 1 'https://github.com/@repo@.git' --branch '@branch@' ClickBench
+REPO_DIR="${PWD}/ClickBench"
+LOG=/var/log/hardware-benchmark.log
+
+echo 'Hardware benchmark' | tee -a "${LOG}"
+
+# --- Local SSDs ----------------------------------------------------------------
+
+# Whole disks that are free to take: not the root disk, not partitioned, not
+# mounted, and not EBS volumes (which are disks too on Nitro machines).
+ROOT_DISK=$(lsblk -no PKNAME "$(findmnt -no SOURCE /)" | head -n1)
+DISKS=()
+while read -r name type model; do
+    [ "${type}" = "disk" ] || continue
+    [ "${name}" = "${ROOT_DISK}" ] && continue
+    [[ "${name}" == zram* || "${name}" == loop* ]] && continue
+    [[ "${model}" == *"Elastic Block Store"* ]] && continue
+    [ "$(lsblk -no NAME "/dev/${name}" | wc -l)" = "1" ] || continue   # has partitions
+    [ -z "$(lsblk -no MOUNTPOINT "/dev/${name}" | tr -d '[:space:]')" ] || continue
+    DISKS+=("/dev/${name}")
+done < <(lsblk -dno NAME,TYPE,MODEL)
+
+DATA_DIR=/mnt/data
+if [ "${#DISKS[@]}" -gt 0 ]; then
+    DISK_SIZE=$(lsblk -dnbo SIZE "${DISKS[0]}")
+    DISK_SIZE_GB=$(( DISK_SIZE / 1000000000 ))
+    if [ "${#DISKS[@]}" -gt 1 ]; then
+        mdadm --create /dev/md0 --run --level=0 --raid-devices="${#DISKS[@]}" "${DISKS[@]}"
+        DEVICE=/dev/md0
+        STORAGE="${#DISKS[@]}x ${DISK_SIZE_GB} GB local NVMe SSD, RAID 0"
+    else
+        DEVICE="${DISKS[0]}"
+        STORAGE="${DISK_SIZE_GB} GB local NVMe SSD"
+    fi
+    # Discarding terabytes of fresh SSDs takes minutes and changes nothing.
+    mkfs.ext4 -F -E nodiscard "${DEVICE}"
+    mkdir -p "${DATA_DIR}"
+    mount -o noatime "${DEVICE}" "${DATA_DIR}"
+    STORAGE_TAG=nvme
+else
+    mkdir -p "${DATA_DIR}"
+    STORAGE='@volume@ GB EBS gp3 (@iops@ IOPS, @throughput@ MB/s)'
+    STORAGE_TAG=ebs
+fi
+echo "Storage: ${STORAGE}" | tee -a "${LOG}"
+lsblk | tee -a "${LOG}"
+cat /proc/mdstat | tee -a "${LOG}"
+
+# --- Benchmark -------------------------------------------------------------------
+
+# hardware.sh works in ./clickhouse-benchmark, where it downloads ClickHouse
+# and keeps the data; queries.sql is taken from there if present.
+cd "${DATA_DIR}"
+mkdir -p clickhouse-benchmark
+cp "${REPO_DIR}/hardware/queries.sql" clickhouse-benchmark/
+timeout @timeout@ "${REPO_DIR}/hardware/hardware.sh" 2>&1 | tee output.txt | tee -a "${LOG}"
+
+# --- Result ----------------------------------------------------------------------
+
+TOKEN=$(curl -sS -X PUT 'http://169.254.169.254/latest/api/token' -H 'X-aws-ec2-metadata-token-ttl-seconds: 21600')
+INSTANCE_TYPE=$(curl -sS -H "X-aws-ec2-metadata-token: ${TOKEN}" 'http://169.254.169.254/latest/meta-data/instance-type')
+
+CPU_MODEL=$(lscpu | sed -n 's/^Model name: *//p' | head -n1)
+VCPUS=$(nproc)
+MEMORY_GIB=$(awk '/MemTotal/ { printf "%d", $2 / 1048576 + 0.5 }' /proc/meminfo)
+case "$(uname -m)" in
+    aarch64) ARCH=arm ;;
+    *)       ARCH=x86 ;;
+esac
+case "$(lscpu | sed -n 's/^Vendor ID: *//p' | head -n1)" in
+    GenuineIntel) VENDOR=intel ;;
+    AuthenticAMD) VENDOR=amd ;;
+    *)            VENDOR="" ;;
+esac
+VERSION=$(sed -n 's/^Version: \([^,]*\),.*/\1/p' output.txt | head -n1)
+
+echo "Instance type: ${INSTANCE_TYPE}, total time: ${SECONDS}s" | tee -a "${LOG}"
+
+# The result lines hardware.sh prints, like [0.123, 0.045, 0.044], - one per query.
+grep -E '^\[([0-9.]+|null), ([0-9.]+|null), ([0-9.]+|null)\],$' output.txt | sed 's/,$//' > result.lines
+
+RESULTS_URL='https://play.clickhouse.com/?user=sink&query=INSERT+INTO+data+FORMAT+RawBLOB'
+
+jq -s -c \
+    --arg kind 'hardware-benchmark' \
+    --arg instance_type "${INSTANCE_TYPE}" \
+    --arg machine "AWS ${INSTANCE_TYPE}" \
+    --arg comment "AWS ${INSTANCE_TYPE} (${CPU_MODEL}), ${VCPUS} vCPU, ${MEMORY_GIB} GiB RAM, ${STORAGE}, ClickHouse ${VERSION}" \
+    --arg time "$(date -u +%F)" \
+    --arg version "${VERSION}" \
+    --argjson tags "$(printf '%s\n' cloud aws "${ARCH}" ${VENDOR} "${STORAGE_TAG}" | jq -R . | jq -s -c .)" \
+    '{kind: $kind, instance_type: $instance_type, version: $version,
+      machine: $machine, comment: $comment, time: $time, tags: $tags, result: .}' \
+    result.lines | tee result.json | curl --max-time 300 "${RESULTS_URL}" --data-binary @-
+
+# Also send the (truncated) log for diagnostics, as the main benchmark does.
+send_log() {
+    local f="$1" size
+    size=$(stat -c%s "$f" 2>/dev/null || echo 0)
+    if [ "$size" -le 1000000 ]; then
+        curl --max-time 300 "${RESULTS_URL}" --data-binary @"$f"
+    else
+        { head -c 100000 "$f"
+          printf '\n...[%d bytes truncated]...\n' "$((size - 1000000))"
+          tail -c 900000 "$f"; } | curl --max-time 300 "${RESULTS_URL}" --data-binary @-
+    fi
+}
+send_log "${LOG}"
+send_log /var/log/cloud-init-output.log
+
+shutdown now
