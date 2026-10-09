@@ -135,12 +135,11 @@ RESULT_DIR=cloud-results-cluster .venv/bin/python run-one-query.py --mode cluste
 
 Each job restarts Trino, clears the runner page cache and records three complete-result attempts for the selected query. Redis stays running. Existing attempts for that query are protected against overwriting. Query numbers range from 1 to 43; the cumulative result is finalized only when all 129 attempt records exist.
 
-The current patched sweep was stopped during Q5: attempts 1 and 2 timed out, and attempt 3 was cancelled by the user. That cancelled attempt is recorded as null with its cancellation reason. At the user's request, the sweep continues through Q6-Q43 in individual jobs, using the same revision, loaded data and hardware.
+The earlier individual-query sweep was stopped during Q5: attempts 1 and 2 timed out, and attempt 3 was cancelled by the user. That cancelled attempt is recorded as null with its cancellation reason. At the user's request, the sweep continues through Q6-Q43 in individual jobs, using the same revision, loaded data and hardware.
 
 ## Current-code requirement
 
-New benchmark runs pin `dbcb518c541b3eba22b4471cb71509233ab09efa` (master checked
-on 2026-10-08), including automatic parallel scans. `install` checks the pin
+This submission pins `d83d504d65cd5b3bd14fd9bd559f5acad6ffedf2` (merged PR154), including automatic parallel scans. `install` checks the pin
 against current origin/master and builds a Git archive of that exact commit,
 excluding stale compiled files and local edits. It records every plugin JAR's
 SHA-256 and the build image ID in `plugin/connector-build.json`.
@@ -164,7 +163,7 @@ The full-data latest-code OSS sweep completed on October 8, 2026 Pacific; see th
 
 ## Completed latest-code full-data run
 
-All 43 queries ran three times on 99,997,497 rows at `dbcb518`. 123 outputs passed independent references; Q24 timed out on all attempts and Q34 exceeded MAX_AGGREGATE_GROUPS on all attempts. These six attempts are null. Results require `no-cold`. Fresh Arrow ingestion plus indexing was 1036.954 seconds; source download/table creation excluded. Separate 10M encoder diagnostics do not enter query timings. An actual default server API switch failed with PROVISION_FAILURE; no client-only comparison is claimed. Validation/provenance evidence is retained in `evidence/latest-20261008`; result JSON is in `results/20261009`.
+All 43 queries ran three times on 99,997,497 rows at `dbcb518`. 123 outputs passed independent references; Q24 timed out on all attempts and Q34 exceeded MAX_AGGREGATE_GROUPS on all attempts. These six attempts are null. Results require `no-cold`. Fresh Arrow ingestion plus indexing was 1036.954 seconds; source download/table creation excluded. Separate 10M encoder diagnostics do not enter query timings. An actual default server API switch failed with PROVISION_FAILURE; no client-only comparison is claimed. Validation/provenance evidence is retained in `evidence/latest-20261008`; its historical result JSON is in `evidence/latest-20261008/leaderboard-result.json`.
 
 ## PR154 acceptance evidence
 
