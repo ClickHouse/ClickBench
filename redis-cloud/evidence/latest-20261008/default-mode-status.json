@@ -1,0 +1,13 @@
+{
+  "taskId": "81531733-0ef6-4369-bf9a-dcf4a267d15f",
+  "status": "processing-error",
+  "server_mode": true,
+  "database_status": "active",
+  "response": {
+    "error": {
+      "type": "PROVISION_FAILURE",
+      "status": "500 INTERNAL_SERVER_ERROR",
+      "description": "Cluster provision general failure occurred"
+    }
+  }
+}

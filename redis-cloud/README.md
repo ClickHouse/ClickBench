@@ -156,8 +156,12 @@ Each results directory retains `connector-build.json`. Older results without
 provenance or with another build must use a separate directory. Historical
 measurements keep their original revisions: the 5M Cloud 129-output acceptance
 predates automatic parallel scans; the local parallel-scan tests are separate.
-No new cloud benchmark was launched by this update.
+The full-data latest-code OSS sweep completed on October 8, 2026 Pacific; see the measured result below.
 
 ```sh
 .venv/bin/python -m unittest discover -s . -p test_benchmark_version.py
 ```
+
+## Completed latest-code full-data run
+
+All 43 queries ran three times on 99,997,497 rows at `dbcb518`. 123 outputs passed independent references; Q24 timed out on all attempts and Q34 exceeded MAX_AGGREGATE_GROUPS on all attempts. These six attempts are null. Results require `no-cold`. Fresh Arrow ingestion plus indexing was 1036.954 seconds; source download/table creation excluded. Separate 10M encoder diagnostics do not enter query timings. An actual default server API switch failed with PROVISION_FAILURE; no client-only comparison is claimed. Validation/provenance evidence is retained in `evidence/latest-20261008`; result JSON is in `results/20261009`.

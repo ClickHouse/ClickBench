@@ -1,0 +1,15 @@
+{
+  "reason": "Normalize RESP2 arrays and RESP3 maps for FT.INFO only; unchanged connector, encoding and SQL",
+  "patches": [
+    {
+      "file": "redis/load-optimized.py",
+      "before_sha256": "11185bfac504074865e0da6eb386dc7db763c5319c7c0c578c5e296631f3e0d4",
+      "after_sha256": "7b0f7e31b0462753af8ed6dc03549f506768b41b282f7f060d11e853cf7fe039"
+    },
+    {
+      "file": "run-latest.py",
+      "before_sha256": "aeb3ae2811cf36df7e7de85e758c5cdc015b0cf9b9818077c1039d500a776d7c",
+      "after_sha256": "07c03b4877f3afc415a514b23cea827940d72a770db32e0b1a82c56606dbe767"
+    }
+  ]
+}

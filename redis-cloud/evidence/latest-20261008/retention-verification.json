@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "1256c2a8df606d6378b57da78497d337f475ec815ecdf2fb3d0026f6ba38bffb",
+  "recorded_attempts": 129,
+  "csv_checksums_verified": 129,
+  "valid_attempts": 123,
+  "failed_attempts": 6,
+  "private_value_scan_files": 604,
+  "private_value_scan_passed": true
+}
