@@ -1,0 +1,63 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [title, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [Title, PageViews]]
+    │   Layout: [title:varchar, count:bigint]
+    │   Estimates: {rows: 10 (640B), cpu: 0, memory: 0B, network: 0B}
+    │   Title := title
+    │   PageViews := count
+    └─ TopN[count = 10, orderBy = [count DESC NULLS LAST]]
+       │   Layout: [title:varchar, count:bigint]
+       │   Estimates: {rows: 10 (640B), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [title:varchar, count:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [title:varchar, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [title, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [title:varchar, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [title:varchar, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [title:varchar, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [title:varchar, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [title:varchar, count:bigint]
+                └─ Aggregate[type = FINAL, keys = [title]]
+                   │   Layout: [title:varchar, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+                   │   count := count(count_0)
+                   └─ LocalExchange[partitioning = HASH, arguments = [title::varchar]]
+                      │   Layout: [title:varchar, count_0:bigint]
+                      │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [title:varchar, count_0:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [title, count_0]
+    Output partitioning: HASH [title]
+    Aggregate[type = PARTIAL, keys = [title]]
+    │   Layout: [title:varchar, count_0:bigint]
+    │   count_0 := count(*)
+    └─ ScanFilter[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint={RediSearchColumnHandle{name=isrefresh, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=smallint, ranges=1, {[0]}] ], RediSearchColumnHandle{name=eventdate, type=date, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}=[ SortedRangeSet[type=date, ranges=1, {[2013-07-01,2013-07-31]}] ], RediSearchColumnHandle{name=dontcounthits, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=smallint, ranges=1, {[0]}] ], RediSearchColumnHandle{name=counterid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=integer, ranges=1, {[62]}] ]}}, filterPredicate = (title <> varchar '')]
+           Layout: [title:varchar]
+           Estimates: {rows: 99997497 (5.12GB), cpu: 5.12G, memory: 0B, network: 0B}/{rows: ? (?), cpu: 5.12G, memory: 0B, network: 0B}
+           title := RediSearchColumnHandle{name=title, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+           RediSearchColumnHandle{name=isrefresh, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[0]]
+           RediSearchColumnHandle{name=eventdate, type=date, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+               :: [[2013-07-01, 2013-07-31]]
+           RediSearchColumnHandle{name=dontcounthits, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[0]]
+           RediSearchColumnHandle{name=counterid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[62]]
+
+"

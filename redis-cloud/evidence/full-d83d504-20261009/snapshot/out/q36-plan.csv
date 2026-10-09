@@ -1,0 +1,62 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [clientip, gid, gid_2, gid_3, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [ClientIP, _col1, _col2, _col3, c]]
+    │   Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count:bigint]
+    │   Estimates: {rows: 10 (290B), cpu: 0, memory: 0B, network: 0B}
+    │   ClientIP := clientip
+    │   _col1 := gid
+    │   _col2 := gid_2
+    │   _col3 := gid_3
+    │   c := count
+    └─ TopN[count = 10, orderBy = [count DESC NULLS LAST]]
+       │   Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count:bigint]
+       │   Estimates: {rows: 10 (290B), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [clientip, gid, gid_2, gid_3, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count:bigint]
+                └─ Aggregate[type = FINAL, keys = [clientip, gid, gid_2, gid_3]]
+                   │   Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: 2.70G, memory: ?, network: 0B}
+                   │   count := count(count_4)
+                   └─ LocalExchange[partitioning = HASH, arguments = [clientip::integer, gid::integer, gid_2::integer, gid_3::integer]]
+                      │   Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count_4:bigint]
+                      │   Estimates: {rows: 99997497 (2.70GB), cpu: 2.70G, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count_4:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [clientip, gid, gid_2, gid_3, count_4]
+    Output partitioning: HASH [clientip, gid, gid_2, gid_3]
+    Aggregate[type = PARTIAL, keys = [clientip, gid, gid_2, gid_3]]
+    │   Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer, count_4:bigint]
+    │   Estimates: {rows: 99997497 (2.70GB), cpu: ?, memory: ?, network: ?}
+    │   count_4 := count(*)
+    └─ ScanProject[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}]
+           Layout: [clientip:integer, gid:integer, gid_2:integer, gid_3:integer]
+           Estimates: {rows: 99997497 (1.86GB), cpu: 476.83M, memory: 0B, network: 0B}/{rows: 99997497 (1.86GB), cpu: 1.86G, memory: 0B, network: 0B}
+           gid := $operator$subtract(clientip, integer '1')
+           gid_2 := $operator$subtract(clientip, integer '2')
+           gid_3 := $operator$subtract(clientip, integer '3')
+           clientip := RediSearchColumnHandle{name=clientip, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+
+"

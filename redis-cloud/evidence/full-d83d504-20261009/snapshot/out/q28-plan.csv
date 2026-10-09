@@ -1,0 +1,63 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [counterid, avg, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [CounterID, l, c]]
+    │   Layout: [counterid:integer, avg:double, count:bigint]
+    │   Estimates: {rows: 25 (575B), cpu: 0, memory: 0B, network: 0B}
+    │   CounterID := counterid
+    │   l := avg
+    │   c := count
+    └─ TopN[count = 25, orderBy = [avg DESC NULLS LAST]]
+       │   Layout: [counterid:integer, avg:double, count:bigint]
+       │   Estimates: {rows: 25 (575B), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [counterid:integer, avg:double, count:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [counterid:integer, avg:double, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [counterid, avg, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 25, orderBy = [avg DESC NULLS LAST]]
+    │   Layout: [counterid:integer, avg:double, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [counterid:integer, avg:double, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 25, orderBy = [avg DESC NULLS LAST]]
+          │   Layout: [counterid:integer, avg:double, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [counterid:integer, avg:double, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 25, orderBy = [avg DESC NULLS LAST]]
+                │   Layout: [counterid:integer, avg:double, count:bigint]
+                └─ Filter[filterPredicate = (bigint '100000' < count)]
+                   │   Layout: [counterid:integer, avg:double, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                   └─ Aggregate[type = FINAL, keys = [counterid]]
+                      │   Layout: [counterid:integer, avg:double, count:bigint]
+                      │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+                      │   avg := avg(avg_0)
+                      │   count := count(count_1)
+                      └─ LocalExchange[partitioning = HASH, arguments = [counterid::integer]]
+                         │   Layout: [counterid:integer, avg_0:row(double, bigint), count_1:bigint]
+                         │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                         └─ RemoteSource[sourceFragmentIds = [2]]
+                                Layout: [counterid:integer, avg_0:row(double, bigint), count_1:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [counterid, avg_0, count_1]
+    Output partitioning: HASH [counterid]
+    Aggregate[type = PARTIAL, keys = [counterid]]
+    │   Layout: [counterid:integer, avg_0:row(double, bigint), count_1:bigint]
+    │   avg_0 := avg(expr)
+    │   count_1 := count(*)
+    └─ ScanFilterProject[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}, filterPredicate = (url <> varchar '')]
+           Layout: [expr:bigint, counterid:integer]
+           Estimates: {rows: 99997497 (1.30GB), cpu: 5.59G, memory: 0B, network: 0B}/{rows: ? (?), cpu: 5.59G, memory: 0B, network: 0B}/{rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+           expr := length(url)
+           counterid := RediSearchColumnHandle{name=counterid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+           url := RediSearchColumnHandle{name=url, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+
+"

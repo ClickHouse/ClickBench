@@ -1,0 +1,59 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [searchphrase, min, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [SearchPhrase, _col1, c]]
+    │   Layout: [searchphrase:varchar, min:varchar, count:bigint]
+    │   Estimates: {rows: 10 (1.16kB), cpu: 0, memory: 0B, network: 0B}
+    │   SearchPhrase := searchphrase
+    │   _col1 := min
+    │   c := count
+    └─ TopN[count = 10, orderBy = [count DESC NULLS LAST]]
+       │   Layout: [searchphrase:varchar, min:varchar, count:bigint]
+       │   Estimates: {rows: 10 (1.16kB), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [searchphrase:varchar, min:varchar, count:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [searchphrase:varchar, min:varchar, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [searchphrase, min, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [searchphrase:varchar, min:varchar, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [searchphrase:varchar, min:varchar, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [searchphrase:varchar, min:varchar, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [searchphrase:varchar, min:varchar, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [searchphrase:varchar, min:varchar, count:bigint]
+                └─ Aggregate[type = FINAL, keys = [searchphrase]]
+                   │   Layout: [searchphrase:varchar, min:varchar, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+                   │   min := min(min_0)
+                   │   count := count(count_1)
+                   └─ LocalExchange[partitioning = HASH, arguments = [searchphrase::varchar]]
+                      │   Layout: [searchphrase:varchar, min_0:varchar, count_1:bigint]
+                      │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [searchphrase:varchar, min_0:varchar, count_1:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [searchphrase, min_0, count_1]
+    Output partitioning: HASH [searchphrase]
+    Aggregate[type = PARTIAL, keys = [searchphrase]]
+    │   Layout: [searchphrase:varchar, min_0:varchar, count_1:bigint]
+    │   min_0 := min(url)
+    │   count_1 := count(*)
+    └─ ScanFilter[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={url=exists(@url) && contains(@url, ""google"") > 0}, limit=OptionalLong.empty, sort=[], constraint=ALL}, filterPredicate = (searchphrase <> varchar '')]
+           Layout: [url:varchar, searchphrase:varchar]
+           Estimates: {rows: 99997497 (10.24GB), cpu: 10.24G, memory: 0B, network: 0B}/{rows: ? (?), cpu: 10.24G, memory: 0B, network: 0B}
+           url := RediSearchColumnHandle{name=url, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+           searchphrase := RediSearchColumnHandle{name=searchphrase, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+
+"

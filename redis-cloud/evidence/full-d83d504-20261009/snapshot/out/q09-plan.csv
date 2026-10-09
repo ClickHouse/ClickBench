@@ -1,0 +1,71 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [regionid, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [RegionID, u]]
+    │   Layout: [regionid:integer, count:bigint]
+    │   Estimates: {rows: 10 (140B), cpu: 0, memory: 0B, network: 0B}
+    │   RegionID := regionid
+    │   u := count
+    └─ TopN[count = 10, orderBy = [count DESC NULLS LAST]]
+       │   Layout: [regionid:integer, count:bigint]
+       │   Estimates: {rows: 10 (140B), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [regionid:integer, count:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [regionid:integer, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [regionid, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [regionid:integer, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [regionid:integer, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [regionid:integer, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [regionid:integer, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [regionid:integer, count:bigint]
+                └─ Aggregate[type = FINAL, keys = [regionid]]
+                   │   Layout: [regionid:integer, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+                   │   count := count(count_0)
+                   └─ LocalExchange[partitioning = HASH, arguments = [regionid::integer]]
+                      │   Layout: [regionid:integer, count_0:bigint]
+                      │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [regionid:integer, count_0:bigint]
+
+Fragment 2 [HASH]
+    Output layout: [regionid, count_0]
+    Output partitioning: HASH [regionid]
+    Aggregate[type = PARTIAL, keys = [regionid]]
+    │   Layout: [regionid:integer, count_0:bigint]
+    │   count_0 := count(userid)
+    └─ Aggregate[type = FINAL, keys = [regionid, userid]]
+       │   Layout: [regionid:integer, userid:bigint]
+       │   Estimates: {rows: ? (?), cpu: 1.30G, memory: ?, network: 0B}
+       └─ LocalExchange[partitioning = HASH, arguments = [regionid::integer, userid::bigint]]
+          │   Layout: [regionid:integer, userid:bigint]
+          │   Estimates: {rows: 99997497 (1.30GB), cpu: 1.30G, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [3]]
+                 Layout: [regionid:integer, userid:bigint]
+
+Fragment 3 [SOURCE]
+    Output layout: [regionid, userid]
+    Output partitioning: HASH [regionid, userid]
+    Aggregate[type = PARTIAL, keys = [regionid, userid]]
+    │   Layout: [regionid:integer, userid:bigint]
+    │   Estimates: {rows: 99997497 (1.30GB), cpu: ?, memory: ?, network: ?}
+    └─ TableScan[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}]
+           Layout: [regionid:integer, userid:bigint]
+           Estimates: {rows: 99997497 (1.30GB), cpu: 1.30G, memory: 0B, network: 0B}
+           userid := RediSearchColumnHandle{name=userid, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+           regionid := RediSearchColumnHandle{name=regionid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+
+"

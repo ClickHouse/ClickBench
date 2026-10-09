@@ -1,0 +1,14 @@
+"Trino version: 483
+Fragment 0 [SOURCE]
+    Output layout: [userid]
+    Output partitioning: SINGLE []
+    Output[columnNames = [UserID]]
+    │   Layout: [userid:bigint]
+    │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+    │   UserID := userid
+    └─ ScanFilter[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint={RediSearchColumnHandle{name=userid, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=bigint, ranges=1, {[435090932899640449]}] ]}}, filterPredicate = (userid = bigint '435090932899640449')]
+           Layout: [userid:bigint]
+           Estimates: {rows: 99997497 (858.29MB), cpu: 858.29M, memory: 0B, network: 0B}/{rows: ? (?), cpu: 858.29M, memory: 0B, network: 0B}
+           userid := RediSearchColumnHandle{name=userid, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+
+"

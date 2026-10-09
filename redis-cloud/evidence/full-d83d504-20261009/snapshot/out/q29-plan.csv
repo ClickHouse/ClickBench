@@ -1,0 +1,66 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [gid, avg, count, min]
+    Output partitioning: SINGLE []
+    Output[columnNames = [k, l, c, _col3]]
+    │   Layout: [gid:varchar, avg:double, count:bigint, min:varchar]
+    │   Estimates: {rows: 25 (3.13kB), cpu: 0, memory: 0B, network: 0B}
+    │   k := gid
+    │   l := avg
+    │   c := count
+    │   _col3 := min
+    └─ TopN[count = 25, orderBy = [avg DESC NULLS LAST]]
+       │   Layout: [gid:varchar, avg:double, count:bigint, min:varchar]
+       │   Estimates: {rows: 25 (3.13kB), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [gid:varchar, avg:double, count:bigint, min:varchar]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [gid:varchar, avg:double, count:bigint, min:varchar]
+
+Fragment 1 [HASH]
+    Output layout: [gid, avg, count, min]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 25, orderBy = [avg DESC NULLS LAST]]
+    │   Layout: [gid:varchar, avg:double, count:bigint, min:varchar]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [gid:varchar, avg:double, count:bigint, min:varchar]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 25, orderBy = [avg DESC NULLS LAST]]
+          │   Layout: [gid:varchar, avg:double, count:bigint, min:varchar]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [gid:varchar, avg:double, count:bigint, min:varchar]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 25, orderBy = [avg DESC NULLS LAST]]
+                │   Layout: [gid:varchar, avg:double, count:bigint, min:varchar]
+                └─ Filter[filterPredicate = (bigint '100000' < count)]
+                   │   Layout: [gid:varchar, avg:double, count:bigint, min:varchar]
+                   │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                   └─ Aggregate[type = FINAL, keys = [gid]]
+                      │   Layout: [gid:varchar, avg:double, count:bigint, min:varchar]
+                      │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+                      │   avg := avg(avg_1)
+                      │   count := count(count_2)
+                      │   min := min(min_3)
+                      └─ LocalExchange[partitioning = HASH, arguments = [gid::varchar]]
+                         │   Layout: [gid:varchar, avg_1:row(double, bigint), count_2:bigint, min_3:varchar]
+                         │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                         └─ RemoteSource[sourceFragmentIds = [2]]
+                                Layout: [gid:varchar, avg_1:row(double, bigint), count_2:bigint, min_3:varchar]
+
+Fragment 2 [SOURCE]
+    Output layout: [gid, avg_1, count_2, min_3]
+    Output partitioning: HASH [gid]
+    Aggregate[type = PARTIAL, keys = [gid]]
+    │   Layout: [gid:varchar, avg_1:row(double, bigint), count_2:bigint, min_3:varchar]
+    │   avg_1 := avg(expr)
+    │   count_2 := count(*)
+    │   min_3 := min(referer)
+    └─ ScanFilterProject[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}, filterPredicate = (referer <> varchar '')]
+           Layout: [referer:varchar, expr:bigint, gid:varchar]
+           Estimates: {rows: 99997497 (11.08GB), cpu: 5.12G, memory: 0B, network: 0B}/{rows: ? (?), cpu: 5.12G, memory: 0B, network: 0B}/{rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+           expr := length(referer)
+           gid := regexp_replace(referer, JoniRegExp '^https?://(?:www\.)?([^/]+)/.*$', varchar(2) '$1')
+           referer := RediSearchColumnHandle{name=referer, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+
+"

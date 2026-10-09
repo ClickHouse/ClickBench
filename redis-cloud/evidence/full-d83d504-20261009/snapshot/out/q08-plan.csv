@@ -1,0 +1,50 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [advengineid, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [AdvEngineID, _col1]]
+    │   Layout: [advengineid:smallint, count:bigint]
+    │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+    │   AdvEngineID := advengineid
+    │   _col1 := count
+    └─ RemoteMerge[sourceFragmentIds = [1]]
+           Layout: [advengineid:smallint, count:bigint]
+
+Fragment 1 [ROUND_ROBIN]
+    Output layout: [advengineid, count]
+    Output partitioning: SINGLE []
+    LocalMerge[orderBy = [count DESC NULLS LAST]]
+    │   Layout: [advengineid:smallint, count:bigint]
+    │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+    └─ PartialSort[orderBy = [count DESC NULLS LAST]]
+       │   Layout: [advengineid:smallint, count:bigint]
+       └─ RemoteSource[sourceFragmentIds = [2]]
+              Layout: [advengineid:smallint, count:bigint]
+
+Fragment 2 [HASH]
+    Output layout: [advengineid, count]
+    Output partitioning: ROUND_ROBIN []
+    Aggregate[type = FINAL, keys = [advengineid]]
+    │   Layout: [advengineid:smallint, count:bigint]
+    │   Estimates: {rows: ? (?), cpu: 1.12G, memory: ?, network: 0B}
+    │   count := count(count_0)
+    └─ LocalExchange[partitioning = HASH, arguments = [advengineid::smallint]]
+       │   Layout: [advengineid:smallint, count_0:bigint]
+       │   Estimates: {rows: 99997497 (1.12GB), cpu: 1.12G, memory: 0B, network: 0B}
+       └─ RemoteSource[sourceFragmentIds = [3]]
+              Layout: [advengineid:smallint, count_0:bigint]
+
+Fragment 3 [SOURCE]
+    Output layout: [advengineid, count_0]
+    Output partitioning: HASH [advengineid]
+    Aggregate[type = PARTIAL, keys = [advengineid]]
+    │   Layout: [advengineid:smallint, count_0:bigint]
+    │   Estimates: {rows: 99997497 (1.12GB), cpu: ?, memory: ?, network: ?}
+    │   count_0 := count(*)
+    └─ TableScan[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint={RediSearchColumnHandle{name=advengineid, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=smallint, ranges=2, {(<min>,0), (0,<max>)}] ]}}]
+           Layout: [advengineid:smallint]
+           Estimates: {rows: 99997497 (286.10MB), cpu: 286.10M, memory: 0B, network: 0B}
+           advengineid := RediSearchColumnHandle{name=advengineid, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [(<min>, 0), (0, <max>)]
+
+"

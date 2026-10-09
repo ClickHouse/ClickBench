@@ -1,0 +1,16 @@
+"Trino version: 483
+Fragment 0 [SOURCE]
+    Output layout: [syntheticcolumn0]
+    Output partitioning: SINGLE []
+    Output[columnNames = [_col0]]
+    │   Layout: [syntheticcolumn0:bigint]
+    │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+    │   _col0 := syntheticcolumn0
+    └─ TableScan[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint={RediSearchColumnHandle{name=advengineid, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=smallint, ranges=2, {(<min>,0), (0,<max>)}] ]}}]
+           Layout: [syntheticcolumn0:bigint]
+           Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+           syntheticcolumn0 := RediSearchColumnHandle{name=syntheticColumn0, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=false, tagSeparator=Optional.empty, filterable=false}
+           RediSearchColumnHandle{name=advengineid, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [(<min>, 0), (0, <max>)]
+
+"

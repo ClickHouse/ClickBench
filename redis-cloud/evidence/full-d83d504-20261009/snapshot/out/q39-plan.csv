@@ -1,0 +1,73 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [url, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [URL, PageViews]]
+    │   Layout: [url:varchar, count:bigint]
+    │   Estimates: {rows: 505 (31.56kB), cpu: 0, memory: 0B, network: 0B}
+    │   URL := url
+    │   PageViews := count
+    └─ FilterProject[filterPredicate = (bigint '1000' < row_number)]
+       │   Layout: [url:varchar, count:bigint]
+       │   Estimates: {rows: 505 (31.56kB), cpu: 72.00k, memory: 0B, network: 0B}/{rows: 505 (31.56kB), cpu: 31.56k, memory: 0B, network: 0B}
+       └─ RowNumber[]
+          │   Layout: [url:varchar, count:bigint, row_number:bigint]
+          │   Estimates: {rows: 1010 (72.00kB), cpu: 8.88k, memory: 0B, network: 0B}
+          │   row_number := row_number()
+          └─ TopN[count = 1010, orderBy = [count DESC NULLS LAST]]
+             │   Layout: [url:varchar, count:bigint]
+             │   Estimates: {rows: 1010 (63.13kB), cpu: ?, memory: ?, network: ?}
+             └─ LocalExchange[partitioning = SINGLE]
+                │   Layout: [url:varchar, count:bigint]
+                │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+                └─ RemoteSource[sourceFragmentIds = [1]]
+                       Layout: [url:varchar, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [url, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 1010, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [url:varchar, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [url:varchar, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 1010, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [url:varchar, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [url:varchar, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 1010, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [url:varchar, count:bigint]
+                └─ Aggregate[type = FINAL, keys = [url]]
+                   │   Layout: [url:varchar, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: 5.96G, memory: ?, network: 0B}
+                   │   count := count(count_0)
+                   └─ LocalExchange[partitioning = HASH, arguments = [url::varchar]]
+                      │   Layout: [url:varchar, count_0:bigint]
+                      │   Estimates: {rows: 99997497 (5.96GB), cpu: 5.96G, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [url:varchar, count_0:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [url, count_0]
+    Output partitioning: HASH [url]
+    Aggregate[type = PARTIAL, keys = [url]]
+    │   Layout: [url:varchar, count_0:bigint]
+    │   Estimates: {rows: 99997497 (5.96GB), cpu: ?, memory: ?, network: ?}
+    │   count_0 := count(*)
+    └─ TableScan[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint={RediSearchColumnHandle{name=islink, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=smallint, ranges=2, {(<min>,0), (0,<max>)}] ], RediSearchColumnHandle{name=counterid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=integer, ranges=1, {[62]}] ], RediSearchColumnHandle{name=isdownload, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=smallint, ranges=1, {[0]}] ], RediSearchColumnHandle{name=isrefresh, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=smallint, ranges=1, {[0]}] ], RediSearchColumnHandle{name=eventdate, type=date, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}=[ SortedRangeSet[type=date, ranges=1, {[2013-07-01,2013-07-31]}] ]}}]
+           Layout: [url:varchar]
+           Estimates: {rows: 99997497 (5.12GB), cpu: 5.12G, memory: 0B, network: 0B}
+           url := RediSearchColumnHandle{name=url, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+           RediSearchColumnHandle{name=islink, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [(<min>, 0), (0, <max>)]
+           RediSearchColumnHandle{name=counterid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[62]]
+           RediSearchColumnHandle{name=isdownload, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[0]]
+           RediSearchColumnHandle{name=isrefresh, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[0]]
+           RediSearchColumnHandle{name=eventdate, type=date, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+               :: [[2013-07-01, 2013-07-31]]
+
+"

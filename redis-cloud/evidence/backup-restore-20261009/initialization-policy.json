@@ -1,0 +1,13 @@
+{
+  "preferred": "restore-from-backup",
+  "requirements": [
+    "compatible Redis version and benchmark schema",
+    "same source dataset and row count",
+    "all shard files present with verified checksums",
+    "post-restore index/count checks and independent query validation"
+  ],
+  "fallback": "fresh ingestion if no compatible verified backup exists",
+  "ingestion_benchmarks": "measure fresh ingestion separately; never label restore time as ingestion time",
+  "available_backup_bucket": "clickbench-backup-3444273-735486936198",
+  "backup_retention_days": 30
+}
