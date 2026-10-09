@@ -12,6 +12,7 @@ on:
 permissions:
   contents: write       # To push the results branch.
   pull-requests: write  # To open and merge the automated pull request.
+  actions: write        # To start the website build after merging.
 
 # Two overlapping runs would publish the same results twice.
 concurrency:

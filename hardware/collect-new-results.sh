@@ -128,6 +128,9 @@ fi
 for attempt in 1 2 3; do
     if gh pr merge "${url}" --merge --delete-branch; then
         note "Merged ${url}"
+        # The merge is pushed with GITHUB_TOKEN, which triggers no push workflows,
+        # so start the website build explicitly instead of waiting for its schedule.
+        gh workflow run generate-results.yml --ref main || note "Could not start the website build."
         exit 0
     fi
     sleep 10
