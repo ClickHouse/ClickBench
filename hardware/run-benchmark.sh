@@ -22,18 +22,28 @@ volume="${volume:-500}"           # GB
 iops="${iops:-16000}"
 throughput="${throughput:-1000}"  # MB/s
 
-# Transient AWS errors that clear on their own: spare capacity frees as
-# instances drain, the vCPU quota frees as other benchmarks finish, API
-# throttling clears within seconds. Others (bad AMI, missing IAM permissions,
-# an instance type unknown in the region) fail fast.
+# Transient AWS errors that clear on their own: the vCPU quota frees as other
+# benchmarks finish, API throttling clears within seconds. Others (bad AMI,
+# missing IAM permissions, an instance type unknown in the region) fail fast.
+#
+# A lack of capacity for the instance type (InsufficientInstanceCapacity) is
+# retried only for capacity_wait seconds: the large sizes of new families can
+# stay unavailable for hours, and the workflow launches the machines one after
+# another, so waiting for one would leave all the following ones unlaunched.
+capacity_wait="${capacity_wait:-600}"
 RETRY_RE='InsufficientInstanceCapacity|VcpuLimitExceeded|InstanceLimitExceeded|MaxSpotInstanceCountExceeded|RequestLimitExceeded|Throttling|VolumeLimitExceeded'
 aws_retry() {
-    local out rc
+    local out rc reason start=${SECONDS}
     while :; do
         out=$(AWS_PAGER='' "$@" 2>&1) && rc=0 || rc=$?
         if [ "${rc}" -eq 0 ]; then printf '%s\n' "${out}"; return 0; fi
-        if printf '%s' "${out}" | grep -qE "${RETRY_RE}"; then
-            printf 'aws: %s for %s, retrying in 60s...\n' "$(printf '%s' "${out}" | grep -oE "${RETRY_RE}" | head -n1)" "${machine}" >&2
+        reason=$(printf '%s' "${out}" | grep -oE "${RETRY_RE}" | head -n1)
+        if [ "${reason}" = "InsufficientInstanceCapacity" ] && [ $(( SECONDS - start )) -ge "${capacity_wait}" ]; then
+            printf 'aws: no capacity for %s for %ss, giving up\n' "${machine}" "${capacity_wait}" >&2
+            return "${rc}"
+        fi
+        if [ -n "${reason}" ]; then
+            printf 'aws: %s for %s, retrying in 60s...\n' "${reason}" "${machine}" >&2
             sleep 60; continue
         fi
         printf '%s\n' "${out}" >&2; return "${rc}"
