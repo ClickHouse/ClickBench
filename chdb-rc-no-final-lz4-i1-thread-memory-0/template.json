@@ -1,0 +1,7 @@
+{
+    "system": "chDB (26.9.0, no FINAL, LZ4, insert threads 1, query memory guard off)",
+    "proprietary": "no",
+    "hardware": "cpu",
+    "tuned": "yes",
+    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless"]
+}
