@@ -73,7 +73,19 @@ def read_blobs(oids):
     return blobs
 
 
-def generate_data(files):
+def base_complexity(rev):
+    """{system directory: complexity} from data.generated.js of a commit. The complexity
+    is computed by generate-results.sh from the scripts of a system, which are
+    not read here, so the values of the base revision are used."""
+    try:
+        text = git("show", f"{rev}:data.generated.js").decode()
+        data = json.loads(text[text.index("["):text.rindex("]") + 1])
+    except (RuntimeError, ValueError):
+        return {}
+    return {entry["source"].split("/")[0]: entry.get("complexity") for entry in data if "source" in entry}
+
+
+def generate_data(files, complexity={}):
     """The data array of the website, as built by generate-results.sh from
     {path: content}: the latest dated copy per (system, file name), without
     failed runs ({"error": ...}) and entries tagged "historical"."""
@@ -97,6 +109,7 @@ def generate_data(files):
             date_dir = RESULT_RE.match(path).group(2)
             entry["date"] = f"{date_dir[:4]}-{date_dir[4:6]}-{date_dir[6:8]}"
         entry["source"] = path
+        entry["complexity"] = complexity.get(path.split("/")[0])
         data.append(entry)
     return data
 
@@ -117,7 +130,7 @@ def build_page(base, changes):
         raise RuntimeError("index.html does not load data.generated.js")
     # Results come from pull requests: escape "<" so that no string in them
     # can close the script element.
-    data = json.dumps(generate_data(files), ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
+    data = json.dumps(generate_data(files, base_complexity(base)), ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
     script = f'<script type="text/javascript">\nconst data = {data};\n</script>'
     return page.replace(DATA_SCRIPT, script, 1)
 
