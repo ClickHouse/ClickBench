@@ -2,6 +2,8 @@
 set -eu
 
 . ./util.sh
+# util.sh's stop and start loops below poll every 0.05 s here; unset (as in ./start and ./stop) they poll every second.
+GIZMOSQL_POLL_S=0.05
 
 # Idempotent: blow away any prior database; the server has it open, so
 # stop it first to release the file lock.
