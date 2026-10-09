@@ -328,6 +328,14 @@
             text-align: left;
         }
 
+        #details.details-fixed {
+            table-layout: fixed;
+        }
+
+        #details .details-spacer {
+            padding: 0;
+        }
+
         #details td {
             white-space: pre;
             font-family: monospace;
@@ -670,7 +678,7 @@ function updateSelectors() {
     [...versions_elem.querySelectorAll('a')].filter(e => e.id != 'select-all-versions').map(elem => {
         elem.className = selectors.version[elem.dataset.version] ? 'selector selector-active' : 'selector' });
     [...datasets_elem.querySelectorAll('a')].filter(e => e.id != 'select-all-datasets').map(elem => {
-        elem.className = selectors.dataset[elem.innerText] ? 'selector selector-active' : 'selector' });
+        elem.className = selectors.dataset[elem.textContent] ? 'selector selector-active' : 'selector' });
     [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
         elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
     [...document.querySelectorAll('.query-checkbox')].map(elem => { elem.checked = selectors.queries[+elem.dataset.query] });
@@ -681,8 +689,11 @@ function clearElement(elem) { while (elem.firstChild) { elem.removeChild(elem.la
 function selectRun(timings) {
     if (!timings) { return null; }
     if (selectors.metric == 'cold') { return timings[0]; }
-    const hot = timings.slice(1).filter(x => x !== null);
-    return hot.length ? Math.min(...hot) : null;
+    let hot = null;
+    for (let i = 1; i < timings.length; ++i) {
+        if (timings[i] !== null && (hot === null || timings[i] < hot)) { hot = timings[i]; }
+    }
+    return hot;
 }
 
 /// A query counts in the summary when its dataset is enabled and its checkbox is on.
@@ -912,18 +923,35 @@ function displayVersion(v) {
     return (m && +m[1] >= 18) ? `${m[1]}.${m[2]}` : v;
 }
 
-function render() {
-    let details_head = document.getElementById('details_head');
-    let details_body = document.getElementById('details_body');
-    clearElement(details_head);
-    clearElement(details_body);
+/// Laying out the details table takes a while even with only the visible columns rendered, so it is
+/// rebuilt after the summary is painted, for the page to respond to clicks right away. If the page
+/// is scrolled before that, it is rebuilt immediately, so that the outdated table is not shown.
+let pending_details = null;
 
+function renderPendingDetails() {
+    if (pending_details) {
+        const f = pending_details;
+        pending_details = null;
+        f();
+    }
+}
+
+function scheduleDetails(f) {
+    pending_details = f;
+    requestAnimationFrame(() => setTimeout(renderPendingDetails, 0));
+}
+
+document.addEventListener('scroll', renderPendingDetails, {capture: true, passive: true});
+
+function render() {
     let filtered_data = data.filter(elem => selectors.version[elem.version]);
 
     let nothing = document.getElementById('nothing-selected');
     if (filtered_data.length == 0) {
         nothing.style.display = 'block';
         [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'none');
+        pending_details = null;
+        clearDetails();
         return;
     }
     nothing.style.display = 'none';
@@ -937,10 +965,200 @@ function render() {
 
     const sorted_indices = renderSummary(filtered_data, baseline_data);
 
+    scheduleDetails(() => renderDetails(filtered_data, sorted_indices, baseline_data));
+}
+
+/// Only the cells of the details table close to the viewport are rendered, because laying out
+/// all of them takes hundreds of milliseconds. First, the sizes of the columns and rows are measured
+/// on the table with all the header cells and a single row of the widest cells; then they are fixed,
+/// so that the table doesn't change while it is scrolled.
+let virtual_details = null;
+
+function clearDetails() {
+    const table = document.getElementById('details');
+    virtual_details = null;
+    table.classList.remove('details-fixed');
+    table.style.width = '';
+    table.querySelector('colgroup')?.remove();
+    clearElement(document.getElementById('details_head'));
+    clearElement(document.getElementById('details_body'));
+}
+
+function makeDetailsCell(cell) {
+    let td = document.createElement('td');
+    td.appendChild(document.createTextNode(cell.text));
+    colorize(td, cell.ratio);
+    return td;
+}
+
+/// `header` contains a function creating the header cell for every column, `rows` - the rows
+/// of the table body to fill, as {tr, cells: [{text, ratio}, ...]}. The cells on the left side
+/// of the columns (the query names, etc.) are already in the rows.
+function virtualizeDetails(header, rows, num_prefix = document.getElementById('details_head').children.length) {
+    const table = document.getElementById('details');
+    const details_head = document.getElementById('details_head');
+    const details_body = document.getElementById('details_body');
+    const num_columns = header.length;
+
+    /// Remove the cells rendered before, if the table is measured again.
+    [details_head, ...rows.map(row => row.tr)].forEach(tr => {
+        while (tr.children.length > num_prefix) { tr.lastElementChild.remove(); }
+    });
+
+    table.classList.remove('details-fixed');
+    table.style.width = '';
+    table.querySelector('colgroup')?.remove();
+    virtual_details = null;
+
+    header.forEach(make => details_head.appendChild(make()));
+
+    /// The width of a column is the width of its widest cell, as the text is monospace.
+    const measureRow = cells => {
+        let tr = document.createElement('tr');
+        for (let i = 0; i < num_prefix; ++i) { tr.appendChild(document.createElement('td')); }
+        cells.forEach(cell => tr.appendChild(cell ? makeDetailsCell(cell) : document.createElement('td')));
+        details_body.appendChild(tr);
+        return tr;
+    };
+    let widest = new Array(num_columns).fill(null);
+    for (const row of rows) {
+        row.cells.forEach((cell, c) => {
+            const w = widest[c];
+            if (!w || cell.text.length > w.text.length || (cell.text.length == w.text.length && cell.ratio == 1)) { widest[c] = cell; }
+        });
+    }
+    const measure_tr = measureRow(widest);
+    /// The skull can be taken from another font, with a different height.
+    const measure_skull_tr = measureRow([{text: '☠', ratio: null}]);
+
+    const table_rect = table.getBoundingClientRect();
+    const rects = [...details_head.children].map(th => th.getBoundingClientRect());
+    const row_height = measure_tr.getBoundingClientRect().height;
+    const skull_row_height = Math.max(row_height, measure_skull_tr.getBoundingClientRect().height);
+
+    measure_tr.remove();
+    measure_skull_tr.remove();
+    while (details_head.children.length > num_prefix) { details_head.lastElementChild.remove(); }
+
+    let colgroup = document.createElement('colgroup');
+    rects.forEach(rect => {
+        let col = document.createElement('col');
+        col.style.width = `${rect.width}px`;
+        colgroup.appendChild(col);
+    });
+    table.insertBefore(colgroup, table.firstChild);
+    table.style.width = `${table_rect.width}px`;
+    table.classList.add('details-fixed');
+
+    rows.forEach(row => {
+        row.tr.style.height = `${row.cells.some(cell => cell.text == '☠') ? skull_row_height : row_height}px`;
+        row.filled = null;
+    });
+
+    const columns = rects.slice(num_prefix).map(rect => [rect.left - table_rect.left, rect.right - table_rect.left]);
+    const prefix_widths = rects.slice(0, num_prefix).map(rect => rect.width);
+    virtual_details = {header, rows, num_prefix, prefix_widths, columns, safe: null};
+    updateDetailsWindow();
+}
+
+/// Fills the row with the cells of the columns [begin, end), replacing the columns [filled[0], filled[1]).
+/// If the ranges overlap, only the cells at the edges are added and removed.
+function fillDetailsRow(tr, num_prefix, filled, begin, end, num_columns, tag, make) {
+    const spacer = span => {
+        let cell = document.createElement(tag);
+        cell.className = 'details-spacer';
+        cell.colSpan = span;
+        return cell;
+    };
+
+    if (!filled || filled[0] >= filled[1] || begin >= end || end <= filled[0] || begin >= filled[1]) {
+        while (tr.children.length > num_prefix) { tr.lastElementChild.remove(); }
+        if (begin >= end) { return; }
+        if (begin > 0) { tr.appendChild(spacer(begin)); }
+        for (let c = begin; c < end; ++c) { tr.appendChild(make(c)); }
+        if (end < num_columns) { tr.appendChild(spacer(num_columns - end)); }
+        return;
+    }
+
+    const [old_begin, old_end] = filled;
+    if (old_begin > 0) { tr.children[num_prefix].remove(); }
+    if (old_end < num_columns) { tr.lastElementChild.remove(); }
+
+    for (let c = old_begin; c < begin; ++c) { tr.children[num_prefix].remove(); }
+    for (let c = end; c < old_end; ++c) { tr.lastElementChild.remove(); }
+
+    const first = tr.children[num_prefix];
+    for (let c = begin; c < old_begin; ++c) { tr.insertBefore(make(c), first); }
+    for (let c = old_end; c < end; ++c) { tr.appendChild(make(c)); }
+
+    if (begin > 0) { tr.insertBefore(spacer(begin), tr.children[num_prefix]); }
+    if (end < num_columns) { tr.appendChild(spacer(num_columns - end)); }
+}
+
+/// Renders the cells within a screen size from the visible part of the table,
+/// unless the visible part is still well inside the cells that are already rendered.
+function updateDetailsWindow() {
+    const v = virtual_details;
+    if (!v) { return; }
+
+    const table_rect = document.getElementById('details').getBoundingClientRect();
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const visible_left = -table_rect.left;
+    const visible_right = width - table_rect.left;
+    const visible_top = -table_rect.top;
+    const visible_bottom = height - table_rect.top;
+    if (v.safe && visible_left >= v.safe[0] && visible_right <= v.safe[1]
+        && visible_top >= v.safe[2] && visible_bottom <= v.safe[3]) { return; }
+
+    const num_columns = v.columns.length;
+    let begin = 0;
+    while (begin < num_columns && v.columns[begin][1] < visible_left - width) { ++begin; }
+    let end = begin;
+    while (end < num_columns && v.columns[end][0] < visible_right + width) { ++end; }
+
+    const row_rects = v.rows.map(row => row.tr.getBoundingClientRect());
+    const row_visible = row_rects.map(rect =>
+        rect.bottom - table_rect.top > visible_top - height && rect.top - table_rect.top < visible_bottom + height);
+    const first_row = row_visible.indexOf(true);
+    const last_row = row_visible.lastIndexOf(true);
+
+    /// If none of the rows are close to the viewport, it is checked again on every scroll.
+    v.safe = first_row == -1 ? null : [
+        begin == 0 ? -Infinity : visible_left - width / 2,
+        end == num_columns ? Infinity : visible_right + width / 2,
+        first_row == 0 ? -Infinity : visible_top - height / 2,
+        last_row == v.rows.length - 1 ? Infinity : visible_bottom + height / 2];
+
+    if (!v.header_filled || v.header_filled[0] != begin || v.header_filled[1] != end) {
+        fillDetailsRow(document.getElementById('details_head'), v.num_prefix, v.header_filled, begin, end, num_columns, 'th', c => v.header[c]());
+        v.header_filled = [begin, end];
+    }
+    v.rows.forEach((row, i) => {
+        const [row_begin, row_end] = row_visible[i] ? [begin, end] : [0, 0];
+        if (row.filled && row.filled[0] == row_begin && row.filled[1] == row_end) { return; }
+        fillDetailsRow(row.tr, v.num_prefix, row.filled, row_begin, row_end, num_columns, 'td', c => makeDetailsCell(row.cells[c]));
+        row.filled = [row_begin, row_end];
+    });
+}
+
+document.addEventListener('scroll', updateDetailsWindow, {capture: true, passive: true});
+
+/// The widths of the columns depend on the fonts, which can be loaded after the table is rendered.
+document.fonts?.addEventListener('loadingdone', () => {
+    if (virtual_details) { virtualizeDetails(virtual_details.header, virtual_details.rows, virtual_details.num_prefix); }
+});
+window.addEventListener('resize', () => { if (virtual_details) { virtual_details.safe = null; updateDetailsWindow(); } });
+
+function renderDetails(filtered_data, sorted_indices, baseline_data) {
+    let details_head = document.getElementById('details_head');
+    let details_body = document.getElementById('details_body');
+    clearDetails();
+
     /// Details header: two label columns (checkbox + name), then a column per version.
     details_head.appendChild(document.createElement('th'));
     details_head.appendChild(document.createElement('th'));
-    sorted_indices.map(idx => {
+    const header = sorted_indices.map(idx => () => {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
         th.className = 'th-entry';
@@ -954,8 +1172,10 @@ function render() {
             d.appendChild(document.createTextNode(elem.release_date));
             th.appendChild(d);
         }
-        details_head.appendChild(th);
+        return th;
     });
+
+    let rows = [];
 
     const enabled_datasets = datasets.filter(d => selectors.dataset[d.name]);
 
@@ -997,13 +1217,10 @@ function render() {
         td_title.className = 'note';
         td_title.appendChild(document.createTextNode(label));
         tr.appendChild(td_title);
-        values.forEach(v => {
+        rows.push({tr, cells: values.map(v => {
             const ratio = (v != null && isFinite(base) && base > 0) ? v / base : null;
-            let td = document.createElement('td');
-            td.appendChild(document.createTextNode(v != null ? `${fmt(v)} (×${(ratio ?? 1).toFixed(2)})` : '—'));
-            colorize(td, ratio);
-            tr.appendChild(td);
-        });
+            return {text: v != null ? `${fmt(v)} (×${(ratio ?? 1).toFixed(2)})` : '—', ratio};
+        })});
         details_body.appendChild(tr);
     }
 
@@ -1073,24 +1290,26 @@ function render() {
             td_query_num.appendChild(tooltip);
             tr.appendChild(td_query_num);
 
-            sorted_indices.map(idx => {
+            const base = selectRun(baseline_data[query_num]);
+            rows.push({tr, cells: sorted_indices.map(idx => {
                 const curr = selectRun(filtered_data[idx].result[query_num]);
-                const base = selectRun(baseline_data[query_num]);
                 const ratio = (curr !== null && base !== null) ? (constant_time_add + curr) / (constant_time_add + base) : null;
-                let td = document.createElement('td');
-                td.appendChild(document.createTextNode(curr !== null ? `${curr.toFixed(2)}s (×${ratio.toFixed(2)})` : '☠'));
-                colorize(td, ratio);
-                tr.appendChild(td);
-            });
+                return {text: curr !== null ? `${curr.toFixed(2)}s (×${ratio.toFixed(2)})` : '☠', ratio};
+            })});
             details_body.appendChild(tr);
         }
     });
 
+    virtualizeDetails(header, rows);
+
     /// Pin the second sticky column (query number) right after the first (checkbox):
     /// set its left offset to column 1's actual rendered width.
-    const col1 = details_head.children[0];
-    if (col1) {
-        document.documentElement.style.setProperty('--qn-left', col1.getBoundingClientRect().width + 'px');
+    /// The width is taken from the measurement of the table, as reading it from the table again
+    /// would lay it out once more. Only write the property when it changes: writing it invalidates
+    /// the styles of the whole page.
+    const qn_left = virtual_details.prefix_widths[0] + 'px';
+    if (qn_left !== document.documentElement.style.getPropertyValue('--qn-left')) {
+        document.documentElement.style.setProperty('--qn-left', qn_left);
     }
 }
 

@@ -292,6 +292,14 @@
             white-space: pre;
         }
 
+        #details.details-fixed {
+            table-layout: fixed;
+        }
+
+        #details .details-spacer {
+            padding: 0;
+        }
+
         #details td {
             white-space: pre;
             font-family: monospace;
@@ -644,7 +652,7 @@ function highlightSystemTags(systemName) {
     const tags = system_to_tags[systemName] || new Set();
     for (const elem of types.childNodes) {
         if (elem.tagName !== 'A') continue;
-        if (tags.has(elem.innerText)) elem.classList.add('selector-tag-hilite');
+        if (tags.has(elem.textContent)) elem.classList.add('selector-tag-hilite');
     }
 }
 
@@ -941,10 +949,10 @@ document.getElementById('selector-metric-size').addEventListener('click', e => {
 selectors.queries = [...data[0].result.keys()].map(k => true);
 
 function updateSelectors() {
-    [...systems.childNodes].map(elem => { elem.className = selectors.system[elem.innerText] ? 'selector selector-active' : 'selector' });
-    [...types.childNodes].map(elem => { elem.className = selectors.type[elem.innerText] ? 'selector selector-active' : 'selector' });
-    [...machines.childNodes].map(elem => { elem.className = selectors.machine[elem.innerText] ? 'selector selector-active' : 'selector' });
-    [...cluster_sizes.childNodes].map(elem => { elem.className = selectors.cluster_size[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...systems.childNodes].map(elem => { elem.className = selectors.system[elem.textContent] ? 'selector selector-active' : 'selector' });
+    [...types.childNodes].map(elem => { elem.className = selectors.type[elem.textContent] ? 'selector selector-active' : 'selector' });
+    [...machines.childNodes].map(elem => { elem.className = selectors.machine[elem.textContent] ? 'selector selector-active' : 'selector' });
+    [...cluster_sizes.childNodes].map(elem => { elem.className = selectors.cluster_size[elem.textContent] ? 'selector selector-active' : 'selector' });
 
     [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
         elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
@@ -977,7 +985,7 @@ function applyTopRowFilters() {
         for (const elem of container.childNodes) {
             if (elem.tagName !== 'A') continue;
             if (elem.id && elem.id.startsWith('select-all-')) continue;
-            elem.style.display = allowed.has(elem.innerText) ? '' : 'none';
+            elem.style.display = allowed.has(elem.textContent) ? '' : 'none';
         }
     }
 
@@ -992,9 +1000,9 @@ function findPassiveSelectors(filtered_data) {
         const filtered = new Set(filtered_data.map(elem => elem[name]).flat().map(x => String(x)));
         for (let elem of container.childNodes) {
             if (elem.tagName == 'A') {
-                if (elem.classList.contains('selector-active') && !filtered.has(elem.innerText)) {
+                if (elem.classList.contains('selector-active') && !filtered.has(elem.textContent)) {
                     elem.className = 'selector selector-passive';
-                } else if (elem.classList.contains('selector-passive') && filtered.has(elem.innerText)) {
+                } else if (elem.classList.contains('selector-passive') && filtered.has(elem.textContent)) {
                     elem.className = 'selector selector-active';
                 }
             }
@@ -1119,16 +1127,18 @@ function renderSummary(filtered_data) {
 
     const num_queries = filtered_data[0].result.length;
 
+    // Apply the same per-metric exclusions to the baseline that the
+    // standalone metric uses: run 0 is the cold run, runs 1/2 are
+    // hot. This keeps lukewarm/in-memory systems out of the cold
+    // baseline so they can't depress the per-query minimum and
+    // inflate every true-cold system's cold ratio in Combined. In
+    // the standalone Cold Run metric they're already filtered out.
+    const baseline_cold_candidates = filtered_data.filter(elem => !elem.fake && !metricExcludes(elem, 'cold'));
+    const baseline_hot_candidates = filtered_data.filter(elem => !elem.fake && !metricExcludes(elem, 'hot'));
+
     const baseline_data = [...filtered_data[0].result.keys()].map(query_num =>
         [...Array(3).keys()].map(run_num =>
-            Math.min(...filtered_data.filter(elem => !elem.fake)
-                // Apply the same per-metric exclusions to the baseline that the
-                // standalone metric uses: run 0 is the cold run, runs 1/2 are
-                // hot. This keeps lukewarm/in-memory systems out of the cold
-                // baseline so they can't depress the per-query minimum and
-                // inflate every true-cold system's cold ratio in Combined. In
-                // the standalone Cold Run metric they're already filtered out.
-                .filter(elem => !metricExcludes(elem, run_num === 0 ? 'cold' : 'hot'))
+            Math.min(...(run_num === 0 ? baseline_cold_candidates : baseline_hot_candidates)
                 .map(elem => elem.result[query_num]?.[run_num]).filter(x => x != null))));
 
     const min_load_time = Math.min(...filtered_data.filter(elem => !metricExcludes(elem, 'load')).map(elem => elem.load_time));
@@ -1210,7 +1220,7 @@ function renderSummary(filtered_data) {
                 e.stopPropagation();
                 selectors.system[elem.system] = false;
                 for (const s of systems.childNodes) {
-                    if (s.tagName === 'A' && s.innerText === elem.system) {
+                    if (s.tagName === 'A' && s.textContent === elem.system) {
                         s.className = 'selector';
                     }
                 }
@@ -1327,13 +1337,27 @@ function colorize(elem, ratio) {
     }
 }
 
+/// Laying out the details table takes a while even with only the visible columns rendered, so it is
+/// rebuilt after the summary is painted, for the page to respond to clicks right away. If the page
+/// is scrolled before that, it is rebuilt immediately, so that the outdated table is not shown.
+let pending_details = null;
+
+function renderPendingDetails() {
+    if (pending_details) {
+        const f = pending_details;
+        pending_details = null;
+        f();
+    }
+}
+
+function scheduleDetails(f) {
+    pending_details = f;
+    requestAnimationFrame(() => setTimeout(renderPendingDetails, 0));
+}
+
+document.addEventListener('scroll', renderPendingDetails, {capture: true, passive: true});
+
 function render() {
-    let details_head = document.getElementById('details_head');
-    let details_body = document.getElementById('details_body');
-
-    clearElement(details_head);
-    clearElement(details_body);
-
     applyTopRowFilters();
 
     let filtered_data = data.filter(elem =>
@@ -1355,6 +1379,8 @@ function render() {
     if (filtered_data.length == 0) {
         nothing_selected_elem.style.display = 'block';
         [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'none');
+        pending_details = null;
+        clearDetails();
         return;
     }
     nothing_selected_elem.style.display = 'none';
@@ -1366,6 +1392,202 @@ function render() {
 
     let [sorted_indices, baseline_data] = renderSummary(filtered_data);
     sorted_indices = sorted_indices.filter(idx => !filtered_data[idx].fake);
+
+    findPassiveSelectors(filtered_data);
+
+    /// The small hint below column heading "Relative time (lower is better)"
+    document.getElementById("scale_hint").textContent = 'Different colors on the bar chart represent the same values shown at different scales (1x, 10x, 100x zoom)';
+
+    scheduleDetails(() => renderDetails(filtered_data, sorted_indices, baseline_data));
+}
+
+/// Only the cells of the details table close to the viewport are rendered, because laying out
+/// all of them takes hundreds of milliseconds. First, the sizes of the columns and rows are measured
+/// on the table with all the header cells and a single row of the widest cells; then they are fixed,
+/// so that the table doesn't change while it is scrolled.
+let virtual_details = null;
+
+function clearDetails() {
+    const table = document.getElementById('details');
+    virtual_details = null;
+    table.classList.remove('details-fixed');
+    table.style.width = '';
+    table.querySelector('colgroup')?.remove();
+    clearElement(document.getElementById('details_head'));
+    clearElement(document.getElementById('details_body'));
+}
+
+function makeDetailsCell(cell) {
+    let td = document.createElement('td');
+    td.appendChild(document.createTextNode(cell.text));
+    colorize(td, cell.ratio);
+    return td;
+}
+
+/// `header` contains a function creating the header cell for every column, `rows` - the rows
+/// of the table body to fill, as {tr, cells: [{text, ratio}, ...]}. The cells on the left side
+/// of the columns (the query names, etc.) are already in the rows.
+function virtualizeDetails(header, rows, num_prefix = document.getElementById('details_head').children.length) {
+    const table = document.getElementById('details');
+    const details_head = document.getElementById('details_head');
+    const details_body = document.getElementById('details_body');
+    const num_columns = header.length;
+
+    /// Remove the cells rendered before, if the table is measured again.
+    [details_head, ...rows.map(row => row.tr)].forEach(tr => {
+        while (tr.children.length > num_prefix) { tr.lastElementChild.remove(); }
+    });
+
+    table.classList.remove('details-fixed');
+    table.style.width = '';
+    table.querySelector('colgroup')?.remove();
+    virtual_details = null;
+
+    header.forEach(make => details_head.appendChild(make()));
+
+    /// The width of a column is the width of its widest cell, as the text is monospace.
+    const measureRow = cells => {
+        let tr = document.createElement('tr');
+        for (let i = 0; i < num_prefix; ++i) { tr.appendChild(document.createElement('td')); }
+        cells.forEach(cell => tr.appendChild(cell ? makeDetailsCell(cell) : document.createElement('td')));
+        details_body.appendChild(tr);
+        return tr;
+    };
+    let widest = new Array(num_columns).fill(null);
+    for (const row of rows) {
+        row.cells.forEach((cell, c) => {
+            const w = widest[c];
+            if (!w || cell.text.length > w.text.length || (cell.text.length == w.text.length && cell.ratio == 1)) { widest[c] = cell; }
+        });
+    }
+    const measure_tr = measureRow(widest);
+    /// The skull can be taken from another font, with a different height.
+    const measure_skull_tr = measureRow([{text: '☠', ratio: null}]);
+
+    const table_rect = table.getBoundingClientRect();
+    const rects = [...details_head.children].map(th => th.getBoundingClientRect());
+    const row_height = measure_tr.getBoundingClientRect().height;
+    const skull_row_height = Math.max(row_height, measure_skull_tr.getBoundingClientRect().height);
+
+    measure_tr.remove();
+    measure_skull_tr.remove();
+    while (details_head.children.length > num_prefix) { details_head.lastElementChild.remove(); }
+
+    let colgroup = document.createElement('colgroup');
+    rects.forEach(rect => {
+        let col = document.createElement('col');
+        col.style.width = `${rect.width}px`;
+        colgroup.appendChild(col);
+    });
+    table.insertBefore(colgroup, table.firstChild);
+    table.style.width = `${table_rect.width}px`;
+    table.classList.add('details-fixed');
+
+    rows.forEach(row => {
+        row.tr.style.height = `${row.cells.some(cell => cell.text == '☠') ? skull_row_height : row_height}px`;
+        row.filled = null;
+    });
+
+    const columns = rects.slice(num_prefix).map(rect => [rect.left - table_rect.left, rect.right - table_rect.left]);
+    const prefix_widths = rects.slice(0, num_prefix).map(rect => rect.width);
+    virtual_details = {header, rows, num_prefix, prefix_widths, columns, safe: null};
+    updateDetailsWindow();
+}
+
+/// Fills the row with the cells of the columns [begin, end), replacing the columns [filled[0], filled[1]).
+/// If the ranges overlap, only the cells at the edges are added and removed.
+function fillDetailsRow(tr, num_prefix, filled, begin, end, num_columns, tag, make) {
+    const spacer = span => {
+        let cell = document.createElement(tag);
+        cell.className = 'details-spacer';
+        cell.colSpan = span;
+        return cell;
+    };
+
+    if (!filled || filled[0] >= filled[1] || begin >= end || end <= filled[0] || begin >= filled[1]) {
+        while (tr.children.length > num_prefix) { tr.lastElementChild.remove(); }
+        if (begin >= end) { return; }
+        if (begin > 0) { tr.appendChild(spacer(begin)); }
+        for (let c = begin; c < end; ++c) { tr.appendChild(make(c)); }
+        if (end < num_columns) { tr.appendChild(spacer(num_columns - end)); }
+        return;
+    }
+
+    const [old_begin, old_end] = filled;
+    if (old_begin > 0) { tr.children[num_prefix].remove(); }
+    if (old_end < num_columns) { tr.lastElementChild.remove(); }
+
+    for (let c = old_begin; c < begin; ++c) { tr.children[num_prefix].remove(); }
+    for (let c = end; c < old_end; ++c) { tr.lastElementChild.remove(); }
+
+    const first = tr.children[num_prefix];
+    for (let c = begin; c < old_begin; ++c) { tr.insertBefore(make(c), first); }
+    for (let c = old_end; c < end; ++c) { tr.appendChild(make(c)); }
+
+    if (begin > 0) { tr.insertBefore(spacer(begin), tr.children[num_prefix]); }
+    if (end < num_columns) { tr.appendChild(spacer(num_columns - end)); }
+}
+
+/// Renders the cells within a screen size from the visible part of the table,
+/// unless the visible part is still well inside the cells that are already rendered.
+function updateDetailsWindow() {
+    const v = virtual_details;
+    if (!v) { return; }
+
+    const table_rect = document.getElementById('details').getBoundingClientRect();
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const visible_left = -table_rect.left;
+    const visible_right = width - table_rect.left;
+    const visible_top = -table_rect.top;
+    const visible_bottom = height - table_rect.top;
+    if (v.safe && visible_left >= v.safe[0] && visible_right <= v.safe[1]
+        && visible_top >= v.safe[2] && visible_bottom <= v.safe[3]) { return; }
+
+    const num_columns = v.columns.length;
+    let begin = 0;
+    while (begin < num_columns && v.columns[begin][1] < visible_left - width) { ++begin; }
+    let end = begin;
+    while (end < num_columns && v.columns[end][0] < visible_right + width) { ++end; }
+
+    const row_rects = v.rows.map(row => row.tr.getBoundingClientRect());
+    const row_visible = row_rects.map(rect =>
+        rect.bottom - table_rect.top > visible_top - height && rect.top - table_rect.top < visible_bottom + height);
+    const first_row = row_visible.indexOf(true);
+    const last_row = row_visible.lastIndexOf(true);
+
+    /// If none of the rows are close to the viewport, it is checked again on every scroll.
+    v.safe = first_row == -1 ? null : [
+        begin == 0 ? -Infinity : visible_left - width / 2,
+        end == num_columns ? Infinity : visible_right + width / 2,
+        first_row == 0 ? -Infinity : visible_top - height / 2,
+        last_row == v.rows.length - 1 ? Infinity : visible_bottom + height / 2];
+
+    if (!v.header_filled || v.header_filled[0] != begin || v.header_filled[1] != end) {
+        fillDetailsRow(document.getElementById('details_head'), v.num_prefix, v.header_filled, begin, end, num_columns, 'th', c => v.header[c]());
+        v.header_filled = [begin, end];
+    }
+    v.rows.forEach((row, i) => {
+        const [row_begin, row_end] = row_visible[i] ? [begin, end] : [0, 0];
+        if (row.filled && row.filled[0] == row_begin && row.filled[1] == row_end) { return; }
+        fillDetailsRow(row.tr, v.num_prefix, row.filled, row_begin, row_end, num_columns, 'td', c => makeDetailsCell(row.cells[c]));
+        row.filled = [row_begin, row_end];
+    });
+}
+
+document.addEventListener('scroll', updateDetailsWindow, {capture: true, passive: true});
+
+/// The widths of the columns depend on the fonts, which can be loaded after the table is rendered.
+document.fonts?.addEventListener('loadingdone', () => {
+    if (virtual_details) { virtualizeDetails(virtual_details.header, virtual_details.rows, virtual_details.num_prefix); }
+});
+window.addEventListener('resize', () => { if (virtual_details) { virtual_details.safe = null; updateDetailsWindow(); } });
+
+function renderDetails(filtered_data, sorted_indices, baseline_data) {
+    let details_head = document.getElementById('details_head');
+    let details_body = document.getElementById('details_body');
+
+    clearDetails();
 
     /// Generate details
 
@@ -1386,7 +1608,7 @@ function render() {
     }
 
     /// Table header
-    sorted_indices.map(idx => {
+    const header = sorted_indices.map(idx => () => {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
         th.appendChild(document.createTextNode(`${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
@@ -1394,8 +1616,10 @@ function render() {
         th.dataset.system = elem.system;
         th.addEventListener('mouseover', () => highlightSystemTags(elem.system));
         th.addEventListener('mouseout', clearSystemTagsHighlight);
-        details_head.appendChild(th);
+        return th;
     });
+
+    let rows = [];
 
     /// Load times
     {
@@ -1407,17 +1631,12 @@ function render() {
         td_title.appendChild(document.createTextNode('Load time: '));
         tr.appendChild(td_title);
 
-        sorted_indices.map(idx => {
+        const baseline_timing = Math.min(...filtered_data.map(elem => elem.load_time).filter(x => x >= 5));
+        rows.push({tr, cells: sorted_indices.map(idx => {
             const curr_timing = filtered_data[idx].load_time;
-            const baseline_timing = Math.min(...filtered_data.map(elem => elem.load_time).filter(x => x >= 5));
             const ratio = curr_timing / baseline_timing;
-
-            let td = document.createElement('td');
-            td.appendChild(document.createTextNode(curr_timing ? `${Math.round(curr_timing)}s (×${ratio.toFixed(2)})` : '0'));
-
-            colorize(td, ratio);
-            tr.appendChild(td);
-        });
+            return {text: curr_timing ? `${Math.round(curr_timing)}s (×${ratio.toFixed(2)})` : '0', ratio};
+        })});
 
         details_body.appendChild(tr);
     }
@@ -1432,17 +1651,12 @@ function render() {
         td_title.appendChild(document.createTextNode('Data size: '));
         tr.appendChild(td_title);
 
-        sorted_indices.map(idx => {
+        const baseline_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x));
+        rows.push({tr, cells: sorted_indices.map(idx => {
             const curr_size = filtered_data[idx].data_size;
-            const baseline_size = Math.min(...filtered_data.map(elem => elem.data_size).filter(x => x));
             const ratio = curr_size !== null ? curr_size / baseline_size : null;
-
-            let td = document.createElement('td');
-            td.appendChild(document.createTextNode(curr_size !== null ? `${(curr_size / 1024 / 1024 / 1024).toFixed(2)} GiB (×${ratio.toFixed(2)})` : '☠'));
-
-            colorize(td, ratio);
-            tr.appendChild(td);
-        });
+            return {text: curr_size !== null ? `${(curr_size / 1024 / 1024 / 1024).toFixed(2)} GiB (×${ratio.toFixed(2)})` : '☠', ratio};
+        })});
 
         details_body.appendChild(tr);
     }
@@ -1481,25 +1695,17 @@ function render() {
         td_query.appendChild(query_name);
         tr.appendChild(td_query);
 
-        sorted_indices.map(idx => {
+        const baseline_timing = selectRun(baseline_data[query_num], selectors.metric);
+        rows.push({tr, cells: sorted_indices.map(idx => {
             const curr_timing = selectRun(filtered_data[idx].result[query_num], selectors.metric);
-            const baseline_timing = selectRun(baseline_data[query_num], selectors.metric);
             const ratio = curr_timing !== null ? (constant_time_add + curr_timing) / (constant_time_add + baseline_timing) : null;
-
-            let td = document.createElement('td');
-            td.appendChild(document.createTextNode(curr_timing !== null ? `${curr_timing.toFixed(3)}s (×${ratio.toFixed(2)})` : '☠'));
-
-            colorize(td, ratio);
-            tr.appendChild(td);
-        });
+            return {text: curr_timing !== null ? `${curr_timing.toFixed(3)}s (×${ratio.toFixed(2)})` : '☠', ratio};
+        })});
 
         details_body.appendChild(tr);
     }
 
-    findPassiveSelectors(filtered_data);
-
-    /// The small hint below column heading "Relative time (lower is better)"
-    document.getElementById("scale_hint").textContent = 'Different colors on the bar chart represent the same values shown at different scales (1x, 10x, 100x zoom)';
+    virtualizeDetails(header, rows);
 }
 
 function isSubsequence(str, subseq) {
