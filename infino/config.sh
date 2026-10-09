@@ -6,11 +6,6 @@
 # Disk cache lives beside the data so warm queries read cached column chunks.
 export INFINO_CACHE_DIR="${INFINO_CACHE_DIR:-./cache}"
 
-# Superfile segment size: many mid-size segments let the scan parallelise across
-# cores. 256 MB fits a 16-core box on up. Without this the default ~1 GiB
-# segments leave queries single-file-bound (seconds instead of sub-second).
-export INFINO_TARGET_SF_MB="${INFINO_TARGET_SF_MB:-256}"
-
 # Disk-cache budget: 24 GiB, comfortably above the ~11 GB (100M-row) dataset so
 # every superfile stays cached (the DiskCacheStore holds them mmap-backed) and
 # warm queries are fast. A fixed size, not a RAM fraction: the cache lives on
