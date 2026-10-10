@@ -1,0 +1,61 @@
+{
+  "queryId": "20261009_182847_00001_z8r4f",
+  "state": "FINISHED",
+  "queryStats": {
+    "elapsedTime": "3.15s",
+    "executionTime": "3.13s",
+    "totalCpuTime": "75.00ms",
+    "physicalInputPositions": 10,
+    "physicalInputReadTime": "2.88s",
+    "physicalInputDataSize": "7103B",
+    "peakUserMemoryReservation": "8592B"
+  },
+  "scanMetrics": [
+    {
+      "stageId": 1,
+      "operatorType": "TableScanOperator",
+      "physicalInputPositions": 10,
+      "connectorMetrics": {
+        "redis.aggregate.requests": {
+          "@class": "io.trino.plugin.base.metrics.LongCount",
+          "total": 1
+        },
+        "redis.request-wall-time": {
+          "@class": "io.trino.plugin.base.metrics.DurationTiming",
+          "duration": "2877905508.00ns"
+        },
+        "redis.exact-hash-commands": {
+          "@class": "io.trino.plugin.base.metrics.LongCount",
+          "total": 10
+        },
+        "redis.rows.received": {
+          "@class": "io.trino.plugin.base.metrics.LongCount",
+          "total": 15911
+        },
+        "redis.exact-hash-reads": {
+          "@class": "io.trino.plugin.base.metrics.LongCount",
+          "total": 1050
+        },
+        "redis.cursor.requests": {
+          "@class": "io.trino.plugin.base.metrics.LongCount",
+          "total": 15
+        },
+        "redis.exact-hash-read-wait-time": {
+          "@class": "io.trino.plugin.base.metrics.DurationTiming",
+          "duration": "6719715.00ns"
+        },
+        "redis.exact-hash-read-batches": {
+          "@class": "io.trino.plugin.base.metrics.LongCount",
+          "total": 1
+        },
+        "redis.row-conversion-time": {
+          "@class": "io.trino.plugin.base.metrics.DurationTiming",
+          "duration": "9002239.00ns"
+        }
+      }
+    }
+  ],
+  "error": null,
+  "failure": null,
+  "successfulElapsedTime": "3.15s"
+}

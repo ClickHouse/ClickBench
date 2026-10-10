@@ -1,0 +1,58 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [gid, url, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [_col0, URL, c]]
+    │   Layout: [gid:integer, url:varchar, count:bigint]
+    │   Estimates: {rows: 10 (690B), cpu: 0, memory: 0B, network: 0B}
+    │   _col0 := gid
+    │   URL := url
+    │   c := count
+    └─ TopN[count = 10, orderBy = [count DESC NULLS LAST]]
+       │   Layout: [url:varchar, gid:integer, count:bigint]
+       │   Estimates: {rows: 10 (690B), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [url:varchar, gid:integer, count:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [url:varchar, gid:integer, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [url, gid, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [url:varchar, gid:integer, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [url:varchar, gid:integer, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [url:varchar, gid:integer, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [url:varchar, gid:integer, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [url:varchar, gid:integer, count:bigint]
+                └─ Aggregate[type = FINAL, keys = [url, gid]]
+                   │   Layout: [url:varchar, gid:integer, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: 6.43G, memory: ?, network: 0B}
+                   │   count := count(count_0)
+                   └─ LocalExchange[partitioning = HASH, arguments = [url::varchar, gid::integer]]
+                      │   Layout: [url:varchar, gid:integer, count_0:bigint]
+                      │   Estimates: {rows: 99997497 (6.43GB), cpu: 6.43G, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [url:varchar, gid:integer, count_0:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [url, gid, count_0]
+    Output partitioning: HASH [url, gid]
+    Aggregate[type = PARTIAL, keys = [url, gid]]
+    │   Layout: [url:varchar, gid:integer, count_0:bigint]
+    │   Estimates: {rows: 99997497 (6.43GB), cpu: ?, memory: ?, network: ?}
+    │   count_0 := count(*)
+    └─ ScanProject[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}]
+           Layout: [url:varchar, gid:integer]
+           Estimates: {rows: 99997497 (5.59GB), cpu: 5.12G, memory: 0B, network: 0B}/{rows: 99997497 (5.59GB), cpu: 5.59G, memory: 0B, network: 0B}
+           gid := integer '1'
+           url := RediSearchColumnHandle{name=url, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+
+"

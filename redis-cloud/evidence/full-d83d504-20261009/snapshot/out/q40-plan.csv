@@ -1,0 +1,78 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [traficsourceid, searchengineid, advengineid, gid, url, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst, PageViews]]
+    │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, gid:varchar, url:varchar, count:bigint]
+    │   Estimates: {rows: 505 (63.13kB), cpu: 0, memory: 0B, network: 0B}
+    │   TraficSourceID := traficsourceid
+    │   SearchEngineID := searchengineid
+    │   AdvEngineID := advengineid
+    │   Src := gid
+    │   Dst := url
+    │   PageViews := count
+    └─ FilterProject[filterPredicate = (bigint '1000' < row_number)]
+       │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count:bigint]
+       │   Estimates: {rows: 505 (63.13kB), cpu: 135.13k, memory: 0B, network: 0B}/{rows: 505 (63.13kB), cpu: 63.13k, memory: 0B, network: 0B}
+       └─ RowNumber[]
+          │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count:bigint, row_number:bigint]
+          │   Estimates: {rows: 1010 (135.13kB), cpu: 8.88k, memory: 0B, network: 0B}
+          │   row_number := row_number()
+          └─ TopN[count = 1010, orderBy = [count DESC NULLS LAST]]
+             │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count:bigint]
+             │   Estimates: {rows: 1010 (126.25kB), cpu: ?, memory: ?, network: ?}
+             └─ LocalExchange[partitioning = SINGLE]
+                │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count:bigint]
+                │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+                └─ RemoteSource[sourceFragmentIds = [1]]
+                       Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [traficsourceid, searchengineid, advengineid, url, gid, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 1010, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 1010, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 1010, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count:bigint]
+                └─ Aggregate[type = FINAL, keys = [traficsourceid, searchengineid, advengineid, url, gid]]
+                   │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: 11.92G, memory: ?, network: 0B}
+                   │   count := count(count_0)
+                   └─ LocalExchange[partitioning = HASH, arguments = [traficsourceid::smallint, searchengineid::smallint, advengineid::smallint, url::varchar, gid::varchar]]
+                      │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count_0:bigint]
+                      │   Estimates: {rows: 99997497 (11.92GB), cpu: 11.92G, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count_0:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [traficsourceid, searchengineid, advengineid, url, gid, count_0]
+    Output partitioning: HASH [traficsourceid, searchengineid, advengineid, url, gid]
+    Aggregate[type = PARTIAL, keys = [traficsourceid, searchengineid, advengineid, url, gid]]
+    │   Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar, count_0:bigint]
+    │   Estimates: {rows: 99997497 (11.92GB), cpu: ?, memory: ?, network: ?}
+    │   count_0 := count(*)
+    └─ ScanProject[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint={RediSearchColumnHandle{name=eventdate, type=date, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}=[ SortedRangeSet[type=date, ranges=1, {[2013-07-01,2013-07-31]}] ], RediSearchColumnHandle{name=isrefresh, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=smallint, ranges=1, {[0]}] ], RediSearchColumnHandle{name=counterid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=integer, ranges=1, {[62]}] ]}}]
+           Layout: [traficsourceid:smallint, searchengineid:smallint, advengineid:smallint, url:varchar, gid:varchar]
+           Estimates: {rows: 99997497 (11.08GB), cpu: 11.08G, memory: 0B, network: 0B}/{rows: 99997497 (11.08GB), cpu: 11.08G, memory: 0B, network: 0B}
+           gid := (CASE WHEN ((searchengineid = smallint '0') AND (advengineid = smallint '0')) THEN referer ELSE varchar '' END)
+           referer := RediSearchColumnHandle{name=referer, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+           url := RediSearchColumnHandle{name=url, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+           traficsourceid := RediSearchColumnHandle{name=traficsourceid, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+           searchengineid := RediSearchColumnHandle{name=searchengineid, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+           advengineid := RediSearchColumnHandle{name=advengineid, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+           RediSearchColumnHandle{name=eventdate, type=date, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+               :: [[2013-07-01, 2013-07-31]]
+           RediSearchColumnHandle{name=isrefresh, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[0]]
+           RediSearchColumnHandle{name=counterid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[62]]
+
+"

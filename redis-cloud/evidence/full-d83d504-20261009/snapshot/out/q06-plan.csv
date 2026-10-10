@@ -1,0 +1,45 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [_col0]]
+    │   Layout: [count:bigint]
+    │   Estimates: {rows: 1 (9B), cpu: 0, memory: 0B, network: 0B}
+    │   _col0 := count
+    └─ Aggregate[type = FINAL]
+       │   Layout: [count:bigint]
+       │   Estimates: {rows: 1 (9B), cpu: ?, memory: 9B, network: 0B}
+       │   count := count(count_0)
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [count_0:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [count_0:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [count_0]
+    Output partitioning: SINGLE []
+    Aggregate[type = PARTIAL]
+    │   Layout: [count_0:bigint]
+    │   count_0 := count(searchphrase)
+    └─ Aggregate[type = FINAL, keys = [searchphrase]]
+       │   Layout: [searchphrase:varchar]
+       │   Estimates: {rows: ? (?), cpu: 5.12G, memory: ?, network: 0B}
+       └─ LocalExchange[partitioning = HASH, arguments = [searchphrase::varchar]]
+          │   Layout: [searchphrase:varchar]
+          │   Estimates: {rows: 99997497 (5.12GB), cpu: 5.12G, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [2]]
+                 Layout: [searchphrase:varchar]
+
+Fragment 2 [SOURCE]
+    Output layout: [searchphrase]
+    Output partitioning: HASH [searchphrase]
+    Aggregate[type = PARTIAL, keys = [searchphrase]]
+    │   Layout: [searchphrase:varchar]
+    │   Estimates: {rows: 99997497 (5.12GB), cpu: ?, memory: ?, network: ?}
+    └─ TableScan[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}]
+           Layout: [searchphrase:varchar]
+           Estimates: {rows: 99997497 (5.12GB), cpu: 5.12G, memory: 0B, network: 0B}
+           searchphrase := RediSearchColumnHandle{name=searchphrase, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+
+"

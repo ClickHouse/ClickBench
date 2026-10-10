@@ -1,0 +1,45 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [_col0]]
+    │   Layout: [count:bigint]
+    │   Estimates: {rows: 1 (9B), cpu: 0, memory: 0B, network: 0B}
+    │   _col0 := count
+    └─ Aggregate[type = FINAL]
+       │   Layout: [count:bigint]
+       │   Estimates: {rows: 1 (9B), cpu: ?, memory: 9B, network: 0B}
+       │   count := count(count_0)
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [count_0:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [count_0:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [count_0]
+    Output partitioning: SINGLE []
+    Aggregate[type = PARTIAL]
+    │   Layout: [count_0:bigint]
+    │   count_0 := count(userid)
+    └─ Aggregate[type = FINAL, keys = [userid]]
+       │   Layout: [userid:bigint]
+       │   Estimates: {rows: ? (?), cpu: 858.29M, memory: ?, network: 0B}
+       └─ LocalExchange[partitioning = HASH, arguments = [userid::bigint]]
+          │   Layout: [userid:bigint]
+          │   Estimates: {rows: 99997497 (858.29MB), cpu: 858.29M, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [2]]
+                 Layout: [userid:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [userid]
+    Output partitioning: HASH [userid]
+    Aggregate[type = PARTIAL, keys = [userid]]
+    │   Layout: [userid:bigint]
+    │   Estimates: {rows: 99997497 (858.29MB), cpu: ?, memory: ?, network: ?}
+    └─ TableScan[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}]
+           Layout: [userid:bigint]
+           Estimates: {rows: 99997497 (858.29MB), cpu: 858.29M, memory: 0B, network: 0B}
+           userid := RediSearchColumnHandle{name=userid, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+
+"

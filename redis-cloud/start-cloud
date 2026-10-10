@@ -1,0 +1,57 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+: "${REDIS_CONNECTION_FILE:?Set REDIS_CONNECTION_FILE to a private Redis connection JSON file}"
+: "${PLUGIN_DIR:?Set PLUGIN_DIR to the built connector directory}"
+source ./versions.env
+PLUGIN_DIR=$(cd "$PLUGIN_DIR" && pwd -P)
+export PLUGIN_DIR
+.venv/bin/python benchmark_version.py verify --plugin "$PLUGIN_DIR" --revision "$CONNECTOR_REVISION"
+manifest_sha=$(.venv/bin/python -c 'from pathlib import Path; from benchmark_version import digest; import os; print(digest(Path(os.environ["PLUGIN_DIR"]) / "connector-build.json"))')
+mkdir -p cloud-etc/catalog
+python3 - <<'PY'
+import json, os
+from pathlib import Path
+c=json.loads(Path(os.environ['REDIS_CONNECTION_FILE']).read_text())
+for mode in ('default','cluster'):
+    text='\n'.join(['connector.name=redisearch',
+        f'redisearch.uri={"rediss" if c.get("ssl") else "redis"}://{c["host"]}:{c["port"]}?timeout=1200s',
+        f'redisearch.password={c["password"]}',
+        f'redisearch.username={c.get("username","default")}',
+        f'redisearch.cluster={str(mode=="cluster").lower()}',
+        'redisearch.default-schema-name=default',
+        'redisearch.query-timeout-ms=1200000'])+'\n'
+    p=Path(f'cloud-etc/catalog/redis_{mode}.properties')
+    p.write_text(text); p.chmod(0o600)
+PY
+# The benchmark runner has 128 GiB RAM. Smaller hosts must reduce these settings.
+docker pull "$TRINO_IMAGE"
+trino_uid=$(docker run --rm --entrypoint id "$TRINO_IMAGE" -u)
+if [ "$(id -u)" -eq 0 ]; then
+    chown "$trino_uid" cloud-etc/catalog/*.properties
+elif [ "$(id -u)" != "$trino_uid" ]; then
+    printf 'Catalog owner must match Trino UID %s; run setup with ownership permissions\n' "$trino_uid" >&2
+    exit 1
+fi
+cid=$(docker create "$TRINO_IMAGE")
+docker cp "$cid:/etc/trino/jvm.config" cloud-etc/jvm.config
+docker rm "$cid" >/dev/null
+sed -i 's/^-Xmx.*/-Xmx96G/' cloud-etc/jvm.config
+cat > cloud-etc/config.properties <<'EOF'
+coordinator=true
+node-scheduler.include-coordinator=true
+http-server.http.port=8080
+discovery.uri=http://localhost:8080
+query.max-memory=64GB
+query.max-memory-per-node=64GB
+memory.heap-headroom-per-node=24GB
+EOF
+docker run -d --name clickbench-cloud-trino --memory=120g \
+    --label "clickbench.connector-revision=$CONNECTOR_REVISION" \
+    --label "clickbench.plugin-manifest-sha256=$manifest_sha" \
+    -p 127.0.0.1:18080:8080 \
+    -v "$PLUGIN_DIR:/usr/lib/trino/plugin/redisearch:ro" \
+    -v "$PWD/cloud-etc/catalog:/etc/trino/catalog:ro" \
+    -v "$PWD/cloud-etc/jvm.config:/etc/trino/jvm.config:ro" \
+    -v "$PWD/cloud-etc/config.properties:/etc/trino/config.properties:ro" \
+    "$TRINO_IMAGE"

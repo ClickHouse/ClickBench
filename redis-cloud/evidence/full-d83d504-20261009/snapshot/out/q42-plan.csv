@@ -1,0 +1,73 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [windowclientwidth, windowclientheight, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [WindowClientWidth, WindowClientHeight, PageViews]]
+    │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count:bigint]
+    │   Estimates: {rows: 5005 (73.32kB), cpu: 0, memory: 0B, network: 0B}
+    │   WindowClientWidth := windowclientwidth
+    │   WindowClientHeight := windowclientheight
+    │   PageViews := count
+    └─ FilterProject[filterPredicate = (bigint '10000' < row_number)]
+       │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count:bigint]
+       │   Estimates: {rows: 5005 (73.32kB), cpu: 234.61k, memory: 0B, network: 0B}/{rows: 5005 (73.32kB), cpu: 73.32k, memory: 0B, network: 0B}
+       └─ RowNumber[]
+          │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count:bigint, row_number:bigint]
+          │   Estimates: {rows: 10010 (234.61kB), cpu: 87.98k, memory: 0B, network: 0B}
+          │   row_number := row_number()
+          └─ TopN[count = 10010, orderBy = [count DESC NULLS LAST]]
+             │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count:bigint]
+             │   Estimates: {rows: 10010 (146.63kB), cpu: ?, memory: ?, network: ?}
+             └─ LocalExchange[partitioning = SINGLE]
+                │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count:bigint]
+                │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+                └─ RemoteSource[sourceFragmentIds = [1]]
+                       Layout: [windowclientwidth:smallint, windowclientheight:smallint, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [windowclientwidth, windowclientheight, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10010, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10010, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10010, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count:bigint]
+                └─ Aggregate[type = FINAL, keys = [windowclientwidth, windowclientheight]]
+                   │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+                   │   count := count(count_0)
+                   └─ LocalExchange[partitioning = HASH, arguments = [windowclientwidth::smallint, windowclientheight::smallint]]
+                      │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count_0:bigint]
+                      │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [windowclientwidth:smallint, windowclientheight:smallint, count_0:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [windowclientwidth, windowclientheight, count_0]
+    Output partitioning: HASH [windowclientwidth, windowclientheight]
+    Aggregate[type = PARTIAL, keys = [windowclientwidth, windowclientheight]]
+    │   Layout: [windowclientwidth:smallint, windowclientheight:smallint, count_0:bigint]
+    │   count_0 := count(*)
+    └─ ScanFilterProject[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint={RediSearchColumnHandle{name=urlhash, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=bigint, ranges=1, {[2868770270353813622]}] ], RediSearchColumnHandle{name=dontcounthits, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=smallint, ranges=1, {[0]}] ], RediSearchColumnHandle{name=counterid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=integer, ranges=1, {[62]}] ], RediSearchColumnHandle{name=isrefresh, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=smallint, ranges=1, {[0]}] ], RediSearchColumnHandle{name=eventdate, type=date, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}=[ SortedRangeSet[type=date, ranges=1, {[2013-07-01,2013-07-31]}] ]}}, filterPredicate = (urlhash = bigint '2868770270353813622')]
+           Layout: [windowclientwidth:smallint, windowclientheight:smallint]
+           Estimates: {rows: 99997497 (572.19MB), cpu: 1.40G, memory: 0B, network: 0B}/{rows: ? (?), cpu: 1.40G, memory: 0B, network: 0B}/{rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+           windowclientwidth := RediSearchColumnHandle{name=windowclientwidth, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+           urlhash := RediSearchColumnHandle{name=urlhash, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+           windowclientheight := RediSearchColumnHandle{name=windowclientheight, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+           RediSearchColumnHandle{name=dontcounthits, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[0]]
+           RediSearchColumnHandle{name=counterid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[62]]
+           RediSearchColumnHandle{name=isrefresh, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[0]]
+           RediSearchColumnHandle{name=eventdate, type=date, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+               :: [[2013-07-01, 2013-07-31]]
+
+"

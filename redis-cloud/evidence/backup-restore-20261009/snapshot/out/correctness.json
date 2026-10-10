@@ -1,0 +1,23 @@
+[
+  {
+    "query": 24,
+    "file": "q24-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 34,
+    "file": "q34-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 35,
+    "file": "q35-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  }
+]

@@ -1,0 +1,102 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [regionid_5, sum, count, avg, count_1]
+    Output partitioning: SINGLE []
+    Output[columnNames = [RegionID, _col1, c, _col3, _col4]]
+    │   Layout: [regionid_5:integer, sum:bigint, count:bigint, avg:double, count_1:bigint]
+    │   Estimates: {rows: 10 (410B), cpu: 0, memory: 0B, network: 0B}
+    │   RegionID := regionid_5
+    │   _col1 := sum
+    │   c := count
+    │   _col3 := avg
+    │   _col4 := count_1
+    └─ TopN[count = 10, orderBy = [count DESC NULLS LAST]]
+       │   Layout: [regionid_5:integer, count_1:bigint, sum:bigint, count:bigint, avg:double]
+       │   Estimates: {rows: 10 (410B), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [regionid_5:integer, count_1:bigint, sum:bigint, count:bigint, avg:double]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [regionid_5:integer, count_1:bigint, sum:bigint, count:bigint, avg:double]
+
+Fragment 1 [HASH]
+    Output layout: [regionid_5, count_1, sum, count, avg]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [regionid_5:integer, count_1:bigint, sum:bigint, count:bigint, avg:double]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [regionid_5:integer, count_1:bigint, sum:bigint, count:bigint, avg:double]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [regionid_5:integer, count_1:bigint, sum:bigint, count:bigint, avg:double]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [regionid_5:integer, count_1:bigint, sum:bigint, count:bigint, avg:double]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [regionid_5:integer, count_1:bigint, sum:bigint, count:bigint, avg:double]
+                └─ Project[]
+                   │   Layout: [regionid_5:integer, count_1:bigint, sum:bigint, count:bigint, avg:double]
+                   │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                   │   count := COALESCE(coalesce_expr, bigint '0')
+                   └─ Aggregate[type = FINAL, keys = [regionid_5]]
+                      │   Layout: [regionid_5:integer, count_1:bigint, sum:bigint, coalesce_expr:bigint, avg:double]
+                      │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+                      │   count_1 := count(count_8)
+                      │   sum := any_value(any_value)
+                      │   coalesce_expr := any_value(any_value_9)
+                      │   avg := any_value(any_value_10)
+                      └─ LocalExchange[partitioning = HASH, arguments = [regionid_5::integer]]
+                         │   Layout: [regionid_5:integer, count_8:bigint, any_value:bigint, any_value_9:bigint, any_value_10:double]
+                         │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                         └─ RemoteSource[sourceFragmentIds = [2]]
+                                Layout: [regionid_5:integer, count_8:bigint, any_value:bigint, any_value_9:bigint, any_value_10:double]
+
+Fragment 2 [HASH]
+    Output layout: [regionid_5, count_8, any_value, any_value_9, any_value_10]
+    Output partitioning: HASH [regionid_5]
+    Aggregate[type = PARTIAL, keys = [regionid_5]]
+    │   Layout: [regionid_5:integer, count_8:bigint, any_value:bigint, any_value_9:bigint, any_value_10:double]
+    │   count_8 := count(userid_2) (mask = gid_filter)
+    │   any_value := any_value(inner) (mask = non_distinct_gid_filter)
+    │   any_value_9 := any_value(inner_6) (mask = non_distinct_gid_filter)
+    │   any_value_10 := any_value(inner_7) (mask = non_distinct_gid_filter)
+    └─ Project[]
+       │   Layout: [non_distinct_gid_filter:boolean, gid_filter:boolean, regionid_5:integer, userid_2:bigint, inner:bigint, inner_6:bigint, inner_7:double]
+       │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+       │   non_distinct_gid_filter := (group = bigint '0')
+       │   gid_filter := (group = bigint '1')
+       └─ Aggregate[type = FINAL, keys = [regionid_5, userid_2, group]]
+          │   Layout: [regionid_5:integer, userid_2:bigint, group:bigint, inner:bigint, inner_6:bigint, inner_7:double]
+          │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+          │   inner := sum(sum_11)
+          │   inner_6 := count(count_12)
+          │   inner_7 := avg(avg_13)
+          └─ LocalExchange[partitioning = HASH, arguments = [regionid_5::integer, userid_2::bigint, group::bigint]]
+             │   Layout: [regionid_5:integer, userid_2:bigint, group:bigint, sum_11:bigint, count_12:bigint, avg_13:row(double, bigint)]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ RemoteSource[sourceFragmentIds = [3]]
+                    Layout: [regionid_5:integer, userid_2:bigint, group:bigint, sum_11:bigint, count_12:bigint, avg_13:row(double, bigint)]
+
+Fragment 3 [SOURCE]
+    Output layout: [regionid_5, userid_2, group, sum_11, count_12, avg_13]
+    Output partitioning: HASH [regionid_5, userid_2, group]
+    Aggregate[type = PARTIAL, keys = [regionid_5, userid_2, group]]
+    │   Layout: [regionid_5:integer, userid_2:bigint, group:bigint, sum_11:bigint, count_12:bigint, avg_13:row(double, bigint)]
+    │   sum_11 := sum(expr_3)
+    │   count_12 := count(*)
+    │   avg_13 := avg(expr_4)
+    └─ GroupId[symbols = [[regionid_5, expr_3, expr_4], [regionid_5, userid_2]]]
+       │   Layout: [regionid_5:integer, expr_3:bigint, expr_4:bigint, userid_2:bigint, group:bigint]
+       │   regionid_5 := regionid_5
+       │   expr_3 := expr_3
+       │   expr_4 := expr_4
+       │   userid_2 := userid_2
+       └─ TableScan[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}]
+              Layout: [userid_2:bigint, expr_3:bigint, expr_4:bigint, regionid_5:integer]
+              Estimates: {rows: 99997497 (2.98GB), cpu: 2.98G, memory: 0B, network: 0B}
+              expr_4 := RediSearchColumnHandle{name=__widen_resolutionwidth_bigint, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=false, tagSeparator=Optional.empty, filterable=false, expression=@resolutionwidth}
+              expr_3 := RediSearchColumnHandle{name=__widen_advengineid_bigint, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=false, tagSeparator=Optional.empty, filterable=false, expression=@advengineid}
+              regionid_5 := RediSearchColumnHandle{name=regionid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+              userid_2 := RediSearchColumnHandle{name=userid, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+
+"

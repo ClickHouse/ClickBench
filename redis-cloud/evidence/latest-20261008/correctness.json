@@ -1,0 +1,899 @@
+[
+  {
+    "query": 1,
+    "file": "q01-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 1,
+    "file": "q01-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 1,
+    "file": "q01-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 2,
+    "file": "q02-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 2,
+    "file": "q02-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 2,
+    "file": "q02-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 3,
+    "file": "q03-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 3,
+    "file": "q03-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 3,
+    "file": "q03-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 4,
+    "file": "q04-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 4,
+    "file": "q04-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 4,
+    "file": "q04-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 5,
+    "file": "q05-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 5,
+    "file": "q05-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 5,
+    "file": "q05-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 6,
+    "file": "q06-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 6,
+    "file": "q06-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 6,
+    "file": "q06-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 7,
+    "file": "q07-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 7,
+    "file": "q07-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 7,
+    "file": "q07-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 8,
+    "file": "q08-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 18
+  },
+  {
+    "query": 8,
+    "file": "q08-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 18
+  },
+  {
+    "query": 8,
+    "file": "q08-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 18
+  },
+  {
+    "query": 9,
+    "file": "q09-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 9,
+    "file": "q09-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 9,
+    "file": "q09-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 10,
+    "file": "q10-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 10,
+    "file": "q10-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 10,
+    "file": "q10-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 11,
+    "file": "q11-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 11,
+    "file": "q11-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 11,
+    "file": "q11-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 12,
+    "file": "q12-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 12,
+    "file": "q12-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 12,
+    "file": "q12-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 13,
+    "file": "q13-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 13,
+    "file": "q13-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 13,
+    "file": "q13-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 14,
+    "file": "q14-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 14,
+    "file": "q14-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 14,
+    "file": "q14-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 15,
+    "file": "q15-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 15,
+    "file": "q15-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 15,
+    "file": "q15-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 16,
+    "file": "q16-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 16,
+    "file": "q16-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 16,
+    "file": "q16-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 17,
+    "file": "q17-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 17,
+    "file": "q17-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 17,
+    "file": "q17-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 18,
+    "file": "q18-cluster-1.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 18,
+    "file": "q18-cluster-2.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 18,
+    "file": "q18-cluster-3.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 19,
+    "file": "q19-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 19,
+    "file": "q19-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 19,
+    "file": "q19-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 20,
+    "file": "q20-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 4
+  },
+  {
+    "query": 20,
+    "file": "q20-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 4
+  },
+  {
+    "query": 20,
+    "file": "q20-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 4
+  },
+  {
+    "query": 21,
+    "file": "q21-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 21,
+    "file": "q21-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 21,
+    "file": "q21-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 22,
+    "file": "q22-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 22,
+    "file": "q22-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 22,
+    "file": "q22-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 23,
+    "file": "q23-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 23,
+    "file": "q23-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 23,
+    "file": "q23-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 24,
+    "file": "q24-cluster-1.csv",
+    "valid": false,
+    "reason": "Query exceeded maximum time limit of 1200.00s"
+  },
+  {
+    "query": 24,
+    "file": "q24-cluster-2.csv",
+    "valid": false,
+    "reason": "Query exceeded maximum time limit of 1200.00s"
+  },
+  {
+    "query": 24,
+    "file": "q24-cluster-3.csv",
+    "valid": false,
+    "reason": "Query exceeded maximum time limit of 1200.00s"
+  },
+  {
+    "query": 25,
+    "file": "q25-cluster-1.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 25,
+    "file": "q25-cluster-2.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 25,
+    "file": "q25-cluster-3.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 26,
+    "file": "q26-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 26,
+    "file": "q26-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 26,
+    "file": "q26-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 27,
+    "file": "q27-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 27,
+    "file": "q27-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 27,
+    "file": "q27-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 28,
+    "file": "q28-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 25
+  },
+  {
+    "query": 28,
+    "file": "q28-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 25
+  },
+  {
+    "query": 28,
+    "file": "q28-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 25
+  },
+  {
+    "query": 29,
+    "file": "q29-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 25
+  },
+  {
+    "query": 29,
+    "file": "q29-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 25
+  },
+  {
+    "query": 29,
+    "file": "q29-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 25
+  },
+  {
+    "query": 30,
+    "file": "q30-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 30,
+    "file": "q30-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 30,
+    "file": "q30-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 31,
+    "file": "q31-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 31,
+    "file": "q31-cluster-2.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 31,
+    "file": "q31-cluster-3.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 32,
+    "file": "q32-cluster-1.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 32,
+    "file": "q32-cluster-2.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 32,
+    "file": "q32-cluster-3.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 33,
+    "file": "q33-cluster-1.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 33,
+    "file": "q33-cluster-2.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 33,
+    "file": "q33-cluster-3.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 34,
+    "file": "q34-cluster-1.csv",
+    "valid": false,
+    "reason": "SEARCH_LIMIT_OVER Aggregate GROUPBY exceeded MAX_AGGREGATE_GROUPS limit of 1000000 groups"
+  },
+  {
+    "query": 34,
+    "file": "q34-cluster-2.csv",
+    "valid": false,
+    "reason": "SEARCH_LIMIT_OVER Aggregate GROUPBY exceeded MAX_AGGREGATE_GROUPS limit of 1000000 groups"
+  },
+  {
+    "query": 34,
+    "file": "q34-cluster-3.csv",
+    "valid": false,
+    "reason": "SEARCH_LIMIT_OVER Aggregate GROUPBY exceeded MAX_AGGREGATE_GROUPS limit of 1000000 groups"
+  },
+  {
+    "query": 35,
+    "file": "q35-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 35,
+    "file": "q35-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 35,
+    "file": "q35-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 36,
+    "file": "q36-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 36,
+    "file": "q36-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 36,
+    "file": "q36-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 37,
+    "file": "q37-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 37,
+    "file": "q37-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 37,
+    "file": "q37-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 38,
+    "file": "q38-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 38,
+    "file": "q38-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 38,
+    "file": "q38-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 39,
+    "file": "q39-cluster-1.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 39,
+    "file": "q39-cluster-2.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 39,
+    "file": "q39-cluster-3.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 40,
+    "file": "q40-cluster-1.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 40,
+    "file": "q40-cluster-2.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 40,
+    "file": "q40-cluster-3.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 41,
+    "file": "q41-cluster-1.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 41,
+    "file": "q41-cluster-2.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 41,
+    "file": "q41-cluster-3.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 42,
+    "file": "q42-cluster-1.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 42,
+    "file": "q42-cluster-2.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 42,
+    "file": "q42-cluster-3.csv",
+    "valid": true,
+    "reason": "verified SQL tie or unordered LIMIT",
+    "rows": 10
+  },
+  {
+    "query": 43,
+    "file": "q43-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 43,
+    "file": "q43-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  },
+  {
+    "query": 43,
+    "file": "q43-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 10
+  }
+]

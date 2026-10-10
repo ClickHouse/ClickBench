@@ -1,0 +1,61 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [userid, gid, searchphrase, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [UserID, m, SearchPhrase, _col3]]
+    │   Layout: [userid:bigint, gid:bigint, searchphrase:varchar, count:bigint]
+    │   Estimates: {rows: 10 (820B), cpu: 0, memory: 0B, network: 0B}
+    │   UserID := userid
+    │   m := gid
+    │   SearchPhrase := searchphrase
+    │   _col3 := count
+    └─ TopN[count = 10, orderBy = [count DESC NULLS LAST]]
+       │   Layout: [userid:bigint, searchphrase:varchar, gid:bigint, count:bigint]
+       │   Estimates: {rows: 10 (820B), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [userid:bigint, searchphrase:varchar, gid:bigint, count:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [userid:bigint, searchphrase:varchar, gid:bigint, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [userid, searchphrase, gid, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [userid:bigint, searchphrase:varchar, gid:bigint, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [userid:bigint, searchphrase:varchar, gid:bigint, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [userid:bigint, searchphrase:varchar, gid:bigint, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [userid:bigint, searchphrase:varchar, gid:bigint, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [userid:bigint, searchphrase:varchar, gid:bigint, count:bigint]
+                └─ Aggregate[type = FINAL, keys = [userid, searchphrase, gid]]
+                   │   Layout: [userid:bigint, searchphrase:varchar, gid:bigint, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: 7.64G, memory: ?, network: 0B}
+                   │   count := count(count_0)
+                   └─ LocalExchange[partitioning = HASH, arguments = [userid::bigint, searchphrase::varchar, gid::bigint]]
+                      │   Layout: [userid:bigint, searchphrase:varchar, gid:bigint, count_0:bigint]
+                      │   Estimates: {rows: 99997497 (7.64GB), cpu: 7.64G, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [userid:bigint, searchphrase:varchar, gid:bigint, count_0:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [userid, searchphrase, gid, count_0]
+    Output partitioning: HASH [userid, searchphrase, gid]
+    Aggregate[type = PARTIAL, keys = [userid, searchphrase, gid]]
+    │   Layout: [userid:bigint, searchphrase:varchar, gid:bigint, count_0:bigint]
+    │   Estimates: {rows: 99997497 (7.64GB), cpu: ?, memory: ?, network: ?}
+    │   count_0 := count(*)
+    └─ ScanProject[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}]
+           Layout: [userid:bigint, searchphrase:varchar, gid:bigint]
+           Estimates: {rows: 99997497 (6.80GB), cpu: 6.80G, memory: 0B, network: 0B}/{rows: 99997497 (6.80GB), cpu: 6.80G, memory: 0B, network: 0B}
+           gid := minute(eventtime)
+           searchphrase := RediSearchColumnHandle{name=searchphrase, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+           userid := RediSearchColumnHandle{name=userid, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+           eventtime := RediSearchColumnHandle{name=eventtime, type=timestamp(3), fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+
+"

@@ -1,0 +1,70 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [mobilephonemodel, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [MobilePhoneModel, u]]
+    │   Layout: [mobilephonemodel:varchar, count:bigint]
+    │   Estimates: {rows: 10 (640B), cpu: 0, memory: 0B, network: 0B}
+    │   MobilePhoneModel := mobilephonemodel
+    │   u := count
+    └─ TopN[count = 10, orderBy = [count DESC NULLS LAST]]
+       │   Layout: [mobilephonemodel:varchar, count:bigint]
+       │   Estimates: {rows: 10 (640B), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [mobilephonemodel:varchar, count:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [mobilephonemodel:varchar, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [mobilephonemodel, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [mobilephonemodel:varchar, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [mobilephonemodel:varchar, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [mobilephonemodel:varchar, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [mobilephonemodel:varchar, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [mobilephonemodel:varchar, count:bigint]
+                └─ Aggregate[type = FINAL, keys = [mobilephonemodel]]
+                   │   Layout: [mobilephonemodel:varchar, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+                   │   count := count(count_0)
+                   └─ LocalExchange[partitioning = HASH, arguments = [mobilephonemodel::varchar]]
+                      │   Layout: [mobilephonemodel:varchar, count_0:bigint]
+                      │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [mobilephonemodel:varchar, count_0:bigint]
+
+Fragment 2 [HASH]
+    Output layout: [mobilephonemodel, count_0]
+    Output partitioning: HASH [mobilephonemodel]
+    Aggregate[type = PARTIAL, keys = [mobilephonemodel]]
+    │   Layout: [mobilephonemodel:varchar, count_0:bigint]
+    │   count_0 := count(userid)
+    └─ Aggregate[type = FINAL, keys = [mobilephonemodel, userid]]
+       │   Layout: [mobilephonemodel:varchar, userid:bigint]
+       │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+       └─ LocalExchange[partitioning = HASH, arguments = [mobilephonemodel::varchar, userid::bigint]]
+          │   Layout: [mobilephonemodel:varchar, userid:bigint]
+          │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [3]]
+                 Layout: [mobilephonemodel:varchar, userid:bigint]
+
+Fragment 3 [SOURCE]
+    Output layout: [mobilephonemodel, userid]
+    Output partitioning: HASH [mobilephonemodel, userid]
+    Aggregate[type = PARTIAL, keys = [mobilephonemodel, userid]]
+    │   Layout: [mobilephonemodel:varchar, userid:bigint]
+    └─ ScanFilter[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}, filterPredicate = (mobilephonemodel <> varchar '')]
+           Layout: [userid:bigint, mobilephonemodel:varchar]
+           Estimates: {rows: 99997497 (5.96GB), cpu: 5.96G, memory: 0B, network: 0B}/{rows: ? (?), cpu: 5.96G, memory: 0B, network: 0B}
+           mobilephonemodel := RediSearchColumnHandle{name=mobilephonemodel, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+           userid := RediSearchColumnHandle{name=userid, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+
+"

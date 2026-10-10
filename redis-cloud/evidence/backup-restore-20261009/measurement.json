@@ -1,0 +1,13 @@
+{
+  "original_arrow_load_plus_index_seconds": 1036.643924278,
+  "restore_plus_verified_count_and_index_seconds": 545.174150466919,
+  "restored_rows": 99997497,
+  "index_failures": 0,
+  "query_validation": "Q24/Q34/Q35 independently verified",
+  "backup_bucket": "clickbench-backup-3444273-735486936198",
+  "cache_tag": "no-cold",
+  "diagnostic_only": true,
+  "speedup": 1.9014913370161768,
+  "cloud_import_acknowledgement_seconds": 11.047910928726196,
+  "timing_note": "Cloud task completion acknowledges asynchronous import; restore end-to-end readiness is measured separately. Premature old-data check excluded."
+}

@@ -1,0 +1,66 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [watchid_3, clientip_4, count, sum, avg]
+    Output partitioning: SINGLE []
+    Output[columnNames = [WatchID, ClientIP, c, _col3, _col4]]
+    │   Layout: [watchid_3:bigint, clientip_4:integer, count:bigint, sum:bigint, avg:double]
+    │   Estimates: {rows: 10 (410B), cpu: 0, memory: 0B, network: 0B}
+    │   WatchID := watchid_3
+    │   ClientIP := clientip_4
+    │   c := count
+    │   _col3 := sum
+    │   _col4 := avg
+    └─ TopN[count = 10, orderBy = [count DESC NULLS LAST]]
+       │   Layout: [watchid_3:bigint, clientip_4:integer, count:bigint, sum:bigint, avg:double]
+       │   Estimates: {rows: 10 (410B), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [watchid_3:bigint, clientip_4:integer, count:bigint, sum:bigint, avg:double]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [watchid_3:bigint, clientip_4:integer, count:bigint, sum:bigint, avg:double]
+
+Fragment 1 [HASH]
+    Output layout: [watchid_3, clientip_4, count, sum, avg]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [watchid_3:bigint, clientip_4:integer, count:bigint, sum:bigint, avg:double]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [watchid_3:bigint, clientip_4:integer, count:bigint, sum:bigint, avg:double]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [watchid_3:bigint, clientip_4:integer, count:bigint, sum:bigint, avg:double]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [watchid_3:bigint, clientip_4:integer, count:bigint, sum:bigint, avg:double]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [watchid_3:bigint, clientip_4:integer, count:bigint, sum:bigint, avg:double]
+                └─ Aggregate[type = FINAL, keys = [watchid_3, clientip_4]]
+                   │   Layout: [watchid_3:bigint, clientip_4:integer, count:bigint, sum:bigint, avg:double]
+                   │   Estimates: {rows: ? (?), cpu: 8.10G, memory: ?, network: 0B}
+                   │   count := count(count_5)
+                   │   sum := sum(sum_6)
+                   │   avg := avg(avg_7)
+                   └─ LocalExchange[partitioning = HASH, arguments = [watchid_3::bigint, clientip_4::integer]]
+                      │   Layout: [watchid_3:bigint, clientip_4:integer, count_5:bigint, sum_6:bigint, avg_7:row(double, bigint)]
+                      │   Estimates: {rows: 99997497 (8.10GB), cpu: 8.10G, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [watchid_3:bigint, clientip_4:integer, count_5:bigint, sum_6:bigint, avg_7:row(double, bigint)]
+
+Fragment 2 [SOURCE]
+    Output layout: [watchid_3, clientip_4, count_5, sum_6, avg_7]
+    Output partitioning: HASH [watchid_3, clientip_4]
+    Aggregate[type = PARTIAL, keys = [watchid_3, clientip_4]]
+    │   Layout: [watchid_3:bigint, clientip_4:integer, count_5:bigint, sum_6:bigint, avg_7:row(double, bigint)]
+    │   Estimates: {rows: 99997497 (8.10GB), cpu: ?, memory: ?, network: ?}
+    │   count_5 := count(*)
+    │   sum_6 := sum(expr_1)
+    │   avg_7 := avg(expr_2)
+    └─ TableScan[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}]
+           Layout: [expr_1:bigint, expr_2:bigint, watchid_3:bigint, clientip_4:integer]
+           Estimates: {rows: 99997497 (2.98GB), cpu: 2.98G, memory: 0B, network: 0B}
+           expr_1 := RediSearchColumnHandle{name=__widen_isrefresh_bigint, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=false, tagSeparator=Optional.empty, filterable=false, expression=@isrefresh}
+           expr_2 := RediSearchColumnHandle{name=__widen_resolutionwidth_bigint, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=false, tagSeparator=Optional.empty, filterable=false, expression=@resolutionwidth}
+           clientip_4 := RediSearchColumnHandle{name=clientip, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+           watchid_3 := RediSearchColumnHandle{name=watchid, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+
+"

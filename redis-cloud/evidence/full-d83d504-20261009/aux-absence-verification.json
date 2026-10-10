@@ -1,0 +1,8 @@
+{
+  "artifact_bucket": true,
+  "cleanup_lambda": true,
+  "deadline_rule": true,
+  "runner_role": true,
+  "cleanup_role": true,
+  "instance_profile": true
+}

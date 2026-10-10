@@ -1,0 +1,14 @@
+"Trino version: 483
+Fragment 0 [SOURCE]
+    Output layout: [syntheticcolumn0]
+    Output partitioning: SINGLE []
+    Output[columnNames = [_col0]]
+    │   Layout: [syntheticcolumn0:bigint]
+    │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+    │   _col0 := syntheticcolumn0
+    └─ TableScan[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}]
+           Layout: [syntheticcolumn0:bigint]
+           Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+           syntheticcolumn0 := RediSearchColumnHandle{name=syntheticColumn0, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=false, tagSeparator=Optional.empty, filterable=false}
+
+"

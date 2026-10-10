@@ -1,0 +1,3 @@
+Historical partial baseline at connector 83d05fc44627ccb9971a40e44e67a78f702bf2e6. Queries 1-4 completed all three attempts and passed independent full-data DuckDB validation. Query 5 timed out twice after 1,200 seconds; its third attempt was cancelled when the sweep was superseded by merged performance patches. This is not a complete ClickBench result and is excluded from the published results directory.
+
+A fresh full sweep pins 4aa71cea12abe7e2f1dc93a8f276418292edd915, including integer-widening aggregation pushdown #131 and scan metrics #132. Data, hardware, configuration and timeouts are unchanged. Query 3 EXPLAIN now has three pushed aggregate columns and no Trino aggregation stage; timing improvements remain to be measured.

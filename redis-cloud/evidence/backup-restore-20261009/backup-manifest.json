@@ -1,0 +1,254 @@
+{
+  "bucket": "clickbench-backup-3444273-735486936198",
+  "region": "us-east-1",
+  "prefix": "full-99997497-d83d504/",
+  "shards": 40,
+  "rows": 99997497,
+  "source_parquet_sha256": "a390f6cb782f6aaef278c72fc1dd86c4f30bc843ebab3c159e9bd4d45ddb079f",
+  "connector_revision": "d83d504d65cd5b3bd14fd9bd559f5acad6ffedf2",
+  "retention_days": 30,
+  "files": [
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-10_of_40-10-3686-4095.rdb.gz",
+      "bytes": 1257085487,
+      "etag": "\"9dfceec8afb2d7f3a68723ecf3b4fb45-150\"",
+      "sha256": "1140bed243b87b94afe6d0453525f37227047afc0ab02094636c7f3227e61534"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-11_of_40-11-4096-4505.rdb.gz",
+      "bytes": 1254064076,
+      "etag": "\"9737e7c2ab8e66496bafd1c79a3b5b7c-150\"",
+      "sha256": "0dd14424352930cc7aeff4b5c638b1cfdb45eabb86693185c01ff7081e072304"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-12_of_40-12-4506-4914.rdb.gz",
+      "bytes": 1250131888,
+      "etag": "\"235e74548bf22a0e7f04e330bc3f7928-150\"",
+      "sha256": "c6de6f719af85f24f6de4f4a69ffa1667d958679e09d18e2b657587be382ffaf"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-13_of_40-13-4915-5324.rdb.gz",
+      "bytes": 1255047912,
+      "etag": "\"5c6548de9fd49e3ae9e4af5b34bcb143-150\"",
+      "sha256": "f2ec00046421d5745bf6ce97591539ba18105bf11d3e19f866f223035e6150b3"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-14_of_40-14-5325-5733.rdb.gz",
+      "bytes": 1252121451,
+      "etag": "\"dc78cc7701dc695de130aa2b24ac5af4-150\"",
+      "sha256": "4382581659174a8f93f1b2a5dfe71fff1c92eb3fac00f2f401105fab912b27c0"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-15_of_40-15-5734-6143.rdb.gz",
+      "bytes": 1254613496,
+      "etag": "\"13ddf2f43efe8c631a4a65c30d32cb98-150\"",
+      "sha256": "3ce79485fb17768f16e699433fc29437c8539d15148704651d3865df89a74b50"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-16_of_40-16-6144-6553.rdb.gz",
+      "bytes": 1258523855,
+      "etag": "\"cb23a21829d8de11c93daee1129c9f1f-151\"",
+      "sha256": "41aab196ec370947a5a8de1bb0a7e348af4d62d62c203d239cefc5769254aa5e"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-17_of_40-17-6554-6962.rdb.gz",
+      "bytes": 1249755525,
+      "etag": "\"0452ef90cf0a0686de34045386fa0df5-149\"",
+      "sha256": "d550564ce3282f1a5d855ed2d72a5986cd81357510a95b5ab6058e37c8e125ef"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-18_of_40-18-6963-7372.rdb.gz",
+      "bytes": 1253167391,
+      "etag": "\"5ba80bc78373b1ee3f3651c9ea0119c7-150\"",
+      "sha256": "7c28de5b46db98514e6c1d27fb5880d22a18f807325a2fec9b98a9481c513743"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-19_of_40-19-7373-7781.rdb.gz",
+      "bytes": 1250312008,
+      "etag": "\"83459afef5efcf43bce4f017fa572ac2-150\"",
+      "sha256": "d4147e38bc0e364e9cfefd030733066baf4791ee0547770872206be4a85c688f"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-1_of_40-1-0-409.rdb.gz",
+      "bytes": 1257426033,
+      "etag": "\"54feb41a0f8010b8f93a734eac921cf1-150\"",
+      "sha256": "60bca29c3af153344bb7274c1e92e89ca53875a291825203066780668fb0d584"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-20_of_40-20-7782-8191.rdb.gz",
+      "bytes": 1256175960,
+      "etag": "\"1efefc8eecd8eba5f94d46cc65ea6453-150\"",
+      "sha256": "1625fbdfe700d560ecf39f7ab64862d8b0954a05abd33838bf95c70a0ce3690d"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-21_of_40-21-8192-8601.rdb.gz",
+      "bytes": 1258009384,
+      "etag": "\"4361f77f0b18df8ed280a69d3b3bac4b-150\"",
+      "sha256": "63e53f39da1c04abb935b402be918460e86972908aa1d309458efb63e623f03e"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-22_of_40-22-8602-9010.rdb.gz",
+      "bytes": 1254194924,
+      "etag": "\"c8444a0789a7abf29bf80cc59abf65a1-150\"",
+      "sha256": "32e423dc257fe838eb23ce059c5f9bf6531f42dfff0bce208beed7d372878ede"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-23_of_40-23-9011-9420.rdb.gz",
+      "bytes": 1255915362,
+      "etag": "\"34ccd1fd84f3c56e2291832186f9d8d8-150\"",
+      "sha256": "6f638f0eb731df9218c483a03c09c24c1091e5fc6293e0d95fd793014f5d8ee3"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-24_of_40-24-9421-9829.rdb.gz",
+      "bytes": 1256087940,
+      "etag": "\"7602950589734c9ad6f7a72184b0f31c-150\"",
+      "sha256": "bd0fda170fdeae190a0d4fe569458c77b02d01d1816388e093587efb87b4e46b"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-25_of_40-25-9830-10239.rdb.gz",
+      "bytes": 1254379992,
+      "etag": "\"a08bbf392f1fed536758f039f13ea91b-150\"",
+      "sha256": "48a73764dbe0d05ea0a535c86a90cc32e58aac8e230abacf37ef1310d1b05b7d"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-26_of_40-26-10240-10649.rdb.gz",
+      "bytes": 1256013968,
+      "etag": "\"c47efe5280502b33c9b9f6f48892864a-150\"",
+      "sha256": "8e5bab543b780a46d311ed3689307fad792a0b72388de2e3cc0e11ca227a672b"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-27_of_40-27-10650-11058.rdb.gz",
+      "bytes": 1252639761,
+      "etag": "\"689fb06dc9d06fbe4410b1de1f9d8095-150\"",
+      "sha256": "7bbed24815a2b3e173de72e3657ed1f9f00ef39fc89f7ac3c8845da8efca21d2"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-28_of_40-28-11059-11468.rdb.gz",
+      "bytes": 1253020165,
+      "etag": "\"d3fc280ebfce7a55b3ebb1226943e7cd-150\"",
+      "sha256": "3a740f7213f1476a72879f9f987c5015cbfaa5147719462a0ba43c7e41be8ced"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-29_of_40-29-11469-11877.rdb.gz",
+      "bytes": 1254964012,
+      "etag": "\"3de1727999902d7845612e3db250454d-150\"",
+      "sha256": "6db6ce1a78e6dcdb3a6a4279fdf65d6511782df74ef8e49645a18872944f876f"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-2_of_40-2-410-818.rdb.gz",
+      "bytes": 1251657898,
+      "etag": "\"6663185ae765f2507aed7ef0446b02d3-150\"",
+      "sha256": "2c0ceb711f58efbfcaff90e141b585be08e32923cba8788afbdc33b748fe4afd"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-30_of_40-30-11878-12287.rdb.gz",
+      "bytes": 1254220413,
+      "etag": "\"73f40d472d8c826edf6b0cc146814416-150\"",
+      "sha256": "e3c0f1e31b8d8d9fbdf42d536ea86468e79cc69d49b6eb4d7950cea76e3db25d"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-31_of_40-31-12288-12697.rdb.gz",
+      "bytes": 1254368724,
+      "etag": "\"2dad29dab93e9b53bc2bf8aaf07ad3c7-150\"",
+      "sha256": "6c401c34a246c80641d31dba33e3313c72e4de8342d0e668f6456db2f213d417"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-32_of_40-32-12698-13106.rdb.gz",
+      "bytes": 1252014401,
+      "etag": "\"c7cb3afb35ab2deff5880247ae584e57-150\"",
+      "sha256": "8087a2b216e8e23b6b1bc16dd26a101b09fcdffef8819e8064db9a2472142549"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-33_of_40-33-13107-13516.rdb.gz",
+      "bytes": 1257610312,
+      "etag": "\"3234ab67311a2c62c1072f7cc0d9fd30-150\"",
+      "sha256": "237b9cbcbe199cb251598fc6bbd58860c4dc9d1e4751e1aa366be2da8a5a9270"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-34_of_40-34-13517-13925.rdb.gz",
+      "bytes": 1253030075,
+      "etag": "\"124d3d6707b9e3a1f7ad9c23c089c90e-150\"",
+      "sha256": "ec41ee2a741d5ccea303d1ffb8ce32e145901f7a3b66712bdcfdcc6eff698d69"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-35_of_40-35-13926-14335.rdb.gz",
+      "bytes": 1257589060,
+      "etag": "\"ed10634ffa309fd92f5737961c3f5d47-150\"",
+      "sha256": "a3ff80d38be5fbbc3b23cf857fcae698c164f03682a7784466dff8b2608207e3"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-36_of_40-36-14336-14745.rdb.gz",
+      "bytes": 1257119913,
+      "etag": "\"2ec0ff1133c4eb4df79ff7707bdaf1c9-150\"",
+      "sha256": "ec311363c7c1305125148014903ffe732d40c642fbc8ebac2fa242596fe50b8a"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-37_of_40-37-14746-15154.rdb.gz",
+      "bytes": 1250953164,
+      "etag": "\"49f01e4c3e5daf0f43f993e4685e2a4e-150\"",
+      "sha256": "e9594435bb87e2672633b1e7b1d2c3d6c6229eb0899735afd6c03be217d8848d"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-38_of_40-38-15155-15564.rdb.gz",
+      "bytes": 1257726187,
+      "etag": "\"c161478b94b0020f48af1c8d17229b20-150\"",
+      "sha256": "d44c2652930484309e93707fc36fe35b3de9b5c512c29b85e6531e2a7d9af661"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-39_of_40-39-15565-15973.rdb.gz",
+      "bytes": 1252180054,
+      "etag": "\"ff5515f111895bc4d0f4f2477aba203f-150\"",
+      "sha256": "d825a6df265a090c8696e8890fa7050e5936ed10d65b492e163afb3be5999be4"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-3_of_40-3-819-1228.rdb.gz",
+      "bytes": 1254951463,
+      "etag": "\"c657804cf6bec6bafbf7eec8f45d6591-150\"",
+      "sha256": "3196551adda6d5ce387d72615618282bfc441a10dfc2ed0f25281b95e5d6809a"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-40_of_40-40-15974-16383.rdb.gz",
+      "bytes": 1255251105,
+      "etag": "\"cc3fffd3a1b3e93db168b7cddf3ff843-150\"",
+      "sha256": "d0dc1bf4c12f6933e18c859a02f97785d361df071ee6475f781a2e90f565dda0"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-4_of_40-4-1229-1637.rdb.gz",
+      "bytes": 1253509880,
+      "etag": "\"5b27af21ae3d2ae3aba7f790e7677fc4-150\"",
+      "sha256": "ba9eec3f2c08f38b9ee4b0e36aea0d5e0e5daef5cc4647a08c13d7add7f03878"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-5_of_40-5-1638-2047.rdb.gz",
+      "bytes": 1255372306,
+      "etag": "\"0f1cbb51bfcd30a3d0222c5d278b1de5-150\"",
+      "sha256": "1669163842b81d9ce1cffb2bcb4b8eb377b6aa91b2a804cf1012a5024fadb409"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-6_of_40-6-2048-2457.rdb.gz",
+      "bytes": 1257945296,
+      "etag": "\"15672a71e2611bf62c3bb16f7708a3db-150\"",
+      "sha256": "54210f708d85211951afff8893585bc73d965bc01859600b028b9370eedd0fe0"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-7_of_40-7-2458-2866.rdb.gz",
+      "bytes": 1255304454,
+      "etag": "\"fbe8754b5e966a6a9682087e181c5236-150\"",
+      "sha256": "37cb77b3c42287ce921fa4a723b3ef61d39362d7fed7e9779606a610d25b2fec"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-8_of_40-8-2867-3276.rdb.gz",
+      "bytes": 1254916332,
+      "etag": "\"f724ef2d114d343f1ae5f15ce675cb55-150\"",
+      "sha256": "752d41a796123b41c9e1d819b17dc85403f5df9eb3a221fc852a7c719fec0a7c"
+    },
+    {
+      "key": "full-99997497-d83d504/bk20261009-165339-14680936-clickbench-acceptance-ram-9_of_40-9-3277-3685.rdb.gz",
+      "bytes": 1251708802,
+      "etag": "\"91d7c3fb569f68f3a9563d98d34bdfa0-150\"",
+      "sha256": "4e56a04e85195a5eae11e1e0d4ea737d27aec52b0049566ad3605be05d2c7712"
+    }
+  ],
+  "total_bytes": 50181080429,
+  "backup_seconds": 149.5410270690918
+}

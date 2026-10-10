@@ -1,0 +1,17 @@
+{
+  "subscription": {
+    "absent": true
+  },
+  "database": {
+    "absent": true
+  },
+  "instances": {
+    "i-0448d3e84fd1da116": "terminated",
+    "i-04e8d1f8961821a28": "terminated",
+    "i-06bb3169f3fc50b1c": "terminated",
+    "i-0f04c6d153ab0451e": "terminated"
+  },
+  "security_group_absent": true,
+  "data_volumes_remaining": [],
+  "complete": true
+}

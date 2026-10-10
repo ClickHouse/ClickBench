@@ -1,0 +1,12 @@
+{"query": 1, "mode": "cluster", "try": 1, "seconds": 5.1366080429997965, "error": null, "output_sha256": "a1c61cbdb37536d9a62a8584884da6e3aa9f9040f039f9422f14b095f0dbff36"}
+{"query": 1, "mode": "cluster", "try": 2, "seconds": 4.1379256240006725, "error": null, "output_sha256": "a1c61cbdb37536d9a62a8584884da6e3aa9f9040f039f9422f14b095f0dbff36"}
+{"query": 1, "mode": "cluster", "try": 3, "seconds": 4.1157151850002265, "error": null, "output_sha256": "a1c61cbdb37536d9a62a8584884da6e3aa9f9040f039f9422f14b095f0dbff36"}
+{"query": 2, "mode": "cluster", "try": 1, "seconds": 1.2730892150002546, "error": null, "output_sha256": "1dc69b996f5f9055899df69f13967aeb73dbe9d93d6e258b03363fe76cbd906a"}
+{"query": 2, "mode": "cluster", "try": 2, "seconds": 0.19646027099952335, "error": null, "output_sha256": "1dc69b996f5f9055899df69f13967aeb73dbe9d93d6e258b03363fe76cbd906a"}
+{"query": 2, "mode": "cluster", "try": 3, "seconds": 0.1856234790002418, "error": null, "output_sha256": "1dc69b996f5f9055899df69f13967aeb73dbe9d93d6e258b03363fe76cbd906a"}
+{"query": 3, "mode": "cluster", "try": 1, "seconds": 9.705052183999214, "error": null, "output_sha256": "01ddc5e9381079f340bce69ad8b6745b379c862191a001f5a68aea1f624c92bf"}
+{"query": 3, "mode": "cluster", "try": 2, "seconds": 8.664592305999577, "error": null, "output_sha256": "01ddc5e9381079f340bce69ad8b6745b379c862191a001f5a68aea1f624c92bf"}
+{"query": 3, "mode": "cluster", "try": 3, "seconds": 8.639647653000793, "error": null, "output_sha256": "01ddc5e9381079f340bce69ad8b6745b379c862191a001f5a68aea1f624c92bf"}
+{"query": 4, "mode": "cluster", "try": 1, "seconds": 6.754633919999833, "error": null, "output_sha256": "5f8caed905d8885a51334ff6eab8f16cd280ffc7f8d8f5b576e213d22e590d03"}
+{"query": 4, "mode": "cluster", "try": 2, "seconds": 5.6877937819999715, "error": null, "output_sha256": "5f8caed905d8885a51334ff6eab8f16cd280ffc7f8d8f5b576e213d22e590d03"}
+{"query": 4, "mode": "cluster", "try": 3, "seconds": 5.700148054000238, "error": null, "output_sha256": "5f8caed905d8885a51334ff6eab8f16cd280ffc7f8d8f5b576e213d22e590d03"}

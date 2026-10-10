@@ -1,0 +1,102 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [searchphrase, min, min_0, count, count_1]
+    Output partitioning: SINGLE []
+    Output[columnNames = [SearchPhrase, _col1, _col2, c, _col4]]
+    │   Layout: [searchphrase:varchar, min:varchar, min_0:varchar, count:bigint, count_1:bigint]
+    │   Estimates: {rows: 10 (1.79kB), cpu: 0, memory: 0B, network: 0B}
+    │   SearchPhrase := searchphrase
+    │   _col1 := min
+    │   _col2 := min_0
+    │   c := count
+    │   _col4 := count_1
+    └─ TopN[count = 10, orderBy = [count DESC NULLS LAST]]
+       │   Layout: [searchphrase:varchar, count_1:bigint, min:varchar, min_0:varchar, count:bigint]
+       │   Estimates: {rows: 10 (1.79kB), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [searchphrase:varchar, count_1:bigint, min:varchar, min_0:varchar, count:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [searchphrase:varchar, count_1:bigint, min:varchar, min_0:varchar, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [searchphrase, count_1, min, min_0, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [searchphrase:varchar, count_1:bigint, min:varchar, min_0:varchar, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [searchphrase:varchar, count_1:bigint, min:varchar, min_0:varchar, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [searchphrase:varchar, count_1:bigint, min:varchar, min_0:varchar, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [searchphrase:varchar, count_1:bigint, min:varchar, min_0:varchar, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [searchphrase:varchar, count_1:bigint, min:varchar, min_0:varchar, count:bigint]
+                └─ Project[]
+                   │   Layout: [searchphrase:varchar, count_1:bigint, min:varchar, min_0:varchar, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                   │   count := COALESCE(coalesce_expr, bigint '0')
+                   └─ Aggregate[type = FINAL, keys = [searchphrase]]
+                      │   Layout: [searchphrase:varchar, count_1:bigint, min:varchar, min_0:varchar, coalesce_expr:bigint]
+                      │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+                      │   count_1 := count(count_4)
+                      │   min := any_value(any_value)
+                      │   min_0 := any_value(any_value_5)
+                      │   coalesce_expr := any_value(any_value_6)
+                      └─ LocalExchange[partitioning = HASH, arguments = [searchphrase::varchar]]
+                         │   Layout: [searchphrase:varchar, count_4:bigint, any_value:varchar, any_value_5:varchar, any_value_6:bigint]
+                         │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                         └─ RemoteSource[sourceFragmentIds = [2]]
+                                Layout: [searchphrase:varchar, count_4:bigint, any_value:varchar, any_value_5:varchar, any_value_6:bigint]
+
+Fragment 2 [HASH]
+    Output layout: [searchphrase, count_4, any_value, any_value_5, any_value_6]
+    Output partitioning: HASH [searchphrase]
+    Aggregate[type = PARTIAL, keys = [searchphrase]]
+    │   Layout: [searchphrase:varchar, count_4:bigint, any_value:varchar, any_value_5:varchar, any_value_6:bigint]
+    │   count_4 := count(userid) (mask = gid_filter)
+    │   any_value := any_value(inner) (mask = non_distinct_gid_filter)
+    │   any_value_5 := any_value(inner_2) (mask = non_distinct_gid_filter)
+    │   any_value_6 := any_value(inner_3) (mask = non_distinct_gid_filter)
+    └─ Project[]
+       │   Layout: [non_distinct_gid_filter:boolean, gid_filter:boolean, searchphrase:varchar, userid:bigint, inner:varchar, inner_2:varchar, inner_3:bigint]
+       │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+       │   non_distinct_gid_filter := (group = bigint '0')
+       │   gid_filter := (group = bigint '1')
+       └─ Aggregate[type = FINAL, keys = [searchphrase, userid, group]]
+          │   Layout: [searchphrase:varchar, userid:bigint, group:bigint, inner:varchar, inner_2:varchar, inner_3:bigint]
+          │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+          │   inner := min(min_7)
+          │   inner_2 := min(min_8)
+          │   inner_3 := count(count_9)
+          └─ LocalExchange[partitioning = HASH, arguments = [searchphrase::varchar, userid::bigint, group::bigint]]
+             │   Layout: [searchphrase:varchar, userid:bigint, group:bigint, min_7:varchar, min_8:varchar, count_9:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ RemoteSource[sourceFragmentIds = [3]]
+                    Layout: [searchphrase:varchar, userid:bigint, group:bigint, min_7:varchar, min_8:varchar, count_9:bigint]
+
+Fragment 3 [SOURCE]
+    Output layout: [searchphrase, userid, group, min_7, min_8, count_9]
+    Output partitioning: HASH [searchphrase, userid, group]
+    Aggregate[type = PARTIAL, keys = [searchphrase, userid, group]]
+    │   Layout: [searchphrase:varchar, userid:bigint, group:bigint, min_7:varchar, min_8:varchar, count_9:bigint]
+    │   min_7 := min(url)
+    │   min_8 := min(title)
+    │   count_9 := count(*)
+    └─ GroupId[symbols = [[searchphrase, url, title], [searchphrase, userid]]]
+       │   Layout: [searchphrase:varchar, url:varchar, title:varchar, userid:bigint, group:bigint]
+       │   searchphrase := searchphrase
+       │   url := url
+       │   title := title
+       │   userid := userid
+       └─ ScanFilter[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={title=exists(@title) && contains(@title, ""Google"") > 0}, limit=OptionalLong.empty, sort=[], constraint=ALL}, filterPredicate = ((searchphrase <> varchar '') AND $not($like(url, LikePattern '[%.google.%]')))]
+              Layout: [title:varchar, userid:bigint, url:varchar, searchphrase:varchar]
+              Estimates: {rows: 99997497 (16.20GB), cpu: 16.20G, memory: 0B, network: 0B}/{rows: ? (?), cpu: 16.20G, memory: 0B, network: 0B}
+              url := RediSearchColumnHandle{name=url, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+              searchphrase := RediSearchColumnHandle{name=searchphrase, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+              userid := RediSearchColumnHandle{name=userid, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+              title := RediSearchColumnHandle{name=title, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+
+"

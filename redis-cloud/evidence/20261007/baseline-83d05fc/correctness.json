@@ -1,0 +1,98 @@
+[
+  {
+    "query": 1,
+    "file": "q01-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 1,
+    "file": "q01-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 1,
+    "file": "q01-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 2,
+    "file": "q02-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 2,
+    "file": "q02-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 2,
+    "file": "q02-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 3,
+    "file": "q03-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 3,
+    "file": "q03-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 3,
+    "file": "q03-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 4,
+    "file": "q04-cluster-1.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 4,
+    "file": "q04-cluster-2.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 4,
+    "file": "q04-cluster-3.csv",
+    "valid": true,
+    "reason": "reference match",
+    "rows": 1
+  },
+  {
+    "query": 5,
+    "file": "q05-cluster-1.csv",
+    "valid": false,
+    "reason": "Query exceeded maximum time limit of 1200.00s"
+  },
+  {
+    "query": 5,
+    "file": "q05-cluster-2.csv",
+    "valid": false,
+    "reason": "Query exceeded maximum time limit of 1200.00s"
+  }
+]

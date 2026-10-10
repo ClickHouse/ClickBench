@@ -1,0 +1,56 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [userid, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [UserID, _col1]]
+    │   Layout: [userid:bigint, count:bigint]
+    │   Estimates: {rows: 10 (180B), cpu: 0, memory: 0B, network: 0B}
+    │   UserID := userid
+    │   _col1 := count
+    └─ TopN[count = 10, orderBy = [count DESC NULLS LAST]]
+       │   Layout: [userid:bigint, count:bigint]
+       │   Estimates: {rows: 10 (180B), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [userid:bigint, count:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [userid:bigint, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [userid, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [userid:bigint, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [userid:bigint, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [userid:bigint, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [userid:bigint, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [userid:bigint, count:bigint]
+                └─ Aggregate[type = FINAL, keys = [userid]]
+                   │   Layout: [userid:bigint, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: 1.68G, memory: ?, network: 0B}
+                   │   count := count(count_0)
+                   └─ LocalExchange[partitioning = HASH, arguments = [userid::bigint]]
+                      │   Layout: [userid:bigint, count_0:bigint]
+                      │   Estimates: {rows: 99997497 (1.68GB), cpu: 1.68G, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [userid:bigint, count_0:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [userid, count_0]
+    Output partitioning: HASH [userid]
+    Aggregate[type = PARTIAL, keys = [userid]]
+    │   Layout: [userid:bigint, count_0:bigint]
+    │   Estimates: {rows: 99997497 (1.68GB), cpu: ?, memory: ?, network: ?}
+    │   count_0 := count(*)
+    └─ TableScan[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}]
+           Layout: [userid:bigint]
+           Estimates: {rows: 99997497 (858.29MB), cpu: 858.29M, memory: 0B, network: 0B}
+           userid := RediSearchColumnHandle{name=userid, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+
+"

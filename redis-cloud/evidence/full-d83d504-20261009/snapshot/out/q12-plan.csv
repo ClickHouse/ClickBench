@@ -1,0 +1,72 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [mobilephone, mobilephonemodel, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [MobilePhone, MobilePhoneModel, u]]
+    │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, count:bigint]
+    │   Estimates: {rows: 10 (670B), cpu: 0, memory: 0B, network: 0B}
+    │   MobilePhone := mobilephone
+    │   MobilePhoneModel := mobilephonemodel
+    │   u := count
+    └─ TopN[count = 10, orderBy = [count DESC NULLS LAST]]
+       │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, count:bigint]
+       │   Estimates: {rows: 10 (670B), cpu: ?, memory: ?, network: ?}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, count:bigint]
+          │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [mobilephone:smallint, mobilephonemodel:varchar, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [mobilephone, mobilephonemodel, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+    │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+          │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 10, orderBy = [count DESC NULLS LAST]]
+                │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, count:bigint]
+                └─ Aggregate[type = FINAL, keys = [mobilephone, mobilephonemodel]]
+                   │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+                   │   count := count(count_0)
+                   └─ LocalExchange[partitioning = HASH, arguments = [mobilephone::smallint, mobilephonemodel::varchar]]
+                      │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, count_0:bigint]
+                      │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [mobilephone:smallint, mobilephonemodel:varchar, count_0:bigint]
+
+Fragment 2 [HASH]
+    Output layout: [mobilephone, mobilephonemodel, count_0]
+    Output partitioning: HASH [mobilephone, mobilephonemodel]
+    Aggregate[type = PARTIAL, keys = [mobilephone, mobilephonemodel]]
+    │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, count_0:bigint]
+    │   count_0 := count(userid)
+    └─ Aggregate[type = FINAL, keys = [mobilephone, mobilephonemodel, userid]]
+       │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, userid:bigint]
+       │   Estimates: {rows: ? (?), cpu: ?, memory: ?, network: 0B}
+       └─ LocalExchange[partitioning = HASH, arguments = [mobilephone::smallint, mobilephonemodel::varchar, userid::bigint]]
+          │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, userid:bigint]
+          │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [3]]
+                 Layout: [mobilephone:smallint, mobilephonemodel:varchar, userid:bigint]
+
+Fragment 3 [SOURCE]
+    Output layout: [mobilephone, mobilephonemodel, userid]
+    Output partitioning: HASH [mobilephone, mobilephonemodel, userid]
+    Aggregate[type = PARTIAL, keys = [mobilephone, mobilephonemodel, userid]]
+    │   Layout: [mobilephone:smallint, mobilephonemodel:varchar, userid:bigint]
+    └─ ScanFilter[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}, filterPredicate = (mobilephonemodel <> varchar '')]
+           Layout: [userid:bigint, mobilephone:smallint, mobilephonemodel:varchar]
+           Estimates: {rows: 99997497 (6.24GB), cpu: 6.24G, memory: 0B, network: 0B}/{rows: ? (?), cpu: 6.24G, memory: 0B, network: 0B}
+           mobilephone := RediSearchColumnHandle{name=mobilephone, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+           mobilephonemodel := RediSearchColumnHandle{name=mobilephonemodel, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+           userid := RediSearchColumnHandle{name=userid, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+
+"

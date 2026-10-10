@@ -1,0 +1,72 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [gid, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [M, PageViews]]
+    │   Layout: [gid:timestamp(3), count:bigint]
+    │   Estimates: {rows: 505 (8.88kB), cpu: 0, memory: 0B, network: 0B}
+    │   M := gid
+    │   PageViews := count
+    └─ FilterProject[filterPredicate = (bigint '1000' < row_number)]
+       │   Layout: [gid:timestamp(3), count:bigint]
+       │   Estimates: {rows: 505 (8.88kB), cpu: 26.63k, memory: 0B, network: 0B}/{rows: 505 (8.88kB), cpu: 8.88k, memory: 0B, network: 0B}
+       └─ RowNumber[]
+          │   Layout: [gid:timestamp(3), count:bigint, row_number:bigint]
+          │   Estimates: {rows: 1010 (26.63kB), cpu: 8.88k, memory: 0B, network: 0B}
+          │   row_number := row_number()
+          └─ TopN[count = 1010, orderBy = [gid ASC NULLS LAST]]
+             │   Layout: [gid:timestamp(3), count:bigint]
+             │   Estimates: {rows: 1010 (17.75kB), cpu: ?, memory: ?, network: ?}
+             └─ LocalExchange[partitioning = SINGLE]
+                │   Layout: [gid:timestamp(3), count:bigint]
+                │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+                └─ RemoteSource[sourceFragmentIds = [1]]
+                       Layout: [gid:timestamp(3), count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [gid, count]
+    Output partitioning: SINGLE []
+    TopNPartial[count = 1010, orderBy = [gid ASC NULLS LAST]]
+    │   Layout: [gid:timestamp(3), count:bigint]
+    └─ LocalExchange[partitioning = SINGLE]
+       │   Layout: [gid:timestamp(3), count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+       └─ TopNPartial[count = 1010, orderBy = [gid ASC NULLS LAST]]
+          │   Layout: [gid:timestamp(3), count:bigint]
+          └─ LocalExchange[partitioning = ROUND_ROBIN]
+             │   Layout: [gid:timestamp(3), count:bigint]
+             │   Estimates: {rows: ? (?), cpu: ?, memory: 0B, network: 0B}
+             └─ TopNPartial[count = 1010, orderBy = [gid ASC NULLS LAST]]
+                │   Layout: [gid:timestamp(3), count:bigint]
+                └─ Aggregate[type = FINAL, keys = [gid]]
+                   │   Layout: [gid:timestamp(3), count:bigint]
+                   │   Estimates: {rows: ? (?), cpu: 1.68G, memory: ?, network: 0B}
+                   │   count := count(count_0)
+                   └─ LocalExchange[partitioning = HASH, arguments = [gid::timestamp(3)]]
+                      │   Layout: [gid:timestamp(3), count_0:bigint]
+                      │   Estimates: {rows: 99997497 (1.68GB), cpu: 1.68G, memory: 0B, network: 0B}
+                      └─ RemoteSource[sourceFragmentIds = [2]]
+                             Layout: [gid:timestamp(3), count_0:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [gid, count_0]
+    Output partitioning: HASH [gid]
+    Aggregate[type = PARTIAL, keys = [gid]]
+    │   Layout: [gid:timestamp(3), count_0:bigint]
+    │   Estimates: {rows: 99997497 (1.68GB), cpu: ?, memory: ?, network: ?}
+    │   count_0 := count(*)
+    └─ ScanProject[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint={RediSearchColumnHandle{name=dontcounthits, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=smallint, ranges=1, {[0]}] ], RediSearchColumnHandle{name=counterid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=integer, ranges=1, {[62]}] ], RediSearchColumnHandle{name=isrefresh, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}=[ SortedRangeSet[type=smallint, ranges=1, {[0]}] ], RediSearchColumnHandle{name=eventdate, type=date, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}=[ SortedRangeSet[type=date, ranges=1, {[2013-07-14,2013-07-15]}] ]}}]
+           Layout: [gid:timestamp(3)]
+           Estimates: {rows: 99997497 (858.29MB), cpu: 858.29M, memory: 0B, network: 0B}/{rows: 99997497 (858.29MB), cpu: 858.29M, memory: 0B, network: 0B}
+           gid := date_trunc(varchar(6) 'minute', eventtime)
+           eventtime := RediSearchColumnHandle{name=eventtime, type=timestamp(3), fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+           RediSearchColumnHandle{name=dontcounthits, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[0]]
+           RediSearchColumnHandle{name=counterid, type=integer, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[62]]
+           RediSearchColumnHandle{name=isrefresh, type=smallint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+               :: [[0]]
+           RediSearchColumnHandle{name=eventdate, type=date, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+               :: [[2013-07-14, 2013-07-15]]
+
+"

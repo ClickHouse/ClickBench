@@ -1,0 +1,49 @@
+"Trino version: 483
+Fragment 0 [SINGLE]
+    Output layout: [userid, searchphrase, count]
+    Output partitioning: SINGLE []
+    Output[columnNames = [UserID, SearchPhrase, _col2]]
+    │   Layout: [userid:bigint, searchphrase:varchar, count:bigint]
+    │   Estimates: {rows: 10 (730B), cpu: 0, memory: 0B, network: 0B}
+    │   UserID := userid
+    │   SearchPhrase := searchphrase
+    │   _col2 := count
+    └─ Limit[count = 10]
+       │   Layout: [userid:bigint, searchphrase:varchar, count:bigint]
+       │   Estimates: {rows: 10 (730B), cpu: 730, memory: 0B, network: 0B}
+       └─ LocalExchange[partitioning = SINGLE]
+          │   Layout: [userid:bigint, searchphrase:varchar, count:bigint]
+          │   Estimates: {rows: 10 (730B), cpu: 0, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [1]]
+                 Layout: [userid:bigint, searchphrase:varchar, count:bigint]
+
+Fragment 1 [HASH]
+    Output layout: [userid, searchphrase, count]
+    Output partitioning: SINGLE []
+    LimitPartial[count = 10]
+    │   Layout: [userid:bigint, searchphrase:varchar, count:bigint]
+    │   Estimates: {rows: 10 (730B), cpu: 730, memory: 0B, network: 0B}
+    └─ Aggregate[type = FINAL, keys = [userid, searchphrase]]
+       │   Layout: [userid:bigint, searchphrase:varchar, count:bigint]
+       │   Estimates: {rows: ? (?), cpu: 6.80G, memory: ?, network: 0B}
+       │   count := count(count_0)
+       └─ LocalExchange[partitioning = HASH, arguments = [userid::bigint, searchphrase::varchar]]
+          │   Layout: [userid:bigint, searchphrase:varchar, count_0:bigint]
+          │   Estimates: {rows: 99997497 (6.80GB), cpu: 6.80G, memory: 0B, network: 0B}
+          └─ RemoteSource[sourceFragmentIds = [2]]
+                 Layout: [userid:bigint, searchphrase:varchar, count_0:bigint]
+
+Fragment 2 [SOURCE]
+    Output layout: [userid, searchphrase, count_0]
+    Output partitioning: HASH [userid, searchphrase]
+    Aggregate[type = PARTIAL, keys = [userid, searchphrase]]
+    │   Layout: [userid:bigint, searchphrase:varchar, count_0:bigint]
+    │   Estimates: {rows: 99997497 (6.80GB), cpu: ?, memory: ?, network: ?}
+    │   count_0 := count(*)
+    └─ TableScan[table = redis_cluster:RediSearchTableHandle{schemaTableName=default.hits, index=hits, filters={}, limit=OptionalLong.empty, sort=[], constraint=ALL}]
+           Layout: [userid:bigint, searchphrase:varchar]
+           Estimates: {rows: 99997497 (5.96GB), cpu: 5.96G, memory: 0B, network: 0B}
+           searchphrase := RediSearchColumnHandle{name=searchphrase, type=varchar, fieldType=TAG, hidden=false, supportsPredicates=true, tagSeparator=Optional[], filterable=true}
+           userid := RediSearchColumnHandle{name=userid, type=bigint, fieldType=NUMERIC, hidden=false, supportsPredicates=true, tagSeparator=Optional.empty, filterable=false}
+
+"
