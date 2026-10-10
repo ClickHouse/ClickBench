@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+if [ $# -ge 1 ]; then
+    QUERY="$1"
+else
+    QUERY="$(cat)"
+fi
+
+PORT="${SILICIUM_PORT:-5433}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ARENA_DIR="${SILICIUM_ARENA:-$SCRIPT_DIR/silicium_arena}"
+
+if command -v psql >/dev/null 2>&1 && (nc -z 127.0.0.1 "$PORT" 2>/dev/null || (exec 3<>/dev/tcp/127.0.0.1/"$PORT") 2>/dev/null); then
+    # PostgreSQL wire server mode: pure TSV on stdout, null represented as empty string
+    psql -h 127.0.0.1 -p "$PORT" -U postgres -d clickbench -t -A -F $'\t' -P null='' -c "$QUERY"
+else
+    # In-process zero-overhead direct runner mode
+    RUNNER="$SCRIPT_DIR/bin/silicium_runner"
+    if [ ! -x "$RUNNER" ]; then
+        RUNNER="$SCRIPT_DIR/../../target/bench-apex/cb_runner"
+    fi
+    if [ ! -x "$RUNNER" ]; then
+        RUNNER="$SCRIPT_DIR/../../target/release/cb_runner"
+    fi
+    if [ ! -x "$RUNNER" ]; then
+        echo "❌ Runner binary not found: $RUNNER" >&2
+        exit 1
+    fi
+    "$RUNNER" --sql "$QUERY" "$ARENA_DIR"
+fi

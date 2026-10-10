@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# SILICIUM CLICKBENCH HARNESS — INSTALL (RUNTIME SETUP)
+# License: SCSL-1.0 / MIT Evaluation License
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Architecture Guard: Silicium requires x86_64 for AVX2/AVX-512 micro-kernels
+if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "amd64" ]; then
+    echo "silicium: x86_64 architecture required for AVX2/AVX-512 kernels; current architecture is $(uname -m). Skipping." >&2
+    exit 1
+fi
+
+echo "================================================================================"
+echo "⚡ SILICIUM CLICKBENCH INSTALL : TÉLÉCHARGEMENT BINAIRES & PRÉPARATION RUNNER"
+echo "================================================================================"
+
+if ! command -v gcc >/dev/null 2>&1; then
+    if command -v sudo >/dev/null 2>&1 && [ "${EUID:-$(id -u)}" -ne 0 ]; then
+        sudo apt-get update -y 2>/dev/null || true
+        sudo apt-get install -y gcc build-essential 2>/dev/null || true
+    fi
+fi
+
+# ==============================================================================
+# 0. ACTIVE SILICON COLD-PROBE (Zero-SIGILL Guaranteed)
+# ==============================================================================
+probe_target_isa() {
+    if ! command -v gcc >/dev/null 2>&1; then
+        if grep -q "avx512" /proc/cpuinfo 2>/dev/null; then
+            echo "avx512"
+            return 0
+        elif grep -q "avx2" /proc/cpuinfo 2>/dev/null; then
+            echo "avx2"
+            return 0
+        fi
+        echo "generic"
+        return 0
+    fi
+    local tmp_dir
+    tmp_dir="$(mktemp -d -t silicium_probe_XXXXXX 2>/dev/null || mktemp -d)"
+    
+    # Test AVX-512 (Ice Lake / Zen 4 / Sapphire Rapids)
+    cat << 'EOF' > "$tmp_dir/probe_avx512.c"
+#include <immintrin.h>
+int main(void) {
+    __m512i a = _mm512_setzero_si512();
+    __m512i b = _mm512_set1_epi32(42);
+    __m512i c = _mm512_add_epi32(a, b);
+    return (int)_mm512_cvtsi512_si32(c) == 42 ? 0 : 1;
+}
+EOF
+    if gcc -O2 -mavx512f -mavx512dq "$tmp_dir/probe_avx512.c" -o "$tmp_dir/probe_avx512" >/dev/null 2>&1; then
+        if "$tmp_dir/probe_avx512" >/dev/null 2>&1; then
+            rm -rf "$tmp_dir"
+            echo "avx512"
+            return 0
+        fi
+    fi
+
+    # Test AVX2 + FMA
+    cat << 'EOF' > "$tmp_dir/probe_avx2.c"
+#include <immintrin.h>
+int main(void) {
+    __m256i a = _mm256_setzero_si256();
+    __m256i b = _mm256_set1_epi32(42);
+    __m256i c = _mm256_add_epi32(a, b);
+    return (int)_mm256_extract_epi32(c, 0) == 42 ? 0 : 1;
+}
+EOF
+    if gcc -O2 -mavx2 -mfma "$tmp_dir/probe_avx2.c" -o "$tmp_dir/probe_avx2" >/dev/null 2>&1; then
+        if "$tmp_dir/probe_avx2" >/dev/null 2>&1; then
+            rm -rf "$tmp_dir"
+            echo "avx2"
+            return 0
+        fi
+    fi
+
+    rm -rf "$tmp_dir"
+    echo "generic"
+    return 0
+}
+
+TARGET_ISA="$(probe_target_isa)"
+echo "⚡ Sonde Silicium Active : ISA certifiée sans SIGILL = ${TARGET_ISA}"
+
+# Téléchargement déterministe des binaires d'évaluation SILICIUM (Pattern Umbra/ElosDB)
+SILICIUM_DOMAIN="clickbench"
+SILICIUM_VERSION="v2.0.0"
+SILICIUM_TAG="${SILICIUM_DOMAIN}-${SILICIUM_VERSION}"
+SILICIUM_TARBALL="silicium-${SILICIUM_DOMAIN}-x86_64-${SILICIUM_VERSION}.tar.gz"
+SILICIUM_DIST_REPO="${SILICIUM_DIST_REPO:-silicium369-spec/silicium-clickbench}"
+SILICIUM_URL="${SILICIUM_DIST_URL:-https://github.com/${SILICIUM_DIST_REPO}/releases/download/${SILICIUM_TAG}/${SILICIUM_TARBALL}}"
+SILICIUM_SHA256="72b0fd3feaccc7c3eb9a2bf9bdbe7ef3aff296306dce74f345a93844a6e54fcd"
+
+mkdir -p bin
+
+# 0.1 Synchronisation automatique depuis les cibles compilées du sanctuaire interne v2
+for cand in ../../target/bench-apex/cb_runner ../../target/release/cb_runner; do
+    if [ -f "$cand" ] && [ -x "$cand" ]; then
+        echo "⚡ Synchronisation locale runner ($cand)..."
+        cp -f "$cand" bin/silicium_runner
+        chmod +x bin/silicium_runner
+        break
+    fi
+done
+
+for cand in ../../target/bench-apex/cb_ingest ../../target/release/cb_ingest ../../target/bench-apex/*ingest ../../target/release/*ingest ../../forge/target/release/*ingest; do
+    if [ -f "$cand" ] && [ -x "$cand" ]; then
+        echo "⚡ Synchronisation locale ingest ($cand)..."
+        cp -f "$cand" bin/silicium_ingest
+        chmod +x bin/silicium_ingest
+        break
+    fi
+done
+
+if [ -f "bin/silicium_runner" ] && [ -f "bin/silicium_ingest" ]; then
+    echo "⚡ SILICIUM CLICKBENCH INSTALL : MODE LOCAL DÉTECTÉ (bin/ déjà présent)"
+    echo "✅ Bypass du téléchargement réseau. Utilisation directe des binaires d'évaluation locaux."
+    chmod +x bin/silicium_runner bin/silicium_ingest 2>/dev/null || true
+else
+    echo "📦 Téléchargement des binaires d'évaluation Silicium (${SILICIUM_TAG})..."
+    echo "   Source : ${SILICIUM_URL}"
+    if command -v gh >/dev/null 2>&1 && gh release download "${SILICIUM_TAG}" -R "${SILICIUM_DIST_REPO}" -p "${SILICIUM_TARBALL}" --clobber >/dev/null 2>&1; then
+        echo "✅ Téléchargement réussi via GitHub CLI."
+    elif [ -n "${GH_TOKEN:-}" ]; then
+        curl -sSL -f -H "Authorization: token ${GH_TOKEN}" -o "${SILICIUM_TARBALL}" "${SILICIUM_URL}" 2>/dev/null || \
+        curl -sSL -f -o "${SILICIUM_TARBALL}" "${SILICIUM_URL}"
+    else
+        curl -sSL -f -o "${SILICIUM_TARBALL}" "${SILICIUM_URL}"
+    fi
+    
+    if command -v sha256sum >/dev/null 2>&1; then
+        echo "🔒 Vérification de l'intégrité SHA-256..."
+        echo "${SILICIUM_SHA256}  ${SILICIUM_TARBALL}" | sha256sum -c - || {
+            echo "❌ Erreur critique : Empreinte SHA-256 non conforme !" >&2
+            exit 1
+        }
+    fi
+    
+    tar -xzf "${SILICIUM_TARBALL}" -C bin/
+    rm -f "${SILICIUM_TARBALL}"
+fi
+
+# Permissions sur les binaires d'évaluation
+chmod +x bin/*ingest bin/*runner 2>/dev/null || true
+
+# Rendre tous les scripts ClickBench exécutables
+chmod +x benchmark.sh check data-size install load query start stop 2>/dev/null || true
+
+echo "✅ Scripts et binaires Silicium configurés avec succès."
+echo "🎉 INSTALLATION SILICIUM TERMINÉE AVEC SUCCÈS"
+echo "================================================================================"

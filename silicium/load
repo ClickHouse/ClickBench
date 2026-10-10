@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# SILICIUM CLICKBENCH HARNESS — LOAD & INGESTION
+# License: PolyForm Noncommercial / BSL 1.1 / MIT Evaluation
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+ARENA_DIR="${SILICIUM_ARENA:-$SCRIPT_DIR/silicium_arena}"
+PARQUET_FILE="${1:-hits.parquet}"
+
+# Activation gracieuse des Transparent HugePages 2 Mo (madvise)
+if [ -w /sys/kernel/mm/transparent_hugepage/enabled ]; then
+    echo madvise > /sys/kernel/mm/transparent_hugepage/enabled 2>/dev/null || true
+fi
+
+# Cas 1 : Si hits.parquet est présent, exécuter l'ingestion native
+if [ -f "$PARQUET_FILE" ]; then
+    echo "================================================================================"
+    echo "⚡ SILICIUM CLICKBENCH LOAD : INGESTION NATIVE PARQUET ➔ ARÈNE MMAP"
+    echo "   Source : $PARQUET_FILE"
+    echo "   Cible  : $ARENA_DIR"
+    echo "================================================================================"
+
+    rm -rf "$ARENA_DIR"
+    mkdir -p "$ARENA_DIR"
+
+    INGEST_BIN="./bin/silicium_ingest"
+    if [ ! -x "$INGEST_BIN" ]; then
+        echo "❌ Binaire d'ingestion $INGEST_BIN introuvable ou non exécutable." >&2
+        exit 1
+    fi
+
+    "$INGEST_BIN" "$PARQUET_FILE" "$ARENA_DIR" --pax
+
+    ARENA_SIZE=$(du -sb -L "$ARENA_DIR" | awk '{print $1}')
+    echo "✅ Arène Silicium ingérée avec succès : $ARENA_SIZE octets."
+
+    # Préservation de l'intégrité du dataset source (ClickBench multi-engine standard)
+    sync
+    exit 0
+fi
+
+# Cas 2 : Arène existante en local
+if [ -d "$ARENA_DIR" ]; then
+    echo "✅ Arène Silicium déjà disponible pour exécution ($ARENA_DIR)."
+    exit 0
+fi
+
+echo "❌ Fichier source $PARQUET_FILE introuvable et aucune arène existante." >&2
+exit 1
