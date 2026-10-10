@@ -30,7 +30,10 @@ fi
 
 "$HOME/opteryx_venv/bin/python" -m pip install --upgrade pip
 # Pinned so a published result is reproducible against a named release.
-OPTERYX_VERSION=0.9.155
+# Bumped from 0.9.155 (yanked from PyPI) to 0.9.164, the current latest
+# at the 20261004 result run. Keep this moving forward when upstream
+# yanks older point releases.
+OPTERYX_VERSION=0.9.164
 "$HOME/opteryx_venv/bin/python" -m pip install "opteryx-core==${OPTERYX_VERSION}"
 
 # Fail loudly here rather than 43 queries later if pip silently fell back to a
