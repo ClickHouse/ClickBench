@@ -43,7 +43,7 @@ df = df.withColumn("EventDate", F.col("EventDate").cast("int").cast("date"))
 df.createOrReplaceTempView("hits")
 
 start = timeit.default_timer()
-res = spark.sql(query).toPandas()
+res = spark.sql(query).toArrow()
 end = timeit.default_timer()
 
 print(res)
