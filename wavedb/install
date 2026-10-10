@@ -1,0 +1,24 @@
+#!/bin/bash
+# Install WaveDB on Ubuntu 24.04: the engine at a pinned commit, its Python packages at pinned versions, and
+# THE BUILD -- every numba kernel signature the engine uses compiled ahead of time (src/kernels.manifest),
+# the way a C++ engine compiles at install. Without it a fresh machine would compile kernels inside the
+# timed cold runs.
+set -e
+cd "$(dirname "$0")"
+WAVEDB_REF=${WAVEDB_REF:-aaa517b5b6f8d50c82bf48a0398bd494d5bb2725}   # the engine this entry was measured with
+WAVEDB_REPO=${WAVEDB_REPO:-https://github.com/Winkman4000/WaveDB.git}
+PY=${WAVEDB_PYTHON:-python3}
+if ! command -v "$PY" >/dev/null || ! "$PY" -c 'import venv, ensurepip' 2>/dev/null \
+        || ! command -v git >/dev/null || ! command -v curl >/dev/null; then
+    sudo apt-get update -y -q
+    sudo apt-get install -y -q python3 python3-venv git curl
+fi
+[ -d WaveDB ] || git clone -q "$WAVEDB_REPO" WaveDB
+cd WaveDB
+git fetch -q origin
+git checkout -q "$WAVEDB_REF"
+"$PY" -m venv venv
+venv/bin/pip install -q --upgrade pip
+venv/bin/pip install -q numpy==2.4.6 numba==0.65.1 llvmlite==0.47.0 pyarrow==24.0.0 zstandard==0.25.0 \
+    sqlglot==30.11.0 pandas==3.0.3 duckdb==1.5.3
+venv/bin/python tools/kernel_build.py build

@@ -1,0 +1,24 @@
+#!/bin/bash
+# Reads one SQL statement from stdin and runs it on the server.
+# Stdout: the result, tab-separated. Stderr, last line: the runtime in fractional seconds -- curl's own
+# measure of the HTTP round trip (query sent .. whole answer received), as clickhouse-client --time measures
+# from the client. Exit non-zero on error.
+set -e
+cd "$(dirname "$0")"
+req=$(mktemp); resp=$(mktemp)
+trap 'rm -f "$req" "$resp"' EXIT
+python3 -c 'import json, sys; json.dump({"sql": sys.stdin.read()}, open(sys.argv[1], "w"))' "$req"
+# (-H 'Expect:': for a body over 1 KB curl otherwise asks "Expect: 100-continue" and waits up to a second for
+# a go-ahead the server never sends -- Q29's 90 SUMs measured 1.14 s through curl against 0.135 s inside)
+t=$(curl -sS -o "$resp" -w '%{time_total}' -X POST -H 'Content-Type: application/json' -H 'Expect:' \
+    --data-binary @"$req" http://127.0.0.1:8765/sql)
+python3 - "$resp" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+if 'error' in d:
+    sys.stderr.write('query failed (%s): %s\n' % (d.get('kind'), d['error']))
+    sys.exit(1)
+for r in d.get('rows', []):
+    print('\t'.join('' if v is None else str(v) for v in r))
+PY
+echo "$t" >&2

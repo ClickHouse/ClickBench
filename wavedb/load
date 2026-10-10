@@ -1,0 +1,8 @@
+#!/bin/bash
+# Load the official hits.parquet (100M rows, one file) with the engine's defaults: no index, projection or
+# pre-aggregate is built -- the data, ordered by EventTime, its load statistics and its text lengths.
+set -e
+cd "$(dirname "$0")"
+rm -rf cbdb
+WaveDB/venv/bin/python WaveDB/bin/wdb load cbdb hits hits.parquet --cluster-by EventTime \
+    --cast EventDate=date_days --cast EventTime=timestamp_s --hash URLHash,RefererHash
