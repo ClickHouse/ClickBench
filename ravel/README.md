@@ -68,18 +68,37 @@ container, less a fixed reserve), with a fixed segment cap and engine deadline.
 Every resolved value and its source is logged on a `performance default
 resolved` line in `server.log`; a published result should record those lines,
 because they are the configuration the numbers were measured at. On
-c6a.4xlarge, with the store on loopback, the fetch cache resolves to 12.3 GB and
-the per-query SQL pool to 16.5 GB. That is the tenant's whole SQL share since
-0.21.0; it was 8.2 GB before. `./start` also raises the process's open-file
+c6a.4xlarge, with the store on loopback, v0.23.0 resolved the fetch cache to
+11.4 GB, the per-query SQL pool to 14.2 GB and fetch concurrency to 32.
+`./start` also raises the process's open-file
 soft limit to the hard limit, since the server has exited with `EMFILE` at
 startup under the common default of 1024.
 
-`./load` declares the typed attribute columns and then loads the Parquet file.
-Object size is set at ingest by `--batch-rows`: one batch becomes one object per
-involved shard, so 150,000 rows over 4 shards gives ~4 MB objects and roughly
-2,600 objects for the 100M-row dataset. **There is no post-load step**: no
-compaction, no catalog fold, no VACUUM equivalent, so the layout the queries
-run against is the layout ingest produced.
+`./load` declares the typed attribute columns and then loads the Parquet file
+in 100,000-row batches. Since 0.23.0 a shard merges several batches into one
+stored object until its buffer's estimated uncompressed content reaches
+`--target-bytes`; at 1,850,000,000 that gives objects of about 25 MB on this
+dataset (about 410 objects in all; a stored object is about 1/74 of the
+estimate here). Before 0.23.0 each batch was its own object, about 4 MB. Large
+objects are what make a cold scan cheap. The loader holds its batches under
+`--load-memory-bytes`, so the load fits the machine. `./load` picks the
+pipeline depth, read cursors and that budget from `MemTotal`:
+
+| MemTotal | `--pipeline-depth` | `--read-cursors` | `--load-memory-bytes` |
+|---|---|---|---|
+| 15 GB and up | 32 | 16 | 6,500,000,000 |
+| 7 to 15 GB | 24 | 16 | 3,500,000,000 |
+| 3 to 7 GB | 16 | 2 | 1,200,000,000 |
+| under 3 GB | 8 | 1 | derived by the loader |
+
+On a 4 GB machine the budget is smaller than the objects need, so the loader
+flushes early to stay inside it and the objects come out smaller, about 17 MB
+median. `--max-flush-delay 30s` lets an object fill before the age trigger
+closes it. Every value can be overridden from the environment (`RAVEL_BATCH_ROWS`,
+`RAVEL_TARGET_BYTES`, `RAVEL_PIPELINE_DEPTH`, `RAVEL_READ_CURSORS`,
+`RAVEL_LOAD_MEMORY_BYTES`, `RAVEL_MAX_FLUSH_DELAY`). **There is no post-load
+step**: no compaction, no catalog fold, no VACUUM equivalent, so the layout the
+queries run against is the layout ingest produced.
 
 `./data-size` reports the tenant's whole durable footprint in the bucket (data
 objects, commit records, manifests, catalog snapshots), which is where all of
@@ -90,32 +109,27 @@ Ravel's state lives.
 The reference machine's disk is a 500 GB gp2 volume. Ravel holds no data on
 local disk, so a cold run (server restarted, page cache dropped) fetches what it
 needs from RustFS, and RustFS reads it from that volume. The stock fetch policy
-reads whole objects, so a statement that touches the table reads the whole
-dataset from the volume, whatever the statement computes. The dataset is
-9.8 GB since 0.21.0, whose log format stores the same rows smaller; it was
-11.2 GB before. Measured on v0.16.1, 40 of the 42 statements that return a
-number take 42.6 to 46.6 s cold, consistent with reading the dataset at about
-250 MB/s each time; the other two (q1 and q7) take about 0.5 s. A 0.19.0 build
-measured 42.6 to 43.3 s for the same 40. On v0.21.0, in the same fresh-VM
-setup, the cold sum over those 42 statements was 1,252.7 s, against 1,712.1 s
-for 0.19.0.
+reads an object whole when it is below the ranged-read break-even (about 19 MB
+here) and only the columns it needs above it. The 4 MB objects before 0.23.0
+were all below it, so a statement that touched the table read the whole
+dataset from the volume, whatever it computed; the 25 MB objects are above it. On c6a.4xlarge, in this repository's fresh-VM setup, the
+cold sum over the 43 statements was 486.6 s on v0.23.0, against 1,291.0 s on
+v0.21.0. The dataset is 10.2 GB (9.8 GB on v0.21.0; fewer, larger objects
+compress slightly differently).
 
-Ravel holds no data on local disk, so a warm run is served from the read cache
-or from RustFS. Since 0.19.0, a server whose store is on loopback derives its
-fetch cache at 40% of its memory budget instead of 25%: 12.3 GB on this
-machine, above the dataset, so the warm runs are served from the cache.
-Before 0.19.0 the derived cache was 7.7 GB, and warm runs re-read the dataset
-from RustFS through the page cache.
+A warm run is served from the read cache or from RustFS. A server whose store
+is on loopback derives its fetch cache at 40% of its memory budget: 11.4 GB on
+this machine, above the dataset, so the warm runs are served from the cache.
 
 ### The tuned configuration
 
 This directory publishes one result, the stock one. A tuned run belongs in its
 own top-level entry the way the other tuned entries in this repository do, and
-that is left for a follow-up. The tuned configuration is three server flags
-passed through `RAVEL_TUNED_ARGS` in `./start`:
+that is left for a follow-up. The tuned configuration is server flags passed
+through `RAVEL_TUNED_ARGS` in `./start`:
 
 ```
-RAVEL_TUNED_ARGS="--logs-fetch-policy latency-first --fetch-concurrency 256 --sql-max-query-bytes 12884901888" ./benchmark.sh
+RAVEL_TUNED_ARGS="--logs-fetch-policy latency-first --fetch-concurrency 256 --sql-max-query-bytes <stock value>" ./benchmark.sh
 ```
 
 `latency-first` is a named policy, not a tuning constant: it says spend
@@ -123,28 +137,42 @@ requests to save wall time, and resolves the byte quantities exactly as
 `byte-minimal` does, so a logs read takes ranged reads wherever they save
 bytes. It only pays off once fetch concurrency is raised with it, which is what
 the second flag does (it sets the object-store GET permits, the SQL partition
-count and the PromQL fan-out together). The third flag lifted the per-query
-memory pool from the 8.2 GB that versions before 0.21.0 derived to 12 GiB,
-which let the widest `GROUP BY` in the set (q33) complete instead of being
-refused. Since 0.21.0 the derived pool is 16.5 GB on this machine, and q33
-completes without it. The trade is more object-store requests for less cold
-wall-clock. It has not been measured against RustFS; the real-S3 figures below
-are the reference for it.
+count and the PromQL fan-out together). Raising the permits shrinks the derived
+per-query pool, so the third flag holds it at the value a stock start logs on
+its `sql_max_query_bytes` line (about 14.2 GB on c6a.4xlarge); without it the
+widest `GROUP BY` (q33) is refused.
+
+Measured on v0.23.0 against RustFS on c6a.4xlarge, the tuned configuration
+took the cold sum from 486.6 s to 384.6 s and left the hot sum unchanged
+(56.9 s and 57.1 s). It is not safe on smaller machines. In-flight fetches at
+256 permits draw on the same process memory budget the queries do, so on
+c6a.2xlarge (16 GB) three statements are refused that the stock configuration
+answers, and more on 8 and 4 GB.
 
 ### Reference: the same binaries on real S3
 
-Measured by us on the same machine type against an S3 bucket in the instance's
-region, credentials from the instance role, with the same driver and the same
-true-cold protocol, on the released v0.16.1 binaries and a freshly loaded
-tenant. One pass each. Not reproducible by this harness, which does not run
-entries on real S3, and therefore not a results file. Cold and hot are the sums
-of the first and third run over the statements that returned a number.
+Measured by us on c6a.4xlarge against a fresh S3 bucket in the instance's
+region (us-east-1), credentials from the instance role, with the same driver
+and the same true-cold protocol, on the released v0.23.0 binaries and this
+entry's `./load` and `./start` unchanged except for the credential source
+(`--s3-auth instance-role`). One pass. Not reproducible by this harness, which
+does not run entries on real S3, and therefore not a results file. Cold is the
+sum of the first runs; hot is the sum of the better of the second and third
+runs.
 
-| configuration | load | cold | hot | statements |
-|---|---|---|---|---|
-| stock, real S3 | 1,191 s | 483 s | 430 s | 42 of 43, q33 refused |
-| tuned, real S3 | (same tenant) | 201 s | 99 s | 43 of 43 |
-| stock, local RustFS, v0.16.1 | 1,236 s | 1,720 s | 272 s | 42 of 43, q33 refused |
+| configuration | load | cold | hot | hot geomean | statements |
+|---|---|---|---|---|---|
+| stock, real S3, v0.23.0 | 932 s | 186 s | 63 s | 1.01 s | 43 of 43 |
+| stock, local RustFS, v0.23.0 | 924 s | 487 s | 57 s | 0.74 s | 43 of 43 |
+
+Cold is faster on S3 because nothing waits on the 250 MB/s gp2 volume: S3
+serves the ranged reads in parallel at network speed. Hot is slightly slower
+because the larger fetch cache share a loopback store gets does not apply to
+a remote endpoint: the derived cache was 7.5 GB on this machine, below the
+10.2 GB dataset, so part of each warm run goes back to S3.
+
+The earlier reference, v0.16.1 with ~4 MB objects, measured a 483 s cold and
+430 s hot sum on real S3, with q33 refused.
 
 ## Notes
 
@@ -156,5 +184,8 @@ of the first and third run over the statements that returned a number.
   endpoint's window defaults to the last hour.
 - The heaviest whole-table aggregates can exceed the derived per-query memory
   pool on a small instance and are reported as errors rather than being run
-  with a raised limit. q33 reserves about 10.9 GB. Since 0.21.0 it completes on
-  c6a.4xlarge; on instances with less memory it can still be refused.
+  with a raised limit. q33 reserves about 10.9 GB. It completes on c6a.4xlarge
+  and larger; on instances with less memory it can still be refused.
+- q28 averages `octet_length("URL")`. ClickHouse's `length()` counts bytes and
+  DataFusion's counts characters, so `octet_length` is the faithful
+  translation; q29 still uses `length("Referer")`.
