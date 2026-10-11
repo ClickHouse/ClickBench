@@ -10,8 +10,21 @@ For more information, visit:
 - [Opteryx Documentation](https://docs.opteryx.app/)
 - [Opteryx GitHub Repository](https://github.com/mabel-dev/opteryx-core)
 
-This page benchmarks Opteryx (PyPI package `opteryx-core`) using the split
-Parquet files provided by ClickBench.
+This page benchmarks Opteryx (PyPI package `opteryx-core`) on data written by
+its own Parquet writer. The load step rewrites ClickBench's split Parquet files
+with Opteryx's writer (rugo), using the writer's default settings; queries then
+run against the rewritten files. The data stays Parquet (converted on load, the
+conversion counted as load time). Its counterpart is
+`Opteryx (Parquet, partitioned)`, which reads the provided files as shipped.
+
+### Load step
+
+`load` runs `convert.py`, which reads each `hits_N.parquet` and writes it back
+with `rugo.parquet.write_parquet` (one output file per input file, row counts
+checked against the source). The codec, rows per row group and row groups per
+block are set at the top of `load`. Only the files the writer produces are kept,
+so `data-size` measures the rewritten dataset. Nothing is precomputed: the
+rewrite changes layout and encoding, not content.
 
 ### Process model
 
@@ -42,7 +55,8 @@ This is the same shape as the pandas/polars entries.
 1. Set up the environment.
 2. Install Python and the required dependencies.
 3. Download the benchmark dataset.
-4. Run the benchmark script.
+4. Rewrite it with Opteryx's writer (this is the load step).
+5. Run the benchmark script.
 
 ### Detailed Instructions
 
@@ -67,7 +81,7 @@ This is the same shape as the pandas/polars entries.
 4. **Clone the ClickBench repository**
    ~~~bash
    git clone https://github.com/ClickHouse/ClickBench
-   cd ClickBench/opteryx
+   cd ClickBench/opteryx-parquet-rewritten
    ~~~
 
 5. **Run the benchmark script**
