@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# SILICIUM CLICKBENCH HARNESS — CHECK (LIVENESS PROBE)
+# Standard: PostgreSQL Wire Liveness Probe (ClickBench bench_wait_ready/stopped)
+# ==============================================================================
+
+PORT="${SILICIUM_PORT:-5433}"
+
+# ClickBench protocol: check must return 0 iff server is accepting connections,
+# and non-zero if server is stopped (used by bench_wait_ready and bench_wait_stopped).
+if command -v psql >/dev/null 2>&1; then
+    exec psql -h 127.0.0.1 -p "$PORT" -U postgres -d clickbench -t -A -c "SELECT 1" >/dev/null 2>&1
+else
+    # Fallback to TCP probe if psql client is not present
+    (nc -z 127.0.0.1 "$PORT" 2>/dev/null || (exec 3<>/dev/tcp/127.0.0.1/"$PORT") 2>/dev/null)
+fi

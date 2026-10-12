@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# SILICIUM CLICKBENCH HARNESS — INSTALL (RUNTIME SETUP)
+# License: SCSL-1.0 / MIT Evaluation License
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Architecture Guard: Silicium requires x86_64 for AVX2/AVX-512 micro-kernels
+if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "amd64" ]; then
+    echo "silicium: x86_64 architecture required for AVX2/AVX-512 kernels; current architecture is $(uname -m). Skipping." >&2
+    exit 1
+fi
+
+echo "================================================================================"
+echo "⚡ SILICIUM CLICKBENCH INSTALL : TÉLÉCHARGEMENT BINAIRES & PRÉPARATION RUNNER"
+echo "================================================================================"
+
+# ==============================================================================
+# 0. ACTIVE SILICON ISA DETECTION (/proc/cpuinfo)
+# ==============================================================================
+if grep -q "avx512" /proc/cpuinfo 2>/dev/null; then
+    TARGET_ISA="avx512"
+elif grep -q "avx2" /proc/cpuinfo 2>/dev/null; then
+    TARGET_ISA="avx2"
+else
+    TARGET_ISA="generic"
+fi
+
+echo "⚡ Silicon ISA detected: ${TARGET_ISA}"
+
+# Téléchargement déterministe des binaires d'évaluation SILICIUM
+SILICIUM_DOMAIN="clickbench"
+SILICIUM_VERSION="v2.0.0"
+SILICIUM_TAG="${SILICIUM_DOMAIN}-${SILICIUM_VERSION}"
+SILICIUM_TARBALL="silicium-${SILICIUM_DOMAIN}-x86_64-${SILICIUM_VERSION}.tar.gz"
+SILICIUM_DIST_REPO="${SILICIUM_DIST_REPO:-silicium369-spec/silicium-clickbench}"
+SILICIUM_URL="${SILICIUM_DIST_URL:-https://github.com/${SILICIUM_DIST_REPO}/releases/download/${SILICIUM_TAG}/${SILICIUM_TARBALL}}"
+SILICIUM_SHA256="008d010ed05454623cf7ccf971ab9d9eab0a69054273d438ccb21dec84bd1660"
+
+mkdir -p bin
+
+if [ -f "bin/silicium_runner" ] && [ -f "bin/silicium_ingest" ]; then
+    echo "⚡ SILICIUM CLICKBENCH INSTALL : MODE LOCAL DÉTECTÉ (bin/ déjà présent)"
+    echo "✅ Utilisation directe des binaires d'évaluation locaux."
+    chmod +x bin/silicium_runner bin/silicium_ingest 2>/dev/null || true
+else
+    if [ ! -f "${SILICIUM_TARBALL}" ]; then
+        if [ -f "../${SILICIUM_TARBALL}" ]; then
+            cp -f "../${SILICIUM_TARBALL}" "${SILICIUM_TARBALL}"
+        else
+            echo "📦 Téléchargement des binaires d'évaluation Silicium (${SILICIUM_TAG})..."
+            echo "   Source : ${SILICIUM_URL}"
+            if command -v gh >/dev/null 2>&1 && gh release download "${SILICIUM_TAG}" -R "${SILICIUM_DIST_REPO}" -p "${SILICIUM_TARBALL}" --clobber >/dev/null 2>&1; then
+                echo "✅ Téléchargement réussi via GitHub CLI."
+            elif [ -n "${GH_TOKEN:-}" ]; then
+                curl -sSL -f -H "Authorization: token ${GH_TOKEN}" -o "${SILICIUM_TARBALL}" "${SILICIUM_URL}" 2>/dev/null || \
+                curl -sSL -f -o "${SILICIUM_TARBALL}" "${SILICIUM_URL}"
+            else
+                curl -sSL -f -o "${SILICIUM_TARBALL}" "${SILICIUM_URL}"
+            fi
+        fi
+    fi
+    
+    if command -v sha256sum >/dev/null 2>&1; then
+        echo "🔒 Vérification de l'intégrité SHA-256..."
+        echo "${SILICIUM_SHA256}  ${SILICIUM_TARBALL}" | sha256sum -c - || {
+            echo "❌ Erreur critique : Empreinte SHA-256 non conforme !" >&2
+            exit 1
+        }
+    fi
+    
+    tar -xzf "${SILICIUM_TARBALL}" -C bin/
+    rm -f "${SILICIUM_TARBALL}"
+fi
+
+# Permissions sur les binaires d'évaluation
+chmod +x bin/*ingest bin/*runner 2>/dev/null || true
+
+# Rendre tous les scripts ClickBench exécutables
+chmod +x benchmark.sh check data-size install load query start stop 2>/dev/null || true
+
+echo "✅ Scripts et binaires Silicium configurés avec succès."
+echo "🎉 INSTALLATION SILICIUM TERMINÉE AVEC SUCCÈS"
+echo "================================================================================"
