@@ -330,7 +330,8 @@ def manual_result_files(pr_number, systems, bot_paths):
 
 def preview_line(pr_number, head, rows, removals=()):
     """A line linking to the preview of the benchmark page with the results
-    of the PR (see results_preview.py): the result files the PR changes at
+    of the PR, and to the comparison with the previous results if there are
+    any (see results_preview.py): the result files the PR changes at
     its head commit, if any, and the new results. None if it failed."""
     try:
         changes = results_preview.pr_changes(pr_number, head) if pr_number and head else {}

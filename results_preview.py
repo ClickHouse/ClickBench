@@ -4,7 +4,10 @@
 The preview is the website's index.html with the data of generate-results.sh
 embedded into it, for the results of the base branch (origin/main) with the
 result files of the pull request laid over them. It is published on
-pastila.nl unencrypted, as a gzipped .html paste, and the link is posted on
+pastila.nl unencrypted, as a gzipped .html paste. If the pull request updates
+existing results, a second page compares them: it has only the old and the
+new results of the updated (system, machine) pairs, as separate systems,
+"<name> (old)" and "<name> (new)". The links are posted on
 the pull request: appended to the last comment if that is a comment of this
 automation (collect-new-results.py also puts the link into its comments),
 otherwise as a new comment.
@@ -114,34 +117,87 @@ def generate_data(files, complexity={}):
     return data
 
 
-def build_page(base, changes):
-    """index.html of the base revision with the data embedded, for the result
-    files of the base revision updated with changes: {path: content, or None
-    for a removed file}."""
+def build_data(base, changes):
+    """The data arrays of the website for the result files of the base
+    revision and for them updated with changes: {path: content, or None for
+    a removed file}."""
     oids = result_files(base)
-    for path in changes:
-        oids.pop(path, None)
     blobs = read_blobs(oids.values())
-    files = {path: blobs[oid] for path, oid in oids.items()}
-    files.update({path: content for path, content in changes.items() if content is not None})
+    old_files = {path: blobs[oid] for path, oid in oids.items()}
+    new_files = {path: content for path, content in old_files.items() if path not in changes}
+    new_files.update({path: content for path, content in changes.items() if content is not None})
+    complexity = base_complexity(base)
+    return generate_data(old_files, complexity), generate_data(new_files, complexity)
 
+
+def comparison_data(old_data, new_data):
+    """The entries that changed, old and new, as separate systems: for every
+    (system directory, file name) that has a result both before and after."""
+    def key(entry):
+        m = RESULT_RE.match(entry["source"])
+        return m.group(1), m.group(3)
+    old = {key(entry): entry for entry in old_data}
+    data = []
+    for entry in new_data:
+        previous = old.get(key(entry))
+        if previous is None or previous == entry:
+            continue
+        for e, label in ((previous, "old"), (entry, "new")):
+            e = dict(e, system=f"{e['system']} ({label})")
+            e.pop("hide", None)
+            data.append(e)
+    return data
+
+
+# For the comparison: show all the entries, regardless of the default filters
+# (some machines, tuned systems, GPUs are not selected by default).
+SELECT_ALL_SCRIPT = """<script type="text/javascript">
+if (!window.location.hash) {
+    for (const k of ['system', 'type', 'machine', 'cluster_size', 'opensource', 'hardware', 'tuned', 'storage'])
+        Object.keys(selectors[k]).forEach(x => { selectors[k][x] = true });
+    updateSelectors();
+    render();
+}
+</script>
+"""
+
+
+def build_page(base, data, select_all=False):
+    """index.html of the base revision with the data embedded."""
     page = git("show", f"{base}:index.html").decode()
     if DATA_SCRIPT not in page:
         raise RuntimeError("index.html does not load data.generated.js")
     # Results come from pull requests: escape "<" so that no string in them
     # can close the script element.
-    data = json.dumps(generate_data(files, base_complexity(base)), ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
+    data = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
     script = f'<script type="text/javascript">\nconst data = {data};\n</script>'
-    return page.replace(DATA_SCRIPT, script, 1)
+    page = page.replace(DATA_SCRIPT, script, 1)
+    if select_all:
+        if "</body>" not in page:
+            raise RuntimeError("index.html has no </body>")
+        page = page.replace("</body>", SELECT_ALL_SCRIPT + "</body>", 1)
+    return page
 
 
 def publish(base, changes):
-    """Publish the preview page and return its URL."""
-    return pastila.post(build_page(base, changes), extension=".html", compress=True)
+    """Publish the preview page and, if the changes update existing results,
+    the comparison page of the old and new results. Returns their URLs: the
+    second one is None without the comparison."""
+    old_data, new_data = build_data(base, changes)
+    url = pastila.post(build_page(base, new_data), extension=".html", compress=True)
+    comparison = comparison_data(old_data, new_data)
+    comparison_url = None
+    if comparison:
+        comparison_url = pastila.post(build_page(base, comparison, select_all=True), extension=".html", compress=True)
+    return url, comparison_url
 
 
-def preview_line(url):
-    return f"[Preview of the benchmark page with these results]({url}) {MARKER}"
+def preview_line(urls):
+    url, comparison_url = urls
+    line = f"[Preview of the benchmark page with these results]({url})"
+    if comparison_url:
+        line += f" · [Comparison with the previous results]({comparison_url})"
+    return f"{line} {MARKER}"
 
 
 def pr_changes(pr_number, head):
@@ -161,15 +217,15 @@ def pr_changes(pr_number, head):
     return {p: blobs[head_files[p]] if p in head_files else None for p in paths}
 
 
-def with_preview(body, url):
+def with_preview(body, urls):
     """A comment body with the preview line added, replacing an older one."""
     lines = [line for line in body.split("\n") if MARKER not in line]
     while lines and not lines[-1].strip():
         lines.pop()
-    return "\n".join(lines) + "\n\n" + preview_line(url)
+    return "\n".join(lines) + "\n\n" + preview_line(urls)
 
 
-def post_link(pr_number, url):
+def post_link(pr_number, urls):
     comments = json.loads(subprocess.run(
         ["gh", "api", f"repos/{REPO}/issues/{pr_number}/comments", "--paginate", "--slurp"],
         capture_output=True, text=True, check=True).stdout)
@@ -177,14 +233,14 @@ def post_link(pr_number, url):
     last = comments[-1] if comments else None
     if (last and last["user"]["login"] == BOT_LOGIN
             and (MARKER in last["body"] or COLLECT_MARKER in last["body"])):
-        if url in last["body"]:
-            print(f"The last comment already links to {url}")
+        if urls[0] in last["body"]:
+            print(f"The last comment already links to {urls[0]}")
             return
-        body = with_preview(last["body"], url)
+        body = with_preview(last["body"], urls)
         cmd = ["gh", "api", "-X", "PATCH", f"repos/{REPO}/issues/comments/{last['id']}",
                "-f", "body=" + body]
     else:
-        body = preview_line(url)
+        body = preview_line(urls)
         cmd = ["gh", "api", f"repos/{REPO}/issues/{pr_number}/comments", "-f", "body=" + body]
     if DRY_RUN:
         print(f"DRY_RUN: would run {cmd[:4]} with:\n{body}\n---")
@@ -206,9 +262,11 @@ def main():
     if not changes:
         print("The pull request does not change any results.")
         return 0
-    url = publish(base, changes)
-    print(f"Preview: {url}")
-    post_link(pr_number, url)
+    urls = publish(base, changes)
+    print(f"Preview: {urls[0]}")
+    if urls[1]:
+        print(f"Comparison: {urls[1]}")
+    post_link(pr_number, urls)
     return 0
 
 
