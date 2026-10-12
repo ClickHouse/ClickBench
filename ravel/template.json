@@ -6,7 +6,6 @@
   "tags": [
     "Rust",
     "column-oriented",
-    "stateless",
     "S3"
   ]
 }

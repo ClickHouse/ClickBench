@@ -29,21 +29,44 @@ MAPPING="${RAVEL_MAPPING:-hits.mapping.toml}"
 "$RAVEL_CLI" --store s3 --s3-auth static \
     typed-attr-column set "$RAVEL_TENANT" --from-mapping "$MAPPING"
 
-# Load geometry. One batch becomes one object per involved shard, so
-# --batch-rows sets the object size directly: 150,000 rows over 4 shards is
-# ~37.5k rows (~4 MB) per object and ~2,600 objects for the 100M-row dataset.
-# That is the whole object-sizing mechanism; --target-bytes stays at its
-# default of 1 (flush every write) because accumulating instead makes each
-# batch's acknowledgement wait for a later batch and the load runs several
-# times longer for the same layout.
+# Load geometry. Small batches merge into large stored objects: a shard's
+# buffer accumulates batches until its estimated uncompressed content reaches
+# --target-bytes, and on this dataset a stored object holds about 1/74 of that
+# estimate, so 1,850,000,000 stores objects of about 25 MB (about 410 objects
+# for the 100M rows). Large objects are what make a cold scan cheap here.
+# --max-flush-delay must outlast one object's fill time or the age trigger
+# closes objects early, and --pipeline-depth must cover the batches one object
+# needs on a shard, since each batch's acknowledgement waits for the flush that
+# holds it. --load-memory-bytes caps what the loader holds; the depth and the
+# budget are sized to the machine's memory below (measured on 128, 16, 8 and
+# 4 GB hosts, NOFireAI/ravel#2627). Every value can be overridden from the
+# environment.
+mem_kb=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
+if [ "$mem_kb" -ge 15000000 ]; then
+    tier_depth=32; tier_budget=6500000000; tier_cursors=16
+elif [ "$mem_kb" -ge 7000000 ]; then
+    tier_depth=24; tier_budget=3500000000; tier_cursors=16
+elif [ "$mem_kb" -ge 3000000 ]; then
+    tier_depth=16; tier_budget=1200000000; tier_cursors=2
+else
+    # Below 3 GB the loader derives its own budget from the host's memory and
+    # admits one batch at a time when that is below one batch.
+    tier_depth=8; tier_budget=; tier_cursors=1
+fi
+load_budget="${RAVEL_LOAD_MEMORY_BYTES-$tier_budget}"
+echo "load: MemTotal ${mem_kb} kB, pipeline depth ${RAVEL_PIPELINE_DEPTH:-$tier_depth}, read cursors ${RAVEL_READ_CURSORS:-$tier_cursors}, memory budget ${load_budget:-derived}" >&2
+
 "$RAVEL_CLI" --store s3 --s3-auth static load \
     --parquet "$PARQUET" \
     --tenant "$RAVEL_TENANT" \
     --mapping "$MAPPING" \
     --shards "$RAVEL_SHARDS" \
-    --read-cursors "${RAVEL_READ_CURSORS:-16}" \
-    --batch-rows "${RAVEL_BATCH_ROWS:-150000}" \
-    --target-bytes 1
+    --read-cursors "${RAVEL_READ_CURSORS:-$tier_cursors}" \
+    --batch-rows "${RAVEL_BATCH_ROWS:-100000}" \
+    --pipeline-depth "${RAVEL_PIPELINE_DEPTH:-$tier_depth}" \
+    ${load_budget:+--load-memory-bytes "$load_budget"} \
+    --max-flush-delay "${RAVEL_MAX_FLUSH_DELAY:-30s}" \
+    --target-bytes "${RAVEL_TARGET_BYTES:-1850000000}"
 
 sync
 
