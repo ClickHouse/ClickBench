@@ -22,7 +22,11 @@ import chdb
 with open(sys.argv[1]) as f:
     query = f.read()
 
+with open("create.sql") as f:
+    create_query = f.read()
+
 conn = chdb.connect()
+conn.query(create_query)
 
 start = timeit.default_timer()
 try:
