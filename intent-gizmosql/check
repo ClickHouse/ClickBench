@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
-# A simple TCP probe is the cheapest health check; the JDBC arrow-flight URI
-# is auth-gated, so we just check the listener is up.
-exec nc -z localhost 31337
+. ./util.sh
+
+# Ready means the server answers a statement, not only that its port is
+# open: SELECT 1 through the query client, with the login util.sh gives
+# the query script. It reads no table. The client exits non-zero when it
+# cannot connect or log in, or when the statement fails.
+exec gizmosql_client -c 'SELECT 1' > /dev/null
