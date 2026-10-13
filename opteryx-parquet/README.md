@@ -17,9 +17,7 @@ run against the rewritten files. The data stays Parquet (converted on load, the
 conversion counted as load time).
 
 Its counterpart is `Opteryx (Parquet, partitioned)` in `../opteryx`, which reads
-the provided files as shipped. The 2026-10-12 results in this directory are
-`Opteryx (Parquet, rewritten)`, the previous form of this entry (integer time
-columns, no sort, opteryx-core 0.9.164).
+the provided files as shipped.
 
 ### Load step
 
