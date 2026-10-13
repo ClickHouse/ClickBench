@@ -81,7 +81,7 @@ This is the same shape as the pandas/polars entries.
 no runtime dependencies, so `install` is a single binary-wheel download with no
 on-box compilation and no toolchain.
 
-`install` pins the release (`opteryx-core==0.9.155`, the latest release when
+`install` pins the release (`opteryx-core==0.9.167`, the latest release when
 this entry was drafted) and fails if the imported
 version differs, so a published result names the build that produced it.
 
