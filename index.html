@@ -1276,8 +1276,9 @@ function renderSummary(filtered_data) {
         document.getElementById('time-or-size').innerText = 'time and data size';
     }
 
+    /// The history view is ordered by date, the newest first.
     const sorted_indices = [...summaries.keys()].sort(history_view
-        ? (a, b) => filtered_data[a].date.localeCompare(filtered_data[b].date) || filtered_data[a].source.localeCompare(filtered_data[b].source)
+        ? (a, b) => filtered_data[b].date.localeCompare(filtered_data[a].date) || filtered_data[b].source.localeCompare(filtered_data[a].source)
         : (a, b) => summaries[a] - summaries[b]);
 
     /// Every row of the history view is the same system, so the rows are highlighted by the result file.
@@ -1466,7 +1467,7 @@ function scheduleDetails(f) {
 
 document.addEventListener('scroll', renderPendingDetails, {capture: true, passive: true});
 
-/// The history view shows all the results of a single entry instead of the list of systems, ordered by date.
+/// The history view shows all the results of a single entry instead of the list of systems, the newest first.
 /// An entry is a pair of the directory and the name of the result file: its history are the files
 /// <directory>/results/<date>/<name> in the repository. They are loaded from the table on play.clickhouse.com,
 /// which has all the result files (see upload-history.py). The view is a part of the URL:
