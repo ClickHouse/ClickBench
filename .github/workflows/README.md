@@ -22,6 +22,7 @@ apart from the runs of main and are excluded by `collect-results.sh`.
 | `hardware-collect-results.yml` | hourly | nothing - it collects the hardware benchmark results of the last day (`hardware/collect-new-results.sh`) from the `kind: hardware-benchmark` rows of `sink.data` into `hardware/results/aws_<instance type>.json`, and commits them as one automated, auto-merged pull request (branch `auto-results/hardware`), then starts the website build (`generate-results.yml`), since its pushes trigger no workflows |
 | `collect-results.yml` | every 30 minutes | nothing - it collects the runs of the last day from the sink database (`collect-new-results.py`): commits result files and posts pastila.nl log links to the corresponding PR, or maintains one automated results PR per system for the runs of main. Its comments also link to a preview of the benchmark page with the new results (`results_preview.py`) |
 | `results-preview.yml` | pull requests that change `*/results/` | nothing - it publishes the benchmark page with the PR's result files laid over main as an unencrypted pastila.nl paste (`results_preview.py`) - and, if the PR updates existing results, a second page with only the old and new results of the updated system/machine pairs as separate systems - and appends the links to the last comment if that is from this automation, or posts a new comment. Results committed by `collect-new-results.py` don't trigger it (GITHUB_TOKEN pushes trigger no workflows), so that script adds the link itself |
+| `upload-history.yml` | every 30 minutes, pushes to main that change `*/results/`, manual | nothing - it replaces the table `clickbench.results` on play.clickhouse.com with all the result files (`upload-history.py`), for the history view of the website (the icon left of a system's name). A run is a no-op unless the set of result files changed, which it tells by a fingerprint of their paths and git blob ids; the manual run can force the upload |
 
 ## Setup
 
@@ -75,3 +76,8 @@ apart from the runs of main and are excluded by `collect-results.sh`.
    tokens. A fine-grained PAT does not work either — it is bound to an
    explicit repository list, which cannot include arbitrary contributors'
    forks.
+
+5. For `upload-history.yml`, the database, tables and the user from the end
+   of `prepare-database.sql` on play.clickhouse.com, with the user's
+   password in the `CLICKBENCH_UPLOAD_PASSWORD` secret. Without the secret
+   the workflow does nothing.

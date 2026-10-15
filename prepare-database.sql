@@ -118,3 +118,69 @@ TO sink;
 
 GRANT INSERT ON sink.data TO sink;
 GRANT SELECT ON sink.data TO sink;
+
+-- All the result files of the repository, <system>/results/<date>/<name>.json,
+-- for the history view of the website (index.html) and for ad-hoc queries.
+-- A row per file, with the fields of the JSON in columns, including the failed runs ({"error": "..."}) and the
+-- entries tagged "historical". The content is replaced by upload-history.py
+-- on every change of the results, atomically: it fills
+-- clickbench.results_staging and moves its contents over with
+-- ALTER TABLE REPLACE PARTITION, so the two tables must have the same
+-- structure, sorting key and partitioning.
+--
+-- The staging table is not replicated: it is filled and moved over within one
+-- connection, on one replica, and the other replicas fetch the new parts of
+-- clickbench.results from it. But it must exist on every replica, as any of
+-- them can get the connection - as well as the database and the user.
+CREATE DATABASE clickbench;
+
+CREATE TABLE clickbench.results
+(
+    -- The path of the file in the repository and the git blob id of its content.
+    source String,
+    blob String,
+    -- An entry of the website, one line in the report, is a pair (directory, name),
+    -- e.g. ('clickhouse', 'c6a.4xlarge.json'), and its history are the files in
+    -- different dated directories: clickhouse/results/20250101/c6a.4xlarge.json, ...
+    directory LowCardinality(String),
+    name LowCardinality(String),
+    -- From the name of the dated directory.
+    file_date Date,
+
+    -- The fields of the JSON, where present. The date falls back to file_date.
+    system LowCardinality(String),
+    date Date,
+    machine LowCardinality(String),
+    -- A number, or a string for some of the cloud services.
+    cluster_size LowCardinality(String),
+    proprietary LowCardinality(String),
+    hardware LowCardinality(String),
+    tuned LowCardinality(String),
+    tags Array(LowCardinality(String)),
+    comment String,
+    load_time Nullable(Float64),
+    data_size Nullable(UInt64),
+    concurrent_qps Nullable(Float64),
+    concurrent_error_ratio Nullable(Float64),
+    -- [cold, hot, hot] runtimes in seconds for every query, NULL for failed queries.
+    result Array(Array(Nullable(Float64))),
+    error String
+)
+ENGINE = ReplicatedMergeTree('/clickhouse/tables/clickbench/results/{shard}', '{replica}')
+ORDER BY (directory, name, file_date);
+
+CREATE TABLE clickbench.results_staging AS clickbench.results
+ENGINE = MergeTree
+ORDER BY (directory, name, file_date);
+
+-- The website reads the history as the public `play` user.
+GRANT SELECT ON clickbench.results TO play;
+
+-- The user for upload-history.py (.github/workflows/upload-history.yml).
+-- The password is in the CLICKBENCH_UPLOAD_PASSWORD GitHub secret of
+-- ClickHouse/ClickBench. REPLACE PARTITION needs SELECT on the source table,
+-- and ALTER DELETE and INSERT on the destination.
+CREATE USER clickbench_upload IDENTIFIED WITH sha256_password BY '<password>';
+
+GRANT SELECT, INSERT, TRUNCATE ON clickbench.results_staging TO clickbench_upload;
+GRANT SELECT, INSERT, ALTER DELETE ON clickbench.results TO clickbench_upload;

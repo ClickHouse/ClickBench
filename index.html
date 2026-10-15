@@ -283,6 +283,40 @@
             color: var(--link-hover-color);
         }
 
+        .history-link {
+            visibility: hidden;
+            margin-right: 0.3rem;
+        }
+
+        .history-link svg {
+            width: 1em;
+            height: 1em;
+            vertical-align: -0.125em;
+            fill: currentColor;
+        }
+
+        .summary-row:hover .history-link {
+            visibility: visible;
+        }
+
+        #history-bar {
+            display: none;
+            padding-top: 2rem;
+        }
+
+        #history-title {
+            margin: 0 0.5rem;
+        }
+
+        .history-mode #history-bar {
+            display: block;
+        }
+
+        /* Only the metric can be chosen in the history view - the rest of the selectors are for the list of systems. */
+        .history-mode .selectors-container tr:not(#selectors-metric-row) {
+            display: none;
+        }
+
         #details {
             padding-bottom: 1rem;
         }
@@ -496,6 +530,12 @@ const additional_data_size_points = [
     <a href="https://github.com/ClickHouse/ClickBench/">Methodology</a> | <a href="https://github.com/ClickHouse/ClickBench/">Reproduce and Validate the Results</a> | <a href="https://github.com/ClickHouse/ClickBench/">Add a System</a> | <a href="https://benchmark.clickhouse.com/hardware/">Hardware Benchmark</a> | <a href="https://benchmark.clickhouse.com/versions/">Versions Benchmark</a> | See also: <a href="https://jsonbench.com/">JSONBench</a> | <a href="https://benchmark.clickhouse.com/playground/">🎈 Playground (new)</a>
 </div>
 
+<div id="history-bar" class="stick-left">
+    <a id="history-back" class="selector selector-active">← All systems</a>
+    History of<b id="history-title"></b>
+    <a id="history-share" class="selector" title="Copy the link to this page">🔗 Copy link</a>
+</div>
+
 <table class="selectors-container stick-left">
     <tr>
         <td colspan="2">
@@ -549,7 +589,7 @@ const additional_data_size_points = [
             <a id="select-all-cluster-sizes" class="selector selector-active">All</a>
         </td>
     </tr>
-    <tr>
+    <tr id="selectors-metric-row">
         <th>Metric: </th>
         <td id="selectors_run">
             <a class="selector" id="selector-metric-combined">Combined</a>
@@ -1236,7 +1276,13 @@ function renderSummary(filtered_data) {
         document.getElementById('time-or-size').innerText = 'time and data size';
     }
 
-    const sorted_indices = [...summaries.keys()].sort((a, b) => summaries[a] - summaries[b]);
+    const sorted_indices = [...summaries.keys()].sort(history_view
+        ? (a, b) => filtered_data[a].date.localeCompare(filtered_data[b].date) || filtered_data[a].source.localeCompare(filtered_data[b].source)
+        : (a, b) => summaries[a] - summaries[b]);
+
+    /// Every row of the history view is the same system, so the rows are highlighted by the result file.
+    const highlight_key = elem => history_view ? elem.source : elem.system;
+    const state_hash = history_view ? null : '#' + encodeState(selectors);
     const max_ratio = 10000;
 
     sorted_indices.map(idx => {
@@ -1248,14 +1294,14 @@ function renderSummary(filtered_data) {
         let tr = document.createElement('tr');
         tr.className = 'summary-row';
 
-        tr.dataset.system = elem.system;
-        tr.addEventListener('mouseover', () => highlightSystem(elem.system));
+        tr.dataset.system = highlight_key(elem);
+        tr.addEventListener('mouseover', () => highlightSystem(highlight_key(elem)));
         tr.addEventListener('mouseout', clearSystemHighlight);
 
         let td_name = document.createElement('td');
         td_name.className = 'summary-name';
 
-        if (!elem.fake) {
+        if (!elem.fake && !history_view) {
             let remove = document.createElement('span');
             remove.className = 'remove-system';
             remove.textContent = '✕';
@@ -1274,9 +1320,24 @@ function renderSummary(filtered_data) {
             });
             td_name.appendChild(remove);
 
+            const key = historyKey(elem);
+            let history_link = document.createElement('a');
+            history_link.className = 'history-link';
+            history_link.innerHTML = history_icon;
+            history_link.title = 'Show the history of the results of this system on this machine';
+            history_link.href = state_hash + '&history=' + encodeURIComponent(key);
+            history_link.addEventListener('click', e => {
+                /// Let the browser open the link in a new tab.
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.button != 0) { return; }
+                e.preventDefault();
+                openHistory(key);
+            });
+            td_name.appendChild(history_link);
+        }
+
+        if (!elem.fake) {
             let link = document.createElement('a');
-            link.appendChild(document.createTextNode(selectors.metric == 'complexity' ? elem.system
-                : `${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+            link.appendChild(document.createTextNode(selectors.metric == 'complexity' ? elem.system : entryTitle(elem)));
             link.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + elem.source;
             link.style.color = `oklch(var(--hashed-link-lightness) 0.2018 ${nameToColor(elem.system.split(' ')[0])})`
             td_name.appendChild(link);
@@ -1405,19 +1466,125 @@ function scheduleDetails(f) {
 
 document.addEventListener('scroll', renderPendingDetails, {capture: true, passive: true});
 
-function render() {
-    applyTopRowFilters();
+/// The history view shows all the results of a single entry instead of the list of systems, ordered by date.
+/// An entry is a pair of the directory and the name of the result file: its history are the files
+/// <directory>/results/<date>/<name> in the repository. They are loaded from the table on play.clickhouse.com,
+/// which has all the result files (see upload-history.py). The view is a part of the URL:
+/// #<selectors>&history=<directory>/<name>.
+const history_url = 'https://play.clickhouse.com/?user=play';
+const history_query = `SELECT source, system, date, machine, cluster_size, proprietary, hardware, tuned, tags, comment,
+    load_time, data_size, concurrent_qps, concurrent_error_ratio, result
+FROM clickbench.results
+WHERE directory = {directory:String} AND name = {name:String} AND error = ''
+ORDER BY file_date FORMAT JSON`;
 
-    let filtered_data = data.filter(elem =>
-        selectors.system[elem.system] &&
-        selectors.machine[elem.machine] &&
-        selectors.cluster_size[elem.cluster_size] &&
-        elem.tags.filter(type => selectors.type[type]).length > 0 &&
-        ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
-        ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
-        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
-        selectors.storage[elem.storage_class]
-        );
+/// null for the list of systems, or {key, data, error}, where data is null until it is loaded.
+let history_view = null;
+
+const history_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>';
+
+function historyKey(elem) {
+    const path = elem.source.split('/');
+    return `${path[0]}/${path[path.length - 1]}`;
+}
+
+function setHistoryView(key) {
+    if (!key) {
+        history_view = null;
+        return;
+    }
+    if (history_view && history_view.key == key) { return; }
+
+    const view = {key, data: null, error: null};
+    history_view = view;
+
+    const [directory, name] = key.split('/');
+    /// The complexity is computed only for the current state of the repository, see generate-results.sh.
+    const complexity = data.find(elem => elem.source.split('/')[0] == directory)?.complexity ?? null;
+
+    fetch(`${history_url}&${new URLSearchParams({param_directory: directory, param_name: name})}`,
+        {method: 'POST', body: history_query})
+        .then(async response => {
+            const text = await response.text();
+            if (!response.ok) { throw new Error(text.trim()); }
+            return JSON.parse(text);
+        })
+        .then(result => {
+            /// The rows are the entries as in data.generated.js, but with the failed runs being the only ones skipped.
+            view.data = result.data.filter(elem => elem.result.length).map(elem => {
+                /// A number, or a name for some of the cloud services, but always a string in the table.
+                if (/^[0-9]+$/.test(elem.cluster_size)) { elem.cluster_size = Number(elem.cluster_size); }
+                /// 64-bit integers are quoted in JSON in older versions of ClickHouse.
+                if (elem.data_size !== null) { elem.data_size = Number(elem.data_size); }
+                elem.complexity = complexity;
+                elem.storage_class = storageOf(elem);
+                return elem;
+            });
+        })
+        .catch(e => { view.error = e.message || String(e); })
+        .finally(() => { if (history_view === view) { render(); } });
+}
+
+function entryTitle(elem) {
+    return `${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`;
+}
+
+function renderHistoryBar() {
+    const key = history_view.key;
+    const latest = history_view.data?.[history_view.data.length - 1] ?? data.find(elem => historyKey(elem) == key);
+    document.getElementById('history-title').textContent = latest ? entryTitle(latest) : key;
+    document.getElementById('history-share').href = window.location.href;
+}
+
+function openHistory(key) {
+    setHistoryView(key);
+    updateHistory();
+    render();
+    window.scrollTo(0, 0);
+}
+
+document.getElementById('history-back').addEventListener('click', e => {
+    e.preventDefault();
+    setHistoryView(null);
+    updateHistory();
+    render();
+});
+
+document.getElementById('history-share').addEventListener('click', e => {
+    e.preventDefault();
+    const elem = e.currentTarget;
+    navigator.clipboard?.writeText(window.location.href).then(() => {
+        elem.textContent = '✓ Copied';
+        setTimeout(() => { elem.textContent = '🔗 Copy link'; }, 1500);
+    });
+});
+
+function render() {
+    document.body.classList.toggle('history-mode', history_view !== null);
+
+    let filtered_data;
+    let nothing_selected_elem = document.getElementById('nothing-selected');
+    nothing_selected_elem.textContent = 'Nothing selected';
+
+    if (history_view) {
+        renderHistoryBar();
+        filtered_data = history_view.data || [];
+        nothing_selected_elem.textContent = history_view.error ? `Cannot load the history: ${history_view.error}`
+            : !history_view.data ? 'Loading…' : history_view.data.length ? 'No results for this metric' : 'No results';
+    } else {
+        applyTopRowFilters();
+
+        filtered_data = data.filter(elem =>
+            selectors.system[elem.system] &&
+            selectors.machine[elem.machine] &&
+            selectors.cluster_size[elem.cluster_size] &&
+            elem.tags.filter(type => selectors.type[type]).length > 0 &&
+            ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
+            ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
+            ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
+            selectors.storage[elem.storage_class]
+            );
+    }
 
     /// Filter out entries that can't be ranked under the selected metric
     /// (see metricExcludes for the per-metric rules).
@@ -1433,7 +1600,6 @@ function render() {
         filtered_data = [...latest.values()];
     }
 
-    let nothing_selected_elem = document.getElementById('nothing-selected');
     if (filtered_data.length == 0) {
         nothing_selected_elem.style.display = 'block';
         [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'none');
@@ -1444,14 +1610,16 @@ function render() {
     nothing_selected_elem.style.display = 'none';
     [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'block');
 
-    if (selectors.metric == 'size') {
+    if (selectors.metric == 'size' && !history_view) {
         filtered_data = [...filtered_data, ...additional_data_size_points];
     }
 
     let [sorted_indices, baseline_data] = renderSummary(filtered_data);
     sorted_indices = sorted_indices.filter(idx => !filtered_data[idx].fake);
 
-    findPassiveSelectors(filtered_data);
+    if (!history_view) {
+        findPassiveSelectors(filtered_data);
+    }
 
     /// The small hint below column heading "Relative time (lower is better)"
     document.getElementById("scale_hint").textContent = 'Different colors on the bar chart represent the same values shown at different scales (1x, 10x, 100x zoom)';
@@ -1669,10 +1837,10 @@ function renderDetails(filtered_data, sorted_indices, baseline_data) {
     const header = sorted_indices.map(idx => () => {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
-        th.appendChild(document.createTextNode(selectors.metric == 'complexity' ? elem.system
-            : `${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+        th.appendChild(document.createTextNode((history_view ? `${elem.date}\n` : '') + (selectors.metric == 'complexity' ? elem.system
+            : `${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`)));
         th.className = 'th-entry';
-        th.dataset.system = elem.system;
+        th.dataset.system = history_view ? elem.source : elem.system;
         th.addEventListener('mouseover', () => highlightSystemTags(elem.system));
         th.addEventListener('mouseout', clearSystemTagsHighlight);
         return th;
@@ -1893,14 +2061,37 @@ function decodeState(state) {
     return decoded;
 }
 
+function historyState() {
+    return {selectors, history: history_view ? history_view.key : null};
+}
+
 function updateHistory() {
-    history.pushState(selectors, '',
-        window.location.pathname + (window.location.search || '') + '#' + encodeState(selectors));
+    history.pushState(historyState(), '',
+        window.location.pathname + (window.location.search || '') + '#' + encodeState(selectors)
+        + (history_view ? '&history=' + encodeURIComponent(history_view.key) : ''));
+}
+
+/// The selectors and the history view from the URL.
+function applyHash() {
+    if (!window.location.hash) { return; }
+    try {
+        const hash = decodeURIComponent(window.location.hash.substring(1));
+        selectors = {...selectors, ...decodeState(hash)};
+        setHistoryView(hash.split('&').map(kv => kv.split('=')).find(([k]) => k == 'history')?.[1]);
+    } catch {}
 }
 
 window.onpopstate = function(event) {
-    if (!event.state) { return; }
-    selectors = event.state;
+    if (event.state) {
+        /// The state used to be just the selectors.
+        const state = event.state.selectors ? event.state : {selectors: event.state, history: null};
+        selectors = state.selectors;
+        setHistoryView(state.history);
+    } else {
+        /// The URL was edited by hand.
+        applyHash();
+        history.replaceState(historyState(), '');
+    }
     if (!selectors.opensource) {
         selectors.opensource = {"yes": true, "no": false};
     }
@@ -1917,23 +2108,10 @@ window.onpopstate = function(event) {
     render();
 };
 
-if (window.location.hash) {
-    try {
-        selectors = decodeState(decodeURIComponent(window.location.hash.substring(1)));
-        if (!selectors.opensource) {
-            selectors.opensource = {"yes": true, "no": false};
-        }
-        if (!selectors.hardware) {
-            selectors.hardware = {"cpu": true, "gpu": false};
-        }
-        if (!selectors.tuned) {
-            selectors.tuned = {"no": true, "yes": false};
-        }
-        if (!selectors.storage) {
-            selectors.storage = {...default_storage};
-        }
-    } catch {}
-}
+applyHash();
+
+/// For the browser's back button to return to the initial view.
+history.replaceState(historyState(), '');
 
 updateSelectors();
 render();
