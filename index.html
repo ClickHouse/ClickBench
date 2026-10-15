@@ -283,6 +283,176 @@
             color: var(--link-hover-color);
         }
 
+        .history-link {
+            visibility: hidden;
+            margin-right: 0.3rem;
+        }
+
+        .history-link svg {
+            width: 1em;
+            height: 1em;
+            vertical-align: -0.125em;
+            fill: currentColor;
+        }
+
+        .summary-row:hover .history-link {
+            visibility: visible;
+        }
+
+        /* The chart of the history view replaces the summary table. The inline display style
+           of the .comparison elements is set in render(), hence !important. */
+        .history-mode #summary-table, body:not(.history-mode) #history-chart {
+            display: none !important;
+        }
+
+        /* Complexity is the same for every result of an entry. */
+        .history-mode #selector-metric-complexity {
+            display: none;
+        }
+
+        #history-chart {
+            padding-bottom: 1rem;
+        }
+
+        .chart-title {
+            font-weight: bold;
+            padding: 0 0 0.5rem 3rem;
+        }
+
+        .chart-area {
+            position: relative;
+            height: 20rem;
+            margin: 1.5rem 0 0 3rem;
+        }
+
+        .chart-plot {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+        }
+
+        .chart-grid {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: rgba(127, 127, 127, 0.2);
+        }
+
+        .chart-grid-baseline {
+            background: rgba(127, 127, 127, 0.6);
+        }
+
+        .chart-tick, .chart-date, .chart-value {
+            position: absolute;
+            font-family: monospace;
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+
+        .chart-tick {
+            right: calc(100% + 0.5rem);
+            transform: translateY(50%);
+            opacity: 0.7;
+        }
+
+        .chart-date {
+            top: calc(100% + 0.4rem);
+            opacity: 0.7;
+        }
+
+        .chart-value {
+            transform: translateY(-0.3rem);
+        }
+
+        .chart-plot {
+            cursor: crosshair;
+            user-select: none;
+            /* Horizontal dragging selects an interval instead of scrolling. */
+            touch-action: pan-y;
+        }
+
+        .chart-selection {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            background: rgba(127, 127, 127, 0.25);
+            pointer-events: none;
+        }
+
+        #history-range {
+            display: none;
+            margin-left: 0.5rem;
+        }
+
+        #history-range-text {
+            font-family: monospace;
+            margin-right: 0.25rem;
+        }
+
+        /* The column is the hit target of a bar, of its whole height. */
+        .chart-column {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+        }
+
+        .chart-bar {
+            position: absolute;
+            bottom: 0;
+        }
+
+        .chart-column:hover .chart-bar, .chart-column:focus .chart-bar {
+            filter: brightness(1.15);
+        }
+
+        .chart-column:focus {
+            outline: none;
+        }
+
+        #chart-tooltip {
+            position: fixed;
+            display: none;
+            pointer-events: none;
+            background-color: var(--tooltip-background-color);
+            color: var(--tooltip-text-color);
+            box-shadow: 0 0 1rem var(--shadow-color);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            z-index: 2;
+            white-space: nowrap;
+        }
+
+        #chart-tooltip .chart-tooltip-value {
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        #chart-tooltip .chart-tooltip-comment {
+            white-space: normal;
+            max-width: 20rem;
+            opacity: 0.8;
+        }
+
+        #history-bar {
+            display: none;
+            padding-top: 2rem;
+        }
+
+        #history-title {
+            margin: 0 0.5rem;
+        }
+
+        .history-mode #history-bar {
+            display: block;
+        }
+
+        /* Only the metric can be chosen in the history view - the rest of the selectors are for the list of systems. */
+        .history-mode .selectors-container tr:not(#selectors-metric-row) {
+            display: none;
+        }
+
         #details {
             padding-bottom: 1rem;
         }
@@ -415,7 +585,7 @@
             filter: brightness(125%);
         }
 
-        #scale_hint {
+        #scale_hint, .chart-scale-hint {
             font-weight: normal;
             font-size: 80%;
             filter: contrast(10%);
@@ -496,6 +666,16 @@ const additional_data_size_points = [
     <a href="https://github.com/ClickHouse/ClickBench/">Methodology</a> | <a href="https://github.com/ClickHouse/ClickBench/">Reproduce and Validate the Results</a> | <a href="https://github.com/ClickHouse/ClickBench/">Add a System</a> | <a href="https://benchmark.clickhouse.com/hardware/">Hardware Benchmark</a> | <a href="https://benchmark.clickhouse.com/versions/">Versions Benchmark</a> | See also: <a href="https://jsonbench.com/">JSONBench</a> | <a href="https://benchmark.clickhouse.com/playground/">🎈 Playground (new)</a>
 </div>
 
+<div id="history-bar" class="stick-left">
+    <a id="history-back" class="selector selector-active">← All systems</a>
+    History of<b id="history-title"></b>
+    <a id="history-share" class="selector" title="Copy the link to this page">🔗 Copy link</a>
+    <span id="history-range">
+        <span id="history-range-text"></span>
+        <a id="history-range-reset" class="selector">Show all dates</a>
+    </span>
+</div>
+
 <table class="selectors-container stick-left">
     <tr>
         <td colspan="2">
@@ -549,7 +729,7 @@ const additional_data_size_points = [
             <a id="select-all-cluster-sizes" class="selector selector-active">All</a>
         </td>
     </tr>
-    <tr>
+    <tr id="selectors-metric-row">
         <th>Metric: </th>
         <td id="selectors_run">
             <a class="selector" id="selector-metric-combined">Combined</a>
@@ -563,7 +743,7 @@ const additional_data_size_points = [
     </tr>
 </table>
 
-<table class="stick-left comparison">
+<table id="summary-table" class="stick-left comparison">
     <thead>
         <tr>
             <th class="summary-name">
@@ -578,6 +758,13 @@ const additional_data_size_points = [
     <tbody id="summary">
     </tbody>
 </table>
+
+<div id="history-chart" class="stick-left comparison">
+    <div class="chart-title"><span id="chart-title-text"></span><br/>
+        <span id="chart-scale-hint" class="chart-scale-hint"></span></div>
+    <div id="chart-area" class="chart-area"></div>
+</div>
+<div id="chart-tooltip"></div>
 
 <div id="nothing-selected" class="stick-left">Nothing selected</div>
 
@@ -1236,14 +1423,33 @@ function renderSummary(filtered_data) {
         document.getElementById('time-or-size').innerText = 'time and data size';
     }
 
-    const sorted_indices = [...summaries.keys()].sort((a, b) => summaries[a] - summaries[b]);
+    /// The history view is ordered by date: the chart from left to right, the details - the newest first.
+    const sorted_indices = [...summaries.keys()].sort(history_view
+        ? (a, b) => filtered_data[a].date.localeCompare(filtered_data[b].date) || filtered_data[a].source.localeCompare(filtered_data[b].source)
+        : (a, b) => summaries[a] - summaries[b]);
+
+    const shown_indices = sorted_indices.filter(idx => {
+        const elem = filtered_data[idx];
+        return !(selectors.metric == 'size' && elem.data_size === null)
+            && !(selectors.metric == 'load' && (!elem.load_time || elem.load_time < 5));
+    });
+
+    if (history_view) {
+        /// Concurrent QPS is shown as is, the higher the better, and the rest - as the relative values of the summary.
+        const qps = selectors.metric == 'qps';
+        renderHistoryChart(shown_indices.map(idx => {
+            const elem = filtered_data[idx];
+            return qps ? {elem, value: validQPS(elem), text: `${formatQPS(validQPS(elem))} QPS`}
+                : {elem, value: summaries[idx], text: summaryText(elem, summaries[idx])};
+        }), qps ? 'qps' : 'ratio');
+        return [[...sorted_indices].reverse(), baseline_data];
+    }
+
+    const state_hash = '#' + encodeState(selectors);
     const max_ratio = 10000;
 
-    sorted_indices.map(idx => {
+    shown_indices.map(idx => {
         const elem = filtered_data[idx];
-
-        if (selectors.metric == 'size' && elem.data_size === null) { return; }
-        if (selectors.metric == 'load' && (!elem.load_time || elem.load_time < 5)) { return; }
 
         let tr = document.createElement('tr');
         tr.className = 'summary-row';
@@ -1274,9 +1480,24 @@ function renderSummary(filtered_data) {
             });
             td_name.appendChild(remove);
 
+            const key = historyKey(elem);
+            let history_link = document.createElement('a');
+            history_link.className = 'history-link';
+            history_link.innerHTML = history_icon;
+            history_link.title = 'Show the history of the results of this system on this machine';
+            history_link.href = state_hash + '&history=' + encodeURIComponent(key);
+            history_link.addEventListener('click', e => {
+                /// Let the browser open the link in a new tab.
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.button != 0) { return; }
+                e.preventDefault();
+                openHistory(key);
+            });
+            td_name.appendChild(history_link);
+        }
+
+        if (!elem.fake) {
             let link = document.createElement('a');
-            link.appendChild(document.createTextNode(selectors.metric == 'complexity' ? elem.system
-                : `${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
+            link.appendChild(document.createTextNode(selectors.metric == 'complexity' ? elem.system : entryTitle(elem)));
             link.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + elem.source;
             link.style.color = `oklch(var(--hashed-link-lightness) 0.2018 ${nameToColor(elem.system.split(' ')[0])})`
             td_name.appendChild(link);
@@ -1293,13 +1514,7 @@ function renderSummary(filtered_data) {
         let td_number = document.createElement('td');
         td_number.className = 'summary-number';
 
-        const text = selectors.metric == 'load' ? (elem.load_time ? `${Math.round(elem.load_time)}s (×${ratio.toFixed(2)})` : 'stateless')
-            :  selectors.metric == 'size' ? `${(elem.data_size / 1024 / 1024 / 1024).toFixed(2)} GiB (×${ratio.toFixed(2)})`
-            :  selectors.metric == 'qps' ? `${formatQPS(elem.concurrent_qps)} QPS (×${ratio.toFixed(2)})`
-            :  selectors.metric == 'complexity' ? `${formatComplexity(elem.complexity)} (×${ratio.toFixed(2)})`
-            : `×${ratio.toFixed(2)}`;
-
-        td_number.appendChild(document.createTextNode(text));
+        td_number.appendChild(document.createTextNode(summaryText(elem, ratio)));
 
         let td_bar = document.createElement('td');
         td_bar.className = 'summary-bar-cell';
@@ -1307,17 +1522,7 @@ function renderSummary(filtered_data) {
         let bar = document.createElement('div');
 
         bar.className = `summary-bar`;
-        bar.style.background = `linear-gradient(to right,
-            var(--bar-color1) 0%,
-            var(--bar-color1) ${Math.min(100, percentage)}%,
-            var(--bar-color2) ${Math.min(100, percentage)}%,
-            var(--bar-color2) ${Math.min(100, percentage * 10)}%,
-            var(--bar-color3) ${Math.min(100, percentage * 10)}%,
-            var(--bar-color3) ${Math.min(100, percentage * 100)}%,
-            var(--bar-color4) ${Math.min(100, percentage * 100)}%,
-            var(--bar-color4) ${Math.min(100, percentage * 1000)}%,
-            transparent ${Math.min(100, percentage * 1000)}%,
-            transparent 100%)`;
+        bar.style.background = barGradient('to right', percentage, 100);
 
         td_bar.appendChild(bar);
 
@@ -1336,6 +1541,238 @@ function renderSummary(filtered_data) {
 
     return [sorted_indices, baseline_data];
 }
+
+function summaryText(elem, ratio) {
+    return selectors.metric == 'load' ? (elem.load_time ? `${Math.round(elem.load_time)}s (×${ratio.toFixed(2)})` : 'stateless')
+        :  selectors.metric == 'size' ? `${(elem.data_size / 1024 / 1024 / 1024).toFixed(2)} GiB (×${ratio.toFixed(2)})`
+        :  selectors.metric == 'qps' ? `${formatQPS(elem.concurrent_qps)} QPS (×${ratio.toFixed(2)})`
+        :  selectors.metric == 'complexity' ? `${formatComplexity(elem.complexity)} (×${ratio.toFixed(2)})`
+        : `×${ratio.toFixed(2)}`;
+}
+
+/// The same value at four scales, each next zoomed 10 times: `percentage` is the length of the first one,
+/// in percent of the full length of the bar. The bar can be cut at `length` percent of the full length,
+/// for the gradient to cover only the painted part.
+function barGradient(direction, percentage, length) {
+    const stop = zoom => Math.min(100, percentage * zoom) / length * 100;
+    return `linear-gradient(${direction},
+        var(--bar-color1) 0%,
+        var(--bar-color1) ${stop(1)}%,
+        var(--bar-color2) ${stop(1)}%,
+        var(--bar-color2) ${stop(10)}%,
+        var(--bar-color3) ${stop(10)}%,
+        var(--bar-color3) ${stop(100)}%,
+        var(--bar-color4) ${stop(100)}%,
+        var(--bar-color4) ${stop(1000)}%,
+        transparent ${stop(1000)}%,
+        transparent 100%)`;
+}
+
+/// The chart of the history view: a vertical bar for every result, in the style of the summary table, with the time
+/// from left to right. The bars are of the maximum width, unless they have to be narrower to fit into the page.
+/// The bars show relative values (`kind` is 'ratio'), or the concurrent QPS as is ('qps').
+/// The vertical scale is chosen for the largest bar to fit: for the relative values, out of a few round values,
+/// up to ×10, and a larger value is shown, as in the summary table, by the zoomed-out scales of the bar;
+/// for QPS, a round value of the form 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8 × 10^n.
+const chart_max_slot = 26;
+let chart_points = null;
+let chart_kind = 'ratio';
+
+function renderHistoryChart(points, kind) {
+    chart_points = points;
+    chart_kind = kind;
+    document.getElementById('chart-title-text').textContent = kind == 'qps' ? 'Concurrent QPS (higher is better).'
+        : `Relative ${document.getElementById('time-or-size').textContent} (lower is better).`;
+    layoutHistoryChart();
+}
+
+/// The top of the vertical scale and the step of the gridlines.
+function chartScale(max_value, kind) {
+    if (kind == 'qps') {
+        const power = Math.pow(10, Math.floor(Math.log10(max_value)));
+        /// With the number of gridlines for each, for the step to be round as well.
+        const [mantissa, divisions] = [[1, 5], [1.5, 3], [2, 4], [2.5, 5], [3, 3], [4, 4], [5, 5], [6, 3], [8, 4], [10, 5]]
+            .find(([m]) => m * power >= max_value * (1 - 1e-9));
+        return {top: mantissa * power, step: mantissa * power / divisions};
+    }
+    const top = [1.5, 2, 3, 5, 10].find(v => v >= max_value) ?? 10;
+    return {top, step: top <= 2 ? 0.5 : top <= 5 ? 1 : 2};
+}
+
+function layoutHistoryChart() {
+    const area = document.getElementById('chart-area');
+    clearElement(area);
+    const points = chart_points;
+    if (!points || !points.length || !history_view) { return; }
+
+    const plot = document.createElement('div');
+    plot.className = 'chart-plot';
+    area.appendChild(plot);
+
+    /// The vertical scale: the full height of the chart is this value.
+    const {top, step} = chartScale(Math.max(...points.map(p => p.value)), chart_kind);
+
+    for (let k = 0; k * step <= top * (1 + 1e-9); ++k) {
+        const v = k * step;
+        const grid = document.createElement('div');
+        grid.className = v == 0 ? 'chart-grid chart-grid-baseline' : 'chart-grid';
+        grid.style.bottom = `${v / top * 100}%`;
+        plot.appendChild(grid);
+
+        const tick = document.createElement('span');
+        tick.className = 'chart-tick';
+        tick.style.bottom = `${v / top * 100}%`;
+        tick.textContent = chart_kind == 'qps' ? `${+v.toPrecision(3)}` : `×${v}`;
+        plot.appendChild(tick);
+    }
+
+    /// At least a pixel per bar: if even that doesn't fit, the page scrolls horizontally.
+    const slot = Math.max(1, Math.min(chart_max_slot, area.clientWidth / points.length));
+    const gap = slot >= 6 ? 2 : slot >= 3 ? 1 : 0;
+    /// If the bars of the maximum width don't take the whole width, the chart is narrower.
+    const width = slot * points.length;
+    plot.style.width = `${width}px`;
+    /// The edges are at whole pixels, or there are seams between the narrow bars, without gaps.
+    const edge = i => Math.round(i * slot);
+
+    const tooltip = document.getElementById('chart-tooltip');
+    const showTooltip = (column, point) => {
+        clearElement(tooltip);
+        const add = (text, className) => {
+            const div = document.createElement('div');
+            div.className = className;
+            div.textContent = text;
+            tooltip.appendChild(div);
+        };
+        add(point.text, 'chart-tooltip-value');
+        add(point.elem.date, '');
+        if (point.elem.comment) { add(point.elem.comment, 'chart-tooltip-comment'); }
+        tooltip.style.display = 'block';
+
+        const rect = column.getBoundingClientRect();
+        const tooltip_rect = tooltip.getBoundingClientRect();
+        tooltip.style.left = `${Math.max(0, Math.min(window.innerWidth - tooltip_rect.width,
+            rect.left + rect.width / 2 - tooltip_rect.width / 2))}px`;
+        tooltip.style.top = `${Math.max(0, column.firstChild.getBoundingClientRect().top - tooltip_rect.height - 8)}px`;
+    };
+    const hideTooltip = () => { tooltip.style.display = 'none'; };
+
+    points.forEach((point, i) => {
+        /// A link to the result file, as the names in the summary table.
+        const column = document.createElement('a');
+        column.className = 'chart-column';
+        column.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + point.elem.source;
+        column.draggable = false;
+        column.style.left = `${edge(i)}px`;
+        column.style.width = `${edge(i + 1) - edge(i)}px`;
+        const bar_width = edge(i + 1) - edge(i) - gap;
+
+        const percentage = point.value / (top * 1000) * 100;
+        const height = Math.min(100, percentage * 1000);
+        const bar = document.createElement('div');
+        bar.className = 'chart-bar';
+        bar.style.left = `${gap / 2}px`;
+        bar.style.width = `${bar_width}px`;
+        bar.style.height = `${height}%`;
+        bar.style.background = barGradient('to top', percentage, height);
+        const radius = Math.min(4, bar_width / 4);
+        bar.style.borderRadius = `${radius}px ${radius}px 0 0`;
+        column.appendChild(bar);
+
+        column.addEventListener('mouseenter', () => { showTooltip(column, point); highlightSystem(point.elem.source); });
+        column.addEventListener('focus', () => { showTooltip(column, point); highlightSystem(point.elem.source); });
+        column.addEventListener('mouseleave', () => { hideTooltip(); clearSystemHighlight(); });
+        column.addEventListener('blur', () => { hideTooltip(); clearSystemHighlight(); });
+        plot.appendChild(column);
+    });
+
+    /// Dragging over the chart selects an interval of dates, which becomes the view. Before the pointer moves
+    /// a few pixels, it is a click, which opens the result file.
+    plot.addEventListener('pointerdown', e => {
+        if (e.button != 0) { return; }
+        const x0 = e.clientX;
+        const index = x => Math.max(0, Math.min(points.length - 1,
+            Math.floor((x - plot.getBoundingClientRect().left) / slot)));
+        const start = index(x0);
+        let selection = null;
+        let interval = null;
+
+        const move = e => {
+            if (!selection) {
+                if (Math.abs(e.clientX - x0) < 4) { return; }
+                selection = document.createElement('div');
+                selection.className = 'chart-selection';
+                plot.appendChild(selection);
+                plot.setPointerCapture(e.pointerId);
+                hideTooltip();
+            }
+            interval = [start, index(e.clientX)].sort((a, b) => a - b);
+            selection.style.left = `${edge(interval[0])}px`;
+            selection.style.width = `${edge(interval[1] + 1) - edge(interval[0])}px`;
+        };
+        const end = e => {
+            plot.removeEventListener('pointermove', move);
+            plot.removeEventListener('pointerup', end);
+            plot.removeEventListener('pointercancel', end);
+            if (!selection) { return; }
+            chart_suppress_click_until = Date.now() + 500;
+            if (e.type == 'pointercancel') {
+                selection.remove();
+                return;
+            }
+            setHistoryView(history_view.key, {from: points[interval[0]].elem.date, to: points[interval[1]].elem.date});
+            updateHistory();
+            render();
+        };
+        plot.addEventListener('pointermove', move);
+        plot.addEventListener('pointerup', end);
+        plot.addEventListener('pointercancel', end);
+    });
+
+    /// The value of the newest result, on its cap.
+    {
+        const point = points[points.length - 1];
+        const label = document.createElement('span');
+        label.className = 'chart-value';
+        label.textContent = point.text;
+        label.style.right = '0';
+        label.style.bottom = `${Math.min(100, point.value / top * 100)}%`;
+        plot.appendChild(label);
+    }
+
+    /// The dates under the bars, as many as fit, starting from the newest.
+    let probe = document.createElement('span');
+    probe.className = 'chart-date';
+    probe.textContent = '0000-00-00';
+    plot.appendChild(probe);
+    const label_width = probe.getBoundingClientRect().width;
+    probe.remove();
+
+    let free_until = Infinity;
+    for (let i = points.length - 1; i >= 0; --i) {
+        const center = (i + 0.5) * slot;
+        /// The labels at the edges are aligned to the edges, to stay within the chart.
+        const left = Math.min(width - label_width, Math.max(0, center - label_width / 2));
+        if (left + label_width > free_until) { continue; }
+        const label = document.createElement('span');
+        label.className = 'chart-date';
+        label.style.left = `${left}px`;
+        label.textContent = points[i].elem.date;
+        plot.appendChild(label);
+        free_until = left - label_width / 2;
+    }
+}
+
+window.addEventListener('resize', () => { if (history_view) { layoutHistoryChart(); } });
+
+/// The click after the end of a drag is not a click on the bar.
+let chart_suppress_click_until = 0;
+document.getElementById('chart-area').addEventListener('click', e => {
+    if (Date.now() < chart_suppress_click_until) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+}, {capture: true});
 
 function colorize(elem, ratio) {
     let [r, g, b] = [0, 0, 0];
@@ -1405,19 +1842,146 @@ function scheduleDetails(f) {
 
 document.addEventListener('scroll', renderPendingDetails, {capture: true, passive: true});
 
-function render() {
-    applyTopRowFilters();
+/// The history view shows all the results of a single entry instead of the list of systems, the newest first.
+/// An entry is a pair of the directory and the name of the result file: its history are the files
+/// <directory>/results/<date>/<name> in the repository. They are loaded from the table on play.clickhouse.com,
+/// which has all the result files (see upload-history.py). The view is a part of the URL:
+/// #<selectors>&history=<directory>/<name>.
+const history_url = 'https://play.clickhouse.com/?user=play';
+const history_query = `SELECT source, system, date, machine, cluster_size, proprietary, hardware, tuned, tags, comment,
+    load_time, data_size, concurrent_qps, concurrent_error_ratio, result
+FROM clickbench.results
+WHERE directory = {directory:String} AND name = {name:String} AND error = ''
+ORDER BY file_date FORMAT JSON`;
 
-    let filtered_data = data.filter(elem =>
-        selectors.system[elem.system] &&
-        selectors.machine[elem.machine] &&
-        selectors.cluster_size[elem.cluster_size] &&
-        elem.tags.filter(type => selectors.type[type]).length > 0 &&
-        ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
-        ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
-        ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
-        selectors.storage[elem.storage_class]
-        );
+/// null for the list of systems, or {key, data, error, range}, where data is null until it is loaded,
+/// and range is null or the interval of dates {from, to} selected on the chart, inclusive.
+let history_view = null;
+
+const history_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>';
+
+function historyKey(elem) {
+    const path = elem.source.split('/');
+    return `${path[0]}/${path[path.length - 1]}`;
+}
+
+function setHistoryView(key, range = null) {
+    if (!key) {
+        history_view = null;
+        return;
+    }
+    if (history_view && history_view.key == key) {
+        history_view.range = range;
+        return;
+    }
+
+    const view = {key, data: null, error: null, range};
+    history_view = view;
+
+    const [directory, name] = key.split('/');
+    /// The complexity is computed only for the current state of the repository, see generate-results.sh.
+    const complexity = data.find(elem => elem.source.split('/')[0] == directory)?.complexity ?? null;
+
+    fetch(`${history_url}&${new URLSearchParams({param_directory: directory, param_name: name})}`,
+        {method: 'POST', body: history_query})
+        .then(async response => {
+            const text = await response.text();
+            if (!response.ok) { throw new Error(text.trim()); }
+            return JSON.parse(text);
+        })
+        .then(result => {
+            /// The rows are the entries as in data.generated.js, but with the failed runs being the only ones skipped.
+            view.data = result.data.filter(elem => elem.result.length).map(elem => {
+                /// A number, or a name for some of the cloud services, but always a string in the table.
+                if (/^[0-9]+$/.test(elem.cluster_size)) { elem.cluster_size = Number(elem.cluster_size); }
+                /// 64-bit integers are quoted in JSON in older versions of ClickHouse.
+                if (elem.data_size !== null) { elem.data_size = Number(elem.data_size); }
+                elem.complexity = complexity;
+                elem.storage_class = storageOf(elem);
+                return elem;
+            });
+        })
+        .catch(e => { view.error = e.message || String(e); })
+        .finally(() => { if (history_view === view) { render(); } });
+}
+
+function entryTitle(elem) {
+    return `${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`;
+}
+
+function renderHistoryBar() {
+    const key = history_view.key;
+    const latest = history_view.data?.[history_view.data.length - 1] ?? data.find(elem => historyKey(elem) == key);
+    document.getElementById('history-title').textContent = latest ? entryTitle(latest) : key;
+    document.getElementById('history-share').href = window.location.href;
+
+    const range = history_view.range;
+    document.getElementById('history-range').style.display = range ? 'inline' : 'none';
+    document.getElementById('history-range-text').textContent = range ? `${range.from} — ${range.to}` : '';
+}
+
+document.getElementById('history-range-reset').addEventListener('click', e => {
+    e.preventDefault();
+    setHistoryView(history_view.key);
+    updateHistory();
+    render();
+});
+
+function openHistory(key) {
+    setHistoryView(key);
+    updateHistory();
+    render();
+    window.scrollTo(0, 0);
+}
+
+document.getElementById('history-back').addEventListener('click', e => {
+    e.preventDefault();
+    setHistoryView(null);
+    updateHistory();
+    render();
+});
+
+document.getElementById('history-share').addEventListener('click', e => {
+    e.preventDefault();
+    const elem = e.currentTarget;
+    navigator.clipboard?.writeText(window.location.href).then(() => {
+        elem.textContent = '✓ Copied';
+        setTimeout(() => { elem.textContent = '🔗 Copy link'; }, 1500);
+    });
+});
+
+function render() {
+    document.body.classList.toggle('history-mode', history_view !== null);
+
+    let filtered_data;
+    let nothing_selected_elem = document.getElementById('nothing-selected');
+    nothing_selected_elem.textContent = 'Nothing selected';
+
+    if (history_view) {
+        /// Complexity is the same for every result of an entry.
+        if (selectors.metric == 'complexity') {
+            selectors.metric = 'combined';
+            updateSelectors();
+        }
+        renderHistoryBar();
+        const range = history_view.range;
+        filtered_data = (history_view.data || []).filter(elem => !range || (elem.date >= range.from && elem.date <= range.to));
+        nothing_selected_elem.textContent = history_view.error ? `Cannot load the history: ${history_view.error}`
+            : !history_view.data ? 'Loading…' : history_view.data.length ? 'No results for this metric' : 'No results';
+    } else {
+        applyTopRowFilters();
+
+        filtered_data = data.filter(elem =>
+            selectors.system[elem.system] &&
+            selectors.machine[elem.machine] &&
+            selectors.cluster_size[elem.cluster_size] &&
+            elem.tags.filter(type => selectors.type[type]).length > 0 &&
+            ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
+            ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
+            ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
+            selectors.storage[elem.storage_class]
+            );
+    }
 
     /// Filter out entries that can't be ranked under the selected metric
     /// (see metricExcludes for the per-metric rules).
@@ -1433,7 +1997,6 @@ function render() {
         filtered_data = [...latest.values()];
     }
 
-    let nothing_selected_elem = document.getElementById('nothing-selected');
     if (filtered_data.length == 0) {
         nothing_selected_elem.style.display = 'block';
         [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'none');
@@ -1444,17 +2007,21 @@ function render() {
     nothing_selected_elem.style.display = 'none';
     [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'block');
 
-    if (selectors.metric == 'size') {
+    if (selectors.metric == 'size' && !history_view) {
         filtered_data = [...filtered_data, ...additional_data_size_points];
     }
 
     let [sorted_indices, baseline_data] = renderSummary(filtered_data);
     sorted_indices = sorted_indices.filter(idx => !filtered_data[idx].fake);
 
-    findPassiveSelectors(filtered_data);
+    if (!history_view) {
+        findPassiveSelectors(filtered_data);
+    }
 
     /// The small hint below column heading "Relative time (lower is better)"
     document.getElementById("scale_hint").textContent = 'Different colors on the bar chart represent the same values shown at different scales (1x, 10x, 100x zoom)';
+    document.getElementById("chart-scale-hint").textContent = document.getElementById("scale_hint").textContent
+        + '. Drag over the chart to select an interval';
 
     scheduleDetails(() => renderDetails(filtered_data, sorted_indices, baseline_data));
 }
@@ -1669,10 +2236,11 @@ function renderDetails(filtered_data, sorted_indices, baseline_data) {
     const header = sorted_indices.map(idx => () => {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
-        th.appendChild(document.createTextNode(selectors.metric == 'complexity' ? elem.system
+        /// The history view is of a single system and machine, named above.
+        th.appendChild(document.createTextNode(history_view ? elem.date : selectors.metric == 'complexity' ? elem.system
             : `${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
         th.className = 'th-entry';
-        th.dataset.system = elem.system;
+        th.dataset.system = history_view ? elem.source : elem.system;
         th.addEventListener('mouseover', () => highlightSystemTags(elem.system));
         th.addEventListener('mouseout', clearSystemTagsHighlight);
         return th;
@@ -1741,8 +2309,8 @@ function renderDetails(filtered_data, sorted_indices, baseline_data) {
         details_body.appendChild(tr);
     }
 
-    /// Complexity, if any of the systems has it
-    if (filtered_data.some(elem => !metricExcludes(elem, 'complexity'))) {
+    /// Complexity, if any of the systems has it. Not in the history view, as it is the same for all the results.
+    if (!history_view && filtered_data.some(elem => !metricExcludes(elem, 'complexity'))) {
         let tr = document.createElement('tr');
         tr.className = 'shadow';
 
@@ -1893,14 +2461,39 @@ function decodeState(state) {
     return decoded;
 }
 
+function historyState() {
+    return {selectors, history: history_view ? history_view.key : null, range: history_view ? history_view.range : null};
+}
+
 function updateHistory() {
-    history.pushState(selectors, '',
-        window.location.pathname + (window.location.search || '') + '#' + encodeState(selectors));
+    history.pushState(historyState(), '',
+        window.location.pathname + (window.location.search || '') + '#' + encodeState(selectors)
+        + (history_view ? '&history=' + encodeURIComponent(history_view.key) : '')
+        + (history_view?.range ? `&from=${history_view.range.from}&to=${history_view.range.to}` : ''));
+}
+
+/// The selectors and the history view from the URL.
+function applyHash() {
+    if (!window.location.hash) { return; }
+    try {
+        const hash = decodeURIComponent(window.location.hash.substring(1));
+        selectors = {...selectors, ...decodeState(hash)};
+        const params = Object.fromEntries(hash.split('&').map(kv => kv.split('=')));
+        setHistoryView(params.history, params.from && params.to ? {from: params.from, to: params.to} : null);
+    } catch {}
 }
 
 window.onpopstate = function(event) {
-    if (!event.state) { return; }
-    selectors = event.state;
+    if (event.state) {
+        /// The state used to be just the selectors.
+        const state = event.state.selectors ? event.state : {selectors: event.state, history: null};
+        selectors = state.selectors;
+        setHistoryView(state.history, state.range);
+    } else {
+        /// The URL was edited by hand.
+        applyHash();
+        history.replaceState(historyState(), '');
+    }
     if (!selectors.opensource) {
         selectors.opensource = {"yes": true, "no": false};
     }
@@ -1917,23 +2510,10 @@ window.onpopstate = function(event) {
     render();
 };
 
-if (window.location.hash) {
-    try {
-        selectors = decodeState(decodeURIComponent(window.location.hash.substring(1)));
-        if (!selectors.opensource) {
-            selectors.opensource = {"yes": true, "no": false};
-        }
-        if (!selectors.hardware) {
-            selectors.hardware = {"cpu": true, "gpu": false};
-        }
-        if (!selectors.tuned) {
-            selectors.tuned = {"no": true, "yes": false};
-        }
-        if (!selectors.storage) {
-            selectors.storage = {...default_storage};
-        }
-    } catch {}
-}
+applyHash();
+
+/// For the browser's back button to return to the initial view.
+history.replaceState(historyState(), '');
 
 updateSelectors();
 render();

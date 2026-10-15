@@ -1,0 +1,46 @@
+name: "Upload results history"
+
+# Replaces the table clickbench.results on play.clickhouse.com with the
+# content of all the result files, for the history view of the website
+# (see upload-history.py and prepare-database.sql).
+#
+# Most results land on main through automation authenticated with
+# GITHUB_TOKEN (the auto-merged `auto-results/*` PRs and the daily ClickHouse
+# Cloud commit), and GitHub does not emit workflow-triggering events for those,
+# so the `push` trigger only fires for human pushes. The schedule picks up the
+# rest, shortly after the results are collected (collect-results.yml runs at
+# 7 and 37 minutes past the hour). A run without changes in the results only
+# compares a fingerprint with the table and does nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Upload even if the table is up to date'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '17,47 * * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - '*/results/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upload-history
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - env:
+          CLICKBENCH_UPLOAD_PASSWORD: ${{ secrets.CLICKBENCH_UPLOAD_PASSWORD }}
+          FORCE: ${{ inputs.force && '1' || '' }}
+        run: python3 upload-history.py

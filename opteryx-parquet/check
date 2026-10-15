@@ -1,0 +1,12 @@
+#!/bin/bash
+# Succeeds only while the server is up and serving a real opteryx-core install.
+# Must FAIL when the server is down: with BENCH_RESTARTABLE=yes the driver waits
+# for that before dropping caches for each cold try.
+#
+# Runs no query — the driver calls this before every cold try, and executing
+# anything here would warm the engine ahead of the measurement. The version
+# shape is asserted instead of a literal so this needs no edit per release.
+set -e
+
+version=$(curl -sf http://127.0.0.1:8421/health)
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]
