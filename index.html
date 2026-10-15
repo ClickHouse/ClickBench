@@ -366,6 +366,31 @@
             transform: translateY(-0.3rem);
         }
 
+        .chart-plot {
+            cursor: crosshair;
+            user-select: none;
+            /* Horizontal dragging selects an interval instead of scrolling. */
+            touch-action: pan-y;
+        }
+
+        .chart-selection {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            background: rgba(127, 127, 127, 0.25);
+            pointer-events: none;
+        }
+
+        #history-range {
+            display: none;
+            margin-left: 0.5rem;
+        }
+
+        #history-range-text {
+            font-family: monospace;
+            margin-right: 0.25rem;
+        }
+
         /* The column is the hit target of a bar, of its whole height. */
         .chart-column {
             position: absolute;
@@ -645,6 +670,10 @@ const additional_data_size_points = [
     <a id="history-back" class="selector selector-active">← All systems</a>
     History of<b id="history-title"></b>
     <a id="history-share" class="selector" title="Copy the link to this page">🔗 Copy link</a>
+    <span id="history-range">
+        <span id="history-range-text"></span>
+        <a id="history-range-reset" class="selector">Show all dates</a>
+    </span>
 </div>
 
 <table class="selectors-container stick-left">
@@ -1610,6 +1639,7 @@ function layoutHistoryChart() {
         const column = document.createElement('a');
         column.className = 'chart-column';
         column.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + point.elem.source;
+        column.draggable = false;
         column.style.left = `${edge(i)}px`;
         column.style.width = `${edge(i + 1) - edge(i)}px`;
         const bar_width = edge(i + 1) - edge(i) - gap;
@@ -1631,6 +1661,49 @@ function layoutHistoryChart() {
         column.addEventListener('mouseleave', () => { hideTooltip(); clearSystemHighlight(); });
         column.addEventListener('blur', () => { hideTooltip(); clearSystemHighlight(); });
         plot.appendChild(column);
+    });
+
+    /// Dragging over the chart selects an interval of dates, which becomes the view. Before the pointer moves
+    /// a few pixels, it is a click, which opens the result file.
+    plot.addEventListener('pointerdown', e => {
+        if (e.button != 0) { return; }
+        const x0 = e.clientX;
+        const index = x => Math.max(0, Math.min(points.length - 1,
+            Math.floor((x - plot.getBoundingClientRect().left) / slot)));
+        const start = index(x0);
+        let selection = null;
+        let interval = null;
+
+        const move = e => {
+            if (!selection) {
+                if (Math.abs(e.clientX - x0) < 4) { return; }
+                selection = document.createElement('div');
+                selection.className = 'chart-selection';
+                plot.appendChild(selection);
+                plot.setPointerCapture(e.pointerId);
+                hideTooltip();
+            }
+            interval = [start, index(e.clientX)].sort((a, b) => a - b);
+            selection.style.left = `${edge(interval[0])}px`;
+            selection.style.width = `${edge(interval[1] + 1) - edge(interval[0])}px`;
+        };
+        const end = e => {
+            plot.removeEventListener('pointermove', move);
+            plot.removeEventListener('pointerup', end);
+            plot.removeEventListener('pointercancel', end);
+            if (!selection) { return; }
+            chart_suppress_click_until = Date.now() + 500;
+            if (e.type == 'pointercancel') {
+                selection.remove();
+                return;
+            }
+            setHistoryView(history_view.key, {from: points[interval[0]].elem.date, to: points[interval[1]].elem.date});
+            updateHistory();
+            render();
+        };
+        plot.addEventListener('pointermove', move);
+        plot.addEventListener('pointerup', end);
+        plot.addEventListener('pointercancel', end);
     });
 
     /// The value of the newest result, on its cap.
@@ -1668,6 +1741,15 @@ function layoutHistoryChart() {
 }
 
 window.addEventListener('resize', () => { if (history_view) { layoutHistoryChart(); } });
+
+/// The click after the end of a drag is not a click on the bar.
+let chart_suppress_click_until = 0;
+document.getElementById('chart-area').addEventListener('click', e => {
+    if (Date.now() < chart_suppress_click_until) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+}, {capture: true});
 
 function colorize(elem, ratio) {
     let [r, g, b] = [0, 0, 0];
@@ -1749,7 +1831,8 @@ FROM clickbench.results
 WHERE directory = {directory:String} AND name = {name:String} AND error = ''
 ORDER BY file_date FORMAT JSON`;
 
-/// null for the list of systems, or {key, data, error}, where data is null until it is loaded.
+/// null for the list of systems, or {key, data, error, range}, where data is null until it is loaded,
+/// and range is null or the interval of dates {from, to} selected on the chart, inclusive.
 let history_view = null;
 
 const history_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>';
@@ -1759,14 +1842,17 @@ function historyKey(elem) {
     return `${path[0]}/${path[path.length - 1]}`;
 }
 
-function setHistoryView(key) {
+function setHistoryView(key, range = null) {
     if (!key) {
         history_view = null;
         return;
     }
-    if (history_view && history_view.key == key) { return; }
+    if (history_view && history_view.key == key) {
+        history_view.range = range;
+        return;
+    }
 
-    const view = {key, data: null, error: null};
+    const view = {key, data: null, error: null, range};
     history_view = view;
 
     const [directory, name] = key.split('/');
@@ -1805,7 +1891,18 @@ function renderHistoryBar() {
     const latest = history_view.data?.[history_view.data.length - 1] ?? data.find(elem => historyKey(elem) == key);
     document.getElementById('history-title').textContent = latest ? entryTitle(latest) : key;
     document.getElementById('history-share').href = window.location.href;
+
+    const range = history_view.range;
+    document.getElementById('history-range').style.display = range ? 'inline' : 'none';
+    document.getElementById('history-range-text').textContent = range ? `${range.from} — ${range.to}` : '';
 }
+
+document.getElementById('history-range-reset').addEventListener('click', e => {
+    e.preventDefault();
+    setHistoryView(history_view.key);
+    updateHistory();
+    render();
+});
 
 function openHistory(key) {
     setHistoryView(key);
@@ -1844,7 +1941,8 @@ function render() {
             updateSelectors();
         }
         renderHistoryBar();
-        filtered_data = history_view.data || [];
+        const range = history_view.range;
+        filtered_data = (history_view.data || []).filter(elem => !range || (elem.date >= range.from && elem.date <= range.to));
         nothing_selected_elem.textContent = history_view.error ? `Cannot load the history: ${history_view.error}`
             : !history_view.data ? 'Loading…' : history_view.data.length ? 'No results for this metric' : 'No results';
     } else {
@@ -1899,7 +1997,8 @@ function render() {
 
     /// The small hint below column heading "Relative time (lower is better)"
     document.getElementById("scale_hint").textContent = 'Different colors on the bar chart represent the same values shown at different scales (1x, 10x, 100x zoom)';
-    document.getElementById("chart-scale-hint").textContent = document.getElementById("scale_hint").textContent;
+    document.getElementById("chart-scale-hint").textContent = document.getElementById("scale_hint").textContent
+        + '. Drag over the chart to select an interval';
 
     scheduleDetails(() => renderDetails(filtered_data, sorted_indices, baseline_data));
 }
@@ -2340,13 +2439,14 @@ function decodeState(state) {
 }
 
 function historyState() {
-    return {selectors, history: history_view ? history_view.key : null};
+    return {selectors, history: history_view ? history_view.key : null, range: history_view ? history_view.range : null};
 }
 
 function updateHistory() {
     history.pushState(historyState(), '',
         window.location.pathname + (window.location.search || '') + '#' + encodeState(selectors)
-        + (history_view ? '&history=' + encodeURIComponent(history_view.key) : ''));
+        + (history_view ? '&history=' + encodeURIComponent(history_view.key) : '')
+        + (history_view?.range ? `&from=${history_view.range.from}&to=${history_view.range.to}` : ''));
 }
 
 /// The selectors and the history view from the URL.
@@ -2355,7 +2455,8 @@ function applyHash() {
     try {
         const hash = decodeURIComponent(window.location.hash.substring(1));
         selectors = {...selectors, ...decodeState(hash)};
-        setHistoryView(hash.split('&').map(kv => kv.split('=')).find(([k]) => k == 'history')?.[1]);
+        const params = Object.fromEntries(hash.split('&').map(kv => kv.split('=')));
+        setHistoryView(params.history, params.from && params.to ? {from: params.from, to: params.to} : null);
     } catch {}
 }
 
@@ -2364,7 +2465,7 @@ window.onpopstate = function(event) {
         /// The state used to be just the selectors.
         const state = event.state.selectors ? event.state : {selectors: event.state, history: null};
         selectors = state.selectors;
-        setHistoryView(state.history);
+        setHistoryView(state.history, state.range);
     } else {
         /// The URL was edited by hand.
         applyHash();
