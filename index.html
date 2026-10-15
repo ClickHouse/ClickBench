@@ -760,7 +760,7 @@ const additional_data_size_points = [
 </table>
 
 <div id="history-chart" class="stick-left comparison">
-    <div class="chart-title">Relative <span id="chart-time-or-size">time</span> (lower is better).<br/>
+    <div class="chart-title"><span id="chart-title-text"></span><br/>
         <span id="chart-scale-hint" class="chart-scale-hint"></span></div>
     <div id="chart-area" class="chart-area"></div>
 </div>
@@ -1435,7 +1435,13 @@ function renderSummary(filtered_data) {
     });
 
     if (history_view) {
-        renderHistoryChart(shown_indices.map(idx => ({elem: filtered_data[idx], ratio: summaries[idx]})));
+        /// Concurrent QPS is shown as is, the higher the better, and the rest - as the relative values of the summary.
+        const qps = selectors.metric == 'qps';
+        renderHistoryChart(shown_indices.map(idx => {
+            const elem = filtered_data[idx];
+            return qps ? {elem, value: validQPS(elem), text: `${formatQPS(validQPS(elem))} QPS`}
+                : {elem, value: summaries[idx], text: summaryText(elem, summaries[idx])};
+        }), qps ? 'qps' : 'ratio');
         return [[...sorted_indices].reverse(), baseline_data];
     }
 
@@ -1564,15 +1570,33 @@ function barGradient(direction, percentage, length) {
 
 /// The chart of the history view: a vertical bar for every result, in the style of the summary table, with the time
 /// from left to right. The bars are of the maximum width, unless they have to be narrower to fit into the page.
-/// The vertical scale is chosen for the largest bar to fit, out of a few round values, up to ×10;
-/// a larger value is shown, as in the summary table, by the zoomed-out scales of the bar.
+/// The bars show relative values (`kind` is 'ratio'), or the concurrent QPS as is ('qps').
+/// The vertical scale is chosen for the largest bar to fit: for the relative values, out of a few round values,
+/// up to ×10, and a larger value is shown, as in the summary table, by the zoomed-out scales of the bar;
+/// for QPS, a round value of the form 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8 × 10^n.
 const chart_max_slot = 26;
 let chart_points = null;
+let chart_kind = 'ratio';
 
-function renderHistoryChart(points) {
+function renderHistoryChart(points, kind) {
     chart_points = points;
-    document.getElementById('chart-time-or-size').textContent = document.getElementById('time-or-size').textContent;
+    chart_kind = kind;
+    document.getElementById('chart-title-text').textContent = kind == 'qps' ? 'Concurrent QPS (higher is better).'
+        : `Relative ${document.getElementById('time-or-size').textContent} (lower is better).`;
     layoutHistoryChart();
+}
+
+/// The top of the vertical scale and the step of the gridlines.
+function chartScale(max_value, kind) {
+    if (kind == 'qps') {
+        const power = Math.pow(10, Math.floor(Math.log10(max_value)));
+        /// With the number of gridlines for each, for the step to be round as well.
+        const [mantissa, divisions] = [[1, 5], [1.5, 3], [2, 4], [2.5, 5], [3, 3], [4, 4], [5, 5], [6, 3], [8, 4], [10, 5]]
+            .find(([m]) => m * power >= max_value * (1 - 1e-9));
+        return {top: mantissa * power, step: mantissa * power / divisions};
+    }
+    const top = [1.5, 2, 3, 5, 10].find(v => v >= max_value) ?? 10;
+    return {top, step: top <= 2 ? 0.5 : top <= 5 ? 1 : 2};
 }
 
 function layoutHistoryChart() {
@@ -1586,11 +1610,10 @@ function layoutHistoryChart() {
     area.appendChild(plot);
 
     /// The vertical scale: the full height of the chart is this value.
-    const max_value = Math.max(...points.map(p => p.ratio));
-    const top = [1.5, 2, 3, 5, 10].find(v => v >= max_value) ?? 10;
-    const step = top <= 2 ? 0.5 : top <= 5 ? 1 : 2;
+    const {top, step} = chartScale(Math.max(...points.map(p => p.value)), chart_kind);
 
-    for (let v = 0; v <= top + 1e-9; v += step) {
+    for (let k = 0; k * step <= top * (1 + 1e-9); ++k) {
+        const v = k * step;
         const grid = document.createElement('div');
         grid.className = v == 0 ? 'chart-grid chart-grid-baseline' : 'chart-grid';
         grid.style.bottom = `${v / top * 100}%`;
@@ -1599,7 +1622,7 @@ function layoutHistoryChart() {
         const tick = document.createElement('span');
         tick.className = 'chart-tick';
         tick.style.bottom = `${v / top * 100}%`;
-        tick.textContent = `×${v}`;
+        tick.textContent = chart_kind == 'qps' ? `${+v.toPrecision(3)}` : `×${v}`;
         plot.appendChild(tick);
     }
 
@@ -1621,7 +1644,7 @@ function layoutHistoryChart() {
             div.textContent = text;
             tooltip.appendChild(div);
         };
-        add(summaryText(point.elem, point.ratio), 'chart-tooltip-value');
+        add(point.text, 'chart-tooltip-value');
         add(point.elem.date, '');
         if (point.elem.comment) { add(point.elem.comment, 'chart-tooltip-comment'); }
         tooltip.style.display = 'block';
@@ -1644,7 +1667,7 @@ function layoutHistoryChart() {
         column.style.width = `${edge(i + 1) - edge(i)}px`;
         const bar_width = edge(i + 1) - edge(i) - gap;
 
-        const percentage = point.ratio / (top * 1000) * 100;
+        const percentage = point.value / (top * 1000) * 100;
         const height = Math.min(100, percentage * 1000);
         const bar = document.createElement('div');
         bar.className = 'chart-bar';
@@ -1711,9 +1734,9 @@ function layoutHistoryChart() {
         const point = points[points.length - 1];
         const label = document.createElement('span');
         label.className = 'chart-value';
-        label.textContent = summaryText(point.elem, point.ratio);
+        label.textContent = point.text;
         label.style.right = '0';
-        label.style.bottom = `${Math.min(100, point.ratio / top * 100)}%`;
+        label.style.bottom = `${Math.min(100, point.value / top * 100)}%`;
         plot.appendChild(label);
     }
 
