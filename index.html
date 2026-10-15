@@ -299,6 +299,117 @@
             visibility: visible;
         }
 
+        /* The chart of the history view replaces the summary table. The inline display style
+           of the .comparison elements is set in render(), hence !important. */
+        .history-mode #summary-table, body:not(.history-mode) #history-chart {
+            display: none !important;
+        }
+
+        /* Complexity is the same for every result of an entry. */
+        .history-mode #selector-metric-complexity {
+            display: none;
+        }
+
+        #history-chart {
+            padding-bottom: 1rem;
+        }
+
+        .chart-title {
+            font-weight: bold;
+            padding: 0 0 0.5rem 3rem;
+        }
+
+        .chart-area {
+            position: relative;
+            height: 20rem;
+            margin: 1.5rem 0 0 3rem;
+        }
+
+        .chart-plot {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+        }
+
+        .chart-grid {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: rgba(127, 127, 127, 0.2);
+        }
+
+        .chart-grid-baseline {
+            background: rgba(127, 127, 127, 0.6);
+        }
+
+        .chart-tick, .chart-date, .chart-value {
+            position: absolute;
+            font-family: monospace;
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+
+        .chart-tick {
+            right: calc(100% + 0.5rem);
+            transform: translateY(50%);
+            opacity: 0.7;
+        }
+
+        .chart-date {
+            top: calc(100% + 0.4rem);
+            opacity: 0.7;
+        }
+
+        .chart-value {
+            transform: translateY(-0.3rem);
+        }
+
+        /* The column is the hit target of a bar, of its whole height. */
+        .chart-column {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+        }
+
+        .chart-bar {
+            position: absolute;
+            bottom: 0;
+        }
+
+        .chart-column:hover .chart-bar, .chart-column:focus .chart-bar {
+            filter: brightness(1.15);
+        }
+
+        .chart-column:focus {
+            outline: none;
+        }
+
+        #chart-tooltip {
+            position: fixed;
+            display: none;
+            pointer-events: none;
+            background-color: var(--tooltip-background-color);
+            color: var(--tooltip-text-color);
+            box-shadow: 0 0 1rem var(--shadow-color);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            z-index: 2;
+            white-space: nowrap;
+        }
+
+        #chart-tooltip .chart-tooltip-value {
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        #chart-tooltip .chart-tooltip-comment {
+            white-space: normal;
+            max-width: 20rem;
+            opacity: 0.8;
+        }
+
         #history-bar {
             display: none;
             padding-top: 2rem;
@@ -449,7 +560,7 @@
             filter: brightness(125%);
         }
 
-        #scale_hint {
+        #scale_hint, .chart-scale-hint {
             font-weight: normal;
             font-size: 80%;
             filter: contrast(10%);
@@ -603,7 +714,7 @@ const additional_data_size_points = [
     </tr>
 </table>
 
-<table class="stick-left comparison">
+<table id="summary-table" class="stick-left comparison">
     <thead>
         <tr>
             <th class="summary-name">
@@ -618,6 +729,13 @@ const additional_data_size_points = [
     <tbody id="summary">
     </tbody>
 </table>
+
+<div id="history-chart" class="stick-left comparison">
+    <div class="chart-title">Relative <span id="chart-time-or-size">time</span> (lower is better).<br/>
+        <span id="chart-scale-hint" class="chart-scale-hint"></span></div>
+    <div id="chart-area" class="chart-area"></div>
+</div>
+<div id="chart-tooltip"></div>
 
 <div id="nothing-selected" class="stick-left">Nothing selected</div>
 
@@ -1276,33 +1394,39 @@ function renderSummary(filtered_data) {
         document.getElementById('time-or-size').innerText = 'time and data size';
     }
 
-    /// The history view is ordered by date, the newest first.
+    /// The history view is ordered by date, from left to right, both on the chart and in the details.
     const sorted_indices = [...summaries.keys()].sort(history_view
-        ? (a, b) => filtered_data[b].date.localeCompare(filtered_data[a].date) || filtered_data[b].source.localeCompare(filtered_data[a].source)
+        ? (a, b) => filtered_data[a].date.localeCompare(filtered_data[b].date) || filtered_data[a].source.localeCompare(filtered_data[b].source)
         : (a, b) => summaries[a] - summaries[b]);
 
-    /// Every row of the history view is the same system, so the rows are highlighted by the result file.
-    const highlight_key = elem => history_view ? elem.source : elem.system;
-    const state_hash = history_view ? null : '#' + encodeState(selectors);
+    const shown_indices = sorted_indices.filter(idx => {
+        const elem = filtered_data[idx];
+        return !(selectors.metric == 'size' && elem.data_size === null)
+            && !(selectors.metric == 'load' && (!elem.load_time || elem.load_time < 5));
+    });
+
+    if (history_view) {
+        renderHistoryChart(shown_indices.map(idx => ({elem: filtered_data[idx], ratio: summaries[idx]})));
+        return [sorted_indices, baseline_data];
+    }
+
+    const state_hash = '#' + encodeState(selectors);
     const max_ratio = 10000;
 
-    sorted_indices.map(idx => {
+    shown_indices.map(idx => {
         const elem = filtered_data[idx];
-
-        if (selectors.metric == 'size' && elem.data_size === null) { return; }
-        if (selectors.metric == 'load' && (!elem.load_time || elem.load_time < 5)) { return; }
 
         let tr = document.createElement('tr');
         tr.className = 'summary-row';
 
-        tr.dataset.system = highlight_key(elem);
-        tr.addEventListener('mouseover', () => highlightSystem(highlight_key(elem)));
+        tr.dataset.system = elem.system;
+        tr.addEventListener('mouseover', () => highlightSystem(elem.system));
         tr.addEventListener('mouseout', clearSystemHighlight);
 
         let td_name = document.createElement('td');
         td_name.className = 'summary-name';
 
-        if (!elem.fake && !history_view) {
+        if (!elem.fake) {
             let remove = document.createElement('span');
             remove.className = 'remove-system';
             remove.textContent = '✕';
@@ -1355,13 +1479,7 @@ function renderSummary(filtered_data) {
         let td_number = document.createElement('td');
         td_number.className = 'summary-number';
 
-        const text = selectors.metric == 'load' ? (elem.load_time ? `${Math.round(elem.load_time)}s (×${ratio.toFixed(2)})` : 'stateless')
-            :  selectors.metric == 'size' ? `${(elem.data_size / 1024 / 1024 / 1024).toFixed(2)} GiB (×${ratio.toFixed(2)})`
-            :  selectors.metric == 'qps' ? `${formatQPS(elem.concurrent_qps)} QPS (×${ratio.toFixed(2)})`
-            :  selectors.metric == 'complexity' ? `${formatComplexity(elem.complexity)} (×${ratio.toFixed(2)})`
-            : `×${ratio.toFixed(2)}`;
-
-        td_number.appendChild(document.createTextNode(text));
+        td_number.appendChild(document.createTextNode(summaryText(elem, ratio)));
 
         let td_bar = document.createElement('td');
         td_bar.className = 'summary-bar-cell';
@@ -1369,17 +1487,7 @@ function renderSummary(filtered_data) {
         let bar = document.createElement('div');
 
         bar.className = `summary-bar`;
-        bar.style.background = `linear-gradient(to right,
-            var(--bar-color1) 0%,
-            var(--bar-color1) ${Math.min(100, percentage)}%,
-            var(--bar-color2) ${Math.min(100, percentage)}%,
-            var(--bar-color2) ${Math.min(100, percentage * 10)}%,
-            var(--bar-color3) ${Math.min(100, percentage * 10)}%,
-            var(--bar-color3) ${Math.min(100, percentage * 100)}%,
-            var(--bar-color4) ${Math.min(100, percentage * 100)}%,
-            var(--bar-color4) ${Math.min(100, percentage * 1000)}%,
-            transparent ${Math.min(100, percentage * 1000)}%,
-            transparent 100%)`;
+        bar.style.background = barGradient('to right', percentage, 100);
 
         td_bar.appendChild(bar);
 
@@ -1398,6 +1506,168 @@ function renderSummary(filtered_data) {
 
     return [sorted_indices, baseline_data];
 }
+
+function summaryText(elem, ratio) {
+    return selectors.metric == 'load' ? (elem.load_time ? `${Math.round(elem.load_time)}s (×${ratio.toFixed(2)})` : 'stateless')
+        :  selectors.metric == 'size' ? `${(elem.data_size / 1024 / 1024 / 1024).toFixed(2)} GiB (×${ratio.toFixed(2)})`
+        :  selectors.metric == 'qps' ? `${formatQPS(elem.concurrent_qps)} QPS (×${ratio.toFixed(2)})`
+        :  selectors.metric == 'complexity' ? `${formatComplexity(elem.complexity)} (×${ratio.toFixed(2)})`
+        : `×${ratio.toFixed(2)}`;
+}
+
+/// The same value at four scales, each next zoomed 10 times: `percentage` is the length of the first one,
+/// in percent of the full length of the bar. The bar can be cut at `length` percent of the full length,
+/// for the gradient to cover only the painted part.
+function barGradient(direction, percentage, length) {
+    const stop = zoom => Math.min(100, percentage * zoom) / length * 100;
+    return `linear-gradient(${direction},
+        var(--bar-color1) 0%,
+        var(--bar-color1) ${stop(1)}%,
+        var(--bar-color2) ${stop(1)}%,
+        var(--bar-color2) ${stop(10)}%,
+        var(--bar-color3) ${stop(10)}%,
+        var(--bar-color3) ${stop(100)}%,
+        var(--bar-color4) ${stop(100)}%,
+        var(--bar-color4) ${stop(1000)}%,
+        transparent ${stop(1000)}%,
+        transparent 100%)`;
+}
+
+/// The chart of the history view: a vertical bar for every result, in the style of the summary table, with the time
+/// from left to right. The bars are of the maximum width, unless they have to be narrower to fit into the page.
+/// The vertical scale is chosen for the largest bar to fit, out of a few round values, up to ×10;
+/// a larger value is shown, as in the summary table, by the zoomed-out scales of the bar.
+const chart_max_slot = 26;
+let chart_points = null;
+
+function renderHistoryChart(points) {
+    chart_points = points;
+    document.getElementById('chart-time-or-size').textContent = document.getElementById('time-or-size').textContent;
+    layoutHistoryChart();
+}
+
+function layoutHistoryChart() {
+    const area = document.getElementById('chart-area');
+    clearElement(area);
+    const points = chart_points;
+    if (!points || !points.length || !history_view) { return; }
+
+    const plot = document.createElement('div');
+    plot.className = 'chart-plot';
+    area.appendChild(plot);
+
+    /// The vertical scale: the full height of the chart is this value.
+    const max_value = Math.max(...points.map(p => p.ratio));
+    const top = [1.5, 2, 3, 5, 10].find(v => v >= max_value) ?? 10;
+    const step = top <= 2 ? 0.5 : top <= 5 ? 1 : 2;
+
+    for (let v = 0; v <= top + 1e-9; v += step) {
+        const grid = document.createElement('div');
+        grid.className = v == 0 ? 'chart-grid chart-grid-baseline' : 'chart-grid';
+        grid.style.bottom = `${v / top * 100}%`;
+        plot.appendChild(grid);
+
+        const tick = document.createElement('span');
+        tick.className = 'chart-tick';
+        tick.style.bottom = `${v / top * 100}%`;
+        tick.textContent = `×${v}`;
+        plot.appendChild(tick);
+    }
+
+    /// At least a pixel per bar: if even that doesn't fit, the page scrolls horizontally.
+    const slot = Math.max(1, Math.min(chart_max_slot, area.clientWidth / points.length));
+    const gap = slot >= 6 ? 2 : slot >= 3 ? 1 : 0;
+    /// If the bars of the maximum width don't take the whole width, the chart is narrower.
+    const width = slot * points.length;
+    plot.style.width = `${width}px`;
+    /// The edges are at whole pixels, or there are seams between the narrow bars, without gaps.
+    const edge = i => Math.round(i * slot);
+
+    const tooltip = document.getElementById('chart-tooltip');
+    const showTooltip = (column, point) => {
+        clearElement(tooltip);
+        const add = (text, className) => {
+            const div = document.createElement('div');
+            div.className = className;
+            div.textContent = text;
+            tooltip.appendChild(div);
+        };
+        add(summaryText(point.elem, point.ratio), 'chart-tooltip-value');
+        add(point.elem.date, '');
+        if (point.elem.comment) { add(point.elem.comment, 'chart-tooltip-comment'); }
+        tooltip.style.display = 'block';
+
+        const rect = column.getBoundingClientRect();
+        const tooltip_rect = tooltip.getBoundingClientRect();
+        tooltip.style.left = `${Math.max(0, Math.min(window.innerWidth - tooltip_rect.width,
+            rect.left + rect.width / 2 - tooltip_rect.width / 2))}px`;
+        tooltip.style.top = `${Math.max(0, column.firstChild.getBoundingClientRect().top - tooltip_rect.height - 8)}px`;
+    };
+    const hideTooltip = () => { tooltip.style.display = 'none'; };
+
+    points.forEach((point, i) => {
+        /// A link to the result file, as the names in the summary table.
+        const column = document.createElement('a');
+        column.className = 'chart-column';
+        column.href = "https://github.com/ClickHouse/ClickBench/blob/main/" + point.elem.source;
+        column.style.left = `${edge(i)}px`;
+        column.style.width = `${edge(i + 1) - edge(i)}px`;
+        const bar_width = edge(i + 1) - edge(i) - gap;
+
+        const percentage = point.ratio / (top * 1000) * 100;
+        const height = Math.min(100, percentage * 1000);
+        const bar = document.createElement('div');
+        bar.className = 'chart-bar';
+        bar.style.left = `${gap / 2}px`;
+        bar.style.width = `${bar_width}px`;
+        bar.style.height = `${height}%`;
+        bar.style.background = barGradient('to top', percentage, height);
+        const radius = Math.min(4, bar_width / 4);
+        bar.style.borderRadius = `${radius}px ${radius}px 0 0`;
+        column.appendChild(bar);
+
+        column.addEventListener('mouseenter', () => { showTooltip(column, point); highlightSystem(point.elem.source); });
+        column.addEventListener('focus', () => { showTooltip(column, point); highlightSystem(point.elem.source); });
+        column.addEventListener('mouseleave', () => { hideTooltip(); clearSystemHighlight(); });
+        column.addEventListener('blur', () => { hideTooltip(); clearSystemHighlight(); });
+        plot.appendChild(column);
+    });
+
+    /// The value of the newest result, on its cap.
+    {
+        const point = points[points.length - 1];
+        const label = document.createElement('span');
+        label.className = 'chart-value';
+        label.textContent = summaryText(point.elem, point.ratio);
+        label.style.right = '0';
+        label.style.bottom = `${Math.min(100, point.ratio / top * 100)}%`;
+        plot.appendChild(label);
+    }
+
+    /// The dates under the bars, as many as fit, starting from the newest.
+    let probe = document.createElement('span');
+    probe.className = 'chart-date';
+    probe.textContent = '0000-00-00';
+    plot.appendChild(probe);
+    const label_width = probe.getBoundingClientRect().width;
+    probe.remove();
+
+    let free_until = Infinity;
+    for (let i = points.length - 1; i >= 0; --i) {
+        const center = (i + 0.5) * slot;
+        /// The labels at the edges are aligned to the edges, to stay within the chart.
+        const left = Math.min(width - label_width, Math.max(0, center - label_width / 2));
+        if (left + label_width > free_until) { continue; }
+        const label = document.createElement('span');
+        label.className = 'chart-date';
+        label.style.left = `${left}px`;
+        label.textContent = points[i].elem.date;
+        plot.appendChild(label);
+        free_until = left - label_width / 2;
+    }
+}
+
+window.addEventListener('resize', () => { if (history_view) { layoutHistoryChart(); } });
 
 function colorize(elem, ratio) {
     let [r, g, b] = [0, 0, 0];
@@ -1568,6 +1838,11 @@ function render() {
     nothing_selected_elem.textContent = 'Nothing selected';
 
     if (history_view) {
+        /// Complexity is the same for every result of an entry.
+        if (selectors.metric == 'complexity') {
+            selectors.metric = 'combined';
+            updateSelectors();
+        }
         renderHistoryBar();
         filtered_data = history_view.data || [];
         nothing_selected_elem.textContent = history_view.error ? `Cannot load the history: ${history_view.error}`
@@ -1624,6 +1899,7 @@ function render() {
 
     /// The small hint below column heading "Relative time (lower is better)"
     document.getElementById("scale_hint").textContent = 'Different colors on the bar chart represent the same values shown at different scales (1x, 10x, 100x zoom)';
+    document.getElementById("chart-scale-hint").textContent = document.getElementById("scale_hint").textContent;
 
     scheduleDetails(() => renderDetails(filtered_data, sorted_indices, baseline_data));
 }
@@ -1838,8 +2114,9 @@ function renderDetails(filtered_data, sorted_indices, baseline_data) {
     const header = sorted_indices.map(idx => () => {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
-        th.appendChild(document.createTextNode((history_view ? `${elem.date}\n` : '') + (selectors.metric == 'complexity' ? elem.system
-            : `${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`)));
+        /// The history view is of a single system and machine, named above.
+        th.appendChild(document.createTextNode(history_view ? elem.date : selectors.metric == 'complexity' ? elem.system
+            : `${elem.system}\n(${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`));
         th.className = 'th-entry';
         th.dataset.system = history_view ? elem.source : elem.system;
         th.addEventListener('mouseover', () => highlightSystemTags(elem.system));
@@ -1910,8 +2187,8 @@ function renderDetails(filtered_data, sorted_indices, baseline_data) {
         details_body.appendChild(tr);
     }
 
-    /// Complexity, if any of the systems has it
-    if (filtered_data.some(elem => !metricExcludes(elem, 'complexity'))) {
+    /// Complexity, if any of the systems has it. Not in the history view, as it is the same for all the results.
+    if (!history_view && filtered_data.some(elem => !metricExcludes(elem, 'complexity'))) {
         let tr = document.createElement('tr');
         tr.className = 'shadow';
 
