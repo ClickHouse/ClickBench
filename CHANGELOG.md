@@ -2,6 +2,9 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-10-15
+Add a history view. Clicking on any entry on the diagram will show the report of its historical results. The dataset is also available in the [public ClickHouse database](https://play.clickhouse.com/play?tab=ClickBench#U0VMRUNUICogRlJPTSBjbGlja2JlbmNoLnJlc3VsdHMgV0hFUkUgc3lzdGVtID0gJ0NsaWNrSG91c2UnIEFORCBtYWNoaW5lID0gJ2M2YS5tZXRhbCc=). (Alexey Milovidov)
+
 ### 2026-10-09
 Added a new metric, "Complexity". It shows how much code is needed to run the benchmark for a system: the size of the zstd-compressed concatenation of all scripts and configs in the system's directory (`install`, `load`, `start`, `stop`, `query`, and the Python, Expect, and other scripts they invoke), with comments, blank lines, and redundant whitespace removed. Queries, table definitions, documentation, and the common runner in `lib/` are not counted. Cloud services and systems without the `install` script are excluded, as their setup is not scripted. The metric does not depend on the machine, so each system is shown once. It is not included in the Combined score. (Alexey Milovidov)
 
