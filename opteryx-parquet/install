@@ -1,0 +1,46 @@
+#!/bin/bash
+set -e
+
+# Opteryx (PyPI package: opteryx-core) on stock CPython 3.14.
+#
+# NOT the free-threaded build. Opteryx abandoned the free-threaded-Python
+# experiment in June 2026; the engine's parallelism target is native (C++)
+# threads under a released GIL, so the GIL build is the supported and the
+# representative configuration. opteryx-core stopped publishing cp314t wheels
+# after 0.9.16 accordingly -- installing onto a 3.14t interpreter would fall
+# through to the sdist and try to build Rust/C++ on the box.
+#
+# opteryx-core publishes cp314 x86_64 manylinux wheels and declares no runtime
+# dependencies, so this is a single binary-wheel download -- no on-box
+# compilation and no toolchain. x86_64 only, which is fine: the canonical
+# c6a.4xlarge is x86_64.
+
+sudo apt-get update -y
+sudo apt-get install -y software-properties-common
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt-get update -y
+
+# Ubuntu 24.04 (noble) ships 3.12; 3.14 comes from deadsnakes, which carries
+# python3.14 for noble. python3.14-venv provides the venv module.
+sudo apt-get install -y python3.14 python3.14-venv git wget
+
+if [ ! -d "$HOME/opteryx_venv" ]; then
+    python3.14 -m venv "$HOME/opteryx_venv"
+fi
+
+"$HOME/opteryx_venv/bin/python" -m pip install --upgrade pip
+# Pinned so a published result is reproducible against a named release.
+OPTERYX_VERSION=0.9.167
+"$HOME/opteryx_venv/bin/python" -m pip install "opteryx-core==${OPTERYX_VERSION}"
+
+# Fail loudly here rather than 43 queries later if pip silently fell back to a
+# source build or resolved an interpreter we did not expect.
+"$HOME/opteryx_venv/bin/python" - "$OPTERYX_VERSION" <<'PY'
+import sys
+
+import opteryx
+
+print(f"python  {sys.version.split()[0]}  (GIL enabled: {sys._is_gil_enabled()})")
+print(f"opteryx-core {opteryx.__version__}")
+assert opteryx.__version__ == sys.argv[1], f"expected opteryx-core {sys.argv[1]}, got {opteryx.__version__}"
+PY

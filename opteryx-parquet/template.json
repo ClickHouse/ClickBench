@@ -1,0 +1,12 @@
+{
+  "system": "Opteryx",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "stateless",
+    "column-oriented",
+    "embedded"
+  ]
+}
