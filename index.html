@@ -1394,7 +1394,7 @@ function renderSummary(filtered_data) {
         document.getElementById('time-or-size').innerText = 'time and data size';
     }
 
-    /// The history view is ordered by date, from left to right, both on the chart and in the details.
+    /// The history view is ordered by date: the chart from left to right, the details - the newest first.
     const sorted_indices = [...summaries.keys()].sort(history_view
         ? (a, b) => filtered_data[a].date.localeCompare(filtered_data[b].date) || filtered_data[a].source.localeCompare(filtered_data[b].source)
         : (a, b) => summaries[a] - summaries[b]);
@@ -1407,7 +1407,7 @@ function renderSummary(filtered_data) {
 
     if (history_view) {
         renderHistoryChart(shown_indices.map(idx => ({elem: filtered_data[idx], ratio: summaries[idx]})));
-        return [sorted_indices, baseline_data];
+        return [[...sorted_indices].reverse(), baseline_data];
     }
 
     const state_hash = '#' + encodeState(selectors);
