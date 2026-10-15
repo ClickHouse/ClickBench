@@ -15,8 +15,8 @@ export BENCH_DURABLE=yes
 # oversubscribe it. Skip by default.
 export BENCH_CONCURRENT_DURATION="${BENCH_CONCURRENT_DURATION:-0}"
 
-# infino tuning (cache dir + budget, superfile segment size). Shared with the
-# raw load/start scripts so the playground gets the same config.
+# infino tuning (cache dir + budget). Shared with the raw load/start scripts so
+# the playground gets the same config.
 . "$(dirname "$0")/config.sh"
 
 exec ../lib/benchmark-common.sh
