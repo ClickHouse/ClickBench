@@ -449,7 +449,12 @@
         }
 
         /* Only the metric can be chosen in the history view - the rest of the selectors are for the list of systems. */
-        .history-mode .selectors-container tr:not(#selectors-metric-row) {
+        .history-mode .selectors-container tr:not(#selectors-metric-row):not(#selectors-history-machine-row) {
+            display: none;
+        }
+
+        /* The other machines of the system are chosen only in the history view. */
+        body:not(.history-mode) #selectors-history-machine-row {
             display: none;
         }
 
@@ -728,6 +733,10 @@ const additional_data_size_points = [
         <td id="selectors_cluster_size">
             <a id="select-all-cluster-sizes" class="selector selector-active">All</a>
         </td>
+    </tr>
+    <tr id="selectors-history-machine-row">
+        <th>Machine: </th>
+        <td id="selectors_history_machine"></td>
     </tr>
     <tr id="selectors-metric-row">
         <th>Metric: </th>
@@ -1854,14 +1863,59 @@ function setHistoryView(key, range = null) {
         .finally(() => { if (history_view === view) { render(); } });
 }
 
+function machineTitle(elem) {
+    return `${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine}`;
+}
+
 function entryTitle(elem) {
-    return `${elem.system} (${Number.isInteger(elem.cluster_size) && elem.cluster_size > 1 ? elem.cluster_size + '×': ''}${elem.machine})`;
+    return `${elem.system} (${machineTitle(elem)})`;
+}
+
+/// The selector of the other machines of the same system (in the same directory), to switch the history view to them.
+function renderHistoryMachines(latest) {
+    const directory = history_view.key.split('/')[0];
+    const entries = data.filter(elem => elem.source.split('/')[0] == directory && (!latest || elem.system == latest.system));
+    if (!entries.some(elem => historyKey(elem) == history_view.key)) {
+        if (latest) { entries.push({...latest, source: history_view.key}); }
+    }
+
+    const row = document.getElementById('selectors-history-machine-row');
+    const td = document.getElementById('selectors_history_machine');
+    td.replaceChildren();
+    row.style.visibility = entries.length > 1 ? 'visible' : 'collapse';
+
+    /// The same machine can be in different result files, e.g., of the older and the newer runs, then they are told apart by the date.
+    const counts = {};
+    for (const elem of entries) { counts[machineTitle(elem)] = (counts[machineTitle(elem)] || 0) + 1; }
+    const items = entries.map(elem => ({key: historyKey(elem), cluster_size: Number.isInteger(elem.cluster_size) ? elem.cluster_size : 1,
+        machine: elem.machine, title: machineTitle(elem) + (counts[machineTitle(elem)] > 1 ? ` (${elem.date})` : '')}));
+    items.sort((a, b) => a.cluster_size - b.cluster_size || a.machine.localeCompare(b.machine, undefined, {numeric: true})
+        || a.title.localeCompare(b.title));
+
+    const state_hash = '#' + encodeState(selectors);
+    for (const item of items) {
+        const link = document.createElement('a');
+        link.className = item.key == history_view.key ? 'selector selector-active' : 'selector';
+        link.textContent = item.title;
+        link.href = state_hash + '&history=' + encodeURIComponent(item.key);
+        link.addEventListener('click', e => {
+            /// Let the browser open the link in a new tab.
+            if (e.ctrlKey || e.metaKey || e.shiftKey || e.button != 0) { return; }
+            e.preventDefault();
+            if (item.key == history_view.key) { return; }
+            setHistoryView(item.key);
+            updateHistory();
+            render();
+        });
+        td.appendChild(link);
+    }
 }
 
 function renderHistoryBar() {
     const key = history_view.key;
     const latest = history_view.data?.[history_view.data.length - 1] ?? data.find(elem => historyKey(elem) == key);
     document.getElementById('history-title').textContent = latest ? entryTitle(latest) : key;
+    renderHistoryMachines(latest);
     document.getElementById('history-share').href = window.location.href;
 
     const range = history_view.range;
