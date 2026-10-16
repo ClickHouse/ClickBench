@@ -867,11 +867,22 @@ function clearSystemHighlight() {
     clearSystemTagsHighlight();
 }
 
+/// A click flips a single toggle, while a right click or Ctrl/Cmd + click selects only this toggle in its group.
 function toggle(e, elem, selectors_map) {
-    selectors_map[elem] = !selectors_map[elem];
-    e.target.className = selectors_map[elem] ? 'selector selector-active' : 'selector';
+    if (e.type == 'contextmenu' || e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        Object.keys(selectors_map).forEach(k => { selectors_map[k] = k == String(elem) });
+    } else {
+        selectors_map[elem] = !selectors_map[elem];
+    }
+    updateSelectors();
     render();
     updateHistory();
+}
+
+function addToggleListener(selector, elem, selectors_map) {
+    selector.addEventListener('click', e => toggle(e, elem, selectors_map));
+    selector.addEventListener('contextmenu', e => toggle(e, elem, selectors_map));
 }
 
 function toggleAll(e, selectors_map) {
@@ -890,7 +901,7 @@ unique_systems.map(elem => {
     selector.appendChild(document.createTextNode(elem));
     systems.appendChild(selector);
     selectors.system[elem] = data.some(entry => entry.system == elem && !entry.hide);
-    selector.addEventListener('click', e => toggle(e, elem, selectors.system));
+    addToggleListener(selector, elem, selectors.system);
 
     /// Highlighting summary rows and table columns on hovering over the system selector.
     selector.addEventListener('mouseover', () => highlightSystem(elem));
@@ -911,7 +922,7 @@ data.forEach(d => {
     selector.appendChild(document.createTextNode(elem));
     types.appendChild(selector);
     selectors.type[elem] = true;
-    selector.addEventListener('click', e => toggle(e, elem, selectors.type));
+    addToggleListener(selector, elem, selectors.type);
 
     /// Highlighting summary rows and detail columns on hovering over a tag.
     selector.addEventListener('mouseover', () => {
@@ -1033,7 +1044,7 @@ const aws_machine_regexp = /^[a-z]+[0-9]+[a-z]*\.[0-9a-z-]+$/;
     selector.appendChild(document.createTextNode(elem));
     machines.appendChild(selector);
     selectors.machine[elem] = selected;
-    selector.addEventListener('click', e => toggle(e, elem, selectors.machine));
+    addToggleListener(selector, elem, selectors.machine);
 });
 
 [... new Set(data.map(elem => elem.cluster_size))].sort(
@@ -1043,87 +1054,18 @@ const aws_machine_regexp = /^[a-z]+[0-9]+[a-z]*\.[0-9a-z-]+$/;
     selector.appendChild(document.createTextNode(elem));
     cluster_sizes.appendChild(selector);
     selectors.cluster_size[elem] = true;
-    selector.addEventListener('click', e => toggle(e, elem, selectors.cluster_size));
+    addToggleListener(selector, elem, selectors.cluster_size);
 });
 
-document.getElementById('selector-opensource-yes').addEventListener('click', e => {
-    selectors.opensource.yes = !selectors.opensource.yes;
-    if (selectors.opensource.yes) {
-        e.target.classList.add('selector-active');
-    } else {
-        e.target.classList.remove('selector-active');
-    }
-    render();
-    updateHistory();
-});
+addToggleListener(document.getElementById('selector-opensource-yes'), 'yes', selectors.opensource);
+addToggleListener(document.getElementById('selector-opensource-no'), 'no', selectors.opensource);
+addToggleListener(document.getElementById('selector-hardware-cpu'), 'cpu', selectors.hardware);
+addToggleListener(document.getElementById('selector-hardware-gpu'), 'gpu', selectors.hardware);
+addToggleListener(document.getElementById('selector-tuned-yes'), 'yes', selectors.tuned);
+addToggleListener(document.getElementById('selector-tuned-no'), 'no', selectors.tuned);
 
-document.getElementById('selector-opensource-no').addEventListener('click', e => {
-    selectors.opensource.no = !selectors.opensource.no;
-    if (selectors.opensource.no) {
-        e.target.classList.add('selector-active');
-    } else {
-        e.target.classList.remove('selector-active');
-    }
-    render();
-    updateHistory();
-});
-
-document.getElementById('selector-hardware-cpu').addEventListener('click', e => {
-    selectors.hardware.cpu = !selectors.hardware.cpu;
-    if (selectors.hardware.cpu) {
-        e.target.classList.add('selector-active');
-    } else {
-        e.target.classList.remove('selector-active');
-    }
-    render();
-    updateHistory();
-});
-
-document.getElementById('selector-hardware-gpu').addEventListener('click', e => {
-    selectors.hardware.gpu = !selectors.hardware.gpu;
-    if (selectors.hardware.gpu) {
-        e.target.classList.add('selector-active');
-    } else {
-        e.target.classList.remove('selector-active');
-    }
-    render();
-    updateHistory();
-});
-
-document.getElementById('selector-tuned-yes').addEventListener('click', e => {
-    selectors.tuned.yes = !selectors.tuned.yes;
-    if (selectors.tuned.yes) {
-        e.target.classList.add('selector-active');
-    } else {
-        e.target.classList.remove('selector-active');
-    }
-    render();
-    updateHistory();
-});
-
-document.getElementById('selector-tuned-no').addEventListener('click', e => {
-    selectors.tuned.no = !selectors.tuned.no;
-    if (selectors.tuned.no) {
-        e.target.classList.add('selector-active');
-    } else {
-        e.target.classList.remove('selector-active');
-    }
-    render();
-    updateHistory();
-});
-
-Object.keys(default_storage).forEach(key => {
-    document.getElementById('selector-storage-' + key).addEventListener('click', e => {
-        selectors.storage[key] = !selectors.storage[key];
-        if (selectors.storage[key]) {
-            e.target.classList.add('selector-active');
-        } else {
-            e.target.classList.remove('selector-active');
-        }
-        render();
-        updateHistory();
-    });
-});
+Object.keys(default_storage).forEach(key =>
+    addToggleListener(document.getElementById('selector-storage-' + key), key, selectors.storage));
 
 document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
 document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
@@ -1144,11 +1086,18 @@ document.getElementById('selector-metric-complexity').addEventListener('click', 
 
 selectors.queries = [...data[0].result.keys()].map(k => true);
 
+/// Keeps the hover highlighting of the element intact, and skips the "All" toggle.
+function setSelectorActive(elem, active) {
+    if (elem.tagName !== 'A' || elem.id.startsWith('select-all-')) return;
+    elem.classList.remove('selector-passive');
+    elem.classList.toggle('selector-active', !!active);
+}
+
 function updateSelectors() {
-    [...systems.childNodes].map(elem => { elem.className = selectors.system[elem.textContent] ? 'selector selector-active' : 'selector' });
-    [...types.childNodes].map(elem => { elem.className = selectors.type[elem.textContent] ? 'selector selector-active' : 'selector' });
-    [...machines.childNodes].map(elem => { elem.className = selectors.machine[elem.textContent] ? 'selector selector-active' : 'selector' });
-    [...cluster_sizes.childNodes].map(elem => { elem.className = selectors.cluster_size[elem.textContent] ? 'selector selector-active' : 'selector' });
+    [...systems.childNodes].map(elem => { setSelectorActive(elem, selectors.system[elem.textContent]) });
+    [...types.childNodes].map(elem => { setSelectorActive(elem, selectors.type[elem.textContent]) });
+    [...machines.childNodes].map(elem => { setSelectorActive(elem, selectors.machine[elem.textContent]) });
+    [...cluster_sizes.childNodes].map(elem => { setSelectorActive(elem, selectors.cluster_size[elem.textContent]) });
 
     [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
         elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
