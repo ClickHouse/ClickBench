@@ -1,0 +1,7 @@
+#!/bin/bash
+# Frigatebird splits persistent state across the column data files in
+# ./storage and the write-ahead log in ./wal_files. Both must be included to
+# reflect on-disk footprint.
+set -e
+
+du -sb storage wal_files 2>/dev/null | awk '{ sum += $1 } END { print sum }'

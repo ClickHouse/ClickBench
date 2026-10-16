@@ -1,0 +1,28 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via frigatebird against the local
+# storage/ directory.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (from `time`).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+# bash builtin `time` with TIMEFORMAT='%R' prints a single fractional seconds
+# value on stderr. We capture frigatebird output and error separately so the
+# timing ends up cleanly on the last stderr line.
+TIMEFORMAT='%R'
+{ time WALRUS_QUIET=1 frigatebird -c "$query" 1>/tmp/frigatebird.out.$$ 2>/tmp/frigatebird.err.$$; } 2>/tmp/frigatebird.time.$$ || status=$?
+status=${status:-0}
+
+cat /tmp/frigatebird.out.$$
+if [ "$status" -ne 0 ]; then
+    cat /tmp/frigatebird.err.$$ >&2
+    rm -f /tmp/frigatebird.out.$$ /tmp/frigatebird.err.$$ /tmp/frigatebird.time.$$
+    exit "$status"
+fi
+
+cat /tmp/frigatebird.err.$$ >&2
+cat /tmp/frigatebird.time.$$ >&2
+
+rm -f /tmp/frigatebird.out.$$ /tmp/frigatebird.err.$$ /tmp/frigatebird.time.$$
