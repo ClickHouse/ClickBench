@@ -40,4 +40,9 @@ fi
 
 ./run.sh
 
+# Concurrent QPS: the same test as `bench_concurrent_qps` in lib/benchmark-common.sh,
+# with a lighter client (see concurrent-qps.py). The service is not restarted.
+FQDN="$FQDN" PASSWORD="$PASSWORD" ./concurrent-qps.py queries.sql
+
+# The data size must be the last line of the output (see collect-results.sh).
 clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "SELECT total_bytes FROM system.tables WHERE name = 'hits' AND database = 'default'"
