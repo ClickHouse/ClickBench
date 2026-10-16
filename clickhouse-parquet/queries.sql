@@ -41,3 +41,18 @@ SELECT TraficSourceID, SearchEngineID, AdvEngineID, CASE WHEN (SearchEngineID = 
 SELECT URLHash, EventDate, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND TraficSourceID IN (-1, 6) AND RefererHash = 3594120000172545465 GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 10 OFFSET 100;
 SELECT WindowClientWidth, WindowClientHeight, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND DontCountHits = 0 AND URLHash = 2868770270353813622 GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10 OFFSET 10000;
 SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;
+SELECT UserID, RANK() OVER (ORDER BY EventTime) AS r FROM hits ORDER BY r DESC LIMIT 10;
+SELECT * FROM hits ORDER BY ClientIP, EventTime LIMIT 100;
+SELECT CounterID, avg(length(Referer)) AS l FROM hits WHERE Referer <> '' GROUP BY CounterID HAVING count() > 100000 ORDER BY l DESC LIMIT 25;
+SELECT BrowserCountry, BrowserLanguage, count() AS c FROM hits GROUP BY BrowserCountry, BrowserLanguage ORDER BY c DESC LIMIT 10;
+SELECT Title, URL, count() AS c FROM hits GROUP BY Title, URL ORDER BY c DESC LIMIT 10;
+SELECT countIf(Not match(URL, '^https')) FROM hits;
+SELECT countIf(position(URL, 'google') > 0) FROM hits;
+SELECT CounterID, EventTime - lagInFrame(EventTime) OVER (PARTITION BY CounterID ORDER BY EventTime) AS dt FROM hits WHERE CounterID = 62 ORDER BY dt DESC LIMIT 10;
+SELECT min(URL), max(URL) FROM hits;
+SELECT URL, length(URL) AS l FROM hits ORDER BY l DESC LIMIT 10;
+SELECT substr(URL, 1, 8) AS p, count() AS c FROM hits GROUP BY p ORDER BY c DESC LIMIT 10;
+SELECT quantilesExact(0.1, 0.5, 0.9)(ResponseEndTiming) FROM hits WHERE ResponseEndTiming > 0;
+SELECT quantileExact(0.99)(ResponseEndTiming) FROM hits WHERE ResponseEndTiming > 0;
+SELECT toHour(toTimeZone(toDateTime(EventTime), 'UTC')) AS h, count() AS c FROM hits GROUP BY h ORDER BY h;
+SELECT EventTime, count() AS c FROM hits GROUP BY EventTime ORDER BY c DESC LIMIT 10;
