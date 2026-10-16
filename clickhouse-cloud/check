@@ -1,4 +1,0 @@
-#!/bin/bash
-set -e
-
-curl --silent --show-error --fail --user "default:${PASSWORD}" --data-binary "SELECT 1" "https://${FQDN}:8443/" >/dev/null
