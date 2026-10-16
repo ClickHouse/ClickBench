@@ -40,4 +40,13 @@ fi
 
 ./run.sh
 
+# Concurrent QPS: the same test as for other systems, from lib/benchmark-common.sh.
+# The service is not restarted, and there are no local caches to flush.
+export FQDN PASSWORD
+export BENCH_DOWNLOAD_SCRIPT="" BENCH_RESTARTABLE=no BENCH_DURABLE=yes
+source ../lib/benchmark-common.sh
+bench_flush_caches() { :; }
+bench_concurrent_qps
+
+# The data size must be the last line of the output (see collect-results.sh).
 clickhouse-client --host "$FQDN" --password "$PASSWORD" --secure --query "SELECT total_bytes FROM system.tables WHERE name = 'hits' AND database = 'default'"

@@ -1,0 +1,14 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it on the service over HTTPS.
+# Stdout: query result (or the error message).
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+#
+# Used by the concurrent QPS test (see benchmark.sh). It uses curl instead of clickhouse-client,
+# because all services are benchmarked at the same time from a single machine, and hundreds of
+# concurrently running clickhouse-client processes would overload it.
+# `wait_end_of_query` makes an exception in the middle of the query result in an HTTP error code.
+
+curl --silent --show-error --fail-with-body --user "default:${PASSWORD}" --data-binary @- \
+    --write-out '%{stderr}%{time_total}\n' \
+    "https://${FQDN}:8443/?default_format=Null&wait_end_of_query=1"
