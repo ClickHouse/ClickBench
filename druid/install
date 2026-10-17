@@ -30,6 +30,14 @@ if [ ! -d "$DRUID_DIR" ]; then
         "${DRUID_DIR}/conf/druid/single-server/medium/historical/runtime.properties"
     sed -i 's druid.processing.buffer.sizeBytes=500MiB druid.processing.buffer.sizeBytes=1000MiB g' \
         "${DRUID_DIR}/conf/druid/single-server/medium/historical/runtime.properties"
+    # buffer.sizeBytes=1000MiB needs (numMergeBuffers + numThreads + 1) *
+    # 1000MiB = 20 * 1000MiB = 20,971,520,000 bytes (~19.53 GiB) of direct
+    # memory. The single-server-medium historical jvm.config ships
+    # MaxDirectMemorySize=13g, which fails Guice startup with
+    # "Not enough direct memory". -XX:MaxDirectMemorySize=20g (21,474,836,480
+    # bytes) already clears that; raise it to 21g for a small margin.
+    sed -i 's/-XX:MaxDirectMemorySize=13g/-XX:MaxDirectMemorySize=21g/' \
+        "${DRUID_DIR}/conf/druid/single-server/medium/historical/jvm.config"
 
     if ! grep -q '^druid.query.groupBy.maxMergingDictionarySize' \
         "${DRUID_DIR}/conf/druid/single-server/medium/historical/runtime.properties"; then
