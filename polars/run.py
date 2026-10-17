@@ -1,10 +1,16 @@
 import os
-# COMPLIES WITH THE RULES: Strictly limited to the 16 threads on the contest server
-os.environ["POLARS_MAX_THREADS"] = "16"
-
+import sys
 import time
 import json
+import warnings
+# Disables all warnings so they don't pollute the ClickBench log parsing
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+
 import polars as pl
+
+# COMPLIES WITH THE RULES: Strictly limited to the 16 threads on the contest server
+os.environ["POLARS_MAX_THREADS"] = "16"
 
 # Relative path to the server's official test system
 parquet_pfad = "hits.parquet"
@@ -73,19 +79,34 @@ with pl.StringCache():
         "Q43": df.filter(pl.col("URL").str.contains("google") & pl.col("EventDate").is_between(pl.date(2014, 3, 17), pl.date(2014, 3, 23))).select(pl.len())
     }
 
-    # Official benchmark read mode for the automated ranking system
-    for q_name, execution_plan in sorted(clickbench_queries.items()):
+    # ====================================================
+    # EXECUTION CONTROLLER FOR CLICKBENCH PARAMETERS
+    # ====================================================
+    query_env = os.environ.get("QUERY_NUM")
+    query_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    
+    target_num = query_arg or query_env
+    if target_num:
+        q_name = f"Q{int(target_num):02d}"
+    else:
+        q_name = None
+
+    def run_single_query(name, plan):
         try:
             # 1. Uncounted warm-up run (cache warming)
-            execution_plan.collect(engine="streaming")
+            plan.collect(engine="streaming")
             
             # 2. The measured main run for the official leaderboard
             start_warm = time.perf_counter()
-            execution_plan.collect(engine="streaming")
+            plan.collect(engine="streaming")
             end_warm = time.perf_counter()
             
-            # Formatted to print only the plain execution time as required by ClickBench logs
             print(f"{(end_warm - start_warm):.4f}")
         except Exception as e:
-            # Crucial for the server to recognize a benchmark failure immediately
-            print(f"FAILED")
+            print("FAILED")
+
+    if q_name and q_name in clickbench_queries:
+        run_single_query(q_name, clickbench_queries[q_name])
+    else:
+        for name, plan in sorted(clickbench_queries.items()):
+            run_single_query(name, plan)
