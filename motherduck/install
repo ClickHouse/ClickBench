@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+# MotherDuck is reached through the DuckDB Python client; the md: connection
+# auto-installs the motherduck extension on first use. The client VM only
+# needs Python and the duckdb package.
+sudo apt-get update -y
+sudo apt-get install -y python3-pip python3-venv
+
+# A venv keeps us off the distro's externally-managed Python (PEP 668). The
+# sibling scripts invoke .venv/bin/python3 directly, since the activate here
+# does not survive into a separate process.
+python3 -m venv .venv
+.venv/bin/pip install --quiet --upgrade pip
+.venv/bin/pip install --quiet duckdb

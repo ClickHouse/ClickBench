@@ -1,0 +1,13 @@
+{
+  "system": "MotherDuck",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "serverless",
+    "managed",
+    "no-cold"
+  ]
+}

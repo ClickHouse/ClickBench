@@ -1,0 +1,29 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it once against MotherDuck's clickbench
+# database via the DuckDB Python client.
+#   Stdout: query result rows.
+#   Stderr: query runtime in fractional seconds on the last line.
+#   Exit:   non-zero on error.
+# The shared driver runs this BENCH_TRIES (default 3) times per query; each
+# invocation is a fresh connection, so reported timings include the per-try
+# cloud connection + catalog-load cost (inherent to the shared runner's
+# one-process-per-try model).
+set -e
+
+PY=.venv/bin/python3; [ -x "$PY" ] || PY=python3
+
+# The query arrives on stdin, so the Python program itself must NOT be read
+# from stdin (that would consume the query). Pass the program via -c and let
+# sys.stdin.read() pick up the query. con.execute (not con.sql) tolerates the
+# trailing ";" each queries.sql line carries.
+exec "$PY" -c '
+import duckdb, sys, timeit
+query = sys.stdin.read()
+con = duckdb.connect("md:clickbench")
+start = timeit.default_timer()
+rows = con.execute(query).fetchall()
+elapsed = timeit.default_timer() - start
+for row in rows:
+    print(row)
+print(f"{elapsed:.3f}", file=sys.stderr)
+'

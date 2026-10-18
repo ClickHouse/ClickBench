@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+: "${motherduck_token:?motherduck_token is required (create a MotherDuck access token)}"
+
+PY=.venv/bin/python3; [ -x "$PY" ] || PY=python3
+
+# Connect to MotherDuck (not a specific database) and run a trivial query. The
+# duckdb client reads the token from the motherduck_token env var.
+"$PY" -c "import duckdb; duckdb.connect('md:').execute('SELECT 1')" >/dev/null
