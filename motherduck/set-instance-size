@@ -1,0 +1,113 @@
+#!/bin/bash
+# Set the MotherDuck read_write Duckling (compute) size for this account, then
+# wait until the new size is actually serving queries.
+#
+#   ./set-instance-size <pulse|standard|jumbo|mega|giga>
+#
+# Duckling size cannot be set via SQL or the md: connection string; it is an
+# account / service-account setting changed through the MotherDuck REST API
+# (PUT /v1/users/{username}/instances). This script wraps that call and then
+# polls md_live_duckling_size() until the requested size is live.
+#
+# Env:
+#   motherduck_token / MOTHERDUCK_TOKEN   required (same PAT used for md:)
+#   motherduck_username                   optional; auto-discovered via SQL
+#   SET_SIZE_TIMEOUT                      optional poll timeout in seconds
+#                                         (default 1800; giga can take ~10 min)
+#   STABILIZE_SECONDS                     extra settle time AFTER the new size
+#                                         first reports live (default 120).
+#                                         md_live_duckling_size() flips before
+#                                         the compute is actually stable, so a
+#                                         >=2 min wait is required on top of it.
+set -eu
+
+size="${1:-}"
+case "$size" in
+    pulse|standard|jumbo|mega|giga) ;;
+    *) echo "usage: $0 <pulse|standard|jumbo|mega|giga>" >&2; exit 2 ;;
+esac
+
+export motherduck_token="${motherduck_token:-${MOTHERDUCK_TOKEN:-}}"
+: "${motherduck_token:?motherduck_token is required}"
+
+PY=.venv/bin/python3; [ -x "$PY" ] || PY=python3
+
+exec "$PY" - "$size" <<'PY'
+import json, os, sys, time, urllib.request
+
+size = sys.argv[1]
+token = os.environ["motherduck_token"]
+timeout = int(os.environ.get("SET_SIZE_TIMEOUT", "1800"))
+# md_live_duckling_size() reports the new size before the compute is actually
+# stable, so always settle for at least 2 minutes after it first matches.
+stabilize = max(120, int(os.environ.get("STABILIZE_SECONDS", "120")))
+base_api = "https://api.motherduck.com/v1"
+
+def discover_username():
+    u = os.environ.get("motherduck_username")
+    if u:
+        return u
+    import duckdb  # only needed when the username isn't supplied
+    return duckdb.connect("md:").execute(
+        "SELECT username FROM MD_USER_INFO()").fetchone()[0]
+
+def req(method, url, body=None):
+    data = json.dumps(body).encode() if body is not None else None
+    r = urllib.request.Request(
+        url, data=data, method=method,
+        headers={"Authorization": f"Bearer {token}",
+                 "Content-Type": "application/json"})
+    with urllib.request.urlopen(r, timeout=60) as resp:
+        raw = resp.read().decode()
+    return json.loads(raw) if raw else {}
+
+username = discover_username()
+base = f"{base_api}/users/{username}/instances"
+
+cur = req("GET", base)
+print(f"current read_write size: "
+      f"{cur.get('read_write', {}).get('instance_size')}", file=sys.stderr)
+
+# The PUT requires both blocks, so preserve read_scaling as-is and change only
+# read_write (the instance the benchmark loads and queries on).
+rs = cur.get("read_scaling", {})
+body = {"config": {
+    "read_write": {"instance_size": size},
+    "read_scaling": {k: rs[k] for k in ("instance_size", "flock_size") if k in rs},
+}}
+req("PUT", base, body)
+print(f"requested read_write size -> {size}", file=sys.stderr)
+
+# Poll until the live duckling reports the new size. Reading the size runs a
+# query on a duckling; between polls we wait longer than the 60s cooldown so
+# the old-size duckling idles out and the next query provisions the new size.
+deadline = time.time() + timeout
+try:
+    import duckdb
+except ImportError:
+    # No client to poll with; fall back to a fixed wait based on the documented
+    # provisioning times (~2 min pulse/standard/jumbo, ~5 min mega, ~10 giga).
+    # These already include the >=2 min stabilization margin.
+    wait = {"pulse": 180, "standard": 180, "jumbo": 180,
+            "mega": 420, "giga": 720}[size]
+    print(f"duckdb unavailable to poll; sleeping {wait}s for the change to "
+          f"take effect", file=sys.stderr)
+    time.sleep(wait)
+    sys.exit(0)
+
+while time.time() < deadline:
+    live = duckdb.connect("md:").execute(
+        "SELECT type FROM md_live_duckling_size()").fetchone()[0]
+    if live.lower() == size.lower():
+        # md_live_duckling_size() flips before the compute is stable; settle.
+        print(f"live duckling size reports {live}; settling {stabilize}s",
+              file=sys.stderr)
+        time.sleep(stabilize)
+        print(f"live duckling size is now {live} (stabilized)")
+        sys.exit(0)
+    print(f"waiting for {size}; live={live}", file=sys.stderr)
+    time.sleep(90)
+
+print(f"timed out after {timeout}s waiting for size {size}", file=sys.stderr)
+sys.exit(1)
+PY

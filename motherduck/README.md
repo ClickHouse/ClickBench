@@ -48,15 +48,89 @@ The shared driver invokes these scripts in the system directory:
 | `data-size` | `pragma_database_size()`, converted to bytes                 |
 | `template.json` | system metadata (name, proprietary, tuned, tags)         |
 
+The next two scripts are MotherDuck-specific helpers, not part of the shared
+driver's contract:
+
+| script             | role                                                   |
+|--------------------|--------------------------------------------------------|
+| `set-instance-size`| change the account's read_write Duckling size + wait   |
+| `run-all-sizes.sh` | run the whole benchmark once per Duckling size          |
+| `make-result`      | convert a per-size log into a committable results JSON   |
+
+### Changing the Duckling (compute) size
+
+The Duckling (compute instance) size **cannot** be set via SQL or the `md:`
+connection string — it is an account / service-account setting changed through
+the MotherDuck REST API (`PUT /v1/users/{username}/instances`). `set-instance-size`
+wraps that call:
+
+```
+motherduck_token=<TOKEN> ./set-instance-size <pulse|standard|jumbo|mega|giga>
+```
+
+It reads the current config (to preserve the `read_scaling` block, which the
+PUT requires), changes only `read_write.instance_size`, then polls
+`md_live_duckling_size()` until the new size reports live. Because that function
+flips **before** the new compute is actually stable, the script then waits an
+additional settle period (`STABILIZE_SECONDS`, default 120 — at least 2 minutes
+is required). The username is auto-discovered via `MD_USER_INFO()`, or set
+`motherduck_username` to skip the lookup.
+
+To benchmark a single size, change it first and then run the benchmark:
+
+```
+motherduck_token=<TOKEN> ./set-instance-size mega && motherduck_token=<TOKEN> ./benchmark.sh
+```
+
+### Running across all sizes
+
+```
+motherduck_token=<TOKEN> ./run-all-sizes.sh                  # mega → pulse
+motherduck_token=<TOKEN> INCLUDE_GIGA=1 ./run-all-sizes.sh   # giga → pulse
+motherduck_token=<TOKEN> ./run-all-sizes.sh standard jumbo   # a subset
+```
+
+Runs proceed **largest size first**, no matter how the sizes are given. The
+default set is `mega jumbo standard pulse`; **giga is excluded by default**
+because some trial accounts don't have it enabled — add it with `INCLUDE_GIGA=1`
+or by naming `giga` explicitly.
+
+For each size it calls `set-instance-size`, waits for the change to stabilize,
+then runs the full benchmark (reload + all 43 queries), capturing output to
+`motherduck-<size>.log` and converting it (via `make-result`) to
+`results/<date>/<size>.json`. Set `RESTORE_SIZE` to return the account to a given
+size when the sweep finishes. Note the sweep is slow: size changes take ~2 min
+(pulse/standard/jumbo) to ~10 min (giga) to take effect, and each run reloads the
+full dataset.
+
+### Producing committable results
+
+The shared cloud-init derives a result's `machine` from the **client EC2
+instance type**, which is meaningless for MotherDuck — the compute is the remote
+Duckling. ClickBench supports PR-committed result files, so instead of relying on
+that path we generate the JSON ourselves, labeled by Duckling size:
+
+```
+./make-result <size> [logfile] [date]     # e.g. ./make-result jumbo
+```
+
+It reads the per-size log plus `template.json` and writes
+`results/<date>/<size>.json` with `machine` set to `Motherduck: <size>` (matching
+the existing published MotherDuck results). `run-all-sizes.sh` calls it
+automatically, so a sweep leaves a full `results/<date>/` set ready to commit.
+
 ### Caveats specific to a managed service
 
-* **Machine label.** The shared `cloud-init.sh.in` records the *client* EC2
-  instance type as the benchmark "machine". For MotherDuck the meaningful size
-  is the cloud compute (warehouse) size, not the client. When running under the
-  official AWS automation you will want a dedicated workflow (as
-  `clickhouse-cloud` has) to inject `motherduck_token` and label results with
-  the MotherDuck instance type rather than the EC2 client. The previous
-  `motherduck_instance_type` knob is no longer read by this directory.
+* **Machine label.** The shared `cloud-init.sh.in` derives a result's `machine`
+  from the *client* EC2 instance type via the sink/materialized-view path. For
+  MotherDuck the meaningful size is the Duckling (compute) size, not the client.
+  We sidestep this by committing results directly: `make-result` labels each
+  file `Motherduck: <size>`, and `run-all-sizes.sh` produces the whole set. The
+  automated sink path would still mislabel a MotherDuck run, so a submission
+  should rely on the committed `results/<date>/*.json` files (as the existing
+  MotherDuck results do), not on a stock cloud-init run. The old
+  `motherduck_instance_type` env var (which only *labeled* the report) is
+  replaced by `set-instance-size`, which actually changes the compute.
 * **Per-try connection cost.** The shared runner runs one process per query
   try, so each timing includes a fresh `md:` connection + catalog load. This is
   consistent with how the harness treats every engine, but is heavier for a
