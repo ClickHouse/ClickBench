@@ -1,0 +1,48 @@
+================================================================================
+SILICIUM EVALUATION LICENSE (SCSL-1.0 / PolyForm Noncommercial 1.0.0)
+Copyright (c) 2026 The Silicium Authors. Protected under Patent Pending. All rights reserved.
+================================================================================
+
+1. GRANT OF EVALUATION LICENSE
+   The Authors ("Licensor") hereby grant you a personal, non-exclusive,
+   non-transferable, revocable, royalty-free license to evaluate the accompanying
+   native binaries and wrapper interfaces solely for non-commercial benchmark
+   verification, academic evaluation, and peer performance reproduction.
+
+2. RESTRICTIONS
+   You shall NOT:
+   a. Decompile, disassemble, decrypt, extract, or reverse-engineer any portion
+      of the binaries or compiled machine code.
+   b. Modify, adapt, translate, or create derivative works based upon the software.
+   c. Distribute, lease, rent, loan, or sublicense the binary without express
+      written authorization from Licensor.
+   d. Remove, obscure, or alter any patent, copyright, or trademark notices.
+   e. Use the software for commercial production serving, cloud hosting, or SaaS deployment.
+
+3. INTELLECTUAL PROPERTY & NO IMPLIED LICENSE
+   All algorithmic architectures, hardware optimizations, graph representations,
+   SIMD layouts, and numerical kernels are proprietary know-how and patent-pending
+   inventions subject to statutory protections. No license or immunity under any patent,
+   patent application, trademark, or proprietary right is granted or implied by estoppel,
+   exhaustion, or otherwise, except for the limited evaluation rights expressly granted in Section 1.
+
+4. GOVERNING LAW & DISPUTE RESOLUTION
+   This License shall be governed by and construed in accordance with applicable
+   international intellectual property conventions and the laws of the Licensor's
+   principal jurisdiction, excluding conflict of law principles and excluding the
+   United Nations Convention on Contracts for the International Sale of Goods (CISG).
+   Any dispute arising hereunder shall be resolved before a court of competent
+   jurisdiction designated by the Licensor.
+
+5. SEVERABILITY
+   If any provision of this License is found to be invalid or unenforceable, such provision
+   shall be enforced to the maximum extent permissible, and the remaining provisions
+   shall remain in full force and effect.
+
+6. DISCLAIMER OF WARRANTIES
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+   PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE LIABLE
+   FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT,
+   OR OTHERWISE, ARISING FROM OR IN CONNECTION WITH THE SOFTWARE.
+================================================================================

@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+# ==============================================================================
+# SILICIUM CLICKBENCH HARNESS — QUERY CLIENT
+# License: PolyForm Noncommercial License 1.0.0 / SCSL-1.0 Evaluation License
+# Protected under Patent Pending. All rights reserved.
+# ==============================================================================
+
+if [ $# -ge 1 ]; then
+    QUERY="$1"
+else
+    QUERY="$(cat)"
+fi
+
+PORT="${SILICIUM_PORT:-5433}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ARENA_DIR="${SILICIUM_ARENA:-$SCRIPT_DIR/silicium_arena}"
+
+RUNNER="${SILICIUM_RUNNER:-$SCRIPT_DIR/bin/silicium_runner}"
+if [ ! -x "$RUNNER" ] && [ -x "$SCRIPT_DIR/silicium_runner" ]; then
+    RUNNER="$SCRIPT_DIR/silicium_runner"
+fi
+
+if (exec 3<>/dev/tcp/127.0.0.1/"$PORT") 2>/dev/null || nc -z 127.0.0.1 "$PORT" 2>/dev/null; then
+    if [ -x "$RUNNER" ]; then
+        exec "$RUNNER" --client --port "$PORT" --sql "$QUERY"
+    elif command -v psql >/dev/null 2>&1; then
+        T_START=$(date +%s%N)
+        psql -h 127.0.0.1 -p "$PORT" -U postgres -d clickbench -t -A -F $'\t' -P null='' -c "$QUERY"
+        STATUS=$?
+        T_END=$(date +%s%N)
+        ELAPSED=$(awk "BEGIN {printf \"%.6f\", ($T_END - $T_START) / 1000000000}")
+        echo "$ELAPSED" >&2
+        exit $STATUS
+    fi
+fi
+
+if [ ! -x "$RUNNER" ]; then
+    echo "Runner binary not found: $RUNNER (run ./install first)" >&2
+    exit 1
+fi
+exec "$RUNNER" --sql "$QUERY" "$ARENA_DIR"
