@@ -68,13 +68,14 @@ wraps that call:
 motherduck_token=<TOKEN> ./set-instance-size <pulse|standard|jumbo|mega|giga>
 ```
 
-It reads the current config (to preserve the `read_scaling` block, which the
-PUT requires), changes only `read_write.instance_size`, then polls
-`md_live_duckling_size()` until the new size reports live. Because that function
-flips **before** the new compute is actually stable, the script then waits an
-additional settle period (`STABILIZE_SECONDS`, default 120 — at least 2 minutes
-is required). The username is auto-discovered via `MD_USER_INFO()`, or set
-`motherduck_username` to skip the lookup.
+It (1) issues `SHUTDOWN NORMAL` so the current duckling shuts down cleanly,
+(2) `PUT`s the new `read_write.instance_size` (preserving the `read_scaling`
+block the PUT requires), (3) waits `SETTLE_SECONDS` (default 120, min 120)
+**without touching MotherDuck** so the duckling finishes shutting down on its own
+— this fixed wait is required, `md_live_duckling_size()` alone isn't enough — and
+(4) double-checks `md_live_duckling_size()` reports the new size. The username is
+auto-discovered via `MD_USER_INFO()`, or set `motherduck_username` to skip the
+lookup. The duckdb Python package must be installed (run `./install` first).
 
 To benchmark a single size, change it first and then run the benchmark:
 
