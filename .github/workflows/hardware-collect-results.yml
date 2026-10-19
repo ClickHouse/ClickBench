@@ -6,8 +6,9 @@ on:
       since_hours:
         description: "Look at the results that arrived in the last N hours"
         default: "24"
-  schedule:
-    - cron: '47 * * * *'
+  # Disabled: automatic collection is paused. Re-enable by uncommenting the schedule.
+  # schedule:
+  #   - cron: '47 * * * *'
 
 permissions:
   contents: write       # To push the results branch.
