@@ -135,4 +135,6 @@ automatically, so a sweep leaves a full `results/<date>/` set ready to commit.
 * **Per-try connection cost.** The shared runner runs one process per query
   try, so each timing includes a fresh `md:` connection + catalog load. This is
   consistent with how the harness treats every engine, but is heavier for a
-  remote service than for a local embedded one.
+  remote service than for a local embedded one. The `query` connection uses
+  `motherduck_attach_mode=single` so each connect attaches only the needed
+  database instead of enumerating the whole workspace catalog.

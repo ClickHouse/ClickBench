@@ -19,7 +19,10 @@ PY=.venv/bin/python3; [ -x "$PY" ] || PY=python3
 exec "$PY" -c '
 import duckdb, sys, timeit
 query = sys.stdin.read()
-con = duckdb.connect("md:clickbench")
+# Single-attach mode: attach only the needed database rather than enumerating
+# the whole workspace catalog on connect. The benchmark touches one database,
+# so there is no reason to pay for attaching the rest.
+con = duckdb.connect("md:clickbench", config={"motherduck_attach_mode": "single"})
 start = timeit.default_timer()
 rows = con.execute(query).fetchall()
 elapsed = timeit.default_timer() - start
