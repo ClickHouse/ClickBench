@@ -1,6 +1,9 @@
 #!/bin/bash
-# 1. Update package list and install pip & pyarrow for Parquet support
-sudo apt-get update && sudo apt-get install -y python3-pip python3-pyarrow
+# 1. Update system package lists
+sudo apt-get update
 
-# 2. Install Polars using pip with system package bypass
-pip3 install polars --break-system-packages
+# 2. Install pip3 using the official Ubuntu package manager
+sudo apt-get install -y python3-pip
+
+# 3. Install Polars and PyArrow via pip3 with the system package bypass
+pip3 install polars pyarrow --break-system-packages
