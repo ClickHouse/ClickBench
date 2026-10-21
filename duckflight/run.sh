@@ -14,7 +14,7 @@ cd "$entry"
 
 if [ "$mode" != native ]; then
     case "$command" in
-    install|load|start|baseline|validate-native|benchmark)
+    install|load|start|benchmark)
         source "$entry/../lib/dataset-bucket.sh"
         export DUCKFLIGHT_BENCH_S3_REGION="${DUCKFLIGHT_BENCH_S3_REGION:-$DATASET_REGION}"
         if [ "$mode" = datalake ]; then
@@ -27,7 +27,7 @@ if [ "$mode" != native ]; then
 fi
 
 case "$command" in
-    install) exec bash "$implementation/bootstrap.sh" ;;
+    install) exec "$implementation/install" ;;
     benchmark)
         export BENCH_RESTARTABLE=yes BENCH_DURABLE=yes
         export BENCH_QUERIES_FILE="$entry/queries.sql"
@@ -49,10 +49,6 @@ case "$command" in
         python) ;;
         *) echo 'DUCKFLIGHT_BENCH_CLIENT must be rust or python' >&2; exit 2 ;;
         esac
-        ;;
-    baseline|validate-native|summarize)
-        script="${command//-/_}.py"
-        exec uv run --project "$implementation" --frozen --no-sync python "$implementation/$script" "$@"
         ;;
 esac
 exec uv run --project "$implementation" --frozen --no-sync python "$implementation/harness.py" "$command" "$@"

@@ -373,7 +373,7 @@ def wait_database_released(state: Path) -> None:
 def query_result(connection, sql: str):
     # These statements have no bound parameters. DB-API execute prepares them
     # first, adding a metadata RPC and native planning that direct execution
-    # execution does not need. Use ADBC's public direct-execution API instead.
+    # does not need. Use ADBC's public direct-execution API instead.
     with AdbcStatement(connection.adbc_connection) as statement:
         statement.set_sql_query(sql)
         stream, _ = statement.execute_query()

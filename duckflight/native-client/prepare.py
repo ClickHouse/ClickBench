@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-import shutil
+import subprocess
 import tarfile
 import urllib.request
 from pathlib import Path
@@ -76,5 +76,8 @@ manifest.write_text(
     manifest.read_text()
     + '\n[workspace]\n\n[dependencies.arrow-csv]\nversion = "=60.0.0"\n'
 )
-shutil.copyfile(ROOT / "Cargo.lock", source / "Cargo.lock")
+subprocess.run(
+    ["patch", "--silent", str(source / "Cargo.lock"), str(ROOT / "Cargo.lock.patch")],
+    check=True,
+)
 print(source)
