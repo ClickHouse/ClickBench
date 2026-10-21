@@ -1,9 +1,11 @@
-"""ClickBench hooks for the released DuckFlight extension over Flight SQL."""
+"""ClickBench hooks for the released Duckflight extension."""
 
 from __future__ import annotations
 
 import argparse
 import csv
+import fnmatch
+import gzip
 import hashlib
 import io
 import json
@@ -13,10 +15,12 @@ import secrets
 import signal
 import subprocess
 import sys
+import tarfile
 import threading
 import time
+import urllib.parse
 import urllib.request
-import zipfile
+import xml.etree.ElementTree as ET
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -25,32 +29,38 @@ import pyarrow
 from adbc_driver_flightsql import dbapi
 from adbc_driver_manager import AdbcStatement
 
-ROOT = Path(__file__).resolve().parent
-RELEASE = "v0.1.12"
-DUCKDB_VERSION = "1.5.6"
+IMPLEMENTATION = Path(__file__).resolve().parent
+ROOT = Path(os.environ.get("DUCKFLIGHT_BENCH_ENTRY", IMPLEMENTATION)).resolve()
+RELEASE = "core-v0.1.14 / signed DuckDB 2.0.0"
+DUCKDB_VERSION = "2.0.0"
+DUCKDB_COMMIT = "d54cbbe3df"
 CHECKSUMS = {
-    "linux_amd64": "c274636b29671a5453c12d169003da8dc21c0b01f64f62074406acdfdc9f3eaf",
-    "linux_arm64": "8bfe1c78195498fe36166e0b434d0639cd02d19fd02455228ff8481a18947ea7",
-    "osx_amd64": "696f332d663d2b6c8338cb4b5218b145912a8aec29889cd41dda0c915c88a4bb",
-    "osx_arm64": "5a6b7b11dc2a862e8b213a5ce3c9627997b399495b7ec7fa973a88b8f7678bef",
+    "linux_amd64": "928d8ef5c91c185873eacc960e7b6e574bfedb527b2d6fc2ad3eda553fc34e68",
+    "linux_arm64": "a52ee234af7614c0d7ef31e43dbe71301155ae60a9c76217d4064bb5acf58729",
+    "osx_amd64": "966d794cce2ac8c32515ba677100e58a378e3f187c4f307aa88e6cf5dfb859c0",
+    "osx_arm64": "52b3117d8f96036f1164608fcc369192ce498610b53f91a97c36a6b498273833",
 }
 EXPECTED_ROWS = 99_997_497
+LAKE_URL = (
+    "https://clickhouse-public-datasets.s3.eu-central-1.amazonaws.com/"
+    "hits_compatible/hits.parquet"
+)
 CLI_ASSETS = {
     "linux_amd64": (
         "linux-amd64",
-        "6e89deac1ebbc36eed0291caf8b567b030c7b86ac35998f71854e22b3c5d5e2f",
+        "c6507206baf7793c6013dbd82368469a45f20dc0e17a6f92f204602f652ed2bc",
     ),
     "linux_arm64": (
         "linux-arm64",
-        "c544e92c9b7c31fc53c2139802cabd8e2d1b2b3e3f933117f31611239c1402db",
+        "859e1875d2a9515fbb4bf8871061437a14af82320da68c753f094c4b776348fe",
     ),
     "osx_amd64": (
-        "osx-universal",
-        "80a80c68736bd7dea53e8b02447e9759db0c8596ea156476ba396c44f54c5810",
+        "osx-amd64",
+        "fbc7013ba09d117396dabf16783281c2add47fc01cdac4855464a03526dc96ee",
     ),
     "osx_arm64": (
-        "osx-universal",
-        "80a80c68736bd7dea53e8b02447e9759db0c8596ea156476ba396c44f54c5810",
+        "osx-arm64",
+        "188a36fe8883ef52e69165a0cbb6031ef679c8e6c448a1ce22951964149b7f96",
     ),
 }
 
@@ -59,44 +69,92 @@ def sql_string(value: str | Path) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
+def storage_mode() -> str:
+    mode = os.environ.get("DUCKFLIGHT_BENCH_STORAGE", "native")
+    if mode not in ("native", "datalake", "datalake-partitioned"):
+        raise ValueError(
+            "DUCKFLIGHT_BENCH_STORAGE must be native, datalake or datalake-partitioned"
+        )
+    return mode
+
+
+def query_file() -> Path:
+    return ROOT / "queries.sql"
+
+
+def storage_settings() -> str:
+    mode = storage_mode()
+    if mode == "native":
+        return ""
+    settings = "set parquet_metadata_cache=true;\nload httpfs;\n"
+    if mode == "datalake-partitioned":
+        region = os.environ.get("DUCKFLIGHT_BENCH_S3_REGION", "eu-central-1")
+        settings += (
+            f"set s3_region={sql_string(region)};\n"
+            "create or replace secret s3_anon (type s3, key_id '', secret '', "
+            f"region {sql_string(region)});\n"
+        )
+    return settings
+
+
 def install(state: Path) -> None:
+    mode = storage_mode()
     os_name = {"Linux": "linux", "Darwin": "osx"}[platform.system()]
     arch = {"x86_64": "amd64", "arm64": "arm64", "aarch64": "arm64"}[platform.machine()]
     target = f"{os_name}_{arch}"
-    asset = f"duckflight-v{DUCKDB_VERSION}-{target}.duckdb_extension"
     path = state / "duckflight.duckdb_extension"
-    if (
-        not path.exists()
-        or hashlib.sha256(path.read_bytes()).hexdigest() != CHECKSUMS[target]
-    ):
-        url = f"https://github.com/sidequery/duckflight-extension/releases/download/{RELEASE}/{asset}"
-        with urllib.request.urlopen(url, timeout=120) as response:
-            data = response.read()
-        if hashlib.sha256(data).hexdigest() != CHECKSUMS[target]:
-            raise RuntimeError("extension checksum mismatch")
-        path.write_bytes(data)
+    url = f"https://extensions.sidequery.dev/v{DUCKDB_VERSION}/{target}/duckflight.duckdb_extension.gz"
+    request = urllib.request.Request(
+        url, headers={"User-Agent": "duckflight-clickbench/2.0"}
+    )
+    with urllib.request.urlopen(request, timeout=120) as response:
+        data = response.read()
+    if hashlib.sha256(data).hexdigest() != CHECKSUMS[target]:
+        raise RuntimeError("extension checksum mismatch")
+    path.write_bytes(gzip.decompress(data))
     cli_target, checksum = CLI_ASSETS[target]
-    archive = state / "duckdb-cli.zip"
+    archive = state / "duckdb-cli.tar.gz"
     if (
         not archive.exists()
         or hashlib.sha256(archive.read_bytes()).hexdigest() != checksum
     ):
-        url = f"https://github.com/duckdb/duckdb/releases/download/v{DUCKDB_VERSION}/duckdb_cli-{cli_target}.zip"
+        url = f"https://github.com/duckdb/duckdb/releases/download/v{DUCKDB_VERSION}/duckdb-cli-{cli_target}.tar.gz"
         with urllib.request.urlopen(url, timeout=120) as response:
             data = response.read()
         if hashlib.sha256(data).hexdigest() != checksum:
             raise RuntimeError("DuckDB CLI checksum mismatch")
         archive.write_bytes(data)
-    with zipfile.ZipFile(io.BytesIO(archive.read_bytes())) as zipped:
-        (state / "duckdb").write_bytes(zipped.read("duckdb"))
+    with tarfile.open(fileobj=io.BytesIO(archive.read_bytes()), mode="r:gz") as packed:
+        (state / "duckdb").write_bytes(packed.extractfile("duckdb").read())
     (state / "duckdb").chmod(0o755)
+    version = (
+        subprocess.check_output(
+            [str(state / "duckdb"), "-csv", "-noheader", "-c", "pragma version"],
+            text=True,
+        )
+        .strip()
+        .split(",")
+    )
+    if version[:2] != [f"v{DUCKDB_VERSION}", DUCKDB_COMMIT]:
+        raise RuntimeError(f"unexpected DuckDB CLI version: {version}")
+    if mode != "native":
+        with duckdb.connect() as database:
+            database.execute("install httpfs from 'https://extensions.duckdb.org'")
     print(f"DuckDB {duckdb.__version__}, DuckFlight {RELEASE}, {target}")
 
 
 def local_database(state: Path):
-    return duckdb.connect(
+    database = duckdb.connect(
         str(state / "hits.db"), config={"allow_unsigned_extensions": "true"}
     )
+    try:
+        settings = storage_settings()
+        if settings:
+            database.execute(settings)
+    except BaseException:
+        database.close()
+        raise
+    return database
 
 
 def connect(state: Path):
@@ -128,6 +186,7 @@ def serve(state: Path, nonce: str) -> None:
         [
             str(state / "duckdb"),
             "-unsigned",
+            "-no-agent",
             "-bail",
             "-init",
             os.devnull,
@@ -140,11 +199,14 @@ def serve(state: Path, nonce: str) -> None:
     try:
         process.stdin.write(
             f"load {sql_string(state / 'duckflight.duckdb_extension')};\n"
+        )
+        process.stdin.write(storage_settings())
+        process.stdin.write(
             "copy (select address from duckflight_flight_serve('127.0.0.1:0', "
             f"{sql_string(state / 'auth.toml')})) to {sql_string(listener)} (format csv, header false);\n"
         )
         process.stdin.flush()
-        deadline = time.monotonic() + 25
+        deadline = time.monotonic() + 120
         while address is None:
             if process.poll() is not None:
                 raise RuntimeError(
@@ -200,7 +262,7 @@ def process_owned(pid: int, nonce: str) -> bool:
     )
     return (
         result.returncode == 0
-        and str(ROOT / "harness.py") in result.stdout
+        and str(IMPLEMENTATION / "harness.py") in result.stdout
         and nonce in result.stdout
     )
 
@@ -237,7 +299,7 @@ def start(state: Path) -> None:
         process = subprocess.Popen(
             [
                 sys.executable,
-                str(ROOT / "harness.py"),
+                str(IMPLEMENTATION / "harness.py"),
                 "serve",
                 "--state",
                 str(state),
@@ -251,7 +313,7 @@ def start(state: Path) -> None:
         )
     pid_path.write_text(json.dumps({"pid": process.pid, "nonce": nonce}))
     try:
-        for _ in range(120):
+        for _ in range(480):
             if process.poll() is not None:
                 raise RuntimeError(f"host exited: see {state / 'server.log'}")
             if (state / "server.json").exists():
@@ -310,7 +372,7 @@ def wait_database_released(state: Path) -> None:
 @contextmanager
 def query_result(connection, sql: str):
     # These statements have no bound parameters. DB-API execute prepares them
-    # first, adding a metadata RPC and native planning that direct Flight SQL
+    # first, adding a metadata RPC and native planning that direct execution
     # execution does not need. Use ADBC's public direct-execution API instead.
     with AdbcStatement(connection.adbc_connection) as statement:
         statement.set_sql_query(sql)
@@ -332,11 +394,22 @@ def query(state: Path) -> None:
             elapsed = time.perf_counter() - began
         writer = csv.writer(sys.stdout, lineterminator="\n")
         writer.writerow(table.column_names)
-        writer.writerows(rows)
+        null_text = os.environ.get("DUCKFLIGHT_BENCH_CSV_NULL")
+        if null_text is None:
+            writer.writerows(rows)
+        else:
+            # Validation distinguishes NULL from empty text; encoding stays
+            # outside the query timer, matching the earlier client comparison.
+            writer.writerows(
+                [null_text if value is None else value for value in row] for row in rows
+            )
     print(f"{elapsed:.9f}", file=sys.stderr)
 
 
 def load(state: Path) -> None:
+    if storage_mode() != "native":
+        load_datalake(state)
+        return
     parquet = ROOT / "hits.parquet"
     if not parquet.is_file():
         raise FileNotFoundError("download the standard hits.parquet before loading")
@@ -366,7 +439,90 @@ def load(state: Path) -> None:
     start(state)
 
 
+def lake_source() -> dict:
+    mode = storage_mode()
+    default = (
+        "s3://clickhouse-public-datasets/hits_compatible/athena_partitioned/hits_*.parquet"
+        if mode == "datalake-partitioned"
+        else LAKE_URL
+    )
+    source = os.environ.get("DUCKFLIGHT_BENCH_PARQUET_SOURCE", default)
+    if mode == "datalake":
+        if not source.startswith(("https://", "http://")):
+            raise ValueError("datalake mode requires a single Parquet HTTP(S) URL")
+        request = urllib.request.Request(source, method="HEAD")
+        with urllib.request.urlopen(request, timeout=120) as response:
+            size = int(response.headers["Content-Length"])
+        return {"mode": mode, "source": source, "data_size": size}
+    parsed = urllib.parse.urlsplit(source)
+    pattern = parsed.path.lstrip("/")
+    if parsed.scheme != "s3" or not parsed.netloc or pattern.count("*") != 1:
+        raise ValueError(
+            "partitioned lake mode requires an s3:// bucket and one wildcard"
+        )
+    region = os.environ.get("DUCKFLIGHT_BENCH_S3_REGION", "eu-central-1")
+    endpoint = f"https://{parsed.netloc}.s3.{region}.amazonaws.com/"
+    params = {"list-type": "2", "prefix": pattern.split("*", 1)[0]}
+    objects = []
+    namespace = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
+    while True:
+        with urllib.request.urlopen(
+            endpoint + "?" + urllib.parse.urlencode(params), timeout=120
+        ) as response:
+            listing = ET.fromstring(response.read())
+        for item in listing.findall("s3:Contents", namespace):
+            key = item.findtext("s3:Key", namespaces=namespace)
+            if key and fnmatch.fnmatchcase(key, pattern):
+                objects.append(
+                    {
+                        "key": key,
+                        "size": int(item.findtext("s3:Size", namespaces=namespace)),
+                    }
+                )
+        if listing.findtext("s3:IsTruncated", namespaces=namespace) != "true":
+            break
+        token = listing.findtext("s3:NextContinuationToken", namespaces=namespace)
+        if not token or token == params.get("continuation-token"):
+            raise RuntimeError("S3 listing omitted a new continuation token")
+        params["continuation-token"] = token
+    if not objects:
+        raise RuntimeError("partitioned lake source matched no objects")
+    return {
+        "mode": mode,
+        "source": source,
+        "region": region,
+        "objects": objects,
+        "data_size": sum(item["size"] for item in objects),
+    }
+
+
+def load_datalake(state: Path) -> None:
+    storage = lake_source()
+    source = storage["source"]
+    stop(state)
+    with local_database(state) as database:
+        database.execute(
+            "create view hits as select * replace (make_date(EventDate) as EventDate) "
+            f"from read_parquet({sql_string(source)}, binary_as_string=true)"
+        )
+        database.execute("create macro toDateTime(t) as epoch_ms(t * 1000)")
+        count = database.execute("select count(*) from hits").fetchone()[0]
+        if count != EXPECTED_ROWS:
+            raise RuntimeError(
+                f"partial dataset: {count} rows, expected {EXPECTED_ROWS}"
+            )
+        database.execute("checkpoint")
+    (state / "storage.json").write_text(json.dumps(storage))
+    start(state)
+
+
 def data_size(state: Path) -> None:
+    if storage_mode() != "native":
+        storage = json.loads((state / "storage.json").read_text())
+        if storage["mode"] != storage_mode():
+            raise RuntimeError("state storage mode differs from requested mode")
+        print(storage["data_size"])
+        return
     paths = [state / "hits.db", state / "hits.db.wal"]
     print(sum(path.stat().st_size for path in paths if path.exists()))
 
