@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+. ./util.sh
+hc_start

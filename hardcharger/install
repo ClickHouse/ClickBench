@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eu
+
+# Hardcharger's official one-line installer (https://github.com/gizmodata/hardcharger-install)
+# puts hardcharger-server and the hardcharger client in ~/.hardcharger/bin.
+HOME="${HOME:-/root}"
+export HOME
+if ! command -v hardcharger-server >/dev/null 2>&1; then
+    curl -fsSL https://install.hardcharger.gizmodata.com | HARDCHARGER_VERSION="${HARDCHARGER_VERSION:-2.0.0}" sh
+    sudo ln -sf "$HOME/.hardcharger/bin/hardcharger-server" "$HOME/.hardcharger/bin/hardcharger" /usr/local/bin/
+fi
