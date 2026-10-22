@@ -1,0 +1,13 @@
+#!/bin/bash
+set -eu
+. "$(dirname "$0")/env.sh"
+$PSQL -tAc 'SELECT 1' >/dev/null 2>&1 && exit 0
+sudo install -d -o "$PGRUST_USER" -g "$PGRUST_USER" "$PGSOCKDIR"
+# The server runs as $PGRUST_USER (it refuses root). The stack rlimit and RUST_MIN_STACK go with
+# max_stack_depth=60000 (the planner's recursive paths need a deeper stack).
+$AS_PG env PGRUST_PREFIX="$PGRUST_PREFIX" PGDATA="$PGDATA" PGPORT="$PGPORT" PGRUST_HOME="$PGRUST_HOME" bash -c '
+    ulimit -s 65520 2>/dev/null || true
+    nohup env RUST_MIN_STACK=67108864 \
+        "$PGRUST_PREFIX/bin/postgres" -D "$PGDATA" -p "$PGPORT" >> "$PGRUST_HOME/server.log" 2>&1 < /dev/null &
+'
+exit 0
