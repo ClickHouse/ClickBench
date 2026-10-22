@@ -1,0 +1,15 @@
+{
+  "system": "MotherDuck (data lake, single)",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "DuckDB derivative",
+    "serverless",
+    "managed",
+    "stateless",
+    "no-cold"
+  ]
+}

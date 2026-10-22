@@ -34,7 +34,7 @@ _EXTERNAL = {
     "clickhouse-cloud",
     "crunchy-bridge-for-analytics", "databricks", "exasol",
     "gravitons", "hologres", "hydrolix",
-    "motherduck", "pgpro_tam", "redshift", "redshift-serverless",
+    "motherduck", "motherduck-datalake", "pgpro_tam", "redshift", "redshift-serverless",
     "s3select", "singlestore", "snowflake", "supabase",
     "tembo-olap", "timescale-cloud", "tinybird", "velodb",
     "vertica", "ydb",
