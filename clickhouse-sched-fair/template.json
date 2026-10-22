@@ -1,0 +1,11 @@
+{
+  "system": "ClickHouse (scheduler: fair)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative"
+  ]
+}
