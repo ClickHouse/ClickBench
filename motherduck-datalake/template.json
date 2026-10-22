@@ -3,6 +3,7 @@
   "proprietary": "yes",
   "hardware": "cpu",
   "tuned": "no",
+  "storage": "datalake",
   "tags": [
     "C++",
     "column-oriented",
