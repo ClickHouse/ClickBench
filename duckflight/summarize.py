@@ -5,12 +5,13 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
 from datetime import date
 from pathlib import Path
 
 
-def parse_log(text: str) -> dict:
+def parse_log(text: str, throughput_status: dict | None = None) -> dict:
     results = []
     metrics = {}
     names = {
@@ -43,6 +44,14 @@ def parse_log(text: str) -> dict:
         raise ValueError("log is missing load, size or concurrency metrics")
     if not metrics["data_size"] or metrics["load_time"] is None:
         raise ValueError("log does not describe a loaded dataset")
+    if (
+        metrics["concurrent_qps"] is not None
+        or metrics["concurrent_error_ratio"] is not None
+    ) and (not throughput_status or not throughput_status.get("status")):
+        raise ValueError("non-null throughput requires an explicit phase status")
+    if throughput_status and throughput_status.get("status") != "complete":
+        metrics["concurrent_qps"] = None
+        metrics["concurrent_error_ratio"] = None
     return {**metrics, "result": results}
 
 
@@ -52,14 +61,38 @@ def main():
     parser.add_argument("output", type=Path)
     parser.add_argument("--date", required=True, type=date.fromisoformat)
     parser.add_argument("--machine", required=True)
+    status = parser.add_mutually_exclusive_group()
+    status.add_argument(
+        "--throughput-status",
+        type=Path,
+        help="JSON phase status; only complete preserves QPS",
+    )
+    status.add_argument(
+        "--throughput-unavailable", help="reason the phase was skipped or invalidated"
+    )
     args = parser.parse_args()
-    template = json.loads(Path(__file__).with_name("template.json").read_text())
+    entry = Path(
+        os.environ.get("DUCKFLIGHT_BENCH_ENTRY", Path(__file__).resolve().parent)
+    )
+    template = json.loads((entry / "template.json").read_text())
+    throughput_status = None
+    if args.throughput_status:
+        throughput_status = json.loads(args.throughput_status.read_text())
+        if not isinstance(throughput_status, dict) or not throughput_status.get(
+            "status"
+        ):
+            raise ValueError("throughput status must contain a nonempty status")
+    elif args.throughput_unavailable:
+        throughput_status = {
+            "status": "unavailable",
+            "reason": args.throughput_unavailable,
+        }
     result = {
         **template,
         "date": args.date.isoformat(),
         "machine": args.machine,
         "cluster_size": 1,
-        **parse_log(args.log.read_text()),
+        **parse_log(args.log.read_text(), throughput_status),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")

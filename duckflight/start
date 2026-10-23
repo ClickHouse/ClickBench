@@ -1,5 +1,4 @@
 #!/bin/bash
-set -eu
-cd "$(dirname "$0")"
-export PATH="$PWD/.tools:$PATH"
-exec uv run --frozen --no-sync python harness.py start
+set -euo pipefail
+entry="$(cd "$(dirname "$0")" && pwd)"
+exec "$entry/../duckflight/run.sh" "$entry" native start "$@"
