@@ -1,0 +1,19 @@
+{
+  "system": "Silicium",
+  "version": "2.0.0",
+  "os": "Ubuntu 24.04",
+  "date": "2026-04-12",
+  "machine": "c6a.4xlarge, 500gb gp2",
+  "cluster_size": 1,
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "PostgreSQL compatible"
+  ],
+  "load_time": 0,
+  "data_size": 0,
+  "result": []
+}

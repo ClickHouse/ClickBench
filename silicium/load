@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# SILICIUM CLICKBENCH HARNESS — LOAD & INGESTION
+# License: PolyForm Noncommercial License 1.0.0 / SCSL-1.0 Evaluation License
+# Protected under Patent Pending. All rights reserved.
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+ARENA_DIR="${SILICIUM_ARENA:-$SCRIPT_DIR/silicium_arena}"
+PARQUET_FILE="${1:-hits.parquet}"
+
+# Case 1: If hits.parquet is present, execute native ingestion
+if [ -f "$PARQUET_FILE" ]; then
+    echo "================================================================================"
+    echo "[SILICIUM] CLICKBENCH LOAD : NATIVE PARQUET -> MMAP COLUMNAR ARENA"
+    echo "   Source : $PARQUET_FILE"
+    echo "   Target : $ARENA_DIR"
+    echo "================================================================================"
+
+    rm -rf "$ARENA_DIR"
+    mkdir -p "$ARENA_DIR"
+
+    INGEST_BIN="./bin/silicium_ingest"
+    if [ ! -x "$INGEST_BIN" ]; then
+        echo "[ERROR] Ingestion binary $INGEST_BIN not found or not executable." >&2
+        exit 1
+    fi
+
+    "$INGEST_BIN" "$PARQUET_FILE" "$ARENA_DIR" --pax
+
+    ARENA_SIZE=$(du -sb -L "$ARENA_DIR" | awk '{print $1}')
+    echo "[OK] Silicium arena ingested: $ARENA_SIZE bytes."
+
+    # Preserve source dataset integrity (ClickBench multi-engine standard)
+    sync
+    exit 0
+fi
+
+# Case 2: Existing local arena
+if [ -d "$ARENA_DIR" ]; then
+    echo "[OK] Silicium arena already available ($ARENA_DIR)."
+    exit 0
+fi
+
+echo "[ERROR] Source file $PARQUET_FILE not found and no existing arena present." >&2
+exit 1

@@ -1,0 +1,5 @@
+bin/
+silicium_arena/
+*.tar.gz
+*.log
+*.pid

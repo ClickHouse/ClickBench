@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# SILICIUM CLICKBENCH HARNESS — INSTALL (RUNTIME SETUP)
+# License: PolyForm Noncommercial License 1.0.0 / SCSL-1.0 Evaluation License
+# Protected under Patent Pending. All rights reserved.
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Architecture Guard: Silicium supports x86_64 (AVX2/AVX-512) and aarch64 (ARMv9 Neoverse-V2 NEON/SVE2/LSE)
+HOST_ARCH="$(uname -m)"
+case "${HOST_ARCH}" in
+    x86_64|amd64)
+        NORM_ARCH="x86_64"
+        ;;
+    aarch64|arm64)
+        NORM_ARCH="aarch64"
+        ;;
+    *)
+        echo "silicium: x86_64 or aarch64 architecture required; current architecture is ${HOST_ARCH}. Skipping." >&2
+        exit 1
+        ;;
+esac
+
+echo "================================================================================"
+echo "[SILICIUM] CLICKBENCH INSTALL : BINARY SETUP & RUNNER PREPARATION"
+echo "================================================================================"
+
+# ==============================================================================
+# 0. ACTIVE SILICON ISA DETECTION (/proc/cpuinfo)
+# ==============================================================================
+if [ "${NORM_ARCH}" = "aarch64" ]; then
+    if grep -q "sve2" /proc/cpuinfo 2>/dev/null; then
+        TARGET_ISA="neoverse-v2-sve2-lse"
+    elif grep -q "asimd" /proc/cpuinfo 2>/dev/null; then
+        TARGET_ISA="aarch64-neon-lse"
+    else
+        TARGET_ISA="aarch64-generic"
+    fi
+elif grep -q "avx512" /proc/cpuinfo 2>/dev/null; then
+    TARGET_ISA="avx512"
+elif grep -q "avx2" /proc/cpuinfo 2>/dev/null; then
+    TARGET_ISA="avx2"
+else
+    TARGET_ISA="generic"
+fi
+
+echo "[INFO] Silicon ISA detected: ${TARGET_ISA} (${NORM_ARCH})"
+
+# Deterministic download of Silicium evaluation binaries
+SILICIUM_DOMAIN="clickbench"
+SILICIUM_VERSION="v2.0.0"
+SILICIUM_TAG="${SILICIUM_DOMAIN}-${SILICIUM_VERSION}"
+SILICIUM_TARBALL="silicium-${SILICIUM_DOMAIN}-${NORM_ARCH}-${SILICIUM_VERSION}.tar.gz"
+SILICIUM_DIST_REPO="${SILICIUM_DIST_REPO:-silicium369-spec/silicium-clickbench}"
+SILICIUM_URL="${SILICIUM_DIST_URL:-https://github.com/${SILICIUM_DIST_REPO}/releases/download/${SILICIUM_TAG}/${SILICIUM_TARBALL}}"
+SILICIUM_SHA256="5431ef86eb5278567d927f26119a493a72d6632fe017829606c82dc4dcabc806"
+SILICIUM_SHA256_AARCH64="661cfdc3dd570b835d9a539e3327a613a8b069ea153c8ccfbc89b87ba0d10f17"
+if [ "${NORM_ARCH}" = "aarch64" ]; then
+    SILICIUM_SHA256="${SILICIUM_SHA256_AARCH64}"
+fi
+
+mkdir -p bin
+
+if [ -f "bin/silicium_runner" ] && [ -f "bin/silicium_ingest" ] && "bin/silicium_runner" --help >/dev/null 2>&1; then
+    echo "[INFO] Local mode detected (bin/ already present and executable)."
+    chmod +x bin/silicium_runner bin/silicium_ingest 2>/dev/null || true
+else
+    if [ ! -f "${SILICIUM_TARBALL}" ]; then
+        if [ -f "../${SILICIUM_TARBALL}" ]; then
+            cp -f "../${SILICIUM_TARBALL}" "${SILICIUM_TARBALL}"
+        else
+            echo "[INFO] Downloading Silicium evaluation binaries (${SILICIUM_TAG})..."
+            echo "       Source: ${SILICIUM_URL}"
+            if command -v gh >/dev/null 2>&1 && gh release download "${SILICIUM_TAG}" -R "${SILICIUM_DIST_REPO}" -p "${SILICIUM_TARBALL}" --clobber >/dev/null 2>&1; then
+                echo "[OK] Downloaded via GitHub CLI."
+            elif [ -n "${GH_TOKEN:-}" ]; then
+                curl -sSL -f -H "Authorization: token ${GH_TOKEN}" -o "${SILICIUM_TARBALL}" "${SILICIUM_URL}" 2>/dev/null || \
+                curl -sSL -f -o "${SILICIUM_TARBALL}" "${SILICIUM_URL}"
+            else
+                curl -sSL -f -o "${SILICIUM_TARBALL}" "${SILICIUM_URL}"
+            fi
+        fi
+    fi
+
+    if command -v sha256sum >/dev/null 2>&1; then
+        echo "[INFO] Verifying SHA-256 cryptographic digest..."
+        echo "${SILICIUM_SHA256}  ${SILICIUM_TARBALL}" | sha256sum -c - || {
+            echo "[ERROR] Critical failure: SHA-256 checksum mismatch!" >&2
+            exit 1
+        }
+    fi
+
+    tar -xzf "${SILICIUM_TARBALL}" -C bin/
+    rm -f "${SILICIUM_TARBALL}"
+fi
+
+# Set executable permissions on evaluation binaries and ClickBench scripts
+chmod +x bin/*ingest bin/*runner 2>/dev/null || true
+chmod +x benchmark.sh check data-size install load query start stop 2>/dev/null || true
+
+echo "[OK] Silicium scripts and binaries configured."
+echo "================================================================================"

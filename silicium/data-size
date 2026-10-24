@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================================================
+# SILICIUM CLICKBENCH HARNESS — DATA SIZE (DISK FOOTPRINT PROBE)
+# License: PolyForm Noncommercial License 1.0.0 / SCSL-1.0 Evaluation License
+# Protected under Patent Pending. All rights reserved.
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ARENA_DIR="${SILICIUM_ARENA:-$SCRIPT_DIR/silicium_arena}"
+
+if [ -d "$ARENA_DIR" ]; then
+    du -sb -L "$ARENA_DIR" | awk '{print $1}'
+else
+    echo 0
+fi
