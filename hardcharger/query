@@ -1,0 +1,17 @@
+#!/bin/bash
+# Reads a query from stdin and runs it with the hardcharger client.
+# Stdout: the result. Stderr: the client's "Run Time" (query sent to all rows
+# received) in seconds, on the last line. Exits non-zero on an error.
+set -e
+. ./util.sh
+
+query=$(cat)
+err=$(mktemp)
+trap 'rm -f "$err"' EXIT
+
+printf '.timer on\n%s\n' "$query" | hardcharger --bail 2>"$err" && status=0 || status=$?
+if [ "$status" -ne 0 ]; then
+    cat "$err" >&2
+    exit "$status"
+fi
+sed -n 's/^Run Time: \([0-9.]*\)s$/\1/p' "$err" | tail -n1 >&2
