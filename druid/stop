@@ -1,8 +1,18 @@
 #!/bin/bash
 
-# Kill all Druid processes (the launcher and child JVMs).
+# pkill -f 'druid' self-matches this harness's own exec'd path, so
+# match the launcher/JVM entrypoint instead.
 pkill -f 'start-single-server-medium' 2>/dev/null || true
-pkill -f 'druid' 2>/dev/null || true
-# Small grace period so subsequent ./start binds cleanly.
-sleep 2
+pkill -f 'bin/supervise -c' 2>/dev/null || true
+pkill -KILL -f 'org.apache.druid.cli.Main' 2>/dev/null || true
+
+# supervise tears children down asynchronously; poll instead of a
+# fixed sleep (see pinot/stop for the same issue).
+for _ in $(seq 1 30); do
+    if ! pgrep -f 'bin/supervise -c' > /dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
 exit 0
