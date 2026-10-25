@@ -1,0 +1,12 @@
+#!/bin/bash
+# query: one statement from stdin through psql \timing; seconds to stderr
+set -e
+. "$(dirname "$0")/env.sh"
+query=$(cat)
+# keep psql's exit status: a lost connection (rc 2) must print psql's message to stderr as an ERROR does
+out=$(printf '\\timing\n%s\n' "$query" | $PSQL -d test -t 2>&1) && status=0 || status=$?
+if [ "$status" -ne 0 ] || printf '%s\n' "$out" | grep -q '^ERROR\|psql: error'; then printf '%s\n' "$out" >&2; exit $(( status ? status : 1 )); fi
+printf '%s\n' "$out" | grep -v '^Time:'
+time_ms=$(printf '%s\n' "$out" | grep -oP 'Time:\s+\K[0-9]+\.[0-9]+' | tail -n1)
+[ -n "$time_ms" ] || { echo "no timing in psql output" >&2; exit 1; }
+awk -v ms="$time_ms" 'BEGIN { printf "%.3f\n", ms / 1000 }' >&2
