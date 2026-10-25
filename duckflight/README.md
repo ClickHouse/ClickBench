@@ -15,7 +15,8 @@ retain the server. DuckDB uses default thread and memory settings.
 The native entry loads `hits.parquet` into a table. `../duckflight-datalake` and
 `../duckflight-datalake-partitioned` read the standard single-file and partitioned
 S3 datasets through views. Run `./benchmark.sh` in the corresponding directory;
-each entry has its own state and uses the shared regional dataset helper.
+each entry is self-contained (with its own copy of the scripts) and has its own
+state.
 
 The 2026-10-21 results use c6a.4xlarge with 500 GB gp2 storage. Concurrent QPS is
 unavailable: the native phase was aborted and the lake phases were skipped.

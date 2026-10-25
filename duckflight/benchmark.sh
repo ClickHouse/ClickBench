@@ -1,4 +1,4 @@
 #!/bin/bash
 set -euo pipefail
 entry="$(cd "$(dirname "$0")" && pwd)"
-exec "$entry/../duckflight/run.sh" "$entry" native benchmark "$@"
+exec "$entry/run.sh" "$entry" native benchmark "$@"
