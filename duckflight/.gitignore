@@ -1,7 +1,7 @@
 .venv/
 .tools/
 .state/
+__pycache__/
 hits.parquet
 result.csv
 baseline.json
-host-metadata.txt
