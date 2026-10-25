@@ -1,4 +1,4 @@
 #!/bin/bash
 set -euo pipefail
 entry="$(cd "$(dirname "$0")" && pwd)"
-exec "$entry/../duckflight/run.sh" "$entry" datalake benchmark "$@"
+exec "$entry/run.sh" "$entry" datalake benchmark "$@"

@@ -14,7 +14,7 @@ cd "$entry"
 
 if [ "$mode" != native ]; then
     case "$command" in
-    install|load|start|benchmark)
+    load|start|benchmark)
         source "$entry/../lib/dataset-bucket.sh"
         export DUCKFLIGHT_BENCH_S3_REGION="${DUCKFLIGHT_BENCH_S3_REGION:-$DATASET_REGION}"
         if [ "$mode" = datalake ]; then
@@ -27,7 +27,6 @@ if [ "$mode" != native ]; then
 fi
 
 case "$command" in
-    install) exec "$implementation/install" ;;
     benchmark)
         export BENCH_RESTARTABLE=yes BENCH_DURABLE=yes
         export BENCH_QUERIES_FILE="$entry/queries.sql"
