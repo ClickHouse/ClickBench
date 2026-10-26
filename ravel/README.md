@@ -135,6 +135,20 @@ an empty `RAVEL_GROUP_TARGET_BLOCKS` keeps the loader's default). **There is no 
 step**: no compaction, no catalog fold, no VACUUM equivalent, so the layout the
 queries run against is the layout ingest produced.
 
+Before the load, `./load` sets two tenant settings that decide how ingest lays
+rows out. `bloom-scope set --scope text` keeps bloom filters to text columns
+(log bodies and severity); `hits` has none, so no column is covered and each
+block keeps only the minimum filter. No statement here has a predicate a bloom
+filter would answer. `clustering-key
+set --column EventDate --column UserID --bucket-width 1d` sorts the rows inside
+each object by counter, day, `EventDate`, `UserID` and time, the order
+ClickHouse's own entry gives its table with `PRIMARY KEY (CounterID, EventDate,
+UserID, EventTime, WatchID)`; the counter is already Ravel's stream, so it is
+not repeated. Sorted columns compress better and the bloom section shrinks
+to its minimum: on c6a.4xlarge with v0.27.0 the two settings together took the stored
+data from 10.3 GB to 8.3 GB and the load from about 900 s to about 640 s, with
+the same answers.
+
 `./data-size` reports the tenant's whole durable footprint in the bucket (data
 objects, commit records, manifests, catalog snapshots), which is where all of
 Ravel's state lives.
@@ -150,9 +164,10 @@ whole objects; `server.log` names it with `policy_source="default-loopback"`.
 On c6a.4xlarge, in this repository's fresh-VM setup, with RustFS as the store,
 the cold sum over the 43 statements was 365.7 s on v0.26.0, against 486.6 s on
 v0.23.0 and 1,291.0 s on v0.21.0. With s3s-fs as the store it was 163.1 s on
-v0.27.0 with 24 MB objects, and 117.7 s with the 46 MB one-group objects the
-30 GB tier writes, the entry as it stands (`results/20261026`). The dataset
-is 10.3 GB. The RustFS results stay under their own dates.
+v0.27.0 with 24 MB objects, 117.7 s with the 46 MB one-group objects the
+30 GB tier writes, and 108.0 s with those objects sorted by the clustering key
+and without bloom filters, the entry as it stands (`results/20261026`). The
+dataset is 8.3 GB. The RustFS results stay under their own dates.
 
 A warm run is served from the read cache or from the store. Since 0.24.0, a
 server whose store is on loopback gives its fetch cache 24% of its memory
