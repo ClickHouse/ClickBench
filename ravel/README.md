@@ -149,9 +149,10 @@ which reads only the byte ranges a statement needs from each object instead of
 whole objects; `server.log` names it with `policy_source="default-loopback"`.
 On c6a.4xlarge, in this repository's fresh-VM setup, with RustFS as the store,
 the cold sum over the 43 statements was 365.7 s on v0.26.0, against 486.6 s on
-v0.23.0 and 1,291.0 s on v0.21.0. With s3s-fs as the store, the entry as it
-stands, it was 163.1 s on v0.27.0 (`results/20261026`). The dataset is 10.2 GB.
-The RustFS results stay under their own dates.
+v0.23.0 and 1,291.0 s on v0.21.0. With s3s-fs as the store it was 163.1 s on
+v0.27.0 with 24 MB objects, and 117.7 s with the 46 MB one-group objects the
+30 GB tier writes, the entry as it stands (`results/20261026`). The dataset
+is 10.3 GB. The RustFS results stay under their own dates.
 
 A warm run is served from the read cache or from the store. Since 0.24.0, a
 server whose store is on loopback gives its fetch cache 24% of its memory
