@@ -53,10 +53,10 @@ fi
 log="server.$(date -u +%Y%m%dT%H%M%SZ).log"
 ln -sfn "$log" server.log
 
-# The store must be up before the server: a RustFS that died between queries
+# The store must be up before the server: an s3s-fs that died between queries
 # would otherwise turn every later statement into an error. No-op when it is
 # already serving.
-./rustfs-start
+./store-start
 
 # Each in-flight object-store request holds a socket, and at startup the
 # server has exited with EMFILE under the common 1024 soft limit. Raise the
