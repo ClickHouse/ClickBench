@@ -103,7 +103,7 @@ startup under the common default of 1024.
 in 100,000-row batches. Since 0.23.0 a shard merges several batches into one
 stored object until its buffer's estimated uncompressed content reaches
 `--target-bytes`; at 1,850,000,000 that gives objects of about 25 MB on this
-dataset (about 410 objects in all; a stored object is about 1/74 of the
+dataset (about 420 objects in all on v0.27.0; a stored object is about 1/74 of the
 estimate here). Before 0.23.0 each batch was its own object, about 4 MB. Large
 objects are what make a cold scan cheap. The loader holds its batches under
 `--load-memory-bytes`, so the load fits the machine. `./load` picks the
@@ -111,17 +111,27 @@ pipeline depth, read cursors and that budget from `MemTotal`:
 
 | MemTotal | `--pipeline-depth` | `--read-cursors` | `--load-memory-bytes` |
 |---|---|---|---|
-| 15 GB and up | 32 | 16 | 6,500,000,000 |
+| 30 GB and up | 56 | 16 | 14,000,000,000 |
+| 15 to 30 GB | 32 | 16 | 6,500,000,000 |
 | 7 to 15 GB | 24 | 16 | 3,500,000,000 |
 | 3 to 7 GB | 16 | 2 | 1,200,000,000 |
 | under 3 GB | 8 | 1 | derived by the loader |
+
+From 30 GB up `./load` also writes larger objects, each one row group:
+`--target-bytes 3700000000` and `--group-target-blocks 512` give objects of
+about 46 MB and 450,000 rows (223 objects on c6a.4xlarge with v0.27.0), and
+each column of an object is one contiguous range. The age trigger there is
+`--max-flush-delay 60s`, since a larger object takes longer to fill. Below
+30 GB the target stays at 1,850,000,000 and objects keep the loader's default
+row groups.
 
 On a 4 GB machine the budget is smaller than the objects need, so the loader
 flushes early to stay inside it and the objects come out smaller, about 17 MB
 median. `--max-flush-delay 30s` lets an object fill before the age trigger
 closes it. Every value can be overridden from the environment (`RAVEL_BATCH_ROWS`,
 `RAVEL_TARGET_BYTES`, `RAVEL_PIPELINE_DEPTH`, `RAVEL_READ_CURSORS`,
-`RAVEL_LOAD_MEMORY_BYTES`, `RAVEL_MAX_FLUSH_DELAY`). **There is no post-load
+`RAVEL_LOAD_MEMORY_BYTES`, `RAVEL_MAX_FLUSH_DELAY`, `RAVEL_GROUP_TARGET_BLOCKS`;
+an empty `RAVEL_GROUP_TARGET_BLOCKS` keeps the loader's default). **There is no post-load
 step**: no compaction, no catalog fold, no VACUUM equivalent, so the layout the
 queries run against is the layout ingest produced.
 
