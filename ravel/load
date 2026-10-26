@@ -29,6 +29,20 @@ MAPPING="${RAVEL_MAPPING:-hits.mapping.toml}"
 "$RAVEL_CLI" --store s3 --s3-auth static \
     typed-attr-column set "$RAVEL_TENANT" --from-mapping "$MAPPING"
 
+# Bloom filters only on text columns (body, severity). hits has none, so no
+# string column gets BLOOM coverage and each block carries only the minimum
+# filter. No statement here has a predicate a bloom filter answers.
+"$RAVEL_CLI" --store s3 --s3-auth static \
+    bloom-scope set --tenant "$RAVEL_TENANT" --scope text --readers-rolled-out
+
+# Clustering key: rows inside each object sort by (stream, day, EventDate,
+# UserID, timestamp), the order ClickHouse's own entry gives its table with
+# PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID). CounterID is
+# already the stream, so it is not repeated here.
+"$RAVEL_CLI" --store s3 --s3-auth static \
+    clustering-key set --tenant "$RAVEL_TENANT" --column EventDate --column UserID \
+    --bucket-width 1d --readers-rolled-out
+
 # Load geometry. Small batches merge into large stored objects: a shard's
 # buffer accumulates batches until its estimated uncompressed content reaches
 # --target-bytes, and on this dataset a stored object holds about 1/74 of that
