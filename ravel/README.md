@@ -93,8 +93,8 @@ container, less a fixed reserve), with a fixed segment cap and engine deadline.
 Every resolved value and its source is logged on a `performance default
 resolved` line in `server.log`; a published result should record those lines,
 because they are the configuration the numbers were measured at. On
-c6a.4xlarge, with the store on loopback, v0.26.0 resolved the fetch cache to
-7.0 GB, the per-query SQL pool to 16.5 GB and fetch concurrency to 32.
+c6a.4xlarge, with the store on loopback, v0.27.0 resolved the fetch cache to
+7.1 GB, the per-query SQL pool to 16.5 GB and fetch concurrency to 32.
 `./start` also raises the process's open-file
 soft limit to the hard limit, since the server has exited with `EMFILE` at
 startup under the common default of 1024.
@@ -139,9 +139,9 @@ which reads only the byte ranges a statement needs from each object instead of
 whole objects; `server.log` names it with `policy_source="default-loopback"`.
 On c6a.4xlarge, in this repository's fresh-VM setup, with RustFS as the store,
 the cold sum over the 43 statements was 365.7 s on v0.26.0, against 486.6 s on
-v0.23.0 and 1,291.0 s on v0.21.0. The dataset is 10.2 GB. The published
-result in `results/` was measured with RustFS; a run of this entry as it
-stands, with s3s-fs, replaces it.
+v0.23.0 and 1,291.0 s on v0.21.0. With s3s-fs as the store, the entry as it
+stands, it was 163.1 s on v0.27.0 (`results/20261026`). The dataset is 10.2 GB.
+The RustFS results stay under their own dates.
 
 A warm run is served from the read cache or from the store. Since 0.24.0, a
 server whose store is on loopback gives its fetch cache 24% of its memory
