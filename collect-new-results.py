@@ -449,6 +449,12 @@ def process_main(system, rows):
            check=False) == "":
         note(f"{system}: no such directory in main, skipping {len(rows)} run(s)")
         return
+    # Several runs of a day (e.g. the scheduled one and a manual rerun) write
+    # the same file: only the latest one counts. Otherwise the older run differs
+    # from what main has after the newer one was merged, and every pass would
+    # commit them in turn. Rows come ordered by time.
+    latest = {result_path(r): r for r in rows if r["good"]}
+    rows = [r for r in rows if not r["good"] or latest[result_path(r)] is r]
     # A result identical to what main already has was posted and merged before.
     rows = [r for r in rows
             if not (r["good"] and file_in_main(result_path(r)) == r["output"])]
