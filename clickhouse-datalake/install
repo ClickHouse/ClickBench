@@ -42,6 +42,13 @@ filesystem_caches:
     max_size: $cache_max
 EOF
 
+# Load the databases synchronously at startup, as for the clickhouse entry:
+# otherwise ./check passes before the table is loaded after a restart, and
+# the cold try waits for it.
+sudo tee /etc/clickhouse-server/config.d/eager_load.yaml >/dev/null <<'EOF'
+async_load_databases: false
+EOF
+
 # Columns cache: keeps deserialized columns in memory, so the hot tries skip
 # Parquet decoding. Sized by default to 10% of RAM (columns_cache_size_to_ram_ratio).
 sudo tee /etc/clickhouse-server/users.d/caches.yaml >/dev/null <<'EOF'
