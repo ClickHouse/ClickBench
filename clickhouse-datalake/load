@@ -2,9 +2,7 @@
 set -e
 
 # Data lives in S3; create.sql defines a remote-backed ENGINE = S3 table.
-# Create the table once here; clickhouse-local persists the metadata in the
-# --path directory so subsequent ./query invocations can reuse it.
 . ../lib/dataset-bucket.sh
-./clickhouse local --path . --query="DROP TABLE IF EXISTS hits"
-./clickhouse local --path . --query="$(bench_dataset_sql < create.sql)"
+clickhouse-client --query "DROP TABLE IF EXISTS hits"
+bench_dataset_sql < create.sql | clickhouse-client
 sync

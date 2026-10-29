@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-./clickhouse local --query "SELECT 1" >/dev/null
+clickhouse-client --query "SELECT 1" >/dev/null
