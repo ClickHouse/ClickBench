@@ -15,7 +15,7 @@ export HARDCHARGER_TLS=false
 PID_FILE="${PWD}/hardcharger-server.pid"
 
 hc_ready() {
-    curl -fsS -o /dev/null "http://${HARDCHARGER_HOST}:${HARDCHARGER_PORT}/warp"
+    curl -fsS -o /dev/null "http://${HARDCHARGER_HOST}:${HARDCHARGER_PORT}/chargewire"
 }
 
 hc_start() {
