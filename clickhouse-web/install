@@ -25,3 +25,12 @@ sudo mkdir -p /dev/shm/clickhouse /var/lib/clickhouse/caches/web
 sudo chown clickhouse:clickhouse /dev/shm/clickhouse /var/lib/clickhouse/caches/web
 sudo mount --bind /dev/shm/clickhouse /var/lib/clickhouse/caches/web
 sudo chown clickhouse:clickhouse /var/lib/clickhouse/caches/web
+
+# Columns cache: keeps deserialized columns in memory, so the hot tries skip
+# decompression. Sized by default to 10% of RAM (columns_cache_size_to_ram_ratio).
+sudo mkdir -p /etc/clickhouse-server/users.d
+sudo tee /etc/clickhouse-server/users.d/columns_cache.yaml >/dev/null <<'EOF'
+profiles:
+  default:
+    use_columns_cache: 1
+EOF

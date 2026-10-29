@@ -5,5 +5,5 @@
 set -e
 
 query=$(cat)
-./clickhouse local --path . --time --filesystem_cache_name cache \
+./clickhouse local --path . --time --filesystem_cache_name cache --use_columns_cache 1 \
     --format=Pretty --query="$query"
