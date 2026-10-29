@@ -33,3 +33,12 @@ merge_tree:
   primary_key_lazy_load: 0
   columns_and_secondary_indices_sizes_lazy_calculation: 0
 EOF
+
+# Columns cache: keeps deserialized columns in memory, so the hot tries skip
+# decompression. Sized by default to 10% of RAM (columns_cache_size_to_ram_ratio).
+sudo mkdir -p /etc/clickhouse-server/users.d
+sudo tee /etc/clickhouse-server/users.d/columns_cache.yaml >/dev/null <<'EOF'
+profiles:
+  default:
+    use_columns_cache: 1
+EOF

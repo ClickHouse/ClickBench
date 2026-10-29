@@ -1,6 +1,16 @@
 #!/bin/bash
 set -e -o pipefail
 
-if [ ! -x ./clickhouse ]; then
+if [ ! -x /usr/bin/clickhouse ]; then
     curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ | sh
+    sudo ./clickhouse install --noninteractive
 fi
+
+# Columns cache: keeps deserialized columns in memory, so the hot tries skip
+# Parquet decoding. Sized by default to 10% of RAM (columns_cache_size_to_ram_ratio).
+sudo mkdir -p /etc/clickhouse-server/users.d
+sudo tee /etc/clickhouse-server/users.d/columns_cache.yaml >/dev/null <<'EOF'
+profiles:
+  default:
+    use_columns_cache: 1
+EOF

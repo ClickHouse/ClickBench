@@ -1,7 +1,14 @@
 #!/bin/bash
 set -e
 
-# clickhouse-local with File(Parquet) engine reads the parquet file in place,
-# so there's no separate ingest step. The "load" is implicit — just keep the
-# downloaded hits.parquet in this directory.
+# The File(Parquet) engine reads the parquet file in place, so there's no
+# separate ingest step. The server resolves the table's path relative to its
+# user_files directory: symlink the downloaded file there and keep it for the
+# duration of the benchmark. chown -h sets the symlink's owner; the file itself
+# is mode 644, so the clickhouse user can read it through the symlink.
+sudo ln -sf "$PWD/hits.parquet" /var/lib/clickhouse/user_files/hits.parquet
+sudo chown -h clickhouse:clickhouse /var/lib/clickhouse/user_files/hits.parquet
+
+clickhouse-client --query "DROP TABLE IF EXISTS hits"
+clickhouse-client < create.sql
 sync

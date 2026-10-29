@@ -1,19 +1,19 @@
 #!/bin/bash
 set -e -o pipefail
 
-if [ ! -x ./clickhouse ]; then
+if [ ! -x /usr/bin/clickhouse ]; then
     curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ | sh
+    sudo ./clickhouse install --noninteractive
 fi
 
-# Filesystem cache in tmpfs (/dev/shm) for S3 reads: unlike the in-process
-# page cache it persists across the per-try clickhouse-local processes, so
-# the hot tries read from RAM instead of re-fetching from S3.
+# Filesystem cache in tmpfs (/dev/shm) for S3 reads, so that the hot tries
+# read from RAM instead of re-fetching from S3.
 #
 # max_size must not exceed /dev/shm's capacity, or ClickHouse refuses to
-# start (Code 36, BAD_ARGUMENTS) and even ./check's SELECT 1 dies. /dev/shm
-# defaults to half of RAM, which is below the 16G we want on every machine
-# under 32 GiB, so cap the cache at half of /dev/shm (a quarter of RAM): it
-# then always fits and never starves query execution of memory.
+# start (Code 36, BAD_ARGUMENTS). /dev/shm defaults to half of RAM, which is
+# below the 16G we want on every machine under 32 GiB, so cap the cache at
+# half of /dev/shm (a quarter of RAM): it then always fits and never starves
+# query execution of memory.
 #
 # Keep the cache in tmpfs on every size rather than spilling to a disk cache
 # on the small ones: their local EBS volume is far slower than same-region
@@ -24,9 +24,29 @@ shm_bytes=$(df -B1 -P /dev/shm 2>/dev/null | awk 'NR==2 {print $2}')
 half_shm=$(( shm_bytes / 2 ))
 [ "$half_shm" -lt "$cache_max" ] && cache_max=$half_shm
 
-cat > clickhouse-local.yaml <<YAML
+# ClickHouse rejects any filesystem-cache path outside
+# /var/lib/clickhouse/caches/, so bind-mount the tmpfs directory there
+# (a symlink is canonicalised and rejected as well).
+if ! mountpoint -q /var/lib/clickhouse/caches/datalake; then
+    sudo mkdir -p /dev/shm/clickhouse /var/lib/clickhouse/caches/datalake
+    sudo chown clickhouse:clickhouse /dev/shm/clickhouse /var/lib/clickhouse/caches/datalake
+    sudo mount --bind /dev/shm/clickhouse /var/lib/clickhouse/caches/datalake
+    sudo chown clickhouse:clickhouse /var/lib/clickhouse/caches/datalake
+fi
+
+sudo mkdir -p /etc/clickhouse-server/config.d /etc/clickhouse-server/users.d
+sudo tee /etc/clickhouse-server/config.d/filesystem_cache.yaml >/dev/null <<EOF
 filesystem_caches:
-    cache:
-        path: '/dev/shm/clickhouse/'
-        max_size: $cache_max
-YAML
+  cache:
+    path: /var/lib/clickhouse/caches/datalake/
+    max_size: $cache_max
+EOF
+
+# Columns cache: keeps deserialized columns in memory, so the hot tries skip
+# Parquet decoding. Sized by default to 10% of RAM (columns_cache_size_to_ram_ratio).
+sudo tee /etc/clickhouse-server/users.d/caches.yaml >/dev/null <<'EOF'
+profiles:
+  default:
+    filesystem_cache_name: cache
+    use_columns_cache: 1
+EOF
