@@ -1,15 +1,21 @@
 #!/bin/bash
-# Loads hits.parquet into the splayed table ./hits.
-#
-# The load runs in its own rayforce process, not through the server: the server
-# started by the driver before ./load has no table open yet and picks it up at
-# the next restart, which happens before the first query.
+# Loads hits.parquet into the splayed table ./hits, in its own process; the
+# server picks the table up at its next restart. With more RAM than the
+# Parquet file the text columns share one .sym file, otherwise each gets its
+# own compressed symbol file.
 set -e
 
 rm -rf hits
 
+mem=$(awk '/^MemTotal:/ { print $2 * 1024 }' /proc/meminfo)
+if [ "$mem" -gt "$(stat -L -c %s hits.parquet)" ]; then
+    export HITS_SYMFILE=shared
+else
+    export HITS_SYMFILE=column
+fi
+echo "MemTotal $mem bytes: $HITS_SYMFILE symbol file"
+
 rayforce load.rfl
 
-# The Parquet file is no longer needed once the columns are on disk.
 rm -f hits.parquet
 sync
