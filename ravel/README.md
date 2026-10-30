@@ -85,8 +85,16 @@ binaries extracted from the signed container images, so what runs here is what
 the published image runs. If the release is unreachable it falls back to
 building the pinned ref from source with `--release`.
 
-`./start` passes **no performance flags**. The server resolves its query
-budgets at startup: fetch concurrency from the core count, the read caches and
+`./start` passes **one performance flag**: from 30 GB of `MemTotal` up it
+turns on the decoded column-block cache with
+`--decoded-cache-max-bytes 8000000000`. Below 30 GB the cache stays off, the
+server's default. The cache keeps decoded columns between statements, so a
+warm statement skips their decode. Its entries are charged to the server's
+memory budget, and memory pressure evicts them before a query is refused. The
+8 GB cap was chosen on c6a.4xlarge from 4, 8 and 12 GB: at 4 GB the cache
+churned and two statements ran slower than without it, and 8 GB came within
+0.2 % of 12 GB's warm-run geomean. `RAVEL_DECODED_CACHE_BYTES` overrides it, and
+`0` turns it off. Everything else the server resolves at startup: fetch concurrency from the core count, the read caches and
 the SQL memory ceilings as shares of one memory budget derived from usable
 memory (`MemTotal`, capped by the cgroup memory limit when it runs in a
 container, less a fixed reserve), with a fixed segment cap and engine deadline.
@@ -171,7 +179,9 @@ dataset is 8.3 GB. The RustFS results stay under their own dates.
 
 A warm run is served from the read cache or from the store. Since 0.24.0, a
 server whose store is on loopback gives its fetch cache 24% of its memory
-budget: 7.0 GB on this machine.
+budget: 7.0 GB on this machine. Since 0.28.0 the decoded cache sits on top of
+it, so a warm statement on this machine also skips decoding the columns it
+already decoded.
 
 ### The tuned configuration
 

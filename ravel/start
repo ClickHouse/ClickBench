@@ -29,7 +29,8 @@ if ports_busy; then
     exit 1
 fi
 
-# No performance flags. Since Ravel 0.13.0 the server resolves its query
+# One performance flag, the decoded cache's cap below; nothing else. Since
+# Ravel 0.13.0 the server resolves its query
 # budgets at startup: fetch concurrency from the core count, the read caches and
 # the two SQL memory ceilings from usable memory (MemTotal, capped by the cgroup
 # limit in a container), with a fixed segment cap and engine deadline. The
@@ -67,6 +68,22 @@ ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
 # ravel-env.sh for what it does against a local store.
 cache_args=()
 [ -n "${RAVEL_CACHE_DIR:-}" ] && cache_args=(--cache-dir "$RAVEL_CACHE_DIR")
+
+# The decoded column-block cache (--decoded-cache-max-bytes, off by default in
+# the server) keeps decoded columns between statements so a warm statement
+# skips their decode. Its entries are charged to the server's memory budget,
+# and the cap was measured on c6a.4xlarge only, so it is set from 30 GB of
+# MemTotal up, the tier ./load also uses, and left off below.
+# RAVEL_DECODED_CACHE_BYTES overrides it; 0 turns it off.
+mem_kb=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
+decoded_cache_bytes=0
+[ "${mem_kb:-0}" -ge 30000000 ] && decoded_cache_bytes=8000000000
+decoded_cache_bytes="${RAVEL_DECODED_CACHE_BYTES:-$decoded_cache_bytes}"
+case "$decoded_cache_bytes" in
+    ''|*[!0-9]*) echo "start: RAVEL_DECODED_CACHE_BYTES must be a byte count" >&2; exit 1 ;;
+esac
+[ "$decoded_cache_bytes" != 0 ] && cache_args+=(--decoded-cache-max-bytes "$decoded_cache_bytes")
+echo "start: MemTotal ${mem_kb} kB, decoded cache ${decoded_cache_bytes} bytes" >&2
 
 # The tuned entry passes its server flags through RAVEL_TUNED_ARGS so the
 # setting is reproducible from this file rather than from a hand-edited
