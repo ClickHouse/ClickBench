@@ -149,7 +149,7 @@ def clickhouse_binary(tmp):
     if found:
         return found
     print("Downloading ClickHouse")
-    subprocess.run("curl -sSfL https://clickhouse.com/ | sh", shell=True, cwd=tmp, check=True,
+    subprocess.run("curl -sSfL https://clickhouse.com/ | CLICKHOUSE_BRANCH=master sh", shell=True, cwd=tmp, check=True,
                    stdout=subprocess.DEVNULL)
     return os.path.join(tmp, "clickhouse")
 

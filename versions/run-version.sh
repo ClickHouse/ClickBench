@@ -185,7 +185,7 @@ start_server() {
         # backgrounding/pidfile juggling here.
         echo "starting ${VERSION}: curl https://clickhouse.com/ | sh  ->  clickhouse install  ->  clickhouse start" >&2
         mkdir -p "${LOCAL_DIR}"
-        ( cd "${LOCAL_DIR}" && curl -fsSL https://clickhouse.com/ | sh ) >&2
+        ( cd "${LOCAL_DIR}" && curl -fsSL https://clickhouse.com/ | CLICKHOUSE_BRANCH=master sh ) >&2
         [ -x "${LOCAL_DIR}/clickhouse" ] || { echo "local install failed: ${LOCAL_DIR}/clickhouse missing" >&2; return 1; }
         ${SUDO} "${LOCAL_DIR}/clickhouse" install --noninteractive >&2 2>&1 </dev/null \
             || ${SUDO} "${LOCAL_DIR}/clickhouse" install >&2 2>&1 </dev/null \

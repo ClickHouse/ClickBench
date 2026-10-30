@@ -2,5 +2,5 @@
 set -e -o pipefail
 
 if [ ! -x ./clickhouse ]; then
-    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ | sh
+    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ | CLICKHOUSE_BRANCH=master sh
 fi

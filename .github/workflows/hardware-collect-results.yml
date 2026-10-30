@@ -29,7 +29,7 @@ jobs:
       - name: Install the ClickHouse client
         working-directory: ${{ runner.temp }}   # not the checkout: it must stay clean
         run: |
-          curl -fsSL https://clickhouse.com/ | sh
+          curl -fsSL https://clickhouse.com/ | CLICKHOUSE_BRANCH=master sh
           sudo ln -sf "$PWD/clickhouse" /usr/local/bin/clickhouse-client
 
       - env:

@@ -8,7 +8,7 @@ export DEBIAN_FRONTEND=noninteractive
 # --- ClickHouse ---
 if [ ! -x /usr/bin/clickhouse ]; then
     cd /tmp
-    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ | sh
+    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ | CLICKHOUSE_BRANCH=master sh
     sudo ./clickhouse install --noninteractive
     rm -f clickhouse
     cd -
