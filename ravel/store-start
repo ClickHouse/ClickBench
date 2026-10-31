@@ -1,0 +1,47 @@
+#!/bin/bash
+# Brings up the local s3s-fs this entry runs against, if it is not already up.
+# Idempotent: ./install calls it after building s3s-fs, and ./start calls it
+# before every server start, so a store that died between queries is restarted
+# rather than turning the rest of the run into errors. Its data directory is
+# on this machine's disk; ./stop leaves the store running on purpose, the
+# driver's restart cycle is for the database, and the page-cache drop before
+# each cold run reaches the store's files the same as any local-disk engine's.
+set -eu
+. ./ravel-env.sh
+
+# s3s-fs has no health route. Any HTTP answer on the endpoint means it is up;
+# the probe is unauthenticated, so an answer cannot be confused with a
+# credential problem.
+up() { [ "$(curl -s -o /dev/null -w '%{http_code}' "$RAVEL_S3_ENDPOINT/")" != 000 ]; }
+if up; then
+    exit 0
+fi
+
+[ -x "$STORE_DIR/bin/s3s-fs" ] || { echo "store-start: $STORE_DIR/bin/s3s-fs missing; run ./install first" >&2; exit 1; }
+[ -f "$STORE_DIR/credentials.env" ] || { echo "store-start: $STORE_DIR/credentials.env missing; run ./install first" >&2; exit 1; }
+mkdir -p "$STORE_DIR/data"
+
+# Credentials reach s3s-fs through its environment (S3S_FS_ACCESS_KEY and
+# S3S_FS_SECRET_KEY), never its argument list. It listens on the loopback
+# address and port of RAVEL_S3_ENDPOINT and nothing else.
+(
+    set -a
+    # shellcheck disable=SC1091
+    . "$STORE_DIR/credentials.env"
+    set +a
+    export S3S_FS_ACCESS_KEY="$STORE_ACCESS_KEY"
+    export S3S_FS_SECRET_KEY="$STORE_SECRET_KEY"
+    hostport="${RAVEL_S3_ENDPOINT#http://}"
+    nohup "$STORE_DIR/bin/s3s-fs" --host "${hostport%:*}" --port "${hostport##*:}" "$STORE_DIR/data" \
+        > "$STORE_DIR/s3s-fs.log" 2>&1 < /dev/null &
+    echo $! > "$STORE_DIR/s3s-fs.pid"
+)
+
+for _ in $(seq 1 60); do
+    if up; then
+        exit 0
+    fi
+    sleep 1
+done
+echo "store-start: s3s-fs did not answer $RAVEL_S3_ENDPOINT within 60s; see $STORE_DIR/s3s-fs.log" >&2
+exit 1
