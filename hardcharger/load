@@ -1,0 +1,12 @@
+#!/bin/bash
+set -eu
+. ./util.sh
+
+hc_stop
+rm -f hits.db hits.db.wal
+hc_start
+
+hardcharger --bail --file create.sql
+hardcharger --bail --file load.sql
+
+rm -f hits.parquet
