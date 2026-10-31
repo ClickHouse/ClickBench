@@ -111,6 +111,12 @@ DATALAKE_FILTERED: frozenset[str] = frozenset({
     "clickhouse-web",
     "duckdb-datalake",
     "duckdb-datalake-partitioned",
+    # duckflight-datalake{,-partitioned}: harness.py reads parquet
+    # directly from s3://clickhouse-public-datasets at query time
+    # (via DuckDB's httpfs/s3 extensions). Same post-snapshot egress
+    # need as the duckdb-datalake variants.
+    "duckflight-datalake",
+    "duckflight-datalake-partitioned",
     "presto-datalake",
     "presto-datalake-partitioned",
     "trino-datalake",
