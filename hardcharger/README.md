@@ -8,7 +8,7 @@ The scripts follow the `gizmosql` entry:
 
 - `install` runs Hardcharger's official one-line installer
   (`curl https://install.hardcharger.gizmodata.com | sh`), defaulting to the official
-  `2.4.0` release. `HARDCHARGER_VERSION` can override that version; the installer verifies the
+  `2.4.1` release. `HARDCHARGER_VERSION` can override that version; the installer verifies the
   release checksum.
 - `start` runs `hardcharger-server` on `hits.db` with its defaults (all CPUs, DuckDB's default
   memory limit, no result cache) and `--storage-version latest`, as the `duckdb` and `gizmosql`
