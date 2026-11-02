@@ -1,0 +1,25 @@
+{
+  "system": "PostgreSQL",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C",
+    "row-oriented",
+    "PostgreSQL compatible"
+  ],
+  "version": "18.6",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-02",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 100000000,
+  "num_loaded_documents": 99999968,
+  "load_time": 2740.407,
+  "total_size": 73878355968,
+  "result": [
+    [148.888, 9.546, 9.469],
+    [357.469, 251.289, 250.479],
+    [167.22, 39.705, 39.671],
+    [151.165, 16.87, 16.983],
+    [152.022, 18.143, 18.14]
+  ]
+}
