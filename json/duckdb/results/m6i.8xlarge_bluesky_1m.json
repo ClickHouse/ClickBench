@@ -1,0 +1,20 @@
+{
+  "system": "DuckDB",
+  "version": "1.1.3",
+  "os": "Ubuntu 24.04",
+  "date": "2025-03-27",
+  "machine": "m6i.8xlarge, 16000gib gp3",
+  "retains_structure": "yes",
+  "tags": [
+  ],
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "total_size": 485490688,
+  "result": [
+    [3.554,0.112,0.111],
+    [3.441,0.324,0.321],
+    [2.921,0.329,0.339],
+    [2.961,0.255,0.255],
+    [3.131,0.262,0.262]
+  ]
+}

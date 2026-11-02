@@ -1,0 +1,36 @@
+#!/bin/bash -e
+
+# Download the first N files of the Bluesky dataset, one million documents
+# each, into a directory (default /data/bluesky):
+#
+#   ./download-data <N> [directory]
+#
+# N is the dataset size in millions of documents: 1, 10, 100 or 1000.
+# Files that are already there are skipped, so this is cheap to repeat.
+#
+# The dataset is only in the eu-central-1 bucket: it has no us-east-1 mirror
+# (unlike the ClickBench datasets in ../lib/dataset-bucket.sh).
+
+N="${1:?usage: download-data <number of files> [directory]}"
+DIR="${2:-/data/bluesky}"
+[[ "${N}" =~ ^[0-9]+$ ]] && [ "${N}" -ge 1 ] && [ "${N}" -le 1000 ] || { echo "N must be 1..1000" >&2; exit 1; }
+
+BASE='https://clickhouse-public-datasets.s3.eu-central-1.amazonaws.com/bluesky'
+
+sudo mkdir -p "${DIR}"
+sudo chmod 755 "${DIR}"
+sudo chown "$(id -u):$(id -g)" "${DIR}"
+
+start=$(date +%s)
+# --continue skips complete files and resumes partial ones. 16 parallel
+# streams saturate the network of the benchmark machines across the Atlantic.
+seq --format "${BASE}/file_%04g.json.gz" 1 "${N}" \
+    | xargs -P 16 -n 1 wget --quiet --continue --tries=10 --waitretry=10 --retry-connrefused --directory-prefix "${DIR}"
+
+count=$(ls "${DIR}"/file_*.json.gz | wc -l)
+if [ "${count}" -lt "${N}" ]; then
+    echo "download-data: only ${count} of ${N} files are in ${DIR}" >&2
+    exit 1
+fi
+chmod 644 "${DIR}"/file_*.json.gz
+echo "download-data: ${N} files in ${DIR}, $(du -sh "${DIR}" | cut -f1), $(( $(date +%s) - start ))s"

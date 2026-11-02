@@ -1,0 +1,22 @@
+{
+  "system": "MongoDB",
+  "version": "8.0.6",
+  "os": "Ubuntu 24.04",
+  "date": "2025-01-13",
+  "machine": "m6i.8xlarge, 10000gib gp3",
+  "retains_structure": "yes",
+  "tags": [
+  ],
+  "dataset_size": 10000000,
+  "num_loaded_documents": 7860000,
+  "total_size": 1536905216,
+  "data_size": 1171361792,
+  "index_size": 365543424,
+  "result": [
+    [10.334,10.266,10.298],
+    [37.401,36.807,37.979],
+    [13.209,12.799,12.889],
+    [2.071,2.029,2.119],
+    [2.165,2.076,2.119]
+  ]
+}

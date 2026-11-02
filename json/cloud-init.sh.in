@@ -1,0 +1,73 @@
+#!/bin/bash -x
+
+# Cloud-init for JSONBench: run json/@system@/benchmark.sh @size@ on a fresh VM,
+# unattended, send the result to the sink (sink.data on play.clickhouse.com),
+# then terminate. Rendered from this template by run-benchmark.sh.
+#
+# Like the versions and hardware benchmarks, and unlike the main ClickBench,
+# the machine sends its whole result as one JSON document (kind:
+# "json-benchmark"), which collect-new-results.sh reads back from sink.data.
+
+# Make sure the machine terminates whatever happens to this script, see
+# ../cloud-init.sh.in.
+shutdown -P "+$(( @timeout@ / 60 + 120 ))"
+trap 'shutdown now' EXIT
+
+export HOME="${HOME:-/root}"
+export DEBIAN_FRONTEND=noninteractive
+
+# See ../cloud-init.sh.in: stop the background zeroing of the inode tables of
+# the freshly grown root filesystem, which would take a part of the disk
+# throughput away from the load and the cold runs.
+mount -o remount,noinit_itable /
+
+apt-get update -y
+apt-get install -y wget curl git jq zstd earlyoom
+systemctl enable --now earlyoom
+
+git clone --depth 1 'https://github.com/@repo@.git' --branch '@branch@' ClickBench
+cd ClickBench/json/@system@
+
+LOG="${PWD}/log"
+# The first line identifies the log in the sink (see collect-new-results.sh).
+echo 'JSONBench system: @system@, size: @size@m, PR: @clickbench_pr@' | tee -a "${LOG}"
+echo "Commit: $(git rev-parse HEAD)" | tee -a "${LOG}"
+
+timeout @timeout@ ./benchmark.sh @size@ 2>&1 | tee -a "${LOG}"
+status=${PIPESTATUS[0]}
+
+TOKEN=$(curl -sS -X PUT 'http://169.254.169.254/latest/api/token' -H 'X-aws-ec2-metadata-token-ttl-seconds: 21600')
+INSTANCE_TYPE=$(curl -sS -H "X-aws-ec2-metadata-token: ${TOKEN}" 'http://169.254.169.254/latest/meta-data/instance-type')
+echo "Exit status: ${status}, instance type: ${INSTANCE_TYPE}, total time: ${SECONDS}s" | tee -a "${LOG}"
+
+RESULTS_URL='https://play.clickhouse.com/?user=sink&query=INSERT+INTO+data+FORMAT+RawBLOB'
+
+# Only a run that finished has a result. The metadata let the collector tell
+# the runs of the main branch from the runs of pull requests.
+if [ "${status}" = 0 ] && [ -s result.json ]; then
+    jq -c --arg kind 'json-benchmark' --arg dir '@system@' --argjson size '@size@' \
+        --arg pr '@clickbench_pr@' --arg repo '@repo@' --arg branch '@branch@' \
+        --arg commit "$(git rev-parse HEAD)" \
+        '. + {kind: $kind, directory: $dir, size: $size, clickbench_pr: $pr,
+              repo: $repo, branch: $branch, commit: $commit}' result.json \
+        | curl --max-time 300 "${RESULTS_URL}" --data-binary @-
+fi
+
+# Also send the (truncated) logs for diagnostics, as the main benchmark does.
+send_log() {
+    local f="$1" size
+    size=$(stat -c%s "$f" 2>/dev/null || echo 0)
+    if [ "$size" -le 1000000 ]; then
+        curl --max-time 300 "${RESULTS_URL}" --data-binary @"$f"
+    else
+        { head -c 100000 "$f"
+          printf '\n...[%d bytes truncated]...\n' "$((size - 1000000))"
+          tail -c 900000 "$f"; } | curl --max-time 300 "${RESULTS_URL}" --data-binary @-
+    fi
+}
+send_log "${LOG}"
+# Prefixed, so that the cloud-init log can be found by the system and size.
+{ echo 'JSONBench cloud-init log: @system@, size: @size@m, PR: @clickbench_pr@'; cat /var/log/cloud-init-output.log; } > cloud-init.log
+send_log cloud-init.log
+
+shutdown now

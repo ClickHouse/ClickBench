@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+clickhouse-client --query "SELECT sum(bytes_on_disk) FROM system.parts WHERE database = 'default' AND table = 'bluesky' AND active"

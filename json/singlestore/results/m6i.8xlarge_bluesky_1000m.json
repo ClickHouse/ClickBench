@@ -1,0 +1,29 @@
+{
+  "system": "SingleStore",
+  "version": "5.7.32",
+  "os": "Ubuntu 24.04",
+  "date": "2025-03-14",
+  "machine": "m6i.8xlarge, 10000gib gp3",
+  "retains_structure": "yes",
+  "tags": [
+  ],
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 811999990,
+  "total_size": 234878938296,
+  "data_size": 234878938296,
+  "index_size": 0,
+  "result": [
+    [51.599, 43.98, 51.557],
+    [321.517, 207.62, 196.39],
+    [125.113, 113.956, 111.105],
+    [322.197, 32.433, 32.407],
+    [326.151, 40.692, 40.644]
+  ],
+  "memory_usage": [
+    [null, null, null],
+    [null, null, null],
+    [null, null, null],
+    [null, null, null],
+    [null, null, null]
+  ]
+}

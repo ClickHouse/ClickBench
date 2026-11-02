@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e -o pipefail
+
+if [ ! -x /usr/bin/clickhouse ]; then
+    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ | sh
+    sudo ./clickhouse install --noninteractive
+    rm -f ./clickhouse
+fi
+
+# Load the tables and their primary keys at startup rather than on the first
+# (cold) query, as in the main ClickBench (see ../../clickhouse/install).
+sudo mkdir -p /etc/clickhouse-server/config.d
+sudo tee /etc/clickhouse-server/config.d/eager_load.yaml >/dev/null <<'YAML'
+async_load_databases: false
+merge_tree:
+  primary_key_lazy_load: 0
+  columns_and_secondary_indices_sizes_lazy_calculation: 0
+YAML

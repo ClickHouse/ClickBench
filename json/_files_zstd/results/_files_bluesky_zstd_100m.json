@@ -1,0 +1,11 @@
+{
+  "system": "data.json.zstd",
+  "fake": true,
+  "date": "2025-01-13",
+  "machine": "m6i.8xlarge, 10000gib gp3",
+  "retains_structure": "yes",
+  "tags": [
+  ],
+  "dataset_size": 100000000,
+  "total_size": 12245368182
+}

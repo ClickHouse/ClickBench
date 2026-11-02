@@ -1,0 +1,21 @@
+{
+  "system": "Apache Doris",
+  "version": "doris-3.0.5-rc01-e277cfb83f",
+  "os": "Ubuntu 24.04",
+  "date": "2025-05-13",
+  "machine": "m6i.8xlarge, 10000gib gp3",
+  "retains_structure": "yes",
+  "tags": [
+  ],
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 999999994,
+  "total_size": 214623810748,
+  "data_size": 214623810748,
+  "result": [
+      [2.02,1.63,1.63],
+      [96.02,6.61,6.64],
+      [21.89,2.15,1.78],
+      [10.26,0.95,0.93],
+      [1.04,1.03,1.04]
+  ]
+}

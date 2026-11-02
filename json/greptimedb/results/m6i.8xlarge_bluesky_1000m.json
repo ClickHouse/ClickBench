@@ -1,0 +1,22 @@
+{
+  "system": "GreptimeDB",
+  "version": "v0.13.0-nightly-20250315",
+  "os": "Ubuntu 24.04",
+  "date": "2025-03-17",
+  "machine": "m6i.8xlarge, 10000gib gp3",
+  "retains_structure": "no",
+  "tags": [
+  ],
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 999999233,
+  "total_size": 108808568186,
+  "data_size": 108803782584,
+  "index_size": 4656890,
+  "result": [
+    [13.643, 1.568, 1.553],
+    [93.269, 22.235, 21.625],
+    [2.176, 2.081, 2.086],
+    [0.507, 0.427, 0.439],
+    [1.694, 1.614, 1.606]
+  ]
+}
