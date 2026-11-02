@@ -3,4 +3,4 @@
 set -e
 source ./env.sh
 
-doris_mysql -N -B -e "SELECT @@version_comment" | sed -E 's/^Doris version //'
+doris_mysql -N -B -e "SELECT @@version_comment" | sed -E 's/^[Dd]oris version //'
