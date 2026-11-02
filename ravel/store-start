@@ -31,6 +31,13 @@ mkdir -p "$STORE_DIR/data"
     set +a
     export S3S_FS_ACCESS_KEY="$STORE_ACCESS_KEY"
     export S3S_FS_SECRET_KEY="$STORE_SECRET_KEY"
+    # Every request the server has in flight holds a connection and open files
+    # in s3s-fs. The server sizes its request concurrency by core count (384 on
+    # a 192-vCPU machine), which exhausts the common 1024 soft limit there:
+    # s3s-fs then refuses connections ("Too many open files") and the server
+    # answers 503. Raise the soft limit to the hard one, as ./start does for
+    # the server, here, so it holds whichever script starts the store.
+    ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
     hostport="${RAVEL_S3_ENDPOINT#http://}"
     nohup "$STORE_DIR/bin/s3s-fs" --host "${hostport%:*}" --port "${hostport##*:}" "$STORE_DIR/data" \
         > "$STORE_DIR/s3s-fs.log" 2>&1 < /dev/null &
