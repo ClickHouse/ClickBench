@@ -616,11 +616,22 @@ let unique_versions = [...new Set(data.map(elem => elem.version))].sort((a, b) =
     return c != 0 ? c : b.localeCompare(a, undefined, { numeric: true });
 });
 
+/// A click flips a single toggle, while a right click or Ctrl/Cmd + click selects only this toggle in its group.
 function toggle(e, elem, selectors_map) {
-    selectors_map[elem] = !selectors_map[elem];
-    e.target.className = selectors_map[elem] ? 'selector selector-active' : 'selector';
+    if (e.type == 'contextmenu' || e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        Object.keys(selectors_map).forEach(k => { selectors_map[k] = k == String(elem) });
+    } else {
+        selectors_map[elem] = !selectors_map[elem];
+    }
+    updateSelectors();
     render();
     updateHistory();
+}
+
+function addToggleListener(selector, elem, selectors_map) {
+    selector.addEventListener('click', e => toggle(e, elem, selectors_map));
+    selector.addEventListener('contextmenu', e => toggle(e, elem, selectors_map));
 }
 
 function toggleAll(e, selectors_map) {
@@ -641,7 +652,7 @@ unique_versions.map(elem => {
     selector.appendChild(document.createTextNode(displayVersion(elem)));
     versions_elem.appendChild(selector);
     if (!(elem in selectors.version)) { selectors.version[elem] = true; }
-    selector.addEventListener('click', e => toggle(e, elem, selectors.version));
+    addToggleListener(selector, elem, selectors.version);
 
     /// Highlight the matching summary row and details column when hovering a version.
     selector.addEventListener('mouseover', e => {
@@ -663,7 +674,7 @@ datasets.map(d => {
     selector.appendChild(document.createTextNode(d.name));
     datasets_elem.appendChild(selector);
     if (!(d.name in selectors.dataset)) { selectors.dataset[d.name] = true; }
-    selector.addEventListener('click', e => toggle(e, d.name, selectors.dataset));
+    addToggleListener(selector, d.name, selectors.dataset);
 });
 document.getElementById('select-all-datasets').addEventListener('click', e => toggleAll(e, selectors.dataset));
 
@@ -674,11 +685,16 @@ document.getElementById('selector-metric-size').addEventListener('click', e => {
 
 if (!selectors.queries.length) { selectors.queries = query_meta.map(() => true); }
 
+/// Keeps the hover highlighting of the element intact, and skips the "All" toggle.
+function setSelectorActive(elem, active) {
+    if (elem.tagName !== 'A' || elem.id.startsWith('select-all-')) return;
+    elem.classList.remove('selector-passive');
+    elem.classList.toggle('selector-active', !!active);
+}
+
 function updateSelectors() {
-    [...versions_elem.querySelectorAll('a')].filter(e => e.id != 'select-all-versions').map(elem => {
-        elem.className = selectors.version[elem.dataset.version] ? 'selector selector-active' : 'selector' });
-    [...datasets_elem.querySelectorAll('a')].filter(e => e.id != 'select-all-datasets').map(elem => {
-        elem.className = selectors.dataset[elem.textContent] ? 'selector selector-active' : 'selector' });
+    [...versions_elem.childNodes].map(elem => { setSelectorActive(elem, selectors.version[elem.dataset?.version]) });
+    [...datasets_elem.childNodes].map(elem => { setSelectorActive(elem, selectors.dataset[elem.textContent]) });
     [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
         elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
     [...document.querySelectorAll('.query-checkbox')].map(elem => { elem.checked = selectors.queries[+elem.dataset.query] });

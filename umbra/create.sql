@@ -104,7 +104,7 @@ create table hits (
     refererhash           bigint       not null,
     urlhash               bigint       not null,
     clid                  integer      not null
-) with (compression=zstd);
+) with (compression=zopp);
 
 insert into hits
 select

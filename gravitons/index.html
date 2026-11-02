@@ -495,11 +495,22 @@ let types = document.getElementById('selectors_type');
 
 let unique_machines = [... new Set(data.map(elem => elem.machine))].sort();
 
+/// A click flips a single toggle, while a right click or Ctrl/Cmd + click selects only this toggle in its group.
 function toggle(e, elem, selectors_map) {
-    selectors_map[elem] = !selectors_map[elem];
-    e.target.className = selectors_map[elem] ? 'selector selector-active' : 'selector';
+    if (e.type == 'contextmenu' || e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        Object.keys(selectors_map).forEach(k => { selectors_map[k] = k == String(elem) });
+    } else {
+        selectors_map[elem] = !selectors_map[elem];
+    }
+    updateSelectors();
     render();
     updateHistory();
+}
+
+function addToggleListener(selector, elem, selectors_map) {
+    selector.addEventListener('click', e => toggle(e, elem, selectors_map));
+    selector.addEventListener('contextmenu', e => toggle(e, elem, selectors_map));
 }
 
 function toggleAll(e, selectors_map) {
@@ -518,7 +529,7 @@ unique_machines.map(elem => {
     selector.appendChild(document.createTextNode(elem));
     machines.appendChild(selector);
     if (!(elem in selectors.machine)) { selectors.machine[elem] = data.some(entry => entry.machine == elem && !entry.hide); }
-    selector.addEventListener('click', e => toggle(e, elem, selectors.machine));
+    addToggleListener(selector, elem, selectors.machine);
 
     /// Highlighting summary rows and table columns on hovering over the machine selector.
     selector.addEventListener('mouseover', e => {
@@ -539,7 +550,7 @@ unique_machines.map(elem => {
     selector.appendChild(document.createTextNode(elem));
     types.appendChild(selector);
     if (!(elem in selectors.type)) { selectors.type[elem] = true; }
-    selector.addEventListener('click', e => toggle(e, elem, selectors.type));
+    addToggleListener(selector, elem, selectors.type);
 });
 
 document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
@@ -554,9 +565,16 @@ document.getElementById('selector-metric-hot').addEventListener('click', e => { 
 
 selectors.queries = [...data[0].result.keys()].map(k => true);
 
+/// Keeps the hover highlighting of the element intact, and skips the "All" toggle.
+function setSelectorActive(elem, active) {
+    if (elem.tagName !== 'A' || elem.id.startsWith('select-all-')) return;
+    elem.classList.remove('selector-passive');
+    elem.classList.toggle('selector-active', !!active);
+}
+
 function updateSelectors() {
-    [...machines.childNodes].map(elem => { elem.className = selectors.machine[elem.innerText] ? 'selector selector-active' : 'selector' });
-    [...types.childNodes].map(elem => { elem.className = selectors.type[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...machines.childNodes].map(elem => { setSelectorActive(elem, selectors.machine[elem.innerText]) });
+    [...types.childNodes].map(elem => { setSelectorActive(elem, selectors.type[elem.innerText]) });
 
     [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
         elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });

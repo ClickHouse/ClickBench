@@ -18,19 +18,38 @@ DRUID_DIR="apache-druid-${VERSION}"
 # "snapshotted" but every query returns
 #   druidException ... Object 'hits' not found
 # at runtime).
+#
+# Do not grep the first [0-9]+ out of the JSON. Druid returns
+# [{"EXPR$0":99997497}] and that first digit is the 0 in EXPR$0.
 cnt=""
 for _ in $(seq 1 4320); do  # 4320 * 5s = 6 h
-    cnt=$(curl -sf -XPOST -H'Content-Type: application/json' \
+    body=$(curl -sf -XPOST -H'Content-Type: application/json' \
         http://localhost:8888/druid/v2/sql/ \
-        -d '{"query": "SELECT COUNT(*) FROM hits"}' 2>/dev/null \
-        | grep -oE '[0-9]+' | head -n1) || cnt=""
+        -d '{"query": "SELECT COUNT(*) FROM hits"}' 2>/dev/null) || body=""
+    cnt=$(printf '%s' "$body" | python3 -c '
+import json, sys
+raw = sys.stdin.read().strip()
+if not raw:
+    raise SystemExit(0)
+try:
+    data = json.loads(raw)
+except Exception:
+    raise SystemExit(0)
+if isinstance(data, list) and data:
+    row = data[0]
+    if isinstance(row, dict):
+        for v in row.values():
+            if isinstance(v, (int, float)):
+                print(int(v))
+                break
+') || cnt=""
     if [ -n "$cnt" ] && [ "$cnt" -gt 0 ]; then
         break
     fi
     sleep 5
 done
 if [ -z "$cnt" ] || [ "$cnt" -le 0 ]; then
-    echo "druid: hits datasource still not queryable after 4 h; ingestion" >&2
+    echo "druid: hits datasource still not queryable after 6 h; ingestion" >&2
     echo "did not finish. Dumping recent task list for diagnosis:" >&2
     curl -sS http://localhost:8081/druid/indexer/v1/tasks 2>&1 | head -c 2000 >&2
     exit 1

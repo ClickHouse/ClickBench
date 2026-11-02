@@ -30,7 +30,7 @@ psql -U crate -h localhost --no-password -q -t -c "
   RETURN SUMMARY;"
 
 if [[ $MODE == "tuned" ]]; then
-    psql -U crate -h localhost --no-password -t -c "REFRESH TABLE hits; OPTIMIZE TABLE hits;"
+    psql -U crate -h localhost --no-password -t -c "REFRESH TABLE hits; OPTIMIZE TABLE hits WITH (max_num_segments = 1);"
 fi
 
 rm -f /tmp/hits.tsv

@@ -37,3 +37,20 @@ jobs:
             c8g.4xlarge
             c8g.metal-48xl
             c7a.metal-48xl
+
+  # clickhouse-memory keeps the whole table (30 GB compressed) in the server's
+  # heap, so the smaller machines of the fleet can't load it: run it only on
+  # the metal instances.
+  launch-memory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/launch-benchmark
+        with:
+          systems: >-
+            clickhouse-memory
+          machines: >-
+            c6a.metal
+            c8g.metal-48xl
+            c7a.metal-48xl

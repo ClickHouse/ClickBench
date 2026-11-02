@@ -1,9 +1,9 @@
-; Stream hits.parquet into a splayed on-disk table under ./hits.
-;
-; `.parquet.splayed` reads the file row group by row group and writes one column
-; file per field plus the `.sym` dictionary, without materialising the whole
-; table in memory. The column names come from the file; `hits-types` gives the
-; native type of each column in the file's order.
+; Stream hits.parquet row group by row group into a compressed splayed table
+; under ./hits. `types` gives the column types in file order; HITS_SYMFILE
+; (set by ./load) picks one shared .sym file or one symbol file per column.
 (load "create.rfl")
-(.parquet.splayed hits-types "hits.parquet" "hits")
+(set opts (if (== (.os.getenv "HITS_SYMFILE") "column")
+  (dict [types compress symfile] (list hits-types true 'column))
+  (dict [types compress] (list hits-types true))))
+(.parquet.splayed opts "hits.parquet" "hits")
 (exit 0)

@@ -1,11 +1,8 @@
 #!/bin/bash
 export BENCH_DOWNLOAD_SCRIPT="download-hits-parquet-single"
-# Rayforce runs as an IPC server here (./start), so the stop/drop_caches/start
-# cold cycle is meaningful and the concurrent-QPS test hits a shared process.
+# IPC server: restarts make cold runs cold, and the concurrent test hits one process.
 export BENCH_RESTARTABLE=yes
 export BENCH_DURABLE=yes
-# Opening the splayed table validates every column file and loads the symbol
-# dictionary; at 100M rows that takes minutes, and it happens on every restart,
-# so the readiness probe needs a much longer window than the 300s default.
+# Every start opens the table, which takes up to about a minute.
 export BENCH_CHECK_TIMEOUT="${BENCH_CHECK_TIMEOUT:-1800}"
 exec ../lib/benchmark-common.sh

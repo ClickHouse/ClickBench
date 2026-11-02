@@ -19,6 +19,16 @@ do
     DATA_SIZE=$(tail -n1 "$f" | tr -d "\n")
     RESULT_BODY=$(grep -F "[" "$f" | head -c-2)
 
+    # Concurrent QPS and its error ratio, if the run has them; otherwise omitted from the JSON.
+    CONCURRENT=""
+    QPS=$(grep -oP '^Concurrent QPS: \K[0-9.]+$' "$f" | tail -n1)
+    ERROR_RATIO=$(grep -oP '^Concurrent error ratio: \K[0-9.]+$' "$f" | tail -n1)
+    if [ -n "$QPS" ] && [ -n "$ERROR_RATIO" ]; then
+        CONCURRENT='
+    "concurrent_qps": '$QPS',
+    "concurrent_error_ratio": '$ERROR_RATIO','
+    fi
+
     # Skip when the raw result file is incomplete — load time / data size must
     # be plain numbers and the result body must be non-empty. Otherwise the
     # generated JSON would be malformed and pollute the repository.
@@ -44,7 +54,7 @@ do
     "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "'$PROVIDER'", "no-cold"],
 
     "load_time": '$LOAD_TIME',
-    "data_size": '$DATA_SIZE',
+    "data_size": '$DATA_SIZE','"$CONCURRENT"'
 
     "result": [
 '"$RESULT_BODY"'

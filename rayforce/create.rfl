@@ -1,16 +1,7 @@
-; ClickBench `hits` schema for Rayforce.
-;
-; `load` passes `hits-types` to `.parquet.splayed`, one entry per column
-; of hits.parquet in file order; `hits-names` lists that order.
-;
-; Types follow ../clickhouse/create.sql: BIGINT -> I64, INTEGER -> I32,
-; SMALLINT -> I16, TIMESTAMP -> TIMESTAMP, Date -> DATE.  The Parquet
-; file keeps EventDate as integer days since 1970-01-01 and EventTime,
-; ClientEventTime and LocalEventTime as integer Unix seconds: UNIX_DATE
-; and UNIX_SECONDS make the reader convert them to native DATE and
-; TIMESTAMP.  Every TEXT / VARCHAR / CHAR column is loaded as SYM
-; (dictionary-encoded) rather than STR -- see README.md "Why every text
-; column is SYM".
+; ClickBench `hits` schema: `hits-names` is the column order of hits.parquet,
+; `hits-types` the type of each column for `.parquet.splayed`. Types follow
+; ../clickhouse/create.sql; UNIX_DATE and UNIX_SECONDS convert the integer
+; dates and times of the Parquet file; text columns are SYM.
 
 (set hits-names [
   WatchID JavaEnable Title GoodEvent EventTime EventDate CounterID ClientIP

@@ -31,6 +31,20 @@ if [ ! -f /swapfile ]; then
     swapon /swapfile
 fi
 
+# The root filesystem is grown from the image's few GB to the whole 500 GB
+# disk during this first boot, and ext4 then zeroes the inode tables of the
+# new space in the background: 16.5 GB written by the ext4lazyinit kernel
+# thread over the first minutes of uptime. Its pace is a per-boot lottery (a
+# fixed pause of 10x the time the first block group happened to take), and a
+# fast draw takes most of the gp2 volume's throughput budget between queries,
+# so the cold run of a system whose dataset is quick to download (the
+# partitioned Parquet files land in seconds) starts with the burst allowance
+# only partly refilled and reads at the sustained rate for longer. Stop the
+# zeroing before the benchmark: the inode tables stay valid unzeroed (this is
+# the documented use of noinit_itable, and a fresh EBS volume reads as zeros
+# anyway), and the machine is terminated at the end of the run.
+mount -o remount,noinit_itable /
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y wget curl git jq earlyoom

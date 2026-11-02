@@ -1,4 +1,4 @@
-"""Run a direct-DuckDB baseline and compare full-dataset Flight SQL results.
+"""Run a direct-DuckDB baseline and compare full-dataset Duckflight results.
 
 Run on the dedicated Linux benchmark host after benchmark.sh. This is a
 same-file comparison, not a second standalone ClickBench submission.
@@ -108,7 +108,7 @@ def resolve_ties(state, output, report, queries):
 
 
 def main():
-    queries = (harness.ROOT / "queries.sql").read_text().splitlines()
+    queries = harness.query_file().read_text().splitlines()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--state",

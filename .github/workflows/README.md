@@ -13,7 +13,7 @@ apart from the runs of main and are excluded by `collect-results.sh`.
 
 | Workflow | Trigger | What it launches |
 |----------|---------|------------------|
-| `benchmark-daily.yml` | daily, 02:00 UTC | the ClickHouse variants, each on the whole set of machine types, from main |
+| `benchmark-daily.yml` | daily, 02:00 UTC | the ClickHouse variants, each on the whole set of machine types, and `clickhouse-memory`, which needs more than 32 GB of RAM, on the metal machines only, from main |
 | `benchmark-manual.yml` | manual | any systems, machines, repository and branch |
 | `benchmark-pr.yml` | pull requests | the systems whose directories the PR changes (results and *.md files don't count), from the PR's repository and branch, after manual approval. A `machine:<ec2-type>` label overrides the default c6a.4xlarge (one run per label; `machine:all`, `machine:all-amd` and `machine:all-arm` expand to the daily-run machine sets); adding such a label relaunches the benchmark |
 | `versions-benchmark.yml` | manual | the [versions benchmark](../../versions/README.md) (`versions/run-benchmark.sh`): one machine per (ClickHouse version, machine type), for an exact version, a version prefix, or `master` (the development build, installed on the machine with `curl https://clickhouse.com/ \| sh`). Sends its result to the same sink, tagged `kind: versions-benchmark` |

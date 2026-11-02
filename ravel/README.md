@@ -68,8 +68,8 @@ container, less a fixed reserve), with a fixed segment cap and engine deadline.
 Every resolved value and its source is logged on a `performance default
 resolved` line in `server.log`; a published result should record those lines,
 because they are the configuration the numbers were measured at. On
-c6a.4xlarge, with the store on loopback, v0.23.0 resolved the fetch cache to
-11.4 GB, the per-query SQL pool to 14.2 GB and fetch concurrency to 32.
+c6a.4xlarge, with the store on loopback, v0.26.0 resolved the fetch cache to
+7.0 GB, the per-query SQL pool to 16.5 GB and fetch concurrency to 32.
 `./start` also raises the process's open-file
 soft limit to the hard limit, since the server has exited with `EMFILE` at
 startup under the common default of 1024.
@@ -108,18 +108,17 @@ Ravel's state lives.
 
 The reference machine's disk is a 500 GB gp2 volume. Ravel holds no data on
 local disk, so a cold run (server restarted, page cache dropped) fetches what it
-needs from RustFS, and RustFS reads it from that volume. The stock fetch policy
-reads an object whole when it is below the ranged-read break-even (about 19 MB
-here) and only the columns it needs above it. The 4 MB objects before 0.23.0
-were all below it, so a statement that touched the table read the whole
-dataset from the volume, whatever it computed; the 25 MB objects are above it. On c6a.4xlarge, in this repository's fresh-VM setup, the
-cold sum over the 43 statements was 486.6 s on v0.23.0, against 1,291.0 s on
-v0.21.0. The dataset is 10.2 GB (9.8 GB on v0.21.0; fewer, larger objects
-compress slightly differently).
+needs from RustFS, and RustFS reads it from that volume. Since 0.24.0, a server
+whose store is on loopback defaults its fetch policy to `latency-first`, which
+reads only the byte ranges a statement needs from each object instead of whole
+objects; `server.log` names it with `policy_source="default-loopback"`. On
+c6a.4xlarge, in this repository's fresh-VM setup, the cold sum over the 43
+statements was 365.7 s on v0.26.0, against 486.6 s on v0.23.0 and 1,291.0 s on
+v0.21.0. The dataset is 10.2 GB.
 
-A warm run is served from the read cache or from RustFS. A server whose store
-is on loopback derives its fetch cache at 40% of its memory budget: 11.4 GB on
-this machine, above the dataset, so the warm runs are served from the cache.
+A warm run is served from the read cache or from RustFS. Since 0.24.0, a server
+whose store is on loopback gives its fetch cache 24% of its memory budget: 7.0
+GB on this machine.
 
 ### The tuned configuration
 
@@ -131,6 +130,10 @@ through `RAVEL_TUNED_ARGS` in `./start`:
 ```
 RAVEL_TUNED_ARGS="--logs-fetch-policy latency-first --fetch-concurrency 256 --sql-max-query-bytes <stock value>" ./benchmark.sh
 ```
+
+From 0.24.0 on, a loopback store already defaults to `latency-first`, so on
+this harness only the last two flags differ from a stock start. The
+description and figures in the rest of this section were measured on v0.23.0.
 
 `latency-first` is a named policy, not a tuning constant: it says spend
 requests to save wall time, and resolves the byte quantities exactly as
