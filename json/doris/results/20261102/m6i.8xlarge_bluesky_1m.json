@@ -8,7 +8,7 @@
     "MySQL compatible",
     "ClickHouse derivative"
   ],
-  "version": "doris-4.1.5-release-917b20be838",
+  "version": "doris version doris-4.1.5-release-917b20be838",
   "os": "Ubuntu 24.04",
   "date": "2026-11-02",
   "machine": "m6i.8xlarge",
