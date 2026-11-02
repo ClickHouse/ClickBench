@@ -15,28 +15,24 @@ gc.enable()
 # ====================================================
 # AUTOMATIC THREAD DETECTION (Local PC vs. c6a.metal)
 # ====================================================
-# Get the total number of logical/physical cores available
 total_cores = multiprocessing.cpu_count()
 
 if total_cores >= 128:
-    # Target: c6a.metal (Equipped with 192 vCPUs by default)
     os.environ["POLARS_MAX_THREADS"] = str(total_cores)
 else:
-    # Target: Local PC (Safety limit to prevent system overheating)
     os.environ["POLARS_MAX_THREADS"] = "8"
 
 os.environ["POLARS_ACTIVATE_DECIMAL"] = "0"
 
 import polars as pl
 
-# Enable global string cache for optimized categorical groupings
 pl.enable_string_cache()
 
 parquet_pfad = "hits.parquet"
 if not os.path.exists(parquet_pfad):
     parquet_pfad = r"C:\python_projekte\hits.parquet"
 
-# FAST BASE STREAM (Polars infers types properly, minimizing runtime casts)
+# FAST BASE STREAM
 df = pl.scan_parquet(parquet_pfad, low_memory=True)
 
 # ====================================================
@@ -110,8 +106,18 @@ clickbench_queries = {
     ).select(pl.len())
 }
 
+# ====================================================
+# SAFE COMMAND LINE ARGUMENT HANDLING
+# ====================================================
 query_env = os.environ.get("QUERY_NUM")
-query_arg = sys.argv if len(sys.argv) > 1 else None
+query_arg = None
+
+if len(sys.argv) > 1:
+    for arg in sys.argv[1:]:
+        if arg.isdigit():
+            query_arg = arg
+            break
+
 target_num = query_arg or query_env
 
 if target_num:
@@ -133,15 +139,28 @@ def run_single_query(name, plan):
         plan.collect(engine="streaming")
         end_hot = time.perf_counter()
         
-        print(f"{name}: {(end_hot - start_hot):.4f} Sec.")
+        elapsed = end_hot - start_hot
+        print(f"{name}: {elapsed:.4f} Sec.")
+        
+        # Write directly to the output file expected by ClickBench framework
+        result_file = os.environ.get("BENCHMARK_OUTPUT", "results.txt")
+        with open(result_file, "a") as f:
+            f.write(f"{elapsed:.4f}\n")
+            
     except Exception as e:
         print(f"Error in {name}: {e}", file=sys.stderr)
         print("FAILED")
+        with open(os.environ.get("BENCHMARK_OUTPUT", "results.txt"), "a") as f:
+            f.write("FAILED\n")
 
 if q_name and q_name in clickbench_queries:
     run_single_query(q_name, clickbench_queries[q_name])
 else:
     active_threads = os.environ.get("POLARS_MAX_THREADS")
     print(f"Starting safe streaming benchmark (Threads: {active_threads})...")
+    output_path = os.environ.get("BENCHMARK_OUTPUT", "results.txt")
+    if os.path.exists(output_path):
+        os.remove(output_path)
+        
     for name, plan in sorted(clickbench_queries.items()):
         run_single_query(name, plan)
