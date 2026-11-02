@@ -14,6 +14,15 @@ inputs:
   machines:
     description: "EC2 instance types, space-separated"
     default: "c6a.4xlarge"
+  json-machines:
+    description: "EC2 instance types for the JSONBench systems (json/<name>),
+      space-separated. They run on the machine of the original JSONBench
+      results by default, not on the machines of the main benchmark."
+    default: "m6i.8xlarge"
+  json-sizes:
+    description: "Dataset sizes for the JSONBench systems (json/<name>), in
+      millions of documents, space-separated: one machine per size"
+    default: "1 10 100 1000"
   repo:
     description: "GitHub repository (owner/name) the machine will clone.
       Empty: the PR's head repository if pr is given, else ClickHouse/ClickBench."
@@ -23,8 +32,10 @@ inputs:
       Empty: the PR's head branch if pr is given, else main."
     default: ""
   timeout:
-    description: "Time limit for benchmark.sh on the machine, seconds"
-    default: "36000"
+    description: "Time limit for benchmark.sh on the machine, seconds.
+      Empty: 36000 for the main benchmark, and for JSONBench a limit that
+      depends on the dataset size (see json/run-benchmark.sh)"
+    default: ""
   pr:
     description: "Pull request number that launched the run, if any. Recorded
       in the log and parsed into the clickbench_pr column of sink.results, so
@@ -49,18 +60,49 @@ runs:
       env:
         systems: ${{ inputs.systems }}
         machines: ${{ inputs.machines }}
+        json_machines: ${{ inputs.json-machines }}
+        json_sizes: ${{ inputs.json-sizes }}
         repo: ${{ inputs.repo }}
         branch: ${{ inputs.branch }}
         timeout: ${{ inputs.timeout }}
         clickbench_pr: ${{ inputs.pr }}
         GH_TOKEN: ${{ github.token }}
       run: |
+        # json/<name> are the systems of JSONBench, launched by their own
+        # launcher, once per dataset size. The PR's head repository and
+        # branch are resolved here for them, as run-benchmark.sh does it for
+        # the main benchmark.
+        main_systems=""
+        json_systems=""
+        for s in $systems; do
+            case "$s" in
+                json/*) json_systems="$json_systems $s" ;;
+                *)      main_systems="$main_systems $s" ;;
+            esac
+        done
         failed=""
         for m in $machines; do
-            for s in $systems; do
-                machine="$m" system="$s" ./run-benchmark.sh || failed="$failed $s/$m"
+            for s in $main_systems; do
+                machine="$m" system="$s" timeout="${timeout:-36000}" ./run-benchmark.sh || failed="$failed $s/$m"
             done
         done
+        if [ -n "$json_systems" ]; then
+            json_repo="$repo"
+            json_branch="$branch"
+            if [ -n "$clickbench_pr" ] && { [ -z "$json_repo" ] || [ -z "$json_branch" ]; }; then
+                pr_head=$(gh api "repos/${{ github.repository }}/pulls/${clickbench_pr}")
+                json_repo=${json_repo:-$(jq -r '.head.repo.full_name' <<< "$pr_head")}
+                json_branch=${json_branch:-$(jq -r '.head.ref' <<< "$pr_head")}
+            fi
+            for m in $json_machines; do
+                for s in $json_systems; do
+                    for size in $json_sizes; do
+                        machine="$m" repo="${json_repo:-ClickHouse/ClickBench}" branch="${json_branch:-main}" \
+                            ./json/run-benchmark.sh "$s" "$size" || failed="$failed $s/${size}m/$m"
+                    done
+                done
+            done
+        fi
         if [ -n "$failed" ]; then
             echo "Failed to launch:$failed"
             exit 1

@@ -1,0 +1,25 @@
+{
+  "system": "Hologres",
+  "proprietary": "yes",
+  "version": "r4.0",
+  "os": "managed",
+  "date": "2025-10-09",
+  "machine": "Hologres: 32 CU",
+  "retains_structure": "yes",
+  "tags": [
+    "managed",
+    "PostgreSQL compatible",
+    "column-oriented",
+    "no-cold"
+  ],
+  "dataset_size": 10000000,
+  "num_loaded_documents": 9999997,
+  "total_size": 1301202397,
+  "result": [
+    [0.037799, 0.028033, 0.026386],
+    [0.149765, 0.1181, 0.13064],
+    [0.044021, 0.03399, 0.031822],
+    [0.04711, 0.045523, 0.045664],
+    [0.051367, 0.048566, 0.051192]
+  ]
+}

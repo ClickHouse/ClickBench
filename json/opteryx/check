@@ -1,0 +1,6 @@
+#!/bin/bash
+# Runs no query: it is called before every cold try.
+set -e
+
+version=$(curl -sf http://127.0.0.1:8421/health)
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]

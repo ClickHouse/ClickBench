@@ -1,0 +1,6 @@
+#!/bin/bash
+# Bytes on disk of the tablets (data and indexes) in the BE storage directory.
+set -e
+source ./env.sh
+
+du -bs "$STARROCKS_HOME/storage/data" | cut -f1

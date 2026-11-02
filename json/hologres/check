@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+source ./env.sh
+hg_psql postgres -t -c "SELECT 1" >/dev/null

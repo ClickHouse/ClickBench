@@ -1,0 +1,31 @@
+#!/bin/bash
+# Reads a query from stdin, runs it with the mysql client.
+# Stdout: the result. Stderr: the runtime in fractional seconds on the last
+# line, as reported by the server in "(X.XX sec)" of `mysql -vvv`, as in the
+# original JSONBench.
+set -e
+source ./env.sh
+
+query=$(cat)
+
+status=0
+out=$(doris_mysql -vvv bluesky -e "$query" 2>&1) || status=$?
+
+if [ "$status" -ne 0 ] || printf '%s\n' "$out" | grep -qE '^ERROR'; then
+    printf '%s\n' "$out" >&2
+    exit 1
+fi
+
+printf '%s\n' "$out" | grep -vE '^\([0-9.]+ sec\)$|rows? in set|Empty set' || true
+
+secs=$(printf '%s\n' "$out" \
+    | grep -oE '\(([0-9]+ min )?[0-9]+\.[0-9]+ sec\)' \
+    | tail -n1 \
+    | sed -r 's/\((([0-9]+) min )?([0-9.]+) sec\)/\2 \3/' \
+    | awk '{ if (NF == 2) print $1 * 60 + $2; else print $1 }')
+
+if [ -z "$secs" ]; then
+    echo "no timing in the mysql output" >&2
+    exit 1
+fi
+echo "$secs" >&2

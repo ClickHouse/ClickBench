@@ -1,0 +1,38 @@
+version: 0.8
+
+index_id: jsonbench
+
+doc_mapping:
+  mode: dynamic
+  dynamic_mapping:
+    indexed: true
+    stored: true
+    tokenizer: raw
+    expand_dots: true
+  field_mappings:
+    - name: did
+      type: text
+      tokenizer: raw
+      fast: true
+    - name: time_us
+      type: datetime
+      input_formats: [unix_timestamp]
+      output_format: unix_timestamp_micros
+      fast: true
+      fast_precision: microseconds
+    - name: kind
+      type: text
+      tokenizer: raw
+      fast: true
+    - name: commit
+      type: object
+      field_mappings:
+        - name: operation
+          type: text
+          tokenizer: raw
+          fast: true
+        - name: collection
+          type: text
+          tokenizer: raw
+          fast: true
+  timestamp_field: time_us

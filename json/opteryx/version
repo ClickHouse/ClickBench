@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+/opt/opteryx_venv/bin/python -c "import opteryx; print(opteryx.__version__)"

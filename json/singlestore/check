@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+source ./env.sh
+
+ss_mysql -e 'SELECT 1' >/dev/null
+
+# After a restart, the database is recovered asynchronously: wait until the
+# table can be read.
+if [ -n "$(ss_mysql -N -B -e "SHOW DATABASES LIKE 'bluesky'")" ]; then
+    ss_mysql -N -B bluesky -e 'SELECT 1 FROM bluesky LIMIT 1' >/dev/null
+fi

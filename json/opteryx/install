@@ -1,0 +1,25 @@
+#!/bin/bash
+# Opteryx (PyPI package opteryx-core) on CPython 3.14 from deadsnakes, as in the
+# main ClickBench (../../opteryx/install). The latest release on PyPI is
+# installed; ./version reports which one.
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+if ! command -v python3.14 >/dev/null 2>&1; then
+    sudo -E apt-get update -y
+    sudo -E apt-get install -y software-properties-common
+    sudo -E add-apt-repository -y ppa:deadsnakes/ppa
+    sudo -E apt-get update -y
+    sudo -E apt-get install -y python3.14 python3.14-venv
+fi
+sudo -E apt-get install -y pigz curl
+
+VENV=/opt/opteryx_venv
+if [ ! -x "${VENV}/bin/python" ]; then
+    sudo python3.14 -m venv "${VENV}"
+fi
+sudo "${VENV}/bin/python" -m pip install --quiet --retries 10 --upgrade pip
+# --only-binary: fail rather than build Rust/C++ from the sdist if no wheel fits.
+sudo "${VENV}/bin/python" -m pip install --quiet --retries 10 --upgrade --only-binary=:all: opteryx-core
+"${VENV}/bin/python" -c "import opteryx; print('opteryx-core', opteryx.__version__)"

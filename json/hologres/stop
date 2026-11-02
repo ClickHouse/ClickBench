@@ -1,0 +1,3 @@
+#!/bin/bash
+# Managed service: nothing to stop.
+exit 0

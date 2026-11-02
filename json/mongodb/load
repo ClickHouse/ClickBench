@@ -1,0 +1,50 @@
+#!/bin/bash
+set -e -o pipefail
+
+# The server parameters from /etc/mongod.conf (see ./install) must be in
+# effect: fail rather than run the queries without them.
+mongosh --quiet --eval '
+    const r = db.adminCommand({getParameter: 1, internalQueryMaxAddToSetBytes: 1, internalQueryPlannerGenerateCoveredWholeIndexScans: 1});
+    if (r.ok !== 1 || String(r.internalQueryMaxAddToSetBytes) !== "1073741824" || r.internalQueryPlannerGenerateCoveredWholeIndexScans !== true) {
+        print("load: unexpected server parameters: " + JSON.stringify(r));
+        quit(1);
+    }
+'
+
+# Create the collection (zstd block compression) and the compound index from
+# scratch, as in the original JSONBench.
+mongosh --quiet bluesky --eval 'db.dropDatabase()' >/dev/null
+mongosh --quiet bluesky --file ddl.js
+
+# One mongoimport per file, as in the original JSONBench, with its default
+# settings (a single insertion worker). The file is decompressed into the pipe
+# rather than into a temporary file.
+#
+# A few lines in the dataset are not valid JSON: documents of more than 64 KiB
+# that were cut into two lines. mongoimport stops at the first line that it
+# cannot parse and loses the rest of the file (the original JSONBench run
+# loaded 7.86 of 10 million documents because of that), so the invalid lines
+# are dropped before mongoimport, the other lines are passed through unchanged.
+for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+    echo "load: ${file}" >&2
+    gzip -dc "${file}" \
+        | python3 -I -c '
+import json
+import sys
+
+out = sys.stdout.buffer
+skipped = 0
+for line in sys.stdin.buffer:
+    try:
+        valid = isinstance(json.loads(line), dict)
+    except ValueError:
+        valid = False
+    if valid:
+        out.write(line)
+    else:
+        skipped += 1
+if skipped:
+    print(f"load: skipped {skipped} invalid lines", file=sys.stderr)
+' \
+        | mongoimport --db bluesky --collection bluesky
+done

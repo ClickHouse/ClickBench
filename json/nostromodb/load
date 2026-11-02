@@ -1,0 +1,13 @@
+#!/bin/bash
+# No CREATE TABLE: IMPORT creates the table from the documents. One IMPORT per
+# file, reading the .json.gz files directly, as in the original PR.
+set -e
+
+source ./env.sh
+
+sudo rm -rf "${NOSTROMODB_DB_DIR}"
+sudo mkdir -p "${NOSTROMODB_DB_DIR}"
+
+for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+    nostromodb "import from '/data/$(basename "${file}")' into bluesky options {'NDJSON': true}"
+done

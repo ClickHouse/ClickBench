@@ -1,0 +1,14 @@
+#!/bin/bash
+# Only a PostgreSQL client is needed on the client machine.
+set -e
+
+if ! command -v psql >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+        export DEBIAN_FRONTEND=noninteractive
+        sudo -E apt-get update -y
+        sudo -E apt-get install -y postgresql-client pigz
+    else
+        # Alibaba Cloud Linux 3, the client OS in README.md.
+        sudo yum install -y postgresql pigz
+    fi
+fi

@@ -1,0 +1,5 @@
+#!/bin/bash
+source ./env.sh
+
+sdb-admin stop-node --all --yes || true
+exit 0

@@ -1,0 +1,5 @@
+#!/bin/bash
+# `quickwit --version` prints e.g. "Quickwit 0.9.3 (x86_64-unknown-linux-gnu ...)".
+set -e -o pipefail
+
+/opt/quickwit/quickwit --version | awk '{ print $2 }'

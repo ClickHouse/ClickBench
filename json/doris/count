@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+source ./env.sh
+
+doris_mysql -N -B bluesky -e "SELECT count(*) FROM bluesky"

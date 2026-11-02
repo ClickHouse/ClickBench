@@ -1,0 +1,37 @@
+#!/bin/bash
+set -e -o pipefail
+source ./env.sh
+
+sr_mysql -e "CREATE DATABASE IF NOT EXISTS bluesky"
+sr_mysql bluesky -e "DROP TABLE IF EXISTS bluesky FORCE"
+sr_mysql bluesky < create.sql
+
+TEMP_DIR=$(mktemp -d /var/tmp/starrocks_json.XXXXXX)
+trap 'rm -rf "$TEMP_DIR"' EXIT
+
+# As in the original JSONBench: one stream load per file, uncompressed first,
+# in strict mode with at most 0.001% of the documents filtered out. A file
+# that fails is skipped (the number of loaded documents shows it).
+loaded=0
+failed=0
+for file in $(ls "$BENCH_DATA_DIR"/file_*.json.gz | head -n "$BENCH_FILES"); do
+    uncompressed="$TEMP_DIR/$(basename "$file" .gz)"
+    gunzip -c "$file" > "$uncompressed"
+    http_code=$(curl -s -o "$TEMP_DIR/response" -w '%{http_code}' --location-trusted -u root: \
+        -H "max_filter_ratio: 0.00001" \
+        -H "strict_mode: true" \
+        -H "Expect:100-continue" \
+        -T "$uncompressed" \
+        -XPUT "http://127.0.0.1:8030/api/bluesky/bluesky/_stream_load") || http_code=000
+    status=$(jq -r '.Status // empty' "$TEMP_DIR/response" 2>/dev/null || true)
+    rm -f "$uncompressed"
+    if [[ "$http_code" == 2* ]] && [ "$status" = "Success" ]; then
+        loaded=$((loaded + 1))
+    else
+        failed=$((failed + 1))
+        echo "load: skipping ${file}, HTTP ${http_code}: $(head -c 2000 "$TEMP_DIR/response" 2>/dev/null)" >&2
+    fi
+done
+
+echo "load: ${loaded} files loaded, ${failed} files failed" >&2
+[ "$loaded" -gt 0 ]

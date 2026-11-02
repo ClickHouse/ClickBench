@@ -1,0 +1,22 @@
+#!/bin/bash
+# Reads a query from stdin and runs it with PROFILE.
+# Stdout: the output of the statement.
+# Stderr: the runtime in fractional seconds on the last line, as reported by
+# NostromoDB itself (optimization + execution), so that the start of the
+# container is not counted. The original PR did the same with "profile".
+set -e -o pipefail
+
+source ./env.sh
+
+query=$(cat)
+out=$(nostromodb "profile ${query}" 2>&1) || { printf '%s\n' "${out}" >&2; exit 1; }
+printf '%s\n' "${out}"
+
+# Lines of the form "Optimization took 0.001s." and "Execution took: 0.034s".
+exec_time=$(printf '%s\n' "${out}" | grep -oP 'Execution took:? *\K[0-9.]+(?=s)' | tail -n1)
+opt_time=$(printf '%s\n' "${out}" | grep -oP 'Optimization took:? *\K[0-9.]+(?=s)' | tail -n1)
+if [ -z "${exec_time}" ]; then
+    echo "query: no 'Execution took' line in the output of PROFILE" >&2
+    exit 1
+fi
+awk -v e="${exec_time}" -v o="${opt_time:-0}" 'BEGIN { printf "%.6f\n", e + o }' >&2

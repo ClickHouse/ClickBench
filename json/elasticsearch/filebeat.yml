@@ -1,0 +1,100 @@
+# ============================== Filebeat inputs ===============================
+filebeat.registry.flush: 5s
+filebeat.inputs:
+
+- type: filestream
+  id: bluesky-events
+
+  paths:
+    - "<temp_dir>/*.json"
+  parsers:
+    - ndjson:
+        target: ""
+# ============================== Filebeat modules ==============================
+
+filebeat.config.modules:
+ # Glob pattern for configuration loading
+ path: ${path.config}/modules.d/*.yml
+
+ # Set to true to enable config reloading
+ reload.enabled: false
+
+# ======================= Elasticsearch template setting =======================
+
+setup.template.enabled: false
+
+# The index template (with the ILM policy) is installed by ./load: filebeat
+# must not manage the ILM policy either.
+setup.ilm.enabled: false
+
+# ================================== Outputs ===================================
+
+# Configure what output to use when sending the data collected by the beat.
+
+# ---------------------------- Elasticsearch Output ----------------------------
+
+output.elasticsearch:
+ # Array of hosts to connect to.
+ hosts: ["https://localhost:9200"]
+
+ # Performance preset - one of "balanced", "throughput", "scale",
+ # "latency", or "custom".
+ preset: throughput
+ compression_level: 1
+ idle_connection_timeout: 30s
+ # Protocol - either `http` (default) or `https`.
+ protocol: "https"
+ index: "<index_name>"
+ # Authentication credentials - either API key or username/password.
+ api_key: "<api_key>"
+ ssl:
+   enabled: true
+   verification_mode: "none"
+
+http.enabled: true
+http.host: localhost
+http.port: 5066
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0640
+
+processors:
+ - rename:
+     when:
+       and:
+         - has_fields: ["commit.record.subject"]
+         - not:
+             has_fields: ["commit.record.subject.cid"]
+     fields:
+       - from: "commit.record.subject"
+         to: "commit.record.subject.value"
+ - rename:
+     when:
+       and:
+         - has_fields: ["commit.record.embed.images.data"]
+         - not:
+             has_fields: ["commit.record.subject.cid"]
+     fields:
+       - from: "commit.record.embed.images.data"
+         to: "commit.record.embed.images.data.value"
+ - drop_fields:
+     fields: ["log", "agent", "ecs","host", "input"]
+     ignore_missing: true
+ - script:
+     lang: javascript
+     source: >
+       function process(event){
+         var time_us = event.Get("time_us");
+         if (typeof time_us === 'string') {
+             time_us = BigInt(time_us);  // If time_us is a string, cast it to a BigInt
+         } else if (typeof time_us !== 'number') {
+             return;  // Exit the function if time_us is not a valid number
+         }
+         var time_us_ms = time_us / 1000;
+         event.Put("time_us", time_us_ms.toString());
+       }

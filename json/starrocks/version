@@ -1,0 +1,6 @@
+#!/bin/bash
+# Prints e.g. 4.1.7, as in the original results.
+set -e
+source ./env.sh
+
+sr_mysql -N -B -e "SELECT current_version()" | awk '{ print $1 }' | sed -E 's/-[0-9a-f]+$//'

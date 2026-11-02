@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+source ./env.sh
+
+sudo du -sb "${NOSTROMODB_DB_DIR}" | cut -f1

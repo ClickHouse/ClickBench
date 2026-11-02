@@ -1,0 +1,5 @@
+{"query":"*","max_hits":0,"aggs":{"events":{"terms":{"field":"commit.collection","order":{"_count":"desc"},"size":1000}}}}
+{"query":"kind:commit AND commit.operation:create","max_hits":0,"aggs":{"events":{"terms":{"field":"commit.collection","order":{"_count":"desc"},"size":1000},"aggs":{"users":{"cardinality":{"field":"did"}}}}}}
+null
+{"query":"kind:commit AND commit.operation:create AND commit.collection:app.bsky.feed.post","max_hits":0,"aggs":{"users":{"terms":{"field":"did","order":{"first_post":"asc"},"size":3},"aggs":{"first_post":{"min":{"field":"time_us"}}}}}}
+null

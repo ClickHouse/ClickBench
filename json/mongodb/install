@@ -1,0 +1,39 @@
+#!/bin/bash
+# Installs the latest MongoDB of the current release series (9.0) from the
+# official repository: https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-ubuntu/
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+MONGODB_SERIES="9.0"
+MONGODB_KEY="server-9"
+
+if ! command -v mongod >/dev/null 2>&1 || ! command -v mongosh >/dev/null 2>&1 || ! command -v mongoimport >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y gnupg curl python3
+
+    curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors "https://pgp.mongodb.com/${MONGODB_KEY}.asc" \
+        | sudo gpg --dearmor --yes -o "/usr/share/keyrings/mongodb-${MONGODB_KEY}.gpg"
+    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-${MONGODB_KEY}.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/${MONGODB_SERIES} multiverse" \
+        | sudo tee "/etc/apt/sources.list.d/mongodb-org-${MONGODB_SERIES}.list" >/dev/null
+
+    sudo apt-get update -y
+    sudo apt-get install -y mongodb-org
+fi
+
+# The server parameters that the original JSONBench set before the queries:
+# a larger limit for $addToSet (Q2 collects the distinct users per group) and
+# covered whole index scans instead of collection scans. They are runtime
+# parameters that a restart resets, and the driver restarts the server before
+# every query, so they go to the config file.
+if ! grep -q '^setParameter:' /etc/mongod.conf; then
+    sudo tee -a /etc/mongod.conf >/dev/null <<'YAML'
+
+setParameter:
+  internalQueryMaxAddToSetBytes: 1073741824
+  internalQueryPlannerGenerateCoveredWholeIndexScans: true
+YAML
+fi
+
+sudo systemctl daemon-reload
+sudo systemctl enable mongod

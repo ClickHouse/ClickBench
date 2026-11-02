@@ -56,8 +56,11 @@
 #                      their own users (postgres, mongodb, ...) can read it.
 #   BENCH_MACHINE      the machine description for the result, default: the
 #                      EC2 instance type from the instance metadata service.
-#   BENCH_QUERY_TIMEOUT seconds for one run of a query, default 3600. A run
-#                      that exceeds it is recorded as null.
+#   BENCH_QUERY_TIMEOUT seconds for one run of a query. A run that exceeds it
+#                      is recorded as null, and so are the remaining runs of
+#                      that query. Default: 3600, 7200 for the 100m size and
+#                      36000 for 1000m (MongoDB and PostgreSQL took up to
+#                      9 hours for a single query on 1000m).
 
 set -e
 
@@ -69,7 +72,6 @@ export HOME="${HOME:-/root}"
 : "${BENCH_QUERIES_FILE:=queries.sql}"
 : "${BENCH_CHECK_TIMEOUT:=300}"
 : "${BENCH_DATA_DIR:=/data/bluesky}"
-: "${BENCH_QUERY_TIMEOUT:=3600}"
 
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 JSON_DIR="$(dirname "${LIB_DIR}")"
@@ -80,6 +82,11 @@ case "${BENCH_SIZE}" in
     *) echo "usage: $0 <size in millions of documents: 1, 10, 100 or 1000>" >&2; exit 1 ;;
 esac
 export BENCH_SIZE
+case "${BENCH_SIZE}" in
+    1000) : "${BENCH_QUERY_TIMEOUT:=36000}" ;;
+    100)  : "${BENCH_QUERY_TIMEOUT:=7200}" ;;
+    *)    : "${BENCH_QUERY_TIMEOUT:=3600}" ;;
+esac
 export BENCH_FILES="${BENCH_SIZE}"
 export BENCH_DATA_DIR
 

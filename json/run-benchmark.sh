@@ -27,13 +27,14 @@ branch="${branch:-main}"
 clickbench_pr="${clickbench_pr:-}"
 
 # The time limit for benchmark.sh. Loading a billion documents takes a day for
-# the slowest systems, and some of their queries run for hours.
+# the slowest systems, and some of their queries run for hours (MongoDB and
+# PostgreSQL need about three days for 1000m).
 if [ -z "${timeout:-}" ]; then
     case "${size}" in
         1)    timeout=7200 ;;
         10)   timeout=14400 ;;
         100)  timeout=86400 ;;
-        1000) timeout=259200 ;;
+        1000) timeout=345600 ;;
     esac
 fi
 
