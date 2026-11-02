@@ -1,0 +1,36 @@
+{
+  "system": "GreptimeDB",
+  "version": "v0.13.0-nightly-20250313",
+  "os": "Ubuntu 24.04",
+  "date": "2025-03-13",
+  "machine": "m6i.8xlarge, 10000gib gp3",
+  "cluster_size": 1,
+  "comment": "",
+  "retains_structure": "yes",
+  "tags": [
+  ],
+  "dataset_size": 10000000,
+  "dataset_size_readable": "10m",
+  "num_loaded_documents": 9999994,
+  "data_compression": "auto",
+  "total_size": 1146428958,
+  "total_size_readable": "1.07 GB",
+  "data_size": 1146357150,
+  "data_size_readable": "1.07 GB",
+  "index_size": 64666,
+  "index_size_readable": "63 MB",
+  "result": [
+    [0.05, 0.031, 0.031],
+    [0.403, 0.404, 0.409],
+    [0.048, 0.049, 0.053],
+    [0.025, 0.027, 0.023],
+    [0.051, 0.048, 0.049]
+  ],
+  "result_readable": [
+    "50.00 msec, 31.00 msec, 31.00 msec",
+    "403.00 msec, 404.00 msec, 409.00 msec",
+    "48.00 msec, 49.00 msec, 53.00 msec",
+    "25.00 msec, 27.00 msec, 23.00 msec",
+    "51.00 msec, 48.00 msec, 49.00 msec"
+  ]
+}

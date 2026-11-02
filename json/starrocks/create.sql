@@ -9,4 +9,6 @@ CREATE TABLE bluesky (
         get_json_string(data, 'did')
     )
 )
-ORDER BY (sort_key);
+ORDER BY (sort_key)
+-- A single backend: the default of three replicas can't be placed.
+PROPERTIES ("replication_num" = "1");

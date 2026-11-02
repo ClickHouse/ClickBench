@@ -1,0 +1,43 @@
+{
+  "system": "MongoDB (snappy)",
+  "version": "8.0.6",
+  "os": "Ubuntu 24.04",
+  "date": "2025-01-13",
+  "machine": "m6i.8xlarge, 10000gib gp3",
+  "retains_structure": "yes",
+  "tags": [
+    "historical"
+  ],
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "total_size": 593920,
+  "data_size": 4096,
+  "index_size": 589824,
+  "result": [
+    [
+      1.312,
+      1.333,
+      1.327
+    ],
+    [
+      1.803,
+      1.811,
+      1.768
+    ],
+    [
+      1.46,
+      1.598,
+      1.536
+    ],
+    [
+      0.236,
+      0.238,
+      0.241
+    ],
+    [
+      0.282,
+      0.268,
+      0.27
+    ]
+  ]
+}

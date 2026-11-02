@@ -1,7 +1,9 @@
 #!/bin/bash -e
 
 # Builds data.generated.js, the data of the JSONBench page (index.html), from
-# the result files <system>/results/<machine>_bluesky_<size>m.json.
+# the result files <system>/results/YYYYMMDD/<machine>_bluesky_<size>m.json.
+# As in the main ClickBench, every run is kept in the directory of its date,
+# and the page shows the latest dated copy of every (system, file name).
 #
 # Entries of the form {"error": "..."} and entries tagged "historical" are
 # skipped, as in the main ClickBench (../generate-results.sh).
@@ -33,7 +35,12 @@ declare -A COMPLEXITY
 {
     echo "const data = ["
     FIRST=1
-    LANG="" find . -mindepth 3 -maxdepth 3 -path './*/results/*.json' | sed 's|^\./||' | sort | while read -r file
+    LANG="" find . -mindepth 4 -maxdepth 4 -path './*/results/*/*.json' | sed 's|^\./||' \
+        | sort \
+        | awk -F/ '{ print $1"/"$NF" "$0 }' \
+        | awk '{ latest[$1] = $2 } END { for (k in latest) print latest[k] }' \
+        | sort \
+        | while read -r file
     do
         system_dir="${file%%/*}"
         [ -z "${COMPLEXITY[$system_dir]}" ] && COMPLEXITY[$system_dir]=$(complexity "$system_dir")

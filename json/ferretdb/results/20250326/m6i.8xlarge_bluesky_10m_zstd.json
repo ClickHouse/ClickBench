@@ -1,0 +1,43 @@
+{
+  "system": "FerretDB (zstd)",
+  "version": "2.0.0",
+  "os": "Ubuntu 24.04",
+  "date": "2025-03-26",
+  "machine": "m6i.8xlarge, 10000gib gp3",
+  "retains_structure": "yes",
+  "tags": [
+    "historical"
+  ],
+  "dataset_size": 10000000,
+  "num_loaded_documents": 6943443,
+  "total_size": 6229417984,
+  "data_size": 4739555328,
+  "index_size": 1489862656,
+  "result": [
+    [
+      47.254,
+      6.443,
+      6.393
+    ],
+    [
+      279.628,
+      18.415,
+      18.402
+    ],
+    [
+      351.67,
+      20.299,
+      20.212
+    ],
+    [
+      252.707,
+      10.042,
+      10
+    ],
+    [
+      249.176,
+      11.413,
+      11.399
+    ]
+  ]
+}

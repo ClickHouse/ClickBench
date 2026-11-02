@@ -88,7 +88,9 @@ Every system has a directory with the same scripts as in the main ClickBench (se
 
 The driver installs the system, downloads the dataset (`download-data`), loads it, measuring the load time, runs every query three times, restarting the system and dropping the page cache before the first (cold) run of every query, and writes the result document, `result.json`.
 
-The result files are `<system>/results/<machine>_bluesky_<size>m.json`, with the fields `system`, `version`, `os`, `date`, `machine`, `retains_structure`, `tags`, `dataset_size`, `num_loaded_documents`, `load_time`, `total_size` and `result` (for every query: the cold run and two hot runs, in seconds, `null` for a failed run).
+The result files are `<system>/results/YYYYMMDD/<machine>_bluesky_<size>m.json`, under a directory named with the UTC date of the run, with the fields `system`, `version`, `os`, `date`, `machine`, `retains_structure`, `tags`, `dataset_size`, `num_loaded_documents`, `load_time`, `total_size` and `result` (for every query: the cold run and two hot runs, in seconds, `null` for a failed run).
+As in the main ClickBench, older runs are kept for history, and the page shows the latest dated copy of every `<system>/<file name>`.
+The history of JSONBench was imported with every version of every result file from its repository: the results of the setups that are no longer benchmarked (other compression codecs, other table definitions, FerretDB) keep their old file names and carry the `historical` tag, which hides them from the page.
 The directories starting with `_files_` hold the sizes of the dataset files themselves, in different compression formats, for comparison of the storage size.
 
 ## Running

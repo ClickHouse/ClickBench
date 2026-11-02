@@ -1,0 +1,44 @@
+{
+  "system": "Starrocks (lz4)",
+  "version": "3.4.0-e94580b",
+  "os": "Ubuntu 24.04",
+  "date": "2025-01-13",
+  "machine": "m6i.8xlarge, 10000gib gp3",
+  "cluster_size": 1,
+  "comment": "",
+  "retains_structure": "yes",
+  "tags": [
+    "historical"
+  ],
+  "dataset_size": 100000000,
+  "num_loaded_documents": 100000000,
+  "data_compression": "lz4",
+  "total_size": 19182000000,
+  "result": [
+    [
+      0.25,
+      0.17,
+      0.17
+    ],
+    [
+      8.13,
+      4.33,
+      3.82
+    ],
+    [
+      3.18,
+      3.08,
+      3.05
+    ],
+    [
+      4.06,
+      4.07,
+      4.12
+    ],
+    [
+      4.04,
+      4.2,
+      3.97
+    ]
+  ]
+}

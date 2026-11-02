@@ -23,4 +23,4 @@ ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}" \
 
 # Make the ingested data searchable and persisted now, rather than after the
 # periodic flush (the original waited for a second instead).
-curl -sS --fail 'http://localhost:9428/internal/force_flush'
+curl -sS --fail -X POST 'http://localhost:9428/internal/force_flush'

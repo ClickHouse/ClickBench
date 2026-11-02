@@ -10,7 +10,9 @@
 #
 #   1. takes the latest complete result of every (system, dataset size,
 #      machine) that arrived in the last SINCE_HOURS hours and writes it to
-#      <system>/results/<machine>_bluesky_<size>m.json,
+#      <system>/results/YYYYMMDD/<machine>_bluesky_<size>m.json, where
+#      YYYYMMDD is the date of the run (older runs are kept, as in the main
+#      ClickBench),
 #   2. regenerates data.generated.js,
 #   3. publishes the changes.
 #
@@ -95,8 +97,9 @@ for line in open(sys.argv[1]):
     rows = ",\n".join("    [" + ", ".join("null" if v is None else str(v) for v in q) + "]" for q in r["result"])
     text = json.dumps(out, indent=2)[:-2] + ',\n  "result": [\n' + rows + "\n  ]\n}\n"
     json.loads(text)  # sanity check
-    os.makedirs(os.path.join(directory, "results"), exist_ok=True)
-    path = os.path.join(directory, "results", f"{machine}_bluesky_{size}m.json")
+    day = r["date"].replace("-", "")
+    os.makedirs(os.path.join(directory, "results", day), exist_ok=True)
+    path = os.path.join(directory, "results", day, f"{machine}_bluesky_{size}m.json")
     with open(path, "w") as f:
         f.write(text)
     print(path, file=sys.stderr)
@@ -134,9 +137,9 @@ with open(sys.argv[1]) as fh:
 sys.exit(0 if old == new else 1)' "${f}"; then
         git checkout -q -- "${f}"
     fi
-done < <(git diff --name-only --relative -- '*/results/*.json')
+done < <(git diff --name-only --relative -- '*/results/*/*.json')
 
-changed=$(git status --porcelain -- '*/results/*.json' | awk '{print $NF}' | sed "s|^${prefix}||" | sort | tr '\n' ' ' | xargs || true)
+changed=$(git status --porcelain --untracked-files=all -- '*/results/*/*.json' | awk '{print $NF}' | sed "s|^${prefix}||" | sort | tr '\n' ' ' | xargs || true)
 if [ -z "${changed}" ]; then
     note "No new JSONBench results${PR:+ of PR #${PR}} in the last ${SINCE_HOURS} hours."
     exit 0
@@ -147,7 +150,7 @@ note "New or updated results: ${changed// /, }."
 
 # --- publish -------------------------------------------------------------------------
 
-runs=$(for f in ${changed}; do echo "${f%%/*}/$(basename "${f}" .json | sed 's/.*_bluesky_//')"; done | tr '\n' ' ' | xargs)
+runs=$(for f in ${changed}; do echo "${f%%/*}/$(basename "${f}" .json | sed 's/.*_bluesky_//')"; done | sort -u | tr '\n' ' ' | xargs)
 count=$(wc -w <<<"${runs}")
 if [ "${count}" -le 4 ]; then
     title="json: results for ${runs// /, }"
