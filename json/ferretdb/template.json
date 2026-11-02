@@ -1,0 +1,10 @@
+{
+  "system": "FerretDB",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Go",
+    "document",
+    "PostgreSQL derivative"
+  ]
+}
