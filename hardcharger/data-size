@@ -1,0 +1,3 @@
+#!/bin/bash
+set -euo pipefail
+printf '%s\n' "$(wc -c < hits.db | tr -d '[:space:]')"
