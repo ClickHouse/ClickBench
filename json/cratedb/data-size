@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+. ./sql.sh
+# The primary shards: the Lucene indexes with _source and the doc values.
+crate_sql -c "SELECT sum(size) FROM sys.shards WHERE table_name = 'bluesky' AND primary = TRUE"

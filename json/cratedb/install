@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+# The latest stable release from the official "stable" APT repository, with
+# the default configuration (the JVM heap is not set: the bundled JVM takes
+# its default, a quarter of the RAM).
+for i in $(seq 1 10); do
+    if sudo -E apt-get update -y \
+        && sudo -E apt-get install -y apt-transport-https curl gnupg postgresql-client python3 \
+        && curl -fsS https://cdn.crate.io/downloads/debian/DEB-GPG-KEY-crate | sudo tee /etc/apt/trusted.gpg.d/cratedb.asc >/dev/null \
+        && echo "deb https://cdn.crate.io/downloads/debian/stable/ default main" | sudo tee /etc/apt/sources.list.d/crate-stable.list >/dev/null \
+        && sudo -E apt-get update -y \
+        && sudo -E apt-get install -y crate; then
+        break
+    fi
+    [ "$i" -eq 10 ] && { echo "install: cannot install CrateDB" >&2; exit 1; }
+    sleep 30
+done
+
+sudo systemctl enable crate
+sudo systemctl start crate
