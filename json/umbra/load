@@ -1,9 +1,11 @@
 #!/bin/bash
-# As ../postgresql/load (without its expression index): one COPY per file, in the CSV format with quote and
-# delimiter characters that never occur in the data, so that every line becomes
-# one JSONB value. `\u0000` is removed, and the lines that are not valid JSON
-# (a few documents longer than 64 KiB are split over two lines in the dataset)
-# are skipped by ON_ERROR ignore.
+# As ../postgresql/load (without its expression index): one COPY per file, in
+# the CSV format with quote and delimiter characters that never occur in the
+# data, so that every line becomes one JSONB value, and `\u0000` removed.
+#
+# Umbra's COPY has no ON_ERROR option, so the lines that are not valid JSON (a
+# few documents longer than 64 KiB are split over two lines in the dataset)
+# are dropped before it, as in ../mongodb/load; the others are passed unchanged.
 set -e -o pipefail
 source ./env.sh
 
@@ -13,6 +15,24 @@ ${PSQL} < ddl.sql
 for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
     echo "load: ${file}"
     gzip -dc "${file}" \
+        | python3 -I -c '
+import json
+import sys
+
+out = sys.stdout.buffer
+skipped = 0
+for line in sys.stdin.buffer:
+    try:
+        valid = isinstance(json.loads(line), dict)
+    except ValueError:
+        valid = False
+    if valid:
+        out.write(line)
+    else:
+        skipped += 1
+if skipped:
+    print(f"load: skipped {skipped} invalid lines", file=sys.stderr)
+' \
         | sed 's/\\u0000//g' \
-        | ${PSQL} -c "\\copy bluesky FROM STDIN WITH (format csv, quote e'\\x01', delimiter e'\\x02', escape e'\\x01', on_error ignore)"
+        | ${PSQL} -c "\\copy bluesky FROM STDIN WITH (format csv, quote e'\\x01', delimiter e'\\x02', escape e'\\x01')"
 done
