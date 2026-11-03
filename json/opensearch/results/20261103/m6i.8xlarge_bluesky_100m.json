@@ -1,0 +1,24 @@
+{
+  "system": "OpenSearch",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Java",
+    "search"
+  ],
+  "version": "3.9.0",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 100000000,
+  "num_loaded_documents": 99999968,
+  "load_time": 2769.705,
+  "total_size": 26585383721,
+  "result": [
+    [1.678, 1.905, 1.944],
+    [6.379, 6.44, 6.47],
+    [9.006, 10.158, 9.634],
+    [1.117, 0.897, 0.879],
+    [3.384, 2.505, 2.425]
+  ]
+}
