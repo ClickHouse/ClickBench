@@ -1,0 +1,9 @@
+#!/bin/bash
+# The Presto containers are removed, not only stopped: they are attached to
+# the Docker network of the CLP package, which stop-clp.sh removes and
+# start-clp.sh creates anew.
+
+if [ -f /clp/presto-clp/.env ]; then
+    (cd /clp/presto-clp && docker compose down) || true
+fi
+(cd /clp/clp-json && sbin/stop-clp.sh) || true
