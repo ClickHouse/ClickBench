@@ -1,0 +1,13 @@
+{
+  "system": "CrateDB",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Java",
+    "column-oriented"
+  ],
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000000,
+  "error": "the run failed"
+}
