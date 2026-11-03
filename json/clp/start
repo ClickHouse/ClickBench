@@ -4,6 +4,9 @@
 # the CLP connector, reading the archives directly).
 set -e
 
+# The driver discards the output of ./start; ./check shows the end of it.
+exec > >(tee -a /var/tmp/clp-start.log) 2>&1
+
 CLP_HOME=/opt/clp/clp-json
 PRESTO_DIR=/opt/clp/presto-clp
 

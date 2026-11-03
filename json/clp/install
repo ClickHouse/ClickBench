@@ -56,16 +56,17 @@ if [ ! -f "${CLP_HOME}/VERSION" ]; then
     sudo sed -i 's/^\(\s*\)disable: false/\1disable: true/' "${CLP_HOME}/etc/clp-config.yaml"
     grep -q 'disable: true' "${CLP_HOME}/etc/clp-config.yaml"
 
-    # The Presto coordinator of this deployment comes with a sample limit of
-    # 1 GB of memory per query (the worker gets a share of the RAM of the
-    # machine, computed by scripts/set-up-config.sh). The aggregations over
-    # the user ids do not fit into 1 GB at the larger dataset sizes, so the
-    # coordinator limit is set to the worker's query memory, half of the RAM,
-    # the same ratio as scripts/init.py uses for the worker.
+    # The Presto coordinator of this deployment comes with a sample cluster-
+    # wide limit of 1 GB of memory per query (the worker gets a share of the
+    # RAM of the machine, computed by scripts/set-up-config.sh). The
+    # aggregations over the user ids do not fit into 1 GB at the larger
+    # dataset sizes, so the limit is set to the worker's query memory, half of
+    # the RAM, the same ratio as scripts/init.py uses for the worker. The
+    # per-node limit is the coordinator's own (it runs no query fragments,
+    # its heap is 4 GB) and stays as it is.
     QUERY_GB=$(awk '/MemTotal/ { printf "%d", $2 / 1024 / 1024 / 2 }' /proc/meminfo)
     sudo sed -i \
         -e "s/^PRESTO_COORDINATOR_CONFIGPROPERTIES_QUERY_MAX_MEMORY=.*/PRESTO_COORDINATOR_CONFIGPROPERTIES_QUERY_MAX_MEMORY=${QUERY_GB}GB/" \
-        -e "s/^PRESTO_COORDINATOR_CONFIGPROPERTIES_QUERY_MAX_MEMORY_PER_NODE=.*/PRESTO_COORDINATOR_CONFIGPROPERTIES_QUERY_MAX_MEMORY_PER_NODE=${QUERY_GB}GB/" \
         "${PRESTO_DIR}/coordinator.env"
     cat "${PRESTO_DIR}/coordinator.env"
 fi

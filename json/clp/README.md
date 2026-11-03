@@ -41,8 +41,8 @@ same archive format as here.
 
 Settings different from the defaults:
 
-- The Presto coordinator's memory limit per query (`query.max-memory`,
-  `query.max-memory-per-node`) is 1 GB in the deployment; it is set to half of the RAM, the
+- The Presto coordinator's cluster-wide memory limit per query (`query.max-memory`)
+  is 1 GB in the deployment; it is set to half of the RAM, the
   query memory that the deployment's set-up script gives to the worker. The aggregations over
   the user ids do not fit into 1 GB at the larger dataset sizes.
 - The package's usage telemetry is disabled.
