@@ -5,10 +5,10 @@
 # statistics, as in the main ClickBench YDB entry).
 set -e
 
+query=$(cat)
+
 cd "$(dirname "$0")"
 source ./env.sh
-
-query=$(cat)
 
 raw=$("${YDB[@]}" sql -s "${query}" --stats basic 2>&1) && status=0 || status=$?
 
