@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# The load ends with CHECKPOINT, so the database file has everything and
+# there is no WAL.
+stat -c %s bluesky.duckdb

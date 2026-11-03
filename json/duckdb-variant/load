@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e -o pipefail
+
+# Idempotent: start from an empty database file.
+rm -f bluesky.duckdb bluesky.duckdb.wal
+
+# As json/duckdb, one INSERT per file, but the documents are converted from
+# JSON to VARIANT (DuckDB 1.5+). At the checkpoint, DuckDB shreds the common
+# structure of the VARIANT values into typed columns.
+#
+# The VARIANT type needs a database file in the storage format of DuckDB 1.5
+# or newer; the default format of new files in DuckDB 2.0 is new enough, so
+# no STORAGE_VERSION is given (with an older default the CREATE TABLE fails).
+#
+# A few documents in the dataset are broken: a document longer than 64 KiB
+# is split into two lines by a raw newline. ignore_errors=true turns these
+# lines into NULLs, which are filtered out.
+{
+    cat ddl.sql
+    for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+        echo "INSERT INTO bluesky SELECT json::VARIANT FROM read_ndjson_objects('${file}', ignore_errors = true, maximum_object_size = 1048576000) WHERE json IS NOT NULL;"
+    done
+    echo "CHECKPOINT;"
+} | duckdb bluesky.duckdb
+
+# Show the storage version of the database file in the log.
+duckdb bluesky.duckdb -noheader -list -c "SELECT tags FROM duckdb_databases() WHERE database_name = 'bluesky'"
