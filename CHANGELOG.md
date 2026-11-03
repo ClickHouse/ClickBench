@@ -114,7 +114,7 @@ Displaying the tuned results can be toggled with [a button](https://github.com/C
 Add a new benchmark, [FastFormats](https://fastformats.clickhouse.com/) comparing the performance on data formats using ClickHouse.  Website by Alexey Milovidov, scripts and methodology by Tom Schreiber.
 
 ### 2025-02-04
-Add a new benchmark, [JSONBench](https://jsonbench.com/) for analytics on semistructured data. Website by Alexey Milovidov, scripts and methodology by Tom Schreiber.
+Add a new benchmark, [JSONBench](https://benchmark.clickhouse.com/json/) for analytics on semistructured data. Website by Alexey Milovidov, scripts and methodology by Tom Schreiber.
 
 ### 2024-11-08
 Add a [new benchmark](https://pastila.nl/?000b1ba6/c224ddf960900f4f2d0d9e100cef5445.html) to compare all generations of AWS Graviton. (Alexey Milovidov)

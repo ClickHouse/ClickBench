@@ -3,7 +3,7 @@
   "version": "v0.13.0-nightly-20250315",
   "os": "Ubuntu 24.04",
   "date": "2025-03-17",
-  "machine": "m6i.8xlarge, 10000gib gp3",
+  "machine": "m6i.8xlarge",
   "retains_structure": "no",
   "tags": [
   ],
