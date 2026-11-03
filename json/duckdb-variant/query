@@ -1,0 +1,27 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it with the DuckDB CLI on bluesky.duckdb.
+# Stdout: the result. Stderr: the runtime in fractional seconds on the last
+# line (the "real" time of `.timer on`, as in the original JSONBench).
+set -e
+
+query=$(cat)
+
+err=$(mktemp /var/tmp/duckdb-query.XXXXXX)
+trap 'rm -f "${err}"' EXIT
+
+out=$(duckdb bluesky.duckdb -c ".timer on" -c "${query}" 2>"${err}") && status=0 || status=$?
+
+if [ "${status}" -ne 0 ]; then
+    cat "${err}" >&2
+    exit "${status}"
+fi
+
+time_s=$(printf '%s\n' "${out}" | awk '/^Run Time/ { t = $5 } END { print t }')
+if [ -z "${time_s}" ]; then
+    printf '%s\n' "${out}" >&2
+    echo "query: no timing in the DuckDB output" >&2
+    exit 1
+fi
+
+printf '%s\n' "${out}" | grep -v '^Run Time '
+echo "${time_s}" >&2
