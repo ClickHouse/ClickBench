@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# The table and the index are in the one database file; the default
+# rollback journal is deleted after every transaction.
+stat -c %s bluesky.db

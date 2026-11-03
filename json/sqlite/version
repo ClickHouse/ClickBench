@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# "3.54.1 2026-... ..." -> "3.54.1"
+sqlite3 --version | awk '{ print $1 }'
