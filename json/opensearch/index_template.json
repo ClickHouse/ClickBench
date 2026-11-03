@@ -1,0 +1,77 @@
+{
+  "index_patterns": [
+    "bluesky"
+  ],
+  "template": {
+    "settings": {
+      "index": {
+        "codec": "best_compression",
+        "mapping": {
+          "total_fields": {
+            "limit": "10000"
+          }
+        },
+        "refresh_interval": "30s",
+        "number_of_shards": "1",
+        "number_of_replicas": "0",
+        "sort": {
+          "field": [
+            "kind",
+            "commit.operation",
+            "commit.collection",
+            "did",
+            "time_us"
+          ],
+          "order": [
+            "asc",
+            "asc",
+            "asc",
+            "asc",
+            "asc"
+          ]
+        }
+      }
+    },
+    "mappings": {
+      "_source": {
+        "enabled": true
+      },
+      "dynamic_templates": [
+        {
+          "strings_as_keyword": {
+            "match_mapping_type": "string",
+            "mapping": {
+              "ignore_above": 1024,
+              "type": "keyword"
+            }
+          }
+        }
+      ],
+      "properties": {
+        "kind": {
+          "type": "keyword"
+        },
+        "did": {
+          "type": "keyword"
+        },
+        "time_us": {
+          "type": "long"
+        },
+        "commit": {
+          "properties": {
+            "collection": {
+              "type": "keyword"
+            },
+            "operation": {
+              "type": "keyword"
+            },
+            "record": {
+              "type": "object",
+              "enabled": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

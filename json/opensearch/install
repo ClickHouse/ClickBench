@@ -1,0 +1,64 @@
+#!/bin/bash
+# Installs the latest OpenSearch of the current major version (3.x) from the
+# official APT repository:
+# https://docs.opensearch.org/latest/install-and-configure/install-opensearch/debian/
+set -e -o pipefail
+
+. ./os-common.sh
+
+export DEBIAN_FRONTEND=noninteractive
+
+OPENSEARCH_MAJOR="3"
+
+retry() {
+    local i
+    for i in $(seq 1 10); do
+        "$@" && return 0
+        echo "install: '$*' failed (attempt ${i}), retrying" >&2
+        sleep 10
+    done
+    return 1
+}
+
+retry sudo apt-get update -y
+retry sudo apt-get install -y ca-certificates curl gnupg2 jq python3
+
+if [ ! -x /usr/share/opensearch/bin/opensearch ]; then
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors https://artifacts.opensearch.org/publickeys/opensearch-release.pgp \
+        | sudo gpg --dearmor --yes --batch -o /etc/apt/keyrings/opensearch.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/opensearch.gpg] https://artifacts.opensearch.org/releases/bundle/opensearch/${OPENSEARCH_MAJOR}.x/apt stable main" \
+        | sudo tee "/etc/apt/sources.list.d/opensearch-${OPENSEARCH_MAJOR}.x.list" >/dev/null
+    retry sudo apt-get update -y
+    # The package installs the demo security configuration (certificates,
+    # users) when it is given the initial admin password.
+    retry sudo env OPENSEARCH_INITIAL_ADMIN_PASSWORD="${OS_PASSWORD}" apt-get install -y opensearch
+fi
+
+if ! sudo grep -q '^plugins.security.ssl.http.enabled' /etc/opensearch/opensearch.yml; then
+    echo "install: the package did not install the demo security configuration" >&2
+    exit 1
+fi
+
+# The only non-default JVM option is the heap size, as in the Elasticsearch
+# entry (the default of the package is 1 GB). jvm.options.d overrides
+# jvm.options.
+sudo tee /etc/opensearch/jvm.options.d/heap.options >/dev/null <<'OPTIONS'
+-Xms31g
+-Xmx31g
+OPTIONS
+sudo chown root:opensearch /etc/opensearch/jvm.options.d/heap.options
+sudo chmod 640 /etc/opensearch/jvm.options.d/heap.options
+
+# Required by OpenSearch (mmapfs), see
+# https://docs.opensearch.org/latest/install-and-configure/install-opensearch/index/#important-settings
+sudo sysctl -w vm.max_map_count=262144
+
+sudo mkdir -p /etc/systemd/system/opensearch.service.d
+sudo tee /etc/systemd/system/opensearch.service.d/override.conf >/dev/null <<'UNIT'
+[Service]
+TimeoutStartSec=900
+UNIT
+
+sudo systemctl daemon-reload
+sudo systemctl enable opensearch.service
