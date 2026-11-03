@@ -22,6 +22,8 @@
 # With PR=<number>, only the runs launched for that pull request are taken
 # (from any time, unless SINCE_HOURS is given), and with PUSH_PR=1 they are
 # committed to the head branch of the pull request and a comment is posted.
+# With PUBLISH_TO_MAIN=1 instead, they are published to main as the runs of
+# main are: for the runs that finish after their pull request was merged.
 # Otherwise the files are left in the working tree (e.g. for a local run).
 #
 #   CONNECTION_PARAMS='--user sink --host play.clickhouse.com --secure' ./collect-new-results.sh
@@ -37,6 +39,9 @@ CH() { clickhouse-client ${CONNECTION_PARAMS} "$@"; }
 
 PR="${PR:-}"
 PUSH_PR="${PUSH_PR:-}"
+# With PR=<number>, publish the results to main (as the runs of main are),
+# for a pull request that is already merged.
+PUBLISH_TO_MAIN="${PUBLISH_TO_MAIN:-}"
 if [ -n "${PR}" ]; then
     SINCE_HOURS="${SINCE_HOURS:-87600}"
 else
@@ -170,7 +175,7 @@ if [ -n "${DRY_RUN}" ]; then
     exit 0
 fi
 
-if [ -n "${PR}" ]; then
+if [ -n "${PR}" ] && [ -z "${PUBLISH_TO_MAIN}" ]; then
     [ -n "${PUSH_PR}" ] || exit 0
     git add -- . ':!*.bak'
     git -c "user.name=${BOT_NAME}" -c "user.email=${BOT_EMAIL}" commit -q -m "${title}" -m "${body}"

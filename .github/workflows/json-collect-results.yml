@@ -54,7 +54,19 @@ jobs:
               FORMAT TSV")
           for pr in $prs; do
               info=$(gh pr view "$pr" --json state,headRefName,headRepository,headRepositoryOwner,isCrossRepository)
-              if [ "$(jq -r .state <<< "$info")" != "OPEN" ]; then
+              state=$(jq -r .state <<< "$info")
+              # The runs that finish after their pull request was merged (the
+              # 1000m size takes days) go to main, as the runs of main do,
+              # from the current main: an earlier step may have merged into it.
+              if [ "$state" = "MERGED" ]; then
+                  git fetch -q origin main
+                  dir=$(mktemp -d)
+                  git worktree add -q --detach "$dir" FETCH_HEAD
+                  (cd "$dir" && PR="$pr" PUBLISH_TO_MAIN=1 BRANCH="auto-results/json-pr$pr" ./json/collect-new-results.sh) || echo "Failed to collect the results of the merged PR #$pr" | tee -a "$GITHUB_STEP_SUMMARY"
+                  git worktree remove --force "$dir"
+                  continue
+              fi
+              if [ "$state" != "OPEN" ]; then
                   continue
               fi
               if [ "$(jq -r .isCrossRepository <<< "$info")" = "true" ]; then
