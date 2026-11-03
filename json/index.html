@@ -741,15 +741,21 @@ unique_tags.map(elem => {
     });
 });
 
+/// The machine that json/run-benchmark.sh runs the benchmark on.
+const default_machine = 'm6i.8xlarge';
+
 [... new Set(real_data.map(elem => elem.machine))].sort((a, b) => {
     const count_diff = real_data.filter(elem => elem.machine === b).length - real_data.filter(elem => elem.machine === a).length;
     return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
 }).map(elem => {
+    /// Only the machine of the benchmark is selected by default: the other machines are
+    /// from the results submitted for managed services (e.g. `Hologres: 32 CU`), not comparable.
+    const selected = elem == default_machine;
     let selector = document.createElement('a');
-    selector.className = 'selector selector-active';
+    selector.className = selected ? 'selector selector-active' : 'selector';
     selector.appendChild(document.createTextNode(elem));
     machines.appendChild(selector);
-    selectors.machine[elem] = true;
+    selectors.machine[elem] = selected;
     addToggleListener(selector, elem, selectors.machine);
 });
 
