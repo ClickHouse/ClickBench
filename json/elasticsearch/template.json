@@ -1,0 +1,9 @@
+{
+  "system": "Elasticsearch",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Java",
+    "search"
+  ]
+}

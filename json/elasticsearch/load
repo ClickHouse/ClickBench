@@ -1,0 +1,120 @@
+#!/bin/bash
+# Creates the data stream from scratch with the index template of this
+# directory (index_template.json) and loads the data with Filebeat, as in the
+# original JSONBench.
+set -e -o pipefail
+
+. ./es-common.sh
+
+# Seconds without progress of Filebeat after which the load is considered
+# finished (for example, when Elasticsearch rejected some documents).
+STALL_TIMEOUT="${STALL_TIMEOUT:-600}"
+
+sudo systemctl stop filebeat.service 2>/dev/null || true
+
+# Idempotency: delete the data stream (with its backing indices) of a
+# previous load.
+code=$(curl -sS -k -o /dev/null -w '%{http_code}' -u "elastic:$(es_password)" "${ES_URL}/_data_stream/${ES_INDEX}")
+if [ "${code}" = "200" ]; then
+    es_curl -X DELETE "${ES_URL}/_data_stream/${ES_INDEX}" >/dev/null
+elif [ "${code}" != "404" ]; then
+    echo "load: unexpected HTTP status ${code} for the data stream" >&2
+    exit 1
+fi
+
+es_curl -X PUT "${ES_URL}/_ilm/policy/filebeat" -d @ilm.json >/dev/null
+es_curl -X PUT "${ES_URL}/_index_template/${ES_INDEX}" -d @index_template.json >/dev/null
+es_curl -X PUT "${ES_URL}/_data_stream/${ES_INDEX}" >/dev/null
+
+# The API key for Filebeat, with the privileges of the original JSONBench.
+es_curl -X DELETE "${ES_URL}/_security/api_key" -d '{"name": "filebeat"}' >/dev/null || true
+api_key=$(es_curl -X POST "${ES_URL}/_security/api_key" -d '
+{
+  "name": "filebeat",
+  "role_descriptors": {
+    "filebeat_writer": {
+      "cluster": ["monitor", "read_ilm", "read_pipeline"],
+      "index": [
+        {
+          "names": ["bluesky*"],
+          "privileges": ["view_index_metadata", "create_doc", "auto_configure"]
+        }
+      ]
+    }
+  }
+}' | jq -r '"\(.id):\(.api_key)"')
+
+# Filebeat reads uncompressed files: decompress them to a temporary directory,
+# counting the lines (the events that Filebeat has to send).
+tmp_dir=$(mktemp -d /var/tmp/jsonbench-elasticsearch.XXXXXX)
+chmod 755 "${tmp_dir}"
+cleanup() {
+    sudo systemctl stop filebeat.service 2>/dev/null || true
+    rm -rf "${tmp_dir}"
+}
+trap cleanup EXIT
+
+ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}" \
+    | xargs -P 8 -I{} bash -c 'set -e -o pipefail; name=$(basename "$1" .gz); gzip -dc "$1" | tee "$2/${name}" | wc -l > "$2/${name}.lines"' _ {} "${tmp_dir}"
+chmod 644 "${tmp_dir}"/*.json
+expected=$(cat "${tmp_dir}"/*.json.lines | awk '{ s += $1 } END { print s }')
+echo "load: ${expected} lines in $(ls "${tmp_dir}"/*.json | wc -l) files" >&2
+
+sed -e "s|<api_key>|${api_key}|g" -e "s|<index_name>|${ES_INDEX}|g" -e "s|<temp_dir>|${tmp_dir}|g" filebeat.yml \
+    | sudo tee /etc/filebeat/filebeat.yml >/dev/null
+sudo chown root:root /etc/filebeat/filebeat.yml
+sudo chmod 600 /etc/filebeat/filebeat.yml
+sudo rm -rf /var/lib/filebeat/registry
+sudo systemctl start filebeat.service
+
+# Wait until Filebeat has sent all the events, or makes no progress for
+# STALL_TIMEOUT seconds.
+last=-1
+stalled=0
+while true; do
+    sleep 10
+    if ! sudo systemctl is-active --quiet filebeat.service; then
+        echo "load: filebeat is not running" >&2
+        sudo journalctl -u filebeat.service --no-pager -n 50 >&2 || true
+        exit 1
+    fi
+    processed=$(curl -sS --max-time 10 'http://localhost:5066/stats' 2>/dev/null | jq -r '.filebeat.events.done // 0' 2>/dev/null) || processed=0
+    [[ "${processed}" =~ ^[0-9]+$ ]] || processed=0
+    echo "load: ${processed} of ${expected} events done" >&2
+    if [ "${processed}" -ge "${expected}" ]; then
+        break
+    fi
+    if [ "${processed}" -eq "${last}" ]; then
+        stalled=$((stalled + 10))
+        if [ "${stalled}" -ge "${STALL_TIMEOUT}" ]; then
+            echo "load: no progress for ${STALL_TIMEOUT}s, stopping at ${processed} of ${expected} events" >&2
+            break
+        fi
+    else
+        stalled=0
+        last="${processed}"
+    fi
+done
+
+cleanup
+trap - EXIT
+
+es_curl -X POST "${ES_URL}/${ES_INDEX}/_refresh" >/dev/null
+
+# Force merge to one segment, as in the original JSONBench. It runs as a task
+# rather than in the HTTP request, which could take hours.
+task=$(es_curl -X POST "${ES_URL}/${ES_INDEX}/_forcemerge?max_num_segments=1&wait_for_completion=false" | jq -r '.task')
+echo "load: force merge task ${task}" >&2
+while true; do
+    status=$(es_curl "${ES_URL}/_tasks/${task}")
+    if [ "$(printf '%s' "${status}" | jq -r '.completed')" = "true" ]; then
+        if printf '%s' "${status}" | jq -e 'has("error")' >/dev/null; then
+            echo "load: force merge failed: ${status}" >&2
+            exit 1
+        fi
+        break
+    fi
+    sleep 10
+done
+
+es_curl -X POST "${ES_URL}/${ES_INDEX}/_refresh" >/dev/null

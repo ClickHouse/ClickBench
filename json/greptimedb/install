@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e -o pipefail
+
+# The latest release from GitHub (releases/latest skips the nightly builds,
+# which are marked as pre-releases).
+if [ ! -x ./greptime ]; then
+    VERSION=$(curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors \
+        https://api.github.com/repos/GreptimeTeam/greptimedb/releases/latest | jq -r .tag_name)
+    if [ -z "${VERSION}" ] || [ "${VERSION}" = "null" ]; then
+        echo "install: cannot resolve the latest GreptimeDB release" >&2
+        exit 1
+    fi
+    ARCH=$(dpkg --print-architecture)
+    NAME="greptime-linux-${ARCH}-${VERSION}"
+    TMP=$(mktemp -d /var/tmp/greptimedb.XXXXXX)
+    wget --quiet --tries=10 --waitretry=10 --retry-connrefused --retry-on-http-error=429,500,502,503,504 \
+        -O "${TMP}/${NAME}.tar.gz" \
+        "https://github.com/GreptimeTeam/greptimedb/releases/download/${VERSION}/${NAME}.tar.gz"
+    tar xzf "${TMP}/${NAME}.tar.gz" -C "${TMP}"
+    mv "${TMP}/${NAME}/greptime" ./greptime
+    rm -rf "${TMP}"
+    echo "${VERSION}" > greptime.version
+fi

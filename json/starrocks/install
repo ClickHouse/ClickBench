@@ -1,0 +1,45 @@
+#!/bin/bash
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+ARCH=$(dpkg --print-architecture)
+SR_HOME="$(pwd)/starrocks"
+
+sudo apt-get update -y
+sudo apt-get install -y openjdk-17-jre-headless mysql-client jq curl wget
+
+if [ ! -d "$SR_HOME" ]; then
+    # The latest stable release: the highest X.Y.Z tag (the "latest" GitHub
+    # release lags behind the tags) whose tarball is already published.
+    VERSION=""
+    for v in $(curl -fsSL --retry 10 --retry-delay 30 --retry-all-errors \
+                    'https://api.github.com/repos/StarRocks/starrocks/tags?per_page=100' \
+                | jq -r '.[].name' | sed 's/^v//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V -r | head -n 5); do
+        if curl -fsI --retry 3 "https://releases.starrocks.io/starrocks/StarRocks-${v}-ubuntu-${ARCH}.tar.gz" >/dev/null; then
+            VERSION="$v"
+            break
+        fi
+    done
+    if [ -z "$VERSION" ]; then
+        echo "starrocks: cannot resolve the latest version" >&2
+        exit 1
+    fi
+    URL="https://releases.starrocks.io/starrocks/StarRocks-${VERSION}-ubuntu-${ARCH}.tar.gz"
+    echo "starrocks: installing from $URL"
+
+    TARBALL="/var/tmp/$(basename "$URL")"
+    wget --continue --tries=10 --waitretry=30 --retry-connrefused --progress=dot:giga -O "$TARBALL" "$URL"
+    rm -rf "${SR_HOME}.tmp"
+    mkdir -p "${SR_HOME}.tmp"
+    tar -xzf "$TARBALL" --strip-components 1 -C "${SR_HOME}.tmp"
+    rm -f "$TARBALL"
+
+    # The default meta and storage directories, which must exist, and the
+    # loopback address for FE and BE, so that they find each other. Otherwise
+    # the default configuration, as with the allin1 image of the original.
+    mkdir -p "${SR_HOME}.tmp/meta" "${SR_HOME}.tmp/storage"
+    printf '\nmeta_dir = %s/meta\npriority_networks = 127.0.0.1/32\n' "$SR_HOME" >> "${SR_HOME}.tmp/fe/conf/fe.conf"
+    printf '\nstorage_root_path = %s/storage\npriority_networks = 127.0.0.1/32\n' "$SR_HOME" >> "${SR_HOME}.tmp/be/conf/be.conf"
+    mv "${SR_HOME}.tmp" "$SR_HOME"
+fi

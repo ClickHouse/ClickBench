@@ -1,0 +1,59 @@
+#!/bin/bash
+# FerretDB on PostgreSQL with the DocumentDB extension, in the Docker images
+# published by FerretDB, as in the original JSONBench entry. The latest FerretDB
+# release is resolved from GitHub, and the DocumentDB build that goes with it
+# from the releases of FerretDB/documentdb (named v<documentdb>-ferretdb-<ferretdb>).
+#
+# The original entry was pinned to FerretDB 2.0.0, which rejected the
+# `bypassEmptyTsReplacement` field that newer versions of mongoimport send
+# (FerretDB accepts it since 2.2), and that is why it was removed from JSONBench
+# in 2025-11: https://github.com/ClickHouse/JSONBench/pull/123
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+gh_api() {
+    curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors -H 'Accept: application/vnd.github+json' "https://api.github.com/$1"
+}
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io gnupg curl jq python3
+sudo systemctl enable --now docker
+
+# The MongoDB shell and mongoimport, from the MongoDB repository (the same
+# series as ../mongodb/install). Only the client tools, not the server.
+MONGODB_SERIES="9.0"
+MONGODB_KEY="server-9"
+curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors "https://pgp.mongodb.com/${MONGODB_KEY}.asc" \
+    | sudo gpg --dearmor --yes -o "/usr/share/keyrings/mongodb-${MONGODB_KEY}.gpg"
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-${MONGODB_KEY}.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/${MONGODB_SERIES} multiverse" \
+    | sudo tee "/etc/apt/sources.list.d/mongodb-org-${MONGODB_SERIES}.list" >/dev/null
+sudo apt-get update -y
+sudo apt-get install -y mongodb-mongosh mongodb-database-tools
+
+FERRETDB_TAG=$(gh_api repos/FerretDB/FerretDB/releases/latest | jq -r .tag_name)
+FERRETDB_VERSION="${FERRETDB_TAG#v}"
+DOCUMENTDB_TAG=$(gh_api 'repos/FerretDB/documentdb/releases?per_page=50' \
+    | jq -r --arg v "-ferretdb-${FERRETDB_VERSION}" '[.[] | select(.prerelease | not) | .tag_name | select(endswith($v))][0] // empty')
+if [ -z "${DOCUMENTDB_TAG}" ]; then
+    echo "install: no DocumentDB release for FerretDB ${FERRETDB_VERSION}" >&2
+    exit 1
+fi
+# v0.107.0-ferretdb-2.7.0 -> 17-0.107.0-ferretdb-2.7.0 (PostgreSQL 17).
+POSTGRES_IMAGE="ghcr.io/ferretdb/postgres-documentdb:17-${DOCUMENTDB_TAG#v}"
+FERRETDB_IMAGE="ghcr.io/ferretdb/ferretdb:${FERRETDB_VERSION}"
+
+for image in "${POSTGRES_IMAGE}" "${FERRETDB_IMAGE}"; do
+    for i in $(seq 1 10); do
+        sudo docker pull -q "${image}" && break
+        [ "$i" -eq 10 ] && exit 1
+        sleep 10
+    done
+done
+
+cat > images.env <<ENV
+POSTGRES_IMAGE=${POSTGRES_IMAGE}
+FERRETDB_IMAGE=${FERRETDB_IMAGE}
+FERRETDB_VERSION=${FERRETDB_VERSION}
+ENV
+cat images.env

@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+# The PGDG repository (https://wiki.postgresql.org/wiki/Apt) has the latest
+# major version; take the highest postgresql-NN package it provides. The
+# server runs with the default settings (the JSONBench rule), unlike the main
+# ClickBench, which tunes them.
+for i in $(seq 1 10); do
+    if sudo -E apt-get update -y \
+        && sudo -E apt-get install -y postgresql-common gzip sed \
+        && sudo -E /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+        && sudo -E apt-get update -y; then
+        break
+    fi
+    [ "$i" -eq 10 ] && { echo "install: cannot set up the PGDG repository" >&2; exit 1; }
+    sleep 30
+done
+
+PGVERSION=$(apt-cache pkgnames postgresql- | grep -E '^postgresql-[0-9]+$' | sed 's/^postgresql-//' | sort -n | tail -n1)
+if [ -z "${PGVERSION}" ] || [ "${PGVERSION}" -lt 17 ]; then
+    # `COPY ... ON_ERROR ignore` in ./load needs PostgreSQL 17 or newer.
+    echo "install: unexpected latest PostgreSQL version '${PGVERSION}'" >&2
+    exit 1
+fi
+echo "install: PostgreSQL ${PGVERSION}"
+
+for i in $(seq 1 10); do
+    sudo -E apt-get install -y "postgresql-${PGVERSION}" && break
+    [ "$i" -eq 10 ] && { echo "install: cannot install postgresql-${PGVERSION}" >&2; exit 1; }
+    sleep 30
+done
+
+sudo systemctl restart "postgresql@${PGVERSION}-main"

@@ -1,0 +1,13 @@
+#!/bin/bash
+# Opteryx queries the NDJSON files in place (READ_JSONL): there is no table and
+# no index. The only preparation, as in the original PR, is decompressing the
+# first N .json.gz files into the directory that server.py reads.
+set -e -o pipefail
+
+DIR=/var/lib/opteryx/bluesky
+sudo rm -rf "${DIR}"
+sudo mkdir -p "${DIR}"
+sudo chown "$(id -u):$(id -g)" "${DIR}"
+
+ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}" \
+    | xargs -P 16 -I{} sh -c 'pigz -dc "$1" > "$2/$(basename "$1" .json.gz).jsonl"' _ {} "${DIR}"

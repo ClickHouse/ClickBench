@@ -1,0 +1,10 @@
+{
+  "system": "NostromoDB",
+  "proprietary": "yes",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "embedded"
+  ]
+}

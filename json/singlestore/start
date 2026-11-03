@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+source ./env.sh
+
+sdb-admin start-node --all --yes

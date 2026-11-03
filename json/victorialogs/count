@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+curl -sS --fail 'http://localhost:9428/select/logsql/query' \
+    --data-urlencode "query=* | count() rows" \
+    | jq -er '.rows | tonumber'

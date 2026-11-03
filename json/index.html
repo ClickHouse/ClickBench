@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>JSONBench — a Benchmark For Data Analytics On JSON</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --color: black;
+            --title-color: black;
+            --background-color: white;
+
+            --link-color: #08F;
+            --link-hover-color: #F40;
+            --hashed-link-lightness: 0.5;
+
+            --selector-text-color: black;
+            --selector-active-text-color: black;
+            --selector-background-color: #EEE;
+            --selector-active-background-color: #FFCB80;
+            --selector-passive-background-color: #EEDDCC;
+            --selector-hover-text-color: black;
+            --selector-hover-background-color: #FDB;
+
+            --summary-every-other-row-color: #F8F8F8;
+            --highlight-color: #EEE;
+            --tag-hilite-color: #FF88AA;
+
+            --bar-color1: oklch(calc(0.9 - 0.6) 0.1 calc(90 - 60));
+            --bar-color2: oklch(calc(0.9 - 0.4) 0.1 calc(90 - 40));
+            --bar-color3: oklch(calc(0.9 - 0.1) 0.1 calc(90 - 20));
+            --bar-color4: oklch(0.9 0.1 90);
+
+            /* The reference sizes of the raw files of the dataset, in the Storage Size metric. */
+            --fake-bar-color1: #999;
+            --fake-bar-color2: #BBB;
+            --fake-bar-color3: #DDD;
+            --fake-bar-color4: #EEE;
+
+            --tooltip-text-color: white;
+            --tooltip-background-color: black;
+
+            --nothing-selected-color: #CCC;
+            --shadow-color: grey;
+        }
+
+        [data-theme="dark"] {
+            --color: #CCC;
+            --title-color: white;
+            --background-color: #04293A;
+
+            --link-color: #8CF;
+            --link-hover-color: #FFF;
+            --hashed-link-lightness: 0.82;
+
+            --selector-text-color: white;
+            --selector-background-color: #444;
+            --selector-active-text-color: white;
+            --selector-active-background-color: #088;
+            --selector-passive-background-color: #566;
+            --selector-hover-text-color: black;
+            --selector-hover-background-color: white;
+
+            --summary-every-other-row-color: #042e41;
+            --highlight-color: #000;
+            --tag-hilite-color: #CC6600;
+
+            --bar-color1: oklch(calc(0.4 + 0.6) 0.1 calc(250 - 180));
+            --bar-color2: oklch(calc(0.4 + 0.4) 0.1 calc(250 - 120));
+            --bar-color3: oklch(calc(0.4 + 0.2) 0.1 calc(250 - 60));
+            --bar-color4: oklch(0.4 0.1 250);
+
+            --fake-bar-color1: #888;
+            --fake-bar-color2: #666;
+            --fake-bar-color3: #555;
+            --fake-bar-color4: #444;
+
+            --tooltip-text-color: white;
+            --tooltip-background-color: #444;
+
+            --nothing-selected-color: #666;
+            --shadow-color: black;
+        }
+
+        html, body {
+            color: var(--color);
+            background-color: var(--background-color);
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: auto;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            padding: 1% 3% 0 3%;
+        }
+
+        h1 {
+            color: var(--title-color);
+        }
+
+        .title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .github-stars {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4em;
+            font-size: 0.95rem;
+            line-height: 1;
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid rgba(127, 127, 127, 0.4);
+            border-radius: 6px;
+            padding: 0.4em 0.7em;
+            background: rgba(127, 127, 127, 0.08);
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+
+        .github-stars:hover {
+            background: rgba(127, 127, 127, 0.18);
+        }
+
+        .github-stars-icon {
+            width: 1.1em;
+            height: 1.1em;
+            fill: currentColor;
+        }
+
+        .github-stars-count {
+            font-weight: 600;
+        }
+
+        .description {
+            margin: 0 0 0.75rem 0;
+        }
+
+        table {
+             border-spacing: 1px;
+        }
+
+        .stick-left {
+            position: sticky;
+            left: 0px;
+        }
+
+        .selectors-container {
+            padding: 2rem 0 2rem 0;
+            user-select: none;
+        }
+
+        .selectors-container th {
+            text-align: left;
+            vertical-align: top;
+            white-space: nowrap;
+            padding-top: 0.5rem;
+            padding-right: 1rem;
+        }
+
+        .inline-filter {
+            display: inline-block;
+            margin-right: 1.5rem;
+            white-space: nowrap;
+        }
+
+        .inline-filter-label {
+            font-weight: bold;
+            margin-right: 0.25rem;
+        }
+
+        .selector {
+            display: inline-block;
+            margin-left: 0.1rem;
+            padding: 0.2rem 0.5rem 0.2rem 0.5rem;
+            background: var(--selector-background-color);
+            color: var(--selector-text-color);
+            border: 0.2rem solid var(--background-color);
+            border-radius: 0.5rem;
+        }
+
+        .selector-active {
+            color: var(--selector-active-text-color);
+            background: var(--selector-active-background-color);
+        }
+
+        .selector-passive {
+            color: var(--selector-active-text-color);
+            background: var(--selector-passive-background-color);
+        }
+
+        .selector-tag-hilite {
+            background: var(--tag-hilite-color) !important;
+        }
+
+        a, a:visited {
+            text-decoration: none;
+            color: var(--link-color);
+            cursor: pointer;
+        }
+
+        a:hover {
+            color: var(--link-hover-color);
+        }
+
+        .selector:hover {
+            color: var(--selector-hover-text-color) !important;
+            background: var(--selector-background-color);
+        }
+
+        .selector-active:hover, .selector-passive:hover {
+            background: var(--selector-hover-background-color);
+        }
+
+        #summary tr:nth-child(odd) {
+            background: var(--summary-every-other-row-color);
+        }
+
+        .summary-name {
+            white-space: nowrap;
+            text-align: right;
+            padding-right: 1rem;
+            position: relative;
+        }
+
+        .summary-bar-cell {
+            width: 100%;
+            position: relative;
+        }
+
+        .summary-date {
+            position: absolute;
+            right: 0.5rem;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            font-size: 80%;
+            text-stroke: 2px var(--background-color);
+            -webkit-text-stroke: 2px var(--background-color);
+            paint-order: stroke fill;
+            pointer-events: none;
+            font-family: monospace;
+        }
+
+        .summary-bar {
+            height: 1rem;
+            width: 100%;
+        }
+
+        .summary-bar-fake {
+            --bar-color1: var(--fake-bar-color1);
+            --bar-color2: var(--fake-bar-color2);
+            --bar-color3: var(--fake-bar-color3);
+            --bar-color4: var(--fake-bar-color4);
+        }
+
+        .summary-number {
+            font-family: monospace;
+            text-align: right;
+            padding-left: 1rem;
+            white-space: nowrap;
+        }
+
+        th {
+            padding-bottom: 0.5rem;
+        }
+
+        .th-entry-hilite {
+            background: var(--highlight-color);
+            font-weight: bold;
+        }
+
+        .summary-row:hover, .summary-row-hilite {
+            background: var(--highlight-color) !important;
+            font-weight: bold;
+        }
+
+        .remove-system {
+            visibility: hidden;
+            cursor: pointer;
+            color: var(--link-color);
+            user-select: none;
+            position: absolute;
+            left: -1rem;
+            padding-right: 1.5rem;
+        }
+
+        .summary-row:hover .remove-system {
+            visibility: visible;
+        }
+
+        .remove-system:hover {
+            color: var(--link-hover-color);
+        }
+
+        #details {
+            padding-bottom: 1rem;
+        }
+
+        #details th {
+            vertical-align: bottom;
+            white-space: pre;
+        }
+
+        #details.details-fixed {
+            table-layout: fixed;
+        }
+
+        #details .details-spacer {
+            padding: 0;
+        }
+
+        #details td {
+            white-space: pre;
+            font-family: monospace;
+            text-align: right;
+            padding: 0.1rem 0.5rem 0.1rem 0.5rem;
+        }
+
+        /* The query checkbox and number stay put while the table is scrolled
+           horizontally, so it is always clear which query a row belongs to.
+           The outline covers the table's 1px border-spacing and the
+           pseudo-element covers the body padding left of the table — without
+           them the cells scrolling underneath shine through around it. */
+        #details .details-query {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background-color: var(--background-color);
+            outline: 1px solid var(--background-color);
+        }
+
+        #details .details-query::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            bottom: -1px;
+            right: 100%;
+            width: 100vw;
+            background-color: var(--background-color);
+        }
+
+        .shadow:hover {
+            box-shadow: 0 0 1rem var(--shadow-color);
+            position: relative;
+        }
+
+        #nothing-selected {
+            display: none;
+            font-size: 32pt;
+            font-weight: bold;
+            color: var(--nothing-selected-color);
+        }
+
+        .note {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: calc(100% + 0.5rem);
+            visibility: hidden;
+            background-color: var(--tooltip-background-color);
+            color: var(--tooltip-text-color);
+            box-shadow: 0 0 1rem var(--shadow-color);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            z-index: 1;
+            text-align: left;
+            white-space: normal;
+            font-weight: normal;
+        }
+
+        .tooltip-result {
+            left: calc(50% - 0.25rem);
+            width: 20rem;
+            margin-left: -10rem;
+        }
+
+        .tooltip-query {
+            left: 0;
+            width: 40rem;
+        }
+
+        /* The tooltips of the selectors open to the right, not to be cut by the left edge of the page. */
+        .tooltip-selector {
+            left: -0.5rem;
+            width: 30rem;
+        }
+
+        .note:hover .tooltip, .note:active .tooltip {
+            visibility: visible;
+        }
+
+        .tooltip::after {
+            content: " ";
+            position: absolute;
+            top: 100%;
+            border-width: 0.5rem;
+            border-style: solid;
+            border-color: var(--tooltip-background-color) transparent transparent transparent;
+        }
+
+        .tooltip-result::after {
+            left: 50%;
+            margin-left: -1rem;
+        }
+
+        .tooltip-query::after, .tooltip-selector::after {
+            left: 0.5rem;
+        }
+
+        .nowrap {
+            text-wrap: none;
+        }
+
+        .themes {
+            float: right;
+            font-size: 200%;
+            cursor: pointer;
+        }
+
+        #toggle-dark, #toggle-light {
+            padding-right: 0.5rem;
+            cursor: pointer;
+        }
+
+        #toggle-dark:hover, #toggle-light:hover {
+            display: inline-block;
+            transform: translate(1px, 1px);
+            filter: brightness(125%);
+        }
+
+        #scale_hint {
+            font-weight: normal;
+            font-size: 80%;
+            filter: contrast(10%);
+        }
+    </style>
+    <script type="text/javascript" src="data.generated.js"></script>
+    <script type="text/javascript">
+
+/// The queries in the ClickHouse dialect, see clickhouse/queries.sql. Every system runs their equivalents.
+const queries = [
+"SELECT data.commit.collection AS event, count() AS count FROM bluesky GROUP BY event ORDER BY count DESC;",
+"SELECT data.commit.collection AS event, count() AS count, uniqExact(data.did) AS users FROM bluesky WHERE data.kind = 'commit' AND data.commit.operation = 'create' GROUP BY event ORDER BY count DESC;",
+"SELECT data.commit.collection AS event, toHour(fromUnixTimestamp64Micro(data.time_us)) as hour_of_day, count() AS count FROM bluesky WHERE data.kind = 'commit' AND data.commit.operation = 'create' AND data.commit.collection in ['app.bsky.feed.post', 'app.bsky.feed.repost', 'app.bsky.feed.like'] GROUP BY event, hour_of_day ORDER BY hour_of_day, event;",
+"SELECT data.did::String as user_id, min(fromUnixTimestamp64Micro(data.time_us)) as first_post_ts FROM bluesky WHERE data.kind = 'commit' AND data.commit.operation = 'create' AND data.commit.collection = 'app.bsky.feed.post' GROUP BY user_id ORDER BY first_post_ts ASC LIMIT 3;",
+"SELECT data.did::String as user_id, date_diff( 'milliseconds', min(fromUnixTimestamp64Micro(data.time_us)), max(fromUnixTimestamp64Micro(data.time_us))) AS activity_span FROM bluesky WHERE data.kind = 'commit' AND data.commit.operation = 'create' AND data.commit.collection = 'app.bsky.feed.post' GROUP BY user_id ORDER BY activity_span DESC LIMIT 3;",
+];
+    </script>
+</head>
+<body>
+
+<div class="header stick-left">
+    <span class="nowrap themes"><span id="toggle-dark">🌚</span><span id="toggle-light">🌞</span></span>
+    <div class="title-row">
+        <h1>JSONBench — a Benchmark For Data Analytics On JSON</h1>
+        <a class="github-stars" href="https://github.com/ClickHouse/ClickBench/" target="_blank" rel="noopener noreferrer" aria-label="Star ClickBench on GitHub" title="Star ClickBench on GitHub">
+            <svg class="github-stars-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
+            <span>Star</span>
+            <span class="github-stars-count" id="github-stars-count"></span>
+        </a>
+    </div>
+    <p class="description">The native JSON support of analytical databases, on a dataset of up to 1 billion JSON documents of Bluesky events.</p>
+    <a href="https://github.com/ClickHouse/ClickBench/tree/main/json">Methodology</a> | <a href="https://clickhouse.com/blog/json-bench-clickhouse-vs-mongodb-elasticsearch-duckdb-postgresql">Blog Post</a> | <a href="https://github.com/ClickHouse/ClickBench/tree/main/json">Reproduce and Validate the Results</a> | <a href="https://github.com/ClickHouse/ClickBench/tree/main/json">Add a New Database</a> | <a href="https://github.com/ClickHouse/ClickBench/issues">Report Mistake</a> | See also: <a href="https://benchmark.clickhouse.com/">ClickBench</a> | <a href="https://benchmark.clickhouse.com/hardware/">Hardware Benchmark</a> | <a href="https://benchmark.clickhouse.com/versions/">Versions Benchmark</a> | <a href="https://benchmark.clickhouse.com/playground/">🎈 Playground</a>
+</div>
+
+<table class="selectors-container stick-left">
+    <tr>
+        <td colspan="2">
+            <span class="inline-filter" id="selectors_opensource">
+                <span class="inline-filter-label">Open source:</span>
+                <a id="selector-opensource-yes" class="selector selector-active">Yes</a>
+                <a id="selector-opensource-no" class="selector selector-active">No</a>
+            </span>
+            <span class="inline-filter" id="selectors_flattening">
+                <span class="inline-filter-label note">Flattening<sup>†</sup><span class="tooltip tooltip-selector">Some databases provide a native JSON data type that flattens nested JSON documents at insertion time to a single level, which removes the possibility to restore the original documents. We consider this a grey zone, and generally discourage it: the systems with flattening are hidden by default.</span>:</span>
+                <a id="selector-flattening-no" class="selector selector-active">No</a>
+                <a id="selector-flattening-yes" class="selector">Yes</a>
+            </span>
+        </td>
+    </tr>
+    <tr>
+        <th>Scale: </th>
+        <td id="selectors_scale">
+        </td>
+    </tr>
+    <tr>
+        <th>System: </th>
+        <td id="selectors_system">
+            <a id="select-all-systems" class="selector selector-active">All</a>
+        </td>
+    </tr>
+    <tr id="selectors-type-row">
+        <th>Type: </th>
+        <td id="selectors_type">
+            <a id="select-all-types" class="selector selector-active">All</a>
+        </td>
+    </tr>
+    <tr>
+        <th>Machine: </th>
+        <td id="selectors_machine">
+            <a id="select-all-machines" class="selector selector-active">All</a>
+        </td>
+    </tr>
+    <tr>
+        <th>Metric: </th>
+        <td id="selectors_run">
+            <a class="selector" id="selector-metric-combined">Combined</a>
+            <a class="selector" id="selector-metric-cold">Cold Run</a>
+            <a class="selector" id="selector-metric-hot">Hot Run</a>
+            <a class="selector" id="selector-metric-load">Load Time</a>
+            <a class="selector" id="selector-metric-size">Storage Size</a>
+            <a class="selector" id="selector-metric-quality">Data Quality</a>
+            <a class="selector" id="selector-metric-complexity">Complexity</a>
+        </td>
+    </tr>
+</table>
+
+<table id="summary-table" class="stick-left comparison">
+    <thead>
+        <tr>
+            <th class="summary-name">
+                System &amp; Machine
+            </th>
+            <th colspan="2">
+                <span id="metric-title"></span><br/>
+                <span id="scale_hint"></span>
+            </th>
+        </tr>
+    </thead>
+    <tbody id="summary">
+    </tbody>
+</table>
+
+<div id="nothing-selected" class="stick-left">Nothing selected</div>
+
+<div class="stick-left comparison">
+    <h2>Detailed Comparison</h2>
+</div>
+
+<table id="details">
+    <thead>
+        <tr id="details_head">
+        </tr>
+    </thead>
+    <tbody id="details_body">
+    </tbody>
+</table>
+
+<script type="text/javascript">
+
+const constant_time_add = 0.01;
+const missing_result_penalty = 2;
+/// Some systems take hours for a query on the largest dataset, hence the minimum penalty is larger than in ClickBench.
+const missing_result_time = 3600;
+
+/// The reference sizes of the raw files of the dataset (data.json, data.json.gz, ...) are shown only
+/// in the Storage Size metric, regardless of the selectors, as they are not results of a system.
+const real_data = data.filter(elem => !elem.fake);
+const fake_data = data.filter(elem => elem.fake);
+
+let selectors = {
+    "system": {},
+    "type": {},
+    "machine": {},
+    "opensource": {"yes": true, "no": true},
+    /// Whether a system flattens the JSON documents, which is the opposite of the `retains_structure` field.
+    "flattening": {"no": true, "yes": false},
+    /// The number of the documents in the dataset, single-select.
+    "scale": "1000000000",
+    "metric": "combined",
+    "queries": queries.map(() => true),
+};
+
+let theme = 'light';
+
+function setTheme(new_theme) {
+    theme = new_theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    window.localStorage.setItem('theme', theme);
+    render();
+}
+
+document.getElementById('toggle-light').addEventListener('click', e => setTheme('light'));
+document.getElementById('toggle-dark').addEventListener('click', e => setTheme('dark'));
+
+let new_theme = window.localStorage.getItem('theme');
+if (new_theme && new_theme != theme) {
+    theme = new_theme;
+    document.documentElement.setAttribute('data-theme', theme);
+}
+
+/// Generate selectors
+
+let scales = document.getElementById('selectors_scale');
+let systems = document.getElementById('selectors_system');
+let types = document.getElementById('selectors_type');
+let machines = document.getElementById('selectors_machine');
+
+let unique_systems = [... new Set(real_data.map(elem => elem.system))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+
+const system_to_tags = {};
+real_data.forEach(d => {
+    if (!system_to_tags[d.system]) system_to_tags[d.system] = new Set();
+    (d.tags || []).forEach(t => system_to_tags[d.system].add(t));
+});
+
+function highlightSystemTags(systemName) {
+    const tags = system_to_tags[systemName] || new Set();
+    for (const elem of types.childNodes) {
+        if (elem.tagName !== 'A') continue;
+        if (tags.has(elem.textContent)) elem.classList.add('selector-tag-hilite');
+    }
+}
+
+function clearSystemTagsHighlight() {
+    for (const elem of types.childNodes) {
+        if (elem.tagName !== 'A') continue;
+        elem.classList.remove('selector-tag-hilite');
+    }
+}
+
+/// Highlighting summary rows and table columns of a system, together with its tags.
+function highlightSystem(systemName) {
+    [...document.querySelectorAll('.summary-row')].map(row => {
+        row.className = row.dataset.system == systemName ? 'summary-row summary-row-hilite' : 'summary-row' });
+    [...document.querySelectorAll('.th-entry')].map(th => {
+        th.className = th.dataset.system == systemName ? 'th-entry th-entry-hilite' : 'th-entry' });
+    highlightSystemTags(systemName);
+}
+
+function clearSystemHighlight() {
+    [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
+    [...document.querySelectorAll('.th-entry')].map(th => { th.className = 'th-entry' });
+    clearSystemTagsHighlight();
+}
+
+/// A click flips a single toggle, while a right click or Ctrl/Cmd + click selects only this toggle in its group.
+function toggle(e, elem, selectors_map) {
+    if (e.type == 'contextmenu' || e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        Object.keys(selectors_map).forEach(k => { selectors_map[k] = k == String(elem) });
+    } else {
+        selectors_map[elem] = !selectors_map[elem];
+    }
+    updateSelectors();
+    render();
+    updateHistory();
+}
+
+function addToggleListener(selector, elem, selectors_map) {
+    selector.addEventListener('click', e => toggle(e, elem, selectors_map));
+    selector.addEventListener('contextmenu', e => toggle(e, elem, selectors_map));
+}
+
+function toggleAll(e, selectors_map) {
+    const new_value = Object.keys(selectors_map).filter(k => selectors_map[k]).length * 2 < Object.keys(selectors_map).length;
+    [...e.target.parentElement.querySelectorAll('a')].map(
+        elem => { elem.className = new_value ? 'selector selector-active' : 'selector' });
+
+    Object.keys(selectors_map).map(k => { selectors_map[k] = new_value });
+    render();
+    updateHistory();
+}
+
+function formatScale(dataset_size) {
+    return `${dataset_size / 1_000_000} million`;
+}
+
+[... new Set(real_data.map(elem => elem.dataset_size))].sort((a, b) => a - b).map(elem => {
+    let selector = document.createElement('a');
+    selector.className = 'selector';
+    selector.dataset.value = String(elem);
+    selector.appendChild(document.createTextNode(formatScale(elem)));
+    scales.appendChild(selector);
+    selector.addEventListener('click', e => {
+        selectors.scale = String(elem);
+        updateSelectors();
+        render();
+        updateHistory();
+    });
+});
+
+unique_systems.map(elem => {
+    let selector = document.createElement('a');
+    selector.className = 'selector selector-active';
+    selector.appendChild(document.createTextNode(elem));
+    systems.appendChild(selector);
+    selectors.system[elem] = real_data.some(entry => entry.system == elem && !entry.hide);
+    addToggleListener(selector, elem, selectors.system);
+
+    /// Highlighting summary rows and table columns on hovering over the system selector.
+    selector.addEventListener('mouseover', () => highlightSystem(elem));
+    selector.addEventListener('mouseout', clearSystemHighlight);
+});
+
+const tag_to_systems = {};
+real_data.forEach(d => {
+    (d.tags || []).forEach(t => {
+        if (!tag_to_systems[t]) tag_to_systems[t] = new Set();
+        tag_to_systems[t].add(d.system);
+    });
+});
+
+const unique_tags = [... new Set(real_data.map(elem => elem.tags || []).flat())].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
+unique_tags.map(elem => {
+    let selector = document.createElement('a');
+    selector.className = 'selector selector-active';
+    selector.appendChild(document.createTextNode(elem));
+    types.appendChild(selector);
+    selectors.type[elem] = true;
+    addToggleListener(selector, elem, selectors.type);
+
+    /// Highlighting summary rows and detail columns on hovering over a tag.
+    selector.addEventListener('mouseover', () => {
+        const tagged = tag_to_systems[elem] || new Set();
+        [...document.querySelectorAll('.summary-row')].map(row => {
+            row.className = tagged.has(row.dataset.system) ? 'summary-row summary-row-hilite' : 'summary-row' });
+        [...document.querySelectorAll('.th-entry')].map(th => {
+            th.className = tagged.has(th.dataset.system) ? 'th-entry th-entry-hilite' : 'th-entry' });
+    });
+    selector.addEventListener('mouseout', () => {
+        [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
+        [...document.querySelectorAll('.th-entry')].map(th => { th.className = 'th-entry' });
+    });
+});
+
+[... new Set(real_data.map(elem => elem.machine))].sort((a, b) => {
+    const count_diff = real_data.filter(elem => elem.machine === b).length - real_data.filter(elem => elem.machine === a).length;
+    return count_diff == 0 ? a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}) : count_diff;
+}).map(elem => {
+    let selector = document.createElement('a');
+    selector.className = 'selector selector-active';
+    selector.appendChild(document.createTextNode(elem));
+    machines.appendChild(selector);
+    selectors.machine[elem] = true;
+    addToggleListener(selector, elem, selectors.machine);
+});
+
+/// The selectors without any data are not shown: the tags and the `proprietary` field are not in the older results,
+/// and the load time and the complexity are not known for all of them.
+/// The results without tags are not filtered by the type, and without the `proprietary` field - by the license.
+const has_tags = unique_tags.length > 0;
+const has_license = real_data.some(elem => elem.proprietary !== undefined);
+if (!has_tags) { document.getElementById('selectors-type-row').style.display = 'none'; }
+if (!has_license) { document.getElementById('selectors_opensource').style.display = 'none'; }
+if (!real_data.some(elem => !metricExcludes(elem, 'load'))) { document.getElementById('selector-metric-load').style.display = 'none'; }
+if (!real_data.some(elem => !metricExcludes(elem, 'complexity'))) { document.getElementById('selector-metric-complexity').style.display = 'none'; }
+
+addToggleListener(document.getElementById('selector-opensource-yes'), 'yes', selectors.opensource);
+addToggleListener(document.getElementById('selector-opensource-no'), 'no', selectors.opensource);
+addToggleListener(document.getElementById('selector-flattening-no'), 'no', selectors.flattening);
+addToggleListener(document.getElementById('selector-flattening-yes'), 'yes', selectors.flattening);
+
+document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
+document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
+document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
+
+[...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => elem.addEventListener('click', e => {
+    selectors.metric = elem.id.replace('selector-metric-', '');
+    updateSelectors();
+    render();
+    updateHistory();
+}));
+
+/// Keeps the hover highlighting of the element intact, and skips the "All" toggle.
+function setSelectorActive(elem, active) {
+    if (elem.tagName !== 'A' || elem.id.startsWith('select-all-')) return;
+    elem.classList.remove('selector-passive');
+    elem.classList.toggle('selector-active', !!active);
+}
+
+function updateSelectors() {
+    [...scales.children].map(elem => { setSelectorActive(elem, elem.dataset.value == selectors.scale) });
+    [...systems.childNodes].map(elem => { setSelectorActive(elem, selectors.system[elem.textContent]) });
+    [...types.childNodes].map(elem => { setSelectorActive(elem, selectors.type[elem.textContent]) });
+    [...machines.childNodes].map(elem => { setSelectorActive(elem, selectors.machine[elem.textContent]) });
+
+    [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
+        elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
+
+    [...document.querySelectorAll('.query-checkbox')].map((elem, i) => { elem.checked = selectors.queries[i] });
+
+    document.getElementById('selector-opensource-yes').className = selectors.opensource.yes ? 'selector selector-active' : 'selector';
+    document.getElementById('selector-opensource-no').className = selectors.opensource.no ? 'selector selector-active' : 'selector';
+
+    document.getElementById('selector-flattening-no').className = selectors.flattening.no ? 'selector selector-active' : 'selector';
+    document.getElementById('selector-flattening-yes').className = selectors.flattening.yes ? 'selector selector-active' : 'selector';
+}
+
+function matchesLicense(elem) {
+    return elem.proprietary === undefined
+        || (selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes");
+}
+
+function matchesFlattening(elem) {
+    return (selectors.flattening.no && elem.retains_structure === "yes") || (selectors.flattening.yes && elem.retains_structure === "no");
+}
+
+function matchesType(elem) {
+    const tags = elem.tags || [];
+    return tags.length == 0 || tags.some(type => selectors.type[type]);
+}
+
+/// Hides the selectors of the systems, types and machines that have no results under the filters of the top rows.
+function applyTopRowFilters() {
+    const matches = real_data.filter(elem =>
+        matchesLicense(elem) && matchesFlattening(elem) && String(elem.dataset_size) == selectors.scale);
+
+    function apply(container, getValues) {
+        const allowed = new Set(matches.flatMap(getValues).map(x => String(x)));
+        for (const elem of container.childNodes) {
+            if (elem.tagName !== 'A') continue;
+            if (elem.id && elem.id.startsWith('select-all-')) continue;
+            elem.style.display = allowed.has(elem.textContent) ? '' : 'none';
+        }
+    }
+
+    apply(systems, e => [e.system]);
+    apply(types, e => e.tags || []);
+    apply(machines, e => [e.machine]);
+}
+
+function findPassiveSelectors(filtered_data) {
+    function process(name, container) {
+        const filtered = new Set(filtered_data.map(elem => elem[name]).flat().map(x => String(x)));
+        for (let elem of container.childNodes) {
+            if (elem.tagName == 'A') {
+                if (elem.classList.contains('selector-active') && !filtered.has(elem.textContent)) {
+                    elem.className = 'selector selector-passive';
+                } else if (elem.classList.contains('selector-passive') && filtered.has(elem.textContent)) {
+                    elem.className = 'selector selector-active';
+                }
+            }
+        }
+    }
+    process('system', systems);
+    process('tags', types);
+    process('machine', machines);
+}
+
+function clearElement(elem)
+{
+    while (elem.firstChild) {
+        elem.removeChild(elem.lastChild);
+    }
+}
+
+/// The weights of the metrics in the Combined metric: the weighted geometric mean of the relative values.
+/// The weights of the metrics not applicable to a system are given to the rest, see renderSummary.
+/// The data quality is not a part of it, and is shown separately.
+const combined_load_time_share = 0.1;
+const combined_data_size_share = 0.1;
+const combined_cold_share = 0.2;
+const combined_hot_share = 0.6;
+
+document.getElementById('selector-metric-combined').title =
+    `The weighted geometric mean of the relative values of the metrics: ${combined_hot_share * 100}% hot run, ${combined_cold_share * 100}% cold run, `
+    + `${combined_data_size_share * 100}% storage size, ${combined_load_time_share * 100}% load time. `
+    + `If the load time is not known for a system, its weight is given to the rest of the metrics.`;
+
+function selectRun(timings, metric) {
+    if (timings == null) return null;
+    const cold_timing = timings[0];
+    const hot_timing = (timings[1] !== null && timings[2] !== null ? Math.min(timings[1], timings[2]) : null);
+
+    return metric == 'cold' ? cold_timing : metric == 'hot' ? hot_timing :
+        (hot_timing !== null && cold_timing !== null ? (hot_timing * combined_hot_share + cold_timing * combined_cold_share) / (combined_hot_share + combined_cold_share) : null);
+}
+
+function relativeQueryTime(num_queries, baseline_data, elem, metric) {
+    const fallback_timing = missing_result_penalty * Math.max(missing_result_time, ...elem.result.map(timings => selectRun(timings, metric)));
+
+    let accumulator = 0;
+    let used_queries = 0;
+
+    const no_queries_selected = selectors.queries.filter(x => x).length == 0;
+
+    for (let i = 0; i < num_queries; ++i) {
+        if (no_queries_selected || selectors.queries[i]) {
+            const baseline_timing = selectRun(baseline_data[i], metric);
+            /// Skip queries that fail on every filtered system - otherwise the
+            /// geometric mean collapses to 0 and no bars render.
+            if (baseline_timing === null || !isFinite(baseline_timing)) continue;
+            const curr_timing = selectRun(elem.result[i], metric) ?? fallback_timing;
+            const ratio = (constant_time_add + curr_timing) / (constant_time_add + baseline_timing);
+            accumulator += Math.log(ratio);
+            ++used_queries;
+        }
+    }
+
+    return used_queries > 0 ? Math.exp(accumulator / used_queries) : null;
+}
+
+function addNote(text) {
+    let note = document.createElement('span');
+    note.className = 'note';
+    note.appendChild(document.createTextNode('†'));
+
+    let tooltip = document.createElement('span');
+    tooltip.className = 'tooltip tooltip-result';
+    tooltip.appendChild(document.createTextNode(text));
+
+    note.appendChild(tooltip);
+    return note;
+}
+
+function nameToColor(str) {
+    let x = 0;
+    for (let i = 0; i < str.length; i++) {
+        x += str.charCodeAt(i);
+        x *= 0xff51afd7;
+        x ^= x >> 17;
+    }
+
+    return 60 + Math.abs(x % 240);
+}
+
+/// Whether a system is excluded from a given metric. Single source of truth
+/// shared by the top-level metric filter (render) and the per-run baseline
+/// used inside the Combined metric (renderSummary) so the two never drift.
+function metricExcludes(elem, metric) {
+    const tags = elem.tags || [];
+    switch (metric) {
+        case 'size':
+            /// Can't rank a system that didn't report a storage size.
+            return !(elem.total_size > 0);
+        case 'load':
+            /// The load time is measured only in the newer results; stateless / in-memory engines don't persist data.
+            return !(elem.load_time > 0) || tags.includes('stateless') || tags.includes('in-memory');
+        case 'quality':
+            return !(elem.num_loaded_documents >= 0);
+        case 'complexity':
+            /// Systems without the install script (with a manual procedure) have no value, see generate-results.sh.
+            return !(elem.complexity > 0);
+        case 'cold':
+            /// True cold-cache reads only: in-memory engines have nothing to
+            /// read from storage, and lukewarm (no-cold) runs never flush engine caches.
+            return tags.includes('in-memory') || tags.includes('no-cold');
+        case 'combined':
+            /// Combined still scores lukewarm (no-cold) systems (with the cold component
+            /// dropped, see below), but in-memory engines are excluded.
+            return tags.includes('in-memory');
+        case 'hot':
+        default:
+            return false;
+    }
+}
+
+/// Complexity is the zstd-compressed size of the system's scripts, see generate-results.sh.
+function formatComplexity(complexity) {
+    return complexity >= 10240 ? `${(complexity / 1024).toFixed(0)} KiB` : complexity >= 1024 ? `${(complexity / 1024).toFixed(1)} KiB` : `${complexity} B`;
+}
+
+function formatSize(bytes) {
+    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`;
+}
+
+/// The share of the documents of the dataset that were loaded.
+function loadedShare(elem) {
+    return elem.num_loaded_documents / elem.dataset_size;
+}
+
+/// As a percentage, with as many digits as needed for an incomplete dataset not to look like 100%.
+function formatShare(share) {
+    let digits = 2;
+    while (digits < 8 && share < 1 && (100 * share).toFixed(digits) == (100).toFixed(digits)) { ++digits; }
+    return `${(100 * share).toFixed(digits)}%`;
+}
+
+function metricTitle(metric) {
+    return metric == 'load' ? 'Relative load time (lower is better).'
+        : metric == 'size' ? 'Relative storage size (lower is better).'
+        : metric == 'quality' ? 'The share of the documents loaded (higher is better).'
+        : metric == 'complexity' ? 'Relative complexity (lower is better).'
+        : metric == 'combined' ? 'Relative time and storage size (lower is better).'
+        : 'Relative time (lower is better).';
+}
+
+function renderSummary(filtered_data) {
+    let table = document.getElementById('summary');
+    clearElement(table);
+
+    /// Generate summary
+
+    /// The algorithm: for each of the queries,
+    /// - if there is a result - take query duration, add 10 ms, and divide it to the corresponding value from the baseline,
+    /// - if there is no result - take the worst query duration across all query runs for this system and multiply by 2.
+    /// Take geometric mean across the queries.
+
+    const num_queries = queries.length;
+
+    // Apply the same per-metric exclusions to the baseline that the
+    // standalone metric uses: run 0 is the cold run, runs 1/2 are
+    // hot. This keeps lukewarm/in-memory systems out of the cold
+    // baseline so they can't depress the per-query minimum and
+    // inflate every true-cold system's cold ratio in Combined. In
+    // the standalone Cold Run metric they're already filtered out.
+    const baseline_cold_candidates = filtered_data.filter(elem => !elem.fake && !metricExcludes(elem, 'cold'));
+    const baseline_hot_candidates = filtered_data.filter(elem => !elem.fake && !metricExcludes(elem, 'hot'));
+
+    const baseline_data = [...queries.keys()].map(query_num =>
+        [...Array(3).keys()].map(run_num =>
+            Math.min(...(run_num === 0 ? baseline_cold_candidates : baseline_hot_candidates)
+                .map(elem => elem.result[query_num]?.[run_num]).filter(x => x != null))));
+
+    /// The reference sizes of the raw files are a part of the baseline of the storage size.
+    const min_load_time = Math.min(...filtered_data.filter(elem => !elem.fake && !metricExcludes(elem, 'load')).map(elem => elem.load_time));
+    const min_data_size = Math.min(...filtered_data.filter(elem => !metricExcludes(elem, 'size')).map(elem => elem.total_size));
+    const min_complexity = Math.min(...filtered_data.filter(elem => !metricExcludes(elem, 'complexity')).map(elem => elem.complexity));
+
+    document.getElementById('metric-title').innerText = metricTitle(selectors.metric);
+
+    let summaries;
+    if (selectors.metric == 'load') {
+        summaries = filtered_data.map(elem => elem.load_time / min_load_time);
+    } else if (selectors.metric == 'size') {
+        summaries = filtered_data.map(elem => elem.total_size / min_data_size);
+    } else if (selectors.metric == 'quality') {
+        summaries = filtered_data.map(loadedShare);
+    } else if (selectors.metric == 'complexity') {
+        summaries = filtered_data.map(elem => elem.complexity / min_complexity);
+    } else if (selectors.metric == 'hot' || selectors.metric == 'cold') {
+        summaries = filtered_data.map(elem => relativeQueryTime(num_queries, baseline_data, elem, selectors.metric));
+    } else if (selectors.metric == 'combined') {
+        summaries = filtered_data.map(elem => {
+            // Exclude metrics that are not applicable to this system from the combined score,
+            // and reweight the rest so the final score is still on a similar scale. For example,
+            // lukewarm systems that don't have a true cold run get their cold weight folded
+            // into hot, so they can still be compared against true cold systems on the hot
+            // performance they do have without being penalized for the cold performance they
+            // can't have.
+            const exclude_cold = metricExcludes(elem, 'cold');
+            const exclude_load = metricExcludes(elem, 'load');
+            const exclude_size = metricExcludes(elem, 'size');
+
+            const hot_share = exclude_cold ? combined_cold_share + combined_hot_share : combined_hot_share;
+            let log_sum = hot_share * Math.log(relativeQueryTime(num_queries, baseline_data, elem, 'hot'));
+
+            if (!exclude_cold) {
+                log_sum += combined_cold_share * Math.log(relativeQueryTime(num_queries, baseline_data, elem, 'cold'));
+            }
+
+            if (!exclude_load) {
+                log_sum += combined_load_time_share * Math.log(elem.load_time / min_load_time);
+            }
+
+            if (!exclude_size) {
+                log_sum += combined_data_size_share * Math.log(elem.total_size / min_data_size);
+            }
+
+            if (exclude_load || exclude_size) {
+                const correction = 1 - (exclude_load ? combined_load_time_share : 0) - (exclude_size ? combined_data_size_share : 0);
+                log_sum = log_sum / correction;
+            }
+
+            return Math.exp(log_sum);
+        });
+    }
+
+    /// The data quality is the higher the better, the rest of the metrics - the lower the better.
+    const sorted_indices = [...summaries.keys()].sort(selectors.metric == 'quality'
+        ? (a, b) => summaries[b] - summaries[a]
+        : (a, b) => summaries[a] - summaries[b]);
+
+    const max_ratio = 10000;
+
+    sorted_indices.map(idx => {
+        const elem = filtered_data[idx];
+
+        let tr = document.createElement('tr');
+        tr.className = 'summary-row';
+
+        tr.dataset.system = elem.system;
+        tr.addEventListener('mouseover', () => highlightSystem(elem.system));
+        tr.addEventListener('mouseout', clearSystemHighlight);
+
+        let td_name = document.createElement('td');
+        td_name.className = 'summary-name';
+
+        if (!elem.fake) {
+            let remove = document.createElement('span');
+            remove.className = 'remove-system';
+            remove.textContent = '✕';
+            remove.title = 'Remove this system from the selection';
+            remove.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectors.system[elem.system] = false;
+                for (const s of systems.childNodes) {
+                    if (s.tagName === 'A' && s.textContent === elem.system) {
+                        s.className = 'selector';
+                    }
+                }
+                render();
+                updateHistory();
+            });
+            td_name.appendChild(remove);
+
+            let link = document.createElement('a');
+            link.appendChild(document.createTextNode(selectors.metric == 'complexity' ? elem.system : entryTitle(elem)));
+            link.href = "https://github.com/ClickHouse/ClickBench/blob/main/json/" + elem.source;
+            link.style.color = `oklch(var(--hashed-link-lightness) 0.2018 ${nameToColor(elem.system.split(' ')[0])})`
+            td_name.appendChild(link);
+        } else {
+            td_name.appendChild(document.createTextNode(elem.system));
+        }
+
+        if (elem.comment) { td_name.appendChild(addNote(elem.comment)); }
+        td_name.appendChild(document.createTextNode(': '));
+
+        const ratio = summaries[idx];
+
+        let td_number = document.createElement('td');
+        td_number.className = 'summary-number';
+
+        td_number.appendChild(document.createTextNode(summaryText(elem, ratio)));
+
+        let td_bar = document.createElement('td');
+        td_bar.className = 'summary-bar-cell';
+
+        let bar = document.createElement('div');
+
+        bar.className = elem.fake ? 'summary-bar summary-bar-fake' : 'summary-bar';
+        if (selectors.metric == 'quality') {
+            /// The share is shown as is, on a linear scale.
+            bar.style.background = `linear-gradient(to right, var(--bar-color1) 0%, var(--bar-color1) ${ratio * 100}%, transparent ${ratio * 100}%, transparent 100%)`;
+        } else {
+            bar.style.background = barGradient('to right', ratio / max_ratio * 100, 100);
+        }
+
+        td_bar.appendChild(bar);
+
+        if (elem.date && !elem.fake) {
+            let date_span = document.createElement('span');
+            date_span.className = 'summary-date';
+            date_span.textContent = elem.date;
+            td_bar.appendChild(date_span);
+        }
+
+        tr.appendChild(td_name);
+        tr.appendChild(td_bar);
+        tr.appendChild(td_number);
+        table.appendChild(tr);
+    });
+
+    return [sorted_indices, baseline_data];
+}
+
+function summaryText(elem, ratio) {
+    return selectors.metric == 'load' ? `${Math.round(elem.load_time)}s (×${ratio.toFixed(2)})`
+        :  selectors.metric == 'size' ? `${formatSize(elem.total_size)} (×${ratio.toFixed(2)})`
+        :  selectors.metric == 'quality' ? formatShare(ratio)
+        :  selectors.metric == 'complexity' ? `${formatComplexity(elem.complexity)} (×${ratio.toFixed(2)})`
+        : `×${ratio.toFixed(2)}`;
+}
+
+/// The same value at four scales, each next zoomed 10 times: `percentage` is the length of the first one,
+/// in percent of the full length of the bar. The bar can be cut at `length` percent of the full length,
+/// for the gradient to cover only the painted part.
+function barGradient(direction, percentage, length) {
+    const stop = zoom => Math.min(100, percentage * zoom) / length * 100;
+    return `linear-gradient(${direction},
+        var(--bar-color1) 0%,
+        var(--bar-color1) ${stop(1)}%,
+        var(--bar-color2) ${stop(1)}%,
+        var(--bar-color2) ${stop(10)}%,
+        var(--bar-color3) ${stop(10)}%,
+        var(--bar-color3) ${stop(100)}%,
+        var(--bar-color4) ${stop(100)}%,
+        var(--bar-color4) ${stop(1000)}%,
+        transparent ${stop(1000)}%,
+        transparent 100%)`;
+}
+
+function colorize(elem, ratio) {
+    let [r, g, b] = [0, 0, 0];
+
+    /// ratio less than 1 - green
+    /// ratio from 1 to 2 - green to yellow
+    /// ratio from 2 to 10 - yellow to red
+    /// ratio from 10 to 1000 to infinity - red to brown to black
+
+    /// Note: we are using RGB space without proper gamma correction. Read more: https://www.handprint.com/HP/WCL/color1.html
+
+    if (ratio !== null) {
+        if (ratio < 1) {
+            r = 232;
+            g = 255;
+            b = 232;
+        } else if (ratio <= 1) {
+            g = 255;
+        } else if (ratio <= 2) {
+            g = 255;
+            r = (ratio - 1) * 255;
+        } else if (ratio <= 10) {
+            g = (10 - ratio) / 8 * 255;
+            r = 255;
+        } else {
+            r = (1 - ((ratio - 10) / ((ratio - 10) + 1000))) * 255;
+        }
+    }
+
+    if (document.documentElement.getAttribute('data-theme') == 'dark') {
+        r /= 1.5;
+        g /= 1.5;
+        b /= 1.5;
+    }
+
+    elem.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+    if (ratio === null || ratio > 10) {
+        /// This will look better on dark backgrounds
+        elem.style.color = 'white';
+    } else {
+        elem.style.color = 'black';
+    }
+
+    /// The best result is highlighted
+    if (ratio == 1) {
+        elem.style.fontWeight = 'bold';
+    }
+}
+
+/// Laying out the details table takes a while even with only the visible columns rendered, so it is
+/// rebuilt after the summary is painted, for the page to respond to clicks right away. If the page
+/// is scrolled before that, it is rebuilt immediately, so that the outdated table is not shown.
+let pending_details = null;
+
+function renderPendingDetails() {
+    if (pending_details) {
+        const f = pending_details;
+        pending_details = null;
+        f();
+    }
+}
+
+function scheduleDetails(f) {
+    pending_details = f;
+    requestAnimationFrame(() => setTimeout(renderPendingDetails, 0));
+}
+
+document.addEventListener('scroll', renderPendingDetails, {capture: true, passive: true});
+
+function entryTitle(elem) {
+    return `${elem.system} (${elem.machine})`;
+}
+
+function render() {
+    let nothing_selected_elem = document.getElementById('nothing-selected');
+
+    applyTopRowFilters();
+
+    let filtered_data = real_data.filter(elem =>
+        String(elem.dataset_size) == selectors.scale &&
+        selectors.system[elem.system] &&
+        selectors.machine[elem.machine] &&
+        matchesType(elem) &&
+        matchesLicense(elem) &&
+        matchesFlattening(elem));
+
+    /// Filter out entries that can't be ranked under the selected metric
+    /// (see metricExcludes for the per-metric rules).
+    filtered_data = filtered_data.filter(elem => !metricExcludes(elem, selectors.metric));
+
+    /// Complexity does not depend on the machine: show each system once, by its latest result.
+    if (selectors.metric == 'complexity') {
+        const latest = new Map();
+        filtered_data.forEach(elem => {
+            const prev = latest.get(elem.system);
+            if (!prev || elem.date > prev.date) { latest.set(elem.system, elem); }
+        });
+        filtered_data = [...latest.values()];
+    }
+
+    if (filtered_data.length == 0) {
+        nothing_selected_elem.style.display = 'block';
+        [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'none');
+        pending_details = null;
+        clearDetails();
+        return;
+    }
+    nothing_selected_elem.style.display = 'none';
+    [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'block');
+
+    if (selectors.metric == 'size') {
+        filtered_data = [...filtered_data, ...fake_data.filter(elem => String(elem.dataset_size) == selectors.scale)];
+    }
+
+    let [sorted_indices, baseline_data] = renderSummary(filtered_data);
+    sorted_indices = sorted_indices.filter(idx => !filtered_data[idx].fake);
+
+    findPassiveSelectors(filtered_data.filter(elem => !elem.fake));
+
+    /// The small hint below column heading "Relative time (lower is better)"
+    document.getElementById("scale_hint").textContent = selectors.metric == 'quality' ? ''
+        : 'Different colors on the bar chart represent the same values shown at different scales (1x, 10x, 100x zoom)';
+
+    scheduleDetails(() => renderDetails(filtered_data, sorted_indices, baseline_data));
+}
+
+/// Only the cells of the details table close to the viewport are rendered, because laying out
+/// all of them takes hundreds of milliseconds. First, the sizes of the columns and rows are measured
+/// on the table with all the header cells and a single row of the widest cells; then they are fixed,
+/// so that the table doesn't change while it is scrolled.
+let virtual_details = null;
+
+function clearDetails() {
+    const table = document.getElementById('details');
+    virtual_details = null;
+    table.classList.remove('details-fixed');
+    table.style.width = '';
+    table.querySelector('colgroup')?.remove();
+    clearElement(document.getElementById('details_head'));
+    clearElement(document.getElementById('details_body'));
+}
+
+function makeDetailsCell(cell) {
+    let td = document.createElement('td');
+    td.appendChild(document.createTextNode(cell.text));
+    if (cell.ratio !== undefined) { colorize(td, cell.ratio); }
+    return td;
+}
+
+/// `header` contains a function creating the header cell for every column, `rows` - the rows
+/// of the table body to fill, as {tr, cells: [{text, ratio}, ...]}. The cells on the left side
+/// of the columns (the query names, etc.) are already in the rows.
+function virtualizeDetails(header, rows, num_prefix = document.getElementById('details_head').children.length) {
+    const table = document.getElementById('details');
+    const details_head = document.getElementById('details_head');
+    const details_body = document.getElementById('details_body');
+    const num_columns = header.length;
+
+    /// Remove the cells rendered before, if the table is measured again.
+    [details_head, ...rows.map(row => row.tr)].forEach(tr => {
+        while (tr.children.length > num_prefix) { tr.lastElementChild.remove(); }
+    });
+
+    table.classList.remove('details-fixed');
+    table.style.width = '';
+    table.querySelector('colgroup')?.remove();
+    virtual_details = null;
+
+    header.forEach(make => details_head.appendChild(make()));
+
+    /// The width of a column is the width of its widest cell, as the text is monospace.
+    const measureRow = cells => {
+        let tr = document.createElement('tr');
+        for (let i = 0; i < num_prefix; ++i) { tr.appendChild(document.createElement('td')); }
+        cells.forEach(cell => tr.appendChild(cell ? makeDetailsCell(cell) : document.createElement('td')));
+        details_body.appendChild(tr);
+        return tr;
+    };
+    let widest = new Array(num_columns).fill(null);
+    for (const row of rows) {
+        row.cells.forEach((cell, c) => {
+            const w = widest[c];
+            if (!w || cell.text.length > w.text.length || (cell.text.length == w.text.length && cell.ratio == 1)) { widest[c] = cell; }
+        });
+    }
+    const measure_tr = measureRow(widest);
+    /// The skull can be taken from another font, with a different height.
+    const measure_skull_tr = measureRow([{text: '☠', ratio: null}]);
+
+    const table_rect = table.getBoundingClientRect();
+    const rects = [...details_head.children].map(th => th.getBoundingClientRect());
+    const row_height = measure_tr.getBoundingClientRect().height;
+    const skull_row_height = Math.max(row_height, measure_skull_tr.getBoundingClientRect().height);
+
+    measure_tr.remove();
+    measure_skull_tr.remove();
+    while (details_head.children.length > num_prefix) { details_head.lastElementChild.remove(); }
+
+    let colgroup = document.createElement('colgroup');
+    rects.forEach(rect => {
+        let col = document.createElement('col');
+        col.style.width = `${rect.width}px`;
+        colgroup.appendChild(col);
+    });
+    table.insertBefore(colgroup, table.firstChild);
+    table.style.width = `${table_rect.width}px`;
+    table.classList.add('details-fixed');
+
+    rows.forEach(row => {
+        row.tr.style.height = `${row.cells.some(cell => cell.text == '☠') ? skull_row_height : row_height}px`;
+        row.filled = null;
+    });
+
+    const columns = rects.slice(num_prefix).map(rect => [rect.left - table_rect.left, rect.right - table_rect.left]);
+    const prefix_widths = rects.slice(0, num_prefix).map(rect => rect.width);
+    virtual_details = {header, rows, num_prefix, prefix_widths, columns, safe: null};
+    updateDetailsWindow();
+}
+
+/// Fills the row with the cells of the columns [begin, end), replacing the columns [filled[0], filled[1]).
+/// If the ranges overlap, only the cells at the edges are added and removed.
+function fillDetailsRow(tr, num_prefix, filled, begin, end, num_columns, tag, make) {
+    const spacer = span => {
+        let cell = document.createElement(tag);
+        cell.className = 'details-spacer';
+        cell.colSpan = span;
+        return cell;
+    };
+
+    if (!filled || filled[0] >= filled[1] || begin >= end || end <= filled[0] || begin >= filled[1]) {
+        while (tr.children.length > num_prefix) { tr.lastElementChild.remove(); }
+        if (begin >= end) { return; }
+        if (begin > 0) { tr.appendChild(spacer(begin)); }
+        for (let c = begin; c < end; ++c) { tr.appendChild(make(c)); }
+        if (end < num_columns) { tr.appendChild(spacer(num_columns - end)); }
+        return;
+    }
+
+    const [old_begin, old_end] = filled;
+    if (old_begin > 0) { tr.children[num_prefix].remove(); }
+    if (old_end < num_columns) { tr.lastElementChild.remove(); }
+
+    for (let c = old_begin; c < begin; ++c) { tr.children[num_prefix].remove(); }
+    for (let c = end; c < old_end; ++c) { tr.lastElementChild.remove(); }
+
+    const first = tr.children[num_prefix];
+    for (let c = begin; c < old_begin; ++c) { tr.insertBefore(make(c), first); }
+    for (let c = old_end; c < end; ++c) { tr.appendChild(make(c)); }
+
+    if (begin > 0) { tr.insertBefore(spacer(begin), tr.children[num_prefix]); }
+    if (end < num_columns) { tr.appendChild(spacer(num_columns - end)); }
+}
+
+/// Renders the cells within a screen size from the visible part of the table,
+/// unless the visible part is still well inside the cells that are already rendered.
+function updateDetailsWindow() {
+    const v = virtual_details;
+    if (!v) { return; }
+
+    const table_rect = document.getElementById('details').getBoundingClientRect();
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const visible_left = -table_rect.left;
+    const visible_right = width - table_rect.left;
+    const visible_top = -table_rect.top;
+    const visible_bottom = height - table_rect.top;
+    if (v.safe && visible_left >= v.safe[0] && visible_right <= v.safe[1]
+        && visible_top >= v.safe[2] && visible_bottom <= v.safe[3]) { return; }
+
+    const num_columns = v.columns.length;
+    let begin = 0;
+    while (begin < num_columns && v.columns[begin][1] < visible_left - width) { ++begin; }
+    let end = begin;
+    while (end < num_columns && v.columns[end][0] < visible_right + width) { ++end; }
+
+    const row_rects = v.rows.map(row => row.tr.getBoundingClientRect());
+    const row_visible = row_rects.map(rect =>
+        rect.bottom - table_rect.top > visible_top - height && rect.top - table_rect.top < visible_bottom + height);
+    const first_row = row_visible.indexOf(true);
+    const last_row = row_visible.lastIndexOf(true);
+
+    /// If none of the rows are close to the viewport, it is checked again on every scroll.
+    v.safe = first_row == -1 ? null : [
+        begin == 0 ? -Infinity : visible_left - width / 2,
+        end == num_columns ? Infinity : visible_right + width / 2,
+        first_row == 0 ? -Infinity : visible_top - height / 2,
+        last_row == v.rows.length - 1 ? Infinity : visible_bottom + height / 2];
+
+    if (!v.header_filled || v.header_filled[0] != begin || v.header_filled[1] != end) {
+        fillDetailsRow(document.getElementById('details_head'), v.num_prefix, v.header_filled, begin, end, num_columns, 'th', c => v.header[c]());
+        v.header_filled = [begin, end];
+    }
+    v.rows.forEach((row, i) => {
+        const [row_begin, row_end] = row_visible[i] ? [begin, end] : [0, 0];
+        if (row.filled && row.filled[0] == row_begin && row.filled[1] == row_end) { return; }
+        fillDetailsRow(row.tr, v.num_prefix, row.filled, row_begin, row_end, num_columns, 'td', c => makeDetailsCell(row.cells[c]));
+        row.filled = [row_begin, row_end];
+    });
+}
+
+document.addEventListener('scroll', updateDetailsWindow, {capture: true, passive: true});
+
+/// The widths of the columns depend on the fonts, which can be loaded after the table is rendered.
+document.fonts?.addEventListener('loadingdone', () => {
+    if (virtual_details) { virtualizeDetails(virtual_details.header, virtual_details.rows, virtual_details.num_prefix); }
+});
+window.addEventListener('resize', () => { if (virtual_details) { virtual_details.safe = null; updateDetailsWindow(); } });
+
+/// A row of the details table with the title in the sticky first column.
+function addDetailsRow(title) {
+    let tr = document.createElement('tr');
+    tr.className = 'shadow';
+
+    let td_title = document.createElement('td');
+    td_title.className = 'details-query';
+    td_title.appendChild(document.createTextNode(title));
+    tr.appendChild(td_title);
+
+    document.getElementById('details_body').appendChild(tr);
+    return tr;
+}
+
+function renderDetails(filtered_data, sorted_indices, baseline_data) {
+    let details_head = document.getElementById('details_head');
+    let details_body = document.getElementById('details_body');
+
+    clearDetails();
+
+    /// Generate details
+
+    /// Global checkbox
+    {
+        let th_checkbox = document.createElement('th');
+        let checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = selectors.queries.every(selected => selected);
+        checkbox.addEventListener('change', e => {
+            selectors.queries.fill(e.target.checked);
+            render();
+            updateHistory();
+        });
+        th_checkbox.className = 'details-query';
+        th_checkbox.appendChild(checkbox);
+        details_head.appendChild(th_checkbox);
+    }
+
+    /// Table header
+    const header = sorted_indices.map(idx => () => {
+        const elem = filtered_data[idx];
+        let th = document.createElement('th');
+        th.appendChild(document.createTextNode(selectors.metric == 'complexity' ? elem.system : `${elem.system}\n(${elem.machine})`));
+        th.className = 'th-entry';
+        th.dataset.system = elem.system;
+        th.addEventListener('mouseover', () => highlightSystemTags(elem.system));
+        th.addEventListener('mouseout', clearSystemTagsHighlight);
+        return th;
+    });
+
+    const entries = sorted_indices.map(idx => filtered_data[idx]);
+    let rows = [];
+
+    /// Load times, if any of the systems has it. A system without the value is not colored as a failed one,
+    /// as the load time was not measured in the older results.
+    if (entries.some(elem => !metricExcludes(elem, 'load'))) {
+        const tr = addDetailsRow('Load time: ');
+        const baseline_timing = Math.min(...entries.filter(elem => !metricExcludes(elem, 'load')).map(elem => elem.load_time));
+        rows.push({tr, cells: entries.map(elem => {
+            if (metricExcludes(elem, 'load')) { return {text: '—'}; }
+            const ratio = elem.load_time / baseline_timing;
+            return {text: `${Math.round(elem.load_time)}s (×${ratio.toFixed(2)})`, ratio};
+        })});
+    }
+
+    /// Storage sizes
+    {
+        const tr = addDetailsRow('Storage size: ');
+        /// The same baseline as in the summary, with the reference sizes of the raw files in the Storage Size metric.
+        const baseline_size = Math.min(...filtered_data.filter(elem => !metricExcludes(elem, 'size')).map(elem => elem.total_size));
+        rows.push({tr, cells: entries.map(elem => {
+            const has_size = !metricExcludes(elem, 'size');
+            const ratio = has_size ? elem.total_size / baseline_size : null;
+            return {text: has_size ? `${formatSize(elem.total_size)} (×${ratio.toFixed(2)})` : '☠', ratio};
+        })});
+    }
+
+    /// Data quality: the number of the documents loaded. A missing share of 0.1% is colored as twice as bad.
+    {
+        const tr = addDetailsRow('Data quality: ');
+        rows.push({tr, cells: entries.map(elem => {
+            if (metricExcludes(elem, 'quality')) { return {text: '☠', ratio: null}; }
+            const share = loadedShare(elem);
+            return {text: `${elem.num_loaded_documents} (${formatShare(share)})`, ratio: 1 + 1000 * (1 - share)};
+        })});
+    }
+
+    /// Complexity, if any of the systems has it.
+    if (entries.some(elem => !metricExcludes(elem, 'complexity'))) {
+        const tr = addDetailsRow('Complexity: ');
+        const baseline_complexity = Math.min(...entries.filter(elem => !metricExcludes(elem, 'complexity')).map(elem => elem.complexity));
+        rows.push({tr, cells: entries.map(elem => {
+            const has_complexity = !metricExcludes(elem, 'complexity');
+            const ratio = has_complexity ? elem.complexity / baseline_complexity : undefined;
+            return {text: has_complexity ? `${formatComplexity(elem.complexity)} (×${ratio.toFixed(2)})` : '—', ratio};
+        })});
+    }
+
+    /// Query runtimes. The details of the metrics other than the run times show the hot runs.
+    const run_metric = selectors.metric == 'cold' || selectors.metric == 'combined' ? selectors.metric : 'hot';
+    const num_queries = queries.length;
+
+    for (let query_num = 0; query_num < num_queries; ++query_num) {
+        let tr = document.createElement('tr');
+        tr.className = 'shadow';
+
+        let td_query = document.createElement('td');
+        td_query.className = 'details-query';
+
+        let checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'query-checkbox';
+        checkbox.checked = selectors.queries[query_num];
+        checkbox.addEventListener('change', e => {
+            selectors.queries[query_num] = e.target.checked;
+            render();
+            updateHistory();
+        });
+        td_query.appendChild(checkbox);
+
+        let query_name = document.createElement('span');
+        query_name.className = 'note';
+        query_name.appendChild(document.createTextNode(` Q${query_num + 1}.`));
+
+        let tooltip = document.createElement('span');
+        tooltip.className = 'tooltip tooltip-query';
+        tooltip.appendChild(document.createTextNode(`Query ${query_num + 1}: ${queries[query_num]}`));
+        query_name.appendChild(tooltip);
+
+        td_query.appendChild(query_name);
+        tr.appendChild(td_query);
+
+        const baseline_timing = selectRun(baseline_data[query_num], run_metric);
+        rows.push({tr, cells: entries.map(elem => {
+            const curr_timing = selectRun(elem.result[query_num], run_metric);
+            const ratio = curr_timing !== null ? (constant_time_add + curr_timing) / (constant_time_add + baseline_timing) : null;
+            return {text: curr_timing !== null ? `${curr_timing.toFixed(3)}s (×${ratio.toFixed(2)})` : '☠', ratio};
+        })});
+
+        details_body.appendChild(tr);
+    }
+
+    virtualizeDetails(header, rows);
+}
+
+function isSubsequence(str, subseq) {
+    let i = 0, j = 0;
+    while (i < str.length && j < subseq.length) {
+        if (str[i] === subseq[j]) j++;
+        i++;
+    }
+    return j === subseq.length;
+}
+
+/// A greedy algorithm to find a unique subsequence of a string in a set. Does not necessarily the smallest one.
+function findUniqueSubsequence(target, others) {
+    const num_matches = others.filter(s => isSubsequence(s, target)).length;
+    let num_failures = 0;
+    for (let i = 0; i < 1000; ++i) {
+        /// We cut characters from pseudorandom places, this gives shorter subsequences than cutting prefix/suffix.
+        const cut_idx = (i + 123) * 67601 % target.length;
+        const cut = target.substring(0, cut_idx) + target.substring(cut_idx + 1, target.length);
+        if (others.filter(s => isSubsequence(s, cut)).length == num_matches) {
+            target = cut;
+            num_failures = 0;
+        } else {
+            ++num_failures;
+            if (num_failures == target.length) {
+                break;
+            }
+        }
+    }
+    return target;
+}
+
+function encodedStrings(strings) {
+    let res = {};
+    strings.forEach(s => { res[s] = findUniqueSubsequence(s, strings) });
+    return res;
+}
+
+let encoded_keys = {};
+function encodeState(selectors) {
+    return Object.keys(selectors).map(k => {
+        let encoded_str = k + '=';
+        if (typeof selectors[k] === 'string') {
+            return encoded_str + selectors[k];
+        }
+        if (!encoded_keys[k]) {
+            encoded_keys[k] = encodedStrings(Object.keys(selectors[k]));
+        }
+        const count_total = Object.values(selectors[k]).length;
+        const count_selected = Object.values(selectors[k]).filter(x => x).length;
+        if (count_selected * 2 <= count_total) {
+            encoded_str += '+' + Object.keys(selectors[k]).filter(x => selectors[k][x]).map(x => encoded_keys[k][x]).join('|');
+        } else {
+            encoded_str += '-' + Object.keys(selectors[k]).filter(x => !selectors[k][x]).map(x => encoded_keys[k][x]).join('|');
+        }
+        return encoded_str;
+    }).join('&');
+}
+
+function decodeState(state) {
+    let decoded = {};
+    state.split('&').forEach(kv => {
+        let [k, v] = kv.split('=');
+
+        if (typeof selectors[k] === 'string') {
+            decoded[k] = v;
+        } else if (typeof selectors[k] === 'object') {
+            decoded[k] = Array.isArray(selectors[k]) ? [] : {};
+
+            const filtered = v.substring(1, v.length).split('|').filter(s => s !== '')
+                .map(substr => Object.keys(selectors[k]).filter(x => isSubsequence(x, decodeURIComponent(substr))).reduce((a, b) => a.length <= b.length ? a : b));
+
+            if (v.startsWith('+')) {
+                Object.keys(selectors[k]).forEach(x => {
+                    decoded[k][x] = filtered.includes(x);
+                });
+            } else if (v.startsWith('-')) {
+                Object.keys(selectors[k]).forEach(x => {
+                    decoded[k][x] = !filtered.includes(x);
+                });
+            }
+        }
+    });
+    return decoded;
+}
+
+function updateHistory() {
+    history.pushState(selectors, '',
+        window.location.pathname + (window.location.search || '') + '#' + encodeState(selectors));
+}
+
+/// The selectors from the URL.
+function applyHash() {
+    if (!window.location.hash) { return; }
+    try {
+        selectors = {...selectors, ...decodeState(decodeURIComponent(window.location.hash.substring(1)))};
+    } catch {}
+}
+
+window.onpopstate = function(event) {
+    if (event.state) {
+        selectors = event.state;
+    } else {
+        /// The URL was edited by hand.
+        applyHash();
+        history.replaceState(selectors, '');
+    }
+    updateSelectors();
+    render();
+};
+
+applyHash();
+
+/// For the browser's back button to return to the initial view.
+history.replaceState(selectors, '');
+
+updateSelectors();
+render();
+
+</script>
+<script>
+(function () {
+    var el = document.getElementById('github-stars-count');
+    if (!el) return;
+    var REPO = 'ClickHouse/ClickBench';
+    var CACHE_KEY = 'github-stars-' + REPO;
+    var TTL = 6 * 3600 * 1000;
+
+    function format(n) {
+        return '' + n;
+    }
+    function show(n) { el.textContent = format(n); }
+
+    try {
+        var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (cached && (Date.now() - cached.t) < TTL) { show(cached.n); return; }
+    } catch (e) {}
+
+    fetch('https://api.github.com/repos/' + REPO)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+            if (!d || typeof d.stargazers_count !== 'number') return;
+            show(d.stargazers_count);
+            try { localStorage.setItem(CACHE_KEY, JSON.stringify({ n: d.stargazers_count, t: Date.now() })); } catch (e) {}
+        })
+        .catch(function () {});
+})();
+</script>
+</body>
+</html>

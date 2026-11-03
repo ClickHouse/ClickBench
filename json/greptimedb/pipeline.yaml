@@ -1,0 +1,35 @@
+processors:
+  - epoch:
+      fields:
+        - time_us
+      resolution: microsecond
+  - simple_extract:
+      fields:
+        - commit, commit_collection
+      key: "collection"
+      ignore_missing: true
+  - simple_extract:
+      fields:
+        - commit, commit_operation
+      key: "operation"
+      ignore_missing: true
+
+transform:
+  - fields:
+      - did
+    type: string
+  - fields:
+      - kind
+      - commit_collection
+      - commit_operation
+    type: string
+    index: inverted
+    tag: true
+  - fields:
+      - commit
+    type: json
+    on_failure: ignore
+  - fields:
+      - time_us
+    type: epoch, us
+    index: timestamp

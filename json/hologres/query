@@ -1,0 +1,14 @@
+#!/bin/bash
+# Reads a query from stdin and runs it with psql.
+# Stderr: the runtime in fractional seconds on the last line, from \timing
+# (measured by the client, as in the original PR).
+set -e -o pipefail
+
+source ./env.sh
+
+query=$(cat)
+out=$(hg_psql "${HOLOGRES_DB}" -t -c '\timing' -c "${query}" 2>&1) || { printf '%s\n' "${out}" >&2; exit 1; }
+printf '%s\n' "${out}" | grep -v '^Time: '
+ms=$(printf '%s\n' "${out}" | grep -oP '^Time: \K[0-9.]+(?= ms)' | tail -n1)
+[ -n "${ms}" ]
+awk -v ms="${ms}" 'BEGIN { printf "%.6f\n", ms / 1000 }' >&2

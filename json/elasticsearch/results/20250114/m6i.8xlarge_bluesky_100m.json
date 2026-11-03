@@ -1,0 +1,20 @@
+{
+  "system": "Elasticsearch",
+  "version": "8.17.0",
+  "os": "Ubuntu 24.04",
+  "date": "2025-01-14",
+  "machine": "m6i.8xlarge, 16000gib gp3",
+  "retains_structure": "yes",
+  "tags": [
+  ],
+  "dataset_size": 100000000,
+  "num_loaded_documents": 99999947,
+  "total_size": 34182479705,
+  "result": [
+    [2.765,2.718,2.799],
+    [20.788,20.822,20.270],
+    [16.306,16.642,15.693],
+    [2.454,2.461,2.423],
+    [2.761,2.768,2.784]
+  ]
+}

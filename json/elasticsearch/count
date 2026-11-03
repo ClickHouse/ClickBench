@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e -o pipefail
+
+. ./es-common.sh
+
+es_curl "${ES_URL}/${ES_INDEX}/_count" | jq -r '.count'

@@ -1,0 +1,23 @@
+#!/bin/bash
+# Reads a LogsQL query from stdin, runs it with the HTTP API.
+# Stdout: the result (JSON lines). Stderr: the runtime in fractional seconds
+# on the last line: the wall-clock time of the HTTP request, as in the
+# original JSONBench.
+set -e
+
+query=$(cat)
+
+out=$(mktemp /var/tmp/victorialogs-query.XXXXXX)
+trap 'rm -f "${out}"' EXIT
+
+time_s=$(curl -sS --fail-with-body -o "${out}" -w '%{time_total}' \
+    'http://localhost:9428/select/logsql/query' --data-urlencode "query=${query}") && status=0 || status=$?
+
+if [ "${status}" -ne 0 ]; then
+    cat "${out}" >&2
+    echo >&2
+    exit "${status}"
+fi
+
+cat "${out}"
+echo "${time_s}" >&2

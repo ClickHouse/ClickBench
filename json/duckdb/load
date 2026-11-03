@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e -o pipefail
+
+# Idempotent: start from an empty database file.
+rm -f bluesky.duckdb bluesky.duckdb.wal
+
+# The original JSONBench split every file into chunks of 100k lines because
+# old DuckDB versions ran out of memory on whole files. The current version
+# reads a whole .json.gz file at once, so there is one INSERT per file, each
+# in its own transaction.
+#
+# A few documents in the dataset are broken: a document longer than 64 KiB
+# is split into two lines by a raw newline. With ignore_errors=false the
+# whole INSERT (in the original: the whole 100k-line chunk) failed. Now the
+# broken lines are skipped: ignore_errors=true turns them into NULLs, which
+# are filtered out.
+{
+    cat ddl.sql
+    for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+        echo "INSERT INTO bluesky SELECT json FROM read_ndjson_objects('${file}', ignore_errors = true, maximum_object_size = 1048576000) WHERE json IS NOT NULL;"
+    done
+    echo "CHECKPOINT;"
+} | duckdb bluesky.duckdb

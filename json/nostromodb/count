@@ -1,0 +1,7 @@
+#!/bin/bash
+# The output is a box-drawn table; the count is the only number on its own row.
+set -e -o pipefail
+
+source ./env.sh
+
+nostromodb "select count(*) from bluesky;" | grep -oP '^│ *\K[0-9]+(?= *│)' | tail -n1

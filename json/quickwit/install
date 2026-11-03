@@ -1,0 +1,26 @@
+#!/bin/bash
+# The latest stable release binary from GitHub (the PR used a prebuilt nightly,
+# because there was no release with the needed features at the time; v0.9 has
+# them).
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+sudo -E apt-get update -y
+sudo -E apt-get install -y curl jq
+
+if [ ! -x /opt/quickwit/quickwit ]; then
+    VERSION=$(curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors \
+        'https://api.github.com/repos/quickwit-oss/quickwit/releases?per_page=30' \
+        | jq -r '[.[] | select(.prerelease == false and .draft == false) | .tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))][0]')
+    [ -n "${VERSION}" ] && [ "${VERSION}" != "null" ]
+    ARCH=$(uname -m)
+    TMP=$(mktemp -d /var/tmp/quickwit.XXXXXX)
+    curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors -o "${TMP}/quickwit.tar.gz" \
+        "https://github.com/quickwit-oss/quickwit/releases/download/${VERSION}/quickwit-${VERSION}-${ARCH}-unknown-linux-gnu.tar.gz"
+    tar -xzf "${TMP}/quickwit.tar.gz" -C "${TMP}"
+    sudo mkdir -p /opt/quickwit
+    sudo install -m 755 "${TMP}/quickwit-${VERSION}/quickwit" /opt/quickwit/quickwit
+    rm -rf "${TMP}"
+fi
+sudo mkdir -p /var/lib/quickwit/qwdata
+/opt/quickwit/quickwit --version

@@ -1,0 +1,5 @@
+#!/bin/bash
+# The image has no version tag: report the digest of the image that ran.
+set -e
+
+sudo docker image inspect --format '{{index .RepoDigests 0}}' svilenmihaylov/nostromodb:latest | sed 's/.*@sha256:\(.\{12\}\).*/latest@sha256:\1/'

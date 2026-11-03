@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+. ./sql.sh
+
+# The disk size of the regions of the table (SST files, indexes, manifest,
+# WAL), as `total_size` in the original JSONBench.
+greptime_sql "SELECT sum(r.disk_size) FROM information_schema.region_statistics r LEFT JOIN information_schema.tables t ON r.table_id = t.table_id WHERE t.table_name = 'bluesky'"

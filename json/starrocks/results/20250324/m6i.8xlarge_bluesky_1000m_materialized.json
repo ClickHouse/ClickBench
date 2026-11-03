@@ -1,0 +1,41 @@
+{
+  "system": "Starrocks (materialized)",
+  "version": "3.4.0-e94580b",
+  "os": "Ubuntu 24.04",
+  "date": "2025-03-24",
+  "machine": "m6i.8xlarge, 10000gib gp3",
+  "retains_structure": "yes",
+  "tags": [
+    "historical"
+  ],
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 997000000,
+  "total_size": 191541000000,
+  "result": [
+    [
+      1.75,
+      1.56,
+      1.54
+    ],
+    [
+      49.75,
+      41.61,
+      31.38
+    ],
+    [
+      12.9,
+      12.58,
+      5.76
+    ],
+    [
+      5.64,
+      6.21,
+      6.03
+    ],
+    [
+      null,
+      null,
+      null
+    ]
+  ]
+}

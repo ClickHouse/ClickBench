@@ -1,0 +1,11 @@
+{
+  "system": "data.json.gz",
+  "fake": true,
+  "date": "2025-01-13",
+  "machine": "m6i.8xlarge, 10000gib gp3",
+  "retains_structure": "yes",
+  "tags": [
+  ],
+  "dataset_size": 1000000,
+  "total_size": 135176827
+}

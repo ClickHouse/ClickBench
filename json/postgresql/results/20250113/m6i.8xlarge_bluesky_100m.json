@@ -1,0 +1,22 @@
+{
+  "system": "PostgreSQL",
+  "version": "16.6",
+  "os": "Ubuntu 24.04",
+  "date": "2025-01-13",
+  "machine": "m6i.8xlarge, 10000gib gp3",
+  "retains_structure": "yes",
+  "tags": [
+  ],
+  "dataset_size": 100000000,
+  "num_loaded_documents": 91000000,
+  "total_size": 69064736768,
+  "data_size": 54598713344,
+  "index_size": 14465753088,
+  "result": [
+    [416.392,10.3372,10.3301],
+    [1868.87,1458.26,1457.45],
+    [440.283,33.0992,33.1468],
+    [477.82,17.7637,17.3674],
+    [476.837,18.9056,18.4372]
+  ]
+}

@@ -1,0 +1,6 @@
+#!/bin/bash
+# The total size of the collection with its indexes, from collStats, as in the
+# original entry (which used ../mongodb/total_size.sh).
+set -e
+
+mongosh --quiet bluesky --eval 'print(String(db.runCommand({collStats: "bluesky"}).totalSize))'

@@ -26,13 +26,14 @@ jobs:
     # hence the state guard.
     if: >-
       github.event.pull_request.state == 'open' &&
-      (github.event.action != 'labeled' || startsWith(github.event.label.name, 'machine:'))
+      (github.event.action != 'labeled' || startsWith(github.event.label.name, 'machine:') || startsWith(github.event.label.name, 'json-size:'))
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
     outputs:
       systems: ${{ steps.changed.outputs.systems }}
       machines: ${{ steps.changed.outputs.machines }}
+      json_sizes: ${{ steps.changed.outputs.json_sizes }}
     steps:
       - id: changed
         env:
@@ -48,9 +49,10 @@ jobs:
           # included and deleted ones are not.
           systems=""
           if [ -n "$HEAD_REPO" ]; then
+              # The JSONBench systems are one level deeper: json/<name>/.
               dirs=$(gh api "repos/$BASE_REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename' \
                   | grep -v -E '(^|/)results/|\.md$' \
-                  | awk -F/ 'NF > 1 { print $1 }' | sort -u || true)
+                  | awk -F/ '$1 == "json" && NF > 2 { print $1 "/" $2; next } NF > 1 { print $1 }' | sort -u || true)
               for dir in $dirs; do
                   if gh api --silent "repos/$HEAD_REPO/contents/$dir/benchmark.sh?ref=$HEAD_SHA" 2>/dev/null; then
                       systems="$systems $dir"
@@ -89,6 +91,17 @@ jobs:
           echo "Machines: $machines"
           echo "machines=$machines" >> "$GITHUB_OUTPUT"
 
+          # The JSONBench systems run on their own machine, once per dataset
+          # size. The 1000m size takes up to a day or more for the slowest
+          # systems, so it runs only if asked by a "json-size:1000" label;
+          # "json-size:<n>" labels replace the default set of sizes.
+          json_sizes=$(jq -r '[.pull_request.labels[].name
+              | select(startswith("json-size:")) | ltrimstr("json-size:")]
+              | join(" ")' "$GITHUB_EVENT_PATH")
+          json_sizes="${json_sizes:-1 10 100}"
+          echo "JSONBench dataset sizes: $json_sizes"
+          echo "json_sizes=$json_sizes" >> "$GITHUB_OUTPUT"
+
   launch:
     needs: detect
     if: needs.detect.outputs.systems != ''
@@ -106,6 +119,7 @@ jobs:
         with:
           systems: ${{ needs.detect.outputs.systems }}
           machines: ${{ needs.detect.outputs.machines }}
+          json-sizes: ${{ needs.detect.outputs.json_sizes }}
           # The head repository and branch to benchmark are derived from the
           # PR number by run-benchmark.sh.
           pr: ${{ github.event.pull_request.number }}

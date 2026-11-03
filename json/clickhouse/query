@@ -1,0 +1,6 @@
+#!/bin/bash
+# Reads a query from stdin, runs it with clickhouse-client.
+# Stderr: the runtime in fractional seconds on the last line (from --time).
+set -e
+
+clickhouse-client --time --format=Null

@@ -1,0 +1,20 @@
+{
+  "system": "Doris",
+  "version": "3.0.5",
+  "os": "Ubuntu 24.04",
+  "date": "2025-04-30",
+  "machine": "m6i.8xlarge, 16000gib gp3",
+  "retains_structure": "yes",
+  "tags": [
+  ],
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 999999245,
+  "total_size": 215190746431,
+  "result": [
+    [1.69,1.46,1.47],
+    [90.34,4.07,4.08],
+    [15.45,4.28,4.27],
+    [0.84,0.82,0.83],
+    [0.86,0.89,0.88]
+  ]
+}

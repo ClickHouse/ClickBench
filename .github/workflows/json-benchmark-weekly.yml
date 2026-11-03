@@ -1,0 +1,24 @@
+name: "JSONBench weekly"
+
+# The ClickHouse entry of JSONBench, on every dataset size, from main. The
+# other systems are run on demand with benchmark-manual.yml
+# (systems: json/<name>) or for the pull requests that change them.
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  id-token: write  # To assume the federated IAM role.
+  contents: read
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/launch-benchmark
+        with:
+          systems: json/clickhouse
+          json-sizes: "1 10 100 1000"

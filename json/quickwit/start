@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+if [ -f quickwit.pid ] && kill -0 "$(cat quickwit.pid)" 2>/dev/null; then
+    exit 0
+fi
+
+QW_CONFIG="$PWD/quickwit.yaml" nohup /opt/quickwit/quickwit run >>quickwit.log 2>&1 &
+echo $! > quickwit.pid

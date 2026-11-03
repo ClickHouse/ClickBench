@@ -1,0 +1,25 @@
+{
+  "system": "StarRocks",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "MySQL compatible"
+  ],
+  "version": "4.1.7",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-02",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 10000000,
+  "num_loaded_documents": 9999997,
+  "load_time": 108.639,
+  "total_size": 5874589233,
+  "result": [
+    [0.451, 0.062, 0.045],
+    [0.755, 0.274, 0.249],
+    [0.587, 0.11, 0.087],
+    [0.541, 0.079, 0.058],
+    [0.547, 0.072, 0.06]
+  ]
+}

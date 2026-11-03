@@ -1,0 +1,45 @@
+#!/bin/bash
+# Installs the latest SingleStore as a local cluster-in-a-box (one master
+# aggregator and one leaf, as the singlestore/cluster-in-a-box Docker image
+# of the original JSONBench) with SingleStore Toolbox from the official apt
+# repository. The Docker image is not updated since 2024 (8.7.12), and the
+# newer singlestoredb-dev image is limited to two partitions and 8 cores and
+# is not meant for benchmarks.
+#
+# SingleStore needs a license key: get one (free or trial) from the
+# SingleStore portal, https://portal.singlestore.com, and pass it in the
+# SINGLESTORE_LICENSE environment variable.
+set -e -o pipefail
+source ./env.sh
+
+export DEBIAN_FRONTEND=noninteractive
+
+if [ -z "${SINGLESTORE_LICENSE:-}" ]; then
+    echo "singlestore: set SINGLESTORE_LICENSE to a SingleStore license key (https://portal.singlestore.com)" >&2
+    exit 1
+fi
+
+sudo apt-get update -y
+sudo apt-get install -y ca-certificates curl gnupg mysql-client jq
+
+if [ ! -f /etc/apt/sources.list.d/singlestore.list ]; then
+    curl -fsSL --retry 10 --retry-delay 30 --retry-all-errors https://release.memsql.com/release-aug2018.gpg \
+        | sudo gpg --dearmor --yes -o /usr/share/keyrings/singlestore.gpg
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/singlestore.gpg] https://release.memsql.com/production/debian memsql main" \
+        | sudo tee /etc/apt/sources.list.d/singlestore.list >/dev/null
+    sudo apt-get update -y
+fi
+sudo apt-get install -y singlestoredb-toolbox
+
+# Toolbox refuses to run as root unless told so.
+mkdir -p "$HOME/.config/singlestoredb-toolbox"
+if ! grep -qs '^user = "root"' "$HOME/.config/singlestoredb-toolbox/toolbox.hcl"; then
+    echo 'user = "root"' >> "$HOME/.config/singlestoredb-toolbox/toolbox.hcl"
+fi
+
+# Idempotent: deploy only once. Without --version, cluster-in-a-box installs
+# the latest release of singlestoredb-server, and starts the nodes.
+if [ ! -f .deployed ]; then
+    sdb-deploy cluster-in-a-box --license "$SINGLESTORE_LICENSE" --password "$MYSQL_PWD" --yes
+    touch .deployed
+fi

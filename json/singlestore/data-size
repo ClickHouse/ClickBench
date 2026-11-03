@@ -1,0 +1,7 @@
+#!/bin/bash
+# The compressed size of the columnstore segments, as the total_size of the
+# original JSONBench (no indexes are used).
+set -e
+source ./env.sh
+
+ss_mysql -N -B -e "SELECT sum(compressed_size) FROM information_schema.columnar_segments WHERE database_name = 'bluesky' AND table_name = 'bluesky'"
