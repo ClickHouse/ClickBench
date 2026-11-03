@@ -342,7 +342,7 @@ Many alternative benchmarks are applicable to OLAP DBMS with their own advantage
 
 ### JSONBench
 
-https://github.com/ClickHouse/JSONBench
+https://benchmark.clickhouse.com/json/, in the [`json`](json/) directory of this repository.
 
 A benchmark for data analytics on JSON.
 
