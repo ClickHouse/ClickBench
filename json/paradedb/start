@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+. ./pg-version.sh
+sudo systemctl start "postgresql@${PGVERSION}-main"

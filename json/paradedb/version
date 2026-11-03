@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+# "0.26.4 (PostgreSQL 18.1)": the version of pg_search and of the server.
+pg_search=$(sudo -u postgres psql -X -d bluesky -t -A -c "SELECT extversion FROM pg_extension WHERE extname = 'pg_search'")
+server=$(sudo -u postgres psql -X -t -A -c "SHOW server_version" | awk '{ print $1 }')
+echo "${pg_search} (PostgreSQL ${server})"

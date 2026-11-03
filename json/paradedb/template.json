@@ -1,0 +1,11 @@
+{
+  "system": "ParadeDB",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Rust",
+    "row-oriented",
+    "search",
+    "PostgreSQL compatible"
+  ]
+}
