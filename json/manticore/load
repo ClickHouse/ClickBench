@@ -17,10 +17,3 @@ ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}" \
 # queries.
 mysql -h 127.0.0.1 -P 9306 -e 'FLUSH RAMCHUNK bluesky'
 mysql -h 127.0.0.1 -P 9306 -e 'OPTIMIZE TABLE bluesky OPTION sync=1'
-
-# TEMPORARY (validation): try the query variants and print the results.
-mysql -h 127.0.0.1 -P 9306 --batch -e 'SHOW TABLE bluesky STATUS' >&2 || true
-while IFS= read -r q; do
-    echo "diag: ${q}" >&2
-    mysql -h 127.0.0.1 -P 9306 --batch -e "${q} SHOW META LIKE 'time';" 2>&1 | head -n 30 | cut -c 1-1500 >&2 || true
-done < diag.sql
