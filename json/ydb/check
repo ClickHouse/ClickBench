@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")"
+source ./env.sh
+timeout 30 "${YDB[@]}" sql -s 'SELECT 1' >/dev/null

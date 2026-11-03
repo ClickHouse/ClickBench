@@ -1,0 +1,8 @@
+#!/bin/bash
+# The compressed size of the active portions (column data and indexes) of the
+# column table: the PDisk is a preallocated file, its size says nothing.
+set -e
+
+cd "$(dirname "$0")"
+source ./env.sh
+"${YDB[@]}" sql -s 'SELECT SUM(ColumnBlobBytes + IndexBlobBytes) FROM `bluesky/.sys/primary_index_portion_stats` WHERE Activity = 1' --format csv | tail -n1

@@ -1,0 +1,27 @@
+#!/bin/bash
+# Reads a YQL query from stdin, runs it with `ydb sql`.
+# Stdout: the result. Stderr: the runtime in fractional seconds on the last
+# line, the server-side duration of the query (total_duration_us of the
+# statistics, as in the main ClickBench YDB entry).
+set -e
+
+cd "$(dirname "$0")"
+source ./env.sh
+
+query=$(cat)
+
+raw=$("${YDB[@]}" sql -s "${query}" --stats basic 2>&1) && status=0 || status=$?
+
+if [ "${status}" -ne 0 ]; then
+    printf '%s\n' "${raw}" >&2
+    exit "${status}"
+fi
+
+printf '%s\n' "${raw}"
+
+us=$(printf '%s\n' "${raw}" | grep -oP 'total_duration_us:\s*\K[0-9]+' | tail -n1)
+if [ -z "${us}" ]; then
+    echo "query: no total_duration_us in the output" >&2
+    exit 1
+fi
+awk -v u="${us}" 'BEGIN { printf "%.6f\n", u / 1000000 }' >&2

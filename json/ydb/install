@@ -1,0 +1,67 @@
+#!/bin/bash
+set -e -o pipefail
+
+cd "$(dirname "$0")"
+
+retry() {
+    local i
+    for i in $(seq 1 10); do
+        "$@" && return 0
+        echo "install: attempt ${i} of '$*' failed" >&2
+        sleep 30
+    done
+    return 1
+}
+
+case "$(uname -m)" in
+    x86_64) arch=amd64 ;;
+    aarch64) arch=arm64 ;;
+    *) echo "install: unsupported architecture $(uname -m)" >&2; exit 1 ;;
+esac
+
+retry sudo apt-get update -y
+retry sudo apt-get install -y curl jq python3
+
+# The latest stable YDB server release (GitHub marks the release candidates as
+# pre-releases, and /releases/latest skips them).
+if [ ! -x ydbd/bin/ydbd ]; then
+    version=$(retry curl -fsSL --retry 5 https://api.github.com/repos/ydb-platform/ydb/releases/latest | jq -r .tag_name)
+    [ -n "${version}" ] && [ "${version}" != "null" ] || { echo "install: cannot resolve the YDB version" >&2; exit 1; }
+    echo "install: YDB ${version}"
+    rm -rf ydbd ydbd.tmp && mkdir ydbd.tmp
+    retry curl -fsSL --retry 5 -o ydbd.tar.gz "https://binaries.ydb.tech/release/${version}/ydbd-${version}-linux-${arch}.tar.gz"
+    tar -xzf ydbd.tar.gz --strip-components=1 -C ydbd.tmp
+    rm -f ydbd.tar.gz
+    mv ydbd.tmp ydbd
+    echo "${version}" > ydbd/VERSION
+fi
+
+# The latest stable YDB CLI.
+if [ ! -x ydb-cli ]; then
+    cli_version=$(retry curl -fsSL --retry 5 https://storage.yandexcloud.net/yandexcloud-ydb/release/stable | tr -d '[:space:]')
+    retry curl -fsSL --retry 5 -o ydb-cli.tmp "https://storage.yandexcloud.net/yandexcloud-ydb/release/${cli_version}/linux/${arch}/ydb"
+    chmod +x ydb-cli.tmp
+    mv ydb-cli.tmp ydb-cli
+fi
+
+# The configuration of a single node, from the local deployment scripts of
+# https://install.ydb.tech (config/disk.yaml), with the automatic actor system
+# configuration for the number of CPUs of the machine instead of the fixed
+# small thread pools of the sample. The storage node and the database node
+# have their own copies with the node type.
+cpus=$(nproc)
+for kind in storage:STORAGE database:COMPUTE; do
+    sed -e "s|@NODE_TYPE@|${kind#*:}|" -e "s|@CPU_COUNT@|${cpus}|" -e "s|@PDISK_PATH@|${PWD}/ydb.data|" \
+        config.yaml.in > "config-${kind%%:*}.yaml"
+done
+
+# The data file of the single PDisk. It is formatted on the first ./start.
+# The volume has 2 TB, the dataset takes 125 GB: 1200 GB is enough for the
+# 1000m size.
+if [ ! -f ydb.data ]; then
+    fallocate -l 1200G ydb.data
+fi
+
+source ./env.sh
+"${YDBD}" --version 2>&1 | head -n 5 || true
+"${YDB[0]}" version

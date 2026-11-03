@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e -o pipefail
+
+cd "$(dirname "$0")"
+source ./env.sh
+
+# Idempotent: recreate the table.
+"${YDB[@]}" sql -s 'DROP TABLE IF EXISTS bluesky' >/dev/null
+"${YDB[@]}" sql -f ddl.sql
+
+rm -rf csv && mkdir csv
+
+# The files are converted to CSV and imported with `ydb import file csv`
+# (which uses all CPUs), four files at a time, so that the conversion of the
+# next files overlaps with the import.
+ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}" \
+    | xargs -P 4 -n 1 ./load-file
+
+rmdir csv

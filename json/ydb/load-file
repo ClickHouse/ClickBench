@@ -1,0 +1,17 @@
+#!/bin/bash
+# Usage: load-file <path to file_NNNN.json.gz>
+set -e -o pipefail
+
+cd "$(dirname "$0")"
+source ./env.sh
+
+file="$1"
+number=$(basename "${file}" .json.gz)
+number=$((10#${number#file_}))
+csv="csv/file_${number}.csv"
+
+gzip -dc "${file}" | python3 -I to-csv.py "${number}" > "${csv}"
+# BulkUpsert in batches with the default settings, from the CSV that has no
+# line breaks inside the values.
+"${YDB[@]}" import file csv --path bluesky --header --newline-delimited "${csv}"
+rm -f "${csv}"
