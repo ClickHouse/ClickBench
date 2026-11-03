@@ -42,7 +42,7 @@ if ! command -v aws >/dev/null 2>&1; then
 fi
 aws --version
 
-RAVEL_VERSION="${RAVEL_VERSION:-v0.26.0}"
+RAVEL_VERSION="${RAVEL_VERSION:-v0.28.0}"
 RAVEL_REPO="${RAVEL_REPO:-https://github.com/NOFireAI/ravel}"
 
 case "$(uname -m)" in
@@ -52,6 +52,23 @@ case "$(uname -m)" in
 esac
 
 mkdir -p "$RAVEL_BIN_DIR"
+
+# A Rust toolchain and a C linker: always for the store below, and for the
+# source build of Ravel when its release is unreachable.
+ensure_cargo() {
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get install -y --no-install-recommends git build-essential pkg-config libssl-dev protobuf-compiler
+    else
+        sudo dnf install -y -q git gcc gcc-c++ make pkgconfig openssl-devel protobuf-compiler
+    fi
+    if ! cargo --version >/dev/null 2>&1; then
+        if command -v rustup >/dev/null 2>&1; then rustup default stable
+        else curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal; fi
+    fi
+    # shellcheck disable=SC1091
+    [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+    cargo --version
+}
 
 # Preferred path: the released binaries, which are the ones extracted from the
 # signed container images, so a downloaded binary is byte-identical to what the
@@ -78,17 +95,7 @@ else
     # Fallback: build at a ref. Used when the release is unreachable, or to
     # benchmark an unreleased commit via RAVEL_REF.
     echo "install: release ${RAVEL_VERSION} not reachable, building from source" >&2
-    if command -v apt-get >/dev/null 2>&1; then
-        sudo apt-get install -y --no-install-recommends git build-essential pkg-config libssl-dev protobuf-compiler
-    else
-        sudo dnf install -y -q git gcc gcc-c++ make pkgconfig openssl-devel protobuf-compiler
-    fi
-    if ! cargo --version >/dev/null 2>&1; then
-        if command -v rustup >/dev/null 2>&1; then rustup default stable
-        else curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal; fi
-    fi
-    # shellcheck disable=SC1091
-    [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+    ensure_cargo
     [ -d src ] || git clone --filter=blob:none "${RAVEL_REPO}.git" src
     git -C src fetch origin --quiet
     git -C src checkout -q --detach "${RAVEL_REF:-$RAVEL_VERSION}"
@@ -103,62 +110,88 @@ fi
 # What will run, by content rather than by a version string.
 sha256sum "$RAVEL_SERVER" "$RAVEL_CLI"
 
-# The object store: a single-node RustFS on this machine's disk, so the entry
+# The object store: a single-node s3s-fs on this machine's disk, so the entry
 # is comparable with the local-disk systems in this repository and needs no
-# cloud account. A pinned release from GitHub, verified against the release's
-# own SHA256SUMS. A loopback RAVEL_S3_ENDPOINT means the RustFS this entry
-# manages; anything else is an external S3-compatible store the operator
-# provisioned, and this section is skipped.
-RUSTFS_VERSION="${RUSTFS_VERSION:-1.0.0}"
+# cloud account. s3s-fs is the file-system backend of the s3s project
+# (https://github.com/s3s-project/s3s). The binary comes from a release on our
+# fork, verified against that release's own SHA256SUMS the way Ravel's binaries
+# are above: the v0.17.0 release plus two changes offered upstream, one that
+# returns each object's stored ETag in listings (s3s-project/s3s#1013), which
+# `store qualify` requires, and one that reads the access and secret key from
+# the environment (s3s-project/s3s#1014). The release is built from the commit
+# S3S_FS_REV names; when the release is unreachable the same commit is built
+# here with `cargo install --locked`, so what runs is fixed by content either
+# way. A loopback RAVEL_S3_ENDPOINT means the s3s-fs this entry manages;
+# anything else is an external S3-compatible store the operator provisioned,
+# and this section is skipped.
+S3S_FS_GIT="${S3S_FS_GIT:-https://github.com/NOFireAI/s3s}"
+S3S_FS_RELEASE="${S3S_FS_RELEASE:-s3s-fs-0.17.0-ravel.1}"
+S3S_FS_REV="${S3S_FS_REV:-9353c1f1b3d4247d1d48858e34abcb21e2003ac5}"
 case "$RAVEL_S3_ENDPOINT" in
     http://127.0.0.1:*|http://localhost:*) local_store=yes ;;
     *) local_store=no ;;
 esac
 if [ "$local_store" = yes ]; then
-    mkdir -p "$RUSTFS_DIR"
-    if ! [ -x "$RUSTFS_DIR/rustfs" ] || ! "$RUSTFS_DIR/rustfs" --version 2>/dev/null | grep -q "^rustfs ${RUSTFS_VERSION}\$"; then
+    mkdir -p "$STORE_DIR/bin"
+    # Fetched or built only when the pin moves: the version string does not
+    # carry the commit, so the commit installed is recorded beside the binary.
+    if ! [ -x "$STORE_DIR/bin/s3s-fs" ] || [ "$(cat "$STORE_DIR/s3s-fs.rev" 2>/dev/null)" != "$S3S_FS_REV" ]; then
         case "$arch" in
-            amd64) rarch=x86_64 ;;
-            arm64) rarch=aarch64 ;;
+            amd64) sarch=x86_64 ;;
+            arm64) sarch=aarch64 ;;
         esac
-        zip="rustfs-linux-${rarch}-gnu-v${RUSTFS_VERSION}.zip"
-        rbase="https://github.com/rustfs/rustfs/releases/download/${RUSTFS_VERSION}"
-        curl -fsSL --retry 3 -o "$RUSTFS_DIR/$zip" "${rbase}/${zip}"
-        want=$(curl -fsSL --retry 3 "${rbase}/SHA256SUMS" | awk -v n="$zip" '$2 == n {print $1}')
-        have=$(sha256sum "$RUSTFS_DIR/$zip" | awk '{print $1}')
-        [ -n "$want" ] && [ "$want" = "$have" ] || { echo "install: checksum mismatch for $zip" >&2; exit 1; }
-        rm -rf "$RUSTFS_DIR/unpack"
-        unzip -q -o "$RUSTFS_DIR/$zip" -d "$RUSTFS_DIR/unpack"
-        chmod +x "$RUSTFS_DIR/unpack/rustfs"
-        # A running RustFS keeps serving from the replaced inode; ./rustfs-start
-        # only launches a new one when the health check fails.
-        mv -f "$RUSTFS_DIR/unpack/rustfs" "$RUSTFS_DIR/rustfs"
-        rm -rf "$RUSTFS_DIR/unpack" "$RUSTFS_DIR/$zip"
+        sbase="${S3S_FS_GIT}/releases/download/${S3S_FS_RELEASE}"
+        if curl -fsSL --retry 3 -o "$STORE_DIR/SHA256SUMS" "${sbase}/SHA256SUMS"; then
+            # Downloaded under a temporary name and moved into place once the
+            # checksum passes, so an unverified binary never sits at the path
+            # ./store-start runs. A running s3s-fs keeps serving from the
+            # replaced inode; ./store-start only launches a new one when the
+            # endpoint stops answering.
+            curl -fsSL --retry 3 -o "$STORE_DIR/bin/s3s-fs.new" "${sbase}/s3s-fs-linux-${sarch}"
+            want=$(awk -v n="s3s-fs-linux-${sarch}" '$2 == n || $2 == "*"n {print $1}' "$STORE_DIR/SHA256SUMS" | head -1)
+            [ -n "$want" ] || { echo "install: s3s-fs-linux-${sarch} absent from the release's SHA256SUMS" >&2; exit 1; }
+            have=$(sha256sum "$STORE_DIR/bin/s3s-fs.new" | awk '{print $1}')
+            [ "$want" = "$have" ] || { echo "install: checksum mismatch for s3s-fs-linux-${sarch}" >&2; exit 1; }
+            chmod +x "$STORE_DIR/bin/s3s-fs.new"
+            mv -f "$STORE_DIR/bin/s3s-fs.new" "$STORE_DIR/bin/s3s-fs"
+            echo "s3s-fs release ${S3S_FS_RELEASE}"
+        else
+            # Fallback: build the same commit. Measured on this repository's
+            # image: about 3 minutes and 1.1 GB of RSS on c6a.large, 30 s on
+            # c8g.4xlarge.
+            echo "install: release ${S3S_FS_RELEASE} not reachable, building s3s-fs from source" >&2
+            ensure_cargo
+            cargo install --locked --git "$S3S_FS_GIT" --rev "$S3S_FS_REV" s3s-fs --features binary --root "$STORE_DIR"
+            echo "s3s-fs built from source"
+        fi
+        echo "$S3S_FS_REV" > "$STORE_DIR/s3s-fs.rev"
     fi
-    "$RUSTFS_DIR/rustfs" --version | head -n 1
+    "$STORE_DIR/bin/s3s-fs" --version | head -n 1
+    echo "s3s-fs commit $(cat "$STORE_DIR/s3s-fs.rev")"
+    sha256sum "$STORE_DIR/bin/s3s-fs"
     # Credentials: generated once, readable by this user only, handed to
-    # RustFS and to Ravel through the environment. Nothing in this repository
+    # s3s-fs and to Ravel through the environment. Nothing in this repository
     # or in a process argument list carries a key.
-    if [ ! -f "$RUSTFS_DIR/credentials.env" ]; then
+    if [ ! -f "$STORE_DIR/credentials.env" ]; then
         ( umask 077
-          printf 'RUSTFS_ACCESS_KEY=%s\nRUSTFS_SECRET_KEY=%s\n' \
+          printf 'STORE_ACCESS_KEY=%s\nSTORE_SECRET_KEY=%s\n' \
               "ravel-$(head -c 6 /dev/urandom | od -An -tx1 | tr -d ' \n')" \
               "$(head -c 30 /dev/urandom | base64 | tr -d '/+=\n')" \
-              > "$RUSTFS_DIR/credentials.env" )
+              > "$STORE_DIR/credentials.env" )
     fi
     # The server records query text on its audit trail tokenized under a
     # key. A keyed deployment derives it; this entry runs unkeyed (see
     # ./start), so it needs one of its own. Generated once, kept beside the
-    # RustFS credentials, handed to the server through the environment.
-    if ! grep -q '^RAVEL_AUDIT_TOKEN_KEY=' "$RUSTFS_DIR/credentials.env"; then
+    # store credentials, handed to the server through the environment.
+    if ! grep -q '^RAVEL_AUDIT_TOKEN_KEY=' "$STORE_DIR/credentials.env"; then
         ( umask 077
           printf 'RAVEL_AUDIT_TOKEN_KEY=%s\n' \
               "$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')" \
-              >> "$RUSTFS_DIR/credentials.env" )
+              >> "$STORE_DIR/credentials.env" )
     fi
     # Re-source so the keys just written are exported for the steps below.
     . ./ravel-env.sh
-    ./rustfs-start
+    ./store-start
 fi
 
 # The bucket. Everything Ravel writes lands under a t/<tenant hash>/ prefix in
