@@ -1,6 +1,6 @@
 # Databend
 
-[Databend](https://github.com/databendlabs/databend), the latest stable release from GitHub (the release tarball with `databend-meta`, `databend-query` and the `bendsql` client), with the shipped configuration files. The only changes to them are the data and log directories and the built-in `root` user without a password, which is needed to connect.
+[Databend](https://github.com/databendlabs/databend), the latest stable release from GitHub (the release tarball with `databend-meta`, `databend-query` and the `bendsql` client), with the shipped configuration files. The only changes to them are the data and log directories, the built-in `root` user without a password, which is needed to connect, and `allow_insecure = true` in `[storage]`, without which `COPY` refuses to read the dataset from the local file system.
 
 The documents are stored in a single `VARIANT` column (Databend's semi-structured type, a binary JSON representation that keeps the original documents). There is no cluster key and no index.
 

@@ -26,16 +26,20 @@ if [ ! -x ./bin/databend-query ]; then
 fi
 
 # The shipped configs with the default settings, except for what is needed
-# to run: the data, raft and log directories under this directory, and the
+# to run: the data, raft and log directories under this directory, the
 # built-in `root` user without a password for the first run (the shipped
 # config says "comment out one of the following blocks to enable a user for
-# the first run").
+# the first run"), and `allow_insecure`, without which COPY refuses to read
+# the dataset from the local file system ("copy from insecure storage is not
+# allowed").
 mkdir -p _data/data _data/raft _data/cache _data/log
 dir=$(pwd)
 sed -e "s|/var/lib/databend|${dir}/_data|g" -e "s|/var/log/databend|${dir}/_data/log|g" \
     configs/databend-meta.toml > databend-meta.toml
 sed -e "s|/var/lib/databend|${dir}/_data|g" -e "s|/var/log/databend|${dir}/_data/log|g" \
+    -e 's|^\[storage\]$|[storage]\nallow_insecure = true|' \
     configs/databend-query.toml > databend-query.toml
+grep -qx 'allow_insecure = true' databend-query.toml || { echo "install: cannot set allow_insecure" >&2; exit 1; }
 cat >> databend-query.toml <<'CONF'
 
 [[query.users]]
