@@ -1,0 +1,46 @@
+#!/bin/bash
+# Installs the latest GA release of MySQL from the official APT repository
+# (https://dev.mysql.com/downloads/repo/apt/): the "innovation" track, whose
+# releases are GA and newer than those of the LTS track (MySQL 26.10 at the
+# time of writing, the LTS track is at 9.7). The main ClickBench
+# (../../mysql/install) takes MySQL 8.0 from Ubuntu instead.
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+for i in $(seq 1 10); do
+    if sudo -E apt-get update -y && sudo -E apt-get install -y curl gnupg gzip python3; then
+        break
+    fi
+    [ "$i" -eq 10 ] && { echo "install: apt-get failed" >&2; exit 1; }
+    sleep 30
+done
+
+# The repository signing key (the 2025 copy of the key has a later expiry
+# date than the 2023 one).
+curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors https://repo.mysql.com/RPM-GPG-KEY-mysql-2025 \
+    | sudo gpg --dearmor --yes -o /usr/share/keyrings/mysql.gpg
+echo "deb [signed-by=/usr/share/keyrings/mysql.gpg] http://repo.mysql.com/apt/ubuntu $(. /etc/os-release && echo "${VERSION_CODENAME}") mysql-innovation" \
+    | sudo tee /etc/apt/sources.list.d/mysql.list >/dev/null
+
+# With an empty root password (the default without a debconf answer), the
+# package sets up root@localhost with auth_socket, so that `sudo mysql` works.
+for i in $(seq 1 10); do
+    if sudo -E apt-get update -y && sudo -E apt-get install -y mysql-server mysql-client; then
+        break
+    fi
+    [ "$i" -eq 10 ] && { echo "install: cannot install mysql-server" >&2; exit 1; }
+    sleep 30
+done
+
+# LOAD DATA LOCAL INFILE (see ./load) must be enabled on the server and in the
+# client: both are off by default.
+sudo tee /etc/mysql/conf.d/local_infile.cnf >/dev/null <<'CNF'
+[mysqld]
+local_infile = 1
+
+[mysql]
+local_infile = 1
+CNF
+
+sudo systemctl restart mysql

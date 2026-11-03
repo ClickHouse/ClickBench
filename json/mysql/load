@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e -o pipefail
+
+# Idempotent: recreate the database.
+sudo mysql -e "DROP DATABASE IF EXISTS bluesky"
+sudo mysql -e "CREATE DATABASE bluesky"
+sudo mysql bluesky < ddl.sql
+
+# One LOAD DATA LOCAL INFILE per file, from the decompressed stream, every
+# line into the JSON column: the field terminator (0x01) never occurs in the
+# data, and there is no escape character, so the lines arrive unchanged.
+#
+# A few lines of the dataset are not valid JSON: documents of more than
+# 64 KiB that were cut into two lines. ./filter.py (the filter of
+# ../mongodb/load) drops them, so that one bad line can't cost the rest of
+# its file.
+#
+# The binary log (on by default, for replication) is turned off for the
+# session, as in the main ClickBench (../../mysql/load): it would store a
+# second copy of all the data.
+for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+    echo "load: ${file}"
+    gzip -dc "${file}" \
+        | python3 -I filter.py \
+        | sudo mysql --local-infile=1 bluesky -e "SET sql_log_bin = 0; LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE bluesky CHARACTER SET utf8mb4 FIELDS TERMINATED BY X'01' ENCLOSED BY '' ESCAPED BY '' LINES TERMINATED BY '\\n' (data); SHOW WARNINGS LIMIT 10;"
+done
+
+# The index is built after the load, in one pass, rather than maintained row
+# by row during it (unlike ../postgresql/load).
+sudo mysql bluesky < index.sql
+sudo mysql bluesky -e "ANALYZE TABLE bluesky"
