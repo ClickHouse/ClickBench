@@ -271,11 +271,6 @@
             background: black;
         }
 
-        /* Black on the dark background would be invisible. */
-        [data-theme="dark"] .summary-bar-failed {
-            box-shadow: inset 0 0 0 1px #888;
-        }
-
         .summary-row-failed .summary-number {
             font-family: inherit;
             font-size: 1.5rem;
@@ -657,14 +652,14 @@ function clearSystemTagsHighlight() {
 /// Highlighting summary rows and table columns of a system, together with its tags.
 function highlightSystem(systemName) {
     [...document.querySelectorAll('.summary-row')].map(row => {
-        row.className = row.dataset.system == systemName ? 'summary-row summary-row-hilite' : 'summary-row' });
+        row.classList.toggle('summary-row-hilite', row.dataset.system == systemName) });
     [...document.querySelectorAll('.th-entry')].map(th => {
         th.className = th.dataset.system == systemName ? 'th-entry th-entry-hilite' : 'th-entry' });
     highlightSystemTags(systemName);
 }
 
 function clearSystemHighlight() {
-    [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
+    [...document.querySelectorAll('.summary-row')].map(row => { row.classList.remove('summary-row-hilite') });
     [...document.querySelectorAll('.th-entry')].map(th => { th.className = 'th-entry' });
     clearSystemTagsHighlight();
 }
@@ -750,12 +745,12 @@ unique_tags.map(elem => {
     selector.addEventListener('mouseover', () => {
         const tagged = tag_to_systems[elem] || new Set();
         [...document.querySelectorAll('.summary-row')].map(row => {
-            row.className = tagged.has(row.dataset.system) ? 'summary-row summary-row-hilite' : 'summary-row' });
+            row.classList.toggle('summary-row-hilite', tagged.has(row.dataset.system)) });
         [...document.querySelectorAll('.th-entry')].map(th => {
             th.className = tagged.has(th.dataset.system) ? 'th-entry th-entry-hilite' : 'th-entry' });
     });
     selector.addEventListener('mouseout', () => {
-        [...document.querySelectorAll('.summary-row')].map(row => { row.className = 'summary-row' });
+        [...document.querySelectorAll('.summary-row')].map(row => { row.classList.remove('summary-row-hilite') });
         [...document.querySelectorAll('.th-entry')].map(th => { th.className = 'th-entry' });
     });
 });
