@@ -11,6 +11,7 @@ that were cut into two lines): try_parse_json returns NULL for them, and they
 are skipped.
 """
 
+import os
 import shutil
 import sys
 
@@ -20,6 +21,7 @@ with open(sys.argv[1]) as f:
     files = [line.strip() for line in f if line.strip()]
 
 shutil.rmtree(TABLE_DIR, ignore_errors=True)
+os.makedirs(TABLE_DIR)
 
 spark = create_session("JSONBench load")
 register_table(spark)
