@@ -1,2 +1,2 @@
 #!/bin/bash
-mysql -h 127.0.0.1 -P 9306 --connect-timeout=5 -e 'SHOW STATUS LIKE "uptime"' >/dev/null
+mysql -h 127.0.0.1 -P 9306 --connect-timeout=5 -e "SHOW STATUS LIKE 'uptime'" >/dev/null
