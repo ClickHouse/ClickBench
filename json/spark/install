@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+for i in $(seq 1 10); do
+    if sudo apt-get update -y && sudo apt-get install -y python3-pip python3-venv openjdk-21-jdk-headless; then
+        break
+    fi
+    [ "$i" -eq 10 ] && { echo "install: apt-get failed" >&2; exit 1; }
+    sleep 30
+done
+
+if [ ! -d myenv ]; then
+    python3 -m venv myenv
+fi
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# The latest Spark 4.x release: Spark 4 has the VARIANT type (parse_json,
+# variant_get) and stores it in Parquet.
+for i in $(seq 1 10); do
+    if pip install -q 'pyspark>=4,<5' psutil; then
+        break
+    fi
+    [ "$i" -eq 10 ] && { echo "install: pip install failed" >&2; exit 1; }
+    sleep 30
+done
+
+python3 -c 'import pyspark; print(pyspark.__version__)'

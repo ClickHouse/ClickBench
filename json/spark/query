@@ -1,0 +1,10 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via PySpark (query.py).
+# Stdout: the result. Stderr: the runtime in fractional seconds on the last line.
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+query=$(cat)
+printf '%s' "$query" | python3 query.py
