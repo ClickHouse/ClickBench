@@ -38,6 +38,9 @@ jobs:
           SINCE_HOURS: ${{ inputs.since_hours || '24' }}
         run: ./json/collect-new-results.sh
 
+      # The script of main (this checkout) runs on a checkout of the pull
+      # request (JSON_DIR), so no code of the pull request runs here, with the
+      # write permissions of this job.
       # The runs launched for pull requests (by benchmark-pr.yml): their
       # results are committed to the pull request, if its branch is in this
       # repository, or else listed in a comment for the author to commit.
@@ -62,7 +65,7 @@ jobs:
                   git fetch -q origin main
                   dir=$(mktemp -d)
                   git worktree add -q --detach "$dir" FETCH_HEAD
-                  (cd "$dir" && PR="$pr" PUBLISH_TO_MAIN=1 BRANCH="auto-results/json-pr$pr" ./json/collect-new-results.sh) || echo "Failed to collect the results of the merged PR #$pr" | tee -a "$GITHUB_STEP_SUMMARY"
+                  PR="$pr" PUBLISH_TO_MAIN=1 BRANCH="auto-results/json-pr$pr" JSON_DIR="$dir/json" ./json/collect-new-results.sh || echo "Failed to collect the results of the merged PR #$pr" | tee -a "$GITHUB_STEP_SUMMARY"
                   git worktree remove --force "$dir"
                   continue
               fi
@@ -77,6 +80,6 @@ jobs:
               dir=$(mktemp -d)
               git fetch -q origin "$branch"
               git worktree add -q --detach "$dir" FETCH_HEAD
-              (cd "$dir" && PR="$pr" PUSH_PR=1 PR_HEAD_BRANCH="$branch" ./json/collect-new-results.sh) || echo "Failed to collect the results of PR #$pr" | tee -a "$GITHUB_STEP_SUMMARY"
+              PR="$pr" PUSH_PR=1 PR_HEAD_BRANCH="$branch" JSON_DIR="$dir/json" ./json/collect-new-results.sh || echo "Failed to collect the results of PR #$pr" | tee -a "$GITHUB_STEP_SUMMARY"
               git worktree remove --force "$dir"
           done
