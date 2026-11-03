@@ -14,12 +14,20 @@ raw=$("${YDB[@]}" sql -s "${query}" --stats basic 2>&1) && status=0 || status=$?
 
 if [ "${status}" -ne 0 ]; then
     printf '%s\n' "${raw}" >&2
-    # If the database node is gone, show why.
-    if ! pgrep -f "${YDBD} server .*--tenant" >/dev/null; then
-        # ./data-size prints these files into the log of the driver.
-        cp logs/database.out "logs/crash-$(date +%s).out" || true
-        dmesg 2>/dev/null | tail -n 20 >> "logs/crash-$(date +%s).out" || true
-        echo "query: the database node is not running; its output is saved in logs/crash-*.out" >&2
+    # If the database node has crashed, save its output for the log (see
+    # ./data-size): wait for it to exit, it may be writing a core dump.
+    if grep -q 'Socket closed' <<< "${raw}"; then
+        for _ in $(seq 1 120); do
+            pgrep -f "${YDBD} server .*--tenant" >/dev/null || break
+            sleep 1
+        done
+        crash="logs/crash-$(date +%s).out"
+        {
+            echo "--- database.out"; tail -n 60 logs/database.out
+            echo "--- database.log"; grep -E 'CRIT|EMERG|ALERT|VERIFY|FAIL|terminate' logs/database.log | tail -n 40
+            echo "--- storage.out"; tail -n 20 logs/storage.out; echo "--- dmesg"; dmesg | tail -n 10; ls -la logs
+            echo "--- processes"; pgrep -af ydbd
+        } > "${crash}" 2>&1 || true
     fi
     exit "${status}"
 fi
