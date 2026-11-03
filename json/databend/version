@@ -3,4 +3,4 @@ set -e -o pipefail
 
 . ./sql.sh
 # "8.0.26-v1.2.881-<commit>(rust-..." -> "1.2.881"
-echo 'SELECT version()' | bendsql -o tsv | grep -oP -- '-v\K[0-9]+\.[0-9]+\.[0-9]+' | head -n1
+echo 'SELECT version()' | bendsql -o tsv | grep -oP -- '\bv\K[0-9]+\.[0-9]+\.[0-9]+' | head -n1

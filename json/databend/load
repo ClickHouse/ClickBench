@@ -22,10 +22,11 @@ for ((i = 0; i < ${#files[@]}; i += batch)); do
     list=${list%,}
     echo "load: ${files[i]} and the next $((batch - 1)) files" >&2
     bendsql -o tsv <<SQL
-COPY INTO bluesky FROM (SELECT \$1 FROM 'fs://${BENCH_DATA_DIR}/') FILES = (${list}) FILE_FORMAT = (TYPE = NDJSON) ON_ERROR = continue;
+COPY INTO bluesky FROM (SELECT \$1 FROM 'fs://${BENCH_DATA_DIR}/') FILES = (${list}) FILE_FORMAT = (TYPE = NDJSON, COMPRESSION = GZIP) ON_ERROR = continue;
 SQL
 done
 
 # A sanity check of the paths and types used by the queries.
 echo "SELECT data['kind']::STRING, data['commit']['collection']::STRING, TO_TIMESTAMP(data['time_us']::INT64, 6) FROM bluesky LIMIT 3" \
     | bendsql -o tsv >&2
+echo 'SELECT version()' | bendsql -o tsv >&2
