@@ -3,7 +3,7 @@
   "version": "25.9.1.1913",
   "os": "Ubuntu 24.04",
   "date": "2025-09-15",
-  "machine": "m6i.8xlarge, 10000gib gp3",
+  "machine": "m6i.8xlarge",
   "retains_structure": "yes",
   "tags": [
     "historical"

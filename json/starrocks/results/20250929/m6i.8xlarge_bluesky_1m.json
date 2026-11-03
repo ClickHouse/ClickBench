@@ -3,7 +3,7 @@
   "version": "4.0.0-rc02",
   "os": "Ubuntu 24.04",
   "date": "2025-09-29",
-  "machine": "m6i.8xlarge, 10000gib gp3",
+  "machine": "m6i.8xlarge",
   "retains_structure": "yes",
   "tags": [
   ],

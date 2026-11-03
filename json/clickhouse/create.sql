@@ -6,7 +6,7 @@ CREATE TABLE bluesky
         commit.operation LowCardinality(String),
         commit.collection LowCardinality(String),
         did String,
-        time_us UInt64) CODEC(ZSTD(1))
+        time_us UInt64)
 )
 ORDER BY (
     data.kind,
