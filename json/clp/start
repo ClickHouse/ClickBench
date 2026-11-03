@@ -1,0 +1,20 @@
+#!/bin/bash
+# Starts the CLP package (its database holds the archive metadata that Presto
+# reads) and the Presto cluster (a coordinator and a Prestissimo worker with
+# the CLP connector, reading the archives directly).
+set -e
+
+CLP_HOME=/opt/clp/clp-json
+PRESTO_DIR=/opt/clp/presto-clp
+
+cd "${CLP_HOME}"
+# `docker compose up --wait` inside: a no-op when it is already running.
+sbin/start-clp.sh
+
+cd "${PRESTO_DIR}"
+# The Presto configuration is generated from the package configuration; the
+# Docker network name in it is known only after the first start of CLP.
+if [ ! -f .env ]; then
+    scripts/set-up-config.sh "${CLP_HOME}"
+fi
+docker compose up --detach --wait

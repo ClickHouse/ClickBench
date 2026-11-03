@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+tr -d '[:space:]' < /opt/clp/clp-json/VERSION
+echo

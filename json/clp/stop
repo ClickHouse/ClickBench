@@ -1,0 +1,6 @@
+#!/bin/bash
+
+if [ -f /opt/clp/presto-clp/.env ]; then
+    (cd /opt/clp/presto-clp && docker compose stop) || true
+fi
+(cd /opt/clp/clp-json && sbin/stop-clp.sh) || true

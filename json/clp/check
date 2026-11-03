@@ -1,0 +1,5 @@
+#!/bin/bash
+# Ready when Presto runs a query, which needs an active worker.
+set -e
+
+echo "SELECT 1" | ./query >/dev/null

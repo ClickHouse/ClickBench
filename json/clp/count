@@ -1,0 +1,13 @@
+#!/bin/bash
+# Presto refreshes the list of CLP datasets (tables) once a minute: wait for
+# the table to appear after the load.
+set -e
+
+for _ in $(seq 1 30); do
+    if out=$(echo 'SELECT count(*) FROM "default"' | ./query 2>/dev/null); then
+        printf '%s\n' "${out}" | tail -n1
+        exit 0
+    fi
+    sleep 10
+done
+echo 'SELECT count(*) FROM "default"' | ./query
