@@ -41,8 +41,3 @@ while true; do
 done
 
 os_curl -X POST "${OS_URL}/${OS_INDEX}/_refresh" >/dev/null
-
-# TEMPORARY (validation): run every query once and print the results.
-while IFS= read -r q; do
-    printf '%s\n' "${q}" | ./query >&2 2>&1 || echo "load: validation query failed" >&2
-done < queries.json
