@@ -1,8 +1,8 @@
 #!/bin/bash
 # Installs the latest release of the clp-json package (the Docker Compose
 # deployment of CLP for JSON logs, https://github.com/y-scope/clp) into
-# /opt/clp/clp-json, and the Presto deployment of the same release
-# (tools/deployment/presto-clp of the source tree) into /opt/clp/presto-clp.
+# /clp/clp-json, and the Presto deployment of the same release
+# (tools/deployment/presto-clp of the source tree) into /clp/presto-clp.
 set -e -o pipefail
 
 export DEBIAN_FRONTEND=noninteractive
@@ -26,7 +26,7 @@ retry() {
     return 1
 }
 
-CLP_ROOT=/opt/clp
+CLP_ROOT=/clp
 CLP_HOME="${CLP_ROOT}/clp-json"
 PRESTO_DIR="${CLP_ROOT}/presto-clp"
 

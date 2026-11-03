@@ -5,8 +5,8 @@
 # `default` dataset.
 set -e -o pipefail
 
-CLP_HOME=/opt/clp/clp-json
-STAGING=/var/lib/clp-staging
+CLP_HOME=/clp/clp-json
+STAGING=/clp/staging
 
 # Idempotent: start from an empty dataset.
 if [ -n "$(ls -A "${CLP_HOME}/var/data/archives" 2>/dev/null)" ]; then

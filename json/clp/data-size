@@ -3,4 +3,4 @@
 # The rest of the package state (the metadata database) is a few MB.
 set -e
 
-du -sb /opt/clp/clp-json/var/data/archives | cut -f1
+du -sb /clp/clp-json/var/data/archives | cut -f1
