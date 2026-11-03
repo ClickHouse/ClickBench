@@ -9,4 +9,7 @@ The few lines of the dataset that are not valid JSON objects (documents longer t
 
 As in [`../postgresql`](../postgresql), there is one index over the expressions used in the filters and the aggregations (`kind`, `commit.operation`, `commit.collection`, `did`, `time_us`). It is created after the load (included in the load time), followed by `ANALYZE`. Queries 2-5 use the index; query 1 has no filter and scans the table.
 
+Queries 2-5 extract the paths in a derived table and aggregate in the outer query.
+This is the same query, but it lets SQLite take all the values from the index: when an aggregate query computes an output column from `data` directly, SQLite reads the table row (a random read) for every group, and for query 3, which groups through a sorter, for every row (the cold run took 42 s instead of 3 s at 1m).
+
 SQLite executes a query in a single thread.
