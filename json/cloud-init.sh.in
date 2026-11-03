@@ -32,6 +32,8 @@ LOG="${PWD}/log"
 # The first line identifies the log in the sink (see collect-new-results.sh).
 echo 'JSONBench system: @system@, size: @size@m, PR: @clickbench_pr@' | tee -a "${LOG}"
 echo "Commit: $(git rev-parse HEAD)" | tee -a "${LOG}"
+# A failed run sends only its log: the collector tells the runs of main by this line.
+echo 'Repository: @repo@, branch: @branch@' | tee -a "${LOG}"
 
 timeout @timeout@ ./benchmark.sh @size@ 2>&1 | tee -a "${LOG}"
 status=${PIPESTATUS[0]}
