@@ -23,3 +23,7 @@ skipped), with the latest stable YDB CLI.
   as in the main ClickBench YDB entry.
 - Data size: the compressed size of the active portions of the column table
   (`.sys/primary_index_portion_stats`); the PDisk file is preallocated.
+- Q3 filters the collections with `OR` of equalities instead of `IN`: with
+  `IN (...)` over `JSON_VALUE` (also in `HAVING` or in a subquery), the column
+  shard fails a `VERIFY` (`i.GetColumnId() != resourceId`, `abstract.h:394`)
+  and the database node goes down; the `OR` form is equivalent.
