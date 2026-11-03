@@ -11,18 +11,33 @@ sudo mysql bluesky < ddl.sql
 # data, and there is no escape character, so the lines arrive unchanged.
 #
 # A few lines of the dataset are not valid JSON: documents of more than
-# 64 KiB that were cut into two lines. ./filter.py (the filter of
-# ../mongodb/load) drops them, so that one bad line can't cost the rest of
-# its file.
+# 64 KiB that were cut into two lines. ../lib/filter-documents.py drops them,
+# so that one bad line can't cost the rest of its file, and also the documents
+# nested deeper than 100 levels, the limit of MySQL's JSON: the 1000m run
+# failed on file 178, which has four documents nested 2163 levels deep ("The
+# JSON document exceeds the maximum depth").
 #
 # The binary log (on by default, for replication) is turned off for the
 # session, as in the main ClickBench (../../mysql/load): it would store a
 # second copy of all the data.
+#
+# Permissive, as in the original JSONBench: a file that fails anyway is skipped (the
+# documents that were loaded are reported as the data quality), and the load fails
+# only if nothing was loaded.
+loaded=0
 for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
     echo "load: ${file}"
-    gzip -dc "${file}" \
-        | python3 -I filter.py \
-        | sudo mysql --local-infile=1 bluesky -e "SET sql_log_bin = 0; LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE bluesky CHARACTER SET utf8mb4 FIELDS TERMINATED BY X'01' ENCLOSED BY '' ESCAPED BY '' LINES TERMINATED BY '\\n' (data); SHOW WARNINGS LIMIT 10;"
+    if gzip -dc "${file}" \
+        | python3 -I ../lib/filter-documents.py --max-depth 100 \
+        | sudo mysql --local-infile=1 bluesky -e "SET sql_log_bin = 0; LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE bluesky CHARACTER SET utf8mb4 FIELDS TERMINATED BY X'01' ENCLOSED BY '' ESCAPED BY '' LINES TERMINATED BY '\\n' (data); SHOW WARNINGS LIMIT 10;"; then
+        loaded=$((loaded + 1))
+    else
+        echo "load: failed to load ${file}, skipped" >&2
+    fi
 done
+if [ "${loaded}" -eq 0 ]; then
+    echo "load: no file was loaded" >&2
+    exit 1
+fi
 
 sudo mysql bluesky -e "ANALYZE TABLE bluesky"

@@ -4,7 +4,7 @@ The latest GA release of MySQL (the "innovation" track of the official APT repos
 
 - The documents are stored in one `JSON` column of an InnoDB table.
 - There is no index, see below.
-- `./load` runs one `LOAD DATA LOCAL INFILE` per file from the decompressed stream, with a field terminator that never occurs in the data and no escape character, so every line becomes one JSON value. The few lines that are not valid JSON (documents longer than 64 KiB that were split over two lines) are dropped by `./filter.py` before the load. The binary log is turned off for the loading session (as in the main ClickBench): it would store a second copy of the data.
+- `./load` runs one `LOAD DATA LOCAL INFILE` per file from the decompressed stream, with a field terminator that never occurs in the data and no escape character, so every line becomes one JSON value. The few lines that are not valid JSON (documents longer than 64 KiB that were split over two lines) are dropped by `../lib/filter-documents.py` before the load, and so are the documents nested deeper than 100 levels, the limit of MySQL's JSON (file 178 has four, nested 2163 levels deep). The load is permissive: a file that fails anyway is skipped, and the loaded documents are reported as the data quality. The binary log is turned off for the loading session (as in the main ClickBench): it would store a second copy of the data.
 - The queries use `->>` and compute the timestamps as `TIMESTAMPADD(MICROSECOND, time_us, TIMESTAMP '1970-01-01 00:00:00')`, which keeps the microseconds and does not depend on the time zone. Q2 counts the distinct users exactly.
 - The InnoDB buffer pool has its default size, 128 MiB, so the hot runs read the data from the disk.
 
