@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+du -bs bluesky | cut -f1
