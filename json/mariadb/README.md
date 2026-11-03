@@ -3,7 +3,11 @@
 The latest stable MariaDB from the official MariaDB repository (the default of its `mariadb_repo_setup` script), with the default settings.
 
 - MariaDB has no binary JSON type: its `JSON` is an alias of `LONGTEXT` with a `JSON_VALID` check constraint. The table has one such column, spelled out (`LONGTEXT ... CHECK (JSON_VALID(data))`) to give it the binary collation, so that the strings extracted from the documents compare and group exactly.
-- The fields that the queries filter and group by are indexed, as with the expression index of [`../postgresql`](../postgresql): MariaDB has no functional indexes, so these are virtual (not stored) generated columns with an index on them, added after the load. The queries do not refer to the generated columns: they use `JSON_VALUE` on the document, which the optimizer may match with the indexed columns.
+- There is no index, see below.
 - `./load` runs one `LOAD DATA LOCAL INFILE` per file from the decompressed stream, with a field terminator that never occurs in the data and no escape character, so every line becomes one document. The few lines that are not valid JSON (documents longer than 64 KiB that were split over two lines) are dropped by `./filter.py` before the load.
-- The queries use `JSON_VALUE`. The strings that they group by or count distinct (`commit.collection`, `did`) are cast to `CHAR(320) COLLATE utf8mb4_bin`: `JSON_VALUE` returns `LONGTEXT`, and grouping by it is slow (Q4 and Q5 took 40 s on 1m documents). They compute the timestamps as `TIMESTAMPADD(MICROSECOND, time_us, TIMESTAMP '1970-01-01 00:00:00')`, which keeps the microseconds and does not depend on the time zone. Q2 counts the distinct users exactly.
+- The queries use `JSON_VALUE` and compute the timestamps as `TIMESTAMPADD(MICROSECOND, time_us, TIMESTAMP '1970-01-01 00:00:00')`, which keeps the microseconds and does not depend on the time zone. Q2 counts the distinct users exactly.
 - The InnoDB buffer pool has its default size, 128 MiB, so the hot runs read the data from the disk.
+
+## Why there is no index
+
+The first version had an index on virtual generated columns for the fields that the queries filter and group by (`kind`, `commit.operation`, `commit.collection`, `did`, `time_us`), the counterpart of the expression index of [`../postgresql`](../postgresql), added after the load. The optimizer used it for the conditions, which match most of the rows, and then looked up every matching row in the table. With the default buffer pool, every lookup is a random read from the disk, so on 1m documents Q2 took 71 s and Q4/Q5 39 s, against 2-3 s for the full scan of Q1. Without the index, all queries are full scans.

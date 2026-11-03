@@ -21,7 +21,4 @@ for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}");
         | sudo mariadb --local-infile=1 bluesky -e "LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE bluesky CHARACTER SET utf8mb4 FIELDS TERMINATED BY X'01' ENCLOSED BY '' ESCAPED BY '' LINES TERMINATED BY '\\n' (data); SHOW WARNINGS LIMIT 10;"
 done
 
-# The virtual columns and their index (see ./index.sql) are added after the
-# load: the index is built in one pass rather than maintained row by row.
-sudo mariadb bluesky < index.sql
 sudo mariadb bluesky -e "ANALYZE TABLE bluesky"

@@ -2,5 +2,5 @@
 set -e
 
 # The tablespace of the table (file-per-table, the default): the rows, the
-# off-page JSON values and the index.
+# off-page JSON values.
 sudo stat -c %s /var/lib/mysql/bluesky/bluesky.ibd
