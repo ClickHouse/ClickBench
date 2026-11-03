@@ -266,6 +266,22 @@
             --bar-color4: var(--fake-bar-color4);
         }
 
+        /* A system that failed at the selected size, but worked at a smaller one. */
+        .summary-bar-failed {
+            background: black;
+        }
+
+        /* Black on the dark background would be invisible. */
+        [data-theme="dark"] .summary-bar-failed {
+            box-shadow: inset 0 0 0 1px #888;
+        }
+
+        .summary-row-failed .summary-number {
+            font-family: inherit;
+            font-size: 1.5rem;
+            line-height: 1rem;
+        }
+
         .summary-number {
             font-family: monospace;
             text-align: right;
@@ -571,8 +587,11 @@ const missing_result_time = 3600;
 
 /// The reference sizes of the raw files of the dataset (data.json, data.json.gz, ...) are shown only
 /// in the Storage Size metric, regardless of the selectors, as they are not results of a system.
-const real_data = data.filter(elem => !elem.fake);
+/// Entries with `error` are the failed latest runs of a system on a dataset size (see
+/// collect-new-results.sh): they have no results, and are only shown as failed, below the chart.
+const real_data = data.filter(elem => !elem.fake && !elem.error);
 const fake_data = data.filter(elem => elem.fake);
+const failed_data = data.filter(elem => elem.error);
 
 let selectors = {
     "system": {},
@@ -999,7 +1018,7 @@ function metricTitle(metric) {
         : 'Relative time (lower is better).';
 }
 
-function renderSummary(filtered_data) {
+function renderSummary(filtered_data, failed = []) {
     let table = document.getElementById('summary');
     clearElement(table);
 
@@ -1166,7 +1185,44 @@ function renderSummary(filtered_data) {
         table.appendChild(tr);
     });
 
+    failed.map(elem => table.appendChild(failedSummaryRow(elem)));
+
     return [sorted_indices, baseline_data];
+}
+
+/// A row of a system that failed at the selected size: a skull and crossbones instead of
+/// the number, and a black bar. The error is in the tooltip.
+function failedSummaryRow(elem) {
+    let tr = document.createElement('tr');
+    tr.className = 'summary-row summary-row-failed';
+    tr.dataset.system = elem.system;
+    tr.title = `Failed on ${elem.date}: ${elem.error}`;
+    tr.addEventListener('mouseover', () => highlightSystem(elem.system));
+    tr.addEventListener('mouseout', clearSystemHighlight);
+
+    let td_name = document.createElement('td');
+    td_name.className = 'summary-name';
+    let link = document.createElement('a');
+    link.appendChild(document.createTextNode(entryTitle(elem)));
+    link.href = "https://github.com/ClickHouse/ClickBench/blob/main/json/" + elem.source;
+    link.style.color = `oklch(var(--hashed-link-lightness) 0.2018 ${nameToColor(elem.system.split(' ')[0])})`;
+    td_name.appendChild(link);
+    td_name.appendChild(document.createTextNode(': '));
+
+    let td_bar = document.createElement('td');
+    td_bar.className = 'summary-bar-cell';
+    let bar = document.createElement('div');
+    bar.className = 'summary-bar summary-bar-failed';
+    td_bar.appendChild(bar);
+
+    let td_number = document.createElement('td');
+    td_number.className = 'summary-number';
+    td_number.textContent = '☠';
+
+    tr.appendChild(td_name);
+    tr.appendChild(td_bar);
+    tr.appendChild(td_number);
+    return tr;
 }
 
 function summaryText(elem, ratio) {
@@ -1308,7 +1364,18 @@ function render() {
         filtered_data = [...filtered_data, ...fake_data.filter(elem => String(elem.dataset_size) == selectors.scale)];
     }
 
-    let [sorted_indices, baseline_data] = renderSummary(filtered_data);
+    /// The systems that worked at a smaller size on the same machine, but failed at this one.
+    /// Complexity doesn't depend on the size, so they are not shown for it.
+    const failed = selectors.metric == 'complexity' ? [] : failed_data.filter(elem =>
+        String(elem.dataset_size) == selectors.scale &&
+        selectors.system[elem.system] &&
+        selectors.machine[elem.machine] &&
+        matchesType(elem) &&
+        matchesLicense(elem) &&
+        matchesFlattening(elem) &&
+        real_data.some(r => r.system == elem.system && r.machine == elem.machine && r.dataset_size < elem.dataset_size));
+
+    let [sorted_indices, baseline_data] = renderSummary(filtered_data, failed);
     sorted_indices = sorted_indices.filter(idx => !filtered_data[idx].fake);
 
     findPassiveSelectors(filtered_data.filter(elem => !elem.fake));
