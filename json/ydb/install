@@ -63,5 +63,4 @@ if [ ! -f ydb.data ]; then
 fi
 
 source ./env.sh
-"${YDBD}" --version 2>&1 | head -n 5 || true
 "${YDB[0]}" version

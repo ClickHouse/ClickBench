@@ -14,6 +14,13 @@ raw=$("${YDB[@]}" sql -s "${query}" --stats basic 2>&1) && status=0 || status=$?
 
 if [ "${status}" -ne 0 ]; then
     printf '%s\n' "${raw}" >&2
+    # If the database node is gone, show why.
+    if ! pgrep -f "${YDBD} server .*--tenant" >/dev/null; then
+        # ./data-size prints these files into the log of the driver.
+        cp logs/database.out "logs/crash-$(date +%s).out" || true
+        dmesg 2>/dev/null | tail -n 20 >> "logs/crash-$(date +%s).out" || true
+        echo "query: the database node is not running; its output is saved in logs/crash-*.out" >&2
+    fi
     exit "${status}"
 fi
 
