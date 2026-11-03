@@ -1,0 +1,16 @@
+#!/bin/bash
+# As in the main ClickBench entry, but with the default settings (no ASYNCIO=0:
+# that was for the throughput of its gp2 volume).
+set -eu
+source ./env.sh
+
+${PSQL} -c 'SELECT 1' >/dev/null 2>&1 && exit 0
+
+sudo docker rm -f umbradb >/dev/null 2>&1 || true
+sudo docker run -d --name umbradb \
+    -v "$(pwd)/db:/var/db" \
+    -p 5432:5432 \
+    --privileged \
+    --ulimit nofile=1048576:1048576 \
+    --ulimit memlock=-1:-1 \
+    "${UMBRA_IMAGE}" >/dev/null
