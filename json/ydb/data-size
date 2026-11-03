@@ -9,6 +9,6 @@ source ./env.sh
 for f in logs/crash-*.out; do
     [ -f "$f" ] || continue
     echo "=== $f" >&2
-    tail -n 100 "$f" >&2
+    cat "$f" >&2
 done
 "${YDB[@]}" sql -s 'SELECT SUM(ColumnBlobBytes + IndexBlobBytes) FROM `bluesky/.sys/primary_index_portion_stats` WHERE Activity = 1' --format csv | tail -n1

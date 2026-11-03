@@ -23,10 +23,8 @@ if [ "${status}" -ne 0 ]; then
         done
         crash="logs/crash-$(date +%s).out"
         {
-            echo "--- database.out"; tail -n 60 logs/database.out
-            echo "--- database.log"; grep -E 'CRIT|EMERG|ALERT|VERIFY|FAIL|terminate' logs/database.log | tail -n 40
-            echo "--- storage.out"; tail -n 20 logs/storage.out; echo "--- dmesg"; dmesg | tail -n 10; ls -la logs
-            echo "--- processes"; pgrep -af ydbd
+            echo "--- database.out"; cat logs/database.out
+            echo "--- database.log"; tail -n 20 logs/database.log
         } > "${crash}" 2>&1 || true
     fi
     exit "${status}"
