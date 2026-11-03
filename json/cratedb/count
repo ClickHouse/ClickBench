@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+. ./sql.sh
+crate_sql -c "SELECT count(*) FROM bluesky"

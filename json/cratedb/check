@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+. ./sql.sh
+
+# After a restart, the PostgreSQL port accepts queries before the shards have
+# recovered (see ../../cratedb/check): wait for all of them.
+not_ready=$(crate_sql -c "SELECT count(*) FROM sys.shards WHERE state NOT IN ('STARTED', 'POST_RECOVERY')")
+[ "${not_ready}" = "0" ]

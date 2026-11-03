@@ -1,0 +1,60 @@
+#!/bin/bash
+set -e -o pipefail
+
+. ./sql.sh
+
+crate_sql < ddl.sql
+
+# COPY FROM reads JSON lines whose keys are the columns of the table, so
+# every document is wrapped as {"data": <document>}. A few lines of the
+# dataset are not valid JSON (documents of more than 64 KiB cut into two
+# lines): they are dropped here, as in ../mongodb/load, the other lines are
+# passed through unchanged. The files are prepared 32 at a time (one per CPU
+# core) into a directory that the server (user crate) can read, and loaded
+# with one COPY FROM per batch.
+tmp_dir=$(mktemp -d /var/tmp/jsonbench-cratedb.XXXXXX)
+chmod 755 "${tmp_dir}"
+trap 'rm -rf "${tmp_dir}"' EXIT
+
+prepare() {
+    gzip -dc "$1" | python3 -I -c '
+import json
+import sys
+
+out = sys.stdout.buffer
+skipped = 0
+for line in sys.stdin.buffer:
+    try:
+        valid = isinstance(json.loads(line), dict)
+    except ValueError:
+        valid = False
+    if valid:
+        out.write(b"{\"data\":" + line.rstrip(b"\r\n") + b"}\n")
+    else:
+        skipped += 1
+if skipped:
+    print(f"load: skipped {skipped} invalid lines in {sys.argv[1]}", file=sys.stderr)
+' "$1" > "$2/$(basename "$1" .gz)"
+    chmod 644 "$2/$(basename "$1" .gz)"
+}
+export -f prepare
+
+files=()
+for f in "${BENCH_DATA_DIR}"/file_*.json.gz; do
+    files+=("${f}")
+done
+files=("${files[@]:0:${BENCH_FILES}}")
+batch=32
+for ((i = 0; i < ${#files[@]}; i += batch)); do
+    echo "load: $(basename "${files[i]}") and the next $((batch - 1)) files" >&2
+    # shellcheck disable=SC2016
+    printf '%s\n' "${files[@]:i:batch}" | xargs -P "${batch}" -I{} bash -c 'set -e -o pipefail; prepare "$1" "$2"' _ {} "${tmp_dir}"
+    crate_sql -c "COPY bluesky FROM 'file://${tmp_dir}/*.json' WITH (format = 'json') RETURN SUMMARY"
+    rm -f "${tmp_dir}"/*.json
+done
+
+crate_sql -c "REFRESH TABLE bluesky"
+
+# A sanity check of the paths and types used by the queries.
+crate_sql -c "SELECT data['kind'], data['commit']['collection'], (data['time_us'] / 1000)::TIMESTAMP WITH TIME ZONE FROM bluesky LIMIT 3" >&2
+crate_sql -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'bluesky' ORDER BY column_name" >&2
