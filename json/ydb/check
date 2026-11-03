@@ -3,4 +3,8 @@ set -e
 
 cd "$(dirname "$0")"
 source ./env.sh
-timeout 30 "${YDB[@]}" sql -s 'SELECT 1' >/dev/null
+if ! timeout 30 "${YDB[@]}" sql -s 'SELECT 1' >/dev/null; then
+    # For the diagnostics in the log of the driver (the last failed ./check).
+    tail -n 5 logs/*.out >&2 2>/dev/null || true
+    exit 1
+fi
