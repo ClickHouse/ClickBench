@@ -6,7 +6,7 @@ set -e -o pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 sudo -E apt-get update -y
-sudo -E apt-get install -y curl jq
+sudo -E apt-get install -y curl jq python3
 
 if [ ! -x /opt/quickwit/quickwit ]; then
     VERSION=$(curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors \
