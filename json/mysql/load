@@ -25,7 +25,4 @@ for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}");
         | sudo mysql --local-infile=1 bluesky -e "SET sql_log_bin = 0; LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE bluesky CHARACTER SET utf8mb4 FIELDS TERMINATED BY X'01' ENCLOSED BY '' ESCAPED BY '' LINES TERMINATED BY '\\n' (data); SHOW WARNINGS LIMIT 10;"
 done
 
-# The index is built after the load, in one pass, rather than maintained row
-# by row during it (unlike ../postgresql/load).
-sudo mysql bluesky < index.sql
 sudo mysql bluesky -e "ANALYZE TABLE bluesky"
