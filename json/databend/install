@@ -1,0 +1,44 @@
+#!/bin/bash
+set -e -o pipefail
+
+# The latest stable release (GitHub marks the nightlies as pre-releases, so
+# "latest" is the newest stable one), as the release tarball with the meta
+# and query servers, the shipped configs and the bendsql client.
+case "$(uname -m)" in
+    x86_64|amd64)  arch=x86_64 ;;
+    aarch64|arm64) arch=aarch64 ;;
+    *) echo "install: unsupported architecture $(uname -m)" >&2; exit 1 ;;
+esac
+
+if [ ! -x ./bin/databend-query ]; then
+    tag=""
+    for i in $(seq 1 10); do
+        tag=$(curl -fsSI --max-time 30 https://github.com/databendlabs/databend/releases/latest \
+            | grep -i '^location:' | grep -oP '/releases/tag/\Kv[0-9][^[:space:]]*') && [ -n "${tag}" ] && break
+        [ "$i" -eq 10 ] && { echo "install: cannot resolve the latest Databend release" >&2; exit 1; }
+        sleep 30
+    done
+    echo "install: Databend ${tag}"
+    curl -fsSL --retry 10 --retry-delay 30 --retry-all-errors -o databend.tar.gz \
+        "https://github.com/databendlabs/databend/releases/download/${tag}/databend-${tag}-${arch}-unknown-linux-gnu.tar.gz"
+    tar xzf databend.tar.gz bin configs
+    rm -f databend.tar.gz
+fi
+
+# The shipped configs with the default settings, except for what is needed
+# to run: the data, raft and log directories under this directory, and the
+# built-in `root` user without a password for the first run (the shipped
+# config says "comment out one of the following blocks to enable a user for
+# the first run").
+mkdir -p _data/data _data/raft _data/cache _data/log
+dir=$(pwd)
+sed -e "s|/var/lib/databend|${dir}/_data|g" -e "s|/var/log/databend|${dir}/_data/log|g" \
+    configs/databend-meta.toml > databend-meta.toml
+sed -e "s|/var/lib/databend|${dir}/_data|g" -e "s|/var/log/databend|${dir}/_data/log|g" \
+    configs/databend-query.toml > databend-query.toml
+cat >> databend-query.toml <<'CONF'
+
+[[query.users]]
+name = "root"
+auth_type = "no_password"
+CONF
