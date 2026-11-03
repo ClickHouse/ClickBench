@@ -85,4 +85,15 @@ for image in $(sed -n 's/.*\(ghcr\.io\/y-scope\/presto\/[a-z-]*\):\${[A-Z_]*:-\(
     retry sudo docker pull "${image}"
 done
 
+# The package's results cache (MongoDB, used by its own search UI, not by
+# Presto) is MongoDB 8.0, which refuses to start on Linux 6.19 and newer
+# (https://jira.mongodb.org/browse/SERVER-121912), and the kernel of the
+# benchmark machines is 7.0. MongoDB 7.0 does not have this check: it is put
+# under the image name that the package uses.
+MONGO_IMAGE=$(grep -ho '^\s*image: "mongo:[^"]*"' "${CLP_HOME}/docker-compose-all.yaml" | cut -d'"' -f2)
+if [ -n "${MONGO_IMAGE}" ] && [ "${MONGO_IMAGE}" != "mongo:7.0" ]; then
+    retry sudo docker pull mongo:7.0
+    sudo docker tag mongo:7.0 "${MONGO_IMAGE}"
+fi
+
 cat "${CLP_HOME}/VERSION"

@@ -46,3 +46,8 @@ Settings different from the defaults:
   query memory that the deployment's set-up script gives to the worker. The aggregations over
   the user ids do not fit into 1 GB at the larger dataset sizes.
 - The package's usage telemetry is disabled.
+- The package's results cache (MongoDB 8.0, used by CLP's own search UI, not by Presto) runs
+  MongoDB 7.0 instead (`install` tags the `mongo:7.0` image with the package's image name):
+  MongoDB 8.0 refuses to start on Linux 6.19 and newer
+  ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)), and the kernel of the
+  benchmark machines is 7.0.
