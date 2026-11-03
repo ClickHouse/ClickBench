@@ -1,0 +1,25 @@
+{
+  "system": "Databend",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "ClickHouse derivative"
+  ],
+  "version": "1.2.881",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 999999233,
+  "load_time": 934.489,
+  "total_size": 208412476054,
+  "result": [
+    [196.999, 164.766, 195.049],
+    [199.055, 170.603, 191.329],
+    [197.44, 169.657, 195.022],
+    [197.809, 169.634, 194.725],
+    [197.823, 166.386, 194.985]
+  ]
+}

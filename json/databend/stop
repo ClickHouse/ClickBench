@@ -1,0 +1,15 @@
+#!/bin/bash
+
+pkill -x databend-query || true
+for _ in $(seq 1 30); do
+    pgrep -x databend-query >/dev/null || break
+    sleep 1
+done
+pkill -9 -x databend-query || true
+pkill -x databend-meta || true
+for _ in $(seq 1 30); do
+    pgrep -x databend-meta >/dev/null || break
+    sleep 1
+done
+pkill -9 -x databend-meta || true
+exit 0

@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+if ./check >/dev/null 2>&1; then
+    exit 0
+fi
+
+# As in the shipped systemd unit of databend-query.
+ulimit -n 65535
+
+# The query server connects to the meta server at startup: start the meta
+# server first and wait for its gRPC port.
+if ! pgrep -x databend-meta >/dev/null; then
+    nohup ./bin/databend-meta -c databend-meta.toml >> _data/meta.out 2>&1 &
+fi
+for _ in $(seq 1 60); do
+    (echo > /dev/tcp/127.0.0.1/9191) >/dev/null 2>&1 && break
+    sleep 1
+done
+if ! pgrep -x databend-query >/dev/null; then
+    nohup ./bin/databend-query -c databend-query.toml >> _data/query.out 2>&1 &
+fi
