@@ -1,0 +1,3 @@
+#!/bin/bash
+set -e -o pipefail
+mysql -h 127.0.0.1 -P 9306 --batch --skip-column-names -e 'SHOW STATUS LIKE "version"' | awk -F '\t' '{ print $2 }' | awk '{ print $1 }'

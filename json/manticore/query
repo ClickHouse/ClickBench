@@ -1,0 +1,21 @@
+#!/bin/bash
+# Reads one SQL query from stdin and runs it over the MySQL protocol.
+# Stdout: the result.
+# Stderr: the runtime in fractional seconds on the last line: the `time` of
+# SHOW META, the server-side time of the query in the same session.
+set -e -o pipefail
+
+query=$(cat)
+
+if ! output=$(mysql -h 127.0.0.1 -P 9306 --batch -e "${query} SHOW META;" 2>&1); then
+    printf '%s\n' "${output}" >&2
+    exit 1
+fi
+
+printf '%s\n' "${output}" | grep -v -E '^(Variable_name|total|total_found|total_relation|time|keyword\[|docs\[|hits\[)'
+time=$(printf '%s\n' "${output}" | awk -F '\t' '$1 == "time" { t = $2 } END { print t }')
+if [ -z "${time}" ]; then
+    echo "query: no time in SHOW META" >&2
+    exit 1
+fi
+printf '%s\n' "${time}" >&2
