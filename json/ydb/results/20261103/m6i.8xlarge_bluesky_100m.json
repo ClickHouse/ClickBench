@@ -6,8 +6,19 @@
     "C++",
     "column-oriented"
   ],
+  "version": "26.2.1.14",
+  "os": "Ubuntu 24.04",
   "date": "2026-11-03",
   "machine": "m6i.8xlarge",
   "dataset_size": 100000000,
-  "error": "<main>: Error: Cannot write data (TIMEOUT) into shard 72075186224037898 in longTx ydb://long-tx/01m6h5st6favncq92cmbmyv07t?node_id=50000"
+  "num_loaded_documents": 99999968,
+  "load_time": 4547.207,
+  "total_size": 27171760704,
+  "result": [
+    [null, 333.055911, 86.705017],
+    [92.117375, 87.522687, 87.527542],
+    [92.189489, 87.812621, 89.761717],
+    [91.691159, 88.921148, 87.053641],
+    [202.289355, 312.484432, 137.354779]
+  ]
 }
