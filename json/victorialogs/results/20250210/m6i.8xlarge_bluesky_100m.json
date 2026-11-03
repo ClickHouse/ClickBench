@@ -3,7 +3,7 @@
   "version": "v1.9.0-victorialogs",
   "os": "Ubuntu 24.04",
   "date": "2025-02-10",
-  "machine": "m6i.8xlarge, 10000gib gp3",
+  "machine": "m6i.8xlarge",
   "cluster_size": 1,
   "comment": "",
   "tags": [

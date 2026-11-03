@@ -3,7 +3,7 @@
   "version": "8.17.0",
   "os": "Ubuntu 24.04",
   "date": "2025-01-14",
-  "machine": "m6i.8xlarge, 16000gib gp3",
+  "machine": "m6i.8xlarge",
   "cluster_size": 1,
   "comment": "",
   "tags": [
