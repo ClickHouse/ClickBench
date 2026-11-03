@@ -6,33 +6,32 @@
 # Umbra's COPY has no ON_ERROR option, so the lines that are not valid JSON (a
 # few documents longer than 64 KiB are split over two lines in the dataset)
 # are dropped before it, as in ../mongodb/load; the others are passed unchanged.
+# So are the documents nested deeper than 100 levels: the 1000m run failed on
+# file 178, which has four documents nested 2163 levels deep, with "invalid
+# input syntax for type json" (Umbra's limit is not documented; 100 is the one
+# of MongoDB and MySQL).
 set -e -o pipefail
 source ./env.sh
 
 ${PSQL} -c "DROP TABLE IF EXISTS bluesky"
 ${PSQL} < ddl.sql
 
+# Permissive, as in the original JSONBench: a file that fails anyway is skipped (the
+# documents that were loaded are reported as the data quality), and the load fails
+# only if nothing was loaded.
+loaded=0
 for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
     echo "load: ${file}"
-    gzip -dc "${file}" \
-        | python3 -I -c '
-import json
-import sys
-
-out = sys.stdout.buffer
-skipped = 0
-for line in sys.stdin.buffer:
-    try:
-        valid = isinstance(json.loads(line), dict)
-    except ValueError:
-        valid = False
-    if valid:
-        out.write(line)
-    else:
-        skipped += 1
-if skipped:
-    print(f"load: skipped {skipped} invalid lines", file=sys.stderr)
-' \
+    if gzip -dc "${file}" \
+        | python3 -I ../lib/filter-documents.py --max-depth 100 \
         | sed 's/\\u0000//g' \
-        | ${PSQL} -c "\\copy bluesky FROM STDIN WITH (format csv, quote e'\\x01', delimiter e'\\x02', escape e'\\x01')"
+        | ${PSQL} -c "\\copy bluesky FROM STDIN WITH (format csv, quote e'\\x01', delimiter e'\\x02', escape e'\\x01')"; then
+        loaded=$((loaded + 1))
+    else
+        echo "load: failed to load ${file}, skipped" >&2
+    fi
 done
+if [ "${loaded}" -eq 0 ]; then
+    echo "load: no file was loaded" >&2
+    exit 1
+fi
