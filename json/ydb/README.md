@@ -17,7 +17,9 @@ skipped), with the latest stable YDB CLI.
   Nothing is extracted from the documents.
 - Loading: every file is converted to CSV (`to-csv.py`, which drops the few
   invalid lines of the dataset and removes `\u0000`, as for PostgreSQL) and
-  imported with `ydb import file csv` (BulkUpsert) with the default settings.
+  imported with `ydb import file csv` (BulkUpsert) with the default settings,
+  one file at a time (several concurrent imports overload the column shards of
+  the single node with write timeouts), with retries.
 - Queries: YQL with `JSON_VALUE`; Q2 uses the exact `COUNT(DISTINCT ...)`.
   The runtime is the server-side `total_duration_us` of the query statistics,
   as in the main ClickBench YDB entry.
