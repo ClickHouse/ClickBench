@@ -1,0 +1,39 @@
+#!/bin/bash
+# Installs the latest stable MariaDB from the official MariaDB repository,
+# set up by its script (https://mariadb.com/docs/server/server-management/
+# install-and-upgrade-mariadb/installing-mariadb/binary-packages/
+# mariadb-package-repository-setup-and-usage): without arguments, it points
+# to the current stable release series (13.0 "rolling" at the time of
+# writing). The main ClickBench (../../mariadb/install) takes MariaDB from
+# Ubuntu instead.
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+for i in $(seq 1 10); do
+    if sudo -E apt-get update -y && sudo -E apt-get install -y curl ca-certificates apt-transport-https gzip python3; then
+        break
+    fi
+    [ "$i" -eq 10 ] && { echo "install: apt-get failed" >&2; exit 1; }
+    sleep 30
+done
+
+for i in $(seq 1 10); do
+    if curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors -o /tmp/mariadb_repo_setup https://r.mariadb.com/downloads/mariadb_repo_setup \
+        && sudo bash /tmp/mariadb_repo_setup --skip-maxscale --skip-tools; then
+        break
+    fi
+    [ "$i" -eq 10 ] && { echo "install: cannot set up the MariaDB repository" >&2; exit 1; }
+    sleep 30
+done
+rm -f /tmp/mariadb_repo_setup
+
+for i in $(seq 1 10); do
+    if sudo -E apt-get update -y && sudo -E apt-get install -y mariadb-server mariadb-client; then
+        break
+    fi
+    [ "$i" -eq 10 ] && { echo "install: cannot install mariadb-server" >&2; exit 1; }
+    sleep 30
+done
+
+sudo systemctl restart mariadb
