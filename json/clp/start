@@ -12,7 +12,17 @@ PRESTO_DIR=/clp/presto-clp
 
 cd "${CLP_HOME}"
 # `docker compose up --wait` inside: a no-op when it is already running.
-sbin/start-clp.sh
+if ! sbin/start-clp.sh; then
+    echo "start: CLP failed to start; the containers that are not healthy:"
+    docker ps -a --format '{{.Names}}\t{{.Status}}'
+    for c in $(docker ps -a --format '{{.Names}}\t{{.Status}}' | grep -v '(healthy)\|Exited (0)' | cut -f1); do
+        echo "--- docker logs ${c}:"
+        docker logs --tail 20 "${c}" 2>&1
+    done
+    echo "--- the results cache log:"
+    tail -n 20 var/log/results_cache/mongod.log 2>&1 | cut -c1-600
+    exit 1
+fi
 
 cd "${PRESTO_DIR}"
 # The Presto configuration is generated from the package configuration; the

@@ -7,7 +7,7 @@ fi
 # Not ready: show why (the driver prints the last failure of ./check).
 if [ -f /var/tmp/clp-start.log ]; then
     echo "--- the end of the output of ./start:" >&2
-    tail -n 15 /var/tmp/clp-start.log >&2
+    tail -n 100 /var/tmp/clp-start.log >&2
 fi
 if [ -f /clp/presto-clp/.env ]; then
     echo "--- the Presto containers:" >&2
