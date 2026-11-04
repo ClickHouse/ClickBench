@@ -1,0 +1,43 @@
+#!/bin/bash
+# Creates the index from scratch with the index template of this directory
+# (index_template.json) and loads the data with the _bulk API.
+set -e -o pipefail
+
+. ./os-common.sh
+
+# Idempotency: delete the index of a previous load.
+code=$(curl -sS -k -o /dev/null -w '%{http_code}' -u "${OS_USER}:${OS_PASSWORD}" "${OS_URL}/${OS_INDEX}")
+if [ "${code}" = "200" ]; then
+    os_curl -X DELETE "${OS_URL}/${OS_INDEX}" >/dev/null
+elif [ "${code}" != "404" ]; then
+    echo "load: unexpected HTTP status ${code} for the index" >&2
+    exit 1
+fi
+
+os_curl -X PUT "${OS_URL}/_index_template/${OS_INDEX}" -d @index_template.json >/dev/null
+os_curl -X PUT "${OS_URL}/${OS_INDEX}" >/dev/null
+
+# Four files at a time, each with four concurrent bulk requests.
+ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}" \
+    | xargs -P 4 -I{} python3 -I "${PWD}/bulk-load.py" {} "${OS_URL}" "${OS_INDEX}" "${OS_USER}" "${OS_PASSWORD}" \
+    | awk '{ sent += $1; rejected += $2 } END { printf "load: sent %d documents, %d rejected\n", sent, rejected }' >&2
+
+os_curl -X POST "${OS_URL}/${OS_INDEX}/_refresh" >/dev/null
+
+# Force merge to one segment, as in the Elasticsearch entry. It runs as a task
+# rather than in the HTTP request, which could take hours.
+task=$(os_curl -X POST "${OS_URL}/${OS_INDEX}/_forcemerge?max_num_segments=1&wait_for_completion=false" | jq -r '.task')
+echo "load: force merge task ${task}" >&2
+while true; do
+    status=$(os_curl "${OS_URL}/_tasks/${task}")
+    if [ "$(printf '%s' "${status}" | jq -r '.completed')" = "true" ]; then
+        if printf '%s' "${status}" | jq -e 'has("error")' >/dev/null; then
+            echo "load: force merge failed: ${status}" >&2
+            exit 1
+        fi
+        break
+    fi
+    sleep 10
+done
+
+os_curl -X POST "${OS_URL}/${OS_INDEX}/_refresh" >/dev/null

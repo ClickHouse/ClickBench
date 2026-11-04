@@ -1,0 +1,8 @@
+#!/bin/bash
+# Ready iff all primary shards are active (the shards are still recovering for
+# a while after a restart).
+set -e -o pipefail
+
+. ./os-common.sh
+
+os_curl --max-time 10 "${OS_URL}/_cluster/health" | jq -e '.status == "yellow" or .status == "green"' >/dev/null

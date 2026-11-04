@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+. ./os-common.sh
+
+sudo systemctl start opensearch.service
+
+# Wait until all primary shards are active.
+for _ in $(seq 1 300); do
+    if os_curl --max-time 20 "${OS_URL}/_cluster/health?wait_for_status=yellow&timeout=10s" 2>/dev/null \
+        | jq -e '.status == "yellow" or .status == "green"' >/dev/null 2>&1; then
+        exit 0
+    fi
+    sleep 1
+done
+echo "start: the cluster did not become yellow or green" >&2
+sudo tail -n 60 /var/log/opensearch/opensearch.log >&2 || true
+exit 1

@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e -o pipefail
+
+. ./os-common.sh
+
+os_curl "${OS_URL}/" | jq -r '.version.number'
