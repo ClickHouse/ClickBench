@@ -45,7 +45,9 @@ struct Column
 [[noreturn]] static void fail(const std::string & msg)
 {
     fprintf(stderr, "%s\n", msg.c_str());
-    exit(1);
+    fflush(stderr);
+    /// Not `exit`: it would shut down the embedded engine under the other threads.
+    _exit(1);
 }
 
 static long long parseInt(const char * begin, const char * end)
@@ -111,7 +113,11 @@ static void loadRange(const char * db, const char * begin, const char * end)
     try
     {
         IProvider * prov = master->getDispatcher();
-        IAttachment * att = prov->attachDatabase(&status, db, 0, nullptr);
+        /// In embedded mode, the user defaults to the OS user, which has no rights on the table.
+        IXpbBuilder * dpb = util->getXpbBuilder(&status, IXpbBuilder::DPB, nullptr, 0);
+        dpb->insertString(&status, isc_dpb_user_name, "SYSDBA");
+        IAttachment * att = prov->attachDatabase(&status, db, dpb->getBufferLength(&status), dpb->getBuffer(&status));
+        dpb->dispose();
 
         IXpbBuilder * tpb = util->getXpbBuilder(&status, IXpbBuilder::TPB, nullptr, 0);
         tpb->insertTag(&status, isc_tpb_write);
