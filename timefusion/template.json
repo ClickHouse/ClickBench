@@ -1,0 +1,13 @@
+{
+  "system": "TimeFusion",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "PostgreSQL compatible",
+    "time-series",
+    "DataFusion derivative"
+  ]
+}

@@ -1,0 +1,11 @@
+#!/bin/bash
+# Stops TimeFusion only. SeaweedFS keeps running: it plays the role of the
+# remote object storage, which survives restarts of the database.
+source "$(dirname "$0")/env.sh"
+
+pkill -x timefusion || true
+for _ in $(seq 1 120); do
+    pgrep -x timefusion >/dev/null || exit 0
+    sleep 1
+done
+pkill -9 -x timefusion || true
