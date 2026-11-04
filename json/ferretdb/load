@@ -7,26 +7,21 @@ set -e -o pipefail
 mongosh --quiet bluesky --eval 'db.dropDatabase()' >/dev/null
 mongosh --quiet bluesky --file ddl.js
 
+# Permissive, as in the original JSONBench: a file that fails anyway is skipped (the
+# documents that were loaded are reported as the data quality), and the load fails
+# only if nothing was loaded.
+loaded=0
 for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
     echo "load: ${file}" >&2
-    gzip -dc "${file}" \
-        | python3 -I -c '
-import json
-import sys
-
-out = sys.stdout.buffer
-skipped = 0
-for line in sys.stdin.buffer:
-    try:
-        valid = isinstance(json.loads(line), dict)
-    except ValueError:
-        valid = False
-    if valid:
-        out.write(line)
-    else:
-        skipped += 1
-if skipped:
-    print(f"load: skipped {skipped} invalid lines", file=sys.stderr)
-' \
-        | mongoimport --db bluesky --collection bluesky
+    if gzip -dc "${file}" \
+        | python3 -I ../lib/filter-documents.py \
+        | mongoimport --db bluesky --collection bluesky; then
+        loaded=$((loaded + 1))
+    else
+        echo "load: failed to load ${file}, skipped" >&2
+    fi
 done
+if [ "${loaded}" -eq 0 ]; then
+    echo "load: no file was loaded" >&2
+    exit 1
+fi
