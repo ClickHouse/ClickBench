@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")"
+source ./env.sh
+mkdir -p logs
+
+retry_until() {
+    for _ in $(seq 1 120); do
+        "$@" && return 0
+        sleep 1
+    done
+    echo "start: '$*' did not succeed" >&2
+    return 1
+}
+
+if ! pgrep -f "${YDBD} server .*--node 1 " >/dev/null; then
+    nohup "${YDBD}" server --yaml-config config-storage.yaml --node 1 \
+        --grpc-port 2136 --ic-port 19001 --mon-port 8765 \
+        --log-file-name logs/storage.log > logs/storage.out 2>&1 &
+fi
+
+# The first start: format the PDisk, define the storage and create the
+# database /Root/bluesky (as the start.sh of the local deployment scripts).
+if [ ! -f .initialized ]; then
+    retry_until "${YDBD}" -s grpc://localhost:2136 admin blobstorage config init --yaml-file config-storage.yaml
+    retry_until "${YDBD}" -s grpc://localhost:2136 admin database /Root/bluesky create ssd:1
+    touch .initialized
+fi
+
+if ! pgrep -f "${YDBD} server .*--tenant /Root/bluesky" >/dev/null; then
+    nohup "${YDBD}" server --yaml-config config-database.yaml --tenant /Root/bluesky \
+        --node-broker localhost:2136 --grpc-port 31001 --ic-port 31003 --mon-port 31002 \
+        --log-file-name logs/database.log > logs/database.out 2>&1 &
+fi

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+cd "$(dirname "$0")" || exit 1
+source ./env.sh
+
+pkill -f "${YDBD} server" || true
+for _ in $(seq 1 60); do
+    pgrep -f "${YDBD} server" >/dev/null || exit 0
+    sleep 1
+done
+pkill -9 -f "${YDBD} server" || true
+exit 0

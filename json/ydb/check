@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")"
+source ./env.sh
+
+diagnostics() {
+    # For the diagnostics in the log of the driver (the last failed ./check).
+    tail -n 5 logs/*.out >&2 2>/dev/null || true
+    exit 1
+}
+
+timeout 30 "${YDB[@]}" sql -s 'SELECT 1' >/dev/null || diagnostics
+
+# After a restart, the database node accepts queries before it has loaded the
+# metadata of the table: the first query then fails with "Failed to load
+# metadata for table" (seen on the cold run of Q1 at 10m). Once the table
+# exists, also compile a query on it, which needs the metadata but reads no
+# rows, so that the cold runs stay cold.
+if timeout 30 "${YDB[@]}" scheme ls 2>/dev/null | grep -qw bluesky; then
+    timeout 30 "${YDB[@]}" sql -s 'SELECT 1 FROM bluesky WHERE false' >/dev/null || diagnostics
+fi
