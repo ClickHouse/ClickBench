@@ -9,5 +9,5 @@
   "date": "2026-11-04",
   "machine": "m6i.8xlarge",
   "dataset_size": 1000000000,
-  "error": "<main>: Error: Bulk upsert to table '/Root/bluesky/bluesky' Invalid JSON for JsonDocument provided: STRING_ERROR: Problem while parsing a string"
+  "error": "load-file: the import of /data/bluesky/file_1000.json.gz failed, retrying (attempt 1)"
 }
