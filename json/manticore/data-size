@@ -1,0 +1,5 @@
+#!/bin/bash
+# The size of the files of the table (disk chunks, RAM chunk, metadata) in
+# the data directory of the package.
+set -e -o pipefail
+sudo du -sb /var/lib/manticore/bluesky | awk '{ print $1 }'

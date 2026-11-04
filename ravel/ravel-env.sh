@@ -2,7 +2,7 @@
 #
 # Ravel keeps every durable byte in S3-compatible object storage; there is no
 # local-disk storage mode (see README.md). For this benchmark the store is a
-# single-node RustFS that ./install downloads, starts and provisions on this
+# single-node s3s-fs that ./install sets up, starts and provisions on this
 # machine's own disk, so the entry needs no cloud bucket and no credentials
 # from the operator. To run against another S3-compatible store instead, set
 # RAVEL_S3_ENDPOINT, RAVEL_S3_BUCKET, RAVEL_S3_ACCESS_KEY and
@@ -13,27 +13,28 @@ export RAVEL_S3_ENDPOINT="${RAVEL_S3_ENDPOINT:-http://127.0.0.1:9000}"
 export RAVEL_S3_BUCKET="${RAVEL_S3_BUCKET:-clickbench}"
 export RAVEL_S3_REGION="${RAVEL_S3_REGION:-us-east-1}"
 
-# Where ./install keeps RustFS: its binary, its data directory (this entry's
-# "data on local disk"), its pid file, its log and the credentials it
-# generated. ./rustfs-start brings it up from here.
-export RUSTFS_DIR="${RUSTFS_DIR:-$PWD/rustfs}"
+# Where ./install keeps the store: the s3s-fs binary (under bin/), its data
+# directory (this entry's "data on local disk"), its pid file, its log and
+# the credentials it generated. ./store-start brings it up from here.
+export STORE_DIR="${STORE_DIR:-$PWD/store}"
 
 # Static keys. ./install generates them once into a file readable by this
 # user only, and every script reads them from there, so no key appears in a
 # process argument list. The server and the CLI take RAVEL_S3_ACCESS_KEY and
-# RAVEL_S3_SECRET_KEY; the AWS CLI (bucket provisioning and ./data-size) takes
-# its own names plus the endpoint.
+# RAVEL_S3_SECRET_KEY; s3s-fs takes S3S_FS_ACCESS_KEY and S3S_FS_SECRET_KEY
+# (./store-start sets them); the AWS CLI (bucket provisioning and
+# ./data-size) takes its own names plus the endpoint.
 export RAVEL_S3_AUTH=static
-if [ -z "${RAVEL_S3_ACCESS_KEY:-}" ] && [ -f "$RUSTFS_DIR/credentials.env" ]; then
+if [ -z "${RAVEL_S3_ACCESS_KEY:-}" ] && [ -f "$STORE_DIR/credentials.env" ]; then
     # shellcheck disable=SC1091
-    . "$RUSTFS_DIR/credentials.env"
-    export RAVEL_S3_ACCESS_KEY="$RUSTFS_ACCESS_KEY"
-    export RAVEL_S3_SECRET_KEY="$RUSTFS_SECRET_KEY"
+    . "$STORE_DIR/credentials.env"
+    export RAVEL_S3_ACCESS_KEY="$STORE_ACCESS_KEY"
+    export RAVEL_S3_SECRET_KEY="$STORE_SECRET_KEY"
 fi
 # The audit-trail tokenization key ./install generated; an unkeyed server
 # refuses to start without one.
-if [ -z "${RAVEL_AUDIT_TOKEN_KEY:-}" ] && [ -f "$RUSTFS_DIR/credentials.env" ]; then
-    RAVEL_AUDIT_TOKEN_KEY="$(sed -n 's/^RAVEL_AUDIT_TOKEN_KEY=//p' "$RUSTFS_DIR/credentials.env")"
+if [ -z "${RAVEL_AUDIT_TOKEN_KEY:-}" ] && [ -f "$STORE_DIR/credentials.env" ]; then
+    RAVEL_AUDIT_TOKEN_KEY="$(sed -n 's/^RAVEL_AUDIT_TOKEN_KEY=//p' "$STORE_DIR/credentials.env")"
 fi
 export RAVEL_AUDIT_TOKEN_KEY="${RAVEL_AUDIT_TOKEN_KEY:-}"
 unset RAVEL_S3_SESSION_TOKEN AWS_SESSION_TOKEN

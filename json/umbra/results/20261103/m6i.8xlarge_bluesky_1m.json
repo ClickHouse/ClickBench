@@ -1,0 +1,25 @@
+{
+  "system": "Umbra",
+  "proprietary": "yes",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "PostgreSQL compatible"
+  ],
+  "version": "26.10",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "load_time": 9.423,
+  "total_size": 439655865,
+  "result": [
+    [0.206, 0.007, 0.007],
+    [0.088, 0.021, 0.021],
+    [0.075, 0.015, 0.015],
+    [0.232, 0.01, 0.01],
+    [0.073, 0.01, 0.01]
+  ]
+}

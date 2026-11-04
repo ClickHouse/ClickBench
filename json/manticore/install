@@ -1,0 +1,31 @@
+#!/bin/bash
+# Installs the latest Manticore Search from its official APT repository:
+# https://manticoresearch.com/install/
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+retry() {
+    local i
+    for i in $(seq 1 10); do
+        "$@" && return 0
+        echo "install: '$*' failed (attempt ${i}), retrying" >&2
+        sleep 10
+    done
+    return 1
+}
+
+retry sudo apt-get update -y
+retry sudo apt-get install -y ca-certificates curl wget jq python3 default-mysql-client
+
+if ! command -v searchd >/dev/null 2>&1; then
+    tmp=$(mktemp -d)
+    retry wget --quiet --tries=10 --waitretry=10 --retry-connrefused -O "${tmp}/manticore-repo.noarch.deb" \
+        https://repo.manticoresearch.com/manticore-repo.noarch.deb
+    retry sudo apt-get install -y "${tmp}/manticore-repo.noarch.deb"
+    rm -rf "${tmp}"
+    retry sudo apt-get update -y
+    retry sudo apt-get install -y manticore
+fi
+
+sudo systemctl enable manticore.service

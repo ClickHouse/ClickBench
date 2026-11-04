@@ -1,0 +1,62 @@
+#!/usr/bin/python3 -I
+# Reads one SQL query from stdin and runs it on Presto (the CLP catalog) over
+# Presto's HTTP protocol, as the Presto CLI does.
+# Stdout: the result, tab-separated. Stderr: the runtime in fractional seconds
+# on the last line (wall-clock time from the submission of the query to the
+# last page of the result). Exits non-zero on error.
+
+import json
+import sys
+import time
+import urllib.request
+
+SERVER = "http://localhost:8889"
+HEADERS = {
+    "X-Presto-User": "jsonbench",
+    "X-Presto-Catalog": "clp",
+    "X-Presto-Schema": "default",
+    "X-Presto-Time-Zone": "UTC",
+}
+
+
+def request(url, data=None):
+    req = urllib.request.Request(url, data=data, headers=HEADERS, method="POST" if data is not None else "GET")
+    with urllib.request.urlopen(req, timeout=86400) as resp:
+        return json.load(resp)
+
+
+def main():
+    query = sys.stdin.read().strip().rstrip(";").strip()
+    if not query:
+        print("query: empty query", file=sys.stderr)
+        return 1
+
+    start = time.monotonic()
+    resp = request(SERVER + "/v1/statement", query.encode())
+    rows = []
+    while True:
+        if "error" in resp:
+            err = resp["error"]
+            print(f"query: {err.get('errorName')}: {err.get('message')}", file=sys.stderr)
+            return 1
+        rows.extend(resp.get("data") or [])
+        next_uri = resp.get("nextUri")
+        if not next_uri:
+            break
+        resp = request(next_uri)
+    elapsed = time.monotonic() - start
+
+    out = sys.stdout
+    for row in rows:
+        out.write("\t".join("NULL" if v is None else str(v) for v in row) + "\n")
+    out.flush()
+    print(f"{elapsed:.3f}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as e:  # connection refused, HTTP errors: report and fail
+        print(f"query: {e}", file=sys.stderr)
+        sys.exit(1)

@@ -1,0 +1,3 @@
+#!/bin/bash
+# SQLite is embedded: nothing to start.
+exit 0

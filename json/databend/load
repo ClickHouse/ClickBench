@@ -1,0 +1,32 @@
+#!/bin/bash
+set -e -o pipefail
+
+. ./sql.sh
+
+bendsql < ddl.sql
+
+# COPY reads the .json.gz files directly; with the NDJSON format, `$1` is the
+# whole document as a VARIANT. A few lines of the dataset are not valid JSON
+# (documents of more than 64 KiB cut into two lines): ON_ERROR = continue
+# skips just these rows (the output shows ERRORS_SEEN per file), the rest of
+# the file is loaded. The files go in batches of 32, one per CPU core, so
+# that every COPY reads several files in parallel.
+files=()
+for f in "${BENCH_DATA_DIR}"/file_*.json.gz; do
+    files+=("$(basename "${f}")")
+done
+files=("${files[@]:0:${BENCH_FILES}}")
+batch=32
+for ((i = 0; i < ${#files[@]}; i += batch)); do
+    list=$(printf "'%s'," "${files[@]:i:batch}")
+    list=${list%,}
+    echo "load: ${files[i]} and the next $((batch - 1)) files" >&2
+    bendsql -o tsv <<SQL
+COPY INTO bluesky FROM (SELECT \$1 FROM 'fs://${BENCH_DATA_DIR}/') FILES = (${list}) FILE_FORMAT = (TYPE = NDJSON, COMPRESSION = GZIP) ON_ERROR = continue;
+SQL
+done
+
+# A sanity check of the paths and types used by the queries.
+echo "SELECT data['kind']::STRING, data['commit']['collection']::STRING, TO_TIMESTAMP(data['time_us']::INT64, 6) FROM bluesky LIMIT 3" \
+    | bendsql -o tsv >&2
+echo 'SELECT version()' | bendsql -o tsv >&2

@@ -17,7 +17,6 @@ cd "${HERE}"
 system="${1:?usage: run-benchmark.sh <system> <size>}"
 size="${2:?usage: run-benchmark.sh <system> <size>}"
 system="${system#json/}"
-[ -x "${system}/benchmark.sh" ] || { echo "no such system: ${system}" >&2; exit 1; }
 case "${size}" in 1|10|100|1000) ;; *) echo "size must be 1, 10, 100 or 1000" >&2; exit 1 ;; esac
 
 # The machine of the original JSONBench results.
@@ -25,6 +24,17 @@ machine="${machine:-m6i.8xlarge}"
 repo="${repo:-ClickHouse/ClickBench}"
 branch="${branch:-main}"
 clickbench_pr="${clickbench_pr:-}"
+
+# The system must exist in the repository and branch that the machine will
+# clone. The launcher runs from a checkout of main, which doesn't have the
+# systems added by a pull request, so look there through the GitHub API if
+# the system is not in this checkout.
+if [ ! -x "${system}/benchmark.sh" ]; then
+    auth=()
+    [ -n "${GH_TOKEN:-}" ] && auth=(-H "Authorization: Bearer ${GH_TOKEN}")
+    curl -fsS -o /dev/null "${auth[@]}" "https://api.github.com/repos/${repo}/contents/json/${system}/benchmark.sh?ref=${branch}" \
+        || { echo "no such system: json/${system} in ${repo}@${branch}" >&2; exit 1; }
+fi
 
 # The time limit for benchmark.sh. Loading a billion documents takes a day for
 # the slowest systems, and some of their queries run for hours (MongoDB and

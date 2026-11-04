@@ -5,8 +5,10 @@
 # As in the main ClickBench, every run is kept in the directory of its date,
 # and the page shows the latest dated copy of every (system, file name).
 #
-# Entries of the form {"error": "..."} and entries tagged "historical" are
-# skipped, as in the main ClickBench (../generate-results.sh).
+# Entries tagged "historical" are skipped, as in the main ClickBench
+# (../generate-results.sh). Unlike there, the entries with an "error" field
+# (the latest run of the system on that size failed, see collect-new-results.sh)
+# are kept: the page shows them as failed, below the others.
 #
 # "Complexity" is computed as in the main ClickBench: the byte size of the
 # zstd-compressed scripts and configs of the system's directory, with comments,
@@ -45,7 +47,7 @@ declare -A COMPLEXITY
         system_dir="${file%%/*}"
         [ -z "${COMPLEXITY[$system_dir]}" ] && COMPLEXITY[$system_dir]=$(complexity "$system_dir")
         if ! entry=$(jq --compact-output --arg src "$file" --argjson complexity "${COMPLEXITY[$system_dir]}" \
-            'select(.error == null) | select((.tags // []) | index("historical") | not) | . + {"source": $src, "complexity": $complexity}' \
+            'select((.tags // []) | index("historical") | not) | . + {"source": $src, "complexity": $complexity}' \
             "$file"); then
             echo "Error in $file - skipping" >&2
             continue

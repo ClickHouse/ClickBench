@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+sudo mariadb bluesky -N -e "SELECT COUNT(*) FROM bluesky"

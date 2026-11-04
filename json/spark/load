@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+# Idempotent: load.py overwrites the table directory.
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}" > files.list
+python3 load.py files.list bluesky
+rm -f files.list

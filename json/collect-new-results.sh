@@ -13,7 +13,8 @@
 #      <system>/results/YYYYMMDD/<machine>_bluesky_<size>m.json, where
 #      YYYYMMDD is the date of the run (older runs are kept, as in the main
 #      ClickBench),
-#   2. regenerates data.generated.js,
+#   2. (data.generated.js is not touched: the website build, generate-results.yml,
+#      regenerates it on main, so that pull requests don't conflict on it),
 #   3. publishes the changes.
 #
 # Runs of the main branch (no PR number) are committed to the branch
@@ -22,6 +23,8 @@
 # With PR=<number>, only the runs launched for that pull request are taken
 # (from any time, unless SINCE_HOURS is given), and with PUSH_PR=1 they are
 # committed to the head branch of the pull request and a comment is posted.
+# With PUBLISH_TO_MAIN=1 instead, they are published to main as the runs of
+# main are: for the runs that finish after their pull request was merged.
 # Otherwise the files are left in the working tree (e.g. for a local run).
 #
 #   CONNECTION_PARAMS='--user sink --host play.clickhouse.com --secure' ./collect-new-results.sh
@@ -29,7 +32,9 @@
 #
 # DRY_RUN=1 does everything except pushing, opening, merging and commenting.
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# JSON_DIR: the json/ directory of the checkout to collect into, if not this
+# one: the workflow runs the script of main on a checkout of a pull request.
+HERE="${JSON_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 cd "${HERE}"
 
 : "${CONNECTION_PARAMS:=--user sink --host play.clickhouse.com --secure}"
@@ -37,6 +42,9 @@ CH() { clickhouse-client ${CONNECTION_PARAMS} "$@"; }
 
 PR="${PR:-}"
 PUSH_PR="${PUSH_PR:-}"
+# With PR=<number>, publish the results to main (as the runs of main are),
+# for a pull request that is already merged.
+PUBLISH_TO_MAIN="${PUBLISH_TO_MAIN:-}"
 if [ -n "${PR}" ]; then
     SINCE_HOURS="${SINCE_HOURS:-87600}"
 else
@@ -105,6 +113,71 @@ for line in open(sys.argv[1]):
     print(path, file=sys.stderr)
 EOF
 
+# --- failed runs ---------------------------------------------------------------------
+
+# The latest run of every (system, size, machine), by its log, if it failed: it exited
+# with an error, or no query succeeded (e.g. every query was rejected). A failed run
+# sends only its log, so the system, size and machine come from the log, and the error
+# is its last line that looks like one. The page shows such systems as failed at that
+# size (if they worked at a smaller one), so a failure is recorded as a result file
+# with an "error" field, which a later successful run replaces.
+if [ -n "${PR}" ]; then
+    LOGS="m[3] = '${PR}'"
+else
+    LOGS="m[3] = '' AND position(content, '\nRepository: ClickHouse/ClickBench, branch: main\n') > 0"
+fi
+CH --query "
+    SELECT dir, size, machine, toDate(t) AS day, err
+    FROM
+    (
+        SELECT m[1] AS dir, toUInt32(m[2]) AS size,
+            extract(content, '\nExit status: [0-9]+, instance type: ([a-z0-9.-]+),') AS machine,
+            argMax(toUInt32OrZero(extract(content, '\nExit status: ([0-9]+)')), time) AS exit,
+            argMax(match(content, '\n\\\\[[0-9][^\n]*\\\\],\n'), time) AS any_query_succeeded,
+            -- The last line that starts like an error message, or else the last one
+            -- that mentions an error.
+            argMax(left(if(notEmpty(errors), errors[-1], if(notEmpty(mentions), mentions[-1], '')), 300), time) AS err,
+            max(time) AS t
+        FROM
+        (
+            SELECT extractGroups(content, '^JSONBench system: ([a-z0-9_-]+), size: ([0-9]+)m, PR: ([0-9]*)\n') AS m, content, time,
+                arrayFilter(l -> NOT startsWith(l, 'Exit status') AND NOT startsWith(l, 'load: skipped'),
+                    arrayMap(l -> trim(replaceRegexpAll(l, '\x1B\\\\[[0-9;]*m', '')), splitByChar('\n', content))) AS lines,
+                arrayFilter(l -> match(l, '^(ERROR|FATAL|PANIC|Error|error|Failed|✘)'), lines) AS errors,
+                arrayFilter(l -> match(l, '(?i)(error|fail|exceed|timeout|traceback|not supported|refus|denied|killed|panic)'), lines) AS mentions
+            FROM sink.data
+            WHERE time >= now() - INTERVAL ${SINCE_HOURS} HOUR
+              AND startsWith(content, 'JSONBench system: ')
+              AND position(content, '\nExit status: ') > 0
+        )
+        WHERE length(m) = 3 AND ${LOGS} AND machine != ''
+        GROUP BY dir, size, machine
+    )
+    WHERE size IN (1, 10, 100, 1000) AND (exit != 0 OR NOT any_query_succeeded)
+    FORMAT TSVRaw" > "${TMP}/failed.tsv"
+
+python3 - "${TMP}/failed.tsv" <<'PY'
+import json, os, sys
+
+for line in open(sys.argv[1]):
+    if not line.strip():
+        continue
+    directory, size, machine, day, error = line.rstrip("\n").split("\t", 4)
+    template = os.path.join(directory, "template.json")
+    if not os.path.isfile(template):
+        print(f"skipping {directory}: no such system", file=sys.stderr)
+        continue
+    with open(template) as f:
+        out = {k: v for k, v in json.load(f).items() if k in ("system", "proprietary", "retains_structure", "tags")}
+    out.update({"date": day, "machine": machine, "dataset_size": int(size) * 1000000,
+                "error": error.strip() or "the run failed"})
+    path = os.path.join(directory, "results", day.replace("-", ""), f"{machine}_bluesky_{size}m.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        f.write(json.dumps(out, indent=2, ensure_ascii=False) + "\n")
+    print(f"{path}: failed: {out['error']}", file=sys.stderr)
+PY
+
 # --- what arrived --------------------------------------------------------------------
 
 # Every run sends its log, starting with 'JSONBench system: <dir>, size: <n>m, PR: <pr>',
@@ -146,7 +219,6 @@ if [ -z "${changed}" ]; then
 fi
 note "New or updated results: ${changed// /, }."
 
-./generate-results.sh
 
 # --- publish -------------------------------------------------------------------------
 
@@ -170,9 +242,9 @@ if [ -n "${DRY_RUN}" ]; then
     exit 0
 fi
 
-if [ -n "${PR}" ]; then
+if [ -n "${PR}" ] && [ -z "${PUBLISH_TO_MAIN}" ]; then
     [ -n "${PUSH_PR}" ] || exit 0
-    git add -- . ':!*.bak'
+    git add -- '*/results/*/*.json'
     git -c "user.name=${BOT_NAME}" -c "user.email=${BOT_EMAIL}" commit -q -m "${title}" -m "${body}"
     git push -q origin "HEAD:refs/heads/${PR_HEAD_BRANCH:?PR_HEAD_BRANCH is required with PUSH_PR}"
     gh pr comment "${PR}" --body "${body}"
@@ -180,7 +252,7 @@ if [ -n "${PR}" ]; then
     exit 0
 fi
 
-git add -- . ':!*.bak'
+git add -- '*/results/*/*.json'
 git -c "user.name=${BOT_NAME}" -c "user.email=${BOT_EMAIL}" commit -q -m "${title}" -m "${body}"
 git push -q --force origin "HEAD:refs/heads/${BRANCH}"
 

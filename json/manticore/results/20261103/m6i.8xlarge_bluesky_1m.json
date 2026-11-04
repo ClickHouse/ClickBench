@@ -1,0 +1,24 @@
+{
+  "system": "Manticore Search",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "search"
+  ],
+  "version": "29.9.0",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "load_time": 13.291,
+  "total_size": 490356202,
+  "result": [
+    [0.14, 0.015, 0.014],
+    [1.399, 0.512, 0.515],
+    [0.159, 0.052, 0.053],
+    [0.15, 0.031, 0.03],
+    [null, null, null]
+  ]
+}

@@ -29,6 +29,20 @@ MAPPING="${RAVEL_MAPPING:-hits.mapping.toml}"
 "$RAVEL_CLI" --store s3 --s3-auth static \
     typed-attr-column set "$RAVEL_TENANT" --from-mapping "$MAPPING"
 
+# Bloom filters only on text columns (body, severity). hits has none, so no
+# string column gets BLOOM coverage and each block carries only the minimum
+# filter. No statement here has a predicate a bloom filter answers.
+"$RAVEL_CLI" --store s3 --s3-auth static \
+    bloom-scope set --tenant "$RAVEL_TENANT" --scope text --readers-rolled-out
+
+# Clustering key: rows inside each object sort by (stream, day, EventDate,
+# UserID, timestamp), the order ClickHouse's own entry gives its table with
+# PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID). CounterID is
+# already the stream, so it is not repeated here.
+"$RAVEL_CLI" --store s3 --s3-auth static \
+    clustering-key set --tenant "$RAVEL_TENANT" --column EventDate --column UserID \
+    --bucket-width 1d --readers-rolled-out
+
 # Load geometry. Small batches merge into large stored objects: a shard's
 # buffer accumulates batches until its estimated uncompressed content reaches
 # --target-bytes, and on this dataset a stored object holds about 1/74 of that
@@ -41,8 +55,19 @@ MAPPING="${RAVEL_MAPPING:-hits.mapping.toml}"
 # budget are sized to the machine's memory below (measured on 128, 16, 8 and
 # 4 GB hosts, NOFireAI/ravel#2627). Every value can be overridden from the
 # environment.
+#
+# From 30 GB up the objects are twice as large and each holds one row group:
+# --group-target-blocks 512 keeps a whole object in one group, so each column
+# of an object is one contiguous range instead of one per group. At
+# 3,700,000,000 that is about 450,000 rows and 46 MB per object, 223 objects
+# on c6a.4xlarge. A larger object takes longer to fill, so the age trigger moves to
+# 60 s, and the depth and budget grow to hold the batches it needs.
 mem_kb=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
-if [ "$mem_kb" -ge 15000000 ]; then
+tier_target=1850000000; tier_delay=30s; tier_groups=
+if [ "$mem_kb" -ge 30000000 ]; then
+    tier_depth=56; tier_budget=14000000000; tier_cursors=16
+    tier_target=3700000000; tier_delay=60s; tier_groups=512
+elif [ "$mem_kb" -ge 15000000 ]; then
     tier_depth=32; tier_budget=6500000000; tier_cursors=16
 elif [ "$mem_kb" -ge 7000000 ]; then
     tier_depth=24; tier_budget=3500000000; tier_cursors=16
@@ -54,7 +79,8 @@ else
     tier_depth=8; tier_budget=; tier_cursors=1
 fi
 load_budget="${RAVEL_LOAD_MEMORY_BYTES-$tier_budget}"
-echo "load: MemTotal ${mem_kb} kB, pipeline depth ${RAVEL_PIPELINE_DEPTH:-$tier_depth}, read cursors ${RAVEL_READ_CURSORS:-$tier_cursors}, memory budget ${load_budget:-derived}" >&2
+group_blocks="${RAVEL_GROUP_TARGET_BLOCKS-$tier_groups}"
+echo "load: MemTotal ${mem_kb} kB, pipeline depth ${RAVEL_PIPELINE_DEPTH:-$tier_depth}, read cursors ${RAVEL_READ_CURSORS:-$tier_cursors}, memory budget ${load_budget:-derived}, target ${RAVEL_TARGET_BYTES:-$tier_target}, group blocks ${group_blocks:-default}" >&2
 
 "$RAVEL_CLI" --store s3 --s3-auth static load \
     --parquet "$PARQUET" \
@@ -65,8 +91,9 @@ echo "load: MemTotal ${mem_kb} kB, pipeline depth ${RAVEL_PIPELINE_DEPTH:-$tier_
     --batch-rows "${RAVEL_BATCH_ROWS:-100000}" \
     --pipeline-depth "${RAVEL_PIPELINE_DEPTH:-$tier_depth}" \
     ${load_budget:+--load-memory-bytes "$load_budget"} \
-    --max-flush-delay "${RAVEL_MAX_FLUSH_DELAY:-30s}" \
-    --target-bytes "${RAVEL_TARGET_BYTES:-1850000000}"
+    --max-flush-delay "${RAVEL_MAX_FLUSH_DELAY:-$tier_delay}" \
+    --target-bytes "${RAVEL_TARGET_BYTES:-$tier_target}" \
+    ${group_blocks:+--group-target-blocks "$group_blocks"}
 
 sync
 

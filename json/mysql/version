@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+sudo mysql -N -e "SELECT VERSION()"

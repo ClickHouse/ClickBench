@@ -1,0 +1,18 @@
+#!/bin/bash
+# As ../postgresql/load: one COPY per file, in the CSV format with quote and
+# delimiter characters that never occur in the data, so that every line becomes
+# one JSONB value. `\u0000` is removed, and the lines that are not valid JSON
+# (a few documents longer than 64 KiB are split over two lines in the dataset)
+# are skipped by ON_ERROR ignore.
+set -e -o pipefail
+source ./env.sh
+
+${PSQL} -c "DROP TABLE IF EXISTS bluesky"
+${PSQL} < ddl.sql
+
+for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+    echo "load: ${file}"
+    gzip -dc "${file}" \
+        | sed 's/\\u0000//g' \
+        | ${PSQL} -c "\\copy bluesky FROM STDIN WITH (format csv, quote e'\\x01', delimiter e'\\x02', escape e'\\x01', on_error ignore)"
+done

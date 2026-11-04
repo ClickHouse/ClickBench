@@ -1,0 +1,6 @@
+#!/bin/bash
+# The archives (data, dictionaries and indexes) of the default dataset.
+# The rest of the package state (the metadata database) is a few MB.
+set -e
+
+du -sb /clp/clp-json/var/data/archives | cut -f1

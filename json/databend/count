@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+. ./sql.sh
+echo 'SELECT count(*) FROM bluesky' | bendsql -o tsv
