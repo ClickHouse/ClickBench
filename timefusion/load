@@ -1,0 +1,17 @@
+#!/bin/bash
+# Loads the partitioned hits_*.parquet files through TimeFusion's `hits__bulk`
+# alias, which commits straight to the Delta table on S3, bypassing the
+# write-ahead log and the in-memory buffer used for streaming inserts.
+# An INSERT is materialized in memory before the commit, so we insert one
+# file (about one million rows) at a time.
+set -e
+source "$(dirname "$0")/env.sh"
+cd "$DIR"
+
+for i in $(seq 0 99); do
+    sed -e "s|{HITS_PARQUET}|$DIR/hits_$i.parquet|" -e "s|{SOURCE}|hits_parquet_$i|g" load.sql |
+        psql -h 127.0.0.1 -p "$TF_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -q -t >/dev/null
+done
+
+rm -f hits_*.parquet
+sync
