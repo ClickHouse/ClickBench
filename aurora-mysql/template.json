@@ -1,0 +1,15 @@
+{
+  "system": "Aurora for MySQL",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "enthusiast",
+  "tags": [
+    "managed",
+    "C++",
+    "MySQL compatible",
+    "row-oriented",
+    "aws",
+    "no-cold"
+  ]
+}

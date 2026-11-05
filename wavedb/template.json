@@ -3,5 +3,6 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "yes",
+    "category": "enthusiast",
     "tags": ["Python", "column-oriented"]
 }

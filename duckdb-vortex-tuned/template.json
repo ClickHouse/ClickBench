@@ -3,6 +3,7 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "yes",
+  "category": "challenger",
   "tags": [
     "Rust",
     "column-oriented",

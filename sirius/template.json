@@ -3,6 +3,7 @@
   "proprietary": "no",
   "hardware": "gpu",
   "tuned": "no",
+  "category": "challenger",
   "tags": [
     "C++",
     "column-oriented",

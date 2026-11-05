@@ -3,6 +3,7 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "retired",
   "tags": [
     "Go",
     "stateless"

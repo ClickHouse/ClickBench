@@ -1,0 +1,12 @@
+{
+  "system": "Databricks",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "elite",
+  "tags": [
+    "managed",
+    "column-oriented",
+    "no-cold"
+  ]
+}

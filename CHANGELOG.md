@@ -2,6 +2,9 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-11-05
+Introduced system categories: Elite, Production, Challenger, Enthusiast, Retired, and Joke. The requirements for each category are described in the [README](README.md#system-categories). The category is set in the `template.json` of every system, and the report has a "Category" selector. Enthusiast and Joke entries are hidden by default; the other categories are shown. The selectors now also work correctly after opening a link with a saved selection. (Alexey Milovidov)
+
 ### 2026-10-15
 Add a history view. Clicking on any entry on the diagram will show the report of its historical results. The dataset is also available in the [public ClickHouse database](https://play.clickhouse.com/play?tab=ClickBench#U0VMRUNUICogRlJPTSBjbGlja2JlbmNoLnJlc3VsdHMgV0hFUkUgc3lzdGVtID0gJ0NsaWNrSG91c2UnIEFORCBtYWNoaW5lID0gJ2M2YS5tZXRhbCc=). (Alexey Milovidov)
 

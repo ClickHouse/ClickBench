@@ -1,0 +1,14 @@
+{
+  "system": "CHYT",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "elite",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative",
+    "managed",
+    "no-cold"
+  ]
+}

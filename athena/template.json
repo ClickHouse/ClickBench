@@ -1,0 +1,15 @@
+{
+  "system": "Athena (single)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "retired",
+  "tags": [
+    "stateless",
+    "managed",
+    "Java",
+    "column-oriented",
+    "aws",
+    "no-cold"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "system": "Bigquery",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "production",
+  "tags": [
+    "serverless",
+    "column-oriented",
+    "gcp",
+    "managed",
+    "no-cold"
+  ]
+}

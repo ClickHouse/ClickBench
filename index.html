@@ -684,6 +684,15 @@ const additional_data_size_points = [
 <table class="selectors-container stick-left">
     <tr>
         <td colspan="2">
+            <span class="inline-filter" id="selectors_category" title="System categories are explained in README.md">
+                <span class="inline-filter-label"><a href="https://github.com/ClickHouse/ClickBench/#system-categories">Category</a>:</span>
+                <a id="selector-category-elite" class="selector selector-active" title="Production-grade, and within 10 times of ClickHouse on every metric">Elite</a>
+                <a id="selector-category-production" class="selector selector-active" title="Mature, durable, used in production, works on small and large machines">Production</a>
+                <a id="selector-category-challenger" class="selector selector-active" title="A real product: website, documentation, releases, both x86_64 and aarch64 or a managed service">Challenger</a>
+                <a id="selector-category-enthusiast" class="selector" title="Entry level, no requirements other than not cheating on benchmarks">Enthusiast</a>
+                <a id="selector-category-retired" class="selector selector-active" title="No updates in the last year">Retired</a>
+                <a id="selector-category-joke" class="selector" title="Cheating on benchmarks">Joke</a>
+            </span>
             <span class="inline-filter" id="selectors_opensource">
                 <span class="inline-filter-label">Open source:</span>
                 <a id="selector-opensource-yes" class="selector selector-active">Yes</a>
@@ -800,6 +809,9 @@ const missing_result_time = 300;
 /// report down to a single way of keeping the data, not for the default view.
 const default_storage = {"native": true, "cloud": true, "memory": true, "parquet": true, "datalake": true, "web": true};
 
+/// See "System Categories" in README.md. Enthusiasts and jokes are hidden by default.
+const default_category = {"elite": true, "production": true, "challenger": true, "enthusiast": false, "retired": true, "joke": false};
+
 let selectors = {
     "system": {},
     "type": {},
@@ -809,6 +821,7 @@ let selectors = {
     "hardware": {"cpu": true, "gpu": false},
     "tuned": {"no": true, "yes": false},
     "storage": {...default_storage},
+    "category": {...default_category},
     "metric": "combined",
     "queries": [],
 };
@@ -877,7 +890,9 @@ function clearSystemHighlight() {
 }
 
 /// A click flips a single toggle, while a right click or Ctrl/Cmd + click selects only this toggle in its group.
-function toggle(e, elem, selectors_map) {
+/// The group is looked up by name on every click, as `applyHash` and `onpopstate` replace the selector objects.
+function toggle(e, elem, group) {
+    const selectors_map = selectors[group];
     if (e.type == 'contextmenu' || e.ctrlKey || e.metaKey) {
         e.preventDefault();
         Object.keys(selectors_map).forEach(k => { selectors_map[k] = k == String(elem) });
@@ -889,12 +904,13 @@ function toggle(e, elem, selectors_map) {
     updateHistory();
 }
 
-function addToggleListener(selector, elem, selectors_map) {
-    selector.addEventListener('click', e => toggle(e, elem, selectors_map));
-    selector.addEventListener('contextmenu', e => toggle(e, elem, selectors_map));
+function addToggleListener(selector, elem, group) {
+    selector.addEventListener('click', e => toggle(e, elem, group));
+    selector.addEventListener('contextmenu', e => toggle(e, elem, group));
 }
 
-function toggleAll(e, selectors_map) {
+function toggleAll(e, group) {
+    const selectors_map = selectors[group];
     const new_value = Object.keys(selectors_map).filter(k => selectors_map[k]).length * 2 < Object.keys(selectors_map).length;
     [...e.target.parentElement.querySelectorAll('a')].map(
         elem => { elem.className = new_value ? 'selector selector-active' : 'selector' });
@@ -910,7 +926,7 @@ unique_systems.map(elem => {
     selector.appendChild(document.createTextNode(elem));
     systems.appendChild(selector);
     selectors.system[elem] = data.some(entry => entry.system == elem && !entry.hide);
-    addToggleListener(selector, elem, selectors.system);
+    addToggleListener(selector, elem, 'system');
 
     /// Highlighting summary rows and table columns on hovering over the system selector.
     selector.addEventListener('mouseover', () => highlightSystem(elem));
@@ -931,7 +947,7 @@ data.forEach(d => {
     selector.appendChild(document.createTextNode(elem));
     types.appendChild(selector);
     selectors.type[elem] = true;
-    addToggleListener(selector, elem, selectors.type);
+    addToggleListener(selector, elem, 'type');
 
     /// Highlighting summary rows and detail columns on hovering over a tag.
     selector.addEventListener('mouseover', () => {
@@ -1053,7 +1069,7 @@ const aws_machine_regexp = /^[a-z]+[0-9]+[a-z]*\.[0-9a-z-]+$/;
     selector.appendChild(document.createTextNode(elem));
     machines.appendChild(selector);
     selectors.machine[elem] = selected;
-    addToggleListener(selector, elem, selectors.machine);
+    addToggleListener(selector, elem, 'machine');
 });
 
 [... new Set(data.map(elem => elem.cluster_size))].sort(
@@ -1063,23 +1079,26 @@ const aws_machine_regexp = /^[a-z]+[0-9]+[a-z]*\.[0-9a-z-]+$/;
     selector.appendChild(document.createTextNode(elem));
     cluster_sizes.appendChild(selector);
     selectors.cluster_size[elem] = true;
-    addToggleListener(selector, elem, selectors.cluster_size);
+    addToggleListener(selector, elem, 'cluster_size');
 });
 
-addToggleListener(document.getElementById('selector-opensource-yes'), 'yes', selectors.opensource);
-addToggleListener(document.getElementById('selector-opensource-no'), 'no', selectors.opensource);
-addToggleListener(document.getElementById('selector-hardware-cpu'), 'cpu', selectors.hardware);
-addToggleListener(document.getElementById('selector-hardware-gpu'), 'gpu', selectors.hardware);
-addToggleListener(document.getElementById('selector-tuned-yes'), 'yes', selectors.tuned);
-addToggleListener(document.getElementById('selector-tuned-no'), 'no', selectors.tuned);
+addToggleListener(document.getElementById('selector-opensource-yes'), 'yes', 'opensource');
+addToggleListener(document.getElementById('selector-opensource-no'), 'no', 'opensource');
+addToggleListener(document.getElementById('selector-hardware-cpu'), 'cpu', 'hardware');
+addToggleListener(document.getElementById('selector-hardware-gpu'), 'gpu', 'hardware');
+addToggleListener(document.getElementById('selector-tuned-yes'), 'yes', 'tuned');
+addToggleListener(document.getElementById('selector-tuned-no'), 'no', 'tuned');
 
 Object.keys(default_storage).forEach(key =>
-    addToggleListener(document.getElementById('selector-storage-' + key), key, selectors.storage));
+    addToggleListener(document.getElementById('selector-storage-' + key), key, 'storage'));
 
-document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
-document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
-document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
-document.getElementById('select-all-cluster-sizes').addEventListener('click', e => toggleAll(e, selectors.cluster_size));
+Object.keys(default_category).forEach(key =>
+    addToggleListener(document.getElementById('selector-category-' + key), key, 'category'));
+
+document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, 'system'));
+document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, 'type'));
+document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, 'machine'));
+document.getElementById('select-all-cluster-sizes').addEventListener('click', e => toggleAll(e, 'cluster_size'));
 
 [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => elem.addEventListener('click', e => {
     [...e.target.parentElement.querySelectorAll('a')].map(elem => { elem.className = elem == e.target ? 'selector selector-active' : 'selector' });
@@ -1125,6 +1144,10 @@ function updateSelectors() {
     Object.keys(default_storage).forEach(key => {
         document.getElementById('selector-storage-' + key).className =
             selectors.storage[key] ? 'selector selector-active' : 'selector' });
+
+    Object.keys(default_category).forEach(key => {
+        document.getElementById('selector-category-' + key).className =
+            selectors.category[key] ? 'selector selector-active' : 'selector' });
 }
 
 function applyTopRowFilters() {
@@ -1132,7 +1155,8 @@ function applyTopRowFilters() {
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
         ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
-        selectors.storage[elem.storage_class]);
+        selectors.storage[elem.storage_class] &&
+        selectors.category[elem.category]);
 
     function apply(container, getValues) {
         const allowed = new Set(matches.flatMap(getValues).map(x => String(x)));
@@ -1982,7 +2006,8 @@ function render() {
             ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
             ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
             ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
-            selectors.storage[elem.storage_class]
+            selectors.storage[elem.storage_class] &&
+            selectors.category[elem.category]
             );
     }
 
@@ -2508,6 +2533,9 @@ window.onpopstate = function(event) {
     }
     if (!selectors.storage) {
         selectors.storage = {...default_storage};
+    }
+    if (!selectors.category) {
+        selectors.category = {...default_category};
     }
     updateSelectors();
     render();
