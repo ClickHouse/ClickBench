@@ -11,9 +11,6 @@ export BENCH_RESTARTABLE=yes
 # Data is durable on local disk; a restart reopens ./data, no reload.
 export BENCH_DURABLE=yes
 
-# The server answers one query at a time, so the concurrent-QPS test would only
-# oversubscribe it. Skip by default.
-export BENCH_CONCURRENT_DURATION="${BENCH_CONCURRENT_DURATION:-0}"
 
 # infino tuning (cache dir + budget). Shared with the raw load/start scripts so
 # the playground gets the same config.
