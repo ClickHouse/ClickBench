@@ -10,7 +10,6 @@ export BENCH_RESTARTABLE=yes
 export BENCH_DURABLE=yes
 export BENCH_TRIES="${BENCH_TRIES:-3}"
 
-export BENCH_CONCURRENT_DURATION="${BENCH_CONCURRENT_DURATION:-0}"
 
 # Run the shared ClickBench driver, capturing stdout so we can BOTH show it live
 # and turn it into the committed results JSON. `tee` preserves the standard text
