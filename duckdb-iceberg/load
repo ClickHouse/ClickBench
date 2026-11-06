@@ -2,6 +2,8 @@
 # Creates the Iceberg table through the REST catalog and writes the dataset
 # into it with a single INSERT with the default settings.
 set -e
+
+../lib/iceberg/prepare
 source ../lib/iceberg/env.sh
 
 {

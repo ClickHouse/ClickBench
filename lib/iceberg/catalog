@@ -29,6 +29,24 @@ TABLE = os.environ["LAKE_TABLE"]
 
 
 def request(method, path, body=None, token=None, form=None):
+    """Sends a request, retrying for up to two minutes while the catalog is not
+    ready yet: right after the start of the storage, it may accept connections
+    before it has loaded the identities or connected to its metadata store, and
+    answer with errors. Returns the last (status, response)."""
+    deadline = time.monotonic() + 120
+    while True:
+        try:
+            status, resp = request_once(method, path, body, token, form)
+        except OSError as e:  # Includes urllib.error.URLError and connection resets.
+            status, resp = None, repr(e)
+        if status is not None and status < 500 and status not in (401, 403):
+            return status, resp
+        if time.monotonic() > deadline:
+            return status, resp
+        time.sleep(1)
+
+
+def request_once(method, path, body, token, form):
     headers = {}
     data = None
     if token:
@@ -53,22 +71,15 @@ def request(method, path, body=None, token=None, form=None):
 
 
 def token():
-    # Right after the start, the catalog may answer before it has loaded the
-    # identities, so we retry for a while.
-    for _ in range(60):
-        try:
-            status, resp = request("POST", "/v1/oauth/tokens", form={
-                "grant_type": "client_credentials",
-                "client_id": os.environ["LAKE_CLIENT_ID"],
-                "client_secret": os.environ["LAKE_CLIENT_SECRET"],
-                "scope": "catalog",
-            })
-        except urllib.error.URLError as e:
-            status, resp = None, e
-        if status == 200:
-            return resp["access_token"]
-        time.sleep(1)
-    sys.exit(f"catalog: cannot get a token: {status} {resp}")
+    status, resp = request("POST", "/v1/oauth/tokens", form={
+        "grant_type": "client_credentials",
+        "client_id": os.environ["LAKE_CLIENT_ID"],
+        "client_secret": os.environ["LAKE_CLIENT_SECRET"],
+        "scope": "catalog",
+    })
+    if status != 200:
+        sys.exit(f"catalog: cannot get a token: {status} {resp}")
+    return resp["access_token"]
 
 
 def prefix(tok):
@@ -91,6 +102,9 @@ def main():
         status, resp = request("POST", f"{base}/namespaces", {"namespace": [NAMESPACE], "properties": {}}, tok)
         if status not in (200, 409):
             sys.exit(f"catalog: create namespace: {status} {resp}")
+        status, resp = request("GET", f"{base}/namespaces/{NAMESPACE}", token=tok)
+        if status != 200:
+            sys.exit(f"catalog: the namespace does not exist after its creation: {status} {resp}")
     elif command == "create-table":
         with open(os.path.join(LIB_DIR, "hits.schema.json")) as f:
             schema = json.load(f)

@@ -28,4 +28,9 @@ seaweedfs)
     ;;
 esac
 
-"$LAKE_LIB_DIR/catalog" create-namespace >/dev/null
+# The benchmark driver discards the output of ./start, and a failure here
+# would only show up as the database never starting. So the namespace is
+# created here for convenience, and again by `create-namespace` in every
+# ./load, whose errors are in the log and fail the run.
+"$LAKE_LIB_DIR/catalog" create-namespace >/dev/null ||
+    echo "lib/iceberg: cannot create the namespace yet" >&2

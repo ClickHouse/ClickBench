@@ -1,5 +1,7 @@
 #!/bin/bash
 set -e
+
+../lib/iceberg/prepare
 source ../lib/iceberg/env.sh
 source myenv/bin/activate
 

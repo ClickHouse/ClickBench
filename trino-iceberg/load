@@ -4,6 +4,8 @@
 # Hive table over the downloaded Parquet files.
 set -e
 
+../lib/iceberg/prepare
+
 for f in hits_*.parquet; do
     ln -f "$f" "data/hits/$f" 2>/dev/null || cp -f "$f" "data/hits/$f"
 done
