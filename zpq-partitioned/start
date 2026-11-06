@@ -1,0 +1,3 @@
+#!/bin/bash
+# zpq is a CLI tool with no daemon.
+exit 0

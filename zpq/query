@@ -1,0 +1,15 @@
+#!/bin/bash
+# Reads a SQL query from stdin and runs it with a fresh zpq process.
+# --cache reads through the page cache: without it, a cold read uses O_DIRECT,
+# and the hot runs would read from disk again.
+# Stdout: query result (NDJSON). Stderr: wall-clock runtime of the zpq
+# process in fractional seconds on the last line. Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+start=$(date +%s.%N)
+zpq query --cache --query "$query"
+end=$(date +%s.%N)
+
+awk -v s="$start" -v e="$end" 'BEGIN { printf "%.6f\n", e - s }' >&2
