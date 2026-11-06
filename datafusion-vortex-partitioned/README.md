@@ -15,7 +15,7 @@ bash benchmark.sh
 
 The shared benchmark harness builds `vortex-datafusion-cli`, downloads the partitioned Parquet files, converts each `partitioned/hits_N.parquet` file into exactly one `vortex/hits_N.vortex` file, and runs the query set.
 
-The `install` script checks out `vortex-datafusion-cli` tag `0.70.0-53.1.0`. CLI tags use `<vortex-version>-<df-version>`, where the first component is the `vortex-datafusion` crate version and the second is the DataFusion/DataFusion CLI version.
+The `install` script checks out `vortex-datafusion-cli` tag `0.90.0-55.2.0`. CLI tags use `<vortex-version>-<df-version>`, where the first component is the `vortex-datafusion` crate version and the second is the DataFusion/DataFusion CLI version.
 
 You can update/preview the results by running:
 
