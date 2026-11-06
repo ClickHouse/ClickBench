@@ -285,13 +285,14 @@ The dashboard has a "Category" selector; Enthusiast and Joke entries are hidden 
 
 **Elite**:
 - implies all requirements for "Production";
-- not more than 10 times worse than ClickHouse on all of the cold run, hot run, load time, data size, and concurrent QPS metrics.
+- not more than 10 times worse than ClickHouse on all of the cold run, hot run, load time, data size, and concurrent QPS metrics;
+- has a non-zero load time measured (concurrent QPS can be missing for now).
 
 How the requirements that depend on the results are checked:
 - the categories are assigned per directory (benchmark entry), so variants of the same product can be in different categories; for example, entries that query Parquet files or keep the data only in memory (tags `stateless`, `in-memory`, `dataframe`) have no durable storage with inserts and stop at Challenger;
 - "all queries succeed" means every try of every query returned a result;
 - for Production, the self-managed entry must have results on c6a.large and on a `metal` machine, and all queries must succeed on all machines except t3a.small;
-- for Elite, self-managed entries are compared with ClickHouse on the same machine, managed services are compared with ClickHouse Cloud with the nearest amount of memory, or with the best ClickHouse Cloud result when the service has no size in memory; the best machine of the entry is taken for every metric, and metrics that are not measured for the entry are not considered.
+- for Elite, self-managed entries are compared with ClickHouse on the same machine, managed services are compared with ClickHouse Cloud with the nearest total amount of memory (then the nearest number of nodes), or with the best ClickHouse Cloud result when the service has no size in memory; the best machine of the entry is taken for every metric, and concurrent QPS is not considered if it is not measured for the entry.
 
 A system can move to another category when its results change, for example, after adding results on aarch64 or on small machines.
 If you think that a system is in the wrong category, send a pull request with the change of its `template.json` and the explanation.
