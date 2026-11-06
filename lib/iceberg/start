@@ -32,5 +32,5 @@ esac
 # would only show up as the database never starting. So the namespace is
 # created here for convenience, and again by `create-namespace` in every
 # ./load, whose errors are in the log and fail the run.
-"$LAKE_LIB_DIR/catalog" create-namespace >/dev/null ||
+{ "$LAKE_LIB_DIR/catalog" wait && "$LAKE_LIB_DIR/catalog" create-namespace >/dev/null; } ||
     echo "lib/iceberg: cannot create the namespace yet" >&2

@@ -109,11 +109,11 @@ Implemented:
 | `spark-iceberg` | Spark 4.1 with the Iceberg runtime 1.12, `CREATE TABLE ... USING iceberg` + `INSERT` | REST, OAuth2 |
 | `trino-iceberg` | Trino Iceberg connector, `CREATE TABLE` + `INSERT` | REST, OAuth2 |
 | `starrocks-iceberg` | StarRocks external Iceberg catalog, `CREATE TABLE` + `INSERT ... FROM FILES()` | REST, OAuth2 |
+| `doris-iceberg` | Doris 4.1 Iceberg catalog, `CREATE TABLE` + `INSERT ... FROM local()` | REST, OAuth2 |
+| `datafusion-iceberg` | DataFusion through the DataFusion integration of iceberg-rust 0.11, `CREATE TABLE` + `INSERT` (a small binary, `src/main.rs`) | REST, OAuth2 |
 
 Can be added on top of the same storage:
 
-- Apache Doris: an Iceberg REST catalog with `CREATE TABLE` and `INSERT`
-  (Doris 3.x; ClickBench has only an x86 release tarball of it).
 - Presto: the Iceberg connector with a REST catalog, `CREATE TABLE` and
   `INSERT`.
 - Dremio: Iceberg REST catalog sources with `CREATE TABLE AS`.
@@ -121,8 +121,6 @@ Can be added on top of the same storage:
   table; queries with their own SQL over `read_iceberg`/`scan_iceberg`.
 - Sail: Iceberg reads and writes in its Spark-compatible API.
 - chDB: the same engine as ClickHouse, embedded.
-- DataFusion through `iceberg-rust` (`INSERT INTO` in its DataFusion
-  integration), which needs a small custom binary.
 - Apache Flink (batch SQL) and RisingWave: both write Iceberg through a REST
   catalog, but are streaming systems first.
 - Impala and Hive write Iceberg only through a Hive Metastore catalog.

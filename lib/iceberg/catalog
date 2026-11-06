@@ -2,6 +2,7 @@
 """A minimal client of the Iceberg REST catalog of the Iceberg entries.
 
 Usage (the environment comes from lib/iceberg/env.sh):
+    catalog wait                 wait until the warehouse is available
     catalog create-namespace     create the `clickbench` namespace if it does not exist
     catalog create-table         create `clickbench.hits` with the schema from hits.schema.json
     catalog drop-table           drop `clickbench.hits` (with purge) if it exists
@@ -99,7 +100,18 @@ def main():
     base = prefix(tok)
     table_path = f"{base}/namespaces/{NAMESPACE}/tables/{TABLE}"
 
-    if command == "create-namespace":
+    if command == "wait":
+        # The catalog answers before the storage has created the warehouse
+        # (SeaweedFS creates the table bucket asynchronously after the start).
+        deadline = time.monotonic() + 300
+        while True:
+            status, resp = request("GET", f"{base}/namespaces", token=tok)
+            if status == 200:
+                break
+            if time.monotonic() > deadline:
+                sys.exit(f"catalog: the warehouse is not available: {status} {resp}")
+            time.sleep(1)
+    elif command == "create-namespace":
         status, resp = request("POST", f"{base}/namespaces", {"namespace": [NAMESPACE], "properties": {}}, tok)
         if status not in (200, 409):
             sys.exit(f"catalog: create namespace: {status} {resp}")
