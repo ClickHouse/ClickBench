@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+# zpq is a single static binary: https://github.com/chicagobuss/zpq
+VERSION=0.5.1
+
+if [ ! -x zpq-dist/bin/zpq ]; then
+    case "$(uname -m)" in
+        x86_64)  target=x86_64-linux-musl ;;  # needs AVX2
+        aarch64) target=aarch64-linux-musl ;;
+        *) echo "unsupported architecture $(uname -m)" >&2; exit 1 ;;
+    esac
+    mkdir -p zpq-dist
+    curl -sSfL "https://github.com/chicagobuss/zpq/releases/download/v${VERSION}/zpq-${target}.tar.gz" \
+        | tar xz -C zpq-dist
+fi
+sudo ln -sf "$PWD/zpq-dist/bin/zpq" /usr/local/bin/zpq
