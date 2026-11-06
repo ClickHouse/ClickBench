@@ -1,12 +1,17 @@
 #!/bin/bash
 # Prints the total size in bytes of all objects of the `clickbench.hits`
-# table: data files, manifests, and metadata of every snapshot.
+# table: data files, manifests, and metadata of every snapshot. The location
+# comes from the catalog, because systems may place a table elsewhere than
+# `<namespace>/<table>` (Trino adds a unique suffix by default).
 set -e
 source "$(dirname "$0")/env.sh"
 
+location=$("$LAKE_LIB_DIR/catalog" location)
+
 case "$LAKE_STORAGE" in
 seaweedfs)
-    echo "fs.du /buckets/$LAKE_WAREHOUSE/$LAKE_NAMESPACE/$LAKE_TABLE" |
+    # s3://<bucket>/<path> is /buckets/<bucket>/<path> in the filer.
+    echo "fs.du /buckets/${location#s3://}" |
         "$WEED_BIN" shell -master=127.0.0.1:9333 2>/dev/null |
         grep -oP 'logical size:\s*\K[0-9]+' | tail -n1
     ;;

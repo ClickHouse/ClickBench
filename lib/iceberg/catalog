@@ -5,6 +5,7 @@ Usage (the environment comes from lib/iceberg/env.sh):
     catalog create-namespace     create the `clickbench` namespace if it does not exist
     catalog create-table         create `clickbench.hits` with the schema from hits.schema.json
     catalog drop-table           drop `clickbench.hits` (with purge) if it exists
+    catalog location             print the location of `clickbench.hits`, e.g. s3://warehouse/clickbench/hits
     catalog load-table           print the LoadTable response of `clickbench.hits`
 
 `create-table` is for the systems that can write into an existing Iceberg
@@ -117,6 +118,11 @@ def main():
         status, resp = request("DELETE", table_path + "?purgeRequested=true", token=tok)
         if status not in (200, 204, 404):
             sys.exit(f"catalog: drop table: {status} {resp}")
+    elif command == "location":
+        status, resp = request("GET", table_path, token=tok)
+        if status != 200:
+            sys.exit(f"catalog: load table: {status} {resp}")
+        print(resp["metadata"]["location"])
     elif command == "load-table":
         status, resp = request("GET", table_path, token=tok)
         if status != 200:
