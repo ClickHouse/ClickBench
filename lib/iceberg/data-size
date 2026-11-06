@@ -1,0 +1,13 @@
+#!/bin/bash
+# Prints the total size in bytes of all objects of the `clickbench.hits`
+# table: data files, manifests, and metadata of every snapshot.
+set -e
+source "$(dirname "$0")/env.sh"
+
+case "$LAKE_STORAGE" in
+seaweedfs)
+    echo "fs.du /buckets/$LAKE_WAREHOUSE/$LAKE_NAMESPACE/$LAKE_TABLE" |
+        "$WEED_BIN" shell -master=127.0.0.1:9333 2>/dev/null |
+        grep -oP 'logical size:\s*\K[0-9]+' | tail -n1
+    ;;
+esac

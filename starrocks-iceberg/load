@@ -1,0 +1,13 @@
+#!/bin/bash
+# Creates the Iceberg table through the REST catalog and writes the dataset
+# into it with a single INSERT with the default settings.
+set -e
+source ../lib/iceberg/env.sh
+
+{
+    ../lib/iceberg/substitute < catalog.sql
+    cat create.sql
+    sed "s|__DATA_DIR__|$PWD|" insert.sql
+} | mysql -h127.0.0.1 -P9030 -uroot
+
+rm -f hits_*.parquet

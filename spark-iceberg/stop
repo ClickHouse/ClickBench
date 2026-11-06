@@ -1,0 +1,3 @@
+#!/bin/bash
+# PySpark runs in-process per query: there is nothing to stop. The storage keeps running.
+exit 0

@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""A minimal client of the Iceberg REST catalog of the Iceberg entries.
+
+Usage (the environment comes from lib/iceberg/env.sh):
+    catalog create-namespace     create the `clickbench` namespace if it does not exist
+    catalog create-table         create `clickbench.hits` with the schema from hits.schema.json
+    catalog drop-table           drop `clickbench.hits` (with purge) if it exists
+    catalog load-table           print the LoadTable response of `clickbench.hits`
+
+`create-table` is for the systems that can write into an existing Iceberg
+table but cannot create one: the catalog writes the initial metadata of an
+empty, unpartitioned, unsorted table with the default properties, as any
+system creating the table through the catalog would do.
+"""
+
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+LIB_DIR = os.path.dirname(os.path.abspath(__file__))
+URI = os.environ["LAKE_CATALOG_URI"].rstrip("/")
+WAREHOUSE = os.environ["LAKE_WAREHOUSE"]
+NAMESPACE = os.environ["LAKE_NAMESPACE"]
+TABLE = os.environ["LAKE_TABLE"]
+
+
+def request(method, path, body=None, token=None, form=None):
+    headers = {}
+    data = None
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    if form is not None:
+        data = urllib.parse.urlencode(form).encode()
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+    elif body is not None:
+        data = json.dumps(body).encode()
+        headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(URI + path, data=data, method=method, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            payload = resp.read()
+            return resp.status, json.loads(payload) if payload else None
+    except urllib.error.HTTPError as e:
+        payload = e.read()
+        try:
+            return e.code, json.loads(payload)
+        except ValueError:
+            return e.code, payload.decode(errors="replace")
+
+
+def token():
+    # Right after the start, the catalog may answer before it has loaded the
+    # identities, so we retry for a while.
+    for _ in range(60):
+        try:
+            status, resp = request("POST", "/v1/oauth/tokens", form={
+                "grant_type": "client_credentials",
+                "client_id": os.environ["LAKE_CLIENT_ID"],
+                "client_secret": os.environ["LAKE_CLIENT_SECRET"],
+                "scope": "catalog",
+            })
+        except urllib.error.URLError as e:
+            status, resp = None, e
+        if status == 200:
+            return resp["access_token"]
+        time.sleep(1)
+    sys.exit(f"catalog: cannot get a token: {status} {resp}")
+
+
+def prefix(tok):
+    status, resp = request("GET", "/v1/config?warehouse=" + urllib.parse.quote(WAREHOUSE), token=tok)
+    if status != 200:
+        sys.exit(f"catalog: GET /v1/config: {status} {resp}")
+    p = resp.get("overrides", {}).get("prefix") or resp.get("defaults", {}).get("prefix")
+    return f"/v1/{p}" if p else "/v1"
+
+
+def main():
+    if len(sys.argv) != 2:
+        sys.exit(__doc__)
+    command = sys.argv[1]
+    tok = token()
+    base = prefix(tok)
+    table_path = f"{base}/namespaces/{NAMESPACE}/tables/{TABLE}"
+
+    if command == "create-namespace":
+        status, resp = request("POST", f"{base}/namespaces", {"namespace": [NAMESPACE], "properties": {}}, tok)
+        if status not in (200, 409):
+            sys.exit(f"catalog: create namespace: {status} {resp}")
+    elif command == "create-table":
+        with open(os.path.join(LIB_DIR, "hits.schema.json")) as f:
+            schema = json.load(f)
+        status, resp = request("POST", f"{base}/namespaces/{NAMESPACE}/tables",
+                               {"name": TABLE, "schema": schema, "stage-create": False}, tok)
+        if status != 200:
+            sys.exit(f"catalog: create table: {status} {resp}")
+        print(resp.get("metadata-location", ""))
+    elif command == "drop-table":
+        status, resp = request("DELETE", table_path + "?purgeRequested=true", token=tok)
+        if status not in (200, 204, 404):
+            sys.exit(f"catalog: drop table: {status} {resp}")
+    elif command == "load-table":
+        status, resp = request("GET", table_path, token=tok)
+        if status != 200:
+            sys.exit(f"catalog: load table: {status} {resp}")
+        json.dump(resp, sys.stdout, indent=2)
+        print()
+    else:
+        sys.exit(__doc__)
+
+
+if __name__ == "__main__":
+    main()

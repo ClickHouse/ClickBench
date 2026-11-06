@@ -1,0 +1,6 @@
+#!/bin/bash
+# Stops Trino only. The storage keeps running: it plays the role of the
+# remote object storage, which survives restarts of the database.
+
+sudo docker stop trino 2>/dev/null || true
+exit 0

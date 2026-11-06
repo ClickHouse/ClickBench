@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+source ../lib/iceberg/env.sh
+source myenv/bin/activate
+
+python3 load.py
+rm -f hits_*.parquet
