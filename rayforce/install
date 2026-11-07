@@ -3,10 +3,10 @@
 # clang; build-essential brings gcc. RAYFORCE_VERSION pins a tag, otherwise the
 # latest release (or the fallback when the GitHub API is rate limited).
 #
-# Last benchmarked release: v3.0.1. Bump this line to request a new run.
+# Last benchmarked release: v3.0.2. Bump this line to request a new run.
 set -e
 
-RAYFORCE_FALLBACK_VERSION=v3.0.1
+RAYFORCE_FALLBACK_VERSION=v3.0.2
 
 if ! command -v rayforce >/dev/null 2>&1; then
     sudo apt-get update
