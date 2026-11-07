@@ -1,0 +1,36 @@
+#!/bin/bash
+# Starts the storage and the catalog of the Iceberg entries (if they are not
+# running yet) and creates the `clickbench` namespace. Run from the entry
+# directory, by its ./start. The storage plays the role of a remote object
+# store: it is not restarted together with the database between the queries.
+set -e
+source "$(dirname "$0")/env.sh"
+
+case "$LAKE_STORAGE" in
+seaweedfs)
+    if ! curl -fs -o /dev/null "$LAKE_CATALOG_URI/v1/config"; then
+        mkdir -p "$WEED_DIR"
+        # `weed mini` runs the master, volume, filer, S3 and Iceberg REST
+        # catalog in one process. Iceberg table maintenance (compaction,
+        # snapshot expiration) is a plugin job that is disabled by default,
+        # and we never enable it: the storage must not optimize the tables
+        # written by the benchmarked system. The S3 keys from the environment
+        # become the admin identity.
+        setsid nohup "$WEED_BIN" mini -dir="$WEED_DIR" -ip=127.0.0.1 -ip.bind=127.0.0.1 \
+            -master.telemetry=false -admin.ui=false -webdav=false -s3.port.lance=0 \
+            -tableBucket="$LAKE_WAREHOUSE" \
+            > "$LAKE_ENTRY_DIR/seaweedfs.log" 2>&1 < /dev/null &
+        for _ in $(seq 1 300); do
+            curl -fs -o /dev/null "$LAKE_CATALOG_URI/v1/config" && break
+            sleep 1
+        done
+    fi
+    ;;
+esac
+
+# The benchmark driver discards the output of ./start, and a failure here
+# would only show up as the database never starting. So the namespace is
+# created here for convenience, and again by `create-namespace` in every
+# ./load, whose errors are in the log and fail the run.
+{ "$LAKE_LIB_DIR/catalog" wait && "$LAKE_LIB_DIR/catalog" create-namespace >/dev/null; } ||
+    echo "lib/iceberg: cannot create the namespace yet" >&2

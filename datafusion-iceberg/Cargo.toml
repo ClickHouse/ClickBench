@@ -1,0 +1,18 @@
+[package]
+name = "datafusion-iceberg"
+version = "0.1.0"
+edition = "2024"
+description = "DataFusion with the Iceberg REST catalog of iceberg-rust, for ClickBench"
+publish = false
+
+[dependencies]
+datafusion = "54"
+iceberg = "0.11.0"
+iceberg-catalog-rest = "0.11.0"
+iceberg-datafusion = "0.11.0"
+iceberg-storage-opendal = { version = "0.11.0", default-features = false, features = ["opendal-s3"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
