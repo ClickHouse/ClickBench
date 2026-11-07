@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+source ./config.sh
+./check
+protocol=$("${NATIVE[@]}" -c 'SHOW pdb.wire_protocol;')
+[ "$protocol" = pdb-native-v2 ]
+printf '%s\n' "$protocol" >"$RUN/wire-protocol.txt"
+"${NATIVE[@]}" -f create.sql
+source_file="$ENTRY/hits.parquet"
+"${NATIVE[@]}" -c "COPY hits FROM '${source_file//\'/\'\'}' WITH (FORMAT PARQUET);"
+rows=$("${NATIVE[@]}" -c 'SELECT COUNT(*) FROM hits;')
+expected=${CB_EXPECT_ROWS:-99997497}
+[ "$rows" = "$expected" ] || { echo "Expected $expected rows, got $rows" >&2; exit 1; }
+printf '%s\n' "$rows" >"$RUN/loaded-rows.txt"
+sync

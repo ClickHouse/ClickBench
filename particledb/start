@@ -1,0 +1,13 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+source ./config.sh
+[ ! -e "$RUN/stop-failed" ] || { echo 'Previous stop failed; refusing restart' >&2; exit 1; }
+sudo -n systemctl start "$SERVICE"
+for ((i=0; i<120; i++)); do
+  if ./check >/dev/null 2>&1; then exit 0; fi
+  systemctl is-active --quiet "$SERVICE" || break
+  sleep 1
+done
+echo "Server did not become ready; see $RUN/server.log" >&2
+exit 1

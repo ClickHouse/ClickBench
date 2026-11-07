@@ -1,0 +1,8 @@
+bin/
+runs/
+current-run
+client-home/
+.benchmark.lock
+hits.parquet
+result.csv
+benchmark.log
