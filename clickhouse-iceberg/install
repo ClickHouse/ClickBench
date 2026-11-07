@@ -14,5 +14,8 @@ if [ ! -x ./clickhouse ]; then
         "https://builds.clickhouse.com/master/$arch/clickhouse"
     chmod +x clickhouse
 fi
+# The binary is self-extracting: it decompresses itself on the first run.
+# Do it here, rather than when ./start and ./check run it at the same time.
+./clickhouse --version
 
 ../lib/iceberg/install
