@@ -18,7 +18,7 @@ The data (`hits.json.gz`) is loaded with the `_bulk` API (`bulk-load.py`: batche
 documents are in the index. As in the Elasticsearch entry, the load time includes the
 download of `hits.json.gz`, which is decompressed on the fly.
 
-The queries (`queries.json`) are search requests with aggregations (the query DSL),
+The queries (`queries.sql`, named so for the Playground, but JSON) are search requests with aggregations (the query DSL),
 written by hand from the SQL queries, as in the OpenSearch entry of the JSON benchmark
 (`../json/opensearch`). OpenSearch has no endpoint to translate SQL to the query DSL
 (the Elasticsearch entry uses `_sql/translate`), and its SQL plugin does not report a
