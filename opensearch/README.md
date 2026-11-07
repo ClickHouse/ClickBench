@@ -30,10 +30,13 @@ the `took` of the response, as in the Elasticsearch entry.
   that are expressions, with Painless scripts: Q19, Q36, Q40), and `date_histogram` for
   `DATE_TRUNC('minute', ...)` (Q43). `GROUP BY` without `ORDER BY` (Q18) is a
   `composite` aggregation.
-- `COUNT(DISTINCT)` is `cardinality` with the default `precision_threshold` (3000), as the
-  Elasticsearch SQL translates it: approximate (HyperLogLog++) above the threshold. The
-  maximum threshold (40000) needs ~100 KB of memory per bucket and trips the circuit
-  breaker in Q14 even on a sample of 1 million rows.
+- `COUNT(DISTINCT)` is exact: a `scripted_metric` that collects the set of the values
+  (`cardinality` is approximate, HyperLogLog++). In the buckets of a `terms` aggregation
+  ordered by the count (Q10, Q23), it is a sub-aggregation. A bucket aggregation cannot
+  be ordered by a `scripted_metric`, so `ORDER BY COUNT(DISTINCT UserID) DESC LIMIT 10`
+  (Q9, Q11, Q12, Q14) is one top-level `scripted_metric` with a set per group, which its
+  reduce script sorts; it returns `[key, count]` pairs (in Q12, the two keys joined by a
+  space).
 - The top-N by count (`ORDER BY COUNT(*) DESC LIMIT N`) is approximate: OpenSearch 3.x
   runs the aggregations with concurrent segment search by default, and each slice of the
   shard returns only its top `size * 1.5 + 10` buckets, as the shards do in a multi-shard
