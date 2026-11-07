@@ -1,0 +1,10 @@
+{
+  "system": "OpenSearch",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "search"
+  ]
+}
