@@ -1,0 +1,3 @@
+#!/bin/bash
+# MotherDuck is a remote managed service — there is no local daemon to stop.
+exit 0

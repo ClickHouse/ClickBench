@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e
+
+: "${motherduck_token:?motherduck_token is required}"
+
+PY=.venv/bin/python3; [ -x "$PY" ] || PY=python3
+
+# Build the clickbench database inside MotherDuck and INSERT directly from the
+# canonical ClickBench parquet on S3. The parquet stores the *EventTime family
+# as integer epochs and EventDate as a day count, so coerce them into proper
+# TIMESTAMP/DATE values to match create.sql. Timing, the post-load sync, and
+# the data-size sanity check are handled by the shared driver.
+"$PY" - <<'PY'
+import duckdb
+
+con = duckdb.connect("md:")
+con.execute("CREATE OR REPLACE DATABASE clickbench")
+con.execute("USE clickbench")
+
+# Loading is faster and lighter without preserving row order.
+con.execute("SET preserve_insertion_order=false")
+
+con.execute(open("create.sql").read())
+
+file = "https://datasets.clickhouse.com/hits_compatible/hits.parquet"
+con.execute(f"""
+    INSERT INTO hits
+    SELECT * REPLACE
+    (epoch_ms(EventTime * 1000) AS EventTime,
+     epoch_ms(ClientEventTime * 1000) AS ClientEventTime,
+     epoch_ms(LocalEventTime * 1000) AS LocalEventTime,
+     DATE '1970-01-01' + INTERVAL (EventDate) DAYS AS EventDate)
+    FROM read_parquet('{file}', binary_as_string=True)
+""")
+PY
