@@ -3,6 +3,7 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "joke",
   "tags": [
     "Zig",
     "column-oriented",

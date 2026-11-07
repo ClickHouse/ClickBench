@@ -1,0 +1,13 @@
+{
+  "system": "Hydra",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "managed",
+    "PostgreSQL compatible",
+    "column-oriented",
+    "no-cold"
+  ]
+}

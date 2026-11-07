@@ -1,0 +1,14 @@
+{
+  "system": "Crunchy Bridge (Parquet)",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "column-oriented",
+    "DuckDB derivative",
+    "PostgreSQL compatible",
+    "managed",
+    "no-cold"
+  ]
+}

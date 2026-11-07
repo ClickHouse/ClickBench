@@ -1,0 +1,13 @@
+{
+  "system": "Tembo OLAP (columnar)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "retired",
+  "tags": [
+    "C",
+    "PostgreSQL compatible",
+    "column-oriented",
+    "no-cold"
+  ]
+}

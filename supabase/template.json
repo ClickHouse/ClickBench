@@ -1,0 +1,14 @@
+{
+  "system": "Supabase",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "production",
+  "tags": [
+    "C",
+    "row-oriented",
+    "PostgreSQL compatible",
+    "no-cold",
+    "managed"
+  ]
+}

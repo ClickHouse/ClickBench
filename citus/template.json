@@ -3,5 +3,6 @@
     "proprietary": "no",
   "hardware": "cpu",
     "tuned": "no",
+    "category": "enthusiast",
     "tags": ["C","PostgreSQL compatible","column-oriented"]
 }
