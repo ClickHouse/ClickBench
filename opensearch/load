@@ -1,0 +1,40 @@
+#!/bin/bash
+# Creates the index from scratch (index.json) and loads the data with the
+# _bulk API.
+set -e -o pipefail
+
+# Idempotency: delete the index of a previous load.
+code=$(curl -sS -o /dev/null -w '%{http_code}' 'http://localhost:9200/hits')
+if [ "${code}" = "200" ]; then
+    curl -sS --fail-with-body -X DELETE 'http://localhost:9200/hits' >/dev/null
+elif [ "${code}" != "404" ]; then
+    echo "load: unexpected HTTP status ${code} for the index" >&2
+    exit 1
+fi
+
+curl -sS --fail-with-body -H 'Content-Type: application/json' \
+    -X PUT 'http://localhost:9200/hits' -d @index.json >/dev/null
+
+# hits.json is a symlink to the pre-decompressed dataset on the Playground
+# (../lib/download-hits-json); elsewhere the compressed file is downloaded and
+# decompressed on the fly, so the download is included in the load time, as in
+# ../elasticsearch.
+if [ -e hits.json ]; then
+    python3 -I bulk-load.py < hits.json
+else
+    wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+    pigz -dc hits.json.gz | python3 -I bulk-load.py
+    rm -f hits.json.gz
+fi
+
+curl -sS --fail-with-body -X POST 'http://localhost:9200/hits/_refresh' >/dev/null
+curl -sS --fail-with-body -X POST 'http://localhost:9200/hits/_flush' >/dev/null
+
+count=$(curl -sS --fail 'http://localhost:9200/hits/_count' | jq -r '.count')
+echo "load: ${count} documents in the index" >&2
+if [ "${count}" != "${EXPECTED_ROWS:-99997497}" ]; then
+    echo "load: expected ${EXPECTED_ROWS:-99997497} documents" >&2
+    exit 1
+fi
+
+rm -f hits.json
