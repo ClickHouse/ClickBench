@@ -1,0 +1,11 @@
+{
+  "system": "Exasol",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "MPP"
+  ]
+}
