@@ -6,13 +6,8 @@ set -e -o pipefail
 # table is sent without the warehouse (`/clickbench/hits`) and SeaweedFS
 # rejects it.
 if [ ! -x ./clickhouse ]; then
-    case "$(uname -m)" in
-        x86_64) arch=amd64 ;;
-        aarch64) arch=aarch64 ;;
-    esac
-    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors -o clickhouse \
-        "https://builds.clickhouse.com/master/$arch/clickhouse"
-    chmod +x clickhouse
+    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ |
+        CLICKHOUSE_BRANCH=master CLICKHOUSE_ONLY=1 sh
 fi
 # The binary is self-extracting: it decompresses itself on the first run.
 # Do it here, rather than when ./start and ./check run it at the same time.
