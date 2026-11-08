@@ -271,8 +271,10 @@
             color: var(--link-color);
             user-select: none;
             position: absolute;
+            /* The clickable area ends at the left edge of the cell, so it does not overlap the history link. */
             left: -1rem;
-            padding-right: 1.5rem;
+            width: 1rem;
+            text-align: center;
         }
 
         .summary-row:hover .remove-system {
