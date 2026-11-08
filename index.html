@@ -878,7 +878,9 @@ function clearSystemHighlight() {
 }
 
 /// A click flips a single toggle, while a right click or Ctrl/Cmd + click selects only this toggle in its group.
-function toggle(e, elem, selectors_map) {
+/// The group is passed by name, as `selectors` is replaced when it is restored from the URL or the browser history.
+function toggle(e, elem, group) {
+    const selectors_map = selectors[group];
     if (e.type == 'contextmenu' || e.ctrlKey || e.metaKey) {
         e.preventDefault();
         Object.keys(selectors_map).forEach(k => { selectors_map[k] = k == String(elem) });
@@ -890,9 +892,9 @@ function toggle(e, elem, selectors_map) {
     updateHistory();
 }
 
-function addToggleListener(selector, elem, selectors_map) {
-    selector.addEventListener('click', e => toggle(e, elem, selectors_map));
-    selector.addEventListener('contextmenu', e => toggle(e, elem, selectors_map));
+function addToggleListener(selector, elem, group) {
+    selector.addEventListener('click', e => toggle(e, elem, group));
+    selector.addEventListener('contextmenu', e => toggle(e, elem, group));
 }
 
 function toggleAll(e, selectors_map) {
@@ -911,7 +913,7 @@ unique_systems.map(elem => {
     selector.appendChild(document.createTextNode(elem));
     systems.appendChild(selector);
     selectors.system[elem] = data.some(entry => entry.system == elem && !entry.hide);
-    addToggleListener(selector, elem, selectors.system);
+    addToggleListener(selector, elem, 'system');
 
     /// Highlighting summary rows and table columns on hovering over the system selector.
     selector.addEventListener('mouseover', () => highlightSystem(elem));
@@ -932,7 +934,7 @@ data.forEach(d => {
     selector.appendChild(document.createTextNode(elem));
     types.appendChild(selector);
     selectors.type[elem] = true;
-    addToggleListener(selector, elem, selectors.type);
+    addToggleListener(selector, elem, 'type');
 
     /// Highlighting summary rows and detail columns on hovering over a tag.
     selector.addEventListener('mouseover', () => {
@@ -1057,7 +1059,7 @@ const aws_machine_regexp = /^[a-z]+[0-9]+[a-z]*\.[0-9a-z-]+$/;
     selector.appendChild(document.createTextNode(elem));
     machines.appendChild(selector);
     selectors.machine[elem] = selected;
-    addToggleListener(selector, elem, selectors.machine);
+    addToggleListener(selector, elem, 'machine');
 });
 
 [... new Set(data.map(elem => elem.cluster_size))].sort(
@@ -1067,18 +1069,18 @@ const aws_machine_regexp = /^[a-z]+[0-9]+[a-z]*\.[0-9a-z-]+$/;
     selector.appendChild(document.createTextNode(elem));
     cluster_sizes.appendChild(selector);
     selectors.cluster_size[elem] = true;
-    addToggleListener(selector, elem, selectors.cluster_size);
+    addToggleListener(selector, elem, 'cluster_size');
 });
 
-addToggleListener(document.getElementById('selector-opensource-yes'), 'yes', selectors.opensource);
-addToggleListener(document.getElementById('selector-opensource-no'), 'no', selectors.opensource);
-addToggleListener(document.getElementById('selector-hardware-cpu'), 'cpu', selectors.hardware);
-addToggleListener(document.getElementById('selector-hardware-gpu'), 'gpu', selectors.hardware);
-addToggleListener(document.getElementById('selector-tuned-yes'), 'yes', selectors.tuned);
-addToggleListener(document.getElementById('selector-tuned-no'), 'no', selectors.tuned);
+addToggleListener(document.getElementById('selector-opensource-yes'), 'yes', 'opensource');
+addToggleListener(document.getElementById('selector-opensource-no'), 'no', 'opensource');
+addToggleListener(document.getElementById('selector-hardware-cpu'), 'cpu', 'hardware');
+addToggleListener(document.getElementById('selector-hardware-gpu'), 'gpu', 'hardware');
+addToggleListener(document.getElementById('selector-tuned-yes'), 'yes', 'tuned');
+addToggleListener(document.getElementById('selector-tuned-no'), 'no', 'tuned');
 
 Object.keys(default_storage).forEach(key =>
-    addToggleListener(document.getElementById('selector-storage-' + key), key, selectors.storage));
+    addToggleListener(document.getElementById('selector-storage-' + key), key, 'storage'));
 
 document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
 document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
