@@ -119,6 +119,84 @@ TO sink;
 GRANT INSERT ON sink.data TO sink;
 GRANT SELECT ON sink.data TO sink;
 
+-- Live logs (lib/live-log.py, live.html): the benchmark machines stream the
+-- output of cloud-init.sh into this table as it goes, about one insert per
+-- second, a row per line, and live.html follows a run with a streaming query:
+--     SELECT ... FROM sink.logs STREAM WHERE run_id = ... AND line_number > ...
+-- The streaming query (`STREAM`) needs the block number and offset columns
+-- and their min-max indices. It returns the rows in the order of the inserts,
+-- and `line_number` lets the reader resume after a reconnect without gaps and
+-- skip the duplicates of retried inserts. The logs are kept for a month; the
+-- complete log of every run is in sink.data anyway.
+CREATE TABLE sink.logs
+(
+    run_id UUID,
+    system LowCardinality(String),
+    machine LowCardinality(String),
+    line_number UInt64,
+    time DateTime64(3),
+    line String CODEC(ZSTD(3)),
+    -- The last row of a run that ended normally, with an empty line.
+    eof Bool
+)
+ENGINE = ReplicatedMergeTree('/clickhouse/tables/sink/logs/{shard}', '{replica}')
+ORDER BY (run_id, line_number)
+TTL toDateTime(time) + INTERVAL 30 DAY
+SETTINGS
+    enable_block_number_column = 1,
+    enable_block_offset_column = 1,
+    add_minmax_index_for_block_number_column = 1,
+    add_minmax_index_for_block_offset_column = 1,
+    part_minmax_index_columns = 'with_block_number_offset';
+
+-- The writer: lib/live-log.py on the benchmark machines. Async inserts batch the
+-- rows of all the machines running at the same time into fewer parts.
+CREATE USER sink_logs IDENTIFIED WITH no_password
+DEFAULT DATABASE sink
+SETTINGS
+    async_insert = 1 READONLY,
+    wait_for_async_insert = 1 READONLY,
+    max_query_size = '1M' READONLY;
+
+-- One insert per second, with room for retries, and the output of builds from source.
+CREATE QUOTA sink_logs
+KEYED BY ip_address
+FOR RANDOMIZED INTERVAL 1 MINUTE MAX query_inserts = 200, written_bytes = 50000000,
+FOR RANDOMIZED INTERVAL 1 DAY MAX query_inserts = 200000, written_bytes = 1000000000
+TO sink_logs;
+
+GRANT INSERT ON sink.logs TO sink_logs;
+
+-- The reader: live.html. Unlike `play`, it has the streaming queries enabled,
+-- and the queries can run for an hour (the page reconnects after that). The
+-- settings are fixed by readonly = 1.
+-- A streaming query that waits for new rows does not notice that the client
+-- has gone, and does not check max_execution_time either, until the table gets
+-- a new part (then cancel_http_readonly_queries_on_client_close kills it), so
+-- the number of concurrent queries is limited.
+CREATE USER live_logs IDENTIFIED WITH no_password
+DEFAULT DATABASE sink
+SETTINGS
+    readonly = 1,
+    add_http_cors_header = 1,
+    -- Browsers always ask for compression, and the compressed response is sent
+    -- in large chunks, which holds back the new lines of a streaming query.
+    enable_http_compression = 0,
+    enable_analyzer = 1,
+    enable_streaming_queries = 1,
+    use_skip_indexes_on_data_read = 0,
+    max_execution_time = 3600,
+    max_result_bytes = 1000000000,
+    cancel_http_readonly_queries_on_client_close = 1,
+    max_concurrent_queries_for_user = 200;
+
+CREATE QUOTA live_logs
+KEYED BY ip_address
+FOR RANDOMIZED INTERVAL 1 MINUTE MAX queries = 60
+TO live_logs;
+
+GRANT SELECT ON sink.logs TO live_logs;
+
 -- All the result files of the repository, <system>/results/<date>/<name>.json,
 -- for the history view of the website (index.html) and for ad-hoc queries.
 -- A row per file, with the fields of the JSON in columns, including the failed runs ({"error": "..."}) and the

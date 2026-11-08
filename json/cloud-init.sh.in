@@ -11,7 +11,17 @@
 # Make sure the machine terminates whatever happens to this script, see
 # ../cloud-init.sh.in.
 shutdown -P "+$(( @timeout@ / 60 + 120 ))"
-trap 'shutdown now' EXIT
+trap 'live_log_stop; shutdown now' EXIT
+
+# The live log, see ../cloud-init.sh.in.
+live_log_pid=
+live_log_stop() {
+    if [ -n "$live_log_pid" ]; then
+        kill -TERM "$live_log_pid"
+        wait "$live_log_pid"
+        live_log_pid=
+    fi
+}
 
 export HOME="${HOME:-/root}"
 export DEBIAN_FRONTEND=noninteractive
@@ -26,6 +36,13 @@ apt-get install -y wget curl git jq zstd earlyoom
 systemctl enable --now earlyoom
 
 git clone --depth 1 'https://github.com/@repo@.git' --branch '@branch@' ClickBench
+
+# Live log: stream the output of this script to sink.logs as it goes, see
+# ../cloud-init.sh.in. Watch it on https://benchmark.clickhouse.com/live.html#@run_id@
+LIVE_LOG_RUN_ID='@run_id@' LIVE_LOG_SYSTEM='json/@system@ @size@m' LIVE_LOG_MACHINE='@machine@' \
+    nice -n 19 python3 ClickBench/lib/live-log.py /var/log/cloud-init-output.log &
+live_log_pid=$!
+
 cd ClickBench/json/@system@
 
 LOG="${PWD}/log"
@@ -72,4 +89,5 @@ send_log "${LOG}"
 { echo 'JSONBench cloud-init log: @system@, size: @size@m, PR: @clickbench_pr@'; cat /var/log/cloud-init-output.log; } > cloud-init.log
 send_log cloud-init.log
 
+live_log_stop
 shutdown now

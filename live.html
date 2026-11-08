@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ClickBench — Live Logs</title>
+<link rel="icon" href="data:image/gif;base64,R0lGODlhIAAgAOMPAHMUEmkyHOcbF8UvJts/E3BeOih1YziiQmebLt2AFjeyQKqZKNWPjLybfPfcDP///yH5BAEKAA8ALAAAAAAgACAAAATg8Ml">
+<!--
+Live logs of the benchmark runs.
+
+The benchmark machines stream the output of their cloud-init script into the
+table sink.logs on play.clickhouse.com (see lib/live-log.py), and this page
+follows a run with a streaming query:
+
+    SELECT ... FROM sink.logs STREAM WHERE run_id = {run:UUID} AND line_number > {last:UInt64}
+
+which returns the lines that are already there and then the new lines as they
+are inserted. If the connection breaks, the page reconnects and continues
+after the last line it has. It stops after the last row of the run (eof).
+
+The page is self-contained and can be hosted anywhere, e.g. on pastila.nl:
+    benchmark.clickhouse.com/live.html            - the list of recent runs
+    benchmark.clickhouse.com/live.html#<run_id>   - the log of a run
+The launchers (run-benchmark.sh) print the link for every machine they start.
+Add ?server=<url> to read from another ClickHouse server, e.g.
+?server=http://localhost:8123/%3Fuser%3Dlive_logs
+-->
+<style>
+:root {
+    --color: black;
+    --background-color: white;
+    --dim-color: #888;
+    --link-color: #08F;
+    --link-hover-color: #F40;
+    --bar-background-color: #EEE;
+    --row-hover-color: #F4F4F4;
+    --trace-color: #777;
+    --error-color: #C00;
+    --live-color: #0A0;
+    --mark-color: #FFCB80;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color: #CCC;
+        --background-color: #04293A;
+        --dim-color: #8AA;
+        --link-color: #8CF;
+        --link-hover-color: #FFF;
+        --bar-background-color: #0A3A4E;
+        --row-hover-color: #0A3445;
+        --trace-color: #8AA;
+        --error-color: #F88;
+        --live-color: #6E6;
+        --mark-color: #866;
+    }
+}
+html, body {
+    margin: 0;
+    color: var(--color);
+    background: var(--background-color);
+    font-family: Inter, Arial, sans-serif;
+    font-size: 14px;
+}
+a { color: var(--link-color); text-decoration: none; }
+a:hover { color: var(--link-hover-color); }
+#bar {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em 1.5em;
+    align-items: center;
+    padding: 0.5em 1em;
+    background: var(--bar-background-color);
+}
+#title { font-weight: bold; }
+#status::before { content: '● '; }
+.status-live { color: var(--live-color); }
+.status-wait { color: var(--dim-color); }
+.status-error { color: var(--error-color); }
+.status-done { color: var(--color); }
+#bar label { white-space: nowrap; cursor: pointer; }
+#bar input[type=text] { width: 15em; }
+#bar .spacer { flex-grow: 1; }
+#message { padding: 1em; color: var(--error-color); white-space: pre-wrap; font-family: monospace; }
+#message:empty { display: none; }
+
+/* The log */
+#log {
+    font-family: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 0.5em 0 2em 0;
+}
+#log .c {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 17000px;
+}
+#log .c > div { display: flex; }
+#log .c > div:hover { background: var(--row-hover-color); }
+#log .t {
+    flex-shrink: 0;
+    width: 6.5em;
+    padding: 0 1em 0 1em;
+    color: var(--dim-color);
+    user-select: none;
+    text-align: right;
+}
+#log .l { white-space: pre; padding-right: 1em; }
+body.wrap #log .l { white-space: pre-wrap; overflow-wrap: anywhere; }
+#log .trace .l { color: var(--trace-color); }
+#log .error .l { color: var(--error-color); }
+#log mark { background: var(--mark-color); color: inherit; }
+#more {
+    position: fixed;
+    right: 2em;
+    bottom: 1em;
+    padding: 0.3em 1em;
+    border-radius: 1em;
+    background: var(--link-color);
+    color: var(--background-color);
+    cursor: pointer;
+    display: none;
+}
+
+/* The list of runs */
+#runs { border-collapse: collapse; margin: 1em; }
+#runs th { text-align: left; color: var(--dim-color); font-weight: normal; padding: 0.3em 1em; }
+#runs td { padding: 0.3em 1em; white-space: nowrap; }
+#runs tr:hover td { background: var(--row-hover-color); }
+#runs td.n { text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="message"></div>
+<div id="content"></div>
+<div id="more">↓ new lines</div>
+
+<script>
+'use strict';
+
+const params = new URLSearchParams(location.search);
+const server = params.get('server') || 'https://play.clickhouse.com/?user=live_logs';
+
+const bar = document.getElementById('bar');
+const message = document.getElementById('message');
+const content = document.getElementById('content');
+
+/// Run a query on the server, with the parameters substituted by the server
+/// itself ({name:Type} in the query, param_name in the URL).
+function request(query, query_params, signal) {
+    const url = new URL(server);
+    for (const [name, value] of Object.entries(query_params || {})) {
+        url.searchParams.set('param_' + name, value);
+    }
+    return fetch(url, { method: 'POST', body: query, signal });
+}
+
+async function check(response) {
+    if (!response.ok) {
+        throw new Error((await response.text()).trim() || `HTTP ${response.status}`);
+    }
+    return response;
+}
+
+function element(tag, attributes, ...children) {
+    const e = document.createElement(tag);
+    for (const [name, value] of Object.entries(attributes || {})) {
+        if (name === 'className') e.className = value;
+        else if (name.startsWith('on')) e.addEventListener(name.slice(2), value);
+        else e.setAttribute(name, value);
+    }
+    e.append(...children);
+    return e;
+}
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+/// The time of a line. Consecutive lines mostly have the same second.
+const time_format = new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+let formatted_second = null;
+let formatted_time = '';
+function formatTime(seconds) {
+    const second = Math.floor(seconds);
+    if (second !== formatted_second) {
+        formatted_second = second;
+        formatted_time = time_format.format(second * 1000);
+    }
+    return formatted_time;
+}
+
+function formatDuration(seconds) {
+    seconds = Math.max(0, Math.round(seconds));
+    const h = Math.floor(seconds / 3600), m = Math.floor(seconds % 3600 / 60), s = seconds % 60;
+    return (h ? `${h}h ` : '') + (h || m ? `${m}m ` : '') + `${s}s`;
+}
+
+/// Terminal escape sequences (colors, cursor movement) that some tools print.
+const ansi = /\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*\x07/g;
+
+/// The list of recent runs.
+async function showRuns() {
+    document.title = 'ClickBench — Live Logs';
+    const filter = element('input', { type: 'text', placeholder: 'filter: system or machine' });
+    filter.value = params.get('filter') || '';
+    bar.replaceChildren(element('span', { id: 'title' }, 'ClickBench live logs'), filter,
+        element('span', { className: 'spacer' }),
+        element('a', { href: 'https://github.com/ClickHouse/ClickBench' }, 'GitHub'));
+
+    let rows = [];
+    const render = () => {
+        const words = filter.value.toLowerCase().split(/\s+/).filter(w => w);
+        const now = Date.now() / 1000;
+        const table = element('table', { id: 'runs' },
+            element('tr', {}, ...['System', 'Machine', 'Started', 'Duration', 'Lines', 'Status'].map(h => element('th', {}, h))));
+        for (const r of rows) {
+            const text = `${r.system} ${r.machine}`.toLowerCase();
+            if (!words.every(w => text.includes(w))) continue;
+            const start = Number(r.start), last = Number(r.last);
+            let status;
+            if (r.finished) status = element('span', { className: 'status-done' }, 'finished');
+            else if (now - last < 120) status = element('span', { className: 'status-live' }, '● running');
+            else status = element('span', { className: 'status-wait' }, `quiet for ${formatDuration(now - last)}`);
+            table.append(element('tr', {},
+                element('td', {}, element('a', { href: '#' + r.run_id }, r.system || '(unknown)')),
+                element('td', {}, r.machine),
+                element('td', {}, new Date(start * 1000).toLocaleString([], { hour12: false })),
+                element('td', { className: 'n' }, formatDuration(last - start)),
+                element('td', { className: 'n' }, Number(r.lines).toLocaleString()),
+                element('td', {}, status)));
+        }
+        content.replaceChildren(table);
+    };
+    filter.addEventListener('input', render);
+
+    const generation = ++view_generation;
+    while (generation === view_generation) {
+        try {
+            const response = await check(await request(`
+                SELECT run_id, any(system) AS system, any(machine) AS machine,
+                    toUnixTimestamp(min(time)) AS start, toUnixTimestamp(max(time)) AS last,
+                    max(line_number) - max(eof) AS lines, max(eof) AS finished
+                FROM logs
+                WHERE time >= now() - INTERVAL 3 DAY
+                GROUP BY run_id
+                ORDER BY start DESC
+                LIMIT 1000
+                FORMAT JSONEachRow`));
+            const text = await response.text();
+            if (generation !== view_generation) return;
+            rows = text.split('\n').filter(l => l).map(l => JSON.parse(l));
+            message.textContent = '';
+            render();
+        } catch (e) {
+            if (generation !== view_generation) return;
+            message.textContent = e.message;
+        }
+        await sleep(10000);
+    }
+}
+
+/// The log of one run, followed with a streaming query.
+async function showRun(run_id) {
+    const generation = ++view_generation;
+    const lines = [];       // {time, text} of every line, to filter them again.
+    let last = 0;           // The line_number of the last line we have.
+    let finished = false;
+    let info = null;
+
+    const title = element('span', { id: 'title' }, run_id);
+    const status = element('span', { id: 'status' });
+    const counter = element('span', {});
+    const follow = element('input', { type: 'checkbox' });
+    follow.checked = true;
+    const wrap = element('input', { type: 'checkbox' });
+    const search = element('input', { type: 'text', placeholder: 'filter lines (regexp)' });
+    bar.replaceChildren(element('a', { href: '#' }, '← all runs'), title, status, counter,
+        element('span', { className: 'spacer' }),
+        search,
+        element('label', {}, follow, ' follow'),
+        element('label', {}, wrap, ' wrap'));
+    wrap.addEventListener('change', () => document.body.classList.toggle('wrap', wrap.checked));
+    document.body.classList.toggle('wrap', wrap.checked);
+
+    const log = element('div', { id: 'log' });
+    content.replaceChildren(log);
+    const more = document.getElementById('more');
+
+    const setStatus = (kind, text) => {
+        status.className = 'status-' + kind;
+        status.textContent = text;
+    };
+
+    let pattern = null;
+    const matches = text => !pattern || pattern.test(text);
+    const escape = text => text.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
+    const lineHTML = line => {
+        const text = line.text;
+        const kind = /^\++ /.test(text) ? ' class="trace"'
+            : /\b(error|exception|fatal|failed|traceback|killed)\b/i.test(text) ? ' class="error"' : '';
+        let body = '';
+        if (pattern) {
+            // Highlight the matches.
+            let pos = 0;
+            for (const m of text.matchAll(new RegExp(pattern.source, 'gi'))) {
+                if (!m[0]) break;
+                body += escape(text.slice(pos, m.index)) + '<mark>' + escape(m[0]) + '</mark>';
+                pos = m.index + m[0].length;
+            }
+            body += escape(text.slice(pos));
+        } else {
+            body = escape(text);
+        }
+        return `<div${kind}><span class="t">${formatTime(line.time)}</span><span class="l">${body}</span></div>`;
+    };
+
+    // The lines are grouped into chunks, so that the browser can skip the layout
+    // of the chunks out of view (content-visibility): a log can have hundreds of
+    // thousands of lines. A chunk is made from HTML, which is faster than
+    // creating the elements one by one.
+    const chunk_size = 1000;
+    let chunk = null;
+    let chunk_lines = 0;
+    const render = new_lines => {
+        let html = '';
+        let shown = 0;
+        for (const line of new_lines) {
+            if (!matches(line.text)) continue;
+            if (!chunk || chunk_lines === chunk_size) {
+                if (html) chunk.insertAdjacentHTML('beforeend', html);
+                html = '';
+                chunk = element('div', { className: 'c' });
+                chunk_lines = 0;
+                log.append(chunk);
+            }
+            html += lineHTML(line);
+            ++chunk_lines;
+            ++shown;
+        }
+        if (html) chunk.insertAdjacentHTML('beforeend', html);
+        return shown;
+    };
+
+    const atBottom = () => window.innerHeight + window.scrollY >= document.body.scrollHeight - 50;
+    const scrollDown = () => window.scrollTo(0, document.body.scrollHeight);
+    window.onscroll = () => { if (atBottom()) more.style.display = 'none'; };
+    more.onclick = () => { more.style.display = 'none'; scrollDown(); };
+
+    // New lines are added to the page in batches, every 100 ms: every update makes
+    // the browser lay out the page to scroll to the end.
+    let queue = [];
+    let scheduled = false;
+    const flush = () => {
+        scheduled = false;
+        if (generation !== view_generation) return;
+        const stick = follow.checked && atBottom();
+        const shown = render(queue);
+        queue = [];
+        counter.textContent = `${lines.length.toLocaleString()} lines`;
+        if (stick) scrollDown();
+        else if (follow.checked && shown !== 0) more.style.display = 'block';
+    };
+    const add = line => {
+        lines.push(line);
+        queue.push(line);
+        if (!scheduled) {
+            scheduled = true;
+            setTimeout(flush, 100);
+        }
+    };
+
+    search.addEventListener('input', () => {
+        try {
+            pattern = search.value ? new RegExp(search.value, 'i') : null;
+            search.style.outline = '';
+        } catch (e) {
+            search.style.outline = '1px solid red';
+            return;
+        }
+        log.replaceChildren();
+        chunk = null;
+        // The queued lines are in `lines` too.
+        queue = [];
+        render(lines);
+    });
+
+    const handleRow = row => {
+        if (row.exception) throw new Error(row.exception);
+        const n = Number(row.line_number);
+        // Lines that we already have: a retried insert, or a reconnect.
+        if (n <= last) return;
+        last = n;
+        if (!info) {
+            info = row;
+            title.textContent = `${row.system} on ${row.machine}`;
+            document.title = `${row.system} on ${row.machine} — ClickBench Live Logs`;
+        }
+        if (row.eof) {
+            finished = true;
+            return;
+        }
+        add({ time: Number(row.time), text: row.line.replace(ansi, '') });
+    };
+
+    let pause = 1000;
+    while (!finished && generation === view_generation) {
+        const controller = new AbortController();
+        current_controller = controller;
+        try {
+            // The server sends the response when it has the first rows to send,
+            // which can take a while for a machine that is just starting.
+            setStatus('wait', 'waiting for lines');
+            const response = await check(await request(`
+                SELECT line_number, toUnixTimestamp64Milli(time) / 1000 AS time, system, machine, line, eof
+                FROM logs STREAM
+                WHERE run_id = {run:UUID} AND line_number > {last:UInt64}
+                FORMAT JSONEachRow`, { run: run_id, last }, controller.signal));
+            setStatus('live', 'live');
+            message.textContent = '';
+            const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+            let buffer = '';
+            while (!finished) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                const texts = (buffer + value).split('\n');
+                buffer = texts.pop();
+                for (const text of texts) {
+                    // An exception after the response has started comes as plain text.
+                    if (!text.startsWith('{')) throw new Error([text, ...texts.slice(texts.indexOf(text) + 1), buffer].join('\n'));
+                    handleRow(JSON.parse(text));
+                    if (finished) break;
+                }
+                pause = 1000;
+            }
+            // Stop the query on the server: the run is over.
+            controller.abort();
+        } catch (e) {
+            if (generation !== view_generation) return;
+            if (!finished) {
+                message.textContent = e.message;
+                setStatus('error', 'disconnected');
+            }
+        }
+        if (!finished && generation === view_generation) {
+            await sleep(pause);
+            pause = Math.min(pause * 2, 30000);
+        }
+    }
+    if (finished && generation === view_generation) {
+        flush();
+        setStatus('done', 'finished');
+    }
+}
+
+let view_generation = 0;
+let current_controller = null;
+
+function route() {
+    if (current_controller) current_controller.abort();
+    current_controller = null;
+    window.onscroll = null;
+    document.getElementById('more').style.display = 'none';
+    message.textContent = '';
+    content.replaceChildren();
+    const run_id = location.hash.slice(1).trim();
+    if (run_id) showRun(run_id);
+    else showRuns();
+}
+
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>

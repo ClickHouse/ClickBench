@@ -73,11 +73,15 @@ aws_retry() {
 arch=$(aws_retry aws ec2 describe-instance-types --instance-types "$machine" --query 'InstanceTypes[0].ProcessorInfo.SupportedArchitectures' --output text)
 ami=$(aws_retry aws ec2 describe-images --owners amazon --filters "Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04*" "Name=architecture,Values=${arch}" "Name=state,Values=available" --query 'sort_by(Images, &CreationDate) | [-1].[ImageId]' --output text)
 
+# Identifies the live log of this run in sink.logs, see ../lib/live-log.py.
+run_id=$(cat /proc/sys/kernel/random/uuid)
+
 rendered="cloud-init.${system}.${size}.sh"
 awk -v sys="$system" -v size="$size" -v repo="$repo" -v branch="$branch" -v t="$timeout" -v pr="$clickbench_pr" \
-    -v volume="$volume" -v iops="$iops" -v throughput="$throughput" '
+    -v volume="$volume" -v iops="$iops" -v throughput="$throughput" -v machine="$machine" -v run_id="$run_id" '
 {
     gsub(/@system@/, sys); gsub(/@size@/, size)
+    gsub(/@machine@/, machine); gsub(/@run_id@/, run_id)
     gsub(/@repo@/, repo); gsub(/@branch@/, branch)
     gsub(/@timeout@/, t); gsub(/@clickbench_pr@/, pr)
     gsub(/@volume@/, volume); gsub(/@iops@/, iops); gsub(/@throughput@/, throughput)
@@ -89,3 +93,7 @@ aws_retry aws ec2 run-instances --image-id "$ami" --instance-type "$machine" \
     --instance-initiated-shutdown-behavior terminate \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=jsonbench-${system}-${size}m}]" \
     --user-data "file://${rendered}"
+
+live_log="Live log of json/${system} ${size}m on ${machine}: https://benchmark.clickhouse.com/live.html#${run_id}"
+echo "${live_log}"
+if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then echo "${live_log}" >> "${GITHUB_STEP_SUMMARY}"; fi
