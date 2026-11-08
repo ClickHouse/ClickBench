@@ -8,7 +8,11 @@ export DORIS_HOME
 export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-$(dpkg --print-architecture)/"
 export PATH=$JAVA_HOME/bin:$PATH
 
-if mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null 2>&1; then
+doris() {
+    mysql -h127.0.0.1 -P9030 -uroot "$@"
+}
+
+if doris -e 'SELECT 1' >/dev/null 2>&1; then
     exit 0
 fi
 
@@ -17,21 +21,27 @@ ulimit -n 65535
 "$DORIS_HOME"/fe/bin/start_fe.sh --daemon
 "$DORIS_HOME"/be/bin/start_be.sh --daemon
 
+# The columns are read by name (`\G`), as their positions differ between
+# Doris versions. The frontend accepts the registration of the backend only
+# once it is the master; until then, `ADD BACKEND` fails, so it is retried
+# until the backend is listed, and then we wait until the backend is alive.
 for _ in $(seq 1 300); do
-    fe_version=$(mysql -h127.0.0.1 -P9030 -uroot -e 'show frontends' 2>/dev/null | cut -f16 | sed -n '2,$p')
-    if [ -n "$fe_version" ] && [ "$fe_version" != "NULL" ]; then
+    if doris -e 'SHOW FRONTENDS\G' 2>/dev/null | grep -q 'IsMaster: true'; then
         break
     fi
     sleep 2
 done
 
-mysql -h127.0.0.1 -P9030 -uroot \
-    -e "ALTER SYSTEM ADD BACKEND '127.0.0.1:9050'" 2>/dev/null || true
-
 for _ in $(seq 1 300); do
-    be_version=$(mysql -h127.0.0.1 -P9030 -uroot -e 'show backends' 2>/dev/null | cut -f22 | sed -n '2,$p')
-    if [ -n "$be_version" ]; then
-        break
+    backends=$(doris -e 'SHOW BACKENDS\G' 2>/dev/null || true)
+    if printf '%s\n' "$backends" | grep -q 'Alive: true'; then
+        exit 0
+    fi
+    if ! printf '%s\n' "$backends" | grep -q 'HeartbeatPort: 9050'; then
+        doris -e "ALTER SYSTEM ADD BACKEND '127.0.0.1:9050'" 2>/dev/null || true
     fi
     sleep 2
 done
+
+echo "doris-iceberg: the backend did not become alive" >&2
+exit 1
