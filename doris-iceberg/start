@@ -1,0 +1,52 @@
+#!/bin/bash
+set -e
+
+# The driver discards the output of ./start; keep a trace of it for ./check
+# to show on failure.
+exec >> start.log 2>&1
+set -x
+
+../lib/iceberg/start
+
+DORIS_HOME=$(cat .doris_home)
+export DORIS_HOME
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-$(dpkg --print-architecture)/"
+export PATH=$JAVA_HOME/bin:$PATH
+
+doris() {
+    mysql -h127.0.0.1 -P9030 -uroot "$@"
+}
+
+if doris -e 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+ulimit -n 65535
+
+"$DORIS_HOME"/fe/bin/start_fe.sh --daemon
+"$DORIS_HOME"/be/bin/start_be.sh --daemon
+
+# The columns are read by name (`\G`), as their positions differ between
+# Doris versions. The frontend accepts the registration of the backend only
+# once it is the master; until then, `ADD BACKEND` fails, so it is retried
+# until the backend is listed, and then we wait until the backend is alive.
+for _ in $(seq 1 300); do
+    if doris -e 'SHOW FRONTENDS\G' 2>/dev/null | grep -q 'IsMaster: true'; then
+        break
+    fi
+    sleep 2
+done
+
+for _ in $(seq 1 300); do
+    backends=$(doris -e 'SHOW BACKENDS\G' 2>/dev/null || true)
+    if printf '%s\n' "$backends" | grep -q 'Alive: true'; then
+        exit 0
+    fi
+    if ! printf '%s\n' "$backends" | grep -q 'HeartbeatPort: 9050'; then
+        doris -e "ALTER SYSTEM ADD BACKEND '127.0.0.1:9050'" 2>/dev/null || true
+    fi
+    sleep 2
+done
+
+echo "doris-iceberg: the backend did not become alive" >&2
+exit 1

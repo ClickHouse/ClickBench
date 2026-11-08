@@ -1,0 +1,16 @@
+profiles:
+    default:
+        # Iceberg catalogs and writes into Iceberg are not enabled by default.
+        # These settings only unlock the features; they do not tune anything.
+        allow_database_iceberg: 1
+        allow_insert_into_iceberg: 1
+users:
+    default:
+        password: ''
+        networks:
+            ip: '::/0'
+        profile: default
+        quota: default
+        access_management: 1
+quotas:
+    default: {}

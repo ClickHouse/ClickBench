@@ -1,0 +1,3 @@
+#!/bin/bash
+# DataFusion is embedded: there is nothing to start except the storage.
+exec ../lib/iceberg/start
