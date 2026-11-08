@@ -72,7 +72,8 @@ def main():
                 "encoding": "UTF8",
                 # ClickHouse writes TSV without quoting; use a character that
                 # never occurs in the data so that '"' is taken literally.
-                "column_delimiter": "\x01",
+                # (\x01 does occur: UserAgentMinor has values like "1\x01".)
+                "column_delimiter": "\x02",
             },
         )
         return
