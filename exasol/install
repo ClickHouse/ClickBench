@@ -11,9 +11,11 @@ sudo apt-get update -y
 sudo apt-get install -y python3-venv ca-certificates curl
 
 # The launcher needs Docker Engine 29 or later, newer than Ubuntu's docker.io.
-if ! sudo docker version --format '{{.Server.Version}}' 2>/dev/null | awk -F. '{ exit !($1 >= 29) }'; then
+docker_version=$(sudo docker version --format '{{.Server.Version}}' 2>/dev/null || true)
+if [ "${docker_version%%.*}" -lt 29 ] 2>/dev/null || [ -z "$docker_version" ]; then
     curl -fsSL https://get.docker.com | sudo sh
 fi
+sudo docker version --format 'Docker Engine {{.Server.Version}}'
 
 case "$(uname -m)" in
     x86_64) arch=x86_64 ;;
