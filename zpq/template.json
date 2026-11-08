@@ -1,0 +1,13 @@
+{
+  "system": "zpq (Parquet, single)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "Zig",
+    "column-oriented",
+    "embedded",
+    "stateless"
+  ]
+}

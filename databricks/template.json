@@ -3,7 +3,7 @@
   "proprietary": "yes",
   "hardware": "cpu",
   "tuned": "no",
-  "category": "elite",
+  "category": "production",
   "tags": [
     "managed",
     "column-oriented",

@@ -1,0 +1,12 @@
+{
+  "system": "ClickHouse (Iceberg)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "elite",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative"
+  ]
+}

@@ -10,15 +10,16 @@
 # "Complexity" is the amount of code needed to run the benchmark for a system:
 # the byte size of the zstd-compressed concatenation of all the scripts and
 # configs in the system's directory (install, load, start, stop, query, the
-# Python and Expect scripts they invoke, etc.), with full-line comments, blank
-# lines, and redundant whitespace removed. Queries, table definitions,
-# results, and docs are not counted, nor is the shared driver in lib/.
+# Python and Expect scripts they invoke, auxiliary SQL files such as insert.sql,
+# etc.), with full-line comments, blank lines, and redundant whitespace removed.
+# Queries (queries*.sql), table definitions (create*.sql), results, and docs are
+# not counted, nor is update-from-play.sql or the shared driver in lib/.
 # Systems without the install script (with a manual procedure) have no value.
 complexity() {
     local files
     if [ -z "$(git ls-files -- "$1/install")" ]; then echo null; return; fi
     mapfile -d '' files < <(git ls-files -z -- "$1/" \
-        | grep -zvE '(^[^/]+/results/|\.(json|md|sql|txt|lock|pyc)$|\.sql\.|(^|/)\.(git|docker)ignore$)' \
+        | grep -zvE '(^[^/]+/results/|\.(json|md|txt|lock|pyc)$|(^|/)(queries|create)([-_][^/]*)?\.sql$|(^|/)update-from-play\.sql$|\.sql\.|(^|/)\.(git|docker)ignore$)' \
         | sort -z \
         | xargs -0 --no-run-if-empty grep -Il --null '')
     if [ ${#files[@]} = 0 ]; then echo null; return; fi

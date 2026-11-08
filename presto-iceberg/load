@@ -1,0 +1,16 @@
+#!/bin/bash
+# Creates the Iceberg table through the REST catalog and writes the dataset
+# into it with a single INSERT with the default settings. The source is a
+# Hive table over the downloaded Parquet files.
+set -e
+
+../lib/iceberg/prepare
+
+for f in hits_*.parquet; do
+    ln -f "$f" "data/hits/$f" 2>/dev/null || cp -f "$f" "data/hits/$f"
+done
+
+cat source.sql create.sql insert.sql > load.sql
+java -jar presto-cli.jar --server http://localhost:8080 --file load.sql
+
+rm -f hits_*.parquet data/hits/hits_*.parquet load.sql

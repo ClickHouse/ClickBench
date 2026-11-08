@@ -1,0 +1,11 @@
+{
+  "system": "Firebird",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "enthusiast",
+  "tags": [
+    "C++",
+    "row-oriented"
+  ]
+}

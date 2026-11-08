@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e -o pipefail
+
+# The master build rather than the latest release: creating tables through an
+# Iceberg REST catalog needs fixes after 26.10, where the location of a new
+# table is sent without the warehouse (`/clickbench/hits`) and SeaweedFS
+# rejects it.
+if [ ! -x ./clickhouse ]; then
+    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ |
+        CLICKHOUSE_BRANCH=master CLICKHOUSE_ONLY=1 sh
+fi
+# The binary is self-extracting: it decompresses itself on the first run.
+# Do it here, rather than when ./start and ./check run it at the same time.
+./clickhouse --version
+
+../lib/iceberg/install

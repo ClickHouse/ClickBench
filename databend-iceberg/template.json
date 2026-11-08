@@ -1,0 +1,12 @@
+{
+  "system": "Databend (Iceberg)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "elite",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "ClickHouse derivative"
+  ]
+}

@@ -1,0 +1,4 @@
+#!/bin/bash
+# MotherDuck is a remote managed service — there is no local daemon to start.
+# Readiness is confirmed by ./check connecting to md:.
+exit 0

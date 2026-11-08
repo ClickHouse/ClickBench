@@ -1,0 +1,7 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via clickhouse-client.
+# Stdout: query result. Stderr: query runtime in fractional seconds on the
+# last line (from --time). Exit non-zero on error.
+set -e
+
+./clickhouse client --time --format=Pretty
