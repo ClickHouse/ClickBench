@@ -110,12 +110,12 @@ Implemented:
 | `trino-iceberg` | Trino Iceberg connector, `CREATE TABLE` + `INSERT` | REST, OAuth2 |
 | `starrocks-iceberg` | StarRocks external Iceberg catalog, `CREATE TABLE` + `INSERT ... FROM FILES()` | REST, OAuth2 |
 | `doris-iceberg` | Doris 4.1 Iceberg catalog, `CREATE TABLE` + `INSERT ... FROM local()` | REST, OAuth2 |
+| `presto-iceberg` | Presto 0.300 Iceberg connector, `CREATE TABLE` + `INSERT` | REST, OAuth2 |
+| `databend-iceberg` | Databend nightly Iceberg catalog, `CREATE TABLE ... ENGINE = ICEBERG` + `INSERT` (column names are lowercase, as Databend folds unquoted identifiers) | REST, OAuth2 |
 | `datafusion-iceberg` | DataFusion through the DataFusion integration of iceberg-rust 0.11, `CREATE TABLE` + `INSERT` (a small binary, `src/main.rs`) | REST, OAuth2 |
 
 Can be added on top of the same storage:
 
-- Presto: the Iceberg connector with a REST catalog, `CREATE TABLE` and
-  `INSERT`.
 - Dremio: Iceberg REST catalog sources with `CREATE TABLE AS`.
 - Daft and Polars: `write_iceberg` through PyIceberg, which also creates the
   table; queries with their own SQL over `read_iceberg`/`scan_iceberg`.
@@ -129,6 +129,11 @@ Need the real S3 bucket, being managed services: Snowflake (Iceberg tables on
 an external volume), Databricks, Amazon Athena and Redshift (Iceberg tables in
 Glue), Amazon EMR, Starburst Galaxy, Dremio Cloud, ClickHouse Cloud,
 MotherDuck.
+
+Firebolt writes Iceberg only with `CREATE ICEBERG TABLE ... AS SELECT` into a
+file-based catalog (the table metadata in the bucket, no catalog service) on
+AWS S3, with no option for another S3 endpoint, so it needs the real S3
+bucket and a rule that allows the file-based catalog.
 
 ## Local testing
 
