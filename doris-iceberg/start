@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# The driver discards the output of ./start; keep a trace of it for ./check
+# to show on failure.
+exec >> start.log 2>&1
+set -x
+
 ../lib/iceberg/start
 
 DORIS_HOME=$(cat .doris_home)
