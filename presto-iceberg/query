@@ -9,7 +9,7 @@ cursor = prestodb.dbapi.connect(host="localhost", port=8080, user="clickbench",
                                 session_properties={"offset_clause_enabled": "true"}).cursor()
 start = time.monotonic()
 try:
-    cursor.execute(sys.argv[1])
+    cursor.execute(sys.argv[1].strip().rstrip(";"))
     rows = cursor.fetchall()
 except prestodb.exceptions.PrestoUserError as error:
     sys.exit(error.message)

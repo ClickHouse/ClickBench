@@ -8,7 +8,7 @@ cursor = trino.dbapi.connect(host="localhost", port=8080, user="clickbench",
                              catalog="iceberg", schema="clickbench").cursor()
 start = time.monotonic()
 try:
-    cursor.execute(sys.argv[1])
+    cursor.execute(sys.argv[1].strip().rstrip(";"))
     rows = cursor.fetchall()
 except trino.exceptions.TrinoQueryError as error:
     sys.exit(error.message)
