@@ -15,17 +15,18 @@ environment variable is set.
   ever decoded -- no index, no lookup structure.
 
 **What is on disk** (`./data-size` counts all of it): the column data; the load statistics -- per block of
-rows, the smallest and largest code, the number of non-NULL rows and, for integer columns, the exact sum of
-the block's values, plus sampled entries of the block
-dictionaries used to seek inside a column; and, for every large text column, the character length of each
-dictionary entry and of each row (the string sizes, kept for every such column by default -- no column is
-named). Each column's dictionary is its own sorted list of distinct values -- part of the column's encoding,
-so `COUNT(DISTINCT col)` with no filter is that list's length, and `COUNT(*)` is the stored row count.
-No index, projection, materialized view or pre-aggregated table is built, by
-the load or by any query: the engine's derived-structure extension ("sidecars") is off by default, and
-answering from per-value counts is off by default (none are written). Like ClickHouse's min/max-count
-projection, MIN, MAX and COUNT of a column with no filter can be answered from the per-block minimum, maximum
-and non-NULL counts, and SUM and AVG from the per-block sums; with a WHERE or a GROUP BY the rows are read.
+rows, the smallest and largest code and the number of non-NULL rows (used to skip blocks), plus sampled
+entries of the block dictionaries used to seek inside a column; and, for every large text column, the
+character length of each dictionary entry and of each row (the string sizes, kept for every such column by
+default -- no column is named). Each column's dictionary is its own sorted list of distinct values -- part of
+the column's encoding, so `COUNT(DISTINCT col)` with no filter is that list's length, and `COUNT(*)` is the
+stored row count. No index, projection, materialized view or pre-aggregated table is built, by the load or by
+any query: the engine's derived-structure extension ("sidecars") is off by default, and no statistic answers a
+query: block sums and per-value counts are off by default (none are written), and the per-block minimum,
+maximum and non-NULL counts only steer. What answers without reading rows is the storage itself: `COUNT(*)` is
+the stored row count (as is `COUNT(col)` of a column with no NULLs), `COUNT(DISTINCT col)` the dictionary's
+length and `MIN`/`MAX` its two ends; `SUM`, `AVG` and anything with a WHERE or a GROUP BY read the column
+data.
 
 **Install.** `./install` checks out the engine at a pinned commit with pinned Python packages, then compiles
 every numba kernel signature the engine uses (`tools/kernel_build.py build`, from `src/kernels.manifest`), as a
