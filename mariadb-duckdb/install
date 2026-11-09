@@ -1,7 +1,11 @@
 #!/bin/bash
 set -eu
 
-CI_SOURCES_URL="https://ci.mariadb.org/70621/amd64-ubuntu-2404-deb-autobake/mariadb.sources"
+MARIADB_VERSION="11.4.13"
+MARIADB_REPO_URL="https://archive.mariadb.org/mariadb-${MARIADB_VERSION}/repo/ubuntu"
+PLUGIN_RELEASE_URL="https://github.com/drrtuy/duckdb-engine/releases/download/v2.0.1-duckdb-fork"
+PLUGIN_DEB="mariadb-plugin-duckdb-${MARIADB_VERSION}-2.0+maria.ubu2404_amd64.deb"
+PLUGIN_SHA256="141f548676e0a1f7db790a910db6036642c82c2296d930b72701193604861ada"
 
 # Idempotent: if DuckDB plugin is already active, nothing to do.
 if sudo mariadb -e "SELECT PLUGIN_STATUS FROM information_schema.PLUGINS WHERE PLUGIN_NAME='DuckDB';" 2>/dev/null | grep -q 'ACTIVE'; then
@@ -19,9 +23,17 @@ if dpkg -l | grep -qE '^ii\s+(mariadb-server|mysql-server)'; then
     sudo rm -rf /var/lib/mysql /etc/mysql
 fi
 
-sudo wget -q -O /etc/apt/sources.list.d/mariadb-duckdb-ci.sources "$CI_SOURCES_URL"
-sudo apt-get update -y
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server mariadb-client
+sudo rm -f /etc/apt/sources.list.d/mariadb-duckdb-ci.sources
+sudo wget -q --tries=5 -O /etc/apt/trusted.gpg.d/mariadb-release-signing-key.asc https://mariadb.org/mariadb_release_signing_key.asc
+echo "deb ${MARIADB_REPO_URL} noble main" | sudo tee /etc/apt/sources.list.d/mariadb.list >/dev/null
+sudo apt-get -o Acquire::Retries=3 update -y
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "mariadb-server=1:${MARIADB_VERSION}+maria~ubu2404" "mariadb-client=1:${MARIADB_VERSION}+maria~ubu2404"
+
+plugin_dir=$(mktemp -d)
+wget -q --tries=5 --timeout=60 -P "$plugin_dir" "${PLUGIN_RELEASE_URL}/${PLUGIN_DEB}"
+echo "${PLUGIN_SHA256}  ${plugin_dir}/${PLUGIN_DEB}" | sha256sum -c -
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$plugin_dir/${PLUGIN_DEB}"
+rm -rf "$plugin_dir"
 
 # Scale duckdb-memory-limit to guest RAM. The upstream default of 24G
 # was fine on the 32 GB c6a.4xlarge benchmark host, but blows past a
