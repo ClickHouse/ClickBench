@@ -893,11 +893,7 @@ function clearSystemHighlight() {
 }
 
 /// A click flips a single toggle, while a right click or Ctrl/Cmd + click selects only this toggle in its group.
-<<<<<<< HEAD
-/// The group is looked up by name on every click, as `applyHash` and `onpopstate` replace the selector objects.
-=======
 /// The group is passed by name, as `selectors` is replaced when it is restored from the URL or the browser history.
->>>>>>> origin/main
 function toggle(e, elem, group) {
     const selectors_map = selectors[group];
     if (e.type == 'contextmenu' || e.ctrlKey || e.metaKey) {
