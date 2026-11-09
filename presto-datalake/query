@@ -1,12 +1,4 @@
 #!/bin/bash
-# Reads a SQL query from stdin, runs it with the Presto Python client.
-# Stdout: query result, tab-separated.
-# Stderr: query runtime in fractional seconds on the last line.
-# Exit non-zero on error.
-#
-# The runtime is measured inside the client process, from sending the query
-# to receiving the last row. Starting the Presto CLI (a JVM) for every query
-# added 0.6-1 s to each run.
 set -e
 
 venv/bin/python - "$(cat)" <<'EOF'
