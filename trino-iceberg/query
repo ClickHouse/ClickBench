@@ -1,36 +1,27 @@
 #!/bin/bash
-# Reads a SQL query from stdin, runs it through the Trino HTTP client protocol.
+# Reads a SQL query from stdin, runs it with the Trino Python client.
 # Stdout: query result, tab-separated.
 # Stderr: query runtime in fractional seconds on the last line.
 # Exit non-zero on error.
 #
-# The runtime is measured inside one client process, from sending the query
+# The runtime is measured inside the client process, from sending the query
 # to receiving the last row. Starting the Trino CLI (a JVM, through
 # `docker exec`) for every query added about a second to each run.
 set -e
 
-query=$(cat)
+venv/bin/python - "$(cat)" <<'EOF'
+import sys, time, trino
 
-python3 - iceberg clickbench "$query" <<'EOF'
-import json, sys, time, urllib.request
-
-catalog, schema, query = sys.argv[1:]
-headers = {"X-Trino-User": "clickbench", "X-Trino-Catalog": catalog, "X-Trino-Schema": schema}
-
-def call(url, data=None):
-    with urllib.request.urlopen(urllib.request.Request(url, data, headers)) as response:
-        return json.load(response)
-
+cursor = trino.dbapi.connect(host="localhost", port=8080, user="clickbench",
+                             catalog="iceberg", schema="clickbench").cursor()
 start = time.monotonic()
-response = call("http://localhost:8080/v1/statement", query.encode())
-rows = response.get("data", [])
-while "nextUri" in response:
-    response = call(response["nextUri"])
-    rows += response.get("data", [])
+try:
+    cursor.execute(sys.argv[1])
+    rows = cursor.fetchall()
+except trino.exceptions.TrinoQueryError as error:
+    sys.exit(error.message)
 elapsed = time.monotonic() - start
 
-if "error" in response:
-    sys.exit(response["error"]["message"])
 for row in rows:
     print("\t".join("NULL" if value is None else str(value) for value in row))
 print(f"{elapsed:.3f}", file=sys.stderr)

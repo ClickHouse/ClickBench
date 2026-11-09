@@ -1,37 +1,28 @@
 #!/bin/bash
-# Reads a SQL query from stdin, runs it through the Presto HTTP client protocol.
+# Reads a SQL query from stdin, runs it with the Presto Python client.
 # Stdout: query result, tab-separated.
 # Stderr: query runtime in fractional seconds on the last line.
 # Exit non-zero on error.
 #
-# The runtime is measured inside one client process, from sending the query
+# The runtime is measured inside the client process, from sending the query
 # to receiving the last row. Starting the Presto CLI (a JVM) for every query
 # added 0.6-1 s to each run.
 set -e
 
-query=$(cat)
+venv/bin/python - "$(cat)" <<'EOF'
+import sys, time, prestodb
 
-python3 - hive clickbench "$query" <<'EOF'
-import json, sys, time, urllib.request
-
-catalog, schema, query = sys.argv[1:]
-headers = {"X-Presto-User": "clickbench", "X-Presto-Catalog": catalog, "X-Presto-Schema": schema,
-           "X-Presto-Session": "offset_clause_enabled=true"}
-
-def call(url, data=None):
-    with urllib.request.urlopen(urllib.request.Request(url, data, headers)) as response:
-        return json.load(response)
-
+cursor = prestodb.dbapi.connect(host="localhost", port=8081, user="clickbench",
+                                catalog="hive", schema="clickbench",
+                                session_properties={"offset_clause_enabled": "true"}).cursor()
 start = time.monotonic()
-response = call("http://localhost:8081/v1/statement", query.encode())
-rows = response.get("data", [])
-while "nextUri" in response:
-    response = call(response["nextUri"])
-    rows += response.get("data", [])
+try:
+    cursor.execute(sys.argv[1])
+    rows = cursor.fetchall()
+except prestodb.exceptions.PrestoUserError as error:
+    sys.exit(error.message)
 elapsed = time.monotonic() - start
 
-if "error" in response:
-    sys.exit(response["error"]["message"])
 for row in rows:
     print("\t".join("NULL" if value is None else str(value) for value in row))
 print(f"{elapsed:.3f}", file=sys.stderr)

@@ -9,7 +9,9 @@ if ! command -v docker >/dev/null 2>&1; then
     sudo apt-get update -y
     sudo apt-get install -y docker.io
 fi
-sudo apt-get install -y openjdk-21-jre-headless bc wget
+sudo apt-get install -y openjdk-21-jre-headless bc wget python3-venv
+python3 -m venv venv
+venv/bin/pip install --quiet presto-python-client
 
 if [ ! -f presto-cli.jar ]; then
     wget --continue --quiet -O presto-cli.jar \
