@@ -9,7 +9,11 @@ query=$(cat)
 
 # duckdb writes both the result and the `Run Time (s): real X.XXX` line to
 # stdout; capture, split, redirect timing to stderr.
-out=$(duckdb hits.db -c ".timer on" -c "$query" 2>/tmp/duckdb.err.$$) && status=0 || status=$?
+# -no-agent: the 2.0 CLI turns on "agent mode" when it detects an AI coding
+# agent in the environment (AI_AGENT, CLAUDECODE, CURSOR_AGENT, ...) and
+# stdout is not a terminal: Markdown tables, truncated results, JSON errors
+# and a progress bar. Keep the plain output regardless of who runs this.
+out=$(duckdb -no-agent hits.db -c ".timer on" -c "$query" 2>/tmp/duckdb.err.$$) && status=0 || status=$?
 
 if [ "$status" -ne 0 ]; then
     cat /tmp/duckdb.err.$$ >&2

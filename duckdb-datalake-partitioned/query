@@ -12,7 +12,11 @@ query=$(cat)
 # the playground's SNI-filter proxy can't follow gracefully. Bake the
 # region into every query. Empty creds keep the credential chain off
 # IMDS (which the proxy correctly blocks).
-out=$(duckdb hits.db \
+# -no-agent: the 2.0 CLI turns on "agent mode" when it detects an AI coding
+# agent in the environment (AI_AGENT, CLAUDECODE, CURSOR_AGENT, ...) and
+# stdout is not a terminal: Markdown tables, truncated results, JSON errors
+# and a progress bar. Keep the plain output regardless of who runs this.
+out=$(duckdb -no-agent hits.db \
     -c "SET s3_region='eu-central-1'" \
     -c "CREATE OR REPLACE SECRET (TYPE S3, KEY_ID '', SECRET '', REGION 'eu-central-1')" \
     -c "SET parquet_metadata_cache=true" \

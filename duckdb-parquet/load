@@ -5,5 +5,6 @@ set -e
 # parquet file is read in place at query time. We persist the view in
 # hits.db so subsequent query invocations see it.
 rm -f hits.db
-duckdb hits.db -f create.sql
+# -no-agent: keep the plain CLI output; see ./query.
+duckdb -no-agent hits.db -f create.sql
 sync
