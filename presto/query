@@ -1,17 +1,21 @@
 #!/bin/bash
-# Reads a SQL query from stdin, runs it via the presto CLI.
-# Stdout: query result.
-# Stderr: query runtime in fractional seconds on the last line.
-# Exit non-zero on error.
 set -e
 
-query=$(cat)
+venv/bin/python - "$(cat)" <<'EOF'
+import sys, time, prestodb
 
-start=$(date +%s.%N)
-java -jar presto-cli.jar --server http://localhost:8081 \
-    --catalog hive --schema clickbench \
-    --session offset_clause_enabled=true \
-    --output-format=ALIGNED --execute "$query"
-end=$(date +%s.%N)
+cursor = prestodb.dbapi.connect(host="localhost", port=8081, user="clickbench",
+                                catalog="hive", schema="clickbench",
+                                session_properties={"offset_clause_enabled": "true"}).cursor()
+start = time.monotonic()
+try:
+    cursor.execute(sys.argv[1].strip().rstrip(";"))
+    rows = cursor.fetchall()
+except prestodb.exceptions.PrestoUserError as error:
+    sys.exit(error.message)
+elapsed = time.monotonic() - start
 
-awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2
+for row in rows:
+    print("\t".join("NULL" if value is None else str(value) for value in row))
+print(f"{elapsed:.3f}", file=sys.stderr)
+EOF

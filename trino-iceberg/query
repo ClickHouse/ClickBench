@@ -1,14 +1,20 @@
 #!/bin/bash
-# Reads a SQL query from stdin, runs it via the Trino CLI in the container.
-# Stdout: query result. Stderr: wall-clock runtime in fractional seconds on
-# the last line. Exit non-zero on error.
 set -e
 
-query=$(cat)
+venv/bin/python - "$(cat)" <<'EOF'
+import sys, time, trino
 
-start=$(date +%s.%N)
-sudo docker exec -i trino trino --catalog iceberg --schema clickbench \
-    --output-format=ALIGNED --execute "$query"
-end=$(date +%s.%N)
+cursor = trino.dbapi.connect(host="localhost", port=8080, user="clickbench",
+                             catalog="iceberg", schema="clickbench").cursor()
+start = time.monotonic()
+try:
+    cursor.execute(sys.argv[1].strip().rstrip(";"))
+    rows = cursor.fetchall()
+except trino.exceptions.TrinoQueryError as error:
+    sys.exit(error.message)
+elapsed = time.monotonic() - start
 
-awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2
+for row in rows:
+    print("\t".join("NULL" if value is None else str(value) for value in row))
+print(f"{elapsed:.3f}", file=sys.stderr)
+EOF

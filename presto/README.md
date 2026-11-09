@@ -10,8 +10,6 @@ Differences from `trino/`:
 - `CREATE SCHEMA` may not specify a `WITH (location = ...)` clause.
 - Presto's default 1 GB JVM heap is too small for ClickBench, so the
   startup script writes a custom `jvm.config`/`config.properties`.
-- The Presto CLI is not bundled with the server image, so the script
-  downloads `presto-cli-<version>-executable.jar` from GitHub releases.
 
 The `hits` view applies the same `EventTime`/`EventDate` conversions used
 in the Trino entry, so `queries.sql` is the canonical ClickBench query
