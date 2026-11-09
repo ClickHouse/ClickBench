@@ -6,7 +6,7 @@ if [ "$1" != "--skip-setup" ]; then
   sudo apt-get install -y python3-pip python3-venv
   python3 -m venv myenv
   source myenv/bin/activate
-  pip install duckdb psutil
+  pip install duckdb==1.5.6 psutil
 fi
 
 # See README.md
