@@ -685,17 +685,18 @@ const additional_data_size_points = [
 
 <table class="selectors-container stick-left">
     <tr>
+        <th>Category: </th>
+        <td id="selectors_category" title="System categories are explained in README.md">
+            <a id="selector-category-elite" class="selector selector-active" title="Production-grade, and within 10 times of ClickHouse on every metric">Elite</a>
+            <a id="selector-category-production" class="selector selector-active" title="Mature, durable, used in production, works on small and large machines">Production</a>
+            <a id="selector-category-challenger" class="selector selector-active" title="A real product: website, documentation, releases, both x86_64 and aarch64 or a managed service">Challenger</a>
+            <a id="selector-category-enthusiast" class="selector" title="Entry level, no requirements other than not cheating on benchmarks">Enthusiast</a>
+            <a id="selector-category-retired" class="selector selector-active" title="No updates in the last year">Retired</a>
+            <a id="selector-category-joke" class="selector" title="Cheating on benchmarks">Joke</a>
+        </td>
+    </tr>
+    <tr>
         <td colspan="2">
-            <span class="inline-filter" id="selectors_category" title="System categories are explained in README.md">
-                <span class="inline-filter-label">Category:</span>
-                <a id="selector-category-elite" class="selector selector-active" title="Production-grade, and within 10 times of ClickHouse on every metric">Elite</a>
-                <a id="selector-category-production" class="selector selector-active" title="Mature, durable, used in production, works on small and large machines">Production</a>
-                <a id="selector-category-challenger" class="selector selector-active" title="A real product: website, documentation, releases, both x86_64 and aarch64 or a managed service">Challenger</a>
-                <a id="selector-category-enthusiast" class="selector" title="Entry level, no requirements other than not cheating on benchmarks">Enthusiast</a>
-                <a id="selector-category-retired" class="selector selector-active" title="No updates in the last year">Retired</a>
-                <a id="selector-category-joke" class="selector" title="Cheating on benchmarks">Joke</a>
-            </span>
-            <br/>
             <span class="inline-filter" id="selectors_opensource">
                 <span class="inline-filter-label">Open source:</span>
                 <a id="selector-opensource-yes" class="selector selector-active">Yes</a>
