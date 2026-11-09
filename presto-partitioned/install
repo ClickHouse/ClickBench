@@ -4,18 +4,14 @@ set -e
 PRESTO_VERSION=0.297
 
 # Install Docker (Presto's official image bundles its own JRE) and the
-# Presto CLI (a Java fat jar, runs against any JRE).
+# Presto Python client.
 if ! command -v docker >/dev/null 2>&1; then
     sudo apt-get update -y
     sudo apt-get install -y docker.io
 fi
-sudo apt-get install -y openjdk-21-jre-headless bc wget
-
-if [ ! -f presto-cli.jar ]; then
-    wget --continue --quiet -O presto-cli.jar \
-        "https://github.com/prestodb/presto/releases/download/${PRESTO_VERSION}/presto-cli-${PRESTO_VERSION}-executable.jar"
-    chmod +x presto-cli.jar
-fi
+sudo apt-get install -y bc python3-venv
+python3 -m venv venv
+venv/bin/pip install --quiet presto-python-client
 
 sudo docker pull prestodb/presto:${PRESTO_VERSION}
 
