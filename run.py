@@ -190,3 +190,5 @@ else:
     print(f"Starting hardware-tuned benchmark (Threads: {TARGET_THREADS}, Engine: {ENGINE_MODE})...")
     for name, plan in sorted(clickbench_queries.items()):
         run_single_query(name, plan)
+
+# Trigger fresh branch verification
