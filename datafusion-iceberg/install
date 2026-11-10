@@ -1,0 +1,18 @@
+#!/bin/bash
+# Builds a small binary (src/main.rs): DataFusion with the Iceberg REST catalog
+# through the DataFusion integration of iceberg-rust. datafusion-cli itself
+# has no Iceberg support.
+set -e
+
+sudo apt-get update -y
+sudo apt-get install -y gcc g++ make pkg-config
+
+if ! command -v cargo >/dev/null 2>&1 && [ ! -x "$HOME/.cargo/bin/cargo" ]; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+fi
+# shellcheck disable=SC1091
+source "$HOME/.cargo/env"
+
+cargo build --release --locked
+
+../lib/iceberg/install

@@ -1,0 +1,15 @@
+#!/bin/bash
+# Creates the Iceberg table through the REST catalog and writes the dataset
+# into it with a single INSERT with the default settings. The source is an
+# external table over the downloaded Parquet files.
+set -e
+
+../lib/iceberg/prepare
+source ../lib/iceberg/env.sh
+
+mkdir -p partitioned
+mv hits_*.parquet partitioned/
+
+target/release/datafusion-iceberg run source.sql create.sql insert.sql
+
+rm -rf partitioned

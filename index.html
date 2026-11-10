@@ -271,8 +271,10 @@
             color: var(--link-color);
             user-select: none;
             position: absolute;
+            /* The clickable area ends at the left edge of the cell, so it does not overlap the history link. */
             left: -1rem;
-            padding-right: 1.5rem;
+            width: 1rem;
+            text-align: center;
         }
 
         .summary-row:hover .remove-system {
@@ -706,6 +708,7 @@ const additional_data_size_points = [
                 <a id="selector-storage-memory" class="selector selector-active">Memory</a>
                 <a id="selector-storage-parquet" class="selector selector-active">Parquet</a>
                 <a id="selector-storage-datalake" class="selector selector-active">Data Lake</a>
+                <a id="selector-storage-iceberg" class="selector selector-active">Iceberg</a>
                 <a id="selector-storage-web" class="selector selector-active">Web</a>
             </span>
         </td>
@@ -798,7 +801,7 @@ const missing_result_time = 300;
 
 /// Every storage kind is enabled by default: the selector is for narrowing the
 /// report down to a single way of keeping the data, not for the default view.
-const default_storage = {"native": true, "cloud": true, "memory": true, "parquet": true, "datalake": true, "web": true};
+const default_storage = {"native": true, "cloud": true, "memory": true, "parquet": true, "datalake": true, "iceberg": true, "web": true};
 
 let selectors = {
     "system": {},
@@ -877,7 +880,9 @@ function clearSystemHighlight() {
 }
 
 /// A click flips a single toggle, while a right click or Ctrl/Cmd + click selects only this toggle in its group.
-function toggle(e, elem, selectors_map) {
+/// The group is passed by name, as `selectors` is replaced when it is restored from the URL or the browser history.
+function toggle(e, elem, group) {
+    const selectors_map = selectors[group];
     if (e.type == 'contextmenu' || e.ctrlKey || e.metaKey) {
         e.preventDefault();
         Object.keys(selectors_map).forEach(k => { selectors_map[k] = k == String(elem) });
@@ -889,9 +894,9 @@ function toggle(e, elem, selectors_map) {
     updateHistory();
 }
 
-function addToggleListener(selector, elem, selectors_map) {
-    selector.addEventListener('click', e => toggle(e, elem, selectors_map));
-    selector.addEventListener('contextmenu', e => toggle(e, elem, selectors_map));
+function addToggleListener(selector, elem, group) {
+    selector.addEventListener('click', e => toggle(e, elem, group));
+    selector.addEventListener('contextmenu', e => toggle(e, elem, group));
 }
 
 function toggleAll(e, selectors_map) {
@@ -910,7 +915,7 @@ unique_systems.map(elem => {
     selector.appendChild(document.createTextNode(elem));
     systems.appendChild(selector);
     selectors.system[elem] = data.some(entry => entry.system == elem && !entry.hide);
-    addToggleListener(selector, elem, selectors.system);
+    addToggleListener(selector, elem, 'system');
 
     /// Highlighting summary rows and table columns on hovering over the system selector.
     selector.addEventListener('mouseover', () => highlightSystem(elem));
@@ -931,7 +936,7 @@ data.forEach(d => {
     selector.appendChild(document.createTextNode(elem));
     types.appendChild(selector);
     selectors.type[elem] = true;
-    addToggleListener(selector, elem, selectors.type);
+    addToggleListener(selector, elem, 'type');
 
     /// Highlighting summary rows and detail columns on hovering over a tag.
     selector.addEventListener('mouseover', () => {
@@ -957,6 +962,8 @@ data.forEach(d => {
 ///   converted on load, in which case the conversion is accounted as the load time;
 /// - datalake — Parquet or a bunch of other files in a bucket on AWS S3 (it is a
 ///   simplification to call it a data lake, but it distills what matters);
+/// - iceberg — an Iceberg table that the system creates and writes itself, through an
+///   Iceberg REST catalog, in an S3-compatible object storage (see lib/iceberg/README.md);
 /// - web — the database native format on a remote HTTP server, a bucket on AWS S3.
 ///
 /// The classification is keyed by the directory of the benchmark entry; everything
@@ -1014,6 +1021,7 @@ function storageOf(elem) {
     /// A managed service is `cloud` no matter what it reads, hence the rule is first.
     if ((elem.tags || []).some(tag => tag == 'managed' || tag == 'serverless')) return 'cloud';
     if (/\(web\)/i.test(elem.system)) return 'web';
+    if (/-iceberg$/.test(directory)) return 'iceberg';
     if (/data.?lake/i.test(elem.system + ' ' + directory)) return 'datalake';
     if (/parquet/i.test(elem.system + ' ' + directory)) return 'parquet';
     if (/dataframe|\(memory\)/i.test(elem.system) || (elem.tags || []).includes('in-memory')) return 'memory';
@@ -1053,7 +1061,7 @@ const aws_machine_regexp = /^[a-z]+[0-9]+[a-z]*\.[0-9a-z-]+$/;
     selector.appendChild(document.createTextNode(elem));
     machines.appendChild(selector);
     selectors.machine[elem] = selected;
-    addToggleListener(selector, elem, selectors.machine);
+    addToggleListener(selector, elem, 'machine');
 });
 
 [... new Set(data.map(elem => elem.cluster_size))].sort(
@@ -1063,18 +1071,18 @@ const aws_machine_regexp = /^[a-z]+[0-9]+[a-z]*\.[0-9a-z-]+$/;
     selector.appendChild(document.createTextNode(elem));
     cluster_sizes.appendChild(selector);
     selectors.cluster_size[elem] = true;
-    addToggleListener(selector, elem, selectors.cluster_size);
+    addToggleListener(selector, elem, 'cluster_size');
 });
 
-addToggleListener(document.getElementById('selector-opensource-yes'), 'yes', selectors.opensource);
-addToggleListener(document.getElementById('selector-opensource-no'), 'no', selectors.opensource);
-addToggleListener(document.getElementById('selector-hardware-cpu'), 'cpu', selectors.hardware);
-addToggleListener(document.getElementById('selector-hardware-gpu'), 'gpu', selectors.hardware);
-addToggleListener(document.getElementById('selector-tuned-yes'), 'yes', selectors.tuned);
-addToggleListener(document.getElementById('selector-tuned-no'), 'no', selectors.tuned);
+addToggleListener(document.getElementById('selector-opensource-yes'), 'yes', 'opensource');
+addToggleListener(document.getElementById('selector-opensource-no'), 'no', 'opensource');
+addToggleListener(document.getElementById('selector-hardware-cpu'), 'cpu', 'hardware');
+addToggleListener(document.getElementById('selector-hardware-gpu'), 'gpu', 'hardware');
+addToggleListener(document.getElementById('selector-tuned-yes'), 'yes', 'tuned');
+addToggleListener(document.getElementById('selector-tuned-no'), 'no', 'tuned');
 
 Object.keys(default_storage).forEach(key =>
-    addToggleListener(document.getElementById('selector-storage-' + key), key, selectors.storage));
+    addToggleListener(document.getElementById('selector-storage-' + key), key, 'storage'));
 
 document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
 document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));

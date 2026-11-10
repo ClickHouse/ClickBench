@@ -1,4 +1,12 @@
 #!/bin/bash
-set -e
-
-./clickhouse local --query "SELECT 1" >/dev/null
+# The benchmark driver discards the output of ./start but prints the stderr
+# of the last failed ./check, so on failure we add the end of the server logs.
+if ! ./clickhouse client --query "SELECT 1" >/dev/null; then
+    for f in server-data/stdout.log server-data/clickhouse-server.err.log; do
+        if [ -f "$f" ]; then
+            echo "The end of $f:" >&2
+            tail -n 20 "$f" >&2
+        fi
+    done
+    exit 1
+fi

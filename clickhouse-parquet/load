@@ -1,7 +1,13 @@
 #!/bin/bash
 set -e
 
-# clickhouse-local with File(Parquet) engine reads the parquet file in place,
-# so there's no separate ingest step. The "load" is implicit — just keep the
-# downloaded hits.parquet in this directory.
+# The File(Parquet) table reads the parquet files in place, so there is no
+# ingest step. The server resolves the path of the table relative to its
+# user_files directory: symlink the files there and keep them for the queries.
+mkdir -p server-data/user_files
+for f in hits.parquet; do
+    ln -sf "$PWD/$f" "server-data/user_files/$f"
+done
+
+./clickhouse client < create.sql
 sync

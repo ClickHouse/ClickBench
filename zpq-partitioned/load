@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# zpq queries the Parquet file in place: there is nothing to load.
+sync

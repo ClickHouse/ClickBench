@@ -1,0 +1,8 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it in a fresh process over the Iceberg
+# table. Stdout: query result. Stderr: runtime in fractional seconds on the
+# last line. Exit non-zero on error.
+set -e
+source ../lib/iceberg/env.sh
+
+exec target/release/datafusion-iceberg query

@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+source ../lib/iceberg/env.sh
+
+if ! command -v docker >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y docker.io
+fi
+sudo apt-get install -y python3-venv
+python3 -m venv venv
+venv/bin/pip install --quiet trino
+
+sudo docker pull trinodb/trino:latest
+
+mkdir -p etc/catalog data/hits
+../lib/iceberg/substitute < iceberg.properties > etc/catalog/iceberg.properties
+# The Hive catalog over local storage only serves the Parquet files to load.
+cat > etc/catalog/hive.properties <<'EOF'
+connector.name=hive
+hive.metastore=file
+hive.metastore.catalog.dir=local:///metastore
+local.location=/clickbench
+fs.native-local.enabled=true
+EOF
+sudo chown -R 1000:1000 data
+
+../lib/iceberg/install

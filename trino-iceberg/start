@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+
+../lib/iceberg/start
+
+if sudo docker ps --format '{{.Names}}' | grep -qx trino; then
+    exit 0
+fi
+if sudo docker ps -a --format '{{.Names}}' | grep -qx trino; then
+    sudo docker start trino
+    exit 0
+fi
+
+# The host network, to reach the storage and the catalog on localhost.
+sudo docker run -d --name trino --network host \
+    -v "$PWD/etc/catalog/iceberg.properties:/etc/trino/catalog/iceberg.properties:ro" \
+    -v "$PWD/etc/catalog/hive.properties:/etc/trino/catalog/hive.properties:ro" \
+    -v "$PWD/data:/clickbench" \
+    trinodb/trino:latest

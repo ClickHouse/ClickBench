@@ -1,0 +1,17 @@
+#!/bin/bash
+# The benchmark driver discards the output of ./start but prints the stderr
+# of the last failed ./check, so on failure we add the state of the backend
+# as the frontend sees it and the end of the logs.
+if ! mysql -h127.0.0.1 -P9030 -uroot -e 'SELECT 1' >/dev/null; then
+    DORIS_HOME=$(cat .doris_home 2>/dev/null)
+    echo "SHOW BACKENDS:" >&2
+    mysql -h127.0.0.1 -P9030 -uroot -e 'SHOW BACKENDS\G' 2>&1 |
+        grep -E 'Host|HeartbeatPort|Alive|LastStartTime|ErrMsg|Version' >&2
+    for f in start.log "$DORIS_HOME/be/log/be.out" "$DORIS_HOME/be/log/be.WARNING" "$DORIS_HOME/fe/log/fe.warn.log"; do
+        if [ -f "$f" ]; then
+            echo "The end of $f:" >&2
+            tail -n 40 "$f" >&2
+        fi
+    done
+    exit 1
+fi

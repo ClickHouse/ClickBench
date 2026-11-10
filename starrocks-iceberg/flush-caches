@@ -1,0 +1,9 @@
+#!/bin/bash
+# Called by the driver between ./stop and ./start for the cold runs.
+# StarRocks caches the data of external tables on local disk (the data
+# cache, enabled by default), which would survive the restart and make the
+# cold run warm.
+SR_DIR=$(cat .sr_dir 2>/dev/null) || exit 0
+if ! pgrep -f "$PWD/$SR_DIR/be/lib/starrocks_be" >/dev/null; then
+    rm -rf "$SR_DIR/storage/datacache"
+fi
