@@ -15,13 +15,14 @@ rm -f bluesky.duckdb bluesky.duckdb.wal
 # A few documents in the dataset are broken: a document longer than 64 KiB
 # is split into two lines by a raw newline. ignore_errors=true turns these
 # lines into NULLs, which are filtered out.
+# -no-agent: keep the plain CLI output; see ../../duckdb/query.
 {
     cat ddl.sql
     for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
         echo "INSERT INTO bluesky SELECT json::VARIANT FROM read_ndjson_objects('${file}', ignore_errors = true, maximum_object_size = 1048576000) WHERE json IS NOT NULL;"
     done
     echo "CHECKPOINT;"
-} | duckdb bluesky.duckdb
+} | duckdb -no-agent bluesky.duckdb
 
 # Show the storage version of the database file in the log.
-duckdb bluesky.duckdb -noheader -list -c "SELECT tags FROM duckdb_databases() WHERE database_name = 'bluesky'"
+duckdb -no-agent bluesky.duckdb -noheader -list -c "SELECT tags FROM duckdb_databases() WHERE database_name = 'bluesky'"

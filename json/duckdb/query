@@ -9,7 +9,8 @@ query=$(cat)
 err=$(mktemp /var/tmp/duckdb-query.XXXXXX)
 trap 'rm -f "${err}"' EXIT
 
-out=$(duckdb bluesky.duckdb -c ".timer on" -c "${query}" 2>"${err}") && status=0 || status=$?
+# -no-agent: keep the plain CLI output; see ../../duckdb/query.
+out=$(duckdb -no-agent bluesky.duckdb -c ".timer on" -c "${query}" 2>"${err}") && status=0 || status=$?
 
 if [ "${status}" -ne 0 ]; then
     cat "${err}" >&2
