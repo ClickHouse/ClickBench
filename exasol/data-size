@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+# Compressed size of the table as stored by the database.
+./venv/bin/python3 exa.py scalar "SELECT MEM_OBJECT_SIZE FROM SYS.EXA_ALL_OBJECT_SIZES WHERE OBJECT_TYPE = 'TABLE' AND OBJECT_NAME = 'HITS'" | cut -d. -f1
