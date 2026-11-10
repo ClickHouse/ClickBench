@@ -6,7 +6,4 @@ export BENCH_DOWNLOAD_SCRIPT="download-hits-parquet-partitioned"
 # lives in process memory, so ./load is not re-run.
 export BENCH_RESTARTABLE=yes
 export BENCH_DURABLE=yes
-# Concurrent-QPS test stays off for now: server.py serves one request at a
-# time, so N connections would measure a queue, not throughput.
-export BENCH_CONCURRENT_DURATION="${BENCH_CONCURRENT_DURATION:-0}"
 exec ../lib/benchmark-common.sh

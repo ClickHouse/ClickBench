@@ -56,15 +56,15 @@
 #   BENCH_CONCURRENT_DURATION
 #                          Wall-clock window for the QPS test, in seconds.
 #                          Default 600. Set to 0 to skip the test (emits
-#                          null). Single-process engines should set 0: each
-#                          query forks a fresh full-machine process with no
-#                          shared scheduler, so N concurrent connections only
-#                          oversubscribe RAM instead of measuring throughput.
-#                          The rule: skip when ./start launches no shared
-#                          server (the embedded CLIs and spark variants), keep
-#                          for daemons and the in-process server wrappers
-#                          (pandas/polars/*-dataframe), which do share one
-#                          process. See issue #946.
+#                          null).
+#   BENCH_CONCURRENT_SWAP_LIMIT
+#                          Swap-in rate, in MiB/s, that counts as thrashing
+#                          during the QPS test. Default 10. Set to 0 to
+#                          disable the guard. See issue #946.
+#   BENCH_CONCURRENT_SWAP_WINDOW
+#                          Seconds the swap-in rate must stay above the limit
+#                          before the QPS test is terminated and recorded as
+#                          null. Default 30.
 #   BENCH_CONCURRENT_SEED  Seed shared across systems so that connection
 #                          N hits the same query order on every engine
 #                          (the per-connection permutation is derived
@@ -91,6 +91,8 @@ export HOME="${HOME:-/root}"
 : "${BENCH_CONCURRENT_CONNECTIONS:=10}"
 : "${BENCH_CONCURRENT_DURATION:=600}"
 : "${BENCH_CONCURRENT_SEED:=clickbench}"
+: "${BENCH_CONCURRENT_SWAP_LIMIT:=10}"
+: "${BENCH_CONCURRENT_SWAP_WINDOW:=30}"
 
 # Resolve the directory containing this script so we can find sibling
 # helpers (download-hits-*).
@@ -389,6 +391,14 @@ bench_run_query() {
 # honest "successful queries / wall window"; only completely-zero
 # successes (e.g. the engine never came back) end up as "null".
 #
+# Swap guard: N independent processes of a single-process engine (each
+# sized for the whole machine) can oversubscribe RAM, and the window then
+# measures how fast the box pages rather than query throughput (issue
+# #946). The main shell samples the swap-in counter every 5 s; if the rate
+# stays above BENCH_CONCURRENT_SWAP_LIMIT MiB/s for
+# BENCH_CONCURRENT_SWAP_WINDOW seconds, the workers and the watchdog are
+# killed and the test is recorded as null.
+#
 # Emits two lines that sink.parser pulls into sink.results:
 #   Concurrent QPS: <N.NNN>          successful queries / window length
 #   Concurrent error ratio: <0.NNN>  errored queries / total attempted
@@ -397,8 +407,7 @@ bench_concurrent_qps() {
     local duration="${BENCH_CONCURRENT_DURATION}"
     local seed="${BENCH_CONCURRENT_SEED}"
 
-    # Duration 0 means the test is disabled (single-process engines set this;
-    # see the BENCH_CONCURRENT_DURATION docs). Emit null and skip the restart,
+    # Duration 0 means the test is disabled. Emit null and skip the restart,
     # cache flush, and worker setup entirely.
     if [ "$duration" -le 0 ]; then
         echo "Concurrent QPS: null"
@@ -439,6 +448,14 @@ bench_concurrent_qps() {
     stats_dir=$(mktemp -d)
     local deadline=$(($(date +%s) + duration))
 
+    # Job control puts the watchdog and every worker in its own process
+    # group, so the swap guard can kill each one together with the ./query
+    # (and client/engine) processes it has spawned. Job control also stops
+    # bash from pointing the background jobs' stdin at /dev/null, so do it
+    # explicitly.
+    set -m
+    local pids=()
+
     # Watchdog: poll ./check; if the system goes down mid-test, bring it
     # back up without telling the workers. Workers keep firing through
     # the outage — errors during the dead window count toward
@@ -461,7 +478,8 @@ bench_concurrent_qps() {
                 fi
             fi
         done
-    ) &
+    ) < /dev/null &
+    pids+=($!)
 
     local c
     for c in $(seq 1 "$connections"); do
@@ -500,9 +518,65 @@ PY
                 idx=$(( (idx + 1) % nq ))
             done
             printf '%s %s\n' "$ok" "$err" > "$stats_dir/$c"
-        ) &
+        ) < /dev/null &
+        pids+=($!)
     done
+    set +m
+
+    local thrashing=0
+    if [ "$BENCH_CONCURRENT_SWAP_LIMIT" != "0" ]; then
+        local page_size limit_pages_per_sec strikes=0 needed_strikes
+        local prev_pages prev_time cur_pages cur_time p alive
+        page_size=$(getconf PAGESIZE)
+        limit_pages_per_sec=$((BENCH_CONCURRENT_SWAP_LIMIT * 1024 * 1024 / page_size))
+        needed_strikes=$(( (BENCH_CONCURRENT_SWAP_WINDOW + 4) / 5 ))
+        prev_pages=$(awk '$1 == "pswpin" { print $2 }' /proc/vmstat)
+        prev_time=$(date +%s)
+        while :; do
+            alive=0
+            for p in "${pids[@]:1}"; do
+                if kill -0 "$p" 2>/dev/null; then
+                    alive=1
+                    break
+                fi
+            done
+            [ "$alive" -eq 1 ] || break
+            sleep 5
+            cur_pages=$(awk '$1 == "pswpin" { print $2 }' /proc/vmstat)
+            cur_time=$(date +%s)
+            if [ "$cur_time" -gt "$prev_time" ] \
+                && [ $(( (cur_pages - prev_pages) / (cur_time - prev_time) )) -gt "$limit_pages_per_sec" ]; then
+                strikes=$((strikes + 1))
+            else
+                strikes=0
+            fi
+            prev_pages=$cur_pages
+            prev_time=$cur_time
+            if [ "$strikes" -ge "$needed_strikes" ]; then
+                thrashing=1
+                break
+            fi
+        done
+    fi
+
+    if [ "$thrashing" -eq 1 ]; then
+        echo "Concurrent QPS test terminated: swap-in above ${BENCH_CONCURRENT_SWAP_LIMIT} MiB/s for ${BENCH_CONCURRENT_SWAP_WINDOW} s" >&2
+        for p in "${pids[@]}"; do
+            kill -TERM -- "-$p" 2>/dev/null || true
+        done
+        sleep 5
+        for p in "${pids[@]}"; do
+            kill -KILL -- "-$p" 2>/dev/null || true
+        done
+    fi
     wait
+
+    if [ "$thrashing" -eq 1 ]; then
+        rm -rf "$stats_dir"
+        echo "Concurrent QPS: null"
+        echo "Concurrent error ratio: null"
+        return 0
+    fi
 
     local total_ok=0 total_err=0 ok err
     for f in "$stats_dir"/*; do

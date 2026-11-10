@@ -90,7 +90,7 @@ To introduce a new result for an existing system with a different usage scenario
 `index.html` can be re-generated using `./generate-results.sh`.
 The CI (GitHub Actions) does this automatically, this step is optional.
 
-The shared driver (`lib/benchmark-common.sh`) runs a supplementary concurrent-QPS test (`BENCH_CONCURRENT_CONNECTIONS` workers for `BENCH_CONCURRENT_DURATION` seconds) after the main sweep. Single-process engines must set `BENCH_CONCURRENT_DURATION=0` in their `benchmark.sh` to skip it: each query forks a fresh full-machine process with no shared scheduler, so concurrent connections only oversubscribe RAM (and can OOM the run) instead of measuring throughput. Rule of thumb — skip when `./start` launches no shared server (the embedded CLIs and Spark variants); keep it for daemons and the in-process server wrappers (pandas/polars/`*-dataframe`), which share one process. See issue #946.
+The shared driver (`lib/benchmark-common.sh`) runs a supplementary concurrent-QPS test (`BENCH_CONCURRENT_CONNECTIONS` workers for `BENCH_CONCURRENT_DURATION` seconds) after the main sweep. It runs for every system, including single-process engines, where each connection runs its own query process. If the machine starts swap thrashing (swap-in above `BENCH_CONCURRENT_SWAP_LIMIT` MiB/s, default 10, for `BENCH_CONCURRENT_SWAP_WINDOW` seconds, default 30), the test is terminated early and the result is recorded as `null`, because the number would measure paging rather than query throughput. See issue #946.
 
 All tests were originally run on AWS c6a.4xlarge EC2 VMs with 500 GB gp2 disks.
 With better automation, more EC2 machines were added later: c6a.2xlarge, c6a.metal, c8g.4xlarge, c6a.xlarge, c7a.metal-48xl, c6a.large, c8g.metal-48xl, and t3a.small.
