@@ -1,5 +1,7 @@
--- httpfs is built into roastedDuck: there is nothing to INSTALL, but it is
--- not autoloaded, so LOAD it here and in every ./query process.
+-- roastedDuck implements httpfs in Rust, but LOAD httpfs still requires the
+-- installed upstream file: it only checks its metadata and never runs its
+-- code. It is not autoloaded, so ./query LOADs it in every process too.
+INSTALL httpfs;
 LOAD httpfs;
 
 -- The s3:// scheme makes DuckDB probe the EC2 instance-metadata
