@@ -13,7 +13,7 @@ on:
         description: "EC2 instance types (space-separated)"
         default: "c7a.4xlarge"
       datasets:
-        description: "Datasets to load (space-separated; empty: all of hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi)"
+        description: "Datasets to load (space-separated; empty: all of hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi jsonbench)"
         default: ""
       tries:
         description: "Runs of every query: 1 cold + the rest hot (empty: 6)"
