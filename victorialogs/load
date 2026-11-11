@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -eu -o pipefail
 
 # Idempotent: blow away any prior data.
 ./stop
@@ -11,10 +11,18 @@ for _ in {1..300}; do
     sleep 1
 done
 
-# Bulk insert via 8 parallel jsonline streams. hits.json is delivered
-# by the shared lib/download-hits-json helper (symlink to the RO
-# dataset on the playground, wget + pigz elsewhere).
-split -n r/8 -d --filter="curl -sS -T - -X POST 'http://localhost:9428/insert/jsonline?_time_field=EventTime&_stream_fields=AdvEngineID,CounterID'" hits.json
+# Bulk insert via 8 parallel jsonline streams. On the Playground hits.json is
+# a symlink to the pre-decompressed dataset (../lib/download-hits-json);
+# elsewhere the compressed file is downloaded and decompressed on the fly, as in
+# ../opensearch.
+INSERT="curl -sS --fail -T - -X POST 'http://localhost:9428/insert/jsonline?_time_field=EventTime&_stream_fields=AdvEngineID,CounterID'"
+if [ -e hits.json ]; then
+    split -n r/8 -d --filter="$INSERT" hits.json
+else
+    wget --continue --progress=dot:giga 'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+    pigz -dc hits.json.gz | split -n r/8 -d --filter="$INSERT" -
+    rm -f hits.json.gz
+fi
 
 rm -f hits.json
 sync
