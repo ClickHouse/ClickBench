@@ -10,7 +10,8 @@ attach=$(../lib/iceberg/substitute < attach.sql)
 err=$(mktemp)
 trap 'rm -f "$err"' EXIT
 
-out=$(duckdb -init /dev/null \
+# -no-agent: keep the plain CLI output; see ../duckdb/query.
+out=$(duckdb -no-agent -init /dev/null \
     -c "$attach" \
     -c "USE lake.clickbench" \
     -c ".timer on" \

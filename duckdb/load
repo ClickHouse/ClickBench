@@ -5,7 +5,8 @@ set -e
 rm -f hits.db
 
 # Build the database from the source parquet via inline create + load DDL.
-duckdb hits.db -storage_version latest <<'SQL'
+# -no-agent: keep the plain CLI output; see ./query.
+duckdb -no-agent hits.db -storage_version latest <<'SQL'
 .read create.sql
 INSERT INTO hits
 SELECT * REPLACE (
