@@ -1,0 +1,10 @@
+{
+  "system": "Polars (SQL)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "column-oriented",
+    "stateless"
+  ]
+}
