@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+sudo stat -c %s /var/lib/firebird/data/hits.fdb

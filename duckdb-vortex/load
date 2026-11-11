@@ -2,11 +2,12 @@
 set -e
 
 # Convert source parquet to Vortex format.
-duckdb -c "LOAD vortex; COPY 'hits.parquet' TO 'hits.vortex' (FORMAT vortex);"
+# -no-agent: keep the plain CLI output; see ./query.
+duckdb -no-agent -c "LOAD vortex; COPY 'hits.parquet' TO 'hits.vortex' (FORMAT vortex);"
 
 # Create the persistent VIEW (over hits.vortex) in hits.db.
 rm -f hits.db
-duckdb hits.db -f create.sql
+duckdb -no-agent hits.db -f create.sql
 
 # Source parquet no longer needed.
 rm -f hits.parquet

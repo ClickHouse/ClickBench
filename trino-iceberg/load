@@ -1,0 +1,18 @@
+#!/bin/bash
+# Creates the Iceberg table through the REST catalog and writes the dataset
+# into it with a single INSERT with the default settings. The source is a
+# Hive table over the downloaded Parquet files.
+set -e
+
+../lib/iceberg/prepare
+
+for f in hits_*.parquet; do
+    ln -f "$f" "data/hits/$f" 2>/dev/null || cp -f "$f" "data/hits/$f"
+done
+sudo chown -R 1000:1000 data
+
+cat source.sql create.sql insert.sql > load.sql
+sudo docker cp load.sql trino:/tmp/load.sql
+sudo docker exec -i trino trino --file /tmp/load.sql
+
+rm -f hits_*.parquet data/hits/hits_*.parquet load.sql

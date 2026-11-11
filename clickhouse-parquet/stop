@@ -1,3 +1,10 @@
 #!/bin/bash
-# clickhouse-local is invoked per-query — no daemon to stop.
-exit 0
+
+[ -f server-data/clickhouse.pid ] || exit 0
+pid=$(cat server-data/clickhouse.pid)
+kill "$pid" 2>/dev/null || exit 0
+for _ in $(seq 1 60); do
+    kill -0 "$pid" 2>/dev/null || exit 0
+    sleep 1
+done
+kill -9 "$pid" 2>/dev/null || true

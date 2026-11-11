@@ -1,0 +1,12 @@
+{
+  "system": "zpq (Parquet, partitioned)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Zig",
+    "column-oriented",
+    "embedded",
+    "stateless"
+  ]
+}

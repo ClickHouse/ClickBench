@@ -14,3 +14,6 @@ set -e
 # is stopped the connection refuses, so check fails as it should.
 out=$(curl -sf http://localhost:8081/v1/info)
 echo "$out" | grep -q '"starting":false'
+# Table scans fail with NO_NODES_AVAILABLE for about a second after the
+# coordinator reports that it has started; wait until one runs.
+venv/bin/python -c 'import prestodb; cursor = prestodb.dbapi.connect(host="localhost", port=8081, user="clickbench").cursor(); cursor.execute("SELECT count(*) FROM tpch.tiny.nation"); cursor.fetchall()' 2>/dev/null

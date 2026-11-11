@@ -1,0 +1,26 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via isql against the `hits` database.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# isql's `SET STATS` output).
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+out=$(printf 'SET STATS ON;\n%s\n' "$query" \
+    | /opt/firebird/bin/isql -q -b -user SYSDBA -password clickbench localhost:hits 2>&1) && exit_code=0 || exit_code=$?
+
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$out" | grep -q '^Statement failed'; then
+    printf '%s\n' "$out" >&2
+    exit 1
+fi
+
+printf '%s\n' "$out" | grep -v -E '^(Current memory|Delta memory|Max memory|Elapsed time|Cpu|Buffers|Reads|Writes|Fetches) = '
+
+time_s=$(printf '%s\n' "$out" | grep -oP '^Elapsed time = \K[0-9.]+' | tail -n1)
+if [ -z "$time_s" ]; then
+    echo "no timing in isql output" >&2
+    exit 1
+fi
+echo "$time_s" >&2

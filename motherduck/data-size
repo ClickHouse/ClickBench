@@ -1,0 +1,37 @@
+#!/bin/bash
+set -e
+
+: "${motherduck_token:?motherduck_token is required}"
+
+PY=.venv/bin/python3; [ -x "$PY" ] || PY=python3
+
+# MotherDuck reports database size as a human-readable string (e.g. "22.0 GiB")
+# via pragma_database_size(). Convert it to bytes so the shared driver's
+# post-load size sanity check (data must be > 5 GB) sees a plain integer.
+exec "$PY" - <<'PY'
+import duckdb, sys
+
+con = duckdb.connect("md:clickbench")
+row = con.execute("""
+    SELECT database_size
+    FROM pragma_database_size()
+    WHERE database_name = 'clickbench'
+""").fetchone()
+
+if not row or not row[0]:
+    sys.exit(f"pragma_database_size() returned no size: {row}")
+
+parts = str(row[0]).split()
+if len(parts) != 2:
+    sys.exit(f"Unparseable database size: {row[0]!r}")
+
+multipliers = {
+    "bytes": 1, "byte": 1,
+    "kb": 1024, "kib": 1024,
+    "mb": 1024**2, "mib": 1024**2,
+    "gb": 1024**3, "gib": 1024**3,
+    "tb": 1024**4, "tib": 1024**4,
+}
+value, unit = float(parts[0]), parts[1].lower()
+print(int(value * multipliers.get(unit, 1)))
+PY

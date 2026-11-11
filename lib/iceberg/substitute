@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+"""Copies stdin to stdout, replacing `{NAME}` with the value of the environment
+variable NAME, for the names consisting of uppercase letters, digits and
+underscores. Fails on a reference to an unset variable. Used to fill the
+storage and catalog settings from lib/iceberg/env.sh into the configuration
+files of the engines."""
+
+import os
+import re
+import sys
+
+
+def replace(match):
+    name = match.group(1)
+    if name not in os.environ:
+        sys.exit(f"substitute: the environment variable {name} is not set")
+    return os.environ[name]
+
+
+sys.stdout.write(re.sub(r"\{([A-Z][A-Z0-9_]*)\}", replace, sys.stdin.read()))

@@ -1,0 +1,636 @@
+{
+  "type": "struct",
+  "schema-id": 0,
+  "fields": [
+    {
+      "id": 1,
+      "name": "WatchID",
+      "required": false,
+      "type": "long"
+    },
+    {
+      "id": 2,
+      "name": "JavaEnable",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 3,
+      "name": "Title",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 4,
+      "name": "GoodEvent",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 5,
+      "name": "EventTime",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "id": 6,
+      "name": "EventDate",
+      "required": false,
+      "type": "date"
+    },
+    {
+      "id": 7,
+      "name": "CounterID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 8,
+      "name": "ClientIP",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 9,
+      "name": "RegionID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 10,
+      "name": "UserID",
+      "required": false,
+      "type": "long"
+    },
+    {
+      "id": 11,
+      "name": "CounterClass",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 12,
+      "name": "OS",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 13,
+      "name": "UserAgent",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 14,
+      "name": "URL",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 15,
+      "name": "Referer",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 16,
+      "name": "IsRefresh",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 17,
+      "name": "RefererCategoryID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 18,
+      "name": "RefererRegionID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 19,
+      "name": "URLCategoryID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 20,
+      "name": "URLRegionID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 21,
+      "name": "ResolutionWidth",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 22,
+      "name": "ResolutionHeight",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 23,
+      "name": "ResolutionDepth",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 24,
+      "name": "FlashMajor",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 25,
+      "name": "FlashMinor",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 26,
+      "name": "FlashMinor2",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 27,
+      "name": "NetMajor",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 28,
+      "name": "NetMinor",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 29,
+      "name": "UserAgentMajor",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 30,
+      "name": "UserAgentMinor",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 31,
+      "name": "CookieEnable",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 32,
+      "name": "JavascriptEnable",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 33,
+      "name": "IsMobile",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 34,
+      "name": "MobilePhone",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 35,
+      "name": "MobilePhoneModel",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 36,
+      "name": "Params",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 37,
+      "name": "IPNetworkID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 38,
+      "name": "TraficSourceID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 39,
+      "name": "SearchEngineID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 40,
+      "name": "SearchPhrase",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 41,
+      "name": "AdvEngineID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 42,
+      "name": "IsArtifical",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 43,
+      "name": "WindowClientWidth",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 44,
+      "name": "WindowClientHeight",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 45,
+      "name": "ClientTimeZone",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 46,
+      "name": "ClientEventTime",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "id": 47,
+      "name": "SilverlightVersion1",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 48,
+      "name": "SilverlightVersion2",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 49,
+      "name": "SilverlightVersion3",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 50,
+      "name": "SilverlightVersion4",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 51,
+      "name": "PageCharset",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 52,
+      "name": "CodeVersion",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 53,
+      "name": "IsLink",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 54,
+      "name": "IsDownload",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 55,
+      "name": "IsNotBounce",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 56,
+      "name": "FUniqID",
+      "required": false,
+      "type": "long"
+    },
+    {
+      "id": 57,
+      "name": "OriginalURL",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 58,
+      "name": "HID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 59,
+      "name": "IsOldCounter",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 60,
+      "name": "IsEvent",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 61,
+      "name": "IsParameter",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 62,
+      "name": "DontCountHits",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 63,
+      "name": "WithHash",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 64,
+      "name": "HitColor",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 65,
+      "name": "LocalEventTime",
+      "required": false,
+      "type": "timestamp"
+    },
+    {
+      "id": 66,
+      "name": "Age",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 67,
+      "name": "Sex",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 68,
+      "name": "Income",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 69,
+      "name": "Interests",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 70,
+      "name": "Robotness",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 71,
+      "name": "RemoteIP",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 72,
+      "name": "WindowName",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 73,
+      "name": "OpenerName",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 74,
+      "name": "HistoryLength",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 75,
+      "name": "BrowserLanguage",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 76,
+      "name": "BrowserCountry",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 77,
+      "name": "SocialNetwork",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 78,
+      "name": "SocialAction",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 79,
+      "name": "HTTPError",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 80,
+      "name": "SendTiming",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 81,
+      "name": "DNSTiming",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 82,
+      "name": "ConnectTiming",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 83,
+      "name": "ResponseStartTiming",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 84,
+      "name": "ResponseEndTiming",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 85,
+      "name": "FetchTiming",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 86,
+      "name": "SocialSourceNetworkID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 87,
+      "name": "SocialSourcePage",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 88,
+      "name": "ParamPrice",
+      "required": false,
+      "type": "long"
+    },
+    {
+      "id": 89,
+      "name": "ParamOrderID",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 90,
+      "name": "ParamCurrency",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 91,
+      "name": "ParamCurrencyID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 92,
+      "name": "OpenstatServiceName",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 93,
+      "name": "OpenstatCampaignID",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 94,
+      "name": "OpenstatAdID",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 95,
+      "name": "OpenstatSourceID",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 96,
+      "name": "UTMSource",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 97,
+      "name": "UTMMedium",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 98,
+      "name": "UTMCampaign",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 99,
+      "name": "UTMContent",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 100,
+      "name": "UTMTerm",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 101,
+      "name": "FromTag",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "id": 102,
+      "name": "HasGCLID",
+      "required": false,
+      "type": "int"
+    },
+    {
+      "id": 103,
+      "name": "RefererHash",
+      "required": false,
+      "type": "long"
+    },
+    {
+      "id": 104,
+      "name": "URLHash",
+      "required": false,
+      "type": "long"
+    },
+    {
+      "id": 105,
+      "name": "CLID",
+      "required": false,
+      "type": "int"
+    }
+  ]
+}

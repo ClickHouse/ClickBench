@@ -14,6 +14,7 @@ Running the benchmark:
 - Because OFFSET is not supported by Elasticsearch https://github.com/elastic/elasticsearch/issues/31549, the last 5 queries were modified to replace LIMIT x OFFSET y with LIMIT x+y 
 - I ran into problems using the SQL API directly (some queries would inexplicably stall), but if I used the SQL Translate API and then passed the resulting JSON to Search API, queries completed. 
 - Only one query did not run due to lack of support for REGEXP_REPLACE.
+- The queries with `COUNT(DISTINCT)` (Q5, Q6, Q9, Q10, Q11, Q12, Q14, Q23) are written in the query DSL rather than SQL (`query` sends a line that starts with `{` to the Search API as it is): the SQL translates `COUNT(DISTINCT)` to the `cardinality` aggregation, which is approximate (HyperLogLog++). Instead, a `scripted_metric` collects the exact set of values: as a sub-aggregation where the groups are ordered by the count (Q10, Q23), and as one top-level `scripted_metric` with a set per group, sorted in its reduce script, where the groups are ordered by the distinct count (Q9, Q11, Q12, Q14). The requests are the same as in `../opensearch`.
 
 Budget some time to run the benchmark:
 - Install and data prep process can take up to an hour.

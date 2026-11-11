@@ -135,6 +135,13 @@ You should not wait for cool down after data loading or running OPTIMIZE / VACUU
 The used storage size can be measured without accounting for temporary data if there is temporary data that will be removed in the background.
 Built-in introspection capabilities can be used to measure the storage size, or it can be measured by checking the used space in the filesystem.
 
+### Iceberg
+
+The entries in the `*-iceberg` directories are for systems that can write Apache Iceberg tables.
+Such a system creates an Iceberg table through an Iceberg REST catalog in an S3-compatible object storage, writes the dataset into it with the default settings, and runs the queries over the table it has written.
+Explicit optimization or compaction steps are not allowed unless the system does them automatically.
+See [lib/iceberg/README.md](lib/iceberg/README.md) for the rules and the shared scripts.
+
 ### Indexing
 
 The benchmark table has one index - the primary key.

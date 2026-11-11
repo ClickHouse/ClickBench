@@ -11,7 +11,11 @@ query=$(cat)
 # doesn't default to us-east-1 and get into a redirect loop. The
 # session-scoped SECRET keeps creds at empty so the chain doesn't
 # probe IMDS (which the playground's SNI filter blocks).
-out=$(duckdb hits.db \
+# -no-agent: the 2.0 CLI turns on "agent mode" when it detects an AI coding
+# agent in the environment (AI_AGENT, CLAUDECODE, CURSOR_AGENT, ...) and
+# stdout is not a terminal: Markdown tables, truncated results, JSON errors
+# and a progress bar. Keep the plain output regardless of who runs this.
+out=$(duckdb -no-agent hits.db \
     -c "SET s3_region='eu-central-1'" \
     -c "CREATE OR REPLACE SECRET (TYPE S3, KEY_ID '', SECRET '', REGION 'eu-central-1')" \
     -c "SET parquet_metadata_cache=true" \

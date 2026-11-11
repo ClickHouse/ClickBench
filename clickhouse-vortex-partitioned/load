@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+# Convert each source Parquet file to a Vortex file with ClickHouse itself.
+# Writing a Vortex file is single-threaded, so the files are converted in
+# parallel, one clickhouse-local process per file. The table structure comes
+# from create.sql, with the engine pointed to the one output file, and the
+# INSERT reads the Parquet file with this structure, the same way
+# clickhouse-parquet-partitioned reads it.
+#
+# The Vortex writer keeps most of a file in memory until it finishes: one
+# partition peaks at about 2.5 GB, so run at most one conversion per 3 GB of
+# available memory.
+mem_kb=$(awk '/^MemAvailable:/ { print $2 }' /proc/meminfo)
+jobs=$(( mem_kb / (3 * 1024 * 1024) ))
+[ "$jobs" -gt "$(nproc)" ] && jobs=$(nproc)
+[ "$jobs" -lt 1 ] && jobs=1
+
+rm -f hits_*.vortex
+seq 0 99 | xargs -P "$jobs" -I{} bash -c '
+    set -e
+    ./clickhouse local --tmp --max_threads=1 --query="$(sed "s/hits_\*\.vortex/hits_{}.vortex/" create.sql);
+        INSERT INTO hits SELECT * FROM file('"'"'hits_{}.parquet'"'"', Parquet)"
+'
+
+# The source Parquet files are no longer needed.
+rm -f hits_*.parquet
+sync

@@ -2,6 +2,9 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-11-04
+Merged [JSONBench](https://benchmark.clickhouse.com/json/) - a benchmark for data analytics on JSON - into the ClickBench repository. The original JSONBench was not updated for more than a year. Now it has been revived, all contributions have been merged, and a dozen new entrants have been added. It adds all UI advancements and automations from ClickBench. (Alexey Milovidov)
+
 ### 2026-10-15
 Add a history view. Clicking on any entry on the diagram will show the report of its historical results. The dataset is also available in the [public ClickHouse database](https://play.clickhouse.com/play?tab=ClickBench#U0VMRUNUICogRlJPTSBjbGlja2JlbmNoLnJlc3VsdHMgV0hFUkUgc3lzdGVtID0gJ0NsaWNrSG91c2UnIEFORCBtYWNoaW5lID0gJ2M2YS5tZXRhbCc=). (Alexey Milovidov)
 

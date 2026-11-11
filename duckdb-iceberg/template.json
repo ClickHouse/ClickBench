@@ -1,0 +1,12 @@
+{
+  "system": "DuckDB (Iceberg)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "DuckDB derivative",
+    "embedded"
+  ]
+}

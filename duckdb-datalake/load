@@ -7,5 +7,6 @@ set -e
 rm -f hits.db
 trap 'rm -f create.rewritten.sql' EXIT
 bench_dataset_sql < create.sql > create.rewritten.sql
-duckdb hits.db -f create.rewritten.sql
+# -no-agent: keep the plain CLI output; see ./query.
+duckdb -no-agent hits.db -f create.rewritten.sql
 sync

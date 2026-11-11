@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+# Convert the source Parquet file to Vortex with ClickHouse itself. create.sql
+# defines `hits` over hits.vortex; the INSERT takes the structure of `hits` for
+# reading hits.parquet, the same way clickhouse-parquet reads it.
+#
+# Writing a Vortex file is single-threaded, and the writer keeps a large part
+# of the file in memory until it finishes (about 22 GB of RSS for this one).
+rm -f hits.vortex
+./clickhouse local --tmp --query="$(cat create.sql); INSERT INTO hits SELECT * FROM file('hits.parquet', Parquet)"
+
+# The source Parquet file is no longer needed.
+rm -f hits.parquet
+sync

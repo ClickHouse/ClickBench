@@ -1,0 +1,7 @@
+#!/bin/bash
+# Ready iff the primary shards are active: the cluster health is red while the
+# shard of `hits` is still recovering after a restart.
+set -e -o pipefail
+
+curl -sS --fail --max-time 10 'http://localhost:9200/_cluster/health' \
+    | jq -e '.status == "yellow" or .status == "green"' >/dev/null
