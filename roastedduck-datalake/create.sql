@@ -1,5 +1,5 @@
-SET home_directory='/root';
-INSTALL httpfs;
+-- httpfs is built into roastedDuck: there is nothing to INSTALL, but it is
+-- not autoloaded, so LOAD it here and in every ./query process.
 LOAD httpfs;
 
 -- Use the HTTPS URL directly instead of s3://. The s3:// scheme makes
