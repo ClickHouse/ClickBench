@@ -176,6 +176,23 @@ ensure_built_image() {
     return 1
 }
 
+# The "master" result must come from a master build. Master always carries the next,
+# not-yet-released major.minor (e.g. 26.11.1.x while 26.10 is the latest release), so refuse
+# to benchmark a server whose major.minor already appears in version_date.tsv -- that means
+# a release-branch build was installed and would be mislabelled as master.
+check_master_build() {
+    local v mm released
+    v=$(local_client --query "SELECT version()" 2>/dev/null | tr -d '\r')
+    mm=$(printf '%s' "${v}" | cut -d. -f1-2)
+    released=$(curl -fsSL https://clickhouse.com/data/version_date.tsv | sed -n 's/^v\([0-9]*\.[0-9]*\)\..*/\1/p' | sort -u)
+    [ -n "${mm}" ] && [ -n "${released}" ] || { echo "cannot verify the master build (version '${v}')" >&2; return 1; }
+    if grep -qxF "${mm}" <<<"${released}"; then
+        echo "installed server ${v} is from the released ${mm} branch, not master; refusing to benchmark it as master" >&2
+        return 1
+    fi
+    echo "master build: ${v}" >&2
+}
+
 start_server() {
     cleanup
     if [ -n "${LOCAL}" ]; then
@@ -183,9 +200,14 @@ start_server() {
         # start it as a normal system service (curl|sh -> ./clickhouse install -> clickhouse
         # start). The service daemonises itself and `clickhouse stop` stops it cleanly, so no
         # backgrounding/pidfile juggling here.
-        echo "starting ${VERSION}: curl https://clickhouse.com/ | sh  ->  clickhouse install  ->  clickhouse start" >&2
+        # The installer defaults to the latest *release* branch (picked from version_date.tsv),
+        # so pin CLICKHOUSE_BRANCH=master to get the master build from builds.clickhouse.com.
+        # Remove a binary left by a previous run first: otherwise the installer saves the new
+        # download as clickhouse.0 and the stale ./clickhouse would be installed instead.
+        echo "starting ${VERSION}: curl https://clickhouse.com/ | CLICKHOUSE_BRANCH=master sh  ->  clickhouse install  ->  clickhouse start" >&2
         mkdir -p "${LOCAL_DIR}"
-        ( cd "${LOCAL_DIR}" && curl -fsSL https://clickhouse.com/ | sh ) >&2
+        rm -f "${LOCAL_DIR}/clickhouse"
+        ( cd "${LOCAL_DIR}" && curl -fsSL https://clickhouse.com/ | CLICKHOUSE_BRANCH=master sh ) >&2
         [ -x "${LOCAL_DIR}/clickhouse" ] || { echo "local install failed: ${LOCAL_DIR}/clickhouse missing" >&2; return 1; }
         ${SUDO} "${LOCAL_DIR}/clickhouse" install --noninteractive >&2 2>&1 </dev/null \
             || ${SUDO} "${LOCAL_DIR}/clickhouse" install >&2 2>&1 </dev/null \
@@ -194,7 +216,7 @@ start_server() {
         CLIENT_MODE=local
         local i
         for i in $(seq 1 "${READY_TIMEOUT:-90}"); do
-            local_client --query "SELECT 1" >/dev/null 2>&1 && return 0
+            local_client --query "SELECT 1" >/dev/null 2>&1 && { check_master_build; return $?; }
             sleep 1
         done
         echo "local server ${VERSION} did not become ready; last log lines:" >&2

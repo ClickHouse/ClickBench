@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e -o pipefail
+
+# The master build rather than the latest release: the Vortex format is not
+# in a release yet.
+if [ ! -x ./clickhouse ]; then
+    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ |
+        CLICKHOUSE_BRANCH=master CLICKHOUSE_ONLY=1 sh
+fi
+# The binary is self-extracting: it decompresses itself on the first run.
+./clickhouse --version
