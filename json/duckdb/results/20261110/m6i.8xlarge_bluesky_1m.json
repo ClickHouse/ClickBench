@@ -1,0 +1,26 @@
+{
+  "system": "DuckDB",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "DuckDB derivative",
+    "embedded"
+  ],
+  "version": "2.0.0",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-10",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "load_time": 5.797,
+  "total_size": 252719104,
+  "result": [
+    [0.322, 0.1, 0.1],
+    [0.565, 0.354, 0.38],
+    [0.571, 0.366, 0.366],
+    [0.447, 0.236, 0.234],
+    [0.454, 0.24, 0.236]
+  ]
+}
