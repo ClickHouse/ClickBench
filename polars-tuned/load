@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+# Polars uses LazyFrame (scan_parquet), so the parquet file must remain
+# available for queries — we only build the plan here and DO NOT delete the
+# input. /load is essentially "register the source".
+elapsed=$(curl -sS -X POST http://127.0.0.1:8000/load | python3 -c 'import json,sys; print(json.load(sys.stdin)["elapsed"])')
+echo "Load (server-reported): ${elapsed}s"
+
+sync
