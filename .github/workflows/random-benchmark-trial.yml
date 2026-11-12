@@ -32,27 +32,21 @@ jobs:
           aws-region: us-east-1
           role-session-name: clickbench-random-trial-${{ github.run_id }}
 
+      # Run 4: rayforce again in group 2ce46201 (the same seed and payload),
+      # after the fix of the single Parquet file.
       - shell: bash
         env:
-          SYSTEMS: "clickhouse duckdb-parquet-partitioned rayforce"
-          MACHINES: "c6a.4xlarge"
-          RANDOM_ROWS: "100000000"
-          RANDOM_QUERIES: "30"
-          RANDOM_PARALLEL_QUERIES: "4"
-          RANDOM_REPEATS: "3"
-          RANDOM_QUERY_TIMEOUT: "600"
-          RANDOM_LLM_BACKEND: "anthropic"
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OUT: ${{ github.workspace }}/random-group
+          machine: c6a.4xlarge
+          system: rayforce
+          group: 2ce46201-be57-4fc3-9daf-684c4c53b85d
+          seed: cec2dddbb33edbbb3a4689457085fddb
+          rows: "100000000"
+          clickhouse_version: 26.10.2.103-stable
+          parallel: "4"
+          repeats: "3"
+          query_timeout: "600"
+          payload_hash: b72030a70bcae8cd3bf96b69fb1cae25c5fe58024466f25234ed46baf95bd316
           repo: ${{ github.repository }}
           branch: randomized-benchmark
-        run: ./random/launch.sh
+        run: ./random/run-benchmark.sh
 
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: random-group
-          path: |
-            random-group/queries.json
-            random-group/translated/
-            random-group/generate.log
