@@ -1,0 +1,7 @@
+# Documentation for the translator: one URL per line.
+https://raw.githubusercontent.com/RayforceDB/rayforce/v3.0.2/docs/docs/language/syntax.md
+https://raw.githubusercontent.com/RayforceDB/rayforce/v3.0.2/docs/docs/language/control-flow.md
+https://raw.githubusercontent.com/RayforceDB/rayforce/v3.0.2/docs/docs/queries/select.md
+https://raw.githubusercontent.com/RayforceDB/rayforce/v3.0.2/docs/docs/queries/joins.md
+https://raw.githubusercontent.com/RayforceDB/rayforce/v3.0.2/docs/docs/language/string.md
+https://raw.githubusercontent.com/RayforceDB/rayforce/v3.0.2/docs/docs/reference/all-functions.md

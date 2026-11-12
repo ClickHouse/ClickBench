@@ -1,0 +1,30 @@
+name: "Report the randomized benchmark"
+
+run-name: "Randomized benchmark report: ${{ inputs.group }}"
+
+# Reads the results of a group of the randomized benchmark from the sink and
+# writes the comparison of the systems into the job summary and an artifact.
+
+on:
+  workflow_dispatch:
+    inputs:
+      group:
+        description: "The group id, printed by the launch"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GROUP: ${{ inputs.group }}
+        run: python3 random/report.py "$GROUP" --output random-report
+      - uses: actions/upload-artifact@v4
+        with:
+          name: random-report
+          path: random-report/

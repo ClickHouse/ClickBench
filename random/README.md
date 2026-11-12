@@ -1,0 +1,158 @@
+# Randomized ClickBench
+
+A variant of ClickBench that cannot be overfitted. Instead of the fixed 43
+queries on the fixed dataset, every run takes new random queries, written by a
+language model, on a new random dataset, made from the original one by
+`clickhouse-obfuscator` with a random seed. Nobody knows the queries or the
+data before the run, so there is nothing to tune a system for, except being
+good at analytical SQL in general.
+
+Because the queries change from run to run, results of different runs are not
+comparable. The unit of the benchmark is a **group**: several systems (for
+example, ten) on several machine types (for example, two), all with the same
+queries and the same data. The comparison is within the group.
+
+## How it works
+
+1. **Queries.** The launcher (a GitHub Actions job) asks a model for several
+   batches of candidate queries, three times as many as needed. Every batch
+   has its own prompt with randomly drawn parameters: a persona, the SQL
+   features to emphasize (joins, `IN` and `EXISTS` subqueries, correlated
+   subqueries, window functions, CTEs, set operations...), the columns to
+   prefer, a few random words and a nonce. The PRNG is seeded with the seed of
+   the group. The current models don't accept sampling parameters such as
+   temperature, so the prompt is the source of entropy.
+
+   Every candidate runs with the pinned ClickHouse on a small dataset of the
+   same kind. A candidate is dropped if it is not a single `SELECT` with
+   `ORDER BY`, aggregates large integers with `SUM`/`AVG` (the result would
+   depend on overflow), fails, takes too long, returns no rows or more than
+   100, or returns different results with different numbers of threads and
+   block sizes (the result is not fully determined). The final set is sampled
+   from the valid candidates to cover the features evenly
+   (`generate-queries.py`).
+
+2. **Translation.** The queries are written in portable SQL. A system whose
+   ClickBench `queries.sql` differs from ClickHouse's gets them translated by
+   the model (`translate-queries.py`). The model learns the dialect from the
+   system's own ClickBench entry, its 43 queries side by side with
+   ClickHouse's, and from its `create*` files. For a system that doesn't
+   speak SQL (Rayforce), `random/systems/<system>/docs` lists the
+   documentation of its language. A query that the target can't express
+   counts as an error of the system.
+
+3. **Data.** Every machine generates the dataset itself, from the seed of the
+   group (`lib/generate-data.sh`). It downloads the 100 files of the original
+   partitioned dataset and trains the model of the obfuscator on a sample.
+   Then it transforms every file in parallel, with the same model and seed,
+   looping over the source as many times as needed for the requested number
+   of rows (one billion by default). Every value of a column is transformed
+   with a key derived from the seed and the column name, so the data stays
+   consistent across files: a `UserID` is the same in all of them. With the
+   same seed and ClickHouse version, every machine gets the same data. The
+   files are written in the format the system loads, with the names and the
+   physical layout of the original files (`lib/make-format.sh`), so the
+   system's own load scripts work unchanged.
+
+4. **Run.** The system is installed, started and loaded with its own scripts
+   from the main benchmark. Then the dispatcher (`lib/driver.py`) takes the
+   list of queries and repeats it (3 times by default). It orders the list
+   pseudorandomly, by a hash of the query id, the repeat number and the seed,
+   which gives the same order on every system. It hands every query to the
+   next free worker (4 by default). There are no cold and hot runs; what
+   counts is the total time. Every execution records its time, its status,
+   and its output in the system's own format.
+
+5. **Validation.** After the run, the system is stopped. ClickHouse computes
+   the reference results on the same data, with settings that give the
+   standard SQL semantics (`lib/reference-settings`), and every output is
+   compared with them (`lib/validate.py`). The outputs come in many formats
+   (tables with borders, CSV, JSON, S-expressions), so the comparison doesn't
+   parse them. It looks for the values of the reference, cell by cell, in the
+   same order, with only separators in between. It tolerates other notations
+   of numbers, float precision, booleans as `true`/`false`, ISO times,
+   differences of escaping and quoting, and a few mangled characters (U+FFFD).
+   An execution is `ok`, `wrong` (with "order" if only the order of the rows
+   differs), `error`, `timeout`, `unsupported`, or `unverified` (no reference
+   result).
+
+The machine sends one JSON document with all of this to the sink
+(`sink.data`, `kind = 'random-benchmark'`). `report.py` builds the comparison
+of the group.
+
+## Running
+
+Run the **Run the randomized benchmark** workflow with the systems and the
+machines. It needs the repository secret `ANTHROPIC_API_KEY` (or
+`OPENAI_API_KEY` with `llm: openai`). The job summary shows the group id.
+When the machines are done, run **Report the randomized benchmark** with the
+group id.
+
+From a checkout, with AWS credentials:
+
+```bash
+SYSTEMS="clickhouse duckdb-parquet-partitioned rayforce" MACHINES="c6a.4xlarge c8g.4xlarge" random/launch.sh
+random/report.py <group>
+```
+
+`DRY_RUN=1` generates and translates the queries without launching anything.
+Without an API key, `RANDOM_LLM_BACKEND=claude-cli` uses the local `claude`
+command.
+
+Parameters (workflow inputs, or environment variables of `launch.sh`): the
+number of rows (`RANDOM_ROWS`, default 1000000000), of queries
+(`RANDOM_QUERIES`, 100), of concurrent workers (`RANDOM_PARALLEL_QUERIES`, 4),
+of repeats (`RANDOM_REPEATS`, 3), and the time limit of a query
+(`RANDOM_QUERY_TIMEOUT`, 600 s).
+
+## The report
+
+For every machine type, the systems are ranked by the penalized time: the
+total time plus the query timeout for every failed execution, divided by the
+number of workers, so that failing fast is no better than the slowest answer.
+The table also shows the total time, the counts of correct, wrong, failed and
+unverified executions, the load time and the data size. Then comes a matrix of
+the queries that failed somewhere. If most systems disagree with the reference
+on a query, the report says so: the query or the reference may be wrong.
+
+## Adding a system
+
+Only reasonably mature systems take part. A system can take part if:
+
+- it loads one of the generated formats: its `benchmark.sh` sets
+  `BENCH_DOWNLOAD_SCRIPT` to `download-hits-parquet-partitioned`,
+  `download-hits-parquet-single`, `download-hits-tsv`, or `download-hits-csv`
+  (not a remote source),
+- its `./query` prints the whole result, all rows and full values,
+- several `./query` can run at once,
+- its `./load` doesn't check for the exact row count of the original dataset.
+
+`random/systems/<system>/` adapts a system without changing its main entry:
+
+- any file except the ones below is copied over the system's directory on the
+  machine; for example, `duckdb*/query` prints CSV (the default mode shows at
+  most 40 rows) and opens the database read-only, so that queries can run
+  concurrently,
+- `config`: `TRANSLATE=yes|no` overrides the choice of translation, and
+  `QUERY_SUFFIX` is appended to every query: ClickHouse uses it for the
+  settings of the standard semantics (`join_use_nulls` and others),
+- `notes.md`: notes for the translator,
+- `docs`: URLs of the documentation of the system's language, for the
+  translator.
+
+## Timings and costs
+
+On this kind of hardware, the obfuscator makes about 35,000 rows per second
+per core. A billion rows takes about 35 minutes on 16 vCPUs, plus a few minutes
+to train the model. The machines have a 2 TB gp3 volume: the TSV of a billion
+rows is about 750 GB. The reference takes a few minutes to load and runs every
+query once. The launcher spends about 10 to 20 minutes on generating and
+validating the queries.
+
+## Testing locally
+
+Every part runs locally: `lib/generate-data.sh` and `lib/make-format.sh` with
+a small `RANDOM_ROWS` and `RANDOM_SOURCE_FILES`, `generate-queries.py` with
+`RANDOM_LLM_BACKEND=claude-cli` on a sample database made by
+`lib/reference.py load`, and `lib/run-system.sh` with `RANDOM_SYSTEMS_DIR`
+pointing to test systems and `RANDOM_CLICKHOUSE` to a ClickHouse binary.

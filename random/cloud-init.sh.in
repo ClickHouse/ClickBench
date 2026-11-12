@@ -1,0 +1,82 @@
+#!/bin/bash -x
+
+# Cloud-init for the randomized benchmark: generate the dataset, run the
+# queries of a benchmark group on one system, compute the reference results,
+# validate, send the result to the sink (sink.data on play.clickhouse.com),
+# then terminate. Rendered from this template by run-benchmark.sh.
+
+# Make sure the machine terminates whatever happens to this script, see
+# ../cloud-init.sh.in.
+shutdown -P "+$(( @timeout@ / 60 + 120 ))"
+trap 'shutdown now' EXIT
+
+export HOME="${HOME:-/root}"
+export DEBIAN_FRONTEND=noninteractive
+
+# See ../cloud-init.sh.in: swap for the loads of row-oriented systems, and no
+# background zeroing of the inode tables.
+if [ ! -f /swapfile ]; then
+    fallocate -l 16G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile >/dev/null
+    swapon /swapfile
+fi
+mount -o remount,noinit_itable /
+
+apt-get update -y
+apt-get install -y wget curl git jq python3 earlyoom
+systemctl enable --now earlyoom
+
+git clone --depth 1 'https://github.com/@repo@.git' --branch '@branch@' ClickBench
+cd ClickBench
+
+export RANDOM_SEED='@seed@'
+export RANDOM_ROWS='@rows@'
+export RANDOM_CLICKHOUSE_VERSION='@clickhouse_version@'
+export RANDOM_PARALLEL_QUERIES='@parallel@'
+export RANDOM_REPEATS='@repeats@'
+export RANDOM_QUERY_TIMEOUT='@query_timeout@'
+SINK='https://play.clickhouse.com/?user=sink'
+
+LOG="${PWD}/random-log"
+# The first line identifies the log in the sink (see report.py).
+echo 'Randomized benchmark group: @group@, system: @system@' | tee -a "${LOG}"
+echo "Commit: $(git rev-parse HEAD)" | tee -a "${LOG}"
+
+WORK=/random-work
+mkdir -p "${WORK}"
+python3 random/lib/payload.py fetch "${SINK}" '@group@' '@system@' '@payload_hash@' "${WORK}/payload" 2>&1 | tee -a "${LOG}"
+
+timeout @timeout@ random/lib/run-system.sh '@system@' "${WORK}/payload" "${WORK}" 2>&1 | tee -a "${LOG}"
+status=${PIPESTATUS[0]}
+
+TOKEN=$(curl -sS -X PUT 'http://169.254.169.254/latest/api/token' -H 'X-aws-ec2-metadata-token-ttl-seconds: 21600')
+INSTANCE_TYPE=$(curl -sS -H "X-aws-ec2-metadata-token: ${TOKEN}" 'http://169.254.169.254/latest/meta-data/instance-type')
+echo "Exit status: ${status}, instance type: ${INSTANCE_TYPE}, total time: ${SECONDS}s" | tee -a "${LOG}"
+
+RESULTS_URL="${SINK}&query=INSERT+INTO+data+FORMAT+RawBLOB"
+
+if [ "${status}" = 0 ] && [ -s "${WORK}/result.json" ]; then
+    jq -c --arg kind 'random-benchmark' --arg group '@group@' --arg machine "${INSTANCE_TYPE}" \
+        --arg repo '@repo@' --arg branch '@branch@' --arg commit "$(git rev-parse HEAD)" \
+        '. + {kind: $kind, group: $group, machine: $machine, repo: $repo, branch: $branch, commit: $commit}' \
+        "${WORK}/result.json" | curl --max-time 300 "${RESULTS_URL}" --data-binary @-
+fi
+
+# The logs for diagnostics, truncated as in the main benchmark.
+send_log() {
+    local f="$1" size
+    size=$(stat -c%s "$f" 2>/dev/null || echo 0)
+    if [ "$size" -le 1000000 ]; then
+        curl --max-time 300 "${RESULTS_URL}" --data-binary @"$f"
+    else
+        { head -c 100000 "$f"
+          printf '\n...[%d bytes truncated]...\n' "$((size - 1000000))"
+          tail -c 900000 "$f"; } | curl --max-time 300 "${RESULTS_URL}" --data-binary @-
+    fi
+}
+send_log "${LOG}"
+{ echo 'Randomized benchmark cloud-init log: group @group@, system: @system@'; cat /var/log/cloud-init-output.log; } > random-cloud-init.log
+send_log random-cloud-init.log
+
+shutdown now

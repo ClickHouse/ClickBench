@@ -1,0 +1,153 @@
+#!/bin/bash
+# Runs the randomized benchmark for one system on this machine.
+#
+# Usage: run-system.sh <system> <payload dir> <work dir>
+#
+# <payload dir> has queries.json (the generated queries) and translated.json
+# (the queries for this system). Environment:
+#   RANDOM_SEED, RANDOM_ROWS, ...   the dataset, see generate-data.sh
+#   RANDOM_CLICKHOUSE_VERSION       the pinned ClickHouse release
+#   RANDOM_PARALLEL_QUERIES         concurrent workers, default 4
+#   RANDOM_REPEATS                  how many times every query runs, default 3
+#   RANDOM_QUERY_TIMEOUT            seconds per query, default 600
+#   RANDOM_REFERENCE_TIMEOUT        seconds per reference query, default 1800
+#
+# The system's own scripts from the main benchmark are used as they are
+# (install, start, check, load, query, data-size, stop), with the files of
+# random/systems/<system>/ copied over them when there are any (e.g. a ./query
+# that prints the whole result). The system loads the generated data in the
+# format of its BENCH_DOWNLOAD_SCRIPT.
+#
+# Writes <work dir>/result.json.
+
+set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+
+SYSTEM="${1:?usage: run-system.sh <system> <payload dir> <work dir>}"
+PAYLOAD="$(cd "${2:?}" && pwd)"
+WORK="${3:?}"
+mkdir -p "${WORK}"
+WORK="$(cd "${WORK}" && pwd)"
+: "${RANDOM_PARALLEL_QUERIES:=4}"
+: "${RANDOM_REPEATS:=3}"
+: "${RANDOM_QUERY_TIMEOUT:=600}"
+: "${RANDOM_REFERENCE_TIMEOUT:=1800}"
+: "${RANDOM_ROWS:=1000000000}"
+export RANDOM_ROWS
+
+log() { echo "random: $*"; }
+# Flushes the writeback outside of the measured windows, and inside the load
+# (as the main benchmark does). RANDOM_SKIP_SYNC=1 is for testing on a shared
+# host, where sync waits for everyone's writes.
+flush() { [ -n "${RANDOM_SKIP_SYNC:-}" ] || sync; }
+
+install_random_clickhouse "${RANDOM_CLICKHOUSE_VERSION:?}"
+
+log "generating the data"
+"${RANDOM_DIR}/lib/generate-data.sh" "${WORK}/data"
+
+# RANDOM_SYSTEMS_DIR: where the system directories are, for testing (default: ClickBench).
+SYSTEM_DIR="${RANDOM_SYSTEMS_DIR:-${CLICKBENCH_DIR}}/${SYSTEM}"
+cd "${SYSTEM_DIR}"
+if [ -d "${RANDOM_DIR}/systems/${SYSTEM}" ]; then
+    for f in "${RANDOM_DIR}/systems/${SYSTEM}"/*; do
+        case "$(basename "$f")" in config|notes.md|docs) ;; *) cp -a "$f" . ;; esac
+    done
+fi
+
+# The settings of the system from its benchmark.sh (BENCH_DOWNLOAD_SCRIPT, ...).
+eval "$(grep -E '^\s*export BENCH_[A-Z_]+=' benchmark.sh)"
+: "${BENCH_DOWNLOAD_SCRIPT:=}"
+: "${BENCH_DURABLE:=yes}"
+: "${BENCH_CHECK_TIMEOUT:=300}"
+export BENCH_DURABLE
+[ -f "${RANDOM_DIR}/systems/${SYSTEM}/config" ] && source "${RANDOM_DIR}/systems/${SYSTEM}/config"
+
+check_loop() {
+    local i
+    for i in $(seq 1 "${BENCH_CHECK_TIMEOUT}"); do
+        ./check >/dev/null 2>&1 && return 0
+        sleep 1
+    done
+    echo "random: ./check did not succeed within ${BENCH_CHECK_TIMEOUT} s" >&2
+    return 1
+}
+
+log "installing"
+./install
+flush
+./start >/dev/null 2>&1 || true
+check_loop
+
+log "making the files for ${BENCH_DOWNLOAD_SCRIPT}"
+"${RANDOM_DIR}/lib/make-format.sh" "${WORK}/data" "${BENCH_DOWNLOAD_SCRIPT}" .
+flush
+
+log "loading"
+start=$(date +%s.%N)
+./load
+flush
+load_time=$(awk -v s="${start}" -v e="$(date +%s.%N)" 'BEGIN { printf "%.3f", e - s }')
+echo "Load time: ${load_time}"
+check_loop
+data_size=$(./data-size || echo null)
+echo "Data size: ${data_size}"
+
+log "running the queries"
+python3 "${RANDOM_DIR}/lib/driver.py" --queries "${PAYLOAD}/translated.json" --output "${WORK}/run" \
+    --parallel "${RANDOM_PARALLEL_QUERIES}" --repeats "${RANDOM_REPEATS}" \
+    --timeout "${RANDOM_QUERY_TIMEOUT}" --seed "${RANDOM_SEED}"
+data_size_after=$(./data-size || echo null)
+./stop >/dev/null 2>&1 || true
+
+# The reference runs after the system is stopped, so it takes nothing from it.
+log "computing the reference"
+python3 "${RANDOM_DIR}/lib/reference.py" load "${WORK}/data" "${WORK}/reference-db"
+python3 "${RANDOM_DIR}/lib/reference.py" run "${WORK}/reference-db" "${PAYLOAD}/queries.json" \
+    "${WORK}/reference" --timeout "${RANDOM_REFERENCE_TIMEOUT}"
+
+log "validating"
+python3 "${RANDOM_DIR}/lib/validate.py" "${WORK}/reference" "${WORK}/run"
+
+python3 - "${WORK}" "${SYSTEM_DIR}" "${PAYLOAD}" "${load_time}" "${data_size}" "${data_size_after}" <<'EOF'
+import json, os, sys
+work, system_dir, payload, load_time, data_size, data_size_after = sys.argv[1:]
+def number(x):
+    try:
+        return float(x) if "." in x else int(x)
+    except ValueError:
+        return None
+run = json.load(open(os.path.join(work, "run", "run.json")))
+validation = json.load(open(os.path.join(work, "run", "validation.json")))
+reference = json.load(open(os.path.join(work, "reference", "status.json")))
+template = json.load(open(os.path.join(system_dir, "template.json")))
+translated = json.load(open(os.path.join(payload, "translated.json")))
+checked = {(v["id"], v["repeat"]): v for v in validation["results"]}
+executions = []
+for e in run["executions"]:
+    v = checked[(e["id"], e["repeat"])]
+    executions.append({"id": e["id"], "repeat": e["repeat"], "status": v["status"], "detail": v["detail"],
+                       "start": e["start"], "time": e["time"], "reported_time": e["reported_time"]})
+# The beginning of the output of every query, for the inspection of wrong results.
+outputs = {}
+for e in run["executions"]:
+    if e["repeat"] == 1 and e["status"] == "ok":
+        with open(os.path.join(work, "run", "out", f"{e['id']}.1.out"), "rb") as f:
+            outputs[e["id"]] = f.read(2000).decode(errors="replace")
+counts = validation["counts"]
+total = sum(counts.values())
+json.dump({
+    "system": template.get("system"), "proprietary": template.get("proprietary"), "tuned": template.get("tuned"),
+    "tags": template.get("tags", []), "directory": os.path.basename(system_dir),
+    "rows": int(os.environ["RANDOM_ROWS"]), "seed": os.environ["RANDOM_SEED"],
+    "clickhouse_version": os.environ["RANDOM_CLICKHOUSE_VERSION"],
+    "parallel": run["parallel"], "repeats": run["repeats"], "query_timeout": run["timeout"],
+    "load_time": number(load_time), "data_size": number(data_size), "data_size_after": number(data_size_after),
+    "total_time": run["total_time"], "restarts": run["restarts"], "counts": counts,
+    "error_rate": round(sum(n for s, n in counts.items() if s not in ("ok", "unverified")) / total, 4) if total else None,
+    "translator": translated.get("translator"),
+    "reference": {k: {"status": v["status"], "time": v["time"]} for k, v in reference.items()},
+    "executions": executions, "outputs": outputs,
+}, open(os.path.join(work, "result.json"), "w"), ensure_ascii=False)
+print("Result: " + json.dumps(counts))
+EOF

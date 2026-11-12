@@ -1,0 +1,3 @@
+# The files of the groups launched from a local checkout (launch.sh).
+groups/
+__pycache__/
