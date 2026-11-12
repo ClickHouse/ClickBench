@@ -54,11 +54,18 @@ case "${KIND}" in
                 SELECT ${PHYSICAL} FROM file(\$\$${WORK}/canonical/part_{}.parquet\$\$, Parquet, \$\$${STRUCTURE}\$\$)"'
         ;;
     download-hits-parquet-single)
-        # One reader at a time keeps the order of the parts.
+        # One reader at a time keeps the order of the parts. The writer gets
+        # the structure: without it, clickhouse-local infers the schema from
+        # stdin, which it buffers whole (16 GiB on 100M rows, out of memory).
+        # With several threads, the writer buffers row groups without a
+        # bound when the input is faster (7 GB for 4.5M rows); with one, it
+        # stays at about 1.5 GB.
+        SINGLE="$(sed -E 's/ DateTime(,|$)/ Int64\1/g; s/ Date(,|$)/ UInt16\1/g' <<< "${STRUCTURE}")"
         for i in "${parts[@]}"; do
             "${CH}" local --max_threads 1 --input_format_parquet_preserve_order 1 --query "
                 SELECT ${PHYSICAL} FROM file('${WORK}/canonical/part_${i}.parquet', Parquet, \$\$${STRUCTURE}\$\$) FORMAT Native"
-        done | "${CH}" local --input-format Native --output_format_parquet_compression_method snappy \
+        done | "${CH}" local --max_threads 1 --input-format Native --structure "${SINGLE}" \
+            --output_format_parquet_compression_method snappy \
             --query "SELECT * FROM table INTO OUTFILE '${DEST}/hits.parquet' TRUNCATE FORMAT Parquet"
         ;;
     download-hits-tsv|download-hits-csv)
