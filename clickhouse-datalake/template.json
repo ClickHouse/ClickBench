@@ -7,7 +7,6 @@
   "tags": [
     "C++",
     "column-oriented",
-    "embedded",
     "stateless",
     "ClickHouse derivative"
   ]

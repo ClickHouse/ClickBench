@@ -3,7 +3,7 @@
 #
 #   ./create.sh <version> <dataset> <table>
 #
-# Datasets: hits | ssb | mgbench | tpch | tpcds | coffeeshop | taxi
+# Datasets: hits | ssb | mgbench | tpch | tpcds | coffeeshop | ontime | uk | job | taxi | jsonbench
 # Each dataset is loaded into its own database (named after the dataset), so
 # tables with the same name across datasets (e.g. TPC-H and TPC-DS both have a
 # `customer`) never collide. The statement here is unqualified; the runner
@@ -61,6 +61,34 @@ prehistoric_tier() {
     else                            echo legacy_plain
     fi
 }
+
+# JSONBench (the Bluesky dataset): one JSON column holding each document whole, with the
+# paths the queries filter and group by declared with types, as in JSONBench. The JSON type
+# exists from 24.8 (queries/jsonbench.minver; the older Object('json') can't load this data:
+# a path is a string in some documents and an object in others). It needs none of the
+# legacy-engine machinery below, and its DDL changes with the version only in the sort key:
+# a JSON subcolumn in ORDER BY is accepted from 24.12, so 24.8 .. 24.11 get no sort key.
+if [ "$DATASET" = "jsonbench" ]; then
+    json_sort_key() {
+        local major minor
+        [ "$VERSION" = "master" ] && return 0
+        IFS=. read -r major minor _ <<<"$VERSION"
+        [ "$major" -gt 24 ] || { [ "$major" -eq 24 ] && [ "$minor" -ge 12 ]; }
+    }
+    if json_sort_key; then
+        ORDER_BY="(data.kind, data.commit.operation, data.commit.collection, data.did, fromUnixTimestamp64Micro(data.time_us))"
+    else
+        ORDER_BY="tuple()"
+    fi
+    echo "DROP TABLE IF EXISTS ${TABLE};"
+    cat <<SQL
+CREATE TABLE ${TABLE}
+(
+    data JSON(kind LowCardinality(String), commit.operation LowCardinality(String), commit.collection LowCardinality(String), did String, time_us UInt64)
+) ENGINE = MergeTree ORDER BY ${ORDER_BY};
+SQL
+    exit 0
+fi
 
 # `customer` exists in both TPC-H and TPC-DS with different schemas, so it is
 # disambiguated by dataset (and its columns file is dataset-qualified below).

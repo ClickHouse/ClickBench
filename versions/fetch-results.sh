@@ -57,11 +57,17 @@ reldate() {
     printf '%s' "${d}"
 }
 
+# Only ClickHouse: the same kind was also used for runs of other systems (DuckDB, StarRocks,
+# CedarDB in 2026-07), which carry a `system` field; the ClickHouse runs have none.
+#
+# A complete result has one entry per query: 349 now, or 344 for the runs made before
+# jsonbench was added (apply-minvers.py pads those with nulls for its queries).
 mapfile -t VERSIONS < <(CH --query "
     SELECT DISTINCT JSONExtractString(content, 'version') AS v
     FROM sink.data
     WHERE JSONExtractString(content, 'kind') = 'versions-benchmark' AND v != ''
-      AND length(JSONExtractArrayRaw(content, 'result')) = 344
+      AND length(JSONExtractArrayRaw(content, 'result')) IN (344, 349)
+      AND JSONExtractString(content, 'system') IN ('', 'ClickHouse')
       ${WINDOW}
     ORDER BY v
     FORMAT TSV")
@@ -77,7 +83,8 @@ for v in "${VERSIONS[@]}"; do
         SELECT argMax(content, time) FROM sink.data
         WHERE JSONExtractString(content, 'kind') = 'versions-benchmark'
           AND JSONExtractString(content, 'version') = '${v}'
-          AND length(JSONExtractArrayRaw(content, 'result')) = 344
+          AND length(JSONExtractArrayRaw(content, 'result')) IN (344, 349)
+      AND JSONExtractString(content, 'system') IN ('', 'ClickHouse')
         FORMAT TSVRaw" > /tmp/vb-content.json
     # Skip runs whose data load did not complete: an OOM during the (parallel) load can
     # kill the server mid-INSERT and take the container down, leaving data_size null
@@ -127,6 +134,17 @@ for f in results/*.json; do
     else
         rm -f "${f}"; echo "  dropped ${v}.json (duplicate of ${av})" >&2
     fi
+done
+
+# One result per release line: like list-versions.sh, keep only the latest patch within each
+# major.minor of the calendar versions (18.x onwards), which the page shows as major.minor.
+# When a newer patch of a line is benchmarked (e.g. the JSONBench backfill ran 26.3.60.2
+# where 26.3.13.31 had run before), its result replaces the older one instead of appearing
+# as a second "26.3".
+for f in $(ls results/*.json 2>/dev/null | sed 's|^results/||; s|\.json$||' \
+           | awk -F. '$1 ~ /^[0-9]+$/ && $1 >= 18 && NF >= 3' | sort -V \
+           | awk -F. '{k = $1"."$2; if (k in last) print last[k]; last[k] = $0}'); do
+    rm -f "results/${f}.json"; echo "  dropped ${f}.json (a later patch of its release line is in)" >&2
 done
 
 # Normalise every result to the current per-query minimum versions (queries/*.minver):

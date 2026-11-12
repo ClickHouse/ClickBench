@@ -6,7 +6,7 @@
 # Spins up the server, creates the six tables with version-appropriate DDL
 # (create/create.sh), loads the prepared Native files with a plain
 # `clickhouse-client INSERT ... FORMAT Native`, then times every query in
-# queries/{mgbench,ssb,hits,tpch,tpcds,coffeeshop,ontime,uk,job,taxi}.sql (TRIES runs each, dropping the page
+# queries/{mgbench,ssb,hits,tpch,tpcds,coffeeshop,ontime,uk,job,taxi,jsonbench}.sql (TRIES runs each, dropping the page
 # cache between queries) and writes results/<version>.json.
 #
 # phase (default "all") splits load from benchmark so run-all.sh can load many
@@ -30,7 +30,7 @@ LOAD_PARALLEL="${LOAD_PARALLEL:-4}"
 # Datasets to actually load. Queries for any skipped dataset still run (and
 # report null). E.g. LOAD_DATASETS="hits ssb mgbench" skips the big taxi load
 # while keeping its file on disk.
-LOAD_DATASETS="${LOAD_DATASETS:-hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi}"
+LOAD_DATASETS="${LOAD_DATASETS:-hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi jsonbench}"
 
 VERSION="${1:?usage: run-version.sh <version> [image_ref] [phase]}"
 IMAGE="${2:-}"
@@ -53,7 +53,9 @@ OUT="${HERE}/results/${VERSION}.json"
 LOAD_STATS="${HERE}/logs/${VERSION}.loadtimes.tsv"
 mkdir -p "${HERE}/logs"
 
-# Datasets => "table:file" pairs to create+load.
+# Datasets => "table:file" pairs to create+load. A file is a path under DATA, or a glob
+# of several files that are concatenated into one INSERT (see data_files). Files named
+# *.native.zst hold Native data; *.json.gz hold JSON documents, one per line.
 declare -A TABLES=(
     [hits]="hits:hits.native.zst"
     [ssb]="lineorder_flat:ssb.native.zst"
@@ -64,6 +66,9 @@ declare -A TABLES=(
     [coffeeshop]="fact_sales:coffeeshop_fact_sales.native.zst dim_locations:coffeeshop_dim_locations.native.zst dim_products:coffeeshop_dim_products.native.zst"
     [ontime]="ontime:ontime.native.zst"
     [uk]="uk_price_paid:uk_price_paid.native.zst"
+    # JSONBench: the Bluesky dataset, 100 files of a million JSON documents each, loaded
+    # as is into a JSON column (prepare-data/jsonbench.sh downloads them).
+    [jsonbench]="bluesky:bluesky/file_*.json.gz"
     [job]="aka_name:job_aka_name.native.zst aka_title:job_aka_title.native.zst cast_info:job_cast_info.native.zst char_name:job_char_name.native.zst comp_cast_type:job_comp_cast_type.native.zst company_name:job_company_name.native.zst company_type:job_company_type.native.zst complete_cast:job_complete_cast.native.zst info_type:job_info_type.native.zst keyword:job_keyword.native.zst kind_type:job_kind_type.native.zst link_type:job_link_type.native.zst movie_companies:job_movie_companies.native.zst movie_info:job_movie_info.native.zst movie_info_idx:job_movie_info_idx.native.zst movie_keyword:job_movie_keyword.native.zst movie_link:job_movie_link.native.zst name:job_name.native.zst person_info:job_person_info.native.zst role_type:job_role_type.native.zst title:job_title.native.zst"
 )
 # Query files are run (and reported) in this fixed order. Each dataset loads
@@ -75,7 +80,11 @@ declare -A TABLES=(
 # reliable, light datasets run FIRST and the heavy, crash-/timeout-prone ones
 # (tpch, tpcds, job — big multi-way joins, INTERSECT, self-joins) run LAST, so a
 # late crash can't take down the earlier datasets' results as collateral.
-QUERY_ORDER="mgbench ssb hits uk ontime taxi coffeeshop tpch tpcds job"
+#
+# New datasets are appended at the END, so the result arrays of the runs made before a
+# dataset existed stay a prefix of the current layout (apply-minvers.py pads them with
+# nulls). jsonbench came last for this reason.
+QUERY_ORDER="mgbench ssb hits uk ontime taxi coffeeshop tpch tpcds job jsonbench"
 
 cleanup() {
     # `clickhouse stop` manages the daemon via its own pidfile and returns once stopped, so
@@ -137,7 +146,8 @@ run_ddl() {
     local db="$1" stmt rc=0
     while IFS= read -r -d ';' stmt; do
         case "${stmt}" in *[![:space:]]*) : ;; *) continue ;; esac   # skip blank/whitespace-only
-        if ! client --database "${db}" --query "${stmt}" </dev/null; then
+        # shellcheck disable=SC2086 # DDL_FLAGS is a list of options
+        if ! client --database "${db}" ${DDL_FLAGS:-} --query "${stmt}" </dev/null; then
             case "${stmt}" in *[Cc][Rr][Ee][Aa][Tt][Ee]*) rc=1 ;; esac
         fi
     done
@@ -267,16 +277,60 @@ start_server() {
     return 1
 }
 
+# The data files of a TABLES entry that are present under DATA, one per line, sorted:
+# the file itself, or every match of a glob (nothing if none matches).
+data_files() {
+    local f
+    for f in "${DATA}"/$1; do [ -f "${f}" ] && printf '%s\n' "${f}"; done
+}
+
+# Version-specific client settings needed to create and load a dataset's tables. The JSON
+# type (jsonbench) was experimental before 25.3. Only the versions that know the setting
+# get it: an older client rejects an unknown setting, and a newer one an obsolete setting.
+dataset_ddl_flags() {
+    case "$1" in
+        jsonbench) version_ge "${VERSION}" "25.3" || echo "--allow_experimental_json_type=1" ;;
+    esac
+}
+
+# INSERT data files into <ds>.<table>, one INSERT per file, in order; fails on the first
+# file that fails. Each file is streamed through pv (progress %/rate/ETA once a second,
+# based on the known file size) -> decompression -> a plain INSERT, so the ancient
+# clickhouse-client never sees compression. A table of several files (jsonbench: 100) is
+# not loaded in one INSERT: on 26.8 and 26.9 memory accumulates over one long INSERT, and a
+# single INSERT of all 100 million JSON documents fails part way through with
+# MEMORY_LIMIT_EXCEEDED (the client sees "Connection reset by peer"), while one INSERT per
+# file, as JSONBench itself loads them, works everywhere.
+#   insert_files <ds> <table> <format> <client flags> <decompress command> <file>...
+insert_files() {
+    local ds="$1" table="$2" fmt="$3" flags="$4" decompress="$5" f i=0 n reader
+    shift 5
+    n=$#
+    for f in "$@"; do
+        i=$((i + 1))
+        if command -v pv >/dev/null 2>&1; then
+            reader=(pv -f -i 1 -N "${ds}.${table}$([ "${n}" -gt 1 ] && echo " ${i}/${n}")" -- "${f}")
+        else
+            reader=(cat -- "${f}")
+        fi
+        # shellcheck disable=SC2086 # flags is a list of options, decompress a command line
+        "${reader[@]}" | ${decompress} | client --database "${ds}" ${flags} --query "INSERT INTO ${table} FORMAT ${fmt}" \
+            || { echo "INSERT of ${f} into ${ds}.${table} failed" >&2; return 1; }
+    done
+}
+
 # Load one dataset: create its database and (create+load) each of its tables.
 # Tables that fail to create/load are left absent so their queries report null.
 load_one_dataset() {
-    local ds="$1" pair table file ddl t0 reader cnt
+    local ds="$1" pair table file ddl t0 cnt files fmt decompress ddl_flags flags
+    ddl_flags=$(dataset_ddl_flags "${ds}")
     # Each dataset lives in its own database so same-named tables (e.g. TPC-H
     # and TPC-DS `customer`) don't clash.
     client --query "CREATE DATABASE IF NOT EXISTS ${ds}" </dev/null 2>/dev/null
     for pair in ${TABLES[$ds]}; do
         table="${pair%%:*}"; file="${pair##*:}"
-        [ -f "${DATA}/${file}" ] || { echo "SKIP ${ds}.${table}: ${file} not present"; continue; }
+        mapfile -t files < <(data_files "${file}")
+        [ "${#files[@]}" -gt 0 ] || { echo "SKIP ${ds}.${table}: ${file} not present"; continue; }
         # Already loaded (a previous pass)? Skip, so the retry pass below only reloads
         # the tables that are actually missing rather than dropping and redoing them.
         if table_exists "${ds}" "${table}"; then
@@ -287,20 +341,22 @@ load_one_dataset() {
         echo "=== CREATE ${ds}.${table} on ${VERSION} ==="
         echo "${ddl}"
         # One statement at a time (no --multiquery on prehistoric clients).
-        if ! printf '%s' "${ddl}" | run_ddl "${ds}"; then
+        if ! printf '%s' "${ddl}" | DDL_FLAGS="${ddl_flags}" run_ddl "${ds}"; then
             echo "CREATE ${ds}.${table} FAILED on ${VERSION}"; continue
         fi
-        echo "=== INSERT INTO ${ds}.${table} FORMAT Native  <-  ${file} ($(du -h "${DATA}/${file}" | cut -f1)) ==="
-        # Stream the compressed file through pv (progress %/rate/ETA once a
-        # second, based on the known file size) -> zstd -dc -> a plain Native
-        # INSERT, so the ancient clickhouse-client never sees compression.
-        if command -v pv >/dev/null 2>&1; then
-            reader=(pv -f -i 1 -N "${ds}.${table}" -- "${DATA}/${file}")
-        else
-            reader=(cat -- "${DATA}/${file}")
-        fi
+        # Native files load everywhere as is. The JSON documents go into the JSON column
+        # whole (JSONAsObject), in big blocks as in JSONBench; a few documents of the
+        # Bluesky dataset are not valid JSON, so the parse errors are skipped.
+        flags="${ddl_flags}"
+        case "${file}" in
+            *.json.gz) fmt=JSONAsObject; decompress=(gzip -dc)
+                       flags+=" --input_format_allow_errors_num=1000000000 --input_format_allow_errors_ratio=1"
+                       flags+=" --min_insert_block_size_rows=1000000 --min_insert_block_size_bytes=0" ;;
+            *)         fmt=Native; decompress=(zstd -dc) ;;
+        esac
+        echo "=== INSERT INTO ${ds}.${table} FORMAT ${fmt}  <-  ${file} (${#files[@]} file(s), $(du -ch "${files[@]}" | tail -1 | cut -f1)) ==="
         t0=${SECONDS}
-        if "${reader[@]}" | zstd -dc | client --database "${ds}" --query "INSERT INTO ${table} FORMAT Native"; then
+        if insert_files "${ds}" "${table}" "${fmt}" "${flags}" "${decompress[*]}" "${files[@]}"; then
             # Record this table's load time (small line -> atomic append, safe
             # across the parallel per-dataset jobs); summed per dataset at bench.
             printf '%s\t%s\n' "${ds}" "$((SECONDS - t0))" >> "${LOAD_STATS}"
@@ -321,7 +377,7 @@ dataset_loaded() {
     local ds="$1" pair table file
     for pair in ${TABLES[$ds]}; do
         table="${pair%%:*}"; file="${pair##*:}"
-        [ -f "${DATA}/${file}" ] || continue
+        [ -n "$(data_files "${file}")" ] || continue
         table_exists "${ds}" "${table}" || return 1
     done
     return 0
@@ -336,7 +392,7 @@ dataset_fully_loaded() {
     local ds="$1" pair table file cnt
     for pair in ${TABLES[$ds]}; do
         table="${pair%%:*}"; file="${pair##*:}"
-        [ -f "${DATA}/${file}" ] || return 1
+        [ -n "$(data_files "${file}")" ] || return 1
         table_exists "${ds}" "${table}" || return 1
         cnt="$(client --database "${ds}" --query "SELECT count() FROM ${table}" 2>/dev/null | tr -d '\r')"
         [ -n "${cnt}" ] && [ "${cnt}" != "0" ] || return 1
