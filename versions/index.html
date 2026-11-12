@@ -544,9 +544,10 @@
         <li><b>tpch</b> &mdash; TPC-H at scale factor 40 (~10&nbsp;GB), 8 tables. 22 queries.</li>
         <li><b>tpcds</b> &mdash; TPC-DS at scale factor 32 (~10&nbsp;GB), 24 tables. 103 queries.</li>
         <li><b>job</b> &mdash; Join Order Benchmark over the IMDb dataset, 21 tables. 113 queries.</li>
+        <li><b>jsonbench</b> &mdash; <a href="../json/">JSONBench</a>: 100&nbsp;million Bluesky events, each a JSON document stored whole in a <code>JSON</code> column. 5 queries. The <code>JSON</code> type exists from 24.8, so older versions have no results.</li>
     </ul>
     <p>The data is stored using only types available in the oldest releases, so one set of files
-    loads into every version. A query a version does not support (a missing function or syntax) is
+    loads into every version (except jsonbench, which is loaded from the original JSON files). A query a version does not support (a missing function or syntax) is
     recorded as no result, and a dataset that does not fully load on a version is skipped entirely
     for it.</p>
 </div>
