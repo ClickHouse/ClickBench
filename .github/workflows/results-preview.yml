@@ -1,12 +1,12 @@
 name: "Preview results"
 
-# Publishes the benchmark page with the results of a pull request on
-# pastila.nl and comments with the link (see results_preview.py).
+# Publishes the benchmark page with the results or with the index.html of a
+# pull request on pastila.nl and comments with the link (see results_preview.py).
 #
 # pull_request_target: the workflow and the script are taken from the trusted
 # base branch, and the token can comment on PRs from forks. Code from the PR
-# never runs: the script fetches the PR head and only reads result files from
-# git objects as data.
+# never runs: the script fetches the PR head and only reads result files and
+# index.html from git objects as data.
 #
 # Results committed by collect-new-results.py with GITHUB_TOKEN do not trigger
 # workflows; that script puts the preview link into its comments itself.
@@ -15,6 +15,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - '*/results/**'
+      - 'index.html'
 
 permissions:
   contents: read
