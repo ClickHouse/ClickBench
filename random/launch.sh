@@ -58,8 +58,8 @@ group="$(python3 -c 'import uuid; print(uuid.uuid4())')"
 seed="${RANDOM_SEED:-$(python3 -c 'import secrets; print(secrets.token_hex(16))')}"
 # The version with the newest committed model of the obfuscator, so that no
 # machine has to train one (see lib/train-model.sh); else the latest release.
-if [ -z "${CLICKHOUSE_VERSION:-}" ]; then
-    CLICKHOUSE_VERSION=$(ls "${HERE}/models" 2>/dev/null | sort -V | tail -n1)
+if [ -z "${CLICKHOUSE_VERSION:-}" ] && [ -d "${HERE}/models" ]; then
+    CLICKHOUSE_VERSION=$(ls "${HERE}/models" | sort -V | tail -n1)
 fi
 if [ -z "${CLICKHOUSE_VERSION:-}" ]; then
     CLICKHOUSE_VERSION=$(curl -sSf https://api.github.com/repos/ClickHouse/ClickHouse/releases/latest | jq -r .tag_name)
