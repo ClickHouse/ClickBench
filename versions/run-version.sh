@@ -293,10 +293,36 @@ dataset_ddl_flags() {
     esac
 }
 
+# INSERT data files into <ds>.<table>, one INSERT per file, in order; fails on the first
+# file that fails. Each file is streamed through pv (progress %/rate/ETA once a second,
+# based on the known file size) -> decompression -> a plain INSERT, so the ancient
+# clickhouse-client never sees compression. A table of several files (jsonbench: 100) is
+# not loaded in one INSERT: on 26.8 and 26.9 memory accumulates over one long INSERT, and a
+# single INSERT of all 100 million JSON documents fails part way through with
+# MEMORY_LIMIT_EXCEEDED (the client sees "Connection reset by peer"), while one INSERT per
+# file, as JSONBench itself loads them, works everywhere.
+#   insert_files <ds> <table> <format> <client flags> <decompress command> <file>...
+insert_files() {
+    local ds="$1" table="$2" fmt="$3" flags="$4" decompress="$5" f i=0 n reader
+    shift 5
+    n=$#
+    for f in "$@"; do
+        i=$((i + 1))
+        if command -v pv >/dev/null 2>&1; then
+            reader=(pv -f -i 1 -N "${ds}.${table}$([ "${n}" -gt 1 ] && echo " ${i}/${n}")" -- "${f}")
+        else
+            reader=(cat -- "${f}")
+        fi
+        # shellcheck disable=SC2086 # flags is a list of options, decompress a command line
+        "${reader[@]}" | ${decompress} | client --database "${ds}" ${flags} --query "INSERT INTO ${table} FORMAT ${fmt}" \
+            || { echo "INSERT of ${f} into ${ds}.${table} failed" >&2; return 1; }
+    done
+}
+
 # Load one dataset: create its database and (create+load) each of its tables.
 # Tables that fail to create/load are left absent so their queries report null.
 load_one_dataset() {
-    local ds="$1" pair table file ddl t0 reader cnt files fmt decompress ddl_flags flags
+    local ds="$1" pair table file ddl t0 cnt files fmt decompress ddl_flags flags
     ddl_flags=$(dataset_ddl_flags "${ds}")
     # Each dataset lives in its own database so same-named tables (e.g. TPC-H
     # and TPC-DS `customer`) don't clash.
@@ -329,17 +355,8 @@ load_one_dataset() {
             *)         fmt=Native; decompress=(zstd -dc) ;;
         esac
         echo "=== INSERT INTO ${ds}.${table} FORMAT ${fmt}  <-  ${file} (${#files[@]} file(s), $(du -ch "${files[@]}" | tail -1 | cut -f1)) ==="
-        # Stream the compressed file(s) through pv (progress %/rate/ETA once a
-        # second, based on the known file size) -> decompression -> a plain
-        # INSERT, so the ancient clickhouse-client never sees compression.
-        if command -v pv >/dev/null 2>&1; then
-            reader=(pv -f -i 1 -N "${ds}.${table}" -- "${files[@]}")
-        else
-            reader=(cat -- "${files[@]}")
-        fi
         t0=${SECONDS}
-        # shellcheck disable=SC2086 # flags is a list of options
-        if "${reader[@]}" | "${decompress[@]}" | client --database "${ds}" ${flags} --query "INSERT INTO ${table} FORMAT ${fmt}"; then
+        if insert_files "${ds}" "${table}" "${fmt}" "${flags}" "${decompress[*]}" "${files[@]}"; then
             # Record this table's load time (small line -> atomic append, safe
             # across the parallel per-dataset jobs); summed per dataset at bench.
             printf '%s\t%s\n' "${ds}" "$((SECONDS - t0))" >> "${LOAD_STATS}"

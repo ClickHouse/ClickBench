@@ -45,7 +45,9 @@ in its own container — from `1.1.54xxx` (2018) to today — with no host insta
    - `bluesky/file_*.json.gz` — [JSONBench](../json/): the Bluesky dataset, 100
      files of a million JSON documents each, downloaded as is (not converted to
      Native). They load whole into a `JSON` column (`INSERT ... FORMAT
-     JSONAsObject`, skipping the few documents that are not valid JSON).
+     JSONAsObject`, one INSERT per file as in JSONBench, skipping the few documents
+     that are not valid JSON). A single INSERT of all 100 files runs out of memory
+     on 26.8 and 26.9 (memory accumulates over one long INSERT there).
 
    Type downgrades: `LowCardinality`→`String`, `IPv4`→`String`,
    `DateTime64`→`DateTime`, enums→`String`, TPC-H/TPC-DS `Decimal`→`Float64`
