@@ -18,39 +18,15 @@ queries.sql, one Python expression per line (the filename matches the
 cross-system convention; the contents are not SQL).
 """
 
-import gc
-import multiprocessing
 import os
 import timeit
-import warnings
 from datetime import date
-
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-warnings.filterwarnings("ignore", category=UserWarning)
-gc.enable()
-
-# ====================================================
-# HARDWARE THREAD DETECTOR (Constant at startup)
-# ====================================================
-total_cores = multiprocessing.cpu_count()
-if total_cores >= 64:
-    # Server profile (e.g., c6a.metal - up to 96 threads)
-    TARGET_THREADS = min(total_cores, 96)
-else:
-    # Local profile
-    TARGET_THREADS = min(total_cores, 16)
-
-os.environ.setdefault("POLARS_MAX_THREADS", str(TARGET_THREADS))
-os.environ.setdefault("POLARS_ACTIVATE_DECIMAL", "0")
 
 import polars as pl
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 
-# Enable global string cache and streaming engine affinity
-pl.enable_string_cache()
-if hasattr(pl, "set_thread_pool_size"):
-    pl.set_thread_pool_size(TARGET_THREADS)
+# Streaming engine will be the default soon.
 pl.Config.set_engine_affinity("streaming")
 
 # ClickBench timings must include serializing the full query result back
@@ -75,20 +51,10 @@ def health():
 def load():
     global hits
     start = timeit.default_timer()
-    # Lazy: builds the optimized execution plan with compact bit-width types
-    # for better CPU L2/L3 cache locality while preserving cold-run rules.
-    hits = pl.scan_parquet(parquet_path, low_memory=False).with_columns(
+    # Lazy: just builds the plan. Data is read on each query collect().
+    hits = pl.scan_parquet(parquet_path).with_columns(
         (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
         pl.col("EventDate").cast(pl.Date),
-        pl.col("SearchPhrase").cast(pl.Categorical),
-        pl.col("Title").cast(pl.String),
-        pl.col("URL").cast(pl.String),
-        pl.col("AdvEngineID").cast(pl.Int16),
-        pl.col("ResolutionWidth").cast(pl.Int32),
-        pl.col("ResolutionHeight").cast(pl.Int32),
-        pl.col("RegionID").cast(pl.Int32),
-        pl.col("IsMobile").cast(pl.Int8),
-        pl.col("SearchEngineID").cast(pl.Int16),
     )
     elapsed = round(timeit.default_timer() - start, 3)
     return {"elapsed": elapsed}

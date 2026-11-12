@@ -1,8 +1,8 @@
-{
-  "system": "Polars (Parquet)",
+﻿{
+  "system": "Polars (Parquet, tuned)",
   "proprietary": "no",
   "hardware": "cpu",
-  "tuned": "no",
+  "tuned": "yes",
   "tags": [
     "column-oriented",
     "stateless"
