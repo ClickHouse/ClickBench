@@ -56,6 +56,11 @@ done
 
 group="$(python3 -c 'import uuid; print(uuid.uuid4())')"
 seed="${RANDOM_SEED:-$(python3 -c 'import secrets; print(secrets.token_hex(16))')}"
+# The version with the newest committed model of the obfuscator, so that no
+# machine has to train one (see lib/train-model.sh); else the latest release.
+if [ -z "${CLICKHOUSE_VERSION:-}" ]; then
+    CLICKHOUSE_VERSION=$(ls "${HERE}/models" 2>/dev/null | sort -V | tail -n1)
+fi
 if [ -z "${CLICKHOUSE_VERSION:-}" ]; then
     CLICKHOUSE_VERSION=$(curl -sSf https://api.github.com/repos/ClickHouse/ClickHouse/releases/latest | jq -r .tag_name)
     CLICKHOUSE_VERSION="${CLICKHOUSE_VERSION#v}"
@@ -71,7 +76,8 @@ note "Seed ${seed}, ${RANDOM_ROWS} rows, ${RANDOM_QUERIES} queries, ClickHouse $
 # A small dataset of the same kind, for the validation of the queries: four
 # source files of 250 thousand rows, replicated to 2 million rows, as the full
 # dataset replicates its source.
-RANDOM_SEED="${seed}" RANDOM_ROWS=2000000 RANDOM_SOURCE_FILES="0 33 66 99" RANDOM_SOURCE_ROWS=250000 \
+RANDOM_SEED="${seed}" RANDOM_CLICKHOUSE_VERSION="${CLICKHOUSE_VERSION}" \
+    RANDOM_ROWS=2000000 RANDOM_SOURCE_FILES="0 33 66 99" RANDOM_SOURCE_ROWS=250000 \
     RANDOM_TRAIN_ROWS=500000 "${HERE}/lib/generate-data.sh" "${OUT}/sample"
 python3 "${HERE}/lib/reference.py" load "${OUT}/sample" "${OUT}/sample-db"
 

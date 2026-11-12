@@ -39,11 +39,11 @@ arch=$(aws_retry aws ec2 describe-instance-types --instance-types "$machine" --q
 ami=$(aws_retry aws ec2 describe-images --owners amazon --filters "Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04*" "Name=architecture,Values=${arch}" "Name=state,Values=available" --query 'sort_by(Images, &CreationDate) | [-1].[ImageId]' --output text)
 
 rendered="$(mktemp)"
-awk -v system="$system" -v group="$group" -v seed="$seed" -v rows="$rows" -v version="$clickhouse_version" \
+awk -v sys="$system" -v group="$group" -v seed="$seed" -v rows="$rows" -v version="$clickhouse_version" \
     -v parallel="$parallel" -v repeats="$repeats" -v qt="$query_timeout" -v hash="$payload_hash" \
     -v repo="$repo" -v branch="$branch" -v t="$timeout" '
 {
-    gsub(/@system@/, system); gsub(/@group@/, group); gsub(/@seed@/, seed); gsub(/@rows@/, rows)
+    gsub(/@system@/, sys); gsub(/@group@/, group); gsub(/@seed@/, seed); gsub(/@rows@/, rows)
     gsub(/@clickhouse_version@/, version); gsub(/@parallel@/, parallel); gsub(/@repeats@/, repeats)
     gsub(/@query_timeout@/, qt); gsub(/@payload_hash@/, hash)
     gsub(/@repo@/, repo); gsub(/@branch@/, branch); gsub(/@timeout@/, t)

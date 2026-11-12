@@ -43,7 +43,9 @@ queries and the same data. The comparison is within the group.
 
 3. **Data.** Every machine generates the dataset itself, from the seed of the
    group (`lib/generate-data.sh`). It downloads the 100 files of the original
-   partitioned dataset and trains the model of the obfuscator on a sample.
+   partitioned dataset and takes the model of the obfuscator committed in
+   `models/<ClickHouse version>/` (trained by `lib/train-model.sh` on a sample
+   of 2 million rows; a model has no seed, only the statistics of the data).
    Then it transforms every file in parallel, with the same model and seed,
    looping over the source as many times as needed for the requested number
    of rows (one billion by default). Every value of a column is transformed
@@ -143,11 +145,24 @@ Only reasonably mature systems take part. A system can take part if:
 ## Timings and costs
 
 On this kind of hardware, the obfuscator makes about 35,000 rows per second
-per core. A billion rows takes about 35 minutes on 16 vCPUs, plus a few minutes
-to train the model. The machines have a 2 TB gp3 volume: the TSV of a billion
+per core. A billion rows takes about 35 minutes on 16 vCPUs. The machines
+have a 2 TB gp3 volume: the TSV of a billion
 rows is about 750 GB. The reference takes a few minutes to load and runs every
 query once. The launcher spends about 10 to 20 minutes on generating and
 validating the queries.
+
+## Models of the obfuscator
+
+`models/<version>/model.bin.zst` is the model of `clickhouse-obfuscator` for
+that ClickHouse release (the file format depends on the version). The launcher
+pins the version of the newest model, so the machines don't train. For a new
+version, run `RANDOM_CLICKHOUSE_VERSION=<version> RANDOM_CLICKHOUSE=<its binary>
+lib/train-model.sh <work dir>` and commit the result. Without a model for the
+pinned version, every machine trains its own on the same sample, which gives
+the same model and takes a few minutes. The file holds the uncompressed model
+compressed with `zstd -9` (the obfuscator itself saves it with ZSTD level 1),
+about 30 MB for 2 million rows. Its integers are native little-endian, the same
+on x86_64 and aarch64.
 
 ## Testing locally
 

@@ -13,8 +13,10 @@
 #   RANDOM_SOURCE_ROWS   the number of rows to take from every source file,
 #                        default all (1M); fewer make a small dataset that is
 #                        replicated as the full one is
-#   RANDOM_TRAIN_ROWS    the size of the sample to train the model on,
-#                        default 2000000
+#   RANDOM_CLICKHOUSE_VERSION  the pinned release; the committed model in
+#                        random/models/<version>/ is used if there is one
+#   RANDOM_TRAIN_ROWS    the size of the sample to train the model on, when
+#                        there is no committed model, default 2000000
 #   RANDOM_PARALLEL      the number of generators at once, default: by the
 #                        number of CPUs and the memory
 #
@@ -75,21 +77,30 @@ echo "Downloaded the source in $(( $(date +%s) - start )) s"
 STRUCTURE="$(logical_structure)"
 printf '%s\n' "${STRUCTURE}" > structure.txt
 
-# The sample for training: deterministic (by a hash of the row, not by the
-# reading order) and spread over the whole source.
+# The model: the committed one for this version of ClickHouse (see
+# train-model.sh), or trained here when there is none, or with RANDOM_TRAIN=1.
+MODEL="${RANDOM_DIR}/models/${RANDOM_CLICKHOUSE_VERSION:-none}/model.bin.zst"
 start=$(date +%s)
-source_rows=$(( nfiles * 1000000 ))
-per_million=$(( RANDOM_TRAIN_ROWS * 1000000 / source_rows ))
-[ "${per_million}" -gt 1000000 ] && per_million=1000000
-"${CH}" local --query "
-    SELECT * FROM file('source/hits_*.parquet', Parquet, \$\$${STRUCTURE}\$\$)
-    WHERE cityHash64(WatchID, UserID, EventTime) % 1000000 < ${per_million}
-    ORDER BY WatchID, UserID, EventTime
-    FORMAT Native" > tmp/train.native
-"${CH}" obfuscator --silent 1 --seed "${RANDOM_SEED}" --structure "${STRUCTURE}" \
-    --input-format Native --output-format Native --limit 0 --save model.bin < tmp/train.native
-rm -f tmp/train.native
-echo "Trained the model in $(( $(date +%s) - start )) s"
+if [ -f "${MODEL}" ] && [ -z "${RANDOM_TRAIN:-}" ]; then
+    # The obfuscator reads the compressed format of ClickHouse.
+    zstd -d -q -c "${MODEL}" | "${CH}" compressor --codec NONE > model.bin
+    echo "Using the model ${MODEL#"${RANDOM_DIR}/"}"
+else
+    # The sample for training: deterministic (by a hash of the row, not by the
+    # reading order) and spread over the whole source.
+    source_rows=$(( nfiles * 1000000 ))
+    per_million=$(( RANDOM_TRAIN_ROWS * 1000000 / source_rows ))
+    [ "${per_million}" -gt 1000000 ] && per_million=1000000
+    "${CH}" local --query "
+        SELECT * FROM file('source/hits_*.parquet', Parquet, \$\$${STRUCTURE}\$\$)
+        WHERE cityHash64(WatchID, UserID, EventTime) % 1000000 < ${per_million}
+        ORDER BY WatchID, UserID, EventTime
+        FORMAT Native" > tmp/train.native
+    "${CH}" obfuscator --silent 1 --seed "${RANDOM_SEED}" --structure "${STRUCTURE}" \
+        --input-format Native --output-format Native --limit 0 --save model.bin < tmp/train.native
+    rm -f tmp/train.native
+    echo "Trained the model in $(( $(date +%s) - start )) s (no committed model for ClickHouse ${RANDOM_CLICKHOUSE_VERSION:-unknown})"
+fi
 
 # Rows of every part: RANDOM_ROWS spread evenly.
 start=$(date +%s)

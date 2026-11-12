@@ -24,7 +24,7 @@ fi
 mount -o remount,noinit_itable /
 
 apt-get update -y
-apt-get install -y wget curl git jq python3 earlyoom
+apt-get install -y wget curl git jq python3 zstd earlyoom
 systemctl enable --now earlyoom
 
 git clone --depth 1 'https://github.com/@repo@.git' --branch '@branch@' ClickBench
