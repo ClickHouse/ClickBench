@@ -93,8 +93,7 @@ def report(results, group):
         for e in r["executions"]:
             per_query.setdefault(e["id"], {}).setdefault(r["directory"], set()).add(e["status"])
     systems = sorted({d for _, d in latest})
-    lines += ["## Queries with failures", "",
-              "| Query | " + " | ".join(systems) + " |", "|---|" + "---|" * len(systems)]
+    table = []
     flagged = []
     for qid in sorted(per_query):
         statuses = per_query[qid]
@@ -105,11 +104,16 @@ def report(results, group):
             cells.append({"ok": "", "wrong": "W", "error": "E", "timeout": "T", "unsupported": "U",
                           "unverified": "?"}[worst])
         if any(cells):
-            lines.append(f"| {qid} | " + " | ".join(cells) + " |")
+            table.append(f"| {qid} | " + " | ".join(cells) + " |")
         wrong = sum(1 for s in systems if "wrong" in statuses.get(s, set()))
         if len(systems) >= 3 and wrong > len(systems) / 2:
             flagged.append(qid)
-    lines += ["", "W: wrong result, E: error, T: timeout, U: unsupported, ?: no reference result.", ""]
+    lines += ["## Queries with failures", ""]
+    if table:
+        lines += ["| Query | " + " | ".join(systems) + " |", "|---|" + "---|" * len(systems)] + table
+        lines += ["", "W: wrong result, E: error, T: timeout, U: unsupported, ?: no reference result.", ""]
+    else:
+        lines += ["None: every execution of every system returned the reference result.", ""]
     if flagged:
         lines += [f"Most systems disagree with the reference on: {', '.join(flagged)}. "
                   "Check these queries and the reference before drawing conclusions.", ""]
