@@ -11,3 +11,5 @@ cache/
 # The local s3s-fs ./install sets up: binary, data directory, pid, log and the
 # generated credentials.
 store/
+# The server's SQL spill scratch directory, under its working directory.
+sql-spill/
