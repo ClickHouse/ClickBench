@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-du -bcs hits_*.vortex | awk '/total$/ { print $1 }'
+du -bcs server-data/user_files/hits_*.vortex | awk '/total$/ { print $1 }'

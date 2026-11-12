@@ -1,0 +1,12 @@
+profiles:
+    default: {}
+users:
+    default:
+        password: ''
+        networks:
+            ip: '::/0'
+        profile: default
+        quota: default
+        access_management: 1
+quotas:
+    default: {}

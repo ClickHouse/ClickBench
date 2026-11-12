@@ -3,10 +3,14 @@ set -e
 
 # Convert each source Parquet file to a Vortex file with ClickHouse itself.
 # Writing a Vortex file is single-threaded, so the files are converted in
-# parallel, one clickhouse-local process per file. The table structure comes
-# from create.sql, with the engine pointed to the one output file, and the
-# INSERT reads the Parquet file with this structure, the same way
+# parallel, one INSERT per file. Each INSERT goes into a temporary table with
+# the structure from create.sql and the engine pointed to the one output file,
+# and reads the Parquet file with this structure, the same way
 # clickhouse-parquet-partitioned reads it.
+#
+# The server resolves the paths of `file` and of File tables relative to its
+# user_files directory: the Parquet files are symlinked there, and the Vortex
+# files are written there.
 #
 # The Vortex writer keeps most of a file in memory until it finishes: one
 # partition peaks at about 2.5 GB, so run at most one conversion per 3 GB of
@@ -16,13 +20,26 @@ jobs=$(( mem_kb / (3 * 1024 * 1024) ))
 [ "$jobs" -gt "$(nproc)" ] && jobs=$(nproc)
 [ "$jobs" -lt 1 ] && jobs=1
 
-rm -f hits_*.vortex
+mkdir -p server-data/user_files
+for f in hits_*.parquet; do
+    ln -sf "$PWD/$f" "server-data/user_files/$f"
+done
+rm -f server-data/user_files/hits_*.vortex
+
+./clickhouse client --query "DROP TABLE IF EXISTS hits"
 seq 0 99 | xargs -P "$jobs" -I{} bash -c '
     set -e
-    ./clickhouse local --tmp --max_threads=1 --query="$(sed "s/hits_\*\.vortex/hits_{}.vortex/" create.sql);
-        INSERT INTO hits SELECT * FROM file('"'"'hits_{}.parquet'"'"', Parquet)"
+    ./clickhouse client --max_threads=1 --query="
+        DROP TABLE IF EXISTS hits_{};
+        $(sed -e "s/^CREATE TABLE hits$/CREATE TABLE hits_{}/" -e "s/hits_\*\.vortex/hits_{}.vortex/" create.sql);
+        INSERT INTO hits_{} SELECT * FROM file('"'"'hits_{}.parquet'"'"', Parquet);
+        DROP TABLE hits_{};"
 '
 
+# The File table expands the glob of its path when it is created, so create
+# it after the conversion.
+./clickhouse client < create.sql
+
 # The source Parquet files are no longer needed.
-rm -f hits_*.parquet
+rm -f server-data/user_files/hits_*.parquet hits_*.parquet
 sync

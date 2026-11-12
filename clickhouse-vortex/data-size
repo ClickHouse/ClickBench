@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-du -bcs hits.vortex | awk 'END { print $1 }'
+du -bcs server-data/user_files/hits.vortex | awk 'END { print $1 }'
