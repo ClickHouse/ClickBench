@@ -1,0 +1,58 @@
+name: "Randomized benchmark trial"
+
+# Temporary: a trial group of the randomized benchmark from the branch of
+# PR #3271, before random-benchmark.yml is on main (workflow_dispatch needs
+# that). Remove before merging.
+
+on:
+  push:
+    branches: [randomized-benchmark]
+    paths: [".github/workflows/random-benchmark-trial.yml"]
+
+permissions:
+  id-token: write  # To assume the federated IAM role.
+  contents: read
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install anthropic openai
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::264113785604:role/ClickBenchLauncher
+          aws-region: us-east-1
+          role-session-name: clickbench-random-trial-${{ github.run_id }}
+
+      - shell: bash
+        env:
+          SYSTEMS: "clickhouse duckdb-parquet-partitioned rayforce"
+          MACHINES: "c6a.4xlarge"
+          RANDOM_ROWS: "100000000"
+          RANDOM_QUERIES: "30"
+          RANDOM_PARALLEL_QUERIES: "4"
+          RANDOM_REPEATS: "3"
+          RANDOM_QUERY_TIMEOUT: "600"
+          RANDOM_LLM_BACKEND: "anthropic"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OUT: ${{ github.workspace }}/random-group
+          repo: ${{ github.repository }}
+          branch: randomized-benchmark
+        run: ./random/launch.sh
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: random-group
+          path: |
+            random-group/queries.json
+            random-group/translated/
+            random-group/generate.log
