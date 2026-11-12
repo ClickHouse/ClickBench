@@ -1,0 +1,14 @@
+{
+  "system": "roastedDuck (data lake, partitioned)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "DuckDB derivative",
+    "embedded",
+    "stateless"
+  ]
+}
