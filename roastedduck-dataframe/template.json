@@ -1,0 +1,15 @@
+{
+  "system": "roastedDuck (DataFrame)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "DuckDB derivative",
+    "embedded",
+    "Python",
+    "dataframe",
+    "in-memory"
+  ]
+}

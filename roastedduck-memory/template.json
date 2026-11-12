@@ -1,0 +1,13 @@
+{
+  "system": "roastedDuck (memory)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "DuckDB derivative",
+    "embedded",
+    "in-memory"
+  ]
+}
