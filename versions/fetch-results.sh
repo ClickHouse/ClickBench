@@ -57,11 +57,13 @@ reldate() {
     printf '%s' "${d}"
 }
 
+# A complete result has one entry per query: 349 now, or 344 for the runs made before
+# jsonbench was added (apply-minvers.py pads those with nulls for its queries).
 mapfile -t VERSIONS < <(CH --query "
     SELECT DISTINCT JSONExtractString(content, 'version') AS v
     FROM sink.data
     WHERE JSONExtractString(content, 'kind') = 'versions-benchmark' AND v != ''
-      AND length(JSONExtractArrayRaw(content, 'result')) = 344
+      AND length(JSONExtractArrayRaw(content, 'result')) IN (344, 349)
       ${WINDOW}
     ORDER BY v
     FORMAT TSV")
@@ -77,7 +79,7 @@ for v in "${VERSIONS[@]}"; do
         SELECT argMax(content, time) FROM sink.data
         WHERE JSONExtractString(content, 'kind') = 'versions-benchmark'
           AND JSONExtractString(content, 'version') = '${v}'
-          AND length(JSONExtractArrayRaw(content, 'result')) = 344
+          AND length(JSONExtractArrayRaw(content, 'result')) IN (344, 349)
         FORMAT TSVRaw" > /tmp/vb-content.json
     # Skip runs whose data load did not complete: an OOM during the (parallel) load can
     # kill the server mid-INSERT and take the container down, leaving data_size null
