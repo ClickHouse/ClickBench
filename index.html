@@ -219,6 +219,12 @@
             position: relative;
         }
 
+        #selector-best {
+            float: left;
+            font-weight: normal;
+            margin-right: 1rem;
+        }
+
         .summary-bar-cell {
             width: 100%;
             position: relative;
@@ -770,6 +776,7 @@ const additional_data_size_points = [
     <thead>
         <tr>
             <th class="summary-name">
+                <a id="selector-best" class="selector" title="Show only the single top result for every system">Best result per system</a>
                 System &amp; Machine
             </th>
             <th colspan="2">
@@ -828,6 +835,7 @@ let selectors = {
     "storage": {...default_storage},
     "category": {...default_category},
     "metric": "combined",
+    "best": "no",
     "queries": [],
 };
 
@@ -1120,6 +1128,13 @@ document.getElementById('selector-metric-size').addEventListener('click', e => {
 document.getElementById('selector-metric-qps').addEventListener('click', e => { selectors.metric = 'qps'; render(); updateHistory(); });
 document.getElementById('selector-metric-complexity').addEventListener('click', e => { selectors.metric = 'complexity'; render(); updateHistory(); });
 
+document.getElementById('selector-best').addEventListener('click', e => {
+    selectors.best = selectors.best == 'yes' ? 'no' : 'yes';
+    updateSelectors();
+    render();
+    updateHistory();
+});
+
 selectors.queries = [...data[0].result.keys()].map(k => true);
 
 /// Keeps the hover highlighting of the element intact, and skips the "All" toggle.
@@ -1139,6 +1154,8 @@ function updateSelectors() {
         elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
 
     [...document.querySelectorAll('.query-checkbox')].map((elem, i) => { elem.checked = selectors.queries[i] });
+
+    document.getElementById('selector-best').className = selectors.best == 'yes' ? 'selector selector-active' : 'selector';
 
     document.getElementById('selector-opensource-yes').className = selectors.opensource.yes ? 'selector selector-active' : 'selector';
     document.getElementById('selector-opensource-no').className = selectors.opensource.no ? 'selector selector-active' : 'selector';
@@ -1414,15 +1431,30 @@ function renderSummary(filtered_data) {
     }
 
     /// The history view is ordered by date: the chart from left to right, the details - the newest first.
-    const sorted_indices = [...summaries.keys()].sort(history_view
+    let sorted_indices = [...summaries.keys()].sort(history_view
         ? (a, b) => filtered_data[a].date.localeCompare(filtered_data[b].date) || filtered_data[a].source.localeCompare(filtered_data[b].source)
         : (a, b) => summaries[a] - summaries[b]);
 
-    const shown_indices = sorted_indices.filter(idx => {
+    let shown_indices = sorted_indices.filter(idx => {
         const elem = filtered_data[idx];
         return !(selectors.metric == 'size' && elem.data_size === null)
             && !(selectors.metric == 'load' && (!elem.load_time || elem.load_time < 5));
     });
+
+    /// Only the top result of every system, both in the summary and in the details.
+    /// It is done after the ranking, so that the baseline and the ratios are the same as with all the results.
+    if (selectors.best == 'yes' && !history_view) {
+        const seen = new Set();
+        shown_indices = shown_indices.filter(idx => {
+            const elem = filtered_data[idx];
+            if (elem.fake) return true;
+            if (seen.has(elem.system)) return false;
+            seen.add(elem.system);
+            return true;
+        });
+        const shown = new Set(shown_indices);
+        sorted_indices = sorted_indices.filter(idx => shown.has(idx));
+    }
 
     if (history_view) {
         /// Concurrent QPS is shown as is, the higher the better, and the rest - as the relative values of the summary.
@@ -2544,6 +2576,9 @@ window.onpopstate = function(event) {
     }
     if (!selectors.category) {
         selectors.category = {...default_category};
+    }
+    if (!selectors.best) {
+        selectors.best = 'no';
     }
     updateSelectors();
     render();
