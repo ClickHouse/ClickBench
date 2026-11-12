@@ -61,7 +61,7 @@ for ds in QUERY_ORDER:
 edited = 0
 total = len(global_minver)
 for f in sorted(glob.glob("results/*.json")):
-    v, n = subprocess.check_output(["jq", "-r", '.version, (.result | length)', f], text=True).split()
+    v, n = subprocess.check_output(["jq", "-r", '.version, (.result | length)', f], text=True).rstrip("\n").rsplit("\n", 1)
     n = int(n)
     if n > total:
         sys.exit(f"{f}: {n} results, more than the {total} queries")

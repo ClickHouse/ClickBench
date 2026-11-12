@@ -97,6 +97,7 @@ complete=$(CH --query "
     FROM sink.data
     WHERE JSONExtractString(content, 'kind') = 'versions-benchmark' AND v != ''
       AND length(JSONExtractArrayRaw(content, 'result')) IN (344, 349)
+      AND JSONExtractString(content, 'system') IN ('', 'ClickHouse')
       AND time >= now() - INTERVAL ${window} HOUR
     ORDER BY v
     FORMAT TSV")
