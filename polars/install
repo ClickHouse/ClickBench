@@ -1,9 +1,12 @@
 #!/bin/bash
-# 1. Update system package lists
-sudo apt-get update
+set -e
 
-# 2. Install pip3 using the official Ubuntu package manager
-sudo apt-get install -y python3-pip
+sudo apt-get update -y
+sudo apt-get install -y python3-pip python3-venv
 
-# 3. Install Polars and PyArrow via pip3 with the system package bypass
-pip3 install polars pyarrow --break-system-packages
+if [ ! -d myenv ]; then
+    python3 -m venv myenv
+fi
+# shellcheck disable=SC1091
+source myenv/bin/activate
+pip install --quiet polars pyarrow fastapi uvicorn
