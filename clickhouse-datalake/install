@@ -28,6 +28,12 @@ shm_bytes=$(df -B1 -P /dev/shm 2>/dev/null | awk 'NR==2 {print $2}')
 half_shm=$(( shm_bytes / 2 ))
 [ "$half_shm" -lt "$cache_max" ] && cache_max=$half_shm
 
+# Use plain LRU instead of the default SLRU: SLRU puts new file segments into
+# a probationary queue of only 40% of max_size (slru_size_ratio = 0.6), so a
+# cold scan that reads more than that evicts its own segments before the hot
+# tries can hit them. With the cache at a quarter of RAM, that made Q28, Q32
+# and Q33 read everything from S3 on every try on the 32 GiB machines.
+#
 # The server merges config.d/*.yaml next to config.yaml.
 mkdir -p config.d
 cat > config.d/filesystem_cache.yaml <<YAML
@@ -35,4 +41,5 @@ filesystem_caches:
     cache:
         path: '/dev/shm/clickhouse/'
         max_size: $cache_max
+        cache_policy: LRU
 YAML
