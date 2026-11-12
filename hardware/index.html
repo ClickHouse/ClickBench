@@ -813,7 +813,10 @@ let types = document.getElementById('selectors_type');
 let unique_machines = [... new Set(data.map(elem => elem.machine))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
 
 /// A click flips a single toggle, while a right click or Ctrl/Cmd + click selects only this toggle in its group.
-function toggle(e, elem, selectors_map) {
+function toggle(e, elem, group) {
+    /// The group is looked up by name at click time: restoring the state from the URL or from
+    /// the history replaces the `selectors` maps, so a captured map would be a stale copy.
+    const selectors_map = selectors[group];
     if (e.type == 'contextmenu' || e.ctrlKey || e.metaKey) {
         e.preventDefault();
         Object.keys(selectors_map).forEach(k => { selectors_map[k] = k == String(elem) });
@@ -825,12 +828,13 @@ function toggle(e, elem, selectors_map) {
     updateHistory();
 }
 
-function addToggleListener(selector, elem, selectors_map) {
-    selector.addEventListener('click', e => toggle(e, elem, selectors_map));
-    selector.addEventListener('contextmenu', e => toggle(e, elem, selectors_map));
+function addToggleListener(selector, elem, group) {
+    selector.addEventListener('click', e => toggle(e, elem, group));
+    selector.addEventListener('contextmenu', e => toggle(e, elem, group));
 }
 
-function toggleAll(e, selectors_map) {
+function toggleAll(e, group) {
+    const selectors_map = selectors[group];
     const new_value = Object.keys(selectors_map).filter(k => selectors_map[k]).length * 2 < Object.keys(selectors_map).length;
     [...e.target.parentElement.querySelectorAll('a')].map(
         elem => { elem.className = new_value ? 'selector selector-active' : 'selector' });
@@ -846,7 +850,7 @@ unique_machines.map(elem => {
     selector.appendChild(document.createTextNode(elem));
     machines.appendChild(selector);
     if (!(elem in selectors.machine)) { selectors.machine[elem] = data.some(entry => entry.machine == elem && !entry.hide); }
-    addToggleListener(selector, elem, selectors.machine);
+    addToggleListener(selector, elem, 'machine');
 
     /// Highlighting summary rows and table columns on hovering over the machine selector.
     selector.addEventListener('mouseover', e => {
@@ -867,11 +871,11 @@ unique_machines.map(elem => {
     selector.appendChild(document.createTextNode(elem));
     types.appendChild(selector);
     if (!(elem in selectors.type)) { selectors.type[elem] = true; }
-    addToggleListener(selector, elem, selectors.type);
+    addToggleListener(selector, elem, 'type');
 });
 
-document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
-document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
+document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, 'machine'));
+document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, 'type'));
 
 [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => elem.addEventListener('click', e => {
     [...e.target.parentElement.querySelectorAll('a')].map(elem => { elem.className = elem == e.target ? 'selector selector-active' : 'selector' });
