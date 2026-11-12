@@ -618,7 +618,11 @@ let unique_versions = [...new Set(data.map(elem => elem.version))].sort((a, b) =
 });
 
 /// A click flips a single toggle, while a right click or Ctrl/Cmd + click selects only this toggle in its group.
-function toggle(e, elem, selectors_map) {
+/// The group is passed by name and looked up at click time: restoring the state from the URL or
+/// from the history replaces the `selectors` maps, so a map captured when the listener was added
+/// would be a stale copy, and the clicks would change nothing on the page.
+function toggle(e, elem, group) {
+    const selectors_map = selectors[group];
     if (e.type == 'contextmenu' || e.ctrlKey || e.metaKey) {
         e.preventDefault();
         Object.keys(selectors_map).forEach(k => { selectors_map[k] = k == String(elem) });
@@ -630,12 +634,13 @@ function toggle(e, elem, selectors_map) {
     updateHistory();
 }
 
-function addToggleListener(selector, elem, selectors_map) {
-    selector.addEventListener('click', e => toggle(e, elem, selectors_map));
-    selector.addEventListener('contextmenu', e => toggle(e, elem, selectors_map));
+function addToggleListener(selector, elem, group) {
+    selector.addEventListener('click', e => toggle(e, elem, group));
+    selector.addEventListener('contextmenu', e => toggle(e, elem, group));
 }
 
-function toggleAll(e, selectors_map) {
+function toggleAll(e, group) {
+    const selectors_map = selectors[group];
     const new_value = Object.keys(selectors_map).filter(k => selectors_map[k]).length * 2 < Object.keys(selectors_map).length;
     [...e.target.parentElement.querySelectorAll('a')].map(
         elem => { elem.className = new_value ? 'selector selector-active' : 'selector' });
@@ -653,7 +658,7 @@ unique_versions.map(elem => {
     selector.appendChild(document.createTextNode(displayVersion(elem)));
     versions_elem.appendChild(selector);
     if (!(elem in selectors.version)) { selectors.version[elem] = true; }
-    addToggleListener(selector, elem, selectors.version);
+    addToggleListener(selector, elem, 'version');
 
     /// Highlight the matching summary row and details column when hovering a version.
     selector.addEventListener('mouseover', e => {
@@ -667,7 +672,7 @@ unique_versions.map(elem => {
         [...document.querySelectorAll('.th-entry')].map(row => { row.className = 'th-entry' });
     });
 });
-document.getElementById('select-all-versions').addEventListener('click', e => toggleAll(e, selectors.version));
+document.getElementById('select-all-versions').addEventListener('click', e => toggleAll(e, 'version'));
 
 datasets.map(d => {
     let selector = document.createElement('a');
@@ -675,9 +680,9 @@ datasets.map(d => {
     selector.appendChild(document.createTextNode(d.name));
     datasets_elem.appendChild(selector);
     if (!(d.name in selectors.dataset)) { selectors.dataset[d.name] = true; }
-    addToggleListener(selector, d.name, selectors.dataset);
+    addToggleListener(selector, d.name, 'dataset');
 });
-document.getElementById('select-all-datasets').addEventListener('click', e => toggleAll(e, selectors.dataset));
+document.getElementById('select-all-datasets').addEventListener('click', e => toggleAll(e, 'dataset'));
 
 document.getElementById('selector-metric-cold').addEventListener('click', e => { selectors.metric = 'cold'; updateSelectors(); render(); updateHistory(); });
 document.getElementById('selector-metric-hot').addEventListener('click', e => { selectors.metric = 'hot'; updateSelectors(); render(); updateHistory(); });

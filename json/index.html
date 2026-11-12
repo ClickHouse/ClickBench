@@ -665,7 +665,10 @@ function clearSystemHighlight() {
 }
 
 /// A click flips a single toggle, while a right click or Ctrl/Cmd + click selects only this toggle in its group.
-function toggle(e, elem, selectors_map) {
+function toggle(e, elem, group) {
+    /// The group is looked up by name at click time: restoring the state from the URL or from
+    /// the history replaces the `selectors` maps, so a captured map would be a stale copy.
+    const selectors_map = selectors[group];
     if (e.type == 'contextmenu' || e.ctrlKey || e.metaKey) {
         e.preventDefault();
         Object.keys(selectors_map).forEach(k => { selectors_map[k] = k == String(elem) });
@@ -677,12 +680,13 @@ function toggle(e, elem, selectors_map) {
     updateHistory();
 }
 
-function addToggleListener(selector, elem, selectors_map) {
-    selector.addEventListener('click', e => toggle(e, elem, selectors_map));
-    selector.addEventListener('contextmenu', e => toggle(e, elem, selectors_map));
+function addToggleListener(selector, elem, group) {
+    selector.addEventListener('click', e => toggle(e, elem, group));
+    selector.addEventListener('contextmenu', e => toggle(e, elem, group));
 }
 
-function toggleAll(e, selectors_map) {
+function toggleAll(e, group) {
+    const selectors_map = selectors[group];
     const new_value = Object.keys(selectors_map).filter(k => selectors_map[k]).length * 2 < Object.keys(selectors_map).length;
     [...e.target.parentElement.querySelectorAll('a')].map(
         elem => { elem.className = new_value ? 'selector selector-active' : 'selector' });
@@ -716,7 +720,7 @@ unique_systems.map(elem => {
     selector.appendChild(document.createTextNode(elem));
     systems.appendChild(selector);
     selectors.system[elem] = real_data.some(entry => entry.system == elem && !entry.hide);
-    addToggleListener(selector, elem, selectors.system);
+    addToggleListener(selector, elem, 'system');
 
     /// Highlighting summary rows and table columns on hovering over the system selector.
     selector.addEventListener('mouseover', () => highlightSystem(elem));
@@ -739,7 +743,7 @@ unique_tags.map(elem => {
     selector.appendChild(document.createTextNode(elem));
     types.appendChild(selector);
     selectors.type[elem] = true;
-    addToggleListener(selector, elem, selectors.type);
+    addToggleListener(selector, elem, 'type');
 
     /// Highlighting summary rows and detail columns on hovering over a tag.
     selector.addEventListener('mouseover', () => {
@@ -770,7 +774,7 @@ const default_machine = 'm6i.8xlarge';
     selector.appendChild(document.createTextNode(elem));
     machines.appendChild(selector);
     selectors.machine[elem] = selected;
-    addToggleListener(selector, elem, selectors.machine);
+    addToggleListener(selector, elem, 'machine');
 });
 
 /// The selectors without any data are not shown: the tags and the `proprietary` field are not in the older results,
@@ -783,14 +787,14 @@ if (!has_license) { document.getElementById('selectors_opensource').style.displa
 if (!real_data.some(elem => !metricExcludes(elem, 'load'))) { document.getElementById('selector-metric-load').style.display = 'none'; }
 if (!real_data.some(elem => !metricExcludes(elem, 'complexity'))) { document.getElementById('selector-metric-complexity').style.display = 'none'; }
 
-addToggleListener(document.getElementById('selector-opensource-yes'), 'yes', selectors.opensource);
-addToggleListener(document.getElementById('selector-opensource-no'), 'no', selectors.opensource);
-addToggleListener(document.getElementById('selector-flattening-no'), 'no', selectors.flattening);
-addToggleListener(document.getElementById('selector-flattening-yes'), 'yes', selectors.flattening);
+addToggleListener(document.getElementById('selector-opensource-yes'), 'yes', 'opensource');
+addToggleListener(document.getElementById('selector-opensource-no'), 'no', 'opensource');
+addToggleListener(document.getElementById('selector-flattening-no'), 'no', 'flattening');
+addToggleListener(document.getElementById('selector-flattening-yes'), 'yes', 'flattening');
 
-document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
-document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
-document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
+document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, 'system'));
+document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, 'type'));
+document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, 'machine'));
 
 [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => elem.addEventListener('click', e => {
     selectors.metric = elem.id.replace('selector-metric-', '');
