@@ -77,6 +77,7 @@ To add a new entry, copy-paste one of the existing directories and edit the file
 
 - `benchmark.sh`: this is the main script which runs the benchmark on a fresh VM; Ubuntu 24.04 or newer should be used by default. For databases that can be installed locally, the script should be able to run in a fully automated manner so it can be used in the benchmark automation (cloud-init). It should output the results in the following format: - one or more lines `Load time: 1234` with the time in seconds; - a line `Data size: 1234567890` with the data size in bytes; the data size should include indexes and transaction logs if applicable; - 43 consecutive lines in the form of `[1.234, 5.678, 9.012],` for the runtimes of every query; - the output may include other lines with the logs, that are not used for the report. For managed databases, if the setup requires clicking in a UI, write a `README.md` instead.
 - `check`, `data-size`, `install`, `load`, `query`, `start`, `stop`: These scripts perform sub-tasks during benchmarking, see `lib/benchmark-common.sh` for an overview.
+- `template.json`: the name of the system, `proprietary`, `hardware`, `tuned`, `category` (see "System Categories" below; a new system starts as `enthusiast`), and `tags`.
 - `README.md`: contains comments and observations if needed. For managed databases, it can describe the setup procedure to be used instead of a shell script.
 - `create.sql`: a CREATE TABLE statement. If it's a NoSQL system, another file like `wtf.json` can be used instead.
 - `queries.sql`: contains 43 ClickBench queries to run;
@@ -257,6 +258,51 @@ Why geometric mean? The ratios can only be naturally averaged in this way. Imagi
 For the cold and hot query runtime metrics, the ratio is calculated for each of the 43 queries and then averaged with the geometric mean. It means that the best system might have a resulting ratio of more than 1, if it was worse in some queries. For example, the fastest system can be 1.5 times slower than a hypothetical ideal system that runs each of the 43 queries as fast as the fastest system for each particular query.
 
 The "Combined" metric summarizes all the results as a weighted geometric mean with the following weights: load time: 10%, data size: 10%, cold runtime: 20%, hot runtime: 60%.
+
+### System Categories
+
+Every system is assigned a category, set by the `category` field of its `template.json` and applied to all of its results.
+The dashboard has a "Category" selector; Enthusiast and Joke entries are hidden by default.
+
+**Joke**:
+- cheating on benchmarks.
+
+**Enthusiast**:
+- entry level, no requirements other than not cheating on benchmarks.
+
+**Challenger**:
+- has a website and documentation;
+- has either a backing company or a public license for the publicly available code;
+- has releases: has releases in the past year or the cloud is still available for self-service;
+- supports both x86_64 and aarch64, or a managed offering;
+- all queries succeed on at least one machine on both platforms or on a managed offering.
+
+**Retired**:
+- has no updates in the last year.
+
+**Production**:
+- implies all requirements for "Challenger";
+- tuned results are excluded from consideration;
+- all queries succeed on the largest machines and on small machines starting from c6a.large, or in the managed service;
+- evidence of customers or users exists;
+- changing benchmark queries does not lead to crashes or deadlocks;
+- changing benchmark queries does not widen the performance gap to the baseline by more than two times compared to ClickHouse;
+- durable storage, support for inserts into a non-empty table, support for concurrent queries;
+- the project (company or the open code) exists for at least five years; this applies to the specific fork or specific product, if it is derivative.
+
+**Elite**:
+- implies all requirements for "Production";
+- not more than 10 times worse than ClickHouse on all of the cold run, hot run, load time, data size, and concurrent QPS metrics;
+- has a non-zero load time measured (concurrent QPS can be missing for now).
+
+How the requirements that depend on the results are checked:
+- the categories are assigned per directory (benchmark entry), so variants of the same product can be in different categories; for example, entries that query Parquet files or keep the data only in memory (tags `stateless`, `in-memory`, `dataframe`) have no durable storage with inserts and stop at Challenger;
+- "all queries succeed" means every try of every query returned a result;
+- for Production, the self-managed entry must have results on c6a.large and on a `metal` machine, and all queries must succeed on all machines except t3a.small;
+- for Elite, self-managed entries are compared with ClickHouse on the same machine, managed services are compared with ClickHouse Cloud with the nearest total amount of memory (then the nearest number of nodes), or with the best ClickHouse Cloud result when the service has no size in memory; the best machine of the entry is taken for every metric, and concurrent QPS is not considered if it is not measured for the entry.
+
+A system can move to another category when its results change, for example, after adding results on aarch64 or on small machines.
+If you think that a system is in the wrong category, send a pull request with the change of its `template.json` and the explanation.
 
 ## History and Motivation
 

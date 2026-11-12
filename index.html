@@ -685,6 +685,17 @@ const additional_data_size_points = [
 
 <table class="selectors-container stick-left">
     <tr>
+        <th>Category: </th>
+        <td id="selectors_category" title="System categories are explained in README.md">
+            <a id="selector-category-elite" class="selector selector-active" title="Production-grade, and within 10 times of ClickHouse on every metric">Elite</a>
+            <a id="selector-category-production" class="selector selector-active" title="Mature, durable, used in production, works on small and large machines">Production</a>
+            <a id="selector-category-challenger" class="selector selector-active" title="A real product: website, documentation, releases, both x86_64 and aarch64 or a managed service">Challenger</a>
+            <a id="selector-category-enthusiast" class="selector" title="Entry level, no requirements other than not cheating on benchmarks">Enthusiast</a>
+            <a id="selector-category-retired" class="selector selector-active" title="No updates in the last year">Retired</a>
+            <a id="selector-category-joke" class="selector" title="Cheating on benchmarks">Joke</a>
+        </td>
+    </tr>
+    <tr>
         <td colspan="2">
             <span class="inline-filter" id="selectors_opensource">
                 <span class="inline-filter-label">Open source:</span>
@@ -803,6 +814,9 @@ const missing_result_time = 300;
 /// report down to a single way of keeping the data, not for the default view.
 const default_storage = {"native": true, "cloud": true, "memory": true, "parquet": true, "datalake": true, "iceberg": true, "web": true};
 
+/// See "System Categories" in README.md. Enthusiasts and jokes are hidden by default.
+const default_category = {"elite": true, "production": true, "challenger": true, "enthusiast": false, "retired": true, "joke": false};
+
 let selectors = {
     "system": {},
     "type": {},
@@ -812,6 +826,7 @@ let selectors = {
     "hardware": {"cpu": true, "gpu": false},
     "tuned": {"no": true, "yes": false},
     "storage": {...default_storage},
+    "category": {...default_category},
     "metric": "combined",
     "queries": [],
 };
@@ -899,7 +914,8 @@ function addToggleListener(selector, elem, group) {
     selector.addEventListener('contextmenu', e => toggle(e, elem, group));
 }
 
-function toggleAll(e, selectors_map) {
+function toggleAll(e, group) {
+    const selectors_map = selectors[group];
     const new_value = Object.keys(selectors_map).filter(k => selectors_map[k]).length * 2 < Object.keys(selectors_map).length;
     [...e.target.parentElement.querySelectorAll('a')].map(
         elem => { elem.className = new_value ? 'selector selector-active' : 'selector' });
@@ -1084,10 +1100,13 @@ addToggleListener(document.getElementById('selector-tuned-no'), 'no', 'tuned');
 Object.keys(default_storage).forEach(key =>
     addToggleListener(document.getElementById('selector-storage-' + key), key, 'storage'));
 
-document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
-document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
-document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
-document.getElementById('select-all-cluster-sizes').addEventListener('click', e => toggleAll(e, selectors.cluster_size));
+Object.keys(default_category).forEach(key =>
+    addToggleListener(document.getElementById('selector-category-' + key), key, 'category'));
+
+document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, 'system'));
+document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, 'type'));
+document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, 'machine'));
+document.getElementById('select-all-cluster-sizes').addEventListener('click', e => toggleAll(e, 'cluster_size'));
 
 [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => elem.addEventListener('click', e => {
     [...e.target.parentElement.querySelectorAll('a')].map(elem => { elem.className = elem == e.target ? 'selector selector-active' : 'selector' });
@@ -1133,6 +1152,10 @@ function updateSelectors() {
     Object.keys(default_storage).forEach(key => {
         document.getElementById('selector-storage-' + key).className =
             selectors.storage[key] ? 'selector selector-active' : 'selector' });
+
+    Object.keys(default_category).forEach(key => {
+        document.getElementById('selector-category-' + key).className =
+            selectors.category[key] ? 'selector selector-active' : 'selector' });
 }
 
 function applyTopRowFilters() {
@@ -1140,7 +1163,8 @@ function applyTopRowFilters() {
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
         ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
-        selectors.storage[elem.storage_class]);
+        selectors.storage[elem.storage_class] &&
+        selectors.category[elem.category]);
 
     function apply(container, getValues) {
         const allowed = new Set(matches.flatMap(getValues).map(x => String(x)));
@@ -1990,7 +2014,8 @@ function render() {
             ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
             ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
             ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
-            selectors.storage[elem.storage_class]
+            selectors.storage[elem.storage_class] &&
+            selectors.category[elem.category]
             );
     }
 
@@ -2516,6 +2541,9 @@ window.onpopstate = function(event) {
     }
     if (!selectors.storage) {
         selectors.storage = {...default_storage};
+    }
+    if (!selectors.category) {
+        selectors.category = {...default_category};
     }
     updateSelectors();
     render();

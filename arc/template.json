@@ -3,5 +3,6 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "challenger",
   "tags": ["Go", "column-oriented", "time-series"]
 }

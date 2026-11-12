@@ -1,0 +1,15 @@
+{
+  "system": "Athena (partitioned)",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "stateless",
+    "managed",
+    "Java",
+    "column-oriented",
+    "aws",
+    "no-cold"
+  ]
+}
