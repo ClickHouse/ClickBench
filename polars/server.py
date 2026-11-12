@@ -81,7 +81,7 @@ def load():
         (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
         pl.col("EventDate").cast(pl.Date),
         pl.col("SearchPhrase").cast(pl.Categorical),
-        pl.col("Title").cast(pl.Categorical),
+        pl.col("Title").cast(pl.String),
         pl.col("URL").cast(pl.String),
         pl.col("AdvEngineID").cast(pl.Int16),
         pl.col("ResolutionWidth").cast(pl.Int32),
