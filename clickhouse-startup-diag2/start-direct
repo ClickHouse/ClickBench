@@ -1,0 +1,6 @@
+#!/bin/bash
+# What `clickhouse start` runs, without `clickhouse start` itself.
+sudo mkdir -p /run/clickhouse-server
+sudo chown clickhouse:clickhouse /run/clickhouse-server
+exec sudo -u clickhouse /usr/bin/clickhouse-server --config-file /etc/clickhouse-server/config.xml \
+    --pid-file /run/clickhouse-server/clickhouse-server.pid --daemon
