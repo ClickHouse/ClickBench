@@ -80,6 +80,9 @@ def parse_reference(data):
 
 CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 UNICODE_ESCAPE = re.compile(r"\\u([0-9a-fA-F]{4})")
+# The hints of the Pretty formats of ClickHouse after a row with a large
+# number: "│ 2514652 │ -- 2.51 million".
+NUMBER_HINT = re.compile(r"(?m)(?<=[│┃|])[ \t]*-- -?[\d.]+ (?:thousand|million|billion|trillion|quadrillion|quintillion)[ \t]*$")
 
 
 def clean(text):
@@ -90,6 +93,7 @@ def clean(text):
     text = UNICODE_ESCAPE.sub(lambda m: chr(int(m.group(1), 16)), text)
     text = text.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r")
     text = CONTROL.sub("", text)
+    text = NUMBER_HINT.sub("", text)
     return re.sub(r"[ \t]+", " ", re.sub(r"[\\\"'`]", "", text))
 
 
@@ -243,6 +247,10 @@ def footer_ok(text, pos):
     row of a key-value format has the column names as keys)."""
     footer = FOOTER.sub(" ", text[pos:])
     footer = KEY_NUMBER.sub(lambda m: m.group(0) if m.group(1) in GAP_WORDS else " ", footer)
+    # The column names repeated after the rows (the Pretty formats of
+    # ClickHouse do it after a long result); the values of an extra row of a
+    # key-value format stay and fail the check.
+    footer = WORD.sub(lambda m: " " if m.group(0) in GAP_WORDS else m.group(0), footer)
     return not NUMBER.search(footer) and len(re.findall(r"\w+", footer)) <= FOOTER_TOKENS
 
 
