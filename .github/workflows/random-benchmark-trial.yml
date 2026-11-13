@@ -2,7 +2,8 @@ name: "Randomized benchmark trial"
 
 # Temporary: a group of the randomized benchmark from the branch of PR #3271,
 # before random-benchmark.yml is on main (workflow_dispatch needs that).
-# Remove before merging. Group 3 (1492dae5): hyper again, with row groups for its limits.
+# Remove before merging. Group 3 (1492dae5): doris again with the generated files
+# (its load called the download script itself), and hyper with the original layout.
 
 on:
   push:
@@ -32,8 +33,9 @@ jobs:
           aws-region: us-east-1
           role-session-name: clickbench-random-trial-${{ github.run_id }}
 
-      # hyper again in group 1492dae5 (the same seed and payload), with at
-      # most a thousand row groups of at least 500K rows in hits.parquet.
+      # doris and hyper again in group 1492dae5 (the same seed and payloads):
+      # doris loaded the original dataset through its own call of the download
+      # script; hyper ran with row groups adjusted to its limits.
       - shell: bash
         env:
           machine: c6a.metal
@@ -47,6 +49,7 @@ jobs:
           repo: ${{ github.repository }}
           branch: randomized-benchmark
         run: |
+          system=doris payload_hash=4843c3dea5ed38ff64d7d01d3f2704cbd0644ee201e4482975c903865868b9f3 ./random/run-benchmark.sh
           system=hyper payload_hash=ae1144c0f98e91bacf0f4147248538fb8f8ff25a4f2506f22fc34b4bceb8b608 ./random/run-benchmark.sh
 
       - uses: actions/upload-artifact@v4

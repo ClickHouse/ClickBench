@@ -99,6 +99,39 @@ log "making the files for ${BENCH_DOWNLOAD_SCRIPT}"
 "${RANDOM_DIR}/lib/make-format.sh" "${WORK}/data" "${BENCH_DOWNLOAD_SCRIPT}" "${RANDOM_DATA_DIR}"
 flush
 
+# Some load scripts call a download script themselves, by its path (doris:
+# "$ROOT/../lib/download-hits-parquet-partitioned" <dir>), and would load the
+# original dataset. The download scripts next to the system hand over the
+# generated files instead (hard links on the same file system), and the ones
+# of the other formats fail: there are no generated files for them.
+GENERATED="$(cd "${RANDOM_DATA_DIR}" && pwd)"
+for script in "${SYSTEM_DIR}"/../lib/download-hits-*; do
+    case "$(basename "${script}")" in
+        download-hits-parquet-partitioned) files='hits_*.parquet' ;;
+        download-hits-parquet-single) files='hits.parquet' ;;
+        download-hits-tsv) files='hits.tsv' ;;
+        download-hits-csv) files='hits.csv' ;;
+        *) files='' ;;
+    esac
+    if [ "$(basename "${script}")" != "${BENCH_DOWNLOAD_SCRIPT}" ] || [ -z "${files}" ]; then
+        printf '#!/bin/bash\necho "%s: the randomized benchmark made the files for %s only" >&2\nexit 1\n' \
+            "$(basename "${script}")" "${BENCH_DOWNLOAD_SCRIPT}" > "${script}"
+        continue
+    fi
+    cat > "${script}" <<EOF
+#!/bin/bash
+# The randomized benchmark: the generated files instead of the original ones.
+set -euo pipefail
+dir="\$(mkdir -p "\${1:-.}" && cd "\${1:-.}" && pwd)"
+[ "\${dir}" = "${GENERATED}" ] && exit 0
+if [ "\$(stat -c %d "\${dir}")" = "\$(stat -c %d "${GENERATED}")" ]; then
+    ln -f "${GENERATED}"/${files} "\${dir}/"
+else
+    cp -f "${GENERATED}"/${files} "\${dir}/"
+fi
+EOF
+done
+
 log "loading"
 start=$(date +%s.%N)
 ./load
