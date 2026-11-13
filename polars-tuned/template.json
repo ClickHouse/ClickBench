@@ -1,1 +1,1 @@
-﻿{"system": "Polars (Parquet, tuned)", "proprietary": "no", "hardware": "cpu", "tuned": "yes", "category": "enthusiast", "tags": ["column-oriented", "stateless"]}
+{"system": "Polars (Parquet, tuned)", "proprietary": "no", "hardware": "cpu", "tuned": "yes", "category": "enthusiast", "tags": ["column-oriented", "stateless"]}
