@@ -54,3 +54,25 @@ jobs:
             c6a.metal
             c8g.metal-48xl
             c7a.metal-48xl
+
+  # clickhouse-iceberg also runs SeaweedFS as the Iceberg REST catalog and
+  # writes the whole dataset with one INSERT; it has results on every machine
+  # of the fleet except t3a.small (2 GB of memory), which it was never run on.
+  launch-iceberg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/launch-benchmark
+        with:
+          systems: >-
+            clickhouse-iceberg
+          machines: >-
+            c6a.4xlarge
+            c6a.2xlarge
+            c6a.xlarge
+            c6a.large
+            c6a.metal
+            c8g.4xlarge
+            c8g.metal-48xl
+            c7a.metal-48xl
