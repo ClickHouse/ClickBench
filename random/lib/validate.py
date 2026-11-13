@@ -78,10 +78,18 @@ def parse_reference(data):
     return names, [[unescape_tsv(c) for c in line.split("\t")] for line in lines[1:]]
 
 
+CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+UNICODE_ESCAPE = re.compile(r"\\u([0-9a-fA-F]{4})")
+
+
 def clean(text):
-    """Escaping differences: literal \\n and \\t become characters, then all
+    """Escaping differences: literal \\n, \\t, \\r and \\uXXXX (of JSON) become
+    characters, the control characters other than the newline and the tab are
+    dropped (a system prints them raw, escaped or not at all), then all
     backslashes and quotes are dropped."""
-    text = text.replace("\\n", "\n").replace("\\t", "\t")
+    text = UNICODE_ESCAPE.sub(lambda m: chr(int(m.group(1), 16)), text)
+    text = text.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r")
+    text = CONTROL.sub("", text)
     return re.sub(r"[ \t]+", " ", re.sub(r"[\\\"'`]", "", text))
 
 
