@@ -43,9 +43,6 @@ flush() { [ -n "${RANDOM_SKIP_SYNC:-}" ] || sync; }
 
 install_random_clickhouse "${RANDOM_CLICKHOUSE_VERSION:?}"
 
-log "generating the data"
-"${RANDOM_DIR}/lib/generate-data.sh" "${WORK}/data"
-
 # RANDOM_SYSTEMS_DIR: where the system directories are, for testing (default: ClickBench).
 SYSTEM_DIR="${RANDOM_SYSTEMS_DIR:-${CLICKBENCH_DIR}}/${SYSTEM}"
 cd "${SYSTEM_DIR}"
@@ -85,11 +82,16 @@ check_loop() {
     return 1
 }
 
+# The system first, the data then: a broken install fails in minutes, not
+# after the generation of the data.
 log "installing"
 ./install
 flush
 ./start >/dev/null 2>&1 || true
 check_loop
+
+log "generating the data"
+"${RANDOM_DIR}/lib/generate-data.sh" "${WORK}/data"
 
 log "making the files for ${BENCH_DOWNLOAD_SCRIPT}"
 "${RANDOM_DIR}/lib/make-format.sh" "${WORK}/data" "${BENCH_DOWNLOAD_SCRIPT}" "${RANDOM_DATA_DIR}"
