@@ -25,7 +25,7 @@ import production
 FAILED = ("wrong", "error", "timeout", "unsupported")
 
 
-def summarize(results, payloads):
+def summarize(results, payloads, missing=()):
     """The data for the page: everything the script of the page renders."""
     first = results[0]
     latest = {}
@@ -70,7 +70,8 @@ def summarize(results, payloads):
                 "reference": r.get("reference", {}), "commit": r.get("commit", ""),
             })
         systems.sort(key=lambda s: (s["geomean"] is None, s["geomean"] or 0))
-        verdicts = production.check([r for (m, _), r in latest.items() if m == machine], machine)
+        verdicts = production.check([r for (m, _), r in latest.items() if m == machine], machine,
+                                    [x for x in missing if x["machine"] == machine])
         for v in verdicts:
             v["demote"] = production.demote(v)
         machines.append({"machine": machine, "systems": systems, "production": verdicts})
@@ -413,8 +414,8 @@ render();
 """
 
 
-def render(results, payloads):
-    data = summarize(results, payloads)
+def render(results, payloads, missing=()):
+    data = summarize(results, payloads, missing)
     # Inside <script>, "</" could end the element: escape "<" everywhere.
     blob = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")
     title = f"group {data['group']}".replace("<", "&lt;")

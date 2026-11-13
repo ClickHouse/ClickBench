@@ -37,6 +37,7 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
+import attempts  # noqa: E402
 import metrics  # noqa: E402
 import production  # noqa: E402
 import revalidate  # noqa: E402
@@ -60,12 +61,7 @@ def recent_groups(sink, since_hours):
           AND JSONExtractString(content, 'kind') = 'random-benchmark'""") if GROUP_RE.match(r["g"])]
 
 
-def last_error(log):
-    lines = [re.sub(r"\x1B\[[0-9;]*m", "", l).strip() for l in log.splitlines()]
-    lines = [l for l in lines if l and not l.startswith("Exit status")]
-    errors = [l for l in lines if re.match(r"^(ERROR|FATAL|PANIC|Error|error|Code: \d+|Traceback|Failed|random: \./check did not)", l)]
-    mentions = [l for l in lines if re.search(r"(?i)(error|exception|fail|timeout|killed|denied|refus)", l)]
-    return (errors or mentions or ["the run failed without a result"])[-1][:500]
+last_error = attempts.last_error
 
 
 def collect(sink, group):
@@ -87,8 +83,8 @@ def collect(sink, group):
         except (ValueError, OSError, KeyError):
             continue
         launched = launched or row["t"]
-    results = [json.loads(r["content"]) for r in rows(sink, f"""
-        SELECT content FROM sink.data
+    results = [(r["t"], json.loads(r["content"])) for r in rows(sink, f"""
+        SELECT content, toString(time) AS t FROM sink.data
         WHERE time >= now() - INTERVAL 60 DAY
           AND JSONExtractString(content, 'kind') = 'random-benchmark'
           AND JSONExtractString(content, 'group') = '{group}'
@@ -104,16 +100,15 @@ def collect(sink, group):
     if not results and not logs:
         return None
 
-    # The latest result of every (system, machine), validated again with the
-    # current validator where the machine sent its outputs.
-    latest = {}
-    for r in results:
-        latest[(r["machine"], r["directory"])] = r
+    # The latest result of every (system, machine), unless a failed run came
+    # after it (lib/attempts.py), validated again with the current validator
+    # where the machine sent its outputs.
+    latest, _ = attempts.latest(results, logs)
     for r in latest.values():
         changed = revalidate.revalidate(r)
         if changed:
             print(f"collect: {r['directory']} on {r['machine']}: {changed} runs validated differently now", file=sys.stderr)
-    first = results[0] if results else {}
+    first = results[0][1] if results else {}
     meta = next(iter(payloads.values()))["queries"] if payloads else {}
 
     systems = []
@@ -146,7 +141,7 @@ def collect(sink, group):
             })
 
     # The systems of the group without a result: the error from their log.
-    with_result = {r["directory"] for r in results}
+    with_result = {d for _, d in latest}
     missing = []
     for system in sorted(set(payloads) - with_result):
         log = next((l for l in reversed(logs) if l["system"] == system), None)

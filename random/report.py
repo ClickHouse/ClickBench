@@ -44,6 +44,7 @@ import urllib.parse
 import urllib.request
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+import attempts  # noqa: E402
 import metrics  # noqa: E402
 import production  # noqa: E402
 import revalidate  # noqa: E402
@@ -53,13 +54,26 @@ FAILED = ("wrong", "error", "timeout", "unsupported")
 
 
 def fetch(sink, group):
-    query = f"""SELECT content FROM sink.data
+    """[(time, result)] of the group in the order of time."""
+    query = f"""SELECT content, toString(time) AS t FROM sink.data
         WHERE time >= now() - INTERVAL 30 DAY
           AND JSONExtractString(content, 'kind') = 'random-benchmark'
           AND JSONExtractString(content, 'group') = '{group}'
         ORDER BY time FORMAT JSONEachRow"""
     with urllib.request.urlopen(sink + "&query=" + urllib.parse.quote(query), timeout=300) as response:
-        return [json.loads(json.loads(line)["content"]) for line in response.read().decode().splitlines() if line]
+        rows = [json.loads(line) for line in response.read().decode().splitlines() if line]
+    return [(row["t"], json.loads(row["content"])) for row in rows]
+
+
+def fetch_logs(sink, group):
+    """The logs of the machines of the group: {"system", "content", "t"} in the order of time."""
+    query = f"""SELECT extract(content, 'system: ([a-z0-9_.-]+)') AS system, content, toString(time) AS t
+        FROM sink.data
+        WHERE time >= now() - INTERVAL 30 DAY
+          AND startsWith(content, 'Randomized benchmark group: {group}, system: ')
+        ORDER BY time FORMAT JSONEachRow"""
+    with urllib.request.urlopen(sink + "&query=" + urllib.parse.quote(query), timeout=300) as response:
+        return [json.loads(line) for line in response.read().decode().splitlines() if line]
 
 
 def decode_payload(row):
@@ -97,9 +111,9 @@ def human_size(n):
     return f"{n:.1f} PB"
 
 
-def production_section(results, machine):
+def production_section(results, machine, missing=()):
     """The requirements of the Production category that the randomized queries check (lib/production.py)."""
-    verdicts = production.check(results, machine)
+    verdicts = production.check(results, machine, [m for m in missing if m["machine"] == machine])
     lines = [f"### Production requirements on {machine}", "",
              "| System | Category | Restarts | Lost server | Timeouts | Gap, random | Gap, standard | Widening | Verdict |",
              "|---|---|---:|---:|---:|---:|---:|---:|---|"]
@@ -120,7 +134,7 @@ def production_section(results, machine):
     return lines
 
 
-def report(results, group):
+def report(results, group, missing=()):
     lines = [f"# Randomized benchmark, group {group}", ""]
     if not results:
         return "\n".join(lines + ["No results yet."])
@@ -153,7 +167,7 @@ def report(results, group):
                   "slowest correct execution of the query in the group), relative to the best system's average as "
                   "(0.01 + time) / (0.01 + best); the geometric mean over the queries. Lower is better; 1 is the best "
                   "on every query.", ""]
-        lines += production_section(here, machine)
+        lines += production_section(here, machine, missing)
     # Queries where many systems fail: either hard queries, or a problem with
     # the query or the reference when nearly every system disagrees with it.
     per_query = {}
@@ -199,8 +213,14 @@ def main():
     args = parser.parse_args()
     if args.files:
         results = [json.load(open(f)) for f in args.files]
+        missing = []
     else:
-        results = fetch(args.sink, args.group)
+        # The latest attempt of every system: a failed run after a result
+        # replaces it (lib/attempts.py).
+        latest, failed = attempts.latest(fetch(args.sink, args.group), fetch_logs(args.sink, args.group))
+        results = list(latest.values())
+        missing = [{"directory": f["system"], "machine": f["machine"], "error": attempts.last_error(f["content"])}
+                   for f in failed]
     # The statuses of the current validator, where the machine sent its outputs.
     for r in results:
         revalidate.revalidate(r)
@@ -213,7 +233,7 @@ def main():
         payloads = {}
     else:
         payloads = fetch_payloads(args.sink, args.group)
-    text = report(results, args.group)
+    text = report(results, args.group, missing)
     print(text)
     if args.output:
         os.makedirs(args.output, exist_ok=True)
@@ -223,11 +243,11 @@ def main():
             json.dump(results, f, ensure_ascii=False)
         if results:
             with open(os.path.join(args.output, "report.html"), "w") as f:
-                f.write(report_html.render(results, payloads))
+                f.write(report_html.render(results, payloads, missing))
     if args.publish and results:
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         import pastila
-        url = pastila.post(report_html.render(results, payloads), extension=".html", compress=True)
+        url = pastila.post(report_html.render(results, payloads, missing), extension=".html", compress=True)
         print(f"\nHTML report: {url}")
         text += f"\n\nHTML report: {url}\n"
     if os.environ.get("GITHUB_STEP_SUMMARY"):
