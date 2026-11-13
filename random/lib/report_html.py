@@ -1,15 +1,15 @@
-"""The HTML report of a group of the randomized benchmark: one self-contained
-file (no external scripts, styles or fonts).
+"""The HTML report of a group of the randomized benchmark, in the style of the
+ClickBench page (index.html): one self-contained file (no external scripts,
+styles or fonts).
 
-  - the parameters of the group,
-  - for every machine type: the systems ranked by the geomean of the relative
-    times (bars, see metrics.py), with the total and the penalized time,
-    with the counts of correct, wrong and failed executions, the load time and
-    the data size,
-  - a matrix of queries x systems: the average time of the correct executions,
-    colored by the ratio to the fastest system on that query; failures are
-    marked with an icon and a label,
-  - for every query (click a row): the SQL, its features, the translation for
+  - selectors of the machines, the systems and the metric (geomean of the
+    relative times, total time, penalized time, load time, data size), the
+    metrics computed in the page for the selected systems, as in
+    lib/metrics.py,
+  - the summary: the systems ranked by the metric, with the bars of ClickBench,
+  - the detailed comparison: queries x systems, the average time and its
+    ratio to the best system, colored as on ClickBench; failures marked,
+  - for every query (click its number): the SQL, its features, the translation for
     every system, the time and the status of every execution, the errors and
     the beginning of the output.
 
@@ -85,226 +85,304 @@ PAGE = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
 <title>Randomized ClickBench: __TITLE__</title>
 <style>
+/* The style of the ClickBench page (index.html). */
 :root {
-  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
-  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10); --bar: #2a78d6; --bar2: #9ec5f4;
-  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
-  --s0: #cde2fb; --s1: #9ec5f4; --s2: #6da7ec; --s3: #3987e5; --s4: #256abf; --s5: #184f95; --s6: #0d366b;
-  --t0: #0b0b0b; --t1: #0b0b0b; --t2: #0b0b0b; --t3: #0b0b0b; --t4: #fff; --t5: #fff; --t6: #fff;
+    --color: black; --title-color: black; --background-color: white;
+    --link-color: #08F; --link-hover-color: #F40;
+    --selector-text-color: black; --selector-active-text-color: black;
+    --selector-background-color: #EEE; --selector-active-background-color: #FFCB80;
+    --selector-hover-text-color: black; --selector-hover-background-color: #FDB;
+    --summary-every-other-row-color: #F8F8F8; --highlight-color: #EEE;
+    --bar-color1: oklch(calc(0.9 - 0.6) 0.1 calc(90 - 60));
+    --bar-color2: oklch(calc(0.9 - 0.4) 0.1 calc(90 - 40));
+    --bar-color3: oklch(calc(0.9 - 0.1) 0.1 calc(90 - 20));
+    --bar-color4: oklch(0.9 0.1 90);
+    --tooltip-text-color: white; --tooltip-background-color: black;
+    --shadow-color: grey; --code-background: #F4F4F4;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
-    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --bar: #3987e5; --bar2: #184f95;
-    --s0: #0d366b; --s1: #104281; --s2: #184f95; --s3: #256abf; --s4: #3987e5; --s5: #6da7ec; --s6: #9ec5f4;
-    --t0: #fff; --t1: #fff; --t2: #fff; --t3: #fff; --t4: #0b0b0b; --t5: #0b0b0b; --t6: #0b0b0b;
-  }
+[data-theme="dark"] {
+    --color: #CCC; --title-color: white; --background-color: #04293A;
+    --link-color: #8CF; --link-hover-color: #FFF;
+    --selector-text-color: white; --selector-background-color: #444;
+    --selector-active-text-color: white; --selector-active-background-color: #088;
+    --selector-hover-text-color: black; --selector-hover-background-color: white;
+    --summary-every-other-row-color: #042e41; --highlight-color: #000;
+    --bar-color1: oklch(calc(0.4 + 0.6) 0.1 calc(250 - 180));
+    --bar-color2: oklch(calc(0.4 + 0.4) 0.1 calc(250 - 120));
+    --bar-color3: oklch(calc(0.4 + 0.2) 0.1 calc(250 - 60));
+    --bar-color4: oklch(0.4 0.1 250);
+    --tooltip-text-color: white; --tooltip-background-color: #444;
+    --shadow-color: black; --code-background: #03202D;
 }
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-main { max-width: 1400px; margin: 0 auto; padding: 24px; }
-h1 { font-size: 22px; margin: 0 0 4px; }
-h2 { font-size: 17px; margin: 32px 0 8px; }
-h3 { font-size: 14px; margin: 16px 0 6px; color: var(--ink2); }
-.sub { color: var(--ink2); margin: 0 0 16px; }
-.card { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 16px; margin: 12px 0; overflow-x: auto; }
-dl.params { display: grid; grid-template-columns: max-content 1fr; gap: 2px 16px; margin: 0; }
-dl.params dt { color: var(--ink2); }
-dl.params dd { margin: 0; font-variant-numeric: tabular-nums; }
-table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
-th, td { padding: 4px 8px; text-align: right; white-space: nowrap; }
-th { color: var(--ink2); font-weight: 600; border-bottom: 1px solid var(--axis); }
-td.l, th.l { text-align: left; }
-tr.sys td { border-bottom: 1px solid var(--grid); }
-.barcell { width: 30%; min-width: 200px; text-align: left; }
-table.rank { width: 100%; }
-.bar { position: relative; height: 18px; }
-.bar span.fill { position: absolute; left: 0; top: 2px; height: 14px; background: var(--bar); border-radius: 0 4px 4px 0; }
-.bar span.fill.total { border-radius: 0; }
-.bar span.fill.penalty { background: var(--bar2); }
-.bar span.cut { position: absolute; top: 0; width: 6px; height: 18px; background: var(--surface); transform: skewX(-20deg); }
-.bar span.val { position: absolute; top: 0; font-size: 12px; color: var(--ink2); }
-.status { display: inline-flex; align-items: center; gap: 4px; }
-.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
-table.matrix td.cell { min-width: 84px; border: 2px solid var(--surface); border-radius: 4px; cursor: pointer; font-size: 12px; }
-table.matrix td.q { text-align: left; cursor: pointer; color: var(--ink2); }
-table.matrix tr:hover td.q { color: var(--ink); text-decoration: underline; }
-td.fail { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1px var(--axis); }
-.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--ink2); font-size: 12px; margin: 8px 0; }
-.legend .sw { display: inline-block; width: 28px; height: 12px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
-details.q { border-top: 1px solid var(--grid); padding: 6px 0; }
-details.q summary { cursor: pointer; }
-pre { background: var(--page); border: 1px solid var(--ring); border-radius: 6px; padding: 8px; white-space: pre-wrap; word-break: break-word; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; max-height: 320px; overflow: auto; margin: 4px 0; }
-.tag { display: inline-block; border: 1px solid var(--axis); border-radius: 10px; padding: 0 8px; margin: 0 4px 2px 0; font-size: 12px; color: var(--ink2); }
-#tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--axis); border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: none; max-width: 420px; z-index: 10; }
-.muted { color: var(--muted); }
+html, body { color: var(--color); background-color: var(--background-color); width: 100%; height: 100%; margin: 0; overflow: auto; box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; padding: 1% 3% 0 3%; }
+h1, h2 { color: var(--title-color); }
+table { border-spacing: 1px; }
+.stick-left { position: sticky; left: 0px; }
+.intro { max-width: 60rem; line-height: 1.5; }
+.selectors-container { padding: 2rem 0 2rem 0; user-select: none; }
+.selectors-container th { text-align: left; vertical-align: top; white-space: nowrap; padding-top: 0.5rem; padding-right: 1rem; }
+.selector { display: inline-block; margin-left: 0.1rem; padding: 0.2rem 0.5rem; background: var(--selector-background-color); color: var(--selector-text-color); border: 0.2rem solid var(--background-color); border-radius: 0.5rem; cursor: pointer; }
+.selector-active { color: var(--selector-active-text-color); background: var(--selector-active-background-color); }
+.selector:hover { color: var(--selector-hover-text-color) !important; background: var(--selector-background-color); }
+.selector-active:hover { background: var(--selector-hover-background-color); }
+a, a:visited { text-decoration: none; color: var(--link-color); cursor: pointer; }
+a:hover { color: var(--link-hover-color); }
+#summary tr:nth-child(odd) { background: var(--summary-every-other-row-color); }
+.summary-name { white-space: nowrap; text-align: right; padding-right: 1rem; }
+.summary-bar-cell { width: 100%; }
+.summary-bar { height: 1rem; width: 100%; }
+.summary-number { font-family: monospace; text-align: right; padding-left: 1rem; white-space: nowrap; }
+.summary-counts { font-family: monospace; white-space: nowrap; padding-left: 1rem; font-size: 90%; }
+th { padding-bottom: 0.5rem; }
+.summary-row:hover { background: var(--highlight-color) !important; font-weight: bold; }
+#details th { vertical-align: bottom; white-space: pre; }
+#details td { white-space: pre; font-family: monospace; text-align: right; padding: 0.1rem 0.5rem; }
+#details td.details-query { text-align: left; position: sticky; left: 0; background-color: var(--background-color); }
+.shadow:hover { box-shadow: 0 0 1rem var(--shadow-color); position: relative; }
+#tip { position: fixed; pointer-events: none; display: none; background-color: var(--tooltip-background-color); color: var(--tooltip-text-color); box-shadow: 0 0 1rem var(--shadow-color); padding: 0.5rem 0.75rem; border-radius: 0.5rem; z-index: 2; max-width: 40rem; font-size: 90%; white-space: pre-wrap; font-family: monospace; }
+.theme-switch { position: absolute; top: 1rem; right: 3%; }
+.query-block { padding: 0.5rem 0; border-top: 1px solid var(--highlight-color); }
+.query-block h3 { margin: 0.5rem 0; }
+pre { background: var(--code-background); padding: 0.5rem; border-radius: 0.5rem; white-space: pre-wrap; word-break: break-word; max-height: 20rem; overflow: auto; }
+.muted { opacity: 0.7; }
+.feature { display: inline-block; margin-right: 0.3rem; padding: 0 0.4rem; border-radius: 0.5rem; background: var(--selector-background-color); font-size: 85%; }
+footer { padding: 2rem 0; }
 </style>
 </head>
 <body>
-<main id="app"></main>
-<div id="tip" role="tooltip"></div>
+<div class="theme-switch"><a class="selector" id="toggle-light">Light</a><a class="selector" id="toggle-dark">Dark</a></div>
+<div class="stick-left">
+<h1>Randomized ClickBench</h1>
+<p class="intro" id="intro"></p>
+</div>
+<table class="selectors-container stick-left">
+<tr><th>Machine: </th><td id="selectors_machine"></td></tr>
+<tr><th>System: </th><td id="selectors_system"></td></tr>
+<tr><th>Metric: </th><td id="selectors_metric"></td></tr>
+</table>
+<table id="summary-table" class="stick-left">
+<thead><tr><th class="summary-name">System &amp; Machine</th><th colspan="3" style="text-align: left">Relative <span id="what">time</span> (lower is better).</th></tr></thead>
+<tbody id="summary"></tbody>
+</table>
+<p class="stick-left intro muted" id="metric-note"></p>
+<div class="stick-left"><h2>Detailed Comparison</h2>
+<p class="intro muted">The average time of the runs of every query and its ratio to the best system's average; a failed run counts as 5× the slowest correct run of the query. Hover over a cell for the runs; click a query for its SQL, the translations and the outputs.</p></div>
+<table id="details"><thead><tr id="details_head"></tr></thead><tbody id="details_body"></tbody></table>
+<div class="stick-left"><h2>Queries</h2></div>
+<div class="stick-left" id="queries"></div>
+<footer class="stick-left muted" id="footer"></footer>
+<div id="tip"></div>
 <script id="data" type="application/json">__DATA__</script>
 <script>
 "use strict";
 const D = JSON.parse(document.getElementById("data").textContent);
-const app = document.getElementById("app");
-const tip = document.getElementById("tip");
+const constant_time_add = 0.01;
+const failure_penalty = 5;
+const FAILED = ["wrong", "error", "timeout", "unsupported"];
+const STATUS_TEXT = { ok: "correct", wrong: "wrong result", error: "error", timeout: "timeout", unsupported: "unsupported", unverified: "no reference" };
+const STATUS_SHORT = { wrong: "wrong", error: "error", timeout: "timeout", unsupported: "unsupp.", unverified: "?" };
 
 function el(tag, attrs, ...children) {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs || {})) {
-    if (k === "class") e.className = v; else if (k === "style") e.style.cssText = v; else e.setAttribute(k, v);
-  }
-  for (const c of children) if (c !== null && c !== undefined) e.append(c instanceof Node ? c : String(c));
-  return e;
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+        if (k === "class") e.className = v; else if (k === "style") e.style.cssText = v; else e.setAttribute(k, v);
+    }
+    for (const c of children) if (c !== null && c !== undefined) e.append(c instanceof Node ? c : String(c));
+    return e;
 }
-const fmtTime = t => t === null || t === undefined ? "–" : t >= 100 ? t.toFixed(0) + " s" : t >= 10 ? t.toFixed(1) + " s" : t.toFixed(2) + " s";
-const fmtSize = n => { if (typeof n !== "number") return "–"; const u = ["B", "KB", "MB", "GB", "TB"]; let i = 0; while (n >= 1000 && i < u.length - 1) { n /= 1000; i++; } return n.toFixed(1) + " " + u[i]; };
-const STATUS = {
-  ok: { color: "var(--good)", icon: "✓", label: "correct" },
-  wrong: { color: "var(--critical)", icon: "✕", label: "wrong result" },
-  error: { color: "var(--serious)", icon: "!", label: "error" },
-  timeout: { color: "var(--warning)", icon: "⏱", label: "timeout" },
-  unsupported: { color: "var(--muted)", icon: "∅", label: "unsupported" },
-  unverified: { color: "var(--muted)", icon: "?", label: "no reference" },
-};
-const ORDER = ["wrong", "error", "timeout", "unsupported", "unverified"];
-const BINS = [1.1, 1.5, 2, 3, 5, 10, Infinity];
-const BIN_LABELS = ["≤1.1×", "≤1.5×", "≤2×", "≤3×", "≤5×", "≤10×", ">10×"];
-const binOf = r => BINS.findIndex(b => r <= b);
+const fmtTime = t => t === null || t === undefined ? "–" : t >= 100 ? t.toFixed(0) + "s" : t >= 10 ? t.toFixed(1) + "s" : t.toFixed(2) + "s";
+const fmtSize = n => typeof n !== "number" ? "–" : (n / 1024 / 1024 / 1024).toFixed(2) + " GiB";
 
-function showTip(ev, lines) {
-  tip.replaceChildren(...lines.map((l, i) => el("div", i ? {} : { style: "font-weight:600" }, l)));
-  tip.style.display = "block";
-  const x = Math.min(ev.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
-  const y = Math.min(ev.clientY + 14, window.innerHeight - tip.offsetHeight - 8);
-  tip.style.left = x + "px"; tip.style.top = y + "px";
+/// Every (system, machine) is an entry, as on the ClickBench page.
+const entries = [];
+for (const M of D.machines) for (const s of M.systems) entries.push({ ...s, machine: M.machine, key: s.directory + " (" + M.machine + ")" });
+const machines = D.machines.map(m => m.machine);
+const selectors = { machine: Object.fromEntries(machines.map(m => [m, true])), system: Object.fromEntries(entries.map(e => [e.directory, true])), metric: "geomean" };
+const METRICS = { geomean: "Geomean of relative times", total: "Total time", penalized: "Penalized time", load: "Load time", size: "Data size" };
+
+/// The same as lib/metrics.py, for the selected entries of one machine.
+function geomeans(list) {
+    const worst = {};
+    for (const e of list) for (const [q, c] of Object.entries(e.cells)) for (const r of c.runs)
+        if (!FAILED.includes(r.status)) worst[q] = Math.max(worst[q] || 0, r.time);
+    const avg = list.map(e => {
+        const a = {};
+        for (const [q, c] of Object.entries(e.cells)) {
+            if (!(q in worst)) continue;
+            const ts = c.runs.map(r => FAILED.includes(r.status) ? failure_penalty * worst[q] : r.time);
+            a[q] = ts.reduce((x, y) => x + y, 0) / ts.length;
+        }
+        return a;
+    });
+    const best = {};
+    for (const a of avg) for (const [q, t] of Object.entries(a)) best[q] = Math.min(best[q] ?? Infinity, t);
+    return { avg, best, worst, geo: avg.map(a => {
+        const qs = Object.keys(best).filter(q => q in a);
+        if (!qs.length) return null;
+        return Math.exp(qs.reduce((s, q) => s + Math.log((constant_time_add + a[q]) / (constant_time_add + best[q])), 0) / qs.length);
+    }) };
+}
+
+/// The bar of the ClickBench page: the same value at four scales, each next zoomed 10 times.
+function barGradient(percentage) {
+    const stop = zoom => Math.min(100, percentage * zoom);
+    return `linear-gradient(to right, var(--bar-color1) 0%, var(--bar-color1) ${stop(1)}%, var(--bar-color2) ${stop(1)}%, var(--bar-color2) ${stop(10)}%, var(--bar-color3) ${stop(10)}%, var(--bar-color3) ${stop(100)}%, var(--bar-color4) ${stop(100)}%, var(--bar-color4) ${stop(1000)}%, transparent ${stop(1000)}%, transparent 100%)`;
+}
+
+/// The colors of the detailed comparison of the ClickBench page.
+function colorize(elem, ratio) {
+    let [r, g, b] = [0, 0, 0];
+    if (ratio !== null) {
+        if (ratio <= 1) { g = 255; }
+        else if (ratio <= 2) { g = 255; r = (ratio - 1) * 255; }
+        else if (ratio <= 10) { g = (10 - ratio) / 8 * 255; r = 255; }
+        else { r = (1 - ((ratio - 10) / ((ratio - 10) + 1000))) * 255; }
+    }
+    if (document.documentElement.getAttribute("data-theme") == "dark") { r /= 1.5; g /= 1.5; b /= 1.5; }
+    elem.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+    elem.style.color = ratio === null || ratio > 10 ? "white" : "black";
+    if (ratio == 1) elem.style.fontWeight = "bold";
+}
+
+const tip = document.getElementById("tip");
+function showTip(ev, text) {
+    tip.textContent = text; tip.style.display = "block";
+    tip.style.left = Math.min(ev.clientX + 14, window.innerWidth - tip.offsetWidth - 8) + "px";
+    tip.style.top = Math.min(ev.clientY + 14, window.innerHeight - tip.offsetHeight - 8) + "px";
 }
 const hideTip = () => { tip.style.display = "none"; };
 
-// Header.
-app.append(el("h1", {}, "Randomized ClickBench"),
-  el("p", { class: "sub" }, `Group ${D.group}: ${D.queries.length} random queries on ${D.rows.toLocaleString("en")} random rows, the same for every system and machine. Results are comparable only within the group.`));
-const params = el("dl", { class: "params" });
-const p = (k, v) => params.append(el("dt", {}, k), el("dd", {}, v));
-p("Rows", D.rows.toLocaleString("en"));
-p("Queries × repeats", `${D.queries.length} × ${D.repeats}, in a pseudorandom order, the same on every system`);
-p("Concurrent workers", D.parallel);
-p("Query timeout", D.query_timeout + " s");
-p("Reference", "ClickHouse " + D.clickhouse_version + " with the standard SQL semantics");
-if (D.model) p("Query generator", `${D.model}: ${D.generated} candidates, ${D.valid} valid` + (Object.keys(D.rejected).length ? " (rejected: " + Object.entries(D.rejected).map(([k, v]) => `${v} ${k}`).join(", ") + ")" : ""));
-p("Seed", D.seed);
-app.append(el("div", { class: "card" }, params));
+function selectorRow(id, items, isActive, onClick) {
+    const td = document.getElementById(id);
+    td.replaceChildren();
+    for (const [value, label] of items) {
+        const a = el("a", { class: "selector" + (isActive(value) ? " selector-active" : "") }, label);
+        a.addEventListener("click", () => { onClick(value); render(); });
+        td.append(a);
+    }
+}
 
-for (const M of D.machines) {
-  app.append(el("h2", {}, M.machine));
+function render() {
+    selectorRow("selectors_machine", machines.map(m => [m, m]), m => selectors.machine[m], m => { selectors.machine[m] = !selectors.machine[m]; });
+    selectorRow("selectors_system", [...new Set(entries.map(e => e.directory))].map(d => [d, d]), d => selectors.system[d], d => { selectors.system[d] = !selectors.system[d]; });
+    selectorRow("selectors_metric", Object.entries(METRICS), m => selectors.metric === m, m => { selectors.metric = m; });
 
-  // Ranking by the geomean of the relative times (one measure, one hue). The
-  // scale ends at 4x the best geomean, so that one slow system doesn't
-  // flatten the others; longer bars are cut.
-  const best = Math.min(...M.systems.map(s => s.geomean ?? Infinity));
-  const scale = Math.max(...M.systems.map(s => Math.min(s.geomean ?? 0, 4 * best)));
-  const rank = el("table", { class: "rank" }, el("thead", {}, el("tr", {},
-    el("th", { class: "l" }, "System"), el("th", { class: "l barcell" }, "Geomean of relative times"),
-    el("th", {}, "Total time"), el("th", {}, "Penalized time"),
-    el("th", {}, "Correct"), el("th", {}, "Wrong"), el("th", { class: "l" }, "Failed / unverified"),
-    el("th", {}, "Load time"), el("th", {}, "Data size"))));
-  const tb = el("tbody");
-  for (const s of M.systems) {
-    const g = s.geomean ?? 0;
-    const w = scale > 0 ? Math.min(100, 100 * g / scale) : 0;
-    const bar = el("div", { class: "bar" },
-      el("span", { class: "fill", style: `width:max(2px, calc((100% - 64px) * ${w / 100}))` }),
-      g > scale ? el("span", { class: "cut", style: `left:calc((100% - 64px) * 0.9)` }) : null,
-      el("span", { class: "val", style: `left:calc((100% - 64px) * ${w / 100} + 6px)` }, s.geomean === null ? "–" : g.toFixed(2) + "×"));
-    const c = s.counts;
-    const n = k => { const v = c[k] || 0; if (!v || k === "ok") return String(v); const st = STATUS[k];
-      return el("span", { class: "status" }, el("span", { class: "dot", style: `background:${st.color}` }), `${st.icon} ${v}`); };
-    const tr = el("tr", { class: "sys" }, el("td", { class: "l" }, s.directory), el("td", { class: "barcell" }, bar),
-      el("td", {}, fmtTime(s.total)), el("td", {}, fmtTime(s.penalized)), el("td", {}, n("ok")), el("td", {}, n("wrong")),
-      el("td", { class: "l" }, ...(["error", "timeout", "unsupported", "unverified"].filter(k => c[k]).map(k => el("span", { style: "margin-right:10px" }, n(k)))), ["error", "timeout", "unsupported", "unverified"].some(k => c[k]) ? null : "0"),
-      el("td", {}, fmtTime(s.load_time)), el("td", {}, fmtSize(s.data_size)));
-    tr.addEventListener("mousemove", ev => showTip(ev, [s.directory,
-      `geomean ${s.geomean === null ? "–" : s.geomean.toFixed(3) + "×"}; total ${fmtTime(s.total)}; penalized ${fmtTime(s.penalized)} = total + ${(c.wrong||0)+(c.error||0)+(c.timeout||0)+(c.unsupported||0)} failed × ${D.query_timeout} s / ${D.parallel} workers`,
-      `translator: ${s.translator || "none"}`, s.restarts ? `restarts: ${s.restarts}` : ""].filter(Boolean)));
-    tr.addEventListener("mouseleave", hideTip);
-    tb.append(tr);
-  }
-  rank.append(tb);
-  app.append(el("div", { class: "card" }, rank,
-    el("p", { class: "muted" }, "Geomean (lower is better, 1× is the best on every query), as on the ClickBench page but with averages: for every query, the average time of the system's runs, a failed run counting as 5× the slowest correct run of the query in the group; its ratio to the best system's average, as (0.01 + time) / (0.01 + best); the geometric mean of the ratios. The scale ends at 4× the best; longer bars are cut (⫽). Total time: the wall-clock time of all runs with the concurrent workers. Penalized time: the total time plus the query timeout for every failed run, divided by the number of workers.")));
+    const selected = entries.filter(e => selectors.machine[e.machine] && selectors.system[e.directory]);
+    // The geomean is relative to the best of the selected systems on the same machine.
+    const geo = new Map(), avgs = new Map(), bests = new Map();
+    for (const m of machines) {
+        const list = selected.filter(e => e.machine === m);
+        if (!list.length) continue;
+        const g = geomeans(list);
+        list.forEach((e, i) => { geo.set(e.key, g.geo[i]); avgs.set(e.key, g.avg[i]); bests.set(e.key, g.best); });
+    }
+    const value = e => selectors.metric === "geomean" ? geo.get(e.key) : selectors.metric === "total" ? e.total
+        : selectors.metric === "penalized" ? e.penalized : selectors.metric === "load" ? e.load_time : e.data_size;
+    const vals = selected.map(value).filter(v => typeof v === "number" && v > 0);
+    const min = Math.min(...vals);
+    const ratio = e => { const v = value(e); return typeof v === "number" && v > 0 ? (selectors.metric === "geomean" ? v : v / min) : null; };
+    const sorted = [...selected].sort((a, b) => (ratio(a) ?? Infinity) - (ratio(b) ?? Infinity));
+    const maxRatio = Math.max(...sorted.map(ratio).filter(x => x !== null));
+    document.getElementById("what").textContent = selectors.metric === "size" ? "size" : "time";
 
-  // Matrix: queries × systems.
-  const legend = el("div", { class: "legend" }, "Average time of the correct runs, by its ratio to the fastest system on the query:",
-    ...BIN_LABELS.map((l, i) => el("span", {}, el("span", { class: "sw", style: `background:var(--s${i})` }), l)),
-    ...ORDER.map(k => el("span", {}, el("span", { class: "dot", style: `background:${STATUS[k].color}` }), ` ${STATUS[k].icon} ${STATUS[k].label}`)));
-  const mt = el("table", { class: "matrix" });
-  mt.append(el("thead", {}, el("tr", {}, el("th", { class: "l" }, "Query"), ...M.systems.map(s => el("th", {}, s.directory)))));
-  const mb = el("tbody");
-  for (const q of D.queries) {
-    const meds = M.systems.map(s => (s.cells[q.id] || {}).average).filter(x => x !== null && x !== undefined);
-    const best = meds.length ? Math.min(...meds) : null;
-    const tr = el("tr", {}, el("td", { class: "q", title: q.description }, q.id));
-    tr.firstChild.addEventListener("click", () => { const d = document.getElementById("detail-" + q.id); d.open = true; d.scrollIntoView({ block: "start" }); });
-    for (const s of M.systems) {
-      const cell = s.cells[q.id];
-      let td;
-      if (!cell) { td = el("td", { class: "cell fail" }, "–"); }
-      else {
-        const bad = ORDER.find(k => cell.statuses.includes(k));
-        if (cell.average === null || cell.average === undefined) {
-          const st = STATUS[bad || "error"];
-          td = el("td", { class: "cell fail" }, el("span", { class: "status" }, el("span", { class: "dot", style: `background:${st.color}` }), `${st.icon} ${st.label}`));
-        } else {
-          const ratio = best > 0 ? cell.average / best : 1;
-          const b = binOf(ratio);
-          const text = fmtTime(cell.average) + (bad ? " " + STATUS[bad].icon : "");
-          td = el("td", { class: "cell", style: `background:var(--s${b});color:var(--t${b})` }, text);
+    const summary = document.getElementById("summary");
+    summary.replaceChildren();
+    for (const e of sorted) {
+        const r = ratio(e);
+        const c = e.counts;
+        const failed = FAILED.reduce((s, k) => s + (c[k] || 0), 0);
+        const text = r === null ? "–" : selectors.metric === "geomean" ? `×${r.toFixed(2)}`
+            : selectors.metric === "size" ? `${fmtSize(e.data_size)} (×${r.toFixed(2)})` : `${fmtTime(value(e))} (×${r.toFixed(2)})`;
+        const tr = el("tr", { class: "summary-row" },
+            el("td", { class: "summary-name" }, e.key + ": "),
+            el("td", { class: "summary-bar-cell" }, el("div", { class: "summary-bar", style: `background:${r === null ? "none" : barGradient(r / maxRatio * 100)}` })),
+            el("td", { class: "summary-number" }, text),
+            el("td", { class: "summary-counts" }, `${c.ok || 0} correct` + (c.wrong ? `, ${c.wrong} wrong` : "") + (failed - (c.wrong || 0) ? `, ${failed - (c.wrong || 0)} failed` : "")));
+        tr.addEventListener("mousemove", ev => showTip(ev, `${e.key}\ngeomean ×${(geo.get(e.key) ?? NaN).toFixed(3)}\ntotal time ${fmtTime(e.total)}, penalized ${fmtTime(e.penalized)}\nload ${fmtTime(e.load_time)}, data size ${fmtSize(e.data_size)}\n` +
+            Object.entries(c).map(([k, v]) => `${STATUS_TEXT[k] || k}: ${v}`).join(", ") + `\ntranslator: ${e.translator || "none"}`));
+        tr.addEventListener("mouseleave", hideTip);
+        summary.append(tr);
+    }
+    document.getElementById("metric-note").textContent = {
+        geomean: "Geomean: for every query, the average time of the system's runs (a failed run counts as 5× the slowest correct run of the query among the selected systems), its ratio to the best average as (0.01 + time) / (0.01 + best), and the geometric mean of the ratios. As on ClickBench, but with the average instead of the best run, to account for the concurrency and the cold runs.",
+        total: "Total time: the wall-clock time of all the runs (queries × repeats) with the concurrent workers.",
+        penalized: `Penalized time: the total time plus the query timeout (${D.query_timeout} s) for every failed run, divided by the number of workers.`,
+        load: "Load time: the time of the system's own load script on the generated data.",
+        size: "Data size: as reported by the system after the load.",
+    }[selectors.metric];
+
+    // The detailed comparison: queries × entries, in the order of the summary.
+    const head = document.getElementById("details_head");
+    head.replaceChildren(el("th", {}, ""), ...sorted.map(e => el("th", {}, e.directory + "\n" + e.machine)));
+    const body = document.getElementById("details_body");
+    body.replaceChildren();
+    for (const q of D.queries) {
+        const qa = el("a", { href: "#q-" + q.id }, q.id);
+        const tr = el("tr", {}, el("td", { class: "details-query" }, qa));
+        qa.addEventListener("mousemove", ev => showTip(ev, (q.description ? q.description + "\n\n" : "") + q.sql));
+        qa.addEventListener("mouseleave", hideTip);
+        for (const e of sorted) {
+            const cell = e.cells[q.id];
+            const a = (avgs.get(e.key) || {})[q.id];
+            const best = (bests.get(e.key) || {})[q.id];
+            const bad = cell ? ["wrong", "error", "timeout", "unsupported", "unverified"].find(k => cell.statuses.includes(k)) : null;
+            const allFailed = cell && cell.runs.every(r => FAILED.includes(r.status));
+            let text, r = null;
+            if (!cell) text = "–";
+            else if (allFailed) text = STATUS_SHORT[bad] || bad;
+            else if (a === undefined) text = fmtTime(cell.average);
+            else { r = (constant_time_add + a) / (constant_time_add + best); text = `${fmtTime(a)} (×${r.toFixed(2)})` + (bad ? " †" : ""); }
+            const td = el("td", { class: "shadow" }, text);
+            colorize(td, allFailed ? null : r);
+            if (cell) {
+                td.addEventListener("mousemove", ev => showTip(ev, `${q.id} on ${e.key}\n` + cell.runs.map(x => `run ${x.repeat}: ${STATUS_TEXT[x.status] || x.status}, ${fmtTime(x.time)}` + (x.detail ? " — " + x.detail.slice(0, 200) : "")).join("\n")));
+                td.addEventListener("mouseleave", hideTip);
+            }
+            tr.append(td);
         }
-        td.addEventListener("mousemove", ev => showTip(ev, [`${q.id} on ${s.directory}`,
-          ...cell.runs.map(r => `run ${r.repeat}: ${STATUS[r.status].icon} ${STATUS[r.status].label}, ${fmtTime(r.time)}` + (r.detail ? ` — ${r.detail.slice(0, 120)}` : "")),
-          cell.average !== null && best ? `average ${fmtTime(cell.average)}, ${(cell.average / best).toFixed(2)}× the fastest` : ""].filter(Boolean)));
-        td.addEventListener("mouseleave", hideTip);
-        td.addEventListener("click", () => { const d = document.getElementById("detail-" + q.id); d.open = true; d.scrollIntoView({ block: "start" }); });
-      }
-      tr.append(td);
+        body.append(tr);
     }
-    mb.append(tr);
-  }
-  mt.append(mb);
-  app.append(el("h3", {}, "Queries"), el("div", { class: "card" }, legend, mt));
 }
 
-// Details of every query.
-app.append(el("h2", {}, "Queries in detail"));
-const det = el("div", { class: "card" });
+// The header and the queries.
+const rejected = Object.entries(D.rejected || {}).map(([k, v]) => `${v} ${k}`).join(", ");
+document.getElementById("intro").textContent =
+    `Group ${D.group}: ${D.queries.length} random queries, written by ${D.model || "a model"}, on ${D.rows.toLocaleString("en")} rows of random data ` +
+    `made from the ClickBench dataset by clickhouse-obfuscator with a random seed. Every query runs ${D.repeats} times, in a pseudorandom order ` +
+    `(the same on every system), on ${D.parallel} concurrent workers, with a timeout of ${D.query_timeout} s. The results are checked against ClickHouse ` +
+    `${D.clickhouse_version} with the standard SQL semantics. The queries and the data are new for every group, so the results are comparable only within it.` +
+    (D.generated ? ` ${D.generated} candidate queries were generated, ${D.valid} passed the validation` + (rejected ? ` (rejected: ${rejected})` : "") + "." : "");
+document.getElementById("footer").textContent = `Seed ${D.seed}.`;
+
+const qdiv = document.getElementById("queries");
 for (const q of D.queries) {
-  const d = el("details", { class: "q", id: "detail-" + q.id });
-  d.append(el("summary", {}, el("b", {}, q.id), " ", q.description));
-  d.append(el("div", {}, ...q.features.map(f => el("span", { class: "tag" }, f))));
-  d.append(el("h3", {}, "SQL (the reference, ClickHouse)"), el("pre", {}, q.sql));
-  for (const M of D.machines) for (const s of M.systems) {
-    const cell = s.cells[q.id];
-    d.append(el("h3", {}, `${s.directory} on ${M.machine}`));
-    const tr = s.translations[q.id];
-    if (tr && tr !== q.sql) d.append(el("div", { class: "muted" }, s.translator && s.translator !== "none"
-      ? `Translation (${s.translator}):` : "As run (the query with the suffix of random/systems/" + s.directory + "/config):"), el("pre", {}, tr));
-    else if (tr === null) d.append(el("div", { class: "muted" }, "No translation: the system can't express this query."));
-    if (cell) {
-      d.append(el("div", {}, ...cell.runs.map(r => el("div", {}, el("span", { class: "status" },
-        el("span", { class: "dot", style: `background:${STATUS[r.status].color}` }),
-        `run ${r.repeat}: ${STATUS[r.status].icon} ${STATUS[r.status].label}, ${fmtTime(r.time)}`), r.detail ? el("span", { class: "muted" }, " — " + r.detail) : ""))));
-      const ref = s.reference[q.id];
-      if (ref) d.append(el("div", { class: "muted" }, `Reference: ${ref.status}, ${fmtTime(ref.time)}`));
+    const block = el("div", { class: "query-block", id: "q-" + q.id });
+    block.append(el("h3", {}, q.id + ". " + q.description), el("div", {}, ...q.features.map(f => el("span", { class: "feature" }, f))), el("pre", {}, q.sql));
+    const det = el("details", {}, el("summary", {}, "Translations, runs and outputs"));
+    for (const e of entries) {
+        const cell = e.cells[q.id];
+        det.append(el("h4", {}, e.key));
+        const t = e.translations[q.id];
+        if (t === null) det.append(el("div", { class: "muted" }, "No translation: the system can't express this query."));
+        else if (t && t !== q.sql) det.append(el("div", { class: "muted" }, e.translator && e.translator !== "none" ? `Translation (${e.translator}):` : `As run (with the suffix of random/systems/${e.directory}/config):`), el("pre", {}, t));
+        if (cell) det.append(el("div", {}, cell.runs.map(x => `run ${x.repeat}: ${STATUS_TEXT[x.status] || x.status}, ${fmtTime(x.time)}` + (x.detail ? " — " + x.detail : "")).join("; ")));
+        const ref = e.reference[q.id];
+        if (ref) det.append(el("div", { class: "muted" }, `Reference: ${ref.status}, ${fmtTime(ref.time)}`));
+        if (e.outputs[q.id]) det.append(el("div", { class: "muted" }, "Output (the beginning of the first run):"), el("pre", {}, e.outputs[q.id]));
     }
-    if (s.outputs[q.id]) d.append(el("div", { class: "muted" }, "Output (the beginning, repeat 1):"), el("pre", {}, s.outputs[q.id]));
-  }
-  det.append(d);
+    block.append(det);
+    qdiv.append(block);
 }
-app.append(det);
+
+let theme = window.localStorage.getItem("theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+function setTheme(t) { theme = t; document.documentElement.setAttribute("data-theme", t); window.localStorage.setItem("theme", t); render(); }
+document.getElementById("toggle-light").addEventListener("click", () => setTheme("light"));
+document.getElementById("toggle-dark").addEventListener("click", () => setTheme("dark"));
+document.documentElement.setAttribute("data-theme", theme);
+render();
 </script>
 </body>
 </html>

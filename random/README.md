@@ -131,15 +131,32 @@ Then comes a matrix of the queries that failed somewhere. If most systems
 disagree with the reference on a query, the report says so: the query or the
 reference may be wrong. The formulas are in `lib/metrics.py`.
 
-`report.py <group> --output <dir>` also writes `report.html`: one
-self-contained page (`lib/report_html.py`) with the ranking for every machine
-type, a matrix of the queries and the systems (the median time of the correct
-runs, colored by its ratio to the fastest system on the query, with the
-failures marked), and every query in detail: its SQL, the translation for
-every system, the time and status of every run, the errors and the beginning
-of the outputs. The workflow **Report the randomized benchmark** publishes it
+`report.py <group> --output <dir>` also writes `report.html`, a
+self-contained page in the style of the ClickBench page (`lib/report_html.py`).
+It has selectors of the machines, the systems and the metric, recomputed for
+the selected systems, the summary with the bars of ClickBench, the detailed
+comparison of queries and systems colored as on ClickBench, and every query in
+detail: its SQL, the translation for every system, the time and status of
+every run, the errors and the beginning of the outputs. The workflow **Report the randomized benchmark** publishes it
 on pastila.nl (`--publish`), links it in the job summary, and keeps it in the
 artifact.
+
+## Stored results
+
+Every group is saved in the repository as one file,
+`results/YYYYMMDD/<group>.json` (the day the group was launched; several groups
+can run on a day). It holds the parameters of the group, the queries with
+their SQL, features and descriptions, and for every system and machine the
+translations, the load time, the data size, the total and penalized time, the
+geomean, the reference times and every run of every query (status, start,
+time, the time reported by the system, the error, and the beginning of the
+output of a wrong result). Systems without a result are listed with the error
+from the log of their machine.
+
+The workflow **Collect the randomized benchmark results** runs every hour. It
+writes again the files of the groups with new results in the sink
+(`collect-results.py`) and publishes them with a pull request that is merged
+(`collect-new-results.sh`), as the collector of JSONBench does.
 
 ## Adding a system
 
