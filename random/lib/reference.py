@@ -93,7 +93,8 @@ def run(db, queries_file, out, timeout=600):
         queries = json.load(f)["queries"]
     status = {}
     for q in queries:
-        s, elapsed, output, error = run_query(db, q["sql"], timeout=timeout)
+        # The query as adapted for ClickHouse (see generate-queries.py).
+        s, elapsed, output, error = run_query(db, q.get("clickhouse") or q["sql"], timeout=timeout)
         if s == "ok":
             with open(os.path.join(out, q["id"] + ".tsv"), "wb") as f:
                 f.write(output)

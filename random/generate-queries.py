@@ -2,7 +2,7 @@
 """Generates the random queries of a benchmark run with a language model.
 
 Usage:
-  generate-queries.py --seed <seed> --sample-db <dir> --sample-parquet <glob> --output queries.json
+  generate-queries.py --seed <seed> --sample-db <dir> --output queries.json
                       [--count 100] [--batches 8] [--per-batch 30]
 
 Entropy. The model is not asked for "random queries" only: sampling
@@ -21,12 +21,14 @@ settings, and is dropped if it
   - fails, takes too long, or returns no rows or more than 100 rows,
   - returns different results with different numbers of threads and block
     sizes, which means that its result is not determined (an ORDER BY with
-    ties, an arbitrary LIMIT),
-  - returns a different result in DuckDB on the same sample (compared as the
-    results of the systems are, lib/validate.py), or fails there: a second
-    implementation of the standard catches the queries on which ClickHouse,
-    the reference, is wrong or deviates from the standard, and the ones whose
-    meaning is ambiguous.
+    ties, an arbitrary LIMIT).
+
+The queries run in ClickHouse, the reference, as adapted for it (the
+"clickhouse" field of queries.json): ClickHouse differs from the standard in
+a few places even with the settings of the standard semantics (byte-wise
+string functions, two problems of correlated subqueries), so the model
+rewrites every query by the rules of random/systems/clickhouse/notes.md, and
+lib/sqlrewrite.py replaces the string functions.
 """
 
 import argparse
@@ -45,7 +47,10 @@ sys.path.insert(0, os.path.join(HERE, "lib"))
 import llm  # noqa: E402
 import reference  # noqa: E402
 import sqlrewrite  # noqa: E402
-import validate  # noqa: E402
+import importlib.util  # noqa: E402
+_spec = importlib.util.spec_from_file_location("translate", os.path.join(HERE, "translate-queries.py"))
+translate = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(translate)
 
 CLICKBENCH = os.path.dirname(HERE)
 
@@ -245,43 +250,7 @@ def dynamic_check(db, sql, time_limit):
         return f"second run: {status}", seconds, rows
     if first != second:
         return "nondeterministic", seconds, rows
-    if duckdb_connection is not None:
-        reason = duckdb_check(sql, first, time_limit)
-        if reason:
-            return reason, seconds, rows
     return None, seconds, rows
-
-
-# DuckDB on the sample, for the cross-check (see the docstring).
-duckdb_connection = None
-
-
-def open_duckdb(parquet_glob):
-    import duckdb
-    global duckdb_connection
-    duckdb_connection = duckdb.connect()
-    duckdb_connection.execute("SET TimeZone = 'UTC'")
-    duckdb_connection.execute(f"CREATE VIEW hits AS SELECT * FROM read_parquet('{parquet_glob}')")
-
-
-def duckdb_check(sql, reference_output, time_limit):
-    import threading
-    timer = threading.Timer(time_limit, duckdb_connection.interrupt)
-    timer.start()
-    try:
-        cursor = duckdb_connection.execute(sql)
-        names = [d[0] for d in cursor.description]
-        rows = cursor.fetchall()
-    except Exception as e:  # any failure: the query is not portable to DuckDB
-        return f"DuckDB: {str(e).splitlines()[0][:200]}"
-    finally:
-        timer.cancel()
-
-    def text(v):
-        return "NULL" if v is None else str(v)
-    output = "\n".join([",".join(names)] + [",".join(text(v) for v in r) for r in rows]) + "\n"
-    status, detail = validate.compare(validate.parse_reference(reference_output), output.encode())
-    return None if status == "ok" else f"DuckDB disagrees: {detail[:150]}"
 
 
 def select(candidates, count, rng):
@@ -302,8 +271,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", required=True)
     parser.add_argument("--sample-db", required=True)
-    parser.add_argument("--sample-parquet", required=True,
-                        help="the files of the sample (canonical/part_*.parquet), for DuckDB")
     parser.add_argument("--output", required=True)
     parser.add_argument("--count", type=int, default=100)
     parser.add_argument("--batches", type=int, default=8)
@@ -313,7 +280,6 @@ def main():
     parser.add_argument("--parallel", type=int, default=8)
     args = parser.parse_args()
 
-    open_duckdb(args.sample_parquet)
     rng = random.Random(hashlib.sha256(args.seed.encode()).digest())
     prompts = [batch_prompt(rng, b, args.per_batch, args.seed) for b in range(args.batches)]
 
@@ -331,7 +297,12 @@ def main():
     print(f"Generated {sum(map(len, batches))} candidates in {time.time() - start:.0f} s "
           f"with {llm.describe()}", file=sys.stderr)
 
-    seen, candidates, rejected = set(), [], {}
+    def reject(reason, sql):
+        key = reason.split(":")[0]
+        rejected[key] = rejected.get(key, 0) + 1
+        print(f"rejected ({reason}): {sql[:200]}", file=sys.stderr)
+
+    seen, passed, candidates, rejected = set(), [], [], {}
     for b, batch in enumerate(batches):
         for item in batch:
             if not isinstance(item, dict) or not isinstance(item.get("sql"), str):
@@ -342,17 +313,28 @@ def main():
                 continue
             seen.add(sql.lower())
             reason = static_check(sql)
-            if reason is None:
-                reason, seconds, rows = dynamic_check(args.sample_db, sql, args.time_limit)
             if reason:
-                key = reason.split(":")[0]
-                rejected[key] = rejected.get(key, 0) + 1
-                print(f"rejected ({reason}): {sql[:200]}", file=sys.stderr)
+                reject(reason, sql)
                 continue
-            features = [f for f in item.get("features", []) if f in FEATURES]
-            candidates.append({"sql": sql, "features": features,
-                               "description": str(item.get("description", "")),
-                               "batch": b, "sample_rows": rows, "sample_time": round(seconds, 3)})
+            passed.append({"id": f"c{len(passed)}", "sql": sql, "item": item, "batch": b})
+
+    # The query for ClickHouse, which the reference runs: the rewrites for the
+    # standard semantics (random/systems/clickhouse/notes.md).
+    adapted = translate.to_clickhouse(passed)
+    for c in passed:
+        clickhouse = adapted.get(c["id"])
+        if not clickhouse:
+            reject("no ClickHouse adaptation", c["sql"])
+            continue
+        reason, seconds, rows = dynamic_check(args.sample_db, clickhouse, args.time_limit)
+        if reason:
+            reject(reason, c["sql"])
+            continue
+        item = c["item"]
+        features = [f for f in item.get("features", []) if f in FEATURES]
+        candidates.append({"sql": c["sql"], "clickhouse": clickhouse, "features": features,
+                           "description": str(item.get("description", "")),
+                           "batch": c["batch"], "sample_rows": rows, "sample_time": round(seconds, 3)})
 
     print(f"{len(candidates)} candidates passed, rejected: {json.dumps(rejected)}", file=sys.stderr)
     if len(candidates) < args.count:

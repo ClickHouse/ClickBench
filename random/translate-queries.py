@@ -19,8 +19,10 @@ system can opt out with TRANSLATE=no). A query that the target can't express
 is marked as unsupported and counts as an error of the system.
 
 random/systems/<system>/config can also give QUERY_SUFFIX, appended to every
-query: ClickHouse uses it for the settings of the standard semantics, and
-REWRITE=clickhouse-standard for the character-wise string functions.
+query: ClickHouse uses it for the settings of the standard semantics. And
+DIALECT=clickhouse takes the ClickHouse translation of every query, which the
+generator makes for the reference (to_clickhouse, with the rules of
+random/systems/clickhouse/notes.md), instead of translating again.
 """
 
 import concurrent.futures
@@ -161,21 +163,65 @@ def translate(queries, system):
     return result, llm.describe()
 
 
+CLICKHOUSE_PROMPT = """You adapt portable SQL queries for ClickHouse, for a benchmark in which ClickHouse
+computes the reference results. The adapted query must give exactly the result that
+the SQL standard defines for the original one (as PostgreSQL or DuckDB give it)."""
+
+
+def to_clickhouse(queries):
+    """{id: the query for ClickHouse, or None}: the queries rewritten by the model
+    with the rules of random/systems/clickhouse/notes.md, then with the
+    deterministic rewrite of the string functions (lib/sqlrewrite.py)."""
+    sys.path.insert(0, os.path.join(HERE, "lib"))
+    import sqlrewrite
+    notes = read(os.path.join(HERE, "systems", "clickhouse", "notes.md"))
+    batches = [queries[i:i + BATCH] for i in range(0, len(queries), BATCH)]
+
+    def ask(batch):
+        lines = "\n".join(json.dumps({"id": q["id"], "sql": q["sql"]}, ensure_ascii=False) for q in batch)
+        text = f"""Adapt these queries for ClickHouse.
+
+{notes}
+Change only what the rules require; when no rule applies, return the query unchanged.
+Every query stays one statement on one line.
+
+The queries, one JSON object per line:
+{lines}
+
+Answer with a JSON object that maps every id to the adapted query, and nothing else.
+"""
+        for attempt in range(3):
+            try:
+                answer = extract_json(llm.complete(CLICKHOUSE_PROMPT, text))
+                missing = [q["id"] for q in batch if not isinstance(answer.get(q["id"]), str)]
+                if missing:
+                    raise RuntimeError(f"no adaptation for {missing}")
+                return {q["id"]: sqlrewrite.clickhouse_standard(answer[q["id"]].strip().rstrip(";")) for q in batch}
+            except Exception as e:  # a malformed answer is retried; after that, the queries are dropped
+                print(f"clickhouse: adaptation attempt {attempt + 1} failed: {e}", file=sys.stderr)
+        return {q["id"]: None for q in batch}
+
+    result = {}
+    with concurrent.futures.ThreadPoolExecutor(8) as pool:
+        for part in pool.map(ask, batches):
+            result.update(part)
+    return result
+
+
 def main():
     if len(sys.argv) != 4:
         sys.exit(__doc__)
     with open(sys.argv[1]) as f:
         queries = json.load(f)["queries"]
     system = sys.argv[2]
-    translations, translator = translate(queries, system)
+    if system_config(system).get("DIALECT", "") == "clickhouse":
+        # The ClickHouse translation of the generator, which the reference runs.
+        translations = {q["id"]: q.get("clickhouse") or q["sql"] for q in queries}
+        translator = "clickhouse (the reference's)"
+    else:
+        translations, translator = translate(queries, system)
     # A fixed suffix for every query, e.g. the SETTINGS clause that selects the
     # standard semantics in ClickHouse.
-    # The rewrite for ClickHouse's string functions (lib/sqlrewrite.py), as
-    # for the reference.
-    if system_config(system).get("REWRITE", "") == "clickhouse-standard":
-        sys.path.insert(0, os.path.join(HERE, "lib"))
-        import sqlrewrite
-        translations = {k: sqlrewrite.clickhouse_standard(v) if v else v for k, v in translations.items()}
     suffix = system_config(system).get("QUERY_SUFFIX", "")
     if len(suffix) >= 2 and suffix[0] == suffix[-1] == '"':
         suffix = suffix[1:-1]
