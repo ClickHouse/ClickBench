@@ -38,6 +38,7 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 import metrics  # noqa: E402
+import production  # noqa: E402
 import revalidate  # noqa: E402
 
 GROUP_RE = re.compile(r"^[0-9a-f-]{36}$")
@@ -152,6 +153,14 @@ def collect(sink, group):
         missing.append({"directory": system, "machine": log["machine"] if log else None,
                         "error": last_error(log["content"]) if log else "no result and no log yet"})
 
+    # The requirements of the Production category (lib/production.py); a
+    # system without a result fails them on the machine type of its launch.
+    verdicts = []
+    for machine in sorted({m for m, _ in latest} | {m["machine"] for m in missing if m["machine"]}):
+        for v in production.check([r for (m, _), r in latest.items() if m == machine], machine,
+                                  [m for m in missing if m["machine"] == machine]):
+            verdicts.append({"machine": machine, **v, "demote": production.demote(v)})
+
     day = (launched or (logs[0]["t"] if logs else "")).split(" ")[0]
     return {
         "group": group, "date": day, "launched": launched,
@@ -160,7 +169,7 @@ def collect(sink, group):
         "clickhouse_version": first.get("clickhouse_version"),
         "generation": {k: meta.get(k) for k in ("model", "generated", "valid", "rejected", "coverage")},
         "queries": [{k: q.get(k) for k in ("id", "sql", "features", "description")} for q in meta.get("queries", [])],
-        "systems": systems, "missing": missing,
+        "systems": systems, "missing": missing, "production": verdicts,
     }
 
 

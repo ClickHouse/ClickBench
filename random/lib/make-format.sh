@@ -60,17 +60,12 @@ case "${KIND}" in
         # With several threads, the writer buffers row groups without a
         # bound when the input is faster (7 GB for 4.5M rows); with one, it
         # stays at about 1.5 GB.
-        # Row groups of 500K rows or more (the original file: 442K), and at
-        # most a thousand of them. Hyper accepts neither a footer over 16 MiB
-        # (the default limit of 512 MB per row group made more than a thousand
-        # row groups for a billion rows, and a footer of 35 MB; Umbra crashed
-        # on that file) nor too large reads: with 250 row groups of 4M rows it
-        # failed with "request exceeding maximum allowed size". A row group
-        # takes about 14 KB of the footer, so a thousand take about 14 MB.
+        # Row groups of the size of the original file's (442K rows on
+        # average), so a billion rows make about 2300 of them. The layout
+        # follows the original and is not adjusted to the limits of a system:
+        # a system that can't read a larger file of the same layout fails.
         SINGLE="$(sed -E 's/ DateTime(,|$)/ Int64\1/g; s/ Date(,|$)/ UInt16\1/g' <<< "${STRUCTURE}")"
-        total_rows=$(awk '{ s += $3 } END { print s }' "${WORK}/parts.txt")
-        group_rows=$(( (total_rows + 999) / 1000 ))
-        [ "${group_rows}" -lt 500000 ] && group_rows=500000
+        group_rows=442000
         for i in "${parts[@]}"; do
             "${CH}" local --max_threads 1 --input_format_parquet_preserve_order 1 --query "
                 SELECT ${PHYSICAL} FROM file('${WORK}/canonical/part_${i}.parquet', Parquet, \$\$${STRUCTURE}\$\$) FORMAT Native"

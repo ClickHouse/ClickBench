@@ -149,6 +149,32 @@ every run, the errors and the beginning of the outputs. The workflow **Report th
 on pastila.nl (`--publish`), links it in the job summary, and keeps it in the
 artifact.
 
+## Production requirements
+
+The benchmark is meant to find immature systems, so it is not adjusted to the
+limits of any of them: the data has the layout of the original files at a larger
+scale, and the queries are portable SQL. A failure is a result. Two
+requirements of the Production category of ClickBench (see "System Categories"
+in the main README) are about changed queries, and the report checks them for
+every system and machine type (`lib/production.py`):
+
+- "changing benchmark queries does not lead to crashes or deadlocks": the
+  system was not restarted during the run, no execution lost the server (a lost
+  connection, a crash), and no execution ran into the query timeout. A system
+  of the group without a result (it failed to install, load or run) fails too.
+- "changing benchmark queries does not widen the performance gap to the
+  baseline by more than two times compared to ClickHouse": the gap on the
+  random queries is the geometric mean over the queries of
+  `(0.01 + average) / (0.01 + average of ClickHouse)`, failures counting as in
+  the geomean; the gap on the standard queries is the same ratio of the hot
+  runs (the best of the second and third) of the latest results of the same
+  directory and of `clickhouse` in the main benchmark on the same machine type.
+  The widening is their ratio; more than 2 fails.
+
+A Production or Elite system that fails is marked for demotion in the report;
+the category itself is changed in its `template.json`, as for the other
+requirements.
+
 ## Stored results
 
 Every group is saved in the repository as one file,
@@ -159,7 +185,8 @@ translations, the load time, the data size, the total and penalized time, the
 geomean, the reference times and every run of every query (status, start,
 time, the time reported by the system, the error, and the beginning of the
 output of a wrong result). Systems without a result are listed with the error
-from the log of their machine.
+from the log of their machine. `production` has the verdicts of the Production
+requirements for every system and machine type.
 
 The workflow **Collect the randomized benchmark results** runs every hour. It
 writes again the files of the groups with new results in the sink

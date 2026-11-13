@@ -430,6 +430,7 @@
    "counts": {
     "ok": 90
    },
+   "revalidated": false,
    "error_rate": 0.0,
    "restarts": 0,
    "reference": {
@@ -1335,6 +1336,7 @@
    "counts": {
     "ok": 90
    },
+   "revalidated": false,
    "error_rate": 0.0,
    "restarts": 0,
    "reference": {
@@ -2240,6 +2242,7 @@
     "error": 18,
     "timeout": 4
    },
+   "revalidated": false,
    "error_rate": 0.2444,
    "restarts": 0,
    "reference": {
@@ -3106,5 +3109,55 @@
    ]
   }
  ],
- "missing": []
+ "missing": [],
+ "production": [
+  {
+   "machine": "c6a.4xlarge",
+   "directory": "duckdb-parquet-partitioned",
+   "category": "challenger",
+   "restarts": 0,
+   "crashed": 0,
+   "timeouts": 0,
+   "random_gap": 1.1639952522668624,
+   "standard_gap": 2.3758286651946103,
+   "standard_date": "2026-11-10",
+   "widening": 0.48993232101251566,
+   "passes": true,
+   "reasons": [],
+   "demote": false
+  },
+  {
+   "machine": "c6a.4xlarge",
+   "directory": "clickhouse",
+   "category": "elite",
+   "restarts": 0,
+   "crashed": 0,
+   "timeouts": 0,
+   "random_gap": 1.0,
+   "standard_gap": 1.0,
+   "standard_date": null,
+   "widening": 1.0,
+   "passes": true,
+   "reasons": [],
+   "demote": false
+  },
+  {
+   "machine": "c6a.4xlarge",
+   "directory": "rayforce",
+   "category": "challenger",
+   "restarts": 0,
+   "crashed": 0,
+   "timeouts": 4,
+   "random_gap": 11.95706307431727,
+   "standard_gap": 0.4573280963838858,
+   "standard_date": "2026-11-06",
+   "widening": 26.14548104274003,
+   "passes": false,
+   "reasons": [
+    "4 executions hit the timeout of 600 s",
+    "the gap to ClickHouse widens 26.1 times"
+   ],
+   "demote": false
+  }
+ ]
 }

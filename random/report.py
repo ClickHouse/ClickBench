@@ -37,6 +37,7 @@ Columns:
 
 import argparse
 import json
+import math
 import os
 import sys
 import urllib.parse
@@ -44,6 +45,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 import metrics  # noqa: E402
+import production  # noqa: E402
 import revalidate  # noqa: E402
 import report_html  # noqa: E402
 
@@ -95,6 +97,29 @@ def human_size(n):
     return f"{n:.1f} PB"
 
 
+def production_section(results, machine):
+    """The requirements of the Production category that the randomized queries check (lib/production.py)."""
+    verdicts = production.check(results, machine)
+    lines = [f"### Production requirements on {machine}", "",
+             "| System | Category | Restarts | Lost server | Timeouts | Gap, random | Gap, standard | Widening | Verdict |",
+             "|---|---|---:|---:|---:|---:|---:|---:|---|"]
+
+    def num(x, fmt="{:.2f}"):
+        return "-" if x is None else fmt.format(x)
+
+    for v in sorted(verdicts, key=lambda v: (not v["passes"], v["widening"] or math.inf)):
+        verdict = "passes" if v["passes"] else ("**demote**: " if production.demote(v) else "fails: ") + "; ".join(v["reasons"])
+        lines.append(f"| {v['directory']} | {v['category'] or '-'} | {num(v['restarts'], '{}')} | {num(v['crashed'], '{}')} | "
+                     f"{num(v['timeouts'], '{}')} | {num(v['random_gap'])} | {num(v['standard_gap'])} | "
+                     f"{num(v['widening'])} | {verdict} |")
+    lines += ["", "\"changing benchmark queries does not lead to crashes or deadlocks\": no restarts of the system, "
+              "no executions that lost the server, no timeouts. \"changing benchmark queries does not widen the "
+              f"performance gap to the baseline by more than two times compared to ClickHouse\": the gap to ClickHouse "
+              "(geomean of the time ratios) on the random queries over the gap of the hot runs in the main benchmark "
+              f"on {machine}, at most {production.MAX_WIDENING:g}. A Production or Elite system that fails is demoted.", ""]
+    return lines
+
+
 def report(results, group):
     lines = [f"# Randomized benchmark, group {group}", ""]
     if not results:
@@ -128,6 +153,7 @@ def report(results, group):
                   "slowest correct execution of the query in the group), relative to the best system's average as "
                   "(0.01 + time) / (0.01 + best); the geometric mean over the queries. Lower is better; 1 is the best "
                   "on every query.", ""]
+        lines += production_section(here, machine)
     # Queries where many systems fail: either hard queries, or a problem with
     # the query or the reference when nearly every system disagrees with it.
     per_query = {}

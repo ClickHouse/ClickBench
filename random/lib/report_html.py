@@ -20,6 +20,7 @@ the systems can't inject markup.
 import json
 
 import metrics
+import production
 
 FAILED = ("wrong", "error", "timeout", "unsupported")
 
@@ -69,7 +70,10 @@ def summarize(results, payloads):
                 "reference": r.get("reference", {}), "commit": r.get("commit", ""),
             })
         systems.sort(key=lambda s: (s["geomean"] is None, s["geomean"] or 0))
-        machines.append({"machine": machine, "systems": systems})
+        verdicts = production.check([r for (m, _), r in latest.items() if m == machine], machine)
+        for v in verdicts:
+            v["demote"] = production.demote(v)
+        machines.append({"machine": machine, "systems": systems, "production": verdicts})
     meta = next(iter(payloads.values()))["queries"] if payloads else {}
     return {
         "group": first.get("group", ""), "rows": first["rows"], "repeats": first["repeats"],
@@ -171,6 +175,9 @@ footer { padding: 2rem 0; }
 <div class="stick-left"><h2>Detailed Comparison</h2>
 <p class="intro muted">The average time of the runs of every query and its ratio to the best system's average; a failed run counts as 5× the slowest correct run of the query. Hover over a cell for the runs; click a query for its SQL, the translations and the outputs.</p></div>
 <table id="details"><thead><tr id="details_head"></tr></thead><tbody id="details_body"></tbody></table>
+<div class="stick-left"><h2>Production Requirements</h2>
+<p class="intro muted">Two requirements of the Production category of ClickBench are checked by changing the queries: "changing benchmark queries does not lead to crashes or deadlocks" (no restarts of the system, no executions that lost the server, no timeouts) and "changing benchmark queries does not widen the performance gap to the baseline by more than two times compared to ClickHouse" (the gap to ClickHouse on these queries, the geomean of the ratios of the average times, over the gap of the hot runs in the main benchmark on the same machine). A Production or Elite system that fails is demoted.</p>
+<div id="production"></div></div>
 <div class="stick-left"><h2>Queries</h2></div>
 <div class="stick-left" id="queries"></div>
 <footer class="stick-left muted" id="footer"></footer>
@@ -376,6 +383,23 @@ for (const q of D.queries) {
     block.append(det);
     qdiv.append(block);
 }
+
+function renderProduction() {
+    const div = document.getElementById("production");
+    const num = (x, d) => x === null || x === undefined ? "–" : d === undefined ? String(x) : x.toFixed(d);
+    for (const M of D.machines) {
+        const rows = [...(M.production || [])].sort((a, b) => (a.passes === b.passes ? 0 : a.passes ? -1 : 1) || (a.widening ?? Infinity) - (b.widening ?? Infinity));
+        const table = el("table", {}, el("tr", {}, ...["System", "Category", "Restarts", "Lost server", "Timeouts", "Gap, random", "Gap, standard", "Widening", "Verdict"].map(h => el("th", {}, h))));
+        for (const v of rows) {
+            const verdict = v.passes ? "passes" : (v.demote ? "demote: " : "fails: ") + v.reasons.join("; ");
+            table.append(el("tr", {}, el("td", {}, v.directory), el("td", {}, v.category || "–"), el("td", {}, num(v.restarts)), el("td", {}, num(v.crashed)),
+                el("td", {}, num(v.timeouts)), el("td", {}, num(v.random_gap, 2)), el("td", {}, num(v.standard_gap, 2)), el("td", {}, num(v.widening, 2)),
+                el("td", { style: v.passes ? "" : v.demote ? "font-weight: bold" : "" }, verdict)));
+        }
+        div.append(el("h3", {}, M.machine), table);
+    }
+}
+renderProduction();
 
 let theme = window.localStorage.getItem("theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 function setTheme(t) { theme = t; document.documentElement.setAttribute("data-theme", t); window.localStorage.setItem("theme", t); render(); }

@@ -299,6 +299,7 @@ How the requirements that depend on the results are checked:
 - the categories are assigned per directory (benchmark entry), so variants of the same product can be in different categories; for example, entries that query Parquet files or keep the data only in memory (tags `stateless`, `in-memory`, `dataframe`) have no durable storage with inserts and stop at Challenger;
 - "all queries succeed" means every try of every query returned a result;
 - for Production, the self-managed entry must have results on c6a.large and on a `metal` machine, and all queries must succeed on all machines except t3a.small;
+- the two requirements about changing benchmark queries are checked by the randomized benchmark (`random/`), which runs new random queries on new random data: see "Production requirements" in `random/README.md`;
 - for Elite, self-managed entries are compared with ClickHouse on the same machine, managed services are compared with ClickHouse Cloud with the nearest total amount of memory (then the nearest number of nodes), or with the best ClickHouse Cloud result when the service has no size in memory; the best machine of the entry is taken for every metric, and concurrent QPS is not considered if it is not measured for the entry.
 
 A system can move to another category when its results change, for example, after adding results on aarch64 or on small machines.
