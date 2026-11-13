@@ -21,6 +21,10 @@ The queries are random, so the numbers are comparable only within a group:
 the same queries and the same data for every system and machine.
 
 Columns:
+  Geomean         the geometric mean of the times relative to the best system,
+                  as on the ClickBench page but with the average time of every
+                  query, failures counting as 5x the slowest correct execution
+                  (see lib/metrics.py); the systems are ranked by it
   Total time      the wall clock time of all executions (queries x repeats)
                   with the concurrent workers
   Penalized time  the total time plus the query timeout for every failed
@@ -39,6 +43,7 @@ import urllib.parse
 import urllib.request
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+import metrics  # noqa: E402
 import report_html  # noqa: E402
 
 FAILED = ("wrong", "error", "timeout", "unsupported")
@@ -103,25 +108,25 @@ def report(results, group):
     for r in results:
         latest[(r["machine"], r["directory"])] = r
     for machine in sorted({m for m, _ in latest}):
-        rows = []
-        for (m, directory), r in latest.items():
-            if m != machine:
-                continue
-            counts = r["counts"]
-            failed = sum(counts.get(s, 0) for s in FAILED)
-            penalized = r["total_time"] + failed * r["query_timeout"] / r["parallel"]
-            rows.append((penalized, directory, r, counts, failed))
-        rows.sort(key=lambda x: x[0])
+        here = [r for (m, _), r in latest.items() if m == machine]
+        geo = metrics.geomeans(here)
+        rows = sorted(here, key=lambda r: (geo[r["directory"]] is None, geo[r["directory"]] or 0))
         lines += [f"## {machine}", "",
-                  "| System | Penalized time | Total time | OK | Wrong | Errors | Unverified | Load time | Data size |",
-                  "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
-        for penalized, directory, r, counts, failed in rows:
+                  "| System | Geomean | Total time | Penalized time | OK | Wrong | Errors | Unverified | Load time | Data size |",
+                  "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+        for r in rows:
+            counts = r["counts"]
             errors = sum(counts.get(s, 0) for s in ("error", "timeout", "unsupported"))
             load = f"{r['load_time']:.0f} s" if isinstance(r.get("load_time"), (int, float)) else "-"
-            lines.append(f"| {directory} | {penalized:.0f} s | {r['total_time']:.0f} s | {counts.get('ok', 0)} | "
-                         f"{counts.get('wrong', 0)} | {errors} | {counts.get('unverified', 0)} | {load} | "
-                         f"{human_size(r.get('data_size'))} |")
-        lines.append("")
+            g = geo[r["directory"]]
+            lines.append(f"| {r['directory']} | {g:.2f} | {r['total_time']:.0f} s | {metrics.penalized_time(r):.0f} s | "
+                         f"{counts.get('ok', 0)} | {counts.get('wrong', 0)} | {errors} | {counts.get('unverified', 0)} | "
+                         f"{load} | {human_size(r.get('data_size'))} |" if g is not None else
+                         f"| {r['directory']} | - | {r['total_time']:.0f} s | {metrics.penalized_time(r):.0f} s | - | - | - | - | {load} | - |")
+        lines += ["", "Geomean: for every query, the average time of the system (a failed execution counts as 5x the "
+                  "slowest correct execution of the query in the group), relative to the best system's average as "
+                  "(0.01 + time) / (0.01 + best); the geometric mean over the queries. Lower is better; 1 is the best "
+                  "on every query.", ""]
     # Queries where many systems fail: either hard queries, or a problem with
     # the query or the reference when nearly every system disagrees with it.
     per_query = {}

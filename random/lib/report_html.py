@@ -2,10 +2,11 @@
 file (no external scripts, styles or fonts).
 
   - the parameters of the group,
-  - for every machine type: the systems ranked by the penalized time (bars),
+  - for every machine type: the systems ranked by the geomean of the relative
+    times (bars, see metrics.py), with the total and the penalized time,
     with the counts of correct, wrong and failed executions, the load time and
     the data size,
-  - a matrix of queries x systems: the median time of the correct executions,
+  - a matrix of queries x systems: the average time of the correct executions,
     colored by the ratio to the fastest system on that query; failures are
     marked with an icon and a label,
   - for every query (click a row): the SQL, its features, the translation for
@@ -17,7 +18,8 @@ the systems can't inject markup.
 """
 
 import json
-import statistics
+
+import metrics
 
 FAILED = ("wrong", "error", "timeout", "unsupported")
 
@@ -38,12 +40,12 @@ def summarize(results, payloads):
                    for i in sorted({e["id"] for r in results for e in r["executions"]})]
     machines = []
     for machine in sorted({m for m, _ in latest}):
+        geo = metrics.geomeans([r for (m, _), r in latest.items() if m == machine])
         systems = []
         for (m, directory), r in latest.items():
             if m != machine:
                 continue
             counts = r["counts"]
-            failed = sum(counts.get(s, 0) for s in FAILED)
             per_query = {}
             for e in r["executions"]:
                 per_query.setdefault(e["id"], []).append(
@@ -53,12 +55,12 @@ def summarize(results, payloads):
             for qid, runs in per_query.items():
                 ok = [x["time"] for x in runs if x["status"] == "ok"]
                 statuses = sorted({x["status"] for x in runs})
-                cells[qid] = {"median": statistics.median(ok) if ok else None, "statuses": statuses,
+                cells[qid] = {"average": sum(ok) / len(ok) if ok else None, "statuses": statuses,
                               "runs": sorted(runs, key=lambda x: x["repeat"])}
             translated = payloads.get(directory, {}).get("translated", {})
             systems.append({
                 "directory": directory, "system": r.get("system") or directory,
-                "penalized": r["total_time"] + failed * r["query_timeout"] / r["parallel"],
+                "penalized": metrics.penalized_time(r), "geomean": geo.get(directory),
                 "total": r["total_time"], "counts": counts, "load_time": r.get("load_time"),
                 "data_size": r.get("data_size"), "restarts": r.get("restarts", 0),
                 "translator": r.get("translator") or translated.get("translator"),
@@ -66,7 +68,7 @@ def summarize(results, payloads):
                 "outputs": r.get("outputs", {}), "cells": cells,
                 "reference": r.get("reference", {}), "commit": r.get("commit", ""),
             })
-        systems.sort(key=lambda s: s["penalized"])
+        systems.sort(key=lambda s: (s["geomean"] is None, s["geomean"] or 0))
         machines.append({"machine": machine, "systems": systems})
     meta = next(iter(payloads.values()))["queries"] if payloads else {}
     return {
@@ -200,52 +202,50 @@ app.append(el("div", { class: "card" }, params));
 for (const M of D.machines) {
   app.append(el("h2", {}, M.machine));
 
-  // Ranking: bars of the penalized time, one hue: the total time solid, the
-  // penalty for failures lighter. The scale ends at 4x the fastest system, so
-  // that one slow system doesn't flatten the others; longer bars are cut.
-  const best = Math.min(...M.systems.map(s => s.penalized));
-  const scale = Math.max(...M.systems.map(s => Math.min(s.penalized, 4 * best)));
+  // Ranking by the geomean of the relative times (one measure, one hue). The
+  // scale ends at 4x the best geomean, so that one slow system doesn't
+  // flatten the others; longer bars are cut.
+  const best = Math.min(...M.systems.map(s => s.geomean ?? Infinity));
+  const scale = Math.max(...M.systems.map(s => Math.min(s.geomean ?? 0, 4 * best)));
   const rank = el("table", { class: "rank" }, el("thead", {}, el("tr", {},
-    el("th", { class: "l" }, "System"), el("th", { class: "l barcell" }, "Penalized time"),
-    el("th", {}, "× fastest"), el("th", {}, "Total time"),
-    el("th", {}, "Correct"), el("th", {}, "Wrong"), el("th", {}, "Errors"), el("th", {}, "Timeouts"), el("th", {}, "Unsupported"),
-    el("th", {}, "Unverified"), el("th", {}, "Load time"), el("th", {}, "Data size"))));
+    el("th", { class: "l" }, "System"), el("th", { class: "l barcell" }, "Geomean of relative times"),
+    el("th", {}, "Total time"), el("th", {}, "Penalized time"),
+    el("th", {}, "Correct"), el("th", {}, "Wrong"), el("th", { class: "l" }, "Failed / unverified"),
+    el("th", {}, "Load time"), el("th", {}, "Data size"))));
   const tb = el("tbody");
   for (const s of M.systems) {
-    // Widths in % of the space left for the bar (the label takes 64px).
-    const pct = v => Math.min(100, 100 * v / scale);
-    const wTotal = pct(s.total), wAll = pct(s.penalized);
+    const g = s.geomean ?? 0;
+    const w = scale > 0 ? Math.min(100, 100 * g / scale) : 0;
     const bar = el("div", { class: "bar" },
-      el("span", { class: "fill penalty", style: `width:max(2px, calc((100% - 64px) * ${wAll / 100}))` }),
-      el("span", { class: "fill total", style: `width:max(2px, calc((100% - 64px) * ${wTotal / 100} - ${wAll > wTotal ? 2 : 0}px))` }),
-      s.penalized > scale ? el("span", { class: "cut", style: `left:calc((100% - 64px) * 0.9)` }) : null,
-      el("span", { class: "val", style: `left:calc((100% - 64px) * ${wAll / 100} + 6px)` }, fmtTime(s.penalized)));
+      el("span", { class: "fill", style: `width:max(2px, calc((100% - 64px) * ${w / 100}))` }),
+      g > scale ? el("span", { class: "cut", style: `left:calc((100% - 64px) * 0.9)` }) : null,
+      el("span", { class: "val", style: `left:calc((100% - 64px) * ${w / 100} + 6px)` }, s.geomean === null ? "–" : g.toFixed(2) + "×"));
     const c = s.counts;
     const n = k => { const v = c[k] || 0; if (!v || k === "ok") return String(v); const st = STATUS[k];
       return el("span", { class: "status" }, el("span", { class: "dot", style: `background:${st.color}` }), `${st.icon} ${v}`); };
     const tr = el("tr", { class: "sys" }, el("td", { class: "l" }, s.directory), el("td", { class: "barcell" }, bar),
-      el("td", {}, (s.penalized / best).toFixed(2) + "×"), el("td", {}, fmtTime(s.total)), el("td", {}, n("ok")), el("td", {}, n("wrong")), el("td", {}, n("error")),
-      el("td", {}, n("timeout")), el("td", {}, n("unsupported")), el("td", {}, n("unverified")),
+      el("td", {}, fmtTime(s.total)), el("td", {}, fmtTime(s.penalized)), el("td", {}, n("ok")), el("td", {}, n("wrong")),
+      el("td", { class: "l" }, ...(["error", "timeout", "unsupported", "unverified"].filter(k => c[k]).map(k => el("span", { style: "margin-right:10px" }, n(k)))), ["error", "timeout", "unsupported", "unverified"].some(k => c[k]) ? null : "0"),
       el("td", {}, fmtTime(s.load_time)), el("td", {}, fmtSize(s.data_size)));
     tr.addEventListener("mousemove", ev => showTip(ev, [s.directory,
-      `penalized ${fmtTime(s.penalized)} = total ${fmtTime(s.total)} + ${(c.wrong||0)+(c.error||0)+(c.timeout||0)+(c.unsupported||0)} failed × ${D.query_timeout} s / ${D.parallel} workers`,
+      `geomean ${s.geomean === null ? "–" : s.geomean.toFixed(3) + "×"}; total ${fmtTime(s.total)}; penalized ${fmtTime(s.penalized)} = total + ${(c.wrong||0)+(c.error||0)+(c.timeout||0)+(c.unsupported||0)} failed × ${D.query_timeout} s / ${D.parallel} workers`,
       `translator: ${s.translator || "none"}`, s.restarts ? `restarts: ${s.restarts}` : ""].filter(Boolean)));
     tr.addEventListener("mouseleave", hideTip);
     tb.append(tr);
   }
   rank.append(tb);
   app.append(el("div", { class: "card" }, rank,
-    el("p", { class: "muted" }, "Penalized time (lower is better): the total wall-clock time of all executions (solid), plus the query timeout for every failed execution divided by the number of workers (light), so failing fast is no better than the slowest answer. The scale ends at 4× the fastest system; longer bars are cut (⫽).")));
+    el("p", { class: "muted" }, "Geomean (lower is better, 1× is the best on every query), as on the ClickBench page but with averages: for every query, the average time of the system's runs, a failed run counting as 5× the slowest correct run of the query in the group; its ratio to the best system's average, as (0.01 + time) / (0.01 + best); the geometric mean of the ratios. The scale ends at 4× the best; longer bars are cut (⫽). Total time: the wall-clock time of all runs with the concurrent workers. Penalized time: the total time plus the query timeout for every failed run, divided by the number of workers.")));
 
   // Matrix: queries × systems.
-  const legend = el("div", { class: "legend" }, "Median time of the correct runs, by its ratio to the fastest system on the query:",
+  const legend = el("div", { class: "legend" }, "Average time of the correct runs, by its ratio to the fastest system on the query:",
     ...BIN_LABELS.map((l, i) => el("span", {}, el("span", { class: "sw", style: `background:var(--s${i})` }), l)),
     ...ORDER.map(k => el("span", {}, el("span", { class: "dot", style: `background:${STATUS[k].color}` }), ` ${STATUS[k].icon} ${STATUS[k].label}`)));
   const mt = el("table", { class: "matrix" });
   mt.append(el("thead", {}, el("tr", {}, el("th", { class: "l" }, "Query"), ...M.systems.map(s => el("th", {}, s.directory)))));
   const mb = el("tbody");
   for (const q of D.queries) {
-    const meds = M.systems.map(s => (s.cells[q.id] || {}).median).filter(x => x !== null && x !== undefined);
+    const meds = M.systems.map(s => (s.cells[q.id] || {}).average).filter(x => x !== null && x !== undefined);
     const best = meds.length ? Math.min(...meds) : null;
     const tr = el("tr", {}, el("td", { class: "q", title: q.description }, q.id));
     tr.firstChild.addEventListener("click", () => { const d = document.getElementById("detail-" + q.id); d.open = true; d.scrollIntoView({ block: "start" }); });
@@ -255,18 +255,18 @@ for (const M of D.machines) {
       if (!cell) { td = el("td", { class: "cell fail" }, "–"); }
       else {
         const bad = ORDER.find(k => cell.statuses.includes(k));
-        if (cell.median === null || cell.median === undefined) {
+        if (cell.average === null || cell.average === undefined) {
           const st = STATUS[bad || "error"];
           td = el("td", { class: "cell fail" }, el("span", { class: "status" }, el("span", { class: "dot", style: `background:${st.color}` }), `${st.icon} ${st.label}`));
         } else {
-          const ratio = best > 0 ? cell.median / best : 1;
+          const ratio = best > 0 ? cell.average / best : 1;
           const b = binOf(ratio);
-          const text = fmtTime(cell.median) + (bad ? " " + STATUS[bad].icon : "");
+          const text = fmtTime(cell.average) + (bad ? " " + STATUS[bad].icon : "");
           td = el("td", { class: "cell", style: `background:var(--s${b});color:var(--t${b})` }, text);
         }
         td.addEventListener("mousemove", ev => showTip(ev, [`${q.id} on ${s.directory}`,
           ...cell.runs.map(r => `run ${r.repeat}: ${STATUS[r.status].icon} ${STATUS[r.status].label}, ${fmtTime(r.time)}` + (r.detail ? ` — ${r.detail.slice(0, 120)}` : "")),
-          cell.median !== null && best ? `median ${fmtTime(cell.median)}, ${(cell.median / best).toFixed(2)}× the fastest` : ""].filter(Boolean)));
+          cell.average !== null && best ? `average ${fmtTime(cell.average)}, ${(cell.average / best).toFixed(2)}× the fastest` : ""].filter(Boolean)));
         td.addEventListener("mouseleave", hideTip);
         td.addEventListener("click", () => { const d = document.getElementById("detail-" + q.id); d.open = true; d.scrollIntoView({ block: "start" }); });
       }

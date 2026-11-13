@@ -109,13 +109,27 @@ of repeats (`RANDOM_REPEATS`, 3), and the time limit of a query
 
 ## The report
 
-For every machine type, the systems are ranked by the penalized time: the
-total time plus the query timeout for every failed execution, divided by the
-number of workers, so that failing fast is no better than the slowest answer.
-The table also shows the total time, the counts of correct, wrong, failed and
-unverified executions, the load time and the data size. Then comes a matrix of
-the queries that failed somewhere. If most systems disagree with the reference
-on a query, the report says so: the query or the reference may be wrong.
+For every machine type, the systems are ranked by the **geomean** of their
+relative times, which is close to the ClickBench page, except that it takes
+the average time of every query instead of the best one. The average accounts
+for the concurrency and smooths over the first, colder runs.
+
+1. For every system and query, take the average time of its runs. A failed
+   run (a wrong result, an error, a timeout, a query the system can't
+   express) counts as 5× the slowest correct run of that query in the group.
+2. Divide it by the best system's average as `(0.01 + time) / (0.01 + best)`,
+   with the constant of ClickBench, so that very short queries don't
+   dominate. Queries on which every system fails are skipped.
+3. Take the geometric mean of these ratios over the queries. 1 means the best
+   on every query; lower is better.
+
+The table also shows the **total time** (the wall clock of all runs with the
+concurrent workers), the **penalized time** (the total time plus the query
+timeout for every failed run, divided by the number of workers), the counts of
+correct, wrong, failed and unverified runs, the load time and the data size.
+Then comes a matrix of the queries that failed somewhere. If most systems
+disagree with the reference on a query, the report says so: the query or the
+reference may be wrong. The formulas are in `lib/metrics.py`.
 
 `report.py <group> --output <dir>` also writes `report.html`: one
 self-contained page (`lib/report_html.py`) with the ranking for every machine
