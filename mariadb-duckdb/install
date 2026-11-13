@@ -1,7 +1,29 @@
 #!/bin/bash
 set -eu
 
-CI_SOURCES_URL="https://ci.mariadb.org/70621/amd64-ubuntu-2404-deb-autobake/mariadb.sources"
+# The DuckDB engine comes from the packages of MariaDB's CI. Since MariaDB 13
+# it is a separate package, mariadb-plugin-duckdb, built on the main branch;
+# the 11.4 builds don't have it anymore (it was disabled there in favor of an
+# externally built engine), and CI builds expire after a few months, so a
+# pinned build breaks: take the newest successful build of main that has the
+# package. MARIADB_CI_BUILD=<tarball build number> pins one. There are amd64
+# packages only.
+CI_BUILDER=amd64-ubuntu-2404-deb-autobake
+command -v jq >/dev/null || sudo apt-get install -y jq
+[ "$(dpkg --print-architecture)" = amd64 ] || { echo "MariaDB's CI has DuckDB engine packages for amd64 only" >&2; exit 1; }
+if [ -z "${MARIADB_CI_BUILD:-}" ]; then
+    for n in $(curl -fsS --retry 5 'https://buildbot.mariadb.org/api/v2/builders/1/builds?order=-number&limit=300&property=branch&results=0' \
+               | jq -r '.builds[] | select(.properties.branch[0] == "main") | .number'); do
+        if curl -fsS --max-time 60 "https://ci.mariadb.org/${n}/${CI_BUILDER}/debs/Packages" 2>/dev/null \
+               | grep -qx 'Package: mariadb-plugin-duckdb'; then
+            MARIADB_CI_BUILD="$n"
+            break
+        fi
+    done
+fi
+[ -n "${MARIADB_CI_BUILD:-}" ] || { echo "No build of MariaDB's CI with mariadb-plugin-duckdb" >&2; exit 1; }
+echo "MariaDB CI build: ${MARIADB_CI_BUILD}"
+CI_SOURCES_URL="https://ci.mariadb.org/${MARIADB_CI_BUILD}/${CI_BUILDER}/mariadb.sources"
 
 # Idempotent: if DuckDB plugin is already active, nothing to do.
 if sudo mariadb -e "SELECT PLUGIN_STATUS FROM information_schema.PLUGINS WHERE PLUGIN_NAME='DuckDB';" 2>/dev/null | grep -q 'ACTIVE'; then
@@ -21,7 +43,7 @@ fi
 
 sudo wget -q -O /etc/apt/sources.list.d/mariadb-duckdb-ci.sources "$CI_SOURCES_URL"
 sudo apt-get update -y
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server mariadb-client
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server mariadb-client mariadb-plugin-duckdb
 
 # Scale duckdb-memory-limit to guest RAM. The upstream default of 24G
 # was fine on the 32 GB c6a.4xlarge benchmark host, but blows past a
