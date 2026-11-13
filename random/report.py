@@ -44,6 +44,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 import metrics  # noqa: E402
+import revalidate  # noqa: E402
 import report_html  # noqa: E402
 
 FAILED = ("wrong", "error", "timeout", "unsupported")
@@ -174,6 +175,9 @@ def main():
         results = [json.load(open(f)) for f in args.files]
     else:
         results = fetch(args.sink, args.group)
+    # The statuses of the current validator, where the machine sent its outputs.
+    for r in results:
+        revalidate.revalidate(r)
     if args.payloads is not None:
         payloads = {}
         for f in args.payloads:

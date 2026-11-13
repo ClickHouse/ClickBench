@@ -156,6 +156,30 @@ for e in run["executions"]:
     if e["repeat"] == 1 and e["status"] == "ok":
         with open(os.path.join(work, "run", "out", f"{e['id']}.1.out"), "rb") as f:
             outputs[e["id"]] = f.read(2000).decode(errors="replace")
+# All the outputs (up to 64 KB each) and the reference results, compressed,
+# so that the results can be validated again with a newer validator
+# (collect-results.py does).
+import base64, gzip
+def pack(d):
+    return base64.b64encode(gzip.compress(json.dumps(d, ensure_ascii=False).encode(), 9)).decode()
+def read_outputs(repeats, limit):
+    out = {}
+    for e in run["executions"]:
+        if e["status"] == "ok" and e["repeat"] in repeats:
+            with open(os.path.join(work, "run", "out", f"{e['id']}.{e['repeat']}.out"), "rb") as f:
+                out[f"{e['id']}.{e['repeat']}"] = f.read(limit).decode(errors="replace")
+    return out
+# The sink refuses too large rows: fewer repeats and shorter outputs until
+# the compressed outputs fit into 600 KB.
+for repeats, limit in ((range(1, 100), 65536), ((1,), 65536), ((1,), 16384), ((1,), 4096)):
+    all_outputs = read_outputs(set(repeats), limit)
+    if len(pack(all_outputs)) <= 600000:
+        break
+reference_outputs = {}
+for qid, v in reference.items():
+    if v["status"] == "ok":
+        with open(os.path.join(work, "reference", qid + ".tsv"), "rb") as f:
+            reference_outputs[qid] = f.read(65536).decode(errors="replace")
 counts = validation["counts"]
 total = sum(counts.values())
 json.dump({
@@ -170,6 +194,7 @@ json.dump({
     "translator": translated.get("translator"),
     "reference": {k: {"status": v["status"], "time": v["time"]} for k, v in reference.items()},
     "executions": executions, "outputs": outputs,
+    "outputs_gz": pack(all_outputs), "reference_gz": pack(reference_outputs),
 }, open(os.path.join(work, "result.json"), "w"), ensure_ascii=False)
 print("Result: " + json.dumps(counts))
 EOF

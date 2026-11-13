@@ -38,6 +38,7 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 import metrics  # noqa: E402
+import revalidate  # noqa: E402
 
 GROUP_RE = re.compile(r"^[0-9a-f-]{36}$")
 
@@ -102,10 +103,15 @@ def collect(sink, group):
     if not results and not logs:
         return None
 
-    # The latest result of every (system, machine).
+    # The latest result of every (system, machine), validated again with the
+    # current validator where the machine sent its outputs.
     latest = {}
     for r in results:
         latest[(r["machine"], r["directory"])] = r
+    for r in latest.values():
+        changed = revalidate.revalidate(r)
+        if changed:
+            print(f"collect: {r['directory']} on {r['machine']}: {changed} runs validated differently now", file=sys.stderr)
     first = results[0] if results else {}
     meta = next(iter(payloads.values()))["queries"] if payloads else {}
 
@@ -133,7 +139,8 @@ def collect(sink, group):
                 "data_size_after": r.get("data_size_after"),
                 "total_time": r["total_time"], "penalized_time": round(metrics.penalized_time(r), 3),
                 "geomean": round(geo[r["directory"]], 4) if geo[r["directory"]] is not None else None,
-                "counts": r["counts"], "error_rate": r.get("error_rate"), "restarts": r.get("restarts", 0),
+                "counts": r["counts"], "revalidated": r.get("revalidated", False),
+                "error_rate": r.get("error_rate"), "restarts": r.get("restarts", 0),
                 "reference": r.get("reference", {}), "runs": runs,
             })
 
