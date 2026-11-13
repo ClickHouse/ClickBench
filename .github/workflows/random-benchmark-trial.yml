@@ -2,7 +2,7 @@ name: "Randomized benchmark trial"
 
 # Temporary: a group of the randomized benchmark from the branch of PR #3271,
 # before random-benchmark.yml is on main (workflow_dispatch needs that).
-# Remove before merging. Group 3 (1492dae5): pivot-parquet and doris again.
+# Remove before merging. Group 3 (1492dae5): doris again, with the swap off.
 
 on:
   push:
@@ -32,9 +32,8 @@ jobs:
           aws-region: us-east-1
           role-session-name: clickbench-random-trial-${{ github.run_id }}
 
-      # pivot-parquet and doris again in group 1492dae5 (the same seed and
-      # payloads), after the fix of the memory accounting of clickhouse-local
-      # in its cgroup, and with the output of ./start in the log.
+      # doris again in group 1492dae5 (the same seed and payload), with the
+      # swap off before its start (doris/install).
       - shell: bash
         env:
           machine: c6a.metal
@@ -48,7 +47,6 @@ jobs:
           repo: ${{ github.repository }}
           branch: randomized-benchmark
         run: |
-          system=pivot-parquet payload_hash=e9a7ad40f5477d736e2f315e7fb458032725f8cee63e721aae83c15708ad30d8 ./random/run-benchmark.sh
           system=doris payload_hash=4843c3dea5ed38ff64d7d01d3f2704cbd0644ee201e4482975c903865868b9f3 ./random/run-benchmark.sh
 
       - uses: actions/upload-artifact@v4
