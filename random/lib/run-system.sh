@@ -78,7 +78,8 @@ check_loop() {
         ./check >/dev/null 2>&1 && return 0
         sleep 1
     done
-    echo "random: ./check did not succeed within ${BENCH_CHECK_TIMEOUT} s" >&2
+    echo "random: ./check did not succeed within ${BENCH_CHECK_TIMEOUT} s; the end of the output of ./start:" >&2
+    tail -n 50 "${WORK}/start.log" >&2 2>/dev/null || true
     return 1
 }
 
@@ -87,7 +88,8 @@ check_loop() {
 log "installing"
 ./install
 flush
-./start >/dev/null 2>&1 || true
+# The output of ./start is kept for the log, if ./check never succeeds.
+./start >"${WORK}/start.log" 2>&1 || true
 check_loop
 
 log "generating the data"

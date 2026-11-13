@@ -45,7 +45,20 @@ install_random_clickhouse() {
     curl -sSfL --retry 5 "https://github.com/ClickHouse/ClickHouse/releases/download/v${version}/clickhouse-common-static-${version%-*}-${arch}.tgz" \
         | tar xz -C "${tmp}" --strip-components=3 "clickhouse-common-static-${version%-*}/usr/bin/clickhouse"
     sudo mkdir -p "${dir}"
-    sudo mv "${tmp}/clickhouse" "${RANDOM_CLICKHOUSE}"
+    sudo mv "${tmp}/clickhouse" "${RANDOM_CLICKHOUSE}.bin"
     rm -rf "${tmp}"
+    # By default ClickHouse takes the memory of its cgroup for its own, and
+    # the cgroup of cloud-init has the benchmarked system in it too, which
+    # runs while the data is generated: clickhouse-local then stopped with
+    # MEMORY_LIMIT_EXCEEDED at "331 GiB" (pivot-parquet in group 1492dae5).
+    # The wrapper makes every clickhouse-local count only its own memory.
+    sudo tee "${RANDOM_CLICKHOUSE}" >/dev/null <<EOF
+#!/bin/bash
+if [ "\$1" = local ]; then
+    exec "${RANDOM_CLICKHOUSE}.bin" "\$@" -- --memory_worker_use_cgroup=0
+fi
+exec "${RANDOM_CLICKHOUSE}.bin" "\$@"
+EOF
+    sudo chmod +x "${RANDOM_CLICKHOUSE}"
     "${RANDOM_CLICKHOUSE}" --version
 }
