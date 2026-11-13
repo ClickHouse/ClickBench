@@ -158,7 +158,7 @@ fi
 
 # Retry: GitHub may still be computing mergeability right after the push.
 for attempt in 1 2 3; do
-    if gh pr merge "${url}" --merge --delete-branch; then
+    if gh pr merge "${url}" --merge --admin --delete-branch; then
         note "Merged ${url}"
         exit 0
     fi

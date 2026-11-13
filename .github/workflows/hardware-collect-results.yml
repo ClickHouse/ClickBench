@@ -12,7 +12,6 @@ on:
 permissions:
   contents: write       # To push the results branch.
   pull-requests: write  # To open and merge the automated pull request.
-  actions: write        # To start the website build after merging.
 
 # Two overlapping runs would publish the same results twice.
 concurrency:
@@ -21,9 +20,22 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
+    # Holds the clickbench-automation App key; main-only. Pushes to main
+    # and the auto-merges go through the App, which bypasses review.
+    environment: automation
     timeout-minutes: 30
     steps:
+      - name: Create clickbench-automation token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.CLICKBENCH_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.CLICKBENCH_AUTOMATION_PRIVATE_KEY }}
+          owner: ClickHouse
+          repositories: ClickBench
       - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Install the ClickHouse client
         working-directory: ${{ runner.temp }}   # not the checkout: it must stay clean
@@ -32,7 +44,7 @@ jobs:
           sudo ln -sf "$PWD/clickhouse" /usr/local/bin/clickhouse-client
 
       - env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           CLICKBENCH_DB_PASSWORD: ${{ secrets.CLICKBENCH_DB_PASSWORD }}
           SINCE_HOURS: ${{ inputs.since_hours || '24' }}
         run: |

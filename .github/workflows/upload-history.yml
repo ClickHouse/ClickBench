@@ -4,12 +4,11 @@ name: "Upload results history"
 # content of all the result files, for the history view of the website
 # (see upload-history.py and prepare-database.sql).
 #
-# Most results land on main through automation authenticated with
-# GITHUB_TOKEN (the auto-merged `auto-results/*` PRs and the daily ClickHouse
-# Cloud commit), and GitHub does not emit workflow-triggering events for those,
-# so the `push` trigger only fires for human pushes. The schedule picks up the
-# rest, shortly after the results are collected (collect-results.yml runs at
-# 7 and 37 minutes past the hour). A run without changes in the results only
+# Most results land on main through automation authenticated as the
+# clickbench-automation App (the auto-merged `auto-results/*` PRs and the daily
+# ClickHouse Cloud commit), and those trigger `push` as well. The schedule
+# stays as a fallback, shortly after the results are collected
+# (collect-results.yml runs at 7 and 37 minutes past the hour). A run without changes in the results only
 # compares a fingerprint with the table and does nothing.
 on:
   workflow_dispatch:

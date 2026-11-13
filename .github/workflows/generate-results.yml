@@ -1,11 +1,11 @@
 name: "Build the website"
 on:
   workflow_dispatch:  # This allows manual trigger from the UI
-  # Most pushes to main come from automation authenticated with GITHUB_TOKEN
-  # (the auto-merged `auto-results/*` PRs and the daily ClickHouse Cloud
-  # commit). GitHub does not emit workflow-triggering events for those, so the
-  # `push` trigger below only fires for human pushes. The schedule makes sure
-  # the site picks up automated results as well.
+  # Most pushes to main come from automation authenticated as the
+  # clickbench-automation App (the auto-merged `auto-results/*` PRs and the
+  # daily ClickHouse Cloud commit). Those do trigger `push` below; this
+  # workflow's own commit is skipped by its `if`. The schedule stays as a
+  # fallback.
   schedule:
     - cron: '25 * * * *'
   push:
@@ -22,11 +22,24 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Holds the clickbench-automation App key; main-only. Pushes to main
+    # and the auto-merges go through the App, which bypasses review.
+    environment: automation
     env:
       CI_COMMIT_MESSAGE: "[bot] Build the website"
       CI_COMMIT_AUTHOR: github
     steps:
+    - name: Create clickbench-automation token
+      id: app-token
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+      with:
+        app-id: ${{ vars.CLICKBENCH_AUTOMATION_APP_ID }}
+        private-key: ${{ secrets.CLICKBENCH_AUTOMATION_PRIVATE_KEY }}
+        owner: ClickHouse
+        repositories: ClickBench
     - uses: actions/checkout@v3
+      with:
+        token: ${{ steps.app-token.outputs.token }}
     - if: github.event.commits[0].message != env.CI_COMMIT_MESSAGE
       run: |
         bash generate-results.sh

@@ -16,11 +16,24 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
+    # Holds the clickbench-automation App key; main-only. Pushes to main
+    # and the auto-merges go through the App, which bypasses review.
+    environment: automation
     timeout-minutes: 25
     steps:
+      - name: Create clickbench-automation token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.CLICKBENCH_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.CLICKBENCH_AUTOMATION_PRIVATE_KEY }}
+          owner: ClickHouse
+          repositories: ClickBench
       - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
       - env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           CLICKBENCH_DB_PASSWORD: ${{ secrets.CLICKBENCH_DB_PASSWORD }}
           # Classic PAT of a user with write access to this repository:
           # enables committing results to fork PRs that allow maintainer

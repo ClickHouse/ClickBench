@@ -265,9 +265,8 @@ else
 fi
 
 for attempt in 1 2 3; do
-    if gh pr merge "${url}" --merge --delete-branch; then
+    if gh pr merge "${url}" --merge --admin --delete-branch; then
         note "Merged ${url}"
-        gh workflow run generate-results.yml --ref main || note "Could not start the website build."
         exit 0
     fi
     sleep 10
