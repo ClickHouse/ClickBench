@@ -19,7 +19,8 @@ system can opt out with TRANSLATE=no). A query that the target can't express
 is marked as unsupported and counts as an error of the system.
 
 random/systems/<system>/config can also give QUERY_SUFFIX, appended to every
-query: ClickHouse uses it for the settings of the standard semantics.
+query: ClickHouse uses it for the settings of the standard semantics, and
+REWRITE=clickhouse-standard for the character-wise string functions.
 """
 
 import concurrent.futures
@@ -169,6 +170,12 @@ def main():
     translations, translator = translate(queries, system)
     # A fixed suffix for every query, e.g. the SETTINGS clause that selects the
     # standard semantics in ClickHouse.
+    # The rewrite for ClickHouse's string functions (lib/sqlrewrite.py), as
+    # for the reference.
+    if system_config(system).get("REWRITE", "") == "clickhouse-standard":
+        sys.path.insert(0, os.path.join(HERE, "lib"))
+        import sqlrewrite
+        translations = {k: sqlrewrite.clickhouse_standard(v) if v else v for k, v in translations.items()}
     suffix = system_config(system).get("QUERY_SUFFIX", "")
     if len(suffix) >= 2 and suffix[0] == suffix[-1] == '"':
         suffix = suffix[1:-1]

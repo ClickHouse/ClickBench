@@ -88,6 +88,7 @@ python3 "${HERE}/lib/reference.py" load "${OUT}/sample" "${OUT}/sample-db"
 per_batch=30
 batches=$(( (RANDOM_CANDIDATES + per_batch - 1) / per_batch ))
 python3 "${HERE}/generate-queries.py" --seed "${seed}" --sample-db "${OUT}/sample-db" \
+    --sample-parquet "${OUT}/sample/canonical/part_*.parquet" \
     --output "${OUT}/queries.json" --count "${RANDOM_QUERIES}" --batches "${batches}" --per-batch "${per_batch}" \
     2> >(tee "${OUT}/generate.log" >&2)
 

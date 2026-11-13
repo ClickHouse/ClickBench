@@ -2,7 +2,7 @@
 """Generates the random queries of a benchmark run with a language model.
 
 Usage:
-  generate-queries.py --seed <seed> --sample-db <dir> --output queries.json
+  generate-queries.py --seed <seed> --sample-db <dir> --sample-parquet <glob> --output queries.json
                       [--count 100] [--batches 8] [--per-batch 30]
 
 Entropy. The model is not asked for "random queries" only: sampling
@@ -21,7 +21,12 @@ settings, and is dropped if it
   - fails, takes too long, or returns no rows or more than 100 rows,
   - returns different results with different numbers of threads and block
     sizes, which means that its result is not determined (an ORDER BY with
-    ties, an arbitrary LIMIT).
+    ties, an arbitrary LIMIT),
+  - returns a different result in DuckDB on the same sample (compared as the
+    results of the systems are, lib/validate.py), or fails there: a second
+    implementation of the standard catches the queries on which ClickHouse,
+    the reference, is wrong or deviates from the standard, and the ones whose
+    meaning is ambiguous.
 """
 
 import argparse
@@ -39,6 +44,8 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "lib"))
 import llm  # noqa: E402
 import reference  # noqa: E402
+import sqlrewrite  # noqa: E402
+import validate  # noqa: E402
 
 CLICKBENCH = os.path.dirname(HERE)
 
@@ -55,7 +62,7 @@ FEATURES = {
     "case": "CASE expressions, conditional aggregation (SUM(CASE ...), COUNT(*) FILTER-like with CASE)",
     "set_operation": "UNION, UNION ALL, INTERSECT or EXCEPT",
     "count_distinct": "COUNT(DISTINCT ...)",
-    "string_functions": "string functions and LIKE (LENGTH, LOWER, UPPER, SUBSTRING, POSITION-like, LIKE patterns)",
+    "string_functions": "string functions and LIKE (CHAR_LENGTH, LOWER, UPPER, SUBSTRING(s, start, length), TRIM, ||, LIKE patterns)",
     "date_time": "date and time arithmetic (EXTRACT, DATE_TRUNC, comparison of dates, intervals)",
     "multi_level": "several levels of nested aggregation (aggregate over the result of an aggregate)",
     "top_n_per_group": "top-N per group",
@@ -100,9 +107,11 @@ RULES = """Rules, all mandatory:
    derived tables and CTEs over `hits` to make joins.
 2. Write portable SQL that runs in ClickHouse, DuckDB and PostgreSQL alike: standard
    syntax, standard functions (COUNT, SUM, AVG, MIN, MAX, COUNT(DISTINCT), CASE, COALESCE,
-   NULLIF, CAST, ABS, ROUND, FLOOR, LENGTH, LOWER, UPPER, SUBSTRING(s FROM a FOR b),
-   TRIM, LIKE, EXTRACT(... FROM ...), DATE_TRUNC('unit', t), window functions).
-   No vendor-specific functions or syntax.
+   NULLIF, CAST, ABS, ROUND, FLOOR, CHAR_LENGTH, LOWER, UPPER, SUBSTRING(s, start, length),
+   TRIM, ||, LIKE, EXTRACT(... FROM ...), DATE_TRUNC('unit', t), window functions).
+   No vendor-specific functions or syntax. The text is in several languages, so
+   string functions must count characters: CHAR_LENGTH, not LENGTH; SUBSTRING
+   with commas, not SUBSTRING ... FROM ... FOR; no POSITION, LEFT, RIGHT, REVERSE.
 3. The result must be fully determined: end with an ORDER BY that orders the rows
    completely (list enough keys to break every tie; it is fine to order by all
    output columns), and every LIMIT must be preceded by such an ORDER BY, also
@@ -214,7 +223,7 @@ def static_check(sql):
         return "no ORDER BY"
     if LARGE_AGGREGATE.search(sql):
         return "SUM/AVG over large integers"
-    return None
+    return sqlrewrite.unsupported(sql)
 
 
 def dynamic_check(db, sql, time_limit):
@@ -236,7 +245,43 @@ def dynamic_check(db, sql, time_limit):
         return f"second run: {status}", seconds, rows
     if first != second:
         return "nondeterministic", seconds, rows
+    if duckdb_connection is not None:
+        reason = duckdb_check(sql, first, time_limit)
+        if reason:
+            return reason, seconds, rows
     return None, seconds, rows
+
+
+# DuckDB on the sample, for the cross-check (see the docstring).
+duckdb_connection = None
+
+
+def open_duckdb(parquet_glob):
+    import duckdb
+    global duckdb_connection
+    duckdb_connection = duckdb.connect()
+    duckdb_connection.execute("SET TimeZone = 'UTC'")
+    duckdb_connection.execute(f"CREATE VIEW hits AS SELECT * FROM read_parquet('{parquet_glob}')")
+
+
+def duckdb_check(sql, reference_output, time_limit):
+    import threading
+    timer = threading.Timer(time_limit, duckdb_connection.interrupt)
+    timer.start()
+    try:
+        cursor = duckdb_connection.execute(sql)
+        names = [d[0] for d in cursor.description]
+        rows = cursor.fetchall()
+    except Exception as e:  # any failure: the query is not portable to DuckDB
+        return f"DuckDB: {str(e).splitlines()[0][:200]}"
+    finally:
+        timer.cancel()
+
+    def text(v):
+        return "NULL" if v is None else str(v)
+    output = "\n".join([",".join(names)] + [",".join(text(v) for v in r) for r in rows]) + "\n"
+    status, detail = validate.compare(validate.parse_reference(reference_output), output.encode())
+    return None if status == "ok" else f"DuckDB disagrees: {detail[:150]}"
 
 
 def select(candidates, count, rng):
@@ -257,6 +302,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", required=True)
     parser.add_argument("--sample-db", required=True)
+    parser.add_argument("--sample-parquet", required=True,
+                        help="the files of the sample (canonical/part_*.parquet), for DuckDB")
     parser.add_argument("--output", required=True)
     parser.add_argument("--count", type=int, default=100)
     parser.add_argument("--batches", type=int, default=8)
@@ -266,6 +313,7 @@ def main():
     parser.add_argument("--parallel", type=int, default=8)
     args = parser.parse_args()
 
+    open_duckdb(args.sample_parquet)
     rng = random.Random(hashlib.sha256(args.seed.encode()).digest())
     prompts = [batch_prompt(rng, b, args.per_batch, args.seed) for b in range(args.batches)]
 

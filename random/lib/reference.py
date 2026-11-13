@@ -11,6 +11,8 @@ results of the queries on it, computed with the pinned ClickHouse.
 The settings in reference-settings make ClickHouse follow the SQL standard
 (NULLs from outer joins, NULL from SUM over no rows, DISTINCT by default for
 UNION/INTERSECT/EXCEPT); these are the semantics the queries are written for.
+For the same reason, LENGTH, SUBSTRING, LOWER and UPPER are rewritten to their
+UTF-8 variants, which work on characters (lib/sqlrewrite.py).
 """
 
 import json
@@ -21,6 +23,8 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CLICKBENCH = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, HERE)
+import sqlrewrite  # noqa: E402
 CLICKHOUSE = os.environ.get("RANDOM_CLICKHOUSE", "/opt/random/clickhouse")
 
 
@@ -65,7 +69,10 @@ def load(work, db):
 
 
 def run_query(db, sql, settings=(), timeout=600, output_format="TSVWithNames"):
-    """Returns (status, seconds, output bytes, error text)."""
+    """Returns (status, seconds, output bytes, error text). The string functions
+    of the query are rewritten to their character-wise variants (see
+    sqlrewrite.py), for the standard semantics."""
+    sql = sqlrewrite.clickhouse_standard(sql)
     start = time.time()
     try:
         result = clickhouse_local(db, sql, settings=[f"--max_execution_time={timeout}", *settings], output_format=output_format,

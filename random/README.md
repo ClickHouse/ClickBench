@@ -28,7 +28,14 @@ queries and the same data. The comparison is within the group.
    `ORDER BY`, aggregates large integers with `SUM`/`AVG` (the result would
    depend on overflow), fails, takes too long, returns no rows or more than
    100, or returns different results with different numbers of threads and
-   block sizes (the result is not fully determined). The final set is sampled
+   block sizes (the result is not fully determined). It is also run in DuckDB on the same
+   sample and dropped if DuckDB fails or returns another result (compared as
+   the results of the systems are): a second implementation of the standard
+   catches the queries on which ClickHouse, the reference, is wrong (as with
+   some correlated subqueries) or deviates from the standard, and those whose
+   meaning is ambiguous. For ClickHouse, `LENGTH`, `SUBSTRING`, `LOWER` and
+   `UPPER` are rewritten to their character-wise UTF-8 variants
+   (`lib/sqlrewrite.py`), as the standard defines them. The final set is sampled
    from the valid candidates to cover the features evenly
    (`generate-queries.py`).
 

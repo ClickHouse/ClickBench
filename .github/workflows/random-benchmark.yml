@@ -60,7 +60,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install anthropic openai
+      # DuckDB cross-checks the candidate queries on the sample (see generate-queries.py).
+      - run: pip install anthropic openai duckdb
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
