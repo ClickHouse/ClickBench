@@ -1,0 +1,17 @@
+; The query script of the main benchmark, changed for the randomized one:
+;
+; - The result goes into a variable of this query only ($RAYFORCE_VAR), not
+;   the shared `rf-result`: with concurrent clients, another query could set
+;   `rf-result` between this query and the fetch of its result.
+; - The result is written as CSV ($RAYFORCE_CSV), with floats in full
+;   precision; `show` prints them with two digits after the point and limits
+;   the rows and the width.
+(set h (.ipc.open (format "127.0.0.1:%" (.os.getenv "RAYFORCE_PORT")) 3600000))
+(set var (.os.getenv "RAYFORCE_VAR"))
+(set ms (.ipc.send h
+    (format "(timeit (set % %))" var (read (.os.getenv "RAYFORCE_QUERY")))))
+(.csv.write (.ipc.send h var) (.os.getenv "RAYFORCE_CSV"))
+(.ipc.send h (format "(set % 0)" var))
+(write (.os.getenv "RAYFORCE_MS") (format "%" ms))
+(.ipc.close h)
+(exit 0)
