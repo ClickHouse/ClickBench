@@ -32,8 +32,8 @@ jobs:
           aws-region: us-east-1
           role-session-name: clickbench-random-trial-${{ github.run_id }}
 
-      # Run 4: rayforce again in group 2ce46201 (the same seed and payload),
-      # after the fix of the single Parquet file.
+      # Run 5: rayforce again in group 2ce46201 (the same seed and payload),
+      # after the restart after the load.
       - shell: bash
         env:
           machine: c6a.4xlarge

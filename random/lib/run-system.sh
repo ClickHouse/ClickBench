@@ -59,6 +59,7 @@ fi
 eval "$(grep -E '^\s*export BENCH_[A-Z_]+=' benchmark.sh)"
 : "${BENCH_DOWNLOAD_SCRIPT:=}"
 : "${BENCH_DURABLE:=yes}"
+: "${BENCH_RESTARTABLE:=yes}"
 : "${BENCH_CHECK_TIMEOUT:=300}"
 export BENCH_DURABLE
 [ -f "${RANDOM_DIR}/systems/${SYSTEM}/config" ] && source "${RANDOM_DIR}/systems/${SYSTEM}/config"
@@ -89,6 +90,16 @@ start=$(date +%s.%N)
 flush
 load_time=$(awk -v s="${start}" -v e="$(date +%s.%N)" 'BEGIN { printf "%.3f", e - s }')
 echo "Load time: ${load_time}"
+# A restart after the load, as the main benchmark does before every cold
+# run: some systems load in a separate process and see the data only after a
+# restart (Rayforce opens its table at start). The queries then run from a
+# freshly started system. An in-memory system (BENCH_DURABLE=no) keeps
+# running: a restart would lose its data.
+if [ "${BENCH_RESTARTABLE}" = "yes" ] && [ "${BENCH_DURABLE}" = "yes" ]; then
+    ./stop >/dev/null 2>&1 || true
+    for i in $(seq 1 60); do ./check >/dev/null 2>&1 || break; sleep 1; done
+    ./start >/dev/null 2>&1 || true
+fi
 check_loop
 data_size=$(./data-size || echo null)
 echo "Data size: ${data_size}"
