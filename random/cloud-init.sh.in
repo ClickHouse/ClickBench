@@ -53,6 +53,14 @@ status=${PIPESTATUS[0]}
 TOKEN=$(curl -sS -X PUT 'http://169.254.169.254/latest/api/token' -H 'X-aws-ec2-metadata-token-ttl-seconds: 21600')
 INSTANCE_TYPE=$(curl -sS -H "X-aws-ec2-metadata-token: ${TOKEN}" 'http://169.254.169.254/latest/meta-data/instance-type')
 echo "Exit status: ${status}, instance type: ${INSTANCE_TYPE}, total time: ${SECONDS}s" | tee -a "${LOG}"
+# Who killed what: earlyoom sends SIGTERM (exit status 143) and the kernel's
+# OOM killer SIGKILL (137); both log to the journal, which is not in the log.
+if [ "${status}" != 0 ]; then
+    { echo "earlyoom and the kernel, the last lines:"
+      journalctl -u earlyoom --no-pager -o short-iso 2>/dev/null | grep -i -E 'sending|kill|low memory' | tail -n 20
+      journalctl -k --no-pager -o short-iso 2>/dev/null | grep -i -E 'out of memory|oom|killed process' | tail -n 20
+    } | tee -a "${LOG}"
+fi
 
 RESULTS_URL="${SINK}&query=INSERT+INTO+data+FORMAT+RawBLOB"
 
