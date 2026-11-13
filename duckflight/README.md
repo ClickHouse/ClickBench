@@ -1,11 +1,12 @@
 # Duckflight
 
-DuckDB 2.0.0 with the Duckflight extension (core-v0.1.14), queried using Apache
+DuckDB 2.0.0 with the Duckflight extension v0.1.17 (core-v0.1.21), queried using Apache
 Arrow's Rust client 60.0.0. The extension contains a proprietary core.
 
 Run `./benchmark.sh` on Ubuntu 24.04+ with sudo access. The installer downloads
-the released DuckDB CLI and extension, installs Python dependencies, and builds
-the Arrow client. Downloads and dependencies are pinned.
+the released DuckDB CLI and the extension of a GitHub release (checked against
+its SHA256SUMS), installs Python dependencies, and builds the Arrow client.
+Downloads and dependencies are pinned.
 
 The client timer includes execution and fetching all results; connection,
 authentication and CSV formatting are outside the timer. The shared ClickBench
