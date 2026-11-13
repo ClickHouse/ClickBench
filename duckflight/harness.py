@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import csv
 import fnmatch
-import gzip
 import hashlib
 import io
 import json
@@ -31,14 +30,19 @@ from adbc_driver_manager import AdbcStatement
 
 IMPLEMENTATION = Path(__file__).resolve().parent
 ROOT = Path(os.environ.get("DUCKFLIGHT_BENCH_ENTRY", IMPLEMENTATION)).resolve()
-RELEASE = "core-v0.1.14 / signed DuckDB 2.0.0"
+RELEASE = "v0.1.17 (core-v0.1.21) / DuckDB 2.0.0"
 DUCKDB_VERSION = "2.0.0"
 DUCKDB_COMMIT = "d54cbbe3df"
+# The extension of the GitHub release DUCKFLIGHT_VERSION, with the SHA-256 of
+# its SHA256SUMS. The files of extensions.sidequery.dev are replaced by every
+# new release (under the same path, by the DuckDB version only), so a pinned
+# checksum of them breaks; the GitHub releases don't change.
+DUCKFLIGHT_VERSION = "v0.1.17"
 CHECKSUMS = {
-    "linux_amd64": "928d8ef5c91c185873eacc960e7b6e574bfedb527b2d6fc2ad3eda553fc34e68",
-    "linux_arm64": "a52ee234af7614c0d7ef31e43dbe71301155ae60a9c76217d4064bb5acf58729",
-    "osx_amd64": "966d794cce2ac8c32515ba677100e58a378e3f187c4f307aa88e6cf5dfb859c0",
-    "osx_arm64": "52b3117d8f96036f1164608fcc369192ce498610b53f91a97c36a6b498273833",
+    "linux_amd64": "f97b985616280f5d44a584c46002dbc177820ba1473ff52493728c8e3ee12bbe",
+    "linux_arm64": "95ad46908bc9e1f253512ed187540dcb8b43d5ee246e001b076db54e3ba2edc3",
+    "osx_amd64": "593398ac4e5e794898adbca9eacd2a33cb954e31155c6afb449f2dc481e8bb8c",
+    "osx_arm64": "76529280c625c4d369e3b249f1bf84d51ec8d930510022897971cc7d99750dbc",
 }
 EXPECTED_ROWS = 99_997_497
 LAKE_URL = (
@@ -103,15 +107,19 @@ def install(state: Path) -> None:
     arch = {"x86_64": "amd64", "arm64": "arm64", "aarch64": "arm64"}[platform.machine()]
     target = f"{os_name}_{arch}"
     path = state / "duckflight.duckdb_extension"
-    url = f"https://extensions.sidequery.dev/v{DUCKDB_VERSION}/{target}/duckflight.duckdb_extension.gz"
+    url = (
+        "https://github.com/sidequery/duckflight-extension/releases/download/"
+        f"{DUCKFLIGHT_VERSION}/duckflight-v{DUCKDB_VERSION}-{target}.duckdb_extension"
+    )
     request = urllib.request.Request(
         url, headers={"User-Agent": "duckflight-clickbench/2.0"}
     )
-    with urllib.request.urlopen(request, timeout=120) as response:
+    with urllib.request.urlopen(request, timeout=300) as response:
         data = response.read()
     if hashlib.sha256(data).hexdigest() != CHECKSUMS[target]:
         raise RuntimeError("extension checksum mismatch")
-    path.write_bytes(gzip.decompress(data))
+    # The release files are not signed: the harness loads with unsigned extensions allowed.
+    path.write_bytes(data)
     cli_target, checksum = CLI_ASSETS[target]
     archive = state / "duckdb-cli.tar.gz"
     if (
