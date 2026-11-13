@@ -48,6 +48,10 @@ note() {
 for s in ${SYSTEMS}; do
     [ -f "${CLICKBENCH_DIR}/${s}/benchmark.sh" ] || { echo "No such system: ${s}" >&2; exit 1; }
     kind=$(grep -oE 'BENCH_DOWNLOAD_SCRIPT="[^"]*"' "${CLICKBENCH_DIR}/${s}/benchmark.sh" | cut -d'"' -f2)
+    # random/systems/<system>/config can set it, for a system that sets it elsewhere.
+    if [ -f "${HERE}/systems/${s}/config" ] && grep -q '^BENCH_DOWNLOAD_SCRIPT=' "${HERE}/systems/${s}/config"; then
+        kind=$(grep '^BENCH_DOWNLOAD_SCRIPT=' "${HERE}/systems/${s}/config" | tail -1 | cut -d= -f2 | tr -d '"')
+    fi
     case "${kind}" in
         download-hits-parquet-partitioned|download-hits-parquet-single|download-hits-tsv|download-hits-csv) ;;
         *) echo "${s} loads '${kind}', which the randomized benchmark does not generate" >&2; exit 1 ;;
@@ -87,10 +91,14 @@ python3 "${HERE}/generate-queries.py" --seed "${seed}" --sample-db "${OUT}/sampl
     --output "${OUT}/queries.json" --count "${RANDOM_QUERIES}" --batches "${batches}" --per-batch "${per_batch}" \
     2> >(tee "${OUT}/generate.log" >&2)
 
+# Four systems at a time (each sends up to 8 requests at once): more runs into
+# the rate limits of the API, and a batch that fails all its attempts makes
+# its queries unsupported for that system.
+export OUT
+printf '%s\n' ${SYSTEMS} | xargs -P 4 -I{} python3 "${HERE}/translate-queries.py" "${OUT}/queries.json" {} "${OUT}/translated/{}.json"
 for s in ${SYSTEMS}; do
-    python3 "${HERE}/translate-queries.py" "${OUT}/queries.json" "${s}" "${OUT}/translated/${s}.json" &
+    [ -s "${OUT}/translated/${s}.json" ] || { echo "No translation for ${s}" >&2; exit 1; }
 done
-wait
 
 for s in ${SYSTEMS}; do
     python3 "${HERE}/lib/payload.py" make "${group}" "${s}" "${OUT}/queries.json" "${OUT}/translated/${s}.json" \

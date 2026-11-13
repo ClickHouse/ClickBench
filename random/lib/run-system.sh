@@ -62,7 +62,18 @@ eval "$(grep -E '^\s*export BENCH_[A-Z_]+=' benchmark.sh)"
 : "${BENCH_RESTARTABLE:=yes}"
 : "${BENCH_CHECK_TIMEOUT:=300}"
 export BENCH_DURABLE
+# random/systems/<system>/config may override these (for a system that sets
+# them elsewhere than in benchmark.sh) and set RANDOM_DATA_DIR: where the
+# system expects its files, if not in its directory.
 [ -f "${RANDOM_DIR}/systems/${SYSTEM}/config" ] && source "${RANDOM_DIR}/systems/${SYSTEM}/config"
+: "${RANDOM_DATA_DIR:=.}"
+
+# Some load scripts check for the exact number of rows of the original
+# dataset (99997497) to catch partial loads: check for the generated number.
+if [ -f load ] && grep -q '99997497' load; then
+    sed -i "s/99997497/${RANDOM_ROWS}/g" load
+    log "./load checks the row count; it expects ${RANDOM_ROWS} rows now"
+fi
 
 check_loop() {
     local i
@@ -81,7 +92,7 @@ flush
 check_loop
 
 log "making the files for ${BENCH_DOWNLOAD_SCRIPT}"
-"${RANDOM_DIR}/lib/make-format.sh" "${WORK}/data" "${BENCH_DOWNLOAD_SCRIPT}" .
+"${RANDOM_DIR}/lib/make-format.sh" "${WORK}/data" "${BENCH_DOWNLOAD_SCRIPT}" "${RANDOM_DATA_DIR}"
 flush
 
 log "loading"
