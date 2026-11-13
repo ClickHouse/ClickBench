@@ -46,8 +46,9 @@ FALSE_WORDS = re.compile(r"(?:false|FALSE|False|f)(?![\w])")
 # The readable-number hints of ClickHouse's Pretty formats: "-- 1.23 million".
 HINT = re.compile(r"--\s*[\d.]+\s+(?:thousand|million|billion|trillion|quadrillion)")
 FOOTER_TOKENS = 6
-# Footers of the clients: "(10 rows)", "10 rows in set", "Elapsed: 0.1 sec".
-FOOTER = re.compile(r"\(?\d+ rows?\)?(?: in set)?|Elapsed:?\s*[\d.]+\s*(?:sec|s|ms)?|(?:Run )?Time:?\s*[\d.]+\s*(?:sec|s|ms)?|Processed [^\n]*", re.I)
+# Footers of the clients: "(10 rows)", "10 rows in set", "Elapsed: 0.1 sec",
+# "2 rows  3 columns" and "100 rows (100 shown)" of DuckDB's box mode.
+FOOTER = re.compile(r"\(?\d+ (?:rows?|columns?|shown)\)?(?: in set)?|Elapsed:?\s*[\d.]+\s*(?:sec|s|ms)?|Run Time[^\n]*|Time:?\s*[\d.]+\s*(?:sec|s|ms)?|Processed [^\n]*", re.I)
 MAX_STARTS = 200
 
 
