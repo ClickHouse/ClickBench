@@ -60,11 +60,20 @@ case "${KIND}" in
         # With several threads, the writer buffers row groups without a
         # bound when the input is faster (7 GB for 4.5M rows); with one, it
         # stays at about 1.5 GB.
+        # About 250 row groups, as in the original file (226 for 100M rows):
+        # with the default limit of 512 MB per row group, a billion rows make
+        # more than a thousand, and their metadata a footer of 35 MB, over the
+        # 16 MB that Hyper accepts (and Umbra crashed on the file).
         SINGLE="$(sed -E 's/ DateTime(,|$)/ Int64\1/g; s/ Date(,|$)/ UInt16\1/g' <<< "${STRUCTURE}")"
+        total_rows=$(awk '{ s += $3 } END { print s }' "${WORK}/parts.txt")
+        group_rows=$(( (total_rows + 249) / 250 ))
+        [ "${group_rows}" -lt 100000 ] && group_rows=100000
         for i in "${parts[@]}"; do
             "${CH}" local --max_threads 1 --input_format_parquet_preserve_order 1 --query "
                 SELECT ${PHYSICAL} FROM file('${WORK}/canonical/part_${i}.parquet', Parquet, \$\$${STRUCTURE}\$\$) FORMAT Native"
         done | "${CH}" local --max_threads 1 --input-format Native --structure "${SINGLE}" \
+            --output_format_parquet_row_group_size "${group_rows}" \
+            --output_format_parquet_row_group_size_bytes 100000000000 \
             --output_format_parquet_compression_method snappy \
             --query "SELECT * FROM table INTO OUTFILE '${DEST}/hits.parquet' TRUNCATE FORMAT Parquet"
         ;;
