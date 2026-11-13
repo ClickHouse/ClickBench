@@ -51,7 +51,7 @@ FIRST=1
 # Use `find` rather than `ls */results/*/*.json`: to avoid overflowing ARG_MAX
 # (clickhouse-cloud alone has tens of thousands of files)
 LANG="" find */results -mindepth 2 -maxdepth 2 -name '*.json' \
-    | grep -Ev '^(hardware|versions|gravitons)/' \
+    | grep -Ev '^(hardware|versions|gravitons|random)/' \
     | sort \
     | awk -F/ '{ print $1"/"$NF" "$0 }' \
     | awk '{ latest[$1] = $2 } END { for (k in latest) print latest[k] }' \
