@@ -1,0 +1,15 @@
+{
+  "system": "Aurora for PostgreSQL",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "production",
+  "tags": [
+    "managed",
+    "C",
+    "PostgreSQL compatible",
+    "row-oriented",
+    "aws",
+    "no-cold"
+  ]
+}

@@ -3,6 +3,7 @@
   "proprietary": "yes",
   "hardware": "cpu",
   "tuned": "yes",
+  "category": "enthusiast",
   "tags": [
     "MySQL compatible",
     "column-oriented",

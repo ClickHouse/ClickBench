@@ -219,6 +219,18 @@
             position: relative;
         }
 
+        #summary-table thead th {
+            vertical-align: top;
+        }
+
+        /* Raised by its padding and border, so that its text is on the same line as the headers. */
+        #selector-best {
+            float: left;
+            font-weight: normal;
+            margin-top: -0.4rem;
+            margin-right: 1rem;
+        }
+
         .summary-bar-cell {
             width: 100%;
             position: relative;
@@ -685,6 +697,17 @@ const additional_data_size_points = [
 
 <table class="selectors-container stick-left">
     <tr>
+        <th>Category: </th>
+        <td id="selectors_category" title="System categories are explained in README.md">
+            <a id="selector-category-elite" class="selector selector-active" title="Production-grade, and within 10 times of ClickHouse on every metric">Elite</a>
+            <a id="selector-category-production" class="selector selector-active" title="Mature, durable, used in production, works on small and large machines">Production</a>
+            <a id="selector-category-challenger" class="selector selector-active" title="A real product: website, documentation, releases, both x86_64 and aarch64 or a managed service">Challenger</a>
+            <a id="selector-category-enthusiast" class="selector" title="Entry level, no requirements other than not cheating on benchmarks">Enthusiast</a>
+            <a id="selector-category-retired" class="selector selector-active" title="No updates in the last year">Retired</a>
+            <a id="selector-category-joke" class="selector" title="Cheating on benchmarks">Joke</a>
+        </td>
+    </tr>
+    <tr>
         <td colspan="2">
             <span class="inline-filter" id="selectors_opensource">
                 <span class="inline-filter-label">Open source:</span>
@@ -759,6 +782,7 @@ const additional_data_size_points = [
     <thead>
         <tr>
             <th class="summary-name">
+                <a id="selector-best" class="selector" title="Show only the single top result for every system">Best result per system</a>
                 System &amp; Machine
             </th>
             <th colspan="2">
@@ -803,6 +827,9 @@ const missing_result_time = 300;
 /// report down to a single way of keeping the data, not for the default view.
 const default_storage = {"native": true, "cloud": true, "memory": true, "parquet": true, "datalake": true, "iceberg": true, "web": true};
 
+/// See "System Categories" in README.md. Enthusiasts and jokes are hidden by default.
+const default_category = {"elite": true, "production": true, "challenger": true, "enthusiast": false, "retired": true, "joke": false};
+
 let selectors = {
     "system": {},
     "type": {},
@@ -812,7 +839,9 @@ let selectors = {
     "hardware": {"cpu": true, "gpu": false},
     "tuned": {"no": true, "yes": false},
     "storage": {...default_storage},
+    "category": {...default_category},
     "metric": "combined",
+    "best": "no",
     "queries": [],
 };
 
@@ -899,7 +928,8 @@ function addToggleListener(selector, elem, group) {
     selector.addEventListener('contextmenu', e => toggle(e, elem, group));
 }
 
-function toggleAll(e, selectors_map) {
+function toggleAll(e, group) {
+    const selectors_map = selectors[group];
     const new_value = Object.keys(selectors_map).filter(k => selectors_map[k]).length * 2 < Object.keys(selectors_map).length;
     [...e.target.parentElement.querySelectorAll('a')].map(
         elem => { elem.className = new_value ? 'selector selector-active' : 'selector' });
@@ -1084,10 +1114,13 @@ addToggleListener(document.getElementById('selector-tuned-no'), 'no', 'tuned');
 Object.keys(default_storage).forEach(key =>
     addToggleListener(document.getElementById('selector-storage-' + key), key, 'storage'));
 
-document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, selectors.system));
-document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, selectors.type));
-document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, selectors.machine));
-document.getElementById('select-all-cluster-sizes').addEventListener('click', e => toggleAll(e, selectors.cluster_size));
+Object.keys(default_category).forEach(key =>
+    addToggleListener(document.getElementById('selector-category-' + key), key, 'category'));
+
+document.getElementById('select-all-systems').addEventListener('click', e => toggleAll(e, 'system'));
+document.getElementById('select-all-types').addEventListener('click', e => toggleAll(e, 'type'));
+document.getElementById('select-all-machines').addEventListener('click', e => toggleAll(e, 'machine'));
+document.getElementById('select-all-cluster-sizes').addEventListener('click', e => toggleAll(e, 'cluster_size'));
 
 [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => elem.addEventListener('click', e => {
     [...e.target.parentElement.querySelectorAll('a')].map(elem => { elem.className = elem == e.target ? 'selector selector-active' : 'selector' });
@@ -1100,6 +1133,13 @@ document.getElementById('selector-metric-load').addEventListener('click', e => {
 document.getElementById('selector-metric-size').addEventListener('click', e => { selectors.metric = 'size'; render(); updateHistory(); });
 document.getElementById('selector-metric-qps').addEventListener('click', e => { selectors.metric = 'qps'; render(); updateHistory(); });
 document.getElementById('selector-metric-complexity').addEventListener('click', e => { selectors.metric = 'complexity'; render(); updateHistory(); });
+
+document.getElementById('selector-best').addEventListener('click', e => {
+    selectors.best = selectors.best == 'yes' ? 'no' : 'yes';
+    updateSelectors();
+    render();
+    updateHistory();
+});
 
 selectors.queries = [...data[0].result.keys()].map(k => true);
 
@@ -1121,6 +1161,8 @@ function updateSelectors() {
 
     [...document.querySelectorAll('.query-checkbox')].map((elem, i) => { elem.checked = selectors.queries[i] });
 
+    document.getElementById('selector-best').className = selectors.best == 'yes' ? 'selector selector-active' : 'selector';
+
     document.getElementById('selector-opensource-yes').className = selectors.opensource.yes ? 'selector selector-active' : 'selector';
     document.getElementById('selector-opensource-no').className = selectors.opensource.no ? 'selector selector-active' : 'selector';
 
@@ -1133,6 +1175,10 @@ function updateSelectors() {
     Object.keys(default_storage).forEach(key => {
         document.getElementById('selector-storage-' + key).className =
             selectors.storage[key] ? 'selector selector-active' : 'selector' });
+
+    Object.keys(default_category).forEach(key => {
+        document.getElementById('selector-category-' + key).className =
+            selectors.category[key] ? 'selector selector-active' : 'selector' });
 }
 
 function applyTopRowFilters() {
@@ -1140,7 +1186,8 @@ function applyTopRowFilters() {
         ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
         ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
         ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
-        selectors.storage[elem.storage_class]);
+        selectors.storage[elem.storage_class] &&
+        selectors.category[elem.category]);
 
     function apply(container, getValues) {
         const allowed = new Set(matches.flatMap(getValues).map(x => String(x)));
@@ -1390,15 +1437,30 @@ function renderSummary(filtered_data) {
     }
 
     /// The history view is ordered by date: the chart from left to right, the details - the newest first.
-    const sorted_indices = [...summaries.keys()].sort(history_view
+    let sorted_indices = [...summaries.keys()].sort(history_view
         ? (a, b) => filtered_data[a].date.localeCompare(filtered_data[b].date) || filtered_data[a].source.localeCompare(filtered_data[b].source)
         : (a, b) => summaries[a] - summaries[b]);
 
-    const shown_indices = sorted_indices.filter(idx => {
+    let shown_indices = sorted_indices.filter(idx => {
         const elem = filtered_data[idx];
         return !(selectors.metric == 'size' && elem.data_size === null)
             && !(selectors.metric == 'load' && (!elem.load_time || elem.load_time < 5));
     });
+
+    /// Only the top result of every system, both in the summary and in the details.
+    /// It is done after the ranking, so that the baseline and the ratios are the same as with all the results.
+    if (selectors.best == 'yes' && !history_view) {
+        const seen = new Set();
+        shown_indices = shown_indices.filter(idx => {
+            const elem = filtered_data[idx];
+            if (elem.fake) return true;
+            if (seen.has(elem.system)) return false;
+            seen.add(elem.system);
+            return true;
+        });
+        const shown = new Set(shown_indices);
+        sorted_indices = sorted_indices.filter(idx => shown.has(idx));
+    }
 
     if (history_view) {
         /// Concurrent QPS is shown as is, the higher the better, and the rest - as the relative values of the summary.
@@ -1990,7 +2052,8 @@ function render() {
             ((selectors.tuned.yes && elem.tuned === "yes") || (selectors.tuned.no && elem.tuned === "no")) &&
             ((selectors.opensource.yes && elem.proprietary === "no") || (selectors.opensource.no && elem.proprietary === "yes")) &&
             ((selectors.hardware.cpu && (elem.hardware === "cpu" || !elem.hardware)) || (selectors.hardware.gpu && elem.hardware === "gpu")) &&
-            selectors.storage[elem.storage_class]
+            selectors.storage[elem.storage_class] &&
+            selectors.category[elem.category]
             );
     }
 
@@ -2516,6 +2579,12 @@ window.onpopstate = function(event) {
     }
     if (!selectors.storage) {
         selectors.storage = {...default_storage};
+    }
+    if (!selectors.category) {
+        selectors.category = {...default_category};
+    }
+    if (!selectors.best) {
+        selectors.best = 'no';
     }
     updateSelectors();
     render();

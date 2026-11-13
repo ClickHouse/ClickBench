@@ -1,0 +1,14 @@
+{
+  "system": "ByteHouse",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "retired",
+  "tags": [
+    "managed",
+    "column-oriented",
+    "ClickHouse derivative",
+    "C++",
+    "no-cold"
+  ]
+}
