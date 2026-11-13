@@ -117,6 +117,16 @@ unverified executions, the load time and the data size. Then comes a matrix of
 the queries that failed somewhere. If most systems disagree with the reference
 on a query, the report says so: the query or the reference may be wrong.
 
+`report.py <group> --output <dir>` also writes `report.html`: one
+self-contained page (`lib/report_html.py`) with the ranking for every machine
+type, a matrix of the queries and the systems (the median time of the correct
+runs, colored by its ratio to the fastest system on the query, with the
+failures marked), and every query in detail: its SQL, the translation for
+every system, the time and status of every run, the errors and the beginning
+of the outputs. The workflow **Report the randomized benchmark** publishes it
+on pastila.nl (`--publish`), links it in the job summary, and keeps it in the
+artifact.
+
 ## Adding a system
 
 Only reasonably mature systems take part. A system can take part if:

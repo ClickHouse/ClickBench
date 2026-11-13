@@ -3,11 +3,19 @@
 
 Usage:
   report.py <group> [--sink URL] [--files result.json ...] [--output dir]
+            [--payloads payload.json ...] [--publish]
 
 Reads the results of the group from the sink (kind "random-benchmark"), or
 from files, and prints a Markdown report: one table per machine type, and
-the queries with the most failures. With --output, also writes report.md and
-results.json (all results) into the directory.
+the queries with the most failures. With --output, also writes report.md,
+report.html (the self-contained HTML report, see lib/report_html.py) and
+results.json (all results) into the directory. The queries and their
+translations for the HTML report come from the payloads of the group in the
+sink (the earliest one of every system: the launcher stores them before it
+launches the machines), or from --payloads files (payload rows, or the
+directory groups/<group>/payload/ of a local launch). With --publish, the
+HTML report is posted to pastila.nl (as results_preview.py does) and the
+link is printed and added to the job summary.
 
 The queries are random, so the numbers are comparable only within a group:
 the same queries and the same data for every system and machine.
@@ -30,6 +38,9 @@ import sys
 import urllib.parse
 import urllib.request
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+import report_html  # noqa: E402
+
 FAILED = ("wrong", "error", "timeout", "unsupported")
 
 
@@ -41,6 +52,31 @@ def fetch(sink, group):
         ORDER BY time FORMAT JSONEachRow"""
     with urllib.request.urlopen(sink + "&query=" + urllib.parse.quote(query), timeout=300) as response:
         return [json.loads(json.loads(line)["content"]) for line in response.read().decode().splitlines() if line]
+
+
+def decode_payload(row):
+    import base64
+    import gzip
+    return json.loads(gzip.decompress(base64.b64decode(row["data"])))
+
+
+def fetch_payloads(sink, group):
+    """{system: {"queries": ..., "translated": ...}} of the group."""
+    query = f"""SELECT content FROM sink.data
+        WHERE time >= now() - INTERVAL 30 DAY
+          AND JSONExtractString(content, 'kind') = 'random-benchmark-payload'
+          AND JSONExtractString(content, 'group') = '{group}'
+        ORDER BY time FORMAT JSONEachRow"""
+    with urllib.request.urlopen(sink + "&query=" + urllib.parse.quote(query), timeout=300) as response:
+        rows = [json.loads(json.loads(line)["content"]) for line in response.read().decode().splitlines() if line]
+    payloads = {}
+    for row in rows:
+        if row.get("system") not in payloads:
+            try:
+                payloads[row["system"]] = decode_payload(row)
+            except (ValueError, OSError, KeyError):
+                print(f"report: an undecodable payload row for {row.get('system')}, skipped", file=sys.stderr)
+    return payloads
 
 
 def human_size(n):
@@ -126,11 +162,22 @@ def main():
     parser.add_argument("--sink", default="https://play.clickhouse.com/?user=sink")
     parser.add_argument("--files", nargs="*")
     parser.add_argument("--output")
+    parser.add_argument("--payloads", nargs="*")
+    parser.add_argument("--publish", action="store_true")
     args = parser.parse_args()
     if args.files:
         results = [json.load(open(f)) for f in args.files]
     else:
         results = fetch(args.sink, args.group)
+    if args.payloads is not None:
+        payloads = {}
+        for f in args.payloads:
+            row = json.load(open(f))
+            payloads[row["system"]] = decode_payload(row)
+    elif args.files:
+        payloads = {}
+    else:
+        payloads = fetch_payloads(args.sink, args.group)
     text = report(results, args.group)
     print(text)
     if args.output:
@@ -139,6 +186,15 @@ def main():
             f.write(text + "\n")
         with open(os.path.join(args.output, "results.json"), "w") as f:
             json.dump(results, f, ensure_ascii=False)
+        if results:
+            with open(os.path.join(args.output, "report.html"), "w") as f:
+                f.write(report_html.render(results, payloads))
+    if args.publish and results:
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        import pastila
+        url = pastila.post(report_html.render(results, payloads), extension=".html", compress=True)
+        print(f"\nHTML report: {url}")
+        text += f"\n\nHTML report: {url}\n"
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
             f.write(text + "\n")
