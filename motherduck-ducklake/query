@@ -1,0 +1,23 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it once against the clickbench_ducklake
+# MotherDuck-managed DuckLake database via the DuckDB Python client.
+#   Stdout: query result rows.
+#   Stderr: query runtime in fractional seconds on the last line.
+#   Exit:   non-zero on error.
+set -e
+
+PY=.venv/bin/python3; [ -x "$PY" ] || PY=python3
+
+# The query arrives on stdin, so pass the program via -c. Single-attach mode
+# attaches only the benchmark database instead of the whole workspace catalog.
+exec "$PY" -c '
+import duckdb, sys, timeit
+query = sys.stdin.read()
+con = duckdb.connect("md:clickbench_ducklake", config={"motherduck_attach_mode": "single"})
+start = timeit.default_timer()
+rows = con.execute(query).fetchall()
+elapsed = timeit.default_timer() - start
+for row in rows:
+    print(row)
+print(f"{elapsed:.3f}", file=sys.stderr)
+'

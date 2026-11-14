@@ -12,4 +12,7 @@ sudo apt-get install -y python3-pip python3-venv
 # does not survive into a separate process.
 python3 -m venv .venv
 .venv/bin/pip install --quiet --upgrade pip
-.venv/bin/pip install --quiet duckdb
+# Pin to a DuckDB release MotherDuck supports: an unpinned install picks up
+# the newest PyPI release, which MotherDuck can lag behind (it rejects a
+# too-new client at connect time). Override with DUCKDB_VERSION.
+.venv/bin/pip install --quiet "duckdb==${DUCKDB_VERSION:-1.5.6}"

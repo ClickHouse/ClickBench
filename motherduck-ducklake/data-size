@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+: "${motherduck_token:?motherduck_token is required}"
+
+PY=.venv/bin/python3; [ -x "$PY" ] || PY=python3
+
+# Total bytes of the DuckLake data (and delete) files backing hits, from the
+# DuckLake catalog.
+exec "$PY" -c '
+import duckdb
+con = duckdb.connect("md:clickbench_ducklake", config={"motherduck_attach_mode": "single"})
+print(con.execute("""
+    SELECT SUM(data_file_size_bytes) + COALESCE(SUM(delete_file_size_bytes), 0)
+    FROM ducklake_list_files('"'"'clickbench_ducklake'"'"', '"'"'hits'"'"')
+""").fetchone()[0])
+'

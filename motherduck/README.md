@@ -40,7 +40,7 @@ The shared driver invokes these scripts in the system directory:
 
 | script      | role                                                          |
 |-------------|--------------------------------------------------------------|
-| `install`   | apt Python + venv, `pip install duckdb`                       |
+| `install`   | apt Python + venv, `pip install duckdb==1.5.6` (MotherDuck-supported) |
 | `start`/`stop` | no-ops (remote service, no local daemon)                  |
 | `check`     | `SELECT 1` over `md:` to confirm connectivity                 |
 | `load`      | create the `clickbench` database + INSERT from S3 parquet     |
