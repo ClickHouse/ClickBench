@@ -1,0 +1,4 @@
+# The queries have the standard SQL semantics, which ClickHouse gives with these settings.
+QUERY_SUFFIX=" SETTINGS join_use_nulls = 1, aggregate_functions_null_for_empty = 1, group_by_use_nulls = 1, union_default_mode = 'DISTINCT', intersect_default_mode = 'DISTINCT', except_default_mode = 'DISTINCT'"
+# The ClickHouse translation of the queries, as the reference runs them.
+DIALECT=clickhouse

@@ -1,0 +1,39 @@
+name: "Collect the randomized benchmark results"
+
+# Writes the results of the groups of the randomized benchmark that arrived in
+# the sink into random/results/YYYYMMDD/<group>.json (one file per group, all
+# the queries and every run), and publishes them with a pull request that is
+# merged (see random/collect-new-results.sh).
+
+on:
+  workflow_dispatch:
+    inputs:
+      since_hours:
+        description: "Look at the results that arrived in the last N hours"
+        default: "24"
+      groups:
+        description: "Collect these groups instead (ids, space-separated)"
+        default: ""
+  schedule:
+    - cron: '41 * * * *'
+
+permissions:
+  contents: write       # To push the results branch.
+  pull-requests: write  # To open and merge the automated pull request.
+
+concurrency:
+  group: random-collect-results
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SINCE_HOURS: ${{ inputs.since_hours || '24' }}
+          RANDOM_GROUPS: ${{ inputs.groups }}
+        run: ./random/collect-new-results.sh

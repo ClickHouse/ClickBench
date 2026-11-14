@@ -55,7 +55,7 @@ STAGING = "clickbench.results_staging"
 
 # The same files as in generate-results.sh: <system>/results/<date>/<name>.json.
 RESULT_RE = re.compile(r"([^/]+)/results/([^/]+)/([^/]+\.json)$")
-SKIP_SYSTEMS = {"hardware", "versions", "gravitons"}
+SKIP_SYSTEMS = {"hardware", "versions", "gravitons", "random"}
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}$")
 
 

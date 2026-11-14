@@ -1,0 +1,29 @@
+#!/bin/bash
+# The query script of the main benchmark, with the changes of query.rfl:
+# the result of every query in its own variable, and printed as CSV.
+# Runs a Rayfall query from stdin on the server. Stdout: the result; stderr:
+# the runtime in seconds on the last line. Non-zero exit on error.
+set -e
+
+export RAYFORCE_PORT="${RAYFORCE_PORT:-5000}"
+export RAYFORCE_QUERY RAYFORCE_MS RAYFORCE_CSV RAYFORCE_VAR
+RAYFORCE_QUERY=$(mktemp)
+RAYFORCE_MS=$(mktemp)
+RAYFORCE_CSV=$(mktemp --suffix=.csv)
+trap 'rm -f "$RAYFORCE_QUERY" "$RAYFORCE_MS" "$RAYFORCE_CSV"' EXIT
+# A name of a variable for this query only.
+RAYFORCE_VAR="rfq$(od -An -N8 -tx8 /dev/urandom | tr -d ' \n')"
+
+cat > "$RAYFORCE_QUERY"
+
+rayforce query.rfl
+
+cat "$RAYFORCE_CSV"
+ms=$(cat "$RAYFORCE_MS")
+if [ -z "$ms" ]; then
+    echo "rayforce: query returned no timing" >&2
+    exit 1
+fi
+
+# Milliseconds, possibly in exponent form, to plain fractional seconds.
+awk -v ms="$ms" 'BEGIN { printf "%.6f\n", ms / 1000 }' >&2
