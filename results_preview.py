@@ -181,11 +181,14 @@ def comparison_data(old_data, new_data):
 
 
 # For the comparison: show all the entries, regardless of the default filters
-# (some machines, tuned systems, GPUs are not selected by default).
+# (some machines, tuned systems, GPUs, enthusiast and joke categories are not
+# selected by default). Every group of checkboxes is selected - not a fixed
+# list of them, so that a new filter of index.html can't hide the entries.
 SELECT_ALL_SCRIPT = """<script type="text/javascript">
 if (!window.location.hash) {
-    for (const k of ['system', 'type', 'machine', 'cluster_size', 'opensource', 'hardware', 'tuned', 'storage'])
-        Object.keys(selectors[k]).forEach(x => { selectors[k][x] = true });
+    for (const group of Object.values(selectors))
+        if (group && typeof group === 'object' && !Array.isArray(group))
+            Object.keys(group).forEach(x => { group[x] = true });
     updateSelectors();
     render();
 }

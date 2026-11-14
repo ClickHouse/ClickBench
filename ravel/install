@@ -42,7 +42,7 @@ if ! command -v aws >/dev/null 2>&1; then
 fi
 aws --version
 
-RAVEL_VERSION="${RAVEL_VERSION:-v0.28.0}"
+RAVEL_VERSION="${RAVEL_VERSION:-v0.32.0}"
 RAVEL_REPO="${RAVEL_REPO:-https://github.com/NOFireAI/ravel}"
 
 case "$(uname -m)" in
@@ -118,15 +118,17 @@ sha256sum "$RAVEL_SERVER" "$RAVEL_CLI"
 # are above: the v0.17.0 release plus two changes offered upstream, one that
 # returns each object's stored ETag in listings (s3s-project/s3s#1013), which
 # `store qualify` requires, and one that reads the access and secret key from
-# the environment (s3s-project/s3s#1014). The release is built from the commit
+# the environment (s3s-project/s3s#1014). It also carries fixes made on the
+# fork: it sets TCP_NODELAY on every accepted connection, and it publishes an
+# object and its checksums under one lock. The release is built from the commit
 # S3S_FS_REV names; when the release is unreachable the same commit is built
 # here with `cargo install --locked`, so what runs is fixed by content either
 # way. A loopback RAVEL_S3_ENDPOINT means the s3s-fs this entry manages;
 # anything else is an external S3-compatible store the operator provisioned,
 # and this section is skipped.
 S3S_FS_GIT="${S3S_FS_GIT:-https://github.com/NOFireAI/s3s}"
-S3S_FS_RELEASE="${S3S_FS_RELEASE:-s3s-fs-0.17.0-ravel.1}"
-S3S_FS_REV="${S3S_FS_REV:-9353c1f1b3d4247d1d48858e34abcb21e2003ac5}"
+S3S_FS_RELEASE="${S3S_FS_RELEASE:-s3s-fs-0.17.0-ravel.3}"
+S3S_FS_REV="${S3S_FS_REV:-9930198234c08ddd49540da103f13f01140ac114}"
 case "$RAVEL_S3_ENDPOINT" in
     http://127.0.0.1:*|http://localhost:*) local_store=yes ;;
     *) local_store=no ;;
