@@ -1,0 +1,7 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+source ./config.sh
+[ ! -e "$RUN/stop-failed" ]
+systemctl is-active --quiet "$SERVICE"
+[ "$("${NATIVE[@]}" -c 'SELECT 1;')" = 1 ]

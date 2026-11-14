@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+source ./config.sh
+# systemd waits for the whole cgroup, including workers whose leader exited.
+if ! sudo -n systemctl stop "$SERVICE" ||
+   [ "$(systemctl show "$SERVICE" -p ActiveState --value)" != inactive ] ||
+   [ "$(systemctl show "$SERVICE" -p Result --value)" != success ]; then
+  touch "$RUN/stop-failed"
+  echo 'Server did not stop cleanly; this run cannot continue' >&2
+  exit 1
+fi

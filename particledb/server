@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+source "$(dirname "$0")/config.sh"
+cd "$RUN"
+# Ignore inherited experimental settings; keep query-result caching disabled.
+exec env -i PATH=/usr/bin:/bin LC_ALL=C PDB_DISABLE_QRC=1 PDB_ENABLE_QRC=0 \
+  "$ENTRY/bin/$VERSION" start --data-dir "$RUN/data" \
+  --no-auth --pg-addr 127.0.0.1:55432 \
+  --http-addr 127.0.0.1:55434 --redis-addr 127.0.0.1:55437 \
+  --metrics-addr 127.0.0.1:55435 \
+  --pdb-addr 127.0.0.1:55434 --no-console --no-unix-sockets \
+  --concurrency-control optimistic --durability sync --default-collation C

@@ -1,0 +1,62 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+source ./config.sh
+case "$(uname -m)" in
+  aarch64) arch=arm64; sha=61098775f0265650fec97a0921d177129f1aee619ce064cd88e9c5ede34bc7dd ;;
+  x86_64)
+    grep -qw avx2 /proc/cpuinfo || { echo 'AVX2 is required' >&2; exit 1; }
+    arch=x86_64; sha=bd7c3fa0db06e099976844f8d42682b866cbbf7295136b87e1271fd992997773 ;;
+  *) echo 'Requires Linux ARM64 or x86-64' >&2; exit 1 ;;
+esac
+# Never replace a service belonging to a different checkout.
+if systemctl cat "$SERVICE" >/dev/null 2>&1; then
+  [ "$(systemctl show "$SERVICE" -p WorkingDirectory --value)" = "$ENTRY" ] || {
+    echo "$SERVICE belongs to another checkout" >&2; exit 1;
+  }
+  ./stop
+fi
+if command -v apt-get >/dev/null 2>&1; then
+  sudo -n env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
+  sudo -n env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y --no-install-recommends ca-certificates curl wget python3
+elif command -v dnf >/dev/null 2>&1; then
+  sudo -n dnf install -y ca-certificates curl-minimal wget python3
+else
+  echo 'Requires apt-get or dnf and systemd' >&2; exit 1
+fi
+mkdir -p bin runs client-home
+binary="$ENTRY/bin/$VERSION"
+url="https://get.particledb.ai/v$VERSION/particledb-linux-$arch"
+if ! printf '%s  %s\n' "$sha" "$binary" | sha256sum -c --status; then
+  curl --fail --location --retry 3 --max-time 600 "$url" -o "$binary.download"
+  printf '%s  %s\n' "$sha" "$binary.download" | sha256sum -c
+  mv "$binary.download" "$binary"
+fi
+chmod +x "$binary"
+run=$(mktemp -d "$ENTRY/runs/$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")
+mkdir "$run/data"
+env -i PATH=/usr/bin:/bin "$binary" version >"$run/version.txt" 2>&1
+grep -Fx "ParticleDB v$VERSION" "$run/version.txt"
+printf '%s\n%s\n' "$url" "$sha" >"$run/binary.txt"
+ln -sfnT "$run" "$RUN"
+# Quote systemd paths, including its % specifier escape.
+unit_path() {
+  local path=${1//\\/\\\\}
+  path=${path//\"/\\\"}; path=${path//%/%%}
+  printf '"%s"' "$path"
+}
+sudo -n tee "/etc/systemd/system/$SERVICE" >/dev/null <<UNIT
+[Unit]
+Description=ParticleDB ClickBench
+[Service]
+Type=exec
+ExitType=cgroup
+User=$(id -u)
+WorkingDirectory=${ENTRY//%/%%}
+ExecStart=:/bin/bash $(unit_path "$ENTRY/server")
+KillMode=control-group
+TimeoutStopSec=120
+StandardOutput=append:${run//%/%%}/server.log
+StandardError=append:${run//%/%%}/server.log
+UNIT
+sudo -n systemctl daemon-reload
