@@ -8,7 +8,8 @@ set -e
 DUCKDB="$(pwd)/duckdb-vortex/build/release/duckdb"
 query=$(cat)
 
-out=$("$DUCKDB" hits.db -c ".timer on" -c "$query" 2>/tmp/duckdb.err.$$) && status=0 || status=$?
+# -no-agent: keep the plain CLI output; see ../duckdb-vortex/query.
+out=$("$DUCKDB" -no-agent hits.db -c ".timer on" -c "$query" 2>/tmp/duckdb.err.$$) && status=0 || status=$?
 
 if [ "$status" -ne 0 ]; then
     cat /tmp/duckdb.err.$$ >&2

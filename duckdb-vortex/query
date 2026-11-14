@@ -1,17 +1,18 @@
 #!/bin/bash
-# Reads a SQL query from stdin, runs it via duckdb against hits.db (a VIEW
-# over hits.vortex). The vortex extension is loaded for each invocation.
+# Reads a SQL query from stdin, runs it via the custom-built duckdb-vortex
+# binary against hits.db (a VIEW over hits.vortex).
 # Stdout: query result. Stderr: runtime in fractional seconds on the last
 # line. Exit non-zero on error.
 set -e
 
+DUCKDB="$(pwd)/duckdb-vortex/build/release/duckdb"
 query=$(cat)
 
 # -no-agent: the 2.0 CLI turns on "agent mode" when it detects an AI coding
 # agent in the environment (AI_AGENT, CLAUDECODE, CURSOR_AGENT, ...) and
 # stdout is not a terminal: Markdown tables, truncated results, JSON errors
 # and a progress bar. Keep the plain output regardless of who runs this.
-out=$(duckdb -no-agent hits.db -c "LOAD vortex;" -c ".timer on" -c "$query" 2>/tmp/duckdb.err.$$) && status=0 || status=$?
+out=$("$DUCKDB" -no-agent hits.db -c ".timer on" -c "$query" 2>/tmp/duckdb.err.$$) && status=0 || status=$?
 
 if [ "$status" -ne 0 ]; then
     cat /tmp/duckdb.err.$$ >&2
