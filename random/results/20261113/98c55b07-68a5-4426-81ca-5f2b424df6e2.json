@@ -7182,7 +7182,7 @@
    "data_size_after": 162292841148,
    "total_time": 133.959,
    "penalized_time": 36883.959,
-   "geomean": 16.5226,
+   "geomean": 18.7574,
    "counts": {
     "error": 243,
     "ok": 55,
@@ -10364,7 +10364,7 @@
    "data_size_after": 68433968358,
    "total_time": 854.619,
    "penalized_time": 38054.619,
-   "geomean": 18.0254,
+   "geomean": 20.4426,
    "counts": {
     "ok": 52,
     "wrong": 4,
@@ -13549,7 +13549,7 @@
    "data_size_after": 179654373376,
    "total_time": 480.22,
    "penalized_time": 44580.22,
-   "geomean": 20.0308,
+   "geomean": 22.8349,
    "counts": {
     "wrong": 294,
     "ok": 6
@@ -16876,7 +16876,7 @@
    "data_size_after": 179616886784,
    "total_time": 1074.346,
    "penalized_time": 45174.346,
-   "geomean": 20.6576,
+   "geomean": 23.5494,
    "counts": {
     "wrong": 293,
     "ok": 6,
@@ -20081,6 +20081,3097 @@
    ]
   },
   {
+   "directory": "rayforce",
+   "system": "Rayforce",
+   "machine": "c6a.metal",
+   "proprietary": "no",
+   "tuned": "no",
+   "tags": [
+    "C",
+    "column-oriented",
+    "embedded"
+   ],
+   "repo": "ClickHouse/ClickBench",
+   "branch": "randomized-benchmark",
+   "commit": "640a7ec2fbb90b4637682ef200c57f8c4da22c9c",
+   "translator": "anthropic:claude-opus-5-5",
+   "translations": {
+    "q001": "(do (set reg (select {from: hits by: RegionID nets: (count (distinct IPNetworkID)) hc: (count RegionID) desc: nets asc: RegionID take: 10})) (set ids (at reg 'RegionID)) (set hourly (select {from: hits by: {RegionID: RegionID hr: (hh EventTime)} c: (count RegionID) where: (in RegionID ids)})) (set mx (select {from: hourly by: RegionID mc: (max c)})) (set peak (select {from: (inner-join [RegionID] hourly mx) by: RegionID hr: (min hr) pc: (max c) where: (== c mc)})) (set tm (select {from: hits by: RegionID ac: (/ (round (* (avg ConnectTiming) 100)) 100) where: (and (> ConnectTiming 0) (in RegionID ids))})) (xcol (select {from: (left-join [RegionID] (inner-join [RegionID] reg peak) tm) RegionID: RegionID nets: nets hc: hc hr: hr pc: pc ac: (fill 0.0 ac) desc: nets asc: RegionID}) [region_id nets hits peak_hour peak_hits avg_connect]))",
+    "q002": "(do (set t2 (select {from: hits UserID: UserID sec: (+ (* (hh EventTime) 3600) (+ (* (minute EventTime) 60) (ss EventTime))) where: (== EventDate 2013.07.15) asc: [UserID sec]})) (set g2 (table [UserID gap fr] (list (at t2 'UserID) (deltas (at t2 'sec)) (differ (at t2 'UserID))))) (xcol (select {from: (select {from: g2 bk: (if (< gap 10) 1 (< gap 60) 2 (< gap 600) 3 (< gap 1800) 4 5) UserID: UserID where: (not fr)}) by: bk gaps: (count UserID) users: (count (distinct UserID)) asc: bk}) [gap_bucket gaps users]))",
+    "q003": "(do (set r3 (select {from: (select {from: hits by: RefererRegionID c: (count RefererRegionID) where: (!= RefererRegionID 0)}) where: (>= c 1000)})) (set ex3 (select {from: hits by: RefererRegionID n: (count RefererRegionID) where: (and (!= SearchPhrase \"\") (>= EventDate 2013.07.25))})) (select {from: (anti-join [RefererRegionID] r3 ex3) RefererRegionID: RefererRegionID c: c desc: c asc: RefererRegionID take: 30}))",
+    "q004": "(do (set st (select {from: (select {from: hits by: [IsMobile CounterID] hits_cnt: (count CounterID) avg_rst: (avg ResponseStartTiming) where: (> ResponseStartTiming 0)}) where: (>= hits_cnt 50)})) (set sl (select {from: st device: IsMobile counter_id: CounterID hits_cnt: hits_cnt avg_rst: avg_rst nr: (neg avg_rst) asc: [device nr counter_id]})) (set sl2 (table [device counter_id hits_cnt avg_rst i] (list (at sl 'device) (at sl 'counter_id) (at sl 'hits_cnt) (at sl 'avg_rst) (til (count (at sl 'device)))))) (set slm (select {from: sl2 by: device m0: (min i)})) (set slr (select {from: (inner-join [device] sl2 slm) kind: 'slowest device: device pos: (+ 1 (- i m0)) counter_id: counter_id hits_cnt: hits_cnt avg_rst: avg_rst where: (< (- i m0) 5) asc: [device pos]})) (set fa (select {from: st device: IsMobile counter_id: CounterID hits_cnt: hits_cnt avg_rst: avg_rst asc: [device avg_rst counter_id]})) (set fa2 (table [device counter_id hits_cnt avg_rst i] (list (at fa 'device) (at fa 'counter_id) (at fa 'hits_cnt) (at fa 'avg_rst) (til (count (at fa 'device)))))) (set fam (select {from: fa2 by: device m0: (min i)})) (set far (select {from: (inner-join [device] fa2 fam) kind: 'fastest device: device pos: (+ 1 (- i m0)) counter_id: counter_id hits_cnt: hits_cnt avg_rst: avg_rst where: (< (- i m0) 5) asc: [device pos]})) (union-all far slr))",
+    "q005": "(do (set tot (count hits)) (set g5 (select {from: (select {from: hits by: {k: (if (== Referer \"\") 1 (like Referer \"*=*\") 3 (like Referer \"https://*\") 4 2) mobile_flag: IsMobile} hits_cnt: (count IsMobile) nb: (avg IsNotBounce)}) asc: [k mobile_flag]})) (select {from: g5 ref_kind: (if (== k 1) \"direct\" (== k 2) \"plain_ref\" (== k 3) \"ref_with_params\" \"secure_ref\") mobile_flag: mobile_flag hits_cnt: hits_cnt share_of_all: (/ hits_cnt tot) not_bounce_rate: nb}))",
+    "q006": "(do (set pb (select {from: hits by: CounterID hits_cnt: (count CounterID) desc: hits_cnt asc: CounterID take: 20})) (set pids (at pb 'CounterID)) (set vv (select {from: hits by: {CounterID: CounterID dnum: (dd EventDate)} day_hits: (count CounterID) day_rst: (avg ResponseStartTiming) where: (in CounterID pids)})) (set vf (select {from: vv where: (>= day_hits 100)})) (set mv (select {from: vf by: CounterID mr: (max day_rst)})) (set wd (select {from: (inner-join [CounterID] vf mv) by: CounterID dnum: (min dnum) where: (== day_rst mr)})) (set wm (inner-join [CounterID dnum] wd vf)) (set mb (select {from: hits by: CounterID overall_rst: (avg ResponseStartTiming) where: (in CounterID pids)})) (set ad (select {from: vv by: CounterID active_days: (count dnum)})) (select {from: (inner-join [CounterID] (inner-join [CounterID] (inner-join [CounterID] pb wm) mb) ad) counter_id: CounterID total_hits: hits_cnt days_active: active_days worst_day: dnum worst_day_hits: day_hits worst_day_rst: day_rst month_rst: overall_rst excess_rst: (- day_rst overall_rst) desc: total_hits asc: counter_id}))",
+    "q007": "(do (set s7 (select {from: hits by: UserID phrases: (count (distinct SearchPhrase)) where: (!= SearchPhrase \"\")})) (set d7 (select {from: hits by: UserID actions: (count UserID) where: (or (== IsDownload 1) (== IsLink 1))})) (xcol (select {from: (select {from: (inner-join [UserID] s7 d7) pb: (min phrases 10) actions: actions}) by: pb users: (count actions) actions_total: (sum actions) max_actions: (max actions) asc: pb}) [phrase_bucket users actions_total max_actions]))",
+    "q008": "(do (set e8 (select {from: (select {from: hits by: CounterID c: (count CounterID) where: (< EventDate 2013.07.15)}) where: (>= c 20)})) (set l8 (select {from: hits by: CounterID n: (count CounterID) where: (>= EventDate 2013.07.25)})) (xcol (select {from: (anti-join [CounterID] e8 l8) CounterID: CounterID c: c desc: c asc: CounterID take: 20}) [CounterID early_hits]))",
+    "q009": "(do (set m9 (select {from: hits by: UserAgentMinor mobile_hits: (count IsMobile) where: (== IsMobile 1)})) (set k9 (select {from: hits by: UserAgentMinor desktop_hits: (count IsMobile) where: (== IsMobile 0)})) (select {from: (inner-join [UserAgentMinor] m9 k9) ua_minor: UserAgentMinor mobile_hits: mobile_hits desktop_hits: desktop_hits where: (and (>= mobile_hits 10) (>= desktop_hits 10)) desc: [mobile_hits desktop_hits] asc: ua_minor take: 30}))",
+    "q010": "(do (set rg (select {from: hits by: RefererRegionID sh: (count RefererRegionID) where: (and (!= SearchPhrase \"\") (!= RefererRegionID 0)) desc: sh asc: RefererRegionID take: 10})) (set rids (at rg 'RefererRegionID)) (set rh (select {from: hits by: {RefererRegionID: RefererRegionID hr: (hh EventTime)} c: (count RefererRegionID) where: (and (!= SearchPhrase \"\") (in RefererRegionID rids))})) (set mx10 (select {from: rh by: RefererRegionID mc: (max c)})) (set pk (select {from: (inner-join [RefererRegionID] rh mx10) by: RefererRegionID hr: (min hr) pc: (max c) where: (== c mc)})) (select {from: (inner-join [RefererRegionID] rg pk) rr: RefererRegionID sh: sh peak_hour: hr peak_hits: pc peak_share: (/ pc sh) desc: sh asc: rr}))",
+    "q011": "(do (set u0 (select {from: hits by: UserID hc: (count UserID) days: (count (distinct EventDate)) ips: (count (distinct RemoteIP)) mob: (sum IsMobile)})) (set sr (select {from: hits by: UserID searches: (count UserID) where: (!= SearchPhrase \"\")})) (set u1 (select {from: (left-join [UserID] (select {from: u0 where: (>= hc 5)}) sr) sc: (fill 0 searches) segment: (if (>= ips 5) \"nomad\" (>= days 10) \"loyal\" (> (* mob 2) hc) \"mobile\" (> (* sc 2) hc) \"searcher\" \"regular\") hc: hc days: days ips: ips})) (select {from: u1 by: segment users: (count hc) hits_total: (sum hc) avg_days: (/ (round (* (avg days) 100)) 100) max_ips: (max ips) desc: users asc: segment}))",
+    "q012": "(do (set thr (* 2 (first (at (select {from: hits a: (avg (strlen URL)) where: (!= URL \"\")}) 'a)))) (select {from: hits by: [CounterClass IsParameter] long_urls: (count CounterClass) max_len: (max (strlen URL)) ips: (count (distinct ClientIP)) where: (and (not (nil? (str-find URL \"?\"))) (> (strlen URL) thr)) desc: long_urls asc: [CounterClass IsParameter]}))",
+    "q013": "(do (set aa (select {from: (select {from: hits by: [UserAgent UserAgentMinor] c: (count UserAgent) where: (!= SearchPhrase \"\")}) where: (>= c 1000)})) (set ex13 (select {from: hits by: [UserAgent UserAgentMinor] n: (count UserAgent) where: (and (== CookieEnable 0) (!= SearchPhrase \"\"))})) (select {from: (inner-join [UserAgent UserAgentMinor] aa ex13) UserAgent: UserAgent UserAgentMinor: UserAgentMinor c: c desc: c asc: [UserAgent UserAgentMinor] take: 25}))",
+    "q014": "(do (set m1 (at (select {from: hits by: MobilePhoneModel n: (count Sex) where: (and (== Sex 1) (!= MobilePhoneModel \"\"))}) 'MobilePhoneModel)) (set m2 (at (select {from: hits by: MobilePhoneModel n: (count Sex) where: (and (== Sex 2) (!= MobilePhoneModel \"\"))}) 'MobilePhoneModel)) (table [sex1_models sex2_models shared_models] (list (enlist (count m1)) (enlist (count m2)) (enlist (count (sect m1 m2))))))",
+    "q015": "(do (set tc (select {from: hits by: CounterID n: (count CounterID) desc: n asc: CounterID take: 50})) (set ids15 (at tc 'CounterID)) (set dc (select {from: hits by: [CounterID EventDate] c: (count CounterID) where: (in CounterID ids15)})) (set ds (select {from: hits by: [CounterID EventDate] sl: (count CounterID) where: (and (in CounterID ids15) (> ResponseStartTiming 500))})) (set dl (select {from: (left-join [CounterID EventDate] dc ds) CounterID: CounterID c: c slow: (fill 0 sl)})) (set mo (select {from: dl by: CounterID mc: (sum c) ms: (sum slow)})) (set j15 (inner-join [CounterID] dl mo)) (set ad15 (select {from: j15 by: [CounterID mc ms] active_days: (count c)})) (set bd15 (select {from: j15 by: CounterID bad_days: (count c) where: (> (* slow mc) (* ms c))})) (select {from: (left-join [CounterID] ad15 bd15) CounterID: CounterID total_hits: mc slow_hits: ms bad_days: (fill 0 bad_days) active_days: active_days desc: bad_days asc: CounterID take: 50}))",
+    "q016": "(do (set h1 (select {from: (select {from: hits by: RefererRegionID c: (count RefererRegionID) where: (and (<= EventDate 2013.07.15) (!= RefererRegionID 0))}) where: (>= c 100)})) (set h2 (select {from: (select {from: hits by: RefererRegionID c2: (count RefererRegionID) where: (and (> EventDate 2013.07.15) (!= RefererRegionID 0))}) where: (>= c2 100)})) (select {from: (anti-join [RefererRegionID] h1 h2) rr: RefererRegionID first_half_hits: c desc: first_half_hits asc: rr take: 30}))",
+    "q017": "(do (set tr (select {from: hits by: RegionID n: (count RegionID) desc: n asc: RegionID take: 10})) (set ids17 (at tr 'RegionID)) (set s17 (select {from: (select {from: hits by: [RegionID OS] c: (count RegionID) avg_ttfb: (avg ResponseStartTiming) where: (in RegionID ids17)}) where: (>= c 100)})) (set so (select {from: s17 RegionID: RegionID OS: OS c: c avg_ttfb: avg_ttfb nr: (neg avg_ttfb) asc: [RegionID nr OS]})) (set sq (table [RegionID OS c avg_ttfb i] (list (at so 'RegionID) (at so 'OS) (at so 'c) (at so 'avg_ttfb) (til (count (at so 'RegionID)))))) (set mi17 (select {from: sq by: RegionID m0: (min i)})) (select {from: (inner-join [RegionID] sq mi17) RegionID: RegionID OS: OS c: c avg_ttfb: avg_ttfb rn: (+ 1 (- i m0)) where: (< (- i m0) 3) asc: [RegionID rn]}))",
+    "q018": "(do (set tu (select {from: hits by: UserID mobile_hits: (count UserID) where: (== IsMobile 1) desc: mobile_hits asc: UserID take: 20})) (set ids18 (at tu 'UserID)) (set dh (select {from: hits by: UserID desktop_hits: (count UserID) where: (and (== IsMobile 0) (in UserID ids18))})) (set oc (select {from: hits by: UserID os_count: (count (distinct OS)) where: (in UserID ids18)})) (select {from: (left-join [UserID] (left-join [UserID] tu dh) oc) user_id: UserID mobile_hits: mobile_hits desktop_hits: (fill 0 desktop_hits) os_count: os_count desc: mobile_hits asc: user_id}))",
+    "q019": "(do (set ua (select {from: hits by: [UserID EventDate] n: (count UserID)})) (set uf (select {from: (select {from: ua by: UserID first_day: (min EventDate)}) where: (<= first_day 2013.07.07)})) (set ux (select {from: (inner-join [UserID] ua uf) UserID: UserID cd: (dd first_day) off: (- (dd EventDate) (dd first_day))})) (set cs (select {from: ux by: cd cohort_size: (count (distinct UserID))})) (set w2 (select {from: ux by: cd active_week2: (count (distinct UserID)) where: (within off [7 13])})) (set lt (select {from: ux by: cd active_later: (count (distinct UserID)) where: (>= off 14)})) (select {from: (left-join [cd] (left-join [cd] cs w2) lt) cohort_day: cd cohort_size: cohort_size active_week2: (fill 0 active_week2) active_later: (fill 0 active_later) asc: cohort_day}))",
+    "q020": "(do (set e20 (select {from: hits UserID: UserID EventTime: EventTime WatchID: WatchID md: (+ (* (hh EventTime) 60) (minute EventTime)) where: (and (== EventDate 2013.07.20) (== IsMobile 1)) asc: [UserID EventTime WatchID]})) (set flg (or (differ (at e20 'UserID)) (> (deltas (at e20 'md)) 30))) (set s20 (select {from: (table [UserID fl] (list (at e20 'UserID) flg)) by: UserID sessions: (count UserID) where: fl})) (select {from: s20 by: sessions users_n: (count UserID) asc: sessions take: 100}))",
+    "q021": "(select {from: (select {from: hits lu: (lower URL) page_type: (if (like lu \"*.htm*\") \"html\" (like lu \"*.php*\") \"php\" (like lu \"*.asp*\") \"asp\" (or (like lu \"*.jpg*\") (like lu \"*.png*\") (like lu \"*.gif*\")) \"image\" (like URL \"*/\") \"directory\" \"other\") CounterID: CounterID ResponseStartTiming: ResponseStartTiming where: (!= URL \"\")}) by: page_type hits_cnt: (count CounterID) counters: (count (distinct CounterID)) avg_rst: (avg ResponseStartTiming) desc: hits_cnt asc: page_type})",
+    "q022": "(do (set ad (select {from: (select {from: hits by: [UserID EventDate] n: (count UserID) where: (!= AdvEngineID 0)}) UserID: UserID EventDate: EventDate})) (set hs (select {from: hits SearchEngineID: SearchEngineID UserID: UserID EventDate: EventDate ResponseEndTiming: ResponseEndTiming where: (!= SearchEngineID 0)})) (set j (inner-join [UserID EventDate] hs ad)) (select {from: j by: SearchEngineID c: (count UserID) users: (count (distinct UserID)) avg_resp_end: (avg ResponseEndTiming) desc: c asc: SearchEngineID take: 20}))",
+    "q023": "(do (set tr (select {from: hits by: RegionID c: (count RegionID) desc: c asc: RegionID take: 20})) (set topids (at tr 'RegionID)) (set daily (select {from: hits by: [RegionID EventDate] c: (count RegionID) where: (in RegionID topids) asc: [RegionID EventDate]})) (set w (select {from: daily RegionID: RegionID EventDate: EventDate c: c next_c: (lead c) nr: (lead RegionID)})) (set dd (select {from: w RegionID: RegionID EventDate: EventDate c: c next_c: next_c drop_hits: (- c next_c) where: (== nr RegionID)})) (set mx (select {from: dd by: RegionID m: (max drop_hits)})) (set f (select {from: (inner-join [RegionID] dd mx) where: (== drop_hits m)})) (set md (select {from: (select {from: f by: RegionID d: (min EventDate)}) RegionID: RegionID EventDate: d})) (set r (inner-join [RegionID EventDate] f md)) (select {from: r RegionID: RegionID drop_day: EventDate day_hits: c next_day_hits: next_c drop_hits: drop_hits desc: drop_hits asc: RegionID}))",
+    "q024": "(do (set a (distinct (at (select {from: hits RemoteIP: RemoteIP where: (== IsMobile 1)}) 'RemoteIP))) (set b (distinct (at (select {from: hits RemoteIP: RemoteIP where: (== IsMobile 0)}) 'RemoteIP))) (table [mobile_ips desktop_ips shared_ips] (list (enlist (count a)) (enlist (count b)) (enlist (count (sect a b))))))",
+    "q025": "(do (set ad (select {from: hits by: [UserID EventDate] eng: (min AdvEngineID) first_ad: (min EventTime) where: (!= AdvEngineID 0)})) (set hs (select {from: hits UserID: UserID EventDate: EventDate EventTime: EventTime IsNotBounce: IsNotBounce IsLink: IsLink})) (set j (inner-join [UserID EventDate] hs ad)) (set f (select {from: (select {from: j eng: eng UserID: UserID EventDate: EventDate e: (if (and (> EventTime first_ad) (== IsNotBounce 1)) 1 0) k: (if (and (> EventTime first_ad) (== IsLink 1)) 1 0)}) by: [eng UserID EventDate] engaged: (max e) clicked: (max k)})) (select {from: f by: {adv_engine: eng} user_days: (count UserID) engaged_days: (sum engaged) clicked_days: (sum clicked) engage_rate: (/ (sum engaged) (count UserID)) desc: user_days asc: adv_engine}))",
+    "q026": "(do (set u (select {from: (select {from: hits by: URL mobile_hits: (count URL) where: (and (== IsMobile 1) (!= URL \"\"))}) where: (>= mobile_hits 20)})) (set d (select {from: hits by: URL dc: (count URL) where: (and (== IsMobile 0) (!= URL \"\"))})) (select {from: (left-join [URL] u d) page_url: URL mobile_hits: mobile_hits where: (or (nil? dc) (> mobile_hits dc)) desc: mobile_hits asc: page_url take: 30}))",
+    "q027": "(do (set tl (select {from: hits by: BrowserLanguage c: (count BrowserLanguage) where: (!= BrowserLanguage \"\") desc: c asc: BrowserLanguage take: 8})) (set langs (at tl 'BrowserLanguage)) (set p0 (select {from: hits by: [BrowserLanguage RefererRegionID] c: (count RefererRegionID) where: (and (in BrowserLanguage langs) (!= RefererRegionID 0))})) (set p1 (select {from: (select {from: p0 asc: RefererRegionID}) asc: BrowserLanguage desc: c})) (set p2 (table [BrowserLanguage RefererRegionID c i] (list (at p1 'BrowserLanguage) (at p1 'RefererRegionID) (at p1 'c) (til (count p1))))) (set st (select {from: p2 by: BrowserLanguage s: (min i)})) (select {from: (left-join [BrowserLanguage] p2 st) BrowserLanguage: BrowserLanguage RefererRegionID: RefererRegionID c: c rn: (+ 1 (- i s)) where: (<= (- i s) 2) asc: [BrowserLanguage rn]}))",
+    "q028": "(select {from: (select {from: hits lang_matches_country: (if (== (lower BrowserLanguage) (lower BrowserCountry)) 1 0) IsMobile: IsMobile UserID: UserID uc: (upper BrowserCountry) where: (and (!= BrowserLanguage \"\") (!= BrowserCountry \"\"))}) by: [lang_matches_country IsMobile] c: (count UserID) users: (count (distinct UserID)) countries: (count (distinct uc)) asc: [lang_matches_country IsMobile]})",
+    "q029": "(do (set d0 (select {from: (select {from: hits EventDate: EventDate RegionID: RegionID e: (if (== IsNotBounce 1) 1 0) where: (>= EventDate 2013.07.16)}) by: [EventDate RegionID] engaged: (sum e)})) (set d1 (select {from: (select {from: d0 asc: RegionID}) asc: EventDate desc: engaged})) (set d2 (table [EventDate RegionID engaged i] (list (at d1 'EventDate) (at d1 'RegionID) (at d1 'engaged) (til (count d1))))) (set st (select {from: d2 by: EventDate s: (min i)})) (select {from: (left-join [EventDate] d2 st) EventDate: EventDate RegionID: RegionID engaged: engaged rn: (+ 1 (- i s)) where: (<= (- i s) 2) asc: [EventDate rn]}))",
+    "q030": "(do (set m (select {from: hits by: [OS UserAgent] n: (count OS) where: (== IsMobile 1)})) (set k (select {from: hits by: [OS UserAgent] n: (count OS) where: (== IsMobile 0)})) (set mo (anti-join [OS UserAgent] m k)) (set ko (anti-join [OS UserAgent] k m)) (set s (union-all (table [side OS] (list (take 'mobile_only (count mo)) (at mo 'OS))) (table [side OS] (list (take 'desktop_only (count ko)) (at ko 'OS))))) (select {from: s by: side pairs: (count OS) os_values: (count (distinct OS)) asc: side}))",
+    "q031": "(do (set g (select {from: hits by: SearchPhrase mobile_hits: (count UserID) mobile_users: (count (distinct UserID)) where: (and (== IsMobile 1) (!= SearchPhrase \"\"))})) (set d (select {from: hits by: SearchPhrase n: (count UserID) where: (== IsMobile 0)})) (select {from: (anti-join [SearchPhrase] g d) phrase: SearchPhrase mobile_hits: mobile_hits mobile_users: mobile_users desc: [mobile_hits mobile_users] asc: phrase take: 25}))",
+    "q032": "(do (set p (select {from: (select {from: hits by: URL views: (count URL) where: (!= URL \"\")}) desc: views})) (set v (at p 'views)) (set run (sums v)) (set total (sum v)) (set cnt (count (where (< (* 2 (- run v)) total)))) (table [pages_for_half total_views all_pages] (list (enlist cnt) (enlist total) (enlist (count v)))))",
+    "q033": "(do (set reg (select {from: (select {from: hits by: RegionID c: (count RegionID)}) where: (>= c 50)})) (set adv (select {from: hits by: RegionID n: (count RegionID) where: (!= AdvEngineID 0)})) (select {from: (anti-join [RegionID] reg adv) RegionID: RegionID c: c desc: c asc: RegionID take: 20}))",
+    "q034": "(select {from: (select {from: hits lu: (lower URL) kind: (if (like lu \"*.html*\") \"html\" (like lu \"*.php*\") \"php\" (or (like lu \"*.jpg*\") (like lu \"*.png*\")) \"image\" \"other\") IsDownload: IsDownload UserID: UserID where: (!= URL \"\")}) by: [kind IsDownload] c: (count UserID) users: (count (distinct UserID)) asc: [kind IsDownload]})",
+    "q035": "(do (set t (select {from: hits by: [EventDate CounterID] users: (count (distinct UserID))})) (select {from: (select {from: t dom: (dd EventDate) users: users f: (if (>= users 100) 1 0)}) by: dom active_counters: (count users) max_users: (max users) avg_users: (avg users) counters_100plus: (sum f) asc: dom}))",
+    "q036": "(do (set pc (select {from: (select {from: hits by: [SearchEngineID SearchPhrase] c: (count SearchPhrase) where: (and (!= SearchPhrase \"\") (!= SearchEngineID 0))}) where: (>= c 200)})) (set mx (select {from: pc by: SearchEngineID m: (max c)})) (select {from: (inner-join [SearchEngineID] pc mx) se: SearchEngineID phrase: SearchPhrase c: c where: (== c m) desc: c asc: [se phrase] take: 30}))",
+    "q037": "(do (set h (select {from: hits by: {EventDate: EventDate hr: (hh EventTime)} c: (count EventDate)})) (set tot (select {from: h by: EventDate day_total: (sum c) pk: (max c)})) (select {from: (inner-join [EventDate] h tot) by: EventDate peak_hour: (min hr) peak_hits: (max c) day_total: (max day_total) where: (== c pk) asc: EventDate}))",
+    "q038": "(do (set md (- (max (at hits 'EventDate)) 7)) (set g (select {from: (select {from: hits UserAgent: UserAgent f: (if (> EventDate md) 1 0)}) by: UserAgent last_week_hits: (sum f) total_hits: (count f)})) (select {from: g UserAgent: UserAgent last_week_hits: last_week_hits total_hits: total_hits last_week_share: (/ last_week_hits total_hits) where: (>= total_hits 1000) desc: last_week_share asc: UserAgent take: 20}))",
+    "q039": "(select {from: (select {from: hits lu: (lower URL) proto: (if (like lu \"https://*\") \"https\" (like lu \"http://*\") \"http\" \"other\") len_bucket: (if (>= (strlen URL) 500) 10 (div (strlen URL) 50)) UserID: UserID where: (!= URL \"\")}) by: [proto len_bucket] c: (count UserID) users: (count (distinct UserID)) asc: [proto len_bucket]})",
+    "q040": "(do (set sp (select {from: (select {from: hits by: [UserID EventDate] n: (count UserID) where: (!= SearchPhrase \"\")}) UserID: UserID EventDate: EventDate})) (set m (select {from: hits UserID: UserID EventDate: EventDate where: (== IsMobile 1)})) (select {from: (inner-join [UserID EventDate] m sp) by: {event_day: EventDate} mobile_users: (count (distinct UserID)) mobile_hits: (count UserID) asc: event_day}))",
+    "q041": "(do (set tn (at (select {from: hits by: IPNetworkID c: (count IPNetworkID) desc: c asc: IPNetworkID take: 50}) 'IPNetworkID)) (set hq (select {from: hits by: {IPNetworkID: IPNetworkID hr: (xbar EventTime 3600000000000)} c: (count IPNetworkID) where: (in IPNetworkID tn) asc: [IPNetworkID hr]})) (set wq (select {from: hq IPNetworkID: IPNetworkID hr: hr c: c prev_c: (lag c) pn: (lag IPNetworkID)})) (select {from: wq IPNetworkID: IPNetworkID hr: hr c: c prev_c: prev_c jump: (- c prev_c) where: (== IPNetworkID pn) desc: jump asc: [IPNetworkID hr] take: 25}))",
+    "q042": "(do (set uc (select {from: hits by: [UserID ParamCurrencyID] c: (count UserID)})) (set un (select {from: uc by: UserID ncur: (count ParamCurrencyID)})) (set jq (inner-join [UserID] uc un)) (set jq2 (select {from: jq ParamCurrencyID: ParamCurrencyID UserID: UserID c: c mq: (if (> ncur 1) 1 0)})) (select {from: jq2 by: ParamCurrencyID users_n: (count UserID) multi_currency_users: (sum mq) hits_n: (sum c) desc: users_n asc: ParamCurrencyID take: 20}))",
+    "q043": "(do (set gq (distinct (at (select {from: hits UserID: UserID where: (== HasGCLID 1)}) 'UserID))) (set nbq (distinct (at (select {from: hits UserID: UserID where: (== IsNotBounce 1)}) 'UserID))) (set eq (except gq nbq)) (select {from: hits by: Sex users: (count (distinct UserID)) hits_cnt: (count UserID) gclid_hits: (sum HasGCLID) where: (in UserID eq) asc: Sex}))",
+    "q044": "(select {from: hits by: {ref_scheme: (if (like Referer \"https://*\") \"https\" (like Referer \"http://*\") \"http\" (== Referer \"\") \"none\" \"other\") url_scheme: (if (like URL \"https://*\") \"https\" (like URL \"http://*\") \"http\" \"other\")} hits: (count IPNetworkID) nets: (count (distinct IPNetworkID)) desc: hits asc: [ref_scheme url_scheme]})",
+    "q045": "(do (set act (distinct (at (select {from: hits UserID: UserID where: (or (== IsDownload 1) (== IsLink 1))}) 'UserID))) (select {from: hits by: Sex searchers_who_act: (count (distinct UserID)) search_hits: (count UserID) where: (and (!= SearchPhrase \"\") (in UserID act)) asc: Sex}))",
+    "q046": "(do (set av (avg (at hits 'SendTiming))) (set hq (select {from: hits by: {hr: (xbar EventTime 3600000000000)} c: (count SendTiming) where: (> SendTiming av) asc: hr})) (set wq (select {from: hq hr: hr slow_send_hits: c roll6: (msum 6 c)})) (select {from: wq desc: roll6 asc: hr take: 20}))",
+    "q047": "(do (set ua (at (select {from: hits by: UserAgent c: (count UserAgent) desc: c asc: UserAgent take: 5}) 'UserAgent)) (set pc (select {from: hits by: [UserAgent PageCharset] c: (count UserAgent) where: (in UserAgent ua)})) (set sq (select {from: (select {from: pc asc: PageCharset}) asc: UserAgent desc: c})) (set t2 (table [UserAgent PageCharset c i] (list (at sq 'UserAgent) (at sq 'PageCharset) (at sq 'c) (til (count sq))))) (set fm (select {from: t2 by: UserAgent st: (min i)})) (set jq (left-join [UserAgent] t2 fm)) (select {from: jq UserAgent: UserAgent PageCharset: PageCharset c: c rn: (+ (- i st) 1) where: (<= (- i st) 2) asc: [UserAgent rn]}))",
+    "q048": "(do (set fa (select {from: (select {from: hits by: FlashMajor users_n: (count (distinct UserID)) c: (count UserID)}) where: (>= c 10000)})) (set fb (select {from: (select {from: hits by: SilverlightVersion3 users_n: (count (distinct UserID)) c: (count UserID)}) where: (>= c 10000)})) (set fc (select {from: (select {from: hits by: RefererCategoryID users_n: (count (distinct UserID)) c: (count UserID)}) where: (>= c 10000)})) (set fd (select {from: (select {from: hits by: ParamCurrencyID users_n: (count (distinct UserID)) c: (count UserID)}) where: (>= c 10000)})) (set ta (table [dim val users_n] (list (take 'flash (count fa)) (as 'I32 (at fa 'FlashMajor)) (at fa 'users_n)))) (set tb (table [dim val users_n] (list (take 'silverlight (count fb)) (as 'I32 (at fb 'SilverlightVersion3)) (at fb 'users_n)))) (set tcq (table [dim val users_n] (list (take 'referer_category (count fc)) (as 'I32 (at fc 'RefererCategoryID)) (at fc 'users_n)))) (set td (table [dim val users_n] (list (take 'currency (count fd)) (as 'I32 (at fd 'ParamCurrencyID)) (at fd 'users_n)))) (set uq (union-all (union-all (union-all ta tb) tcq) td)) (select {from: (select {from: uq asc: val}) asc: dim desc: users_n take: 100}))",
+    "q049": "(do (set dq (select {from: hits by: {cat: URLCategoryID dy: (dd EventDate)} cnt: (count URLCategoryID)})) (set mq (select {from: dq by: cat mx: (max cnt)})) (set jq (inner-join [cat] dq mq)) (select {from: jq cat: cat dy: dy cnt: cnt where: (== cnt mx) desc: cnt asc: [cat dy] take: 50}))",
+    "q050": "(do (set tc (at (select {from: hits by: CounterID c: (count CounterID) desc: c asc: CounterID take: 10}) 'CounterID)) (set stq (select {from: hits by: CounterID n: (count CounterID) sum_end: (sum ResponseEndTiming) where: (in CounterID tc)})) (set hq (select {from: hits CounterID: CounterID ResponseEndTiming: ResponseEndTiming where: (in CounterID tc)})) (set jq (inner-join [CounterID] hq stq)) (set jq2 (select {from: jq CounterID: CounterID n: n slow: (if (> (* ResponseEndTiming n) (* 2 sum_end)) 1 0)})) (set rq (select {from: jq2 by: CounterID hits_cnt: (max n) slow_hits: (sum slow)})) (select {from: rq CounterID: CounterID hits_cnt: hits_cnt slow_hits: slow_hits slow_share: (/ slow_hits hits_cnt) desc: slow_hits asc: CounterID}))",
+    "q051": "(select {from: (select {from: hits np: (+ (- (strlen URL) (strlen (replace URL \"&\" \"\"))) 1) IsParameter: IsParameter IPNetworkID: IPNetworkID where: (not (nil? (str-find URL \"?\")))}) by: {n_params: (if (>= np 20) 20 np)} hits: (count IPNetworkID) param_flagged: (sum IsParameter) nets: (count (distinct IPNetworkID)) asc: n_params})",
+    "q052": "(do (set bd (first (at (select {from: hits by: EventDate c: (count EventDate) desc: c asc: EventDate take: 1}) 'EventDate))) (set hq (select {from: hits by: {hr: (xbar EventTime 3600000000000)} hits_cnt: (count EventTime) avg_connect: (avg ConnectTiming) where: (== EventDate bd) asc: hr})) (select {from: hq hr: hr hits_cnt: hits_cnt avg_connect: (/ (round (* avg_connect 100)) 100) rolling_3h: (msum 3 hits_cnt)}))",
+    "q053": "(do (set mv (at (select {from: hits by: CounterID x: (count CounterID) where: (== IsMobile 1)}) 'CounterID)) (select {from: hits by: CounterID hits_cnt: (count UserID) users: (count (distinct UserID)) uncounted: (sum DontCountHits) where: (not (in CounterID mv)) desc: hits_cnt asc: CounterID take: 20}))",
+    "q054": "(select {from: (select {from: (select {from: hits by: CounterID hits_cnt: (count CounterID) avg_rst: (avg ResponseStartTiming)}) where: (>= hits_cnt 1000)}) by: {bucket_id: (if (== avg_rst 0) 0 (< avg_rst 100) 1 (< avg_rst 300) 2 (< avg_rst 1000) 3 4)} counters: (count hits_cnt) hits_total: (sum hits_cnt) biggest: (max hits_cnt) asc: bucket_id})",
+    "q055": "(do (set aq (select {from: (select {from: hits by: URL early: (count URL) where: (and (!= URL \"\") (<= EventDate 2013.07.15))}) where: (>= early 50)})) (set bq (select {from: (select {from: hits by: URL late: (count URL) where: (and (!= URL \"\") (> EventDate 2013.07.15))}) where: (>= late 50)})) (set jq (inner-join [URL] aq bq)) (select {from: jq URL: URL early: early late: late growth: (/ late early) desc: growth asc: URL take: 20}))",
+    "q056": "(do (set tc (first (at (select {from: hits by: CounterID c: (count CounterID) where: (== IsMobile 1) desc: c asc: CounterID take: 1}) 'CounterID))) (set cq (select {from: hits by: [OS URL] hits_cnt: (count URL) where: (and (== IsMobile 1) (!= URL \"\") (== CounterID tc))})) (set sq (select {from: (select {from: cq asc: URL}) asc: OS desc: hits_cnt})) (set t2 (table [OS URL hits_cnt i] (list (at sq 'OS) (at sq 'URL) (at sq 'hits_cnt) (til (count sq))))) (set fm (select {from: t2 by: OS st: (min i)})) (set jq (left-join [OS] t2 fm)) (select {from: jq os_code: OS rn: (+ (- i st) 1) hits_cnt: hits_cnt page_url: URL where: (<= (- i st) 2) asc: [os_code rn] take: 60}))",
+    "q057": "(do (set cq (select {from: hits by: CounterID hits_cnt: (count CounterID) mob: (sum (if (== IsMobile 1) 1 0))})) (set c2 (select {from: cq hits_cnt: hits_cnt share_bucket: (floor (/ (* 10 mob) hits_cnt)) where: (>= hits_cnt 100)})) (select {from: c2 by: share_bucket counters: (count hits_cnt) hits_total: (sum hits_cnt) asc: share_bucket}))",
+    "q058": "(do (set mq (at (select {from: hits by: RegionID c: (count RegionID) where: (== IsMobile 1) desc: c asc: RegionID take: 50}) 'RegionID)) (set av (avg (at hits 'ResponseStartTiming))) (set sq (at (select {from: hits by: RegionID c: (count RegionID) where: (> ResponseStartTiming av) desc: c asc: RegionID take: 50}) 'RegionID)) (table [RegionID] (list (asc (sect mq sq)))))",
+    "q059": "(do (set tr (at (select {from: hits by: RegionID c: (count RegionID) desc: c asc: RegionID take: 50}) 'RegionID)) (set rd (select {from: hits by: [RegionID EventDate] c: (count RegionID) where: (in RegionID tr)})) (set avq (select {from: rd by: RegionID ac: (avg c)})) (set jq (inner-join [RegionID] rd avq)) (select {from: jq RegionID: RegionID spike_day: EventDate c: c where: (> c ac) desc: c asc: [RegionID spike_day] take: 20}))",
+    "q060": "(do (set gq (select {from: (select {from: hits by: {ref_cat: RefererCategoryID url_cat: URLCategoryID} hits_cnt: (count URLCategoryID) avg_rst: (avg ResponseStartTiming)}) where: (>= hits_cnt 100)})) (set sq (select {from: (select {from: gq asc: url_cat}) asc: ref_cat desc: avg_rst})) (set t2 (table [ref_cat url_cat hits_cnt avg_rst i] (list (at sq 'ref_cat) (at sq 'url_cat) (at sq 'hits_cnt) (at sq 'avg_rst) (til (count sq))))) (set fm (select {from: t2 by: ref_cat st: (min i)})) (set jq (left-join [ref_cat] t2 fm)) (select {from: jq ref_cat: ref_cat rn: (+ (- i st) 1) url_cat: url_cat hits_cnt: hits_cnt avg_rst: avg_rst where: (<= (- i st) 2) asc: [ref_cat rn] take: 100}))",
+    "q061": "(do (set t61 (select {from: hits by: URLHash cnt: (count URLHash) where: (and (!= URL \"\") (== IsRefresh 0)) desc: cnt asc: URLHash take: 500})) (set r61 (select {from: hits by: URLHash n: (count URLHash) where: (== IsRefresh 1)})) (set a61 (anti-join [URLHash] t61 r61)) (select {from: a61 urls_without_refresh: (count cnt) their_hits: (sum cnt)}))",
+    "q062": "(do (set a62 (select {from: (select {from: hits by: RegionID c: (count RegionID) ttfb: (avg ResponseStartTiming) where: (< EventDate 2013.07.16)}) where: (>= c 500) RegionID: RegionID early_hits: c early_ttfb: ttfb})) (set b62 (select {from: (select {from: hits by: RegionID c: (count RegionID) ttfb: (avg ResponseStartTiming) where: (>= EventDate 2013.07.16)}) where: (>= c 500) RegionID: RegionID late_hits: c late_ttfb: ttfb})) (set j62 (inner-join [RegionID] a62 b62)) (select {from: j62 RegionID: RegionID early_hits: early_hits late_hits: late_hits early_ttfb: early_ttfb late_ttfb: late_ttfb ttfb_delta: (- late_ttfb early_ttfb) desc: ttfb_delta asc: RegionID take: 20}))",
+    "q063": "(do (set t63 (select {from: hits by: EventDate slow_connects: (sum (if (> ConnectTiming 100) 1 0)) nets: (count (distinct IPNetworkID)) where: (within EventDate [2013.07.01 2013.07.31]) asc: EventDate})) (select {from: t63 EventDate: EventDate slow_connects: slow_connects slow_connects_3d: (msum 3 slow_connects) nets: nets}))",
+    "q064": "(do (set d64 (first (at (select {from: hits by: EventDate c: (count EventDate) desc: c asc: EventDate take: 1}) 'EventDate))) (select {from: hits by: {hr: (hh EventTime)} hits_n: (count UserID) users_n: (count (distinct UserID)) mobile_hits: (sum (if (== IsMobile 1) 1 0)) where: (== EventDate d64) asc: hr}))",
+    "q065": "(select {from: (select {from: hits by: {host_prefix: (substr URL 8 4)} c: (count URL) counters: (count (distinct CounterID)) avg_fetch: (avg FetchTiming) where: (like URL \"http://*\")}) where: (>= c 1000) desc: c asc: host_prefix take: 15})",
+    "q066": "(select {from: (select {from: hits by: CounterID total_hits: (count CounterID) mobile_hits: (sum IsMobile) gclid_hits: (sum HasGCLID) avg_rst: (avg ResponseStartTiming) m1: (sum (if (== IsMobile 1) 1 0)) g1: (sum (if (== HasGCLID 1) 1 0))}) where: (and (> m1 0) (> g1 0)) counter_id: CounterID total_hits: total_hits mobile_hits: mobile_hits gclid_hits: gclid_hits avg_rst: avg_rst desc: total_hits asc: counter_id take: 15})",
+    "q067": "(do (set f67 (select {from: hits by: UserID first_day: (min EventDate)})) (set g67 (select {from: f67 by: first_day new_users: (count UserID) asc: first_day})) (select {from: g67 first_day: first_day new_users: new_users cumulative_users: (sums new_users)}))",
+    "q068": "(do (set ac68 (at (select {from: hits by: CounterID n: (count CounterID) where: (!= AdvEngineID 0)}) 'CounterID)) (select {from: hits by: TraficSourceID c: (count TraficSourceID) avg_connect: (avg ConnectTiming) avg_dns: (avg DNSTiming) where: (in CounterID ac68) desc: c asc: TraficSourceID}))",
+    "q069": "(do (set ud69 (select {from: hits by: [UserID EventDate] c: (count UserID)})) (set u69 (select {from: (select {from: ud69 by: UserID total_c: (sum c) peak_c: (max c) active_days: (count c)}) where: (>= total_c 50)})) (select {from: u69 by: active_days users_n: (count UserID) peak_share: (/ (sum peak_c) (sum total_c)) comet_users: (sum (if (>= (* peak_c 10) (* total_c 9)) 1 0)) asc: active_days}))",
+    "q070": "(do (set fl70 [HasGCLID IsDownload IsEvent DontCountHits IsMobile]) (set uid70 (at hits 'UserID)) (set t70 (table [flag_name flagged_hits flagged_users] (list fl70 (map (fn [f] (sum (at hits f))) fl70) (map (fn [f] (count (distinct (at uid70 (where (== (at hits f) 1)))))) fl70)))) (select {from: t70 desc: flagged_hits asc: flag_name}))",
+    "q071": "(do (set g71 (select {from: hits by: {d: EventDate hr_start: (xbar EventTime 3600000000000)} c: (count EventDate) nc: (neg c) where: (!= SearchPhrase \"\") asc: [d nc hr_start]})) (set dv71 (at g71 'd)) (set ix71 (til (count dv71))) (set t71 (table [d hr_start c rn] (list dv71 (at g71 'hr_start) (at g71 'c) (+ 1 (- ix71 (maxs (* ix71 (as 'I64 (differ dv71))))))))) (select {from: t71 where: (<= rn 2)}))",
+    "q072": "(do (set reg72 (select {from: hits by: [RegionID IsMobile] c: (count RegionID) avg_fetch: (avg FetchTiming)})) (set dk72 (select {from: reg72 where: (and (== IsMobile 0) (>= c 100)) RegionID: RegionID c: c avg_fetch: avg_fetch})) (set mb72 (select {from: reg72 where: (== IsMobile 1) RegionID: RegionID m_avg: avg_fetch})) (set j72 (left-join [RegionID] dk72 mb72)) (select {from: j72 where: (or (nil? m_avg) (>= m_avg avg_fetch)) RegionID: RegionID desktop_hits: c desktop_fetch: avg_fetch desc: desktop_hits asc: RegionID take: 20}))",
+    "q073": "(do (set ud73 (select {from: hits by: [UserID EventDate] pv: (count UserID) where: (== IsRefresh 0)})) (set b73 (select {from: ud73 by: {bucket: (if (== pv 1) 1 (<= pv 5) 2 (<= pv 20) 3 (<= pv 100) 4 5)} user_days: (count pv) total_pv: (sum pv) asc: bucket})) (set tot73 (sum (at b73 'total_pv))) (select {from: b73 bucket: bucket user_days: user_days total_pv: total_pv pv_share: (/ total_pv tot73)}))",
+    "q074": "(do (set mh74 (at (select {from: hits by: ResolutionHeight n: (count ResolutionHeight) where: (== IsMobile 1)}) 'ResolutionHeight)) (select {from: hits by: ResolutionHeight hits_n: (count ResolutionHeight) users_n: (count (distinct UserID)) where: (and (== IsMobile 0) (not (in ResolutionHeight mh74))) desc: hits_n asc: ResolutionHeight take: 25}))",
+    "q075": "(do (set t75 (select {from: (select {from: hits by: [UserID EventDate] nets: (count (distinct IPNetworkID))}) where: (>= nets 2)})) (select {from: t75 by: EventDate hopping_users: (count UserID) max_nets: (max nets) asc: EventDate}))",
+    "q076": "(do (set s76 (select {from: hits by: {dom: (dd EventDate)} hits_total: (count EventDate) search_hits: (sum (if (!= SearchPhrase \"\") 1 0))})) (set a76 (select {from: s76 dom: dom search_hits: search_hits share: (/ search_hits hits_total)})) (set b76 (select {from: s76 dom: (+ dom 7) search_hits_week_before: search_hits b_share: (/ search_hits hits_total)})) (set j76 (inner-join [dom] a76 b76)) (select {from: j76 dom: dom search_hits: search_hits search_hits_week_before: search_hits_week_before share_change: (- share b_share) asc: dom}))",
+    "q077": "(do (set g77 (select {from: hits by: {EventDate: EventDate hr: (hh EventTime)} c: (count EventDate) nc: (neg c) asc: [EventDate nc hr]})) (set dv77 (at g77 'EventDate)) (set ix77 (til (count dv77))) (set t77 (table [EventDate hr c rn] (list dv77 (at g77 'hr) (at g77 'c) (+ 1 (- ix77 (maxs (* ix77 (as 'I64 (differ dv77))))))))) (select {from: t77 where: (<= rn 2)}))",
+    "q078": "(select {from: hits by: {scheme_id: (if (like URL \"https://*\") 1 (like URL \"http://*\") 2 3) has_query: (if (nil? (str-find URL \"?\")) 0 1)} hits_n: (count URL) avg_len: (avg (strlen URL)) html_hits: (sum (if (like (lower URL) \"*.html*\") 1 0)) users_n: (count (distinct UserID)) where: (!= URL \"\") asc: [scheme_id has_query]})",
+    "q079": "(do (set inc79 (select {from: hits by: Income avg_rst: (avg ResponseStartTiming) c: (count Income)})) (set j79 (left-join [Income] (select {from: hits Income: Income rst: ResponseStartTiming}) inc79)) (set s79 (select {from: j79 by: Income slower_than_avg: (sum (if (> rst avg_rst) 1 0))})) (select {from: (left-join [Income] inc79 s79) Income: Income c: c avg_rst: avg_rst slower_than_avg: slower_than_avg asc: Income}))",
+    "q080": "(do (set f80 (select {from: hits by: UserID first_day: (min EventDate)})) (set g80 (select {from: f80 by: first_day new_users: (count UserID) asc: first_day})) (select {from: g80 first_day: first_day new_users: new_users cumulative_users: (sums new_users)}))",
+    "q081": "(do (set a81 (select {from: hits by: URLCategoryID early_users: (count (distinct UserID)) where: (< EventDate 2013.07.16)})) (set b81 (select {from: hits by: URLCategoryID late_users: (count (distinct UserID)) where: (>= EventDate 2013.07.16)})) (select {from: (inner-join [URLCategoryID] a81 b81) URLCategoryID: URLCategoryID early_users: early_users late_users: late_users growth: (/ late_users early_users) desc: early_users asc: URLCategoryID take: 30}))",
+    "q082": "(do (set g82 (select {from: hits by: [Income SearchPhrase] users: (count (distinct UserID)) where: (!= SearchPhrase \"\")})) (set s82 (select {from: g82 Income: Income SearchPhrase: SearchPhrase users: users nu: (neg users) asc: [Income nu SearchPhrase]})) (set t82 (table [Income SearchPhrase users idx] (list (at s82 'Income) (at s82 'SearchPhrase) (at s82 'users) (til (count s82))))) (set m82 (select {from: t82 by: Income m0: (min idx)})) (select {from: (select {from: (left-join [Income] t82 m82) Income: Income SearchPhrase: SearchPhrase users: users rn: (+ 1 (- idx m0))}) where: (<= rn 3) asc: [Income rn]}))",
+    "q083": "(select {from: hits by: {url_kind: (if (not (nil? (str-find URL \"?\"))) \"query\" (or (like URL \"*.html\") (like URL \"*.htm\")) \"static\" (like URL \"*/\") \"directory\" \"other\")} c: (count URL) phrases: (count (distinct SearchPhrase)) avg_history: (avg HistoryLength) java_hits: (sum (if (== JavaEnable 1) 1 0)) where: (and (!= SearchPhrase \"\") (!= URL \"\")) desc: c asc: url_kind})",
+    "q084": "(do (set topc84 (at (at (select {from: hits by: CounterID c: (count CounterID) desc: c asc: CounterID take: 1}) 'CounterID) 0)) (set h84 (select {from: hits by: {hr: (hh EventTime)} cnt: (count CounterID) af: (avg FetchTiming) where: (== CounterID topc84) asc: hr})) (set y84 (* (at h84 'af) 100.0)) (set k84 (as 'I64 (== (- y84 (floor y84)) 0.5))) (table [hr cnt avg_fetch prev_hour_cnt] (list (at h84 'hr) (at h84 'cnt) (/ (+ (* k84 (* 2 (round (/ y84 2)))) (* (- 1 k84) (round y84))) 100) (fill 0 (lag (at h84 'cnt))))))",
+    "q085": "(do (set g85 (select {from: hits by: {cat: URLCategoryID sx: Sex} cnt: (count WatchID)})) (set t85 (select {from: g85 by: cat tot: (sum cnt)})) (select {from: (left-join [cat] g85 t85) cat: cat sx: sx cnt: cnt share_in_category: (/ cnt tot) desc: cnt asc: [cat sx] take: 40}))",
+    "q086": "(do (set a86 (select {from: hits by: SilverlightVersion3 users_first_half: (count (distinct UserID)) where: (< EventDate 2013.07.16)})) (set b86 (select {from: hits by: SilverlightVersion3 users_second_half: (count (distinct UserID)) where: (>= EventDate 2013.07.16)})) (select {from: (inner-join [SilverlightVersion3] a86 b86) SilverlightVersion3: SilverlightVersion3 users_first_half: users_first_half users_second_half: users_second_half growth: (/ users_second_half users_first_half) where: (>= users_first_half 100) desc: growth asc: SilverlightVersion3 take: 25}))",
+    "q087": "(do (set h87 (select {from: hits by: {d: EventDate hr: (hh EventTime)} mobile_hits: (count WatchID) where: (== IsMobile 1)})) (set m87 (select {from: h87 by: d mx: (max mobile_hits)})) (select {from: (left-join [d] h87 m87) by: d hr: (min hr) mobile_hits: (max mobile_hits) where: (== mobile_hits mx) asc: d}))",
+    "q088": "(select {from: hits by: {UserAgentMajor: UserAgentMajor minor_shape: (if (== UserAgentMinor \"\") \"empty\" (like UserAgentMinor \"*.*\") \"dotted\" (like UserAgentMinor \"* *\") \"spaced\" \"token\")} hits_total: (count UserAgentMajor) minor_variants: (count (distinct UserAgentMinor)) desc: hits_total asc: [UserAgentMajor minor_shape] take: 25})",
+    "q089": "(do (set topc89 (at (at (select {from: hits by: CounterID c: (count CounterID) desc: c asc: CounterID take: 1}) 'CounterID) 0)) (set h89 (select {from: hits by: {hr: (hh EventTime)} hits_cnt: (count CounterID) avg_rst: (avg ResponseStartTiming) where: (== CounterID topc89) asc: hr})) (set cs89 (sums (at h89 'hits_cnt))) (table [hr hits_cnt avg_rst cumulative_hits cumulative_share] (list (at h89 'hr) (at h89 'hits_cnt) (at h89 'avg_rst) cs89 (/ cs89 (sum (at h89 'hits_cnt))))))",
+    "q090": "(do (set a90 (select {from: (select {from: hits by: ResolutionWidth c: (count ResolutionWidth) where: (== MobilePhone 0)}) where: (>= c 100)})) (set b90 (select {from: hits by: ResolutionWidth c2: (count ResolutionWidth) where: (!= MobilePhone 0)})) (select {from: (anti-join [ResolutionWidth] a90 b90) ResolutionWidth: ResolutionWidth asc: ResolutionWidth take: 50}))",
+    "q091": "(do (set g91 (select {from: hits by: [CounterClass ResolutionWidth] users: (count (distinct UserID)) where: (> ResolutionWidth 0)})) (set u91 (select {from: g91 by: [CounterClass users] k: (count CounterClass)})) (set s91 (select {from: u91 CounterClass: CounterClass users: users nu: (neg users) asc: [CounterClass nu]})) (set t91 (table [CounterClass users idx] (list (at s91 'CounterClass) (at s91 'users) (til (count s91))))) (set m91 (select {from: t91 by: CounterClass m0: (min idx)})) (set r91 (select {from: (left-join [CounterClass] t91 m91) CounterClass: CounterClass users: users drk: (+ 1 (- idx m0))})) (select {from: (left-join [CounterClass users] g91 r91) CounterClass: CounterClass ResolutionWidth: ResolutionWidth users: users drk: drk where: (<= drk 3) asc: [CounterClass drk ResolutionWidth] take: 100}))",
+    "q092": "(do (set u92 (select {from: hits by: UserID d: (count (distinct SearchPhrase)) search_hits: (count SearchPhrase) where: (!= SearchPhrase \"\")})) (select {from: (select {from: u92 bucket: (min d 20) search_hits: search_hits}) by: bucket users: (count bucket) hits_total: (sum search_hits) asc: bucket}))",
+    "q093": "(do (set on93 (select {from: hits by: UserID on_hits: (count UserID) where: (== JavascriptEnable 1)})) (set off93 (select {from: hits by: UserID off_hits: (count UserID) where: (== JavascriptEnable 0)})) (set j93 (select {from: (inner-join [UserID] on93 off93) profile: (if (>= off_hits on_hits) \"mostly_off\" \"mostly_on\") on_hits: on_hits off_hits: off_hits})) (select {from: j93 by: profile users: (count profile) on_hits: (sum on_hits) off_hits: (sum off_hits) asc: profile}))",
+    "q094": "(select {from: hits by: {utm_content_size: (if (== UTMContent \"\") \"none\" (<= (strlen UTMContent) 10) \"short\" (<= (strlen UTMContent) 30) \"medium\" \"long\")} views: (count UTMContent) variants: (count (distinct UTMContent)) with_source: (sum (if (!= UTMSource \"\") 1 0)) desc: views asc: utm_content_size})",
+    "q095": "(do (set g95 (select {from: hits by: [RefererCategoryID ResolutionHeight] users_n: (count (distinct UserID)) where: (> ResolutionHeight 0)})) (set s95 (select {from: g95 RefererCategoryID: RefererCategoryID ResolutionHeight: ResolutionHeight users_n: users_n nu: (neg users_n) asc: [RefererCategoryID nu ResolutionHeight]})) (set t95 (table [RefererCategoryID ResolutionHeight users_n idx] (list (at s95 'RefererCategoryID) (at s95 'ResolutionHeight) (at s95 'users_n) (til (count s95))))) (set m95 (select {from: t95 by: RefererCategoryID m0: (min idx)})) (select {from: (select {from: (left-join [RefererCategoryID] t95 m95) RefererCategoryID: RefererCategoryID ResolutionHeight: ResolutionHeight users_n: users_n rnk: (+ 1 (- idx m0))}) where: (<= rnk 3) asc: [RefererCategoryID rnk] take: 100}))",
+    "q096": "(do (set s96 (select {from: hits by: [TraficSourceID URL] views: (count URL) where: (!= URL \"\")})) (set st96 (select {from: s96 by: TraficSourceID total: (sum views) n: (count views)})) (select {from: (inner-join [TraficSourceID] s96 st96) by: TraficSourceID standout_pages: (count views) top_views: (max views) pages_in_source: (max n) where: (> (* views n) (* 50 total)) asc: TraficSourceID}))",
+    "q097": "(do (set top97 (at (select {from: hits by: CounterID sc: (count CounterID) where: (!= SearchPhrase \"\") desc: sc asc: CounterID take: 10}) 'CounterID)) (set a97 (select {from: hits by: CounterID c: (count CounterID) dont_count: (sum (if (== DontCountHits 1) 1 0)) refreshes: (sum (if (== IsRefresh 1) 1 0)) where: (in CounterID top97)})) (set b97 (select {from: hits by: CounterID distinct_phrases: (count (distinct SearchPhrase)) where: (and (in CounterID top97) (!= SearchPhrase \"\"))})) (select {from: (left-join [CounterID] a97 b97) CounterID: CounterID c: c dont_count: dont_count refreshes: refreshes distinct_phrases: distinct_phrases desc: c asc: CounterID}))",
+    "q098": "(do (set d98 (select {from: hits by: {dy: (dd EventDate)} cnt: (count EventDate) users: (count (distinct UserID)) where: (== IsRefresh 0) asc: dy})) (set dy98 (at d98 'dy)) (set c98 (at d98 'cnt)) (set k98 (as 'I64 (== (lag dy98) (- dy98 1)))) (table [dy cnt users delta_vs_prev_day] (list dy98 c98 (at d98 'users) (- c98 (* k98 (fill 0 (lag c98)))))))",
+    "q099": "(do (set g99 (select {from: hits by: [ParamCurrencyID RefererRegionID] hits_cnt: (count UserID) users: (count (distinct UserID))})) (set s99 (select {from: g99 ParamCurrencyID: ParamCurrencyID RefererRegionID: RefererRegionID hits_cnt: hits_cnt users: users nh: (neg hits_cnt) asc: [ParamCurrencyID nh RefererRegionID]})) (set t99 (table [ParamCurrencyID RefererRegionID hits_cnt users idx] (list (at s99 'ParamCurrencyID) (at s99 'RefererRegionID) (at s99 'hits_cnt) (at s99 'users) (til (count s99))))) (set m99 (select {from: t99 by: ParamCurrencyID m0: (min idx)})) (select {from: (select {from: (left-join [ParamCurrencyID] t99 m99) ParamCurrencyID: ParamCurrencyID RefererRegionID: RefererRegionID hits_cnt: hits_cnt users: users rn: (+ 1 (- idx m0))}) where: (<= rn 3) asc: [ParamCurrencyID rn] take: 60}))",
+    "q100": "(do (set ov100 (/ (count (where (== (at hits 'IsMobile) 1))) (count hits))) (select {from: hits by: {local_hour: (hh LocalEventTime)} hits_cnt: (count IsMobile) mobile_hits: (sum (if (== IsMobile 1) 1 0)) share_vs_overall: (- (/ mobile_hits hits_cnt) ov100) asc: local_hour}))"
+   },
+   "load_time": 657.242,
+   "data_size": 203212154531,
+   "data_size_after": 203212154531,
+   "total_time": 26508.353,
+   "penalized_time": 70308.353,
+   "geomean": 24.1165,
+   "counts": {
+    "timeout": 139,
+    "error": 152,
+    "ok": 8,
+    "wrong": 1
+   },
+   "revalidated": false,
+   "error_rate": 0.9733,
+   "restarts": 0,
+   "reference": {
+    "q001": {
+     "status": "ok",
+     "time": 4.249
+    },
+    "q002": {
+     "status": "ok",
+     "time": 3.169
+    },
+    "q003": {
+     "status": "ok",
+     "time": 1.22
+    },
+    "q004": {
+     "status": "ok",
+     "time": 1.566
+    },
+    "q005": {
+     "status": "ok",
+     "time": 8.302
+    },
+    "q006": {
+     "status": "ok",
+     "time": 1.554
+    },
+    "q007": {
+     "status": "ok",
+     "time": 4.714
+    },
+    "q008": {
+     "status": "ok",
+     "time": 0.923
+    },
+    "q009": {
+     "status": "ok",
+     "time": 1.808
+    },
+    "q010": {
+     "status": "ok",
+     "time": 2.594
+    },
+    "q011": {
+     "status": "ok",
+     "time": 7.687
+    },
+    "q012": {
+     "status": "ok",
+     "time": 11.924
+    },
+    "q013": {
+     "status": "ok",
+     "time": 1.615
+    },
+    "q014": {
+     "status": "ok",
+     "time": 1.527
+    },
+    "q015": {
+     "status": "ok",
+     "time": 1.357
+    },
+    "q016": {
+     "status": "ok",
+     "time": 1.362
+    },
+    "q017": {
+     "status": "ok",
+     "time": 1.603
+    },
+    "q018": {
+     "status": "ok",
+     "time": 1.655
+    },
+    "q019": {
+     "status": "ok",
+     "time": 57.403
+    },
+    "q020": {
+     "status": "ok",
+     "time": 0.648
+    },
+    "q021": {
+     "status": "ok",
+     "time": 4.687
+    },
+    "q022": {
+     "status": "ok",
+     "time": 1.326
+    },
+    "q023": {
+     "status": "ok",
+     "time": 0.703
+    },
+    "q024": {
+     "status": "ok",
+     "time": 6.82
+    },
+    "q025": {
+     "status": "ok",
+     "time": 2.016
+    },
+    "q026": {
+     "status": "ok",
+     "time": 13.797
+    },
+    "q027": {
+     "status": "ok",
+     "time": 1.006
+    },
+    "q028": {
+     "status": "ok",
+     "time": 4.014
+    },
+    "q029": {
+     "status": "ok",
+     "time": 0.607
+    },
+    "q030": {
+     "status": "ok",
+     "time": 0.889
+    },
+    "q031": {
+     "status": "ok",
+     "time": 8.937
+    },
+    "q032": {
+     "status": "ok",
+     "time": 74.678
+    },
+    "q033": {
+     "status": "ok",
+     "time": 0.667
+    },
+    "q034": {
+     "status": "ok",
+     "time": 6.803
+    },
+    "q035": {
+     "status": "ok",
+     "time": 2.568
+    },
+    "q036": {
+     "status": "ok",
+     "time": 3.815
+    },
+    "q037": {
+     "status": "ok",
+     "time": 0.54
+    },
+    "q038": {
+     "status": "ok",
+     "time": 0.498
+    },
+    "q039": {
+     "status": "ok",
+     "time": 6.156
+    },
+    "q040": {
+     "status": "ok",
+     "time": 3.179
+    },
+    "q041": {
+     "status": "ok",
+     "time": 0.951
+    },
+    "q042": {
+     "status": "ok",
+     "time": 91.65
+    },
+    "q043": {
+     "status": "ok",
+     "time": 4.385
+    },
+    "q044": {
+     "status": "ok",
+     "time": 3.891
+    },
+    "q045": {
+     "status": "ok",
+     "time": 1.067
+    },
+    "q046": {
+     "status": "ok",
+     "time": 0.505
+    },
+    "q047": {
+     "status": "ok",
+     "time": 0.895
+    },
+    "q048": {
+     "status": "ok",
+     "time": 7.965
+    },
+    "q049": {
+     "status": "ok",
+     "time": 0.522
+    },
+    "q050": {
+     "status": "ok",
+     "time": 0.629
+    },
+    "q051": {
+     "status": "ok",
+     "time": 3.241
+    },
+    "q052": {
+     "status": "ok",
+     "time": 0.474
+    },
+    "q053": {
+     "status": "ok",
+     "time": 0.914
+    },
+    "q054": {
+     "status": "ok",
+     "time": 0.472
+    },
+    "q055": {
+     "status": "ok",
+     "time": 8.523
+    },
+    "q056": {
+     "status": "ok",
+     "time": 0.515
+    },
+    "q057": {
+     "status": "ok",
+     "time": 0.407
+    },
+    "q058": {
+     "status": "ok",
+     "time": 0.662
+    },
+    "q059": {
+     "status": "ok",
+     "time": 0.983
+    },
+    "q060": {
+     "status": "ok",
+     "time": 0.672
+    },
+    "q061": {
+     "status": "ok",
+     "time": 3.427
+    },
+    "q062": {
+     "status": "ok",
+     "time": 0.721
+    },
+    "q063": {
+     "status": "ok",
+     "time": 0.764
+    },
+    "q064": {
+     "status": "ok",
+     "time": 1.646
+    },
+    "q065": {
+     "status": "ok",
+     "time": 1.88
+    },
+    "q066": {
+     "status": "ok",
+     "time": 0.794
+    },
+    "q067": {
+     "status": "ok",
+     "time": 3.873
+    },
+    "q068": {
+     "status": "ok",
+     "time": 0.77
+    },
+    "q069": {
+     "status": "ok",
+     "time": 4.55
+    },
+    "q070": {
+     "status": "ok",
+     "time": 1.501
+    },
+    "q071": {
+     "status": "ok",
+     "time": 0.565
+    },
+    "q072": {
+     "status": "ok",
+     "time": 0.992
+    },
+    "q073": {
+     "status": "ok",
+     "time": 2.914
+    },
+    "q074": {
+     "status": "ok",
+     "time": 0.969
+    },
+    "q075": {
+     "status": "ok",
+     "time": 6.44
+    },
+    "q076": {
+     "status": "ok",
+     "time": 0.97
+    },
+    "q077": {
+     "status": "ok",
+     "time": 0.501
+    },
+    "q078": {
+     "status": "ok",
+     "time": 6.401
+    },
+    "q079": {
+     "status": "ok",
+     "time": 1.416
+    },
+    "q080": {
+     "status": "ok",
+     "time": 3.756
+    },
+    "q081": {
+     "status": "ok",
+     "time": 2.736
+    },
+    "q082": {
+     "status": "ok",
+     "time": 21.443
+    },
+    "q083": {
+     "status": "ok",
+     "time": 4.467
+    },
+    "q084": {
+     "status": "ok",
+     "time": 0.377
+    },
+    "q085": {
+     "status": "ok",
+     "time": 0.555
+    },
+    "q086": {
+     "status": "ok",
+     "time": 3.025
+    },
+    "q087": {
+     "status": "ok",
+     "time": 0.509
+    },
+    "q088": {
+     "status": "ok",
+     "time": 1.266
+    },
+    "q089": {
+     "status": "ok",
+     "time": 0.376
+    },
+    "q090": {
+     "status": "ok",
+     "time": 0.514
+    },
+    "q091": {
+     "status": "ok",
+     "time": 2.824
+    },
+    "q092": {
+     "status": "ok",
+     "time": 3.805
+    },
+    "q093": {
+     "status": "ok",
+     "time": 2.448
+    },
+    "q094": {
+     "status": "ok",
+     "time": 1.102
+    },
+    "q095": {
+     "status": "ok",
+     "time": 3.553
+    },
+    "q096": {
+     "status": "ok",
+     "time": 24.774
+    },
+    "q097": {
+     "status": "ok",
+     "time": 1.427
+    },
+    "q098": {
+     "status": "ok",
+     "time": 3.086
+    },
+    "q099": {
+     "status": "ok",
+     "time": 3.676
+    },
+    "q100": {
+     "status": "ok",
+     "time": 0.616
+    }
+   },
+   "runs": [
+    {
+     "id": "q024",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 0.0,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q071",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 0.001,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q030",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 0.001,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q021",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 0.001,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q083",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 600.104,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q032",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 600.105,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q018",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 600.105,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q092",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 600.105,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q072",
+     "repeat": 1,
+     "status": "error",
+     "start": 1200.207,
+     "time": 467.064,
+     "reported_time": null,
+     "detail": "error: nyi\n"
+    },
+    {
+     "id": "q079",
+     "repeat": 3,
+     "status": "ok",
+     "start": 1200.207,
+     "time": 474.458,
+     "reported_time": 6.15371
+    },
+    {
+     "id": "q014",
+     "repeat": 2,
+     "status": "ok",
+     "start": 1200.208,
+     "time": 474.456,
+     "reported_time": 1.10937
+    },
+    {
+     "id": "q083",
+     "repeat": 1,
+     "status": "ok",
+     "start": 1200.208,
+     "time": 480.756,
+     "reported_time": 7.38504
+    },
+    {
+     "id": "q036",
+     "repeat": 3,
+     "status": "error",
+     "start": 1667.271,
+     "time": 13.683,
+     "reported_time": null,
+     "detail": "error: nyi\n"
+    },
+    {
+     "id": "q035",
+     "repeat": 1,
+     "status": "ok",
+     "start": 1674.664,
+     "time": 63.517,
+     "reported_time": 15.2467
+    },
+    {
+     "id": "q096",
+     "repeat": 1,
+     "status": "ok",
+     "start": 1674.665,
+     "time": 55.711,
+     "reported_time": 13.4059
+    },
+    {
+     "id": "q091",
+     "repeat": 2,
+     "status": "error",
+     "start": 1680.955,
+     "time": 57.213,
+     "reported_time": null,
+     "detail": "error: nyi\n"
+    },
+    {
+     "id": "q043",
+     "repeat": 2,
+     "status": "ok",
+     "start": 1680.964,
+     "time": 57.758,
+     "reported_time": 20.7505
+    },
+    {
+     "id": "q049",
+     "repeat": 1,
+     "status": "wrong",
+     "start": 1730.376,
+     "time": 30.211,
+     "reported_time": 0.551599,
+     "detail": "extra output after the result",
+     "output": "cat,dy,cnt\n0,9,24380600\n14472,15,7215112\n12481,15,7100433\n14485,15,7073774\n16239,15,7073770\n9580,15,7073768\n9663,15,7073767\n11170,15,7073767\n13069,15,7073767\n15832,15,7073767\n16095,15,7073767\n3650,21,4090377\n2678,21,4087977\n3234,21,4087586\n2638,21,4087403\n3638,21,4087263\n2511,21,4087258\n2538,21,4087258\n2814,21,4087258\n3158,21,4087258\n3402,21,4087258\n83,3,3763185\n15998,10,3323036\n14043,10,3322062\n11662,10,3321770\n16146,10,3321709\n8246,10,3321664\n11464,10,3321664\n13577,10,3321664\n13652,10,3321664\n14004,10,3321664\n14828,10,3321664\n423,3,2791852\n373,3,2790346\n261,3,2637581\n9582,9,2624758\n10223,9,2624758\n12142,9,2624758\n12276,9,2624758\n12419,9,2624758\n14381,9,2624758\n15173,9,2624758\n15682,9,2624758\n15771,9,2624758\n15891,9,2624758\n409,3,2542571\n340,3,2528181\n343,3,2525947\n483,3,2512577\n341,3,2512541\n"
+    },
+    {
+     "id": "q048",
+     "repeat": 3,
+     "status": "ok",
+     "start": 1738.168,
+     "time": 25.593,
+     "reported_time": 18.518
+    },
+    {
+     "id": "q074",
+     "repeat": 2,
+     "status": "ok",
+     "start": 1738.181,
+     "time": 25.579,
+     "reported_time": 3.31492
+    },
+    {
+     "id": "q015",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 1738.723,
+     "time": 600.101,
+     "reported_time": null
+    },
+    {
+     "id": "q009",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 1760.587,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q097",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 1763.761,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q011",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 1763.761,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q050",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 2338.825,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q056",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 2360.69,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q087",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 2363.865,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q001",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 2363.865,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q078",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 2938.929,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q062",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 2960.792,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q041",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 2963.967,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q073",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 2963.968,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q002",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 3539.032,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q063",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 3560.894,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q048",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 3564.069,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q046",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 3564.071,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q059",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 4139.136,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q054",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 4160.996,
+     "time": 600.107,
+     "reported_time": null
+    },
+    {
+     "id": "q032",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 4164.171,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q017",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 4164.174,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q009",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 4739.241,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q100",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 4761.104,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q024",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 4764.276,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q013",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 4764.28,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q051",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 5339.343,
+     "time": 600.074,
+     "reported_time": null
+    },
+    {
+     "id": "q091",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 5361.205,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q074",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 5364.38,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q087",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 5364.382,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q037",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 5939.418,
+     "time": 600.007,
+     "reported_time": null
+    },
+    {
+     "id": "q093",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 5961.307,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q064",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 5964.483,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q090",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 5964.484,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q019",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 6539.425,
+     "time": 600.01,
+     "reported_time": null
+    },
+    {
+     "id": "q065",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 6561.41,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q088",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 6564.585,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q026",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 6564.586,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q033",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 7139.434,
+     "time": 600.008,
+     "reported_time": null
+    },
+    {
+     "id": "q094",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 7161.512,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q045",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 7164.688,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q075",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 7164.689,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q002",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 7739.443,
+     "time": 600.048,
+     "reported_time": null
+    },
+    {
+     "id": "q019",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 7761.614,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q019",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 7764.79,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q080",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 7764.791,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q004",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 8339.491,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q093",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 8361.716,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q032",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 8364.893,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q092",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 8364.894,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q022",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 8939.594,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q048",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 8961.818,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q084",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 8964.995,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q046",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 8964.996,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q080",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 9539.697,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q094",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 9561.92,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q005",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 9565.098,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q040",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 9565.099,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q039",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 10139.801,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q023",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 10162.022,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q016",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 10165.202,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q094",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 10165.203,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q034",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 10739.903,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q012",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 10762.125,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q058",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 10765.304,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q012",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 10765.305,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q056",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 11340.007,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q047",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 11362.227,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q068",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 11365.408,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q076",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 11365.408,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q051",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 11940.11,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q092",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 11962.329,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q004",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 11965.51,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q095",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 11965.51,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q077",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 12540.212,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q011",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 12562.431,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q008",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 12565.612,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q034",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 12565.613,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q010",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 13140.316,
+     "time": 600.105,
+     "reported_time": null
+    },
+    {
+     "id": "q044",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 13162.533,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q057",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 13165.715,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q058",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 13165.715,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q076",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 13740.421,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q067",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 13762.635,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q006",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 13765.818,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q001",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 13765.818,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q088",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 14340.523,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q042",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 14362.738,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q036",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 14365.92,
+     "time": 600.106,
+     "reported_time": null
+    },
+    {
+     "id": "q055",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 14365.92,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q059",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 14940.625,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q049",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 14962.842,
+     "time": 600.035,
+     "reported_time": null
+    },
+    {
+     "id": "q082",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 14966.026,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q010",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 14966.027,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q038",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 15540.728,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q089",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 15562.877,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q057",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 15566.129,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q035",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 15566.129,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q036",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 16140.83,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q071",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 16162.979,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q055",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 16166.231,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q008",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 16166.231,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q060",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 16740.932,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q054",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 16763.081,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q052",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 16766.333,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q010",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 16766.333,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q085",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 17341.034,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q026",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 17363.183,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q071",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 17366.435,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q070",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 17366.435,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q062",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 17941.136,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q013",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 17963.285,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q051",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 17966.537,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q061",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 17966.538,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q027",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 18541.238,
+     "time": 600.008,
+     "reported_time": null
+    },
+    {
+     "id": "q085",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 18563.387,
+     "time": 600.043,
+     "reported_time": null
+    },
+    {
+     "id": "q069",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 18566.639,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q098",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 18566.64,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q064",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 19141.246,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q020",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 19163.43,
+     "time": 600.007,
+     "reported_time": null
+    },
+    {
+     "id": "q100",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 19166.741,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q068",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 19166.742,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q030",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 19741.348,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q017",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 19763.436,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q063",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 19766.844,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q052",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 19766.844,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q028",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 20341.45,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q099",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 20363.538,
+     "time": 600.006,
+     "reported_time": null
+    },
+    {
+     "id": "q042",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 20366.946,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q070",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 20366.947,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q085",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 20941.552,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q029",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 20963.545,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q039",
+     "repeat": 1,
+     "status": "error",
+     "start": 20967.048,
+     "time": 134.584,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q004",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 20967.049,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q099",
+     "repeat": 1,
+     "status": "error",
+     "start": 21101.638,
+     "time": 135.156,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q050",
+     "repeat": 2,
+     "status": "error",
+     "start": 21236.794,
+     "time": 135.162,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q022",
+     "repeat": 1,
+     "status": "error",
+     "start": 21371.958,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q011",
+     "repeat": 1,
+     "status": "error",
+     "start": 21507.125,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q043",
+     "repeat": 1,
+     "status": "error",
+     "start": 21541.654,
+     "time": 133.406,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q003",
+     "repeat": 1,
+     "status": "error",
+     "start": 21563.652,
+     "time": 135.986,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q087",
+     "repeat": 1,
+     "status": "error",
+     "start": 21567.151,
+     "time": 132.488,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q053",
+     "repeat": 3,
+     "status": "error",
+     "start": 21642.294,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q022",
+     "repeat": 3,
+     "status": "error",
+     "start": 21675.06,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q031",
+     "repeat": 2,
+     "status": "error",
+     "start": 21699.638,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q062",
+     "repeat": 1,
+     "status": "error",
+     "start": 21699.639,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q047",
+     "repeat": 1,
+     "status": "error",
+     "start": 21777.462,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q073",
+     "repeat": 3,
+     "status": "error",
+     "start": 21810.229,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q025",
+     "repeat": 2,
+     "status": "error",
+     "start": 21834.806,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q042",
+     "repeat": 1,
+     "status": "error",
+     "start": 21834.806,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q095",
+     "repeat": 2,
+     "status": "error",
+     "start": 21912.63,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q044",
+     "repeat": 2,
+     "status": "error",
+     "start": 21945.396,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q095",
+     "repeat": 3,
+     "status": "error",
+     "start": 21969.973,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q017",
+     "repeat": 1,
+     "status": "error",
+     "start": 21969.976,
+     "time": 135.166,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q041",
+     "repeat": 2,
+     "status": "error",
+     "start": 22047.797,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q023",
+     "repeat": 2,
+     "status": "error",
+     "start": 22080.565,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q029",
+     "repeat": 3,
+     "status": "error",
+     "start": 22105.142,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q037",
+     "repeat": 3,
+     "status": "error",
+     "start": 22105.142,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q041",
+     "repeat": 3,
+     "status": "error",
+     "start": 22182.965,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q028",
+     "repeat": 1,
+     "status": "error",
+     "start": 22215.733,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q081",
+     "repeat": 1,
+     "status": "error",
+     "start": 22240.31,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q089",
+     "repeat": 3,
+     "status": "error",
+     "start": 22240.311,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q030",
+     "repeat": 2,
+     "status": "error",
+     "start": 22318.133,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q078",
+     "repeat": 3,
+     "status": "error",
+     "start": 22350.901,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q044",
+     "repeat": 3,
+     "status": "error",
+     "start": 22375.478,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q015",
+     "repeat": 1,
+     "status": "error",
+     "start": 22375.478,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q082",
+     "repeat": 2,
+     "status": "error",
+     "start": 22453.302,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q029",
+     "repeat": 2,
+     "status": "error",
+     "start": 22486.07,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q007",
+     "repeat": 2,
+     "status": "error",
+     "start": 22510.645,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q073",
+     "repeat": 1,
+     "status": "error",
+     "start": 22510.646,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q079",
+     "repeat": 2,
+     "status": "error",
+     "start": 22588.469,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q027",
+     "repeat": 1,
+     "status": "error",
+     "start": 22621.238,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q072",
+     "repeat": 2,
+     "status": "error",
+     "start": 22645.813,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q021",
+     "repeat": 2,
+     "status": "error",
+     "start": 22645.814,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q075",
+     "repeat": 1,
+     "status": "error",
+     "start": 22723.637,
+     "time": 135.172,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q020",
+     "repeat": 1,
+     "status": "error",
+     "start": 22756.406,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q059",
+     "repeat": 2,
+     "status": "error",
+     "start": 22780.982,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q045",
+     "repeat": 1,
+     "status": "error",
+     "start": 22780.982,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q003",
+     "repeat": 2,
+     "status": "error",
+     "start": 22858.809,
+     "time": 135.165,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q097",
+     "repeat": 1,
+     "status": "error",
+     "start": 22891.573,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q038",
+     "repeat": 1,
+     "status": "error",
+     "start": 22916.15,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q040",
+     "repeat": 2,
+     "status": "error",
+     "start": 22916.15,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q033",
+     "repeat": 1,
+     "status": "error",
+     "start": 22993.974,
+     "time": 135.166,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q009",
+     "repeat": 2,
+     "status": "error",
+     "start": 23026.741,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q096",
+     "repeat": 2,
+     "status": "error",
+     "start": 23051.318,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q053",
+     "repeat": 1,
+     "status": "error",
+     "start": 23051.318,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q099",
+     "repeat": 2,
+     "status": "error",
+     "start": 23129.141,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q055",
+     "repeat": 3,
+     "status": "error",
+     "start": 23161.91,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q067",
+     "repeat": 2,
+     "status": "error",
+     "start": 23186.486,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q034",
+     "repeat": 1,
+     "status": "error",
+     "start": 23186.486,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q083",
+     "repeat": 3,
+     "status": "error",
+     "start": 23264.309,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q082",
+     "repeat": 1,
+     "status": "error",
+     "start": 23297.078,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q033",
+     "repeat": 2,
+     "status": "error",
+     "start": 23321.654,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q040",
+     "repeat": 1,
+     "status": "error",
+     "start": 23321.654,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q031",
+     "repeat": 1,
+     "status": "error",
+     "start": 23399.477,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q006",
+     "repeat": 1,
+     "status": "error",
+     "start": 23432.246,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q069",
+     "repeat": 2,
+     "status": "error",
+     "start": 23456.822,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q008",
+     "repeat": 1,
+     "status": "error",
+     "start": 23456.823,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q081",
+     "repeat": 2,
+     "status": "error",
+     "start": 23534.645,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q049",
+     "repeat": 2,
+     "status": "error",
+     "start": 23567.414,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q002",
+     "repeat": 1,
+     "status": "error",
+     "start": 23591.99,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q056",
+     "repeat": 1,
+     "status": "error",
+     "start": 23591.99,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q023",
+     "repeat": 3,
+     "status": "error",
+     "start": 23669.814,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q065",
+     "repeat": 2,
+     "status": "error",
+     "start": 23702.582,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q039",
+     "repeat": 2,
+     "status": "error",
+     "start": 23727.158,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q037",
+     "repeat": 1,
+     "status": "error",
+     "start": 23727.159,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q025",
+     "repeat": 1,
+     "status": "error",
+     "start": 23804.982,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q020",
+     "repeat": 2,
+     "status": "error",
+     "start": 23837.75,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q005",
+     "repeat": 2,
+     "status": "error",
+     "start": 23862.325,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q072",
+     "repeat": 3,
+     "status": "error",
+     "start": 23862.326,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q066",
+     "repeat": 2,
+     "status": "error",
+     "start": 23940.15,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q090",
+     "repeat": 2,
+     "status": "error",
+     "start": 23972.917,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q028",
+     "repeat": 2,
+     "status": "error",
+     "start": 23997.494,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q018",
+     "repeat": 3,
+     "status": "error",
+     "start": 23997.494,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q007",
+     "repeat": 1,
+     "status": "error",
+     "start": 24075.318,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q014",
+     "repeat": 1,
+     "status": "error",
+     "start": 24108.085,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q046",
+     "repeat": 3,
+     "status": "error",
+     "start": 24132.662,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q069",
+     "repeat": 3,
+     "status": "error",
+     "start": 24132.662,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q096",
+     "repeat": 3,
+     "status": "error",
+     "start": 24210.486,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q007",
+     "repeat": 3,
+     "status": "error",
+     "start": 24243.253,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q035",
+     "repeat": 2,
+     "status": "error",
+     "start": 24267.83,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q077",
+     "repeat": 1,
+     "status": "error",
+     "start": 24267.831,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q093",
+     "repeat": 2,
+     "status": "error",
+     "start": 24345.654,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q053",
+     "repeat": 2,
+     "status": "error",
+     "start": 24378.421,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q098",
+     "repeat": 2,
+     "status": "error",
+     "start": 24402.997,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q065",
+     "repeat": 1,
+     "status": "error",
+     "start": 24402.998,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q014",
+     "repeat": 3,
+     "status": "error",
+     "start": 24480.822,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q079",
+     "repeat": 1,
+     "status": "error",
+     "start": 24513.59,
+     "time": 135.171,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q027",
+     "repeat": 2,
+     "status": "error",
+     "start": 24538.165,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q026",
+     "repeat": 1,
+     "status": "error",
+     "start": 24538.166,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q080",
+     "repeat": 3,
+     "status": "error",
+     "start": 24615.99,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q086",
+     "repeat": 2,
+     "status": "error",
+     "start": 24648.76,
+     "time": 135.165,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q089",
+     "repeat": 2,
+     "status": "error",
+     "start": 24673.333,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q090",
+     "repeat": 1,
+     "status": "error",
+     "start": 24673.334,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q047",
+     "repeat": 2,
+     "status": "error",
+     "start": 24751.158,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q066",
+     "repeat": 1,
+     "status": "error",
+     "start": 24783.926,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q012",
+     "repeat": 2,
+     "status": "error",
+     "start": 24808.502,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q091",
+     "repeat": 3,
+     "status": "error",
+     "start": 24808.502,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q024",
+     "repeat": 3,
+     "status": "error",
+     "start": 24886.326,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q086",
+     "repeat": 3,
+     "status": "error",
+     "start": 24919.093,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q088",
+     "repeat": 2,
+     "status": "error",
+     "start": 24943.669,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q084",
+     "repeat": 1,
+     "status": "error",
+     "start": 24943.67,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q001",
+     "repeat": 1,
+     "status": "error",
+     "start": 25021.494,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q060",
+     "repeat": 3,
+     "status": "error",
+     "start": 25054.262,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q016",
+     "repeat": 1,
+     "status": "error",
+     "start": 25078.837,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q045",
+     "repeat": 3,
+     "status": "error",
+     "start": 25078.837,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q006",
+     "repeat": 3,
+     "status": "error",
+     "start": 25156.661,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q058",
+     "repeat": 3,
+     "status": "error",
+     "start": 25189.43,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q043",
+     "repeat": 3,
+     "status": "error",
+     "start": 25214.005,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q077",
+     "repeat": 3,
+     "status": "error",
+     "start": 25214.006,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q068",
+     "repeat": 2,
+     "status": "error",
+     "start": 25291.83,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q052",
+     "repeat": 3,
+     "status": "error",
+     "start": 25324.598,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q084",
+     "repeat": 2,
+     "status": "error",
+     "start": 25349.174,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q081",
+     "repeat": 3,
+     "status": "error",
+     "start": 25349.174,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q003",
+     "repeat": 3,
+     "status": "error",
+     "start": 25426.997,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q067",
+     "repeat": 1,
+     "status": "error",
+     "start": 25459.765,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q064",
+     "repeat": 1,
+     "status": "error",
+     "start": 25484.342,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q078",
+     "repeat": 2,
+     "status": "error",
+     "start": 25484.343,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q075",
+     "repeat": 2,
+     "status": "error",
+     "start": 25562.165,
+     "time": 135.171,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q018",
+     "repeat": 1,
+     "status": "error",
+     "start": 25594.934,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q054",
+     "repeat": 2,
+     "status": "error",
+     "start": 25619.509,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q061",
+     "repeat": 3,
+     "status": "error",
+     "start": 25619.51,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q100",
+     "repeat": 2,
+     "status": "error",
+     "start": 25697.337,
+     "time": 135.165,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q016",
+     "repeat": 3,
+     "status": "error",
+     "start": 25730.102,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q061",
+     "repeat": 2,
+     "status": "error",
+     "start": 25754.677,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q060",
+     "repeat": 1,
+     "status": "error",
+     "start": 25754.678,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q097",
+     "repeat": 2,
+     "status": "error",
+     "start": 25832.501,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q066",
+     "repeat": 3,
+     "status": "error",
+     "start": 25865.27,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q063",
+     "repeat": 2,
+     "status": "error",
+     "start": 25889.845,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q098",
+     "repeat": 3,
+     "status": "error",
+     "start": 25889.846,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q050",
+     "repeat": 1,
+     "status": "error",
+     "start": 25967.67,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q074",
+     "repeat": 3,
+     "status": "error",
+     "start": 26000.438,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q021",
+     "repeat": 1,
+     "status": "error",
+     "start": 26025.014,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q038",
+     "repeat": 2,
+     "status": "error",
+     "start": 26025.014,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q025",
+     "repeat": 3,
+     "status": "error",
+     "start": 26102.838,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q057",
+     "repeat": 2,
+     "status": "error",
+     "start": 26135.606,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q070",
+     "repeat": 2,
+     "status": "error",
+     "start": 26160.182,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q005",
+     "repeat": 3,
+     "status": "error",
+     "start": 26160.182,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q086",
+     "repeat": 1,
+     "status": "error",
+     "start": 26238.005,
+     "time": 135.169,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q013",
+     "repeat": 2,
+     "status": "error",
+     "start": 26270.775,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q031",
+     "repeat": 3,
+     "status": "error",
+     "start": 26295.35,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q015",
+     "repeat": 3,
+     "status": "error",
+     "start": 26295.351,
+     "time": 135.167,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    },
+    {
+     "id": "q076",
+     "repeat": 3,
+     "status": "error",
+     "start": 26373.174,
+     "time": 135.168,
+     "reported_time": null,
+     "detail": "error: io: connection timed out: 127.0.0.1:5000\n"
+    }
+   ]
+  },
+  {
    "directory": "cedardb",
    "system": "CedarDB",
    "machine": "c6a.metal",
@@ -20202,7 +23293,7 @@
    "data_size_after": null,
    "total_time": 2.242,
    "penalized_time": 45002.242,
-   "geomean": 21.7031,
+   "geomean": 24.7413,
    "counts": {
     "error": 300
    },
@@ -23436,7 +26527,7 @@
    "data_size_after": 162292841148,
    "total_time": 626.344,
    "penalized_time": 45626.344,
-   "geomean": 21.7031,
+   "geomean": 24.7413,
    "counts": {
     "wrong": 7,
     "timeout": 1,
@@ -26575,11 +29666,6 @@
    "error": "the run failed without a result"
   },
   {
-   "directory": "rayforce",
-   "machine": null,
-   "error": "no result and no log yet"
-  },
-  {
    "directory": "umbra",
    "machine": "c6a.metal",
    "error": "psql:create.sql:216: error: connection to server was lost"
@@ -26625,15 +29711,15 @@
    "restarts": 1,
    "crashed": 137,
    "timeouts": 0,
-   "random_gap": 12.057507511984083,
+   "random_gap": 13.688409056873619,
    "standard_gap": 0.7354695605953615,
    "standard_date": "2026-10-01",
-   "widening": 16.394298497171725,
+   "widening": 18.61179549809359,
    "passes": false,
    "reasons": [
     "went down 1 times",
     "137 executions lost the server",
-    "the gap to ClickHouse widens 16.4 times"
+    "the gap to ClickHouse widens 18.6 times"
    ],
    "demote": false
   },
@@ -26644,13 +29730,13 @@
    "restarts": 0,
    "crashed": 0,
    "timeouts": 0,
-   "random_gap": 15.838010996944147,
+   "random_gap": 18.055159179114675,
    "standard_gap": 0.8092091172078205,
    "standard_date": "2026-11-10",
-   "widening": 19.572210273153214,
+   "widening": 22.312105480736644,
    "passes": false,
    "reasons": [
-    "the gap to ClickHouse widens 19.6 times"
+    "the gap to ClickHouse widens 22.3 times"
    ],
    "demote": false
   },
@@ -26661,15 +29747,15 @@
    "restarts": 1,
    "crashed": 0,
    "timeouts": 1,
-   "random_gap": 15.838010996944147,
+   "random_gap": 18.055159179114675,
    "standard_gap": 1.3435549269093212,
    "standard_date": "2026-10-25",
-   "widening": 11.788138080351873,
+   "widening": 13.438348382710554,
    "passes": false,
    "reasons": [
     "went down 1 times",
     "1 executions hit the timeout of 600 s",
-    "the gap to ClickHouse widens 11.8 times"
+    "the gap to ClickHouse widens 13.4 times"
    ],
    "demote": false
   },
@@ -26680,13 +29766,13 @@
    "restarts": 0,
    "crashed": 0,
    "timeouts": 0,
-   "random_gap": 14.617685049174675,
+   "random_gap": 16.664000955924088,
    "standard_gap": 1.026828526187119,
    "standard_date": "2026-05-11",
-   "widening": 14.235760573826221,
+   "widening": 16.22861123444033,
    "passes": false,
    "reasons": [
-    "the gap to ClickHouse widens 14.2 times"
+    "the gap to ClickHouse widens 16.2 times"
    ],
    "demote": false
   },
@@ -26697,14 +29783,14 @@
    "restarts": 0,
    "crashed": 0,
    "timeouts": 1,
-   "random_gap": 15.075072306225849,
+   "random_gap": 17.185417422559386,
    "standard_gap": 0.9700905687725369,
    "standard_date": "2026-11-02",
-   "widening": 15.53986070115129,
+   "widening": 17.715271105361047,
    "passes": false,
    "reasons": [
     "1 executions hit the timeout of 600 s",
-    "the gap to ClickHouse widens 15.5 times"
+    "the gap to ClickHouse widens 17.7 times"
    ],
    "demote": false
   },
@@ -26715,16 +29801,34 @@
    "restarts": 1,
    "crashed": 4,
    "timeouts": 2,
-   "random_gap": 13.154222036633538,
+   "random_gap": 14.918172414634975,
    "standard_gap": 0.47910721252191024,
    "standard_date": "2026-10-25",
-   "widening": 27.45569612152724,
+   "widening": 31.137440691216366,
    "passes": false,
    "reasons": [
     "went down 1 times",
     "4 executions lost the server",
     "2 executions hit the timeout of 600 s",
-    "the gap to ClickHouse widens 27.5 times"
+    "the gap to ClickHouse widens 31.1 times"
+   ],
+   "demote": false
+  },
+  {
+   "machine": "c6a.metal",
+   "directory": "rayforce",
+   "category": "challenger",
+   "restarts": 0,
+   "crashed": 0,
+   "timeouts": 139,
+   "random_gap": 17.59923635273431,
+   "standard_gap": 0.7051956104081282,
+   "standard_date": "2026-11-06",
+   "widening": 24.956531341068395,
+   "passes": false,
+   "reasons": [
+    "139 executions hit the timeout of 600 s",
+    "the gap to ClickHouse widens 25.0 times"
    ],
    "demote": false
   },
