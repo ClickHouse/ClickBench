@@ -108,6 +108,8 @@ PAGE = r"""<!DOCTYPE html>
     --bar-color4: oklch(0.9 0.1 90);
     --tooltip-text-color: white; --tooltip-background-color: black;
     --shadow-color: grey; --code-background: #F4F4F4;
+    --pass-color: #1B5E20; --pass-background: #DFF3E2; --fail-color: #8E1B1B; --fail-background: #FBE3E1;
+    --rule-color: #DDD;
 }
 [data-theme="dark"] {
     --color: #CCC; --title-color: white; --background-color: #04293A;
@@ -122,6 +124,8 @@ PAGE = r"""<!DOCTYPE html>
     --bar-color4: oklch(0.4 0.1 250);
     --tooltip-text-color: white; --tooltip-background-color: #444;
     --shadow-color: black; --code-background: #03202D;
+    --pass-color: #B6F0C2; --pass-background: #0D4A35; --fail-color: #FFC9C4; --fail-background: #5C1F24;
+    --rule-color: #0B4560;
 }
 html, body { color: var(--color); background-color: var(--background-color); width: 100%; height: 100%; margin: 0; overflow: auto; box-sizing: border-box; }
 body { font-family: 'Inter', sans-serif; padding: 1% 3% 0 3%; }
@@ -160,6 +164,28 @@ pre { background: var(--code-background); padding: 0.5rem; border-radius: 0.5rem
 .muted { opacity: 0.7; }
 .feature { display: inline-block; margin-right: 0.3rem; padding: 0 0.4rem; border-radius: 0.5rem; background: var(--selector-background-color); font-size: 85%; }
 footer { padding: 2rem 0; }
+/* The table of the Production requirements. */
+.prod-table { border-collapse: collapse; margin: 0.5rem 0 1.5rem 0; }
+.prod-table th, .prod-table td { padding: 0.35rem 0.7rem; vertical-align: middle; }
+.prod-table thead th { text-align: right; white-space: nowrap; font-weight: 600; border-bottom: 2px solid var(--rule-color); padding-bottom: 0.35rem; }
+.prod-table thead tr.prod-groups th { text-align: center; font-weight: 500; opacity: 0.75; border-bottom: 1px solid var(--rule-color); }
+.prod-table thead th.prod-left { text-align: left; }
+.prod-table tbody tr:nth-child(odd) { background: var(--summary-every-other-row-color); }
+.prod-table tbody tr:hover { background: var(--highlight-color); }
+.prod-table td.prod-system { white-space: nowrap; font-weight: 600; }
+.prod-table td.prod-number { text-align: right; font-family: monospace; font-size: 95%; white-space: nowrap; }
+.prod-table td.prod-group-start, .prod-table th.prod-group-start { border-left: 1px solid var(--rule-color); }
+.prod-zero { opacity: 0.4; }
+.prod-bad { color: var(--fail-color); font-weight: bold; }
+.prod-none { text-align: center; opacity: 0.55; font-style: italic; }
+.prod-category { display: inline-block; padding: 0 0.45rem; border-radius: 0.5rem; background: var(--selector-background-color); font-size: 85%; }
+.prod-verdict { min-width: 16rem; max-width: 40rem; }
+.prod-verdict-line { display: flex; align-items: baseline; }
+.prod-badge { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 0.5rem; font-size: 85%; font-weight: 600; white-space: nowrap; }
+.prod-pass { color: var(--pass-color); background: var(--pass-background); }
+.prod-fail { color: var(--fail-color); background: var(--fail-background); }
+.prod-demote { color: var(--fail-color); background: var(--fail-background); outline: 2px solid var(--fail-color); }
+.prod-reason { font-size: 85%; opacity: 0.8; margin-left: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -410,17 +436,49 @@ for (const q of D.queries) {
 
 function renderProduction() {
     const div = document.getElementById("production");
-    const num = (x, d) => x === null || x === undefined ? "–" : d === undefined ? String(x) : x.toFixed(d);
+    const num = (x, digits) => x === null || x === undefined ? "–" : digits === undefined ? String(x) : x.toFixed(digits);
+    /// A count of crashes or timeouts: zero is muted, anything else is a failure.
+    const count = (x, start) => el("td", { class: "prod-number" + (start ? " prod-group-start" : "") },
+        el("span", { class: x ? "prod-bad" : "prod-zero" }, num(x)));
     for (const M of D.machines) {
-        const rows = [...(M.production || [])].sort((a, b) => (a.passes === b.passes ? 0 : a.passes ? -1 : 1) || (a.widening ?? Infinity) - (b.widening ?? Infinity));
-        const table = el("table", {}, el("tr", {}, ...["System", "Category", "Restarts", "Lost server", "Timeouts", "Gap, random", "Gap, standard", "Widening", "Verdict"].map(h => el("th", {}, h))));
+        const rows = [...(M.production || [])].sort((a, b) => (a.passes === b.passes ? 0 : a.passes ? -1 : 1)
+            || ((a.widening === null) - (b.widening === null)) || ((a.widening ?? 0) - (b.widening ?? 0)));
+        const head = el("thead", {},
+            el("tr", { class: "prod-groups" }, el("th", { colspan: 2 }, ""),
+                el("th", { colspan: 3, class: "prod-group-start" }, "Crashes and deadlocks"),
+                el("th", { colspan: 3, class: "prod-group-start" }, "Gap to ClickHouse"),
+                el("th", { class: "prod-group-start" }, "")),
+            el("tr", {}, el("th", { class: "prod-left" }, "System"), el("th", { class: "prod-left" }, "Category"),
+                el("th", { class: "prod-group-start", title: "The system went down and the driver restarted it" }, "Restarts"),
+                el("th", { title: "Executions that failed with a lost connection or a crash of the server" }, "Lost server"),
+                el("th", { title: `Executions that ran into the query timeout of ${D.query_timeout} s` }, "Timeouts"),
+                el("th", { class: "prod-group-start", title: "Geomean of (0.01 + average) / (0.01 + average of ClickHouse) on the random queries" }, "Random"),
+                el("th", { title: "The same ratio of the hot runs in the main benchmark on this machine" }, "Standard"),
+                el("th", { title: `Random over standard; more than ${2} fails` }, "Widening"),
+                el("th", { class: "prod-left prod-group-start" }, "Verdict")));
+        const body = el("tbody");
         for (const v of rows) {
-            const verdict = v.passes ? "passes" : (v.demote ? "demote: " : "fails: ") + v.reasons.join("; ");
-            table.append(el("tr", {}, el("td", {}, v.directory), el("td", {}, v.category || "–"), el("td", {}, num(v.restarts)), el("td", {}, num(v.crashed)),
-                el("td", {}, num(v.timeouts)), el("td", {}, num(v.random_gap, 2)), el("td", {}, num(v.standard_gap, 2)), el("td", {}, num(v.widening, 2)),
-                el("td", { style: v.passes ? "" : v.demote ? "font-weight: bold" : "" }, verdict)));
+            const badge = v.passes ? el("span", { class: "prod-badge prod-pass" }, "✓ passes")
+                : v.demote ? el("span", { class: "prod-badge prod-demote" }, "▼ demote")
+                : el("span", { class: "prod-badge prod-fail" }, "✗ fails");
+            const reason = v.reasons.join("; ");
+            const verdict = el("td", { class: "prod-verdict prod-group-start" }, el("div", { class: "prod-verdict-line" }, badge,
+                reason ? el("div", { class: "prod-reason", title: reason }, reason) : null));
+            const tr = el("tr", {}, el("td", { class: "prod-system" }, v.directory),
+                el("td", {}, v.category ? el("span", { class: "prod-category" }, v.category) : "–"));
+            if (v.restarts === null) {
+                tr.append(el("td", { colspan: 6, class: "prod-none prod-group-start" }, "no result: failed before the queries"));
+            } else {
+                const wide = v.widening !== null && v.widening > 2;
+                tr.append(count(v.restarts, true), count(v.crashed), count(v.timeouts),
+                    el("td", { class: "prod-number prod-group-start" }, v.random_gap === null ? "–" : "×" + num(v.random_gap, 2)),
+                    el("td", { class: "prod-number" }, v.standard_gap === null ? "–" : "×" + num(v.standard_gap, 2)),
+                    el("td", { class: "prod-number" }, el("span", { class: wide ? "prod-bad" : "" }, v.widening === null ? "–" : "×" + num(v.widening, 2))));
+            }
+            tr.append(verdict);
+            body.append(tr);
         }
-        div.append(el("h3", {}, M.machine), table);
+        div.append(el("h3", {}, M.machine), el("table", { class: "prod-table" }, head, body));
     }
 }
 renderProduction();
