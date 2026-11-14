@@ -40,6 +40,7 @@ NUMBER = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
 NUMERIC_CELL = re.compile(r"^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$|^[-+]?(?:inf|nan)$", re.I)
 DATETIME_CELL = re.compile(r"^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(\.\d+)?$")
 DATE_CELL = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+IPV4 = re.compile(r"(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?![\d.])")
 NULL_WORDS = re.compile(r"(?:NULL|null|Null|None|none|NaN|nan|<NA>|N/A|\\N|NA|\u1d3a\u1d41\u1d38\u1d38)(?![\w])")
 TRUE_WORDS = re.compile(r"(?:true|TRUE|True|t)(?![\w])")
 FALSE_WORDS = re.compile(r"(?:false|FALSE|False|f)(?![\w])")
@@ -178,6 +179,12 @@ def match_cell(cell, text, pos):
         m = NUMBER.match(text, pos)
         if m and number_matches(value, m.group(0)) and not (m.end() < len(text) and text[m.end()].isalnum()):
             return m.end()
+        # An IPv4 address (QuestDB keeps ClientIP as IPv4) for the same 32 bits.
+        m = IPV4.match(text, pos)
+        if m and re.fullmatch(r"-?\d+", value) and all(int(x) < 256 for x in m.groups()):
+            a, b, c, d = (int(x) for x in m.groups())
+            if (a << 24 | b << 16 | c << 8 | d) == int(value) % (1 << 32):
+                return m.end()
         if value in ("0", "1"):
             m = (TRUE_WORDS if value == "1" else FALSE_WORDS).match(text, pos)
             if m:
@@ -193,7 +200,7 @@ def match_cell(cell, text, pos):
         found = re.compile(pattern).match(text, pos)
         return found.end() if found else None
     if DATE_CELL.match(value):
-        found = re.compile(re.escape(value) + r"(?:[ T]00:00:00(?:\.0*)?)?").match(text, pos)
+        found = re.compile(re.escape(value) + r"(?:[ T]00:00:00(?:\.0*)?(?:Z|\s?UTC|[+-]00(?::?00)?)?)?").match(text, pos)
         return found.end() if found else None
     return match_string(value, text, pos)
 
@@ -268,11 +275,40 @@ def start_positions(first, text):
     return positions
 
 
+def keyed_rows(output, names):
+    """A JSON output with the rows as objects keyed by the column names (in any
+    order: ctrlb sorts the keys) as TSV in the order of the columns, or None.
+    Needs distinct column names."""
+    if len(set(names)) != len(names):
+        return None
+    try:
+        doc = json.loads(output)
+    except ValueError:
+        return None
+    wanted = {n.lower() for n in names}
+    stack = [doc]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, dict):
+            stack.extend(node.values())
+        elif isinstance(node, list):
+            if node and all(isinstance(x, dict) for x in node):
+                keys = {k.lower(): k for k in node[0]}
+                if wanted <= set(keys):
+                    def cell(v):
+                        return "NULL" if v is None else v if isinstance(v, str) else json.dumps(v, ensure_ascii=False)
+                    return "\n".join("\t".join(cell(row.get(keys[n.lower()])) for n in names) for row in node)
+            stack.extend(node)
+    return None
+
+
 def compare(reference, output):
     names, reference_rows = reference
     GAP_WORDS.clear()
     GAP_WORDS.update(w for name in names for w in WORD.findall(clean(name)))
-    text = HINT.sub(" ", clean(output.decode("utf-8", errors="replace")))
+    decoded = output.decode("utf-8", errors="replace")
+    keyed = keyed_rows(decoded, names)
+    text = HINT.sub(" ", clean(keyed if keyed is not None else decoded))
     cells = [c for row in reference_rows for c in row]
     if not reference_rows or all(is_empty(c) for c in cells):
         # Nothing to find; the output must not have values either.
