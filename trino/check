@@ -4,3 +4,6 @@ set -e
 # Trino exposes /v1/info. The "starting" field flips to false when ready.
 out=$(curl -sf http://localhost:8080/v1/info)
 echo "$out" | grep -q '"starting":false'
+# Table scans can fail with NO_NODES_AVAILABLE briefly after the coordinator
+# reports that it has started; wait until one runs.
+venv/bin/python -c 'import trino; cursor = trino.dbapi.connect(host="localhost", port=8080, user="clickbench").cursor(); cursor.execute("SELECT count(*) FROM tpch.tiny.nation"); cursor.fetchall()' 2>/dev/null
