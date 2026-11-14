@@ -40,7 +40,7 @@ def summarize(results, payloads, missing=()):
         queries = [{"id": i, "sql": "", "features": [], "description": ""}
                    for i in sorted({e["id"] for r in results for e in r["executions"]})]
     machines = []
-    for machine in sorted({m for m, _ in latest}):
+    for machine in sorted({m for m, _ in latest} | {x["machine"] for x in missing if x["machine"]}):
         geo = metrics.geomeans([r for (m, _), r in latest.items() if m == machine])
         systems = []
         for (m, directory), r in latest.items():
@@ -74,7 +74,9 @@ def summarize(results, payloads, missing=()):
                                     [x for x in missing if x["machine"] == machine])
         for v in verdicts:
             v["demote"] = production.demote(v)
-        machines.append({"machine": machine, "systems": systems, "production": verdicts})
+        failed = [{"directory": x["directory"], "error": x.get("error") or "the run failed"}
+                  for x in missing if x["machine"] == machine]
+        machines.append({"machine": machine, "systems": systems, "production": verdicts, "failed": failed})
     meta = next(iter(payloads.values()))["queries"] if payloads else {}
     return {
         "group": first.get("group", ""), "rows": first["rows"], "repeats": first["repeats"],
@@ -140,6 +142,9 @@ a:hover { color: var(--link-hover-color); }
 .summary-bar-cell { width: 100%; }
 .summary-bar { height: 1rem; width: 100%; }
 .summary-number { font-family: monospace; text-align: right; padding-left: 1rem; white-space: nowrap; }
+/* A system that failed entirely (or on every query), as on JSONBench: a black bar and a skull and crossbones. */
+.summary-bar-failed { background: black; }
+.summary-row-failed .summary-number { font-family: inherit; font-size: 1.5rem; line-height: 1rem; }
 .summary-counts { font-family: monospace; white-space: nowrap; padding-left: 1rem; font-size: 90%; }
 th { padding-bottom: 0.5rem; }
 .summary-row:hover { background: var(--highlight-color) !important; font-weight: bold; }
@@ -208,7 +213,12 @@ const fmtSize = n => typeof n !== "number" ? "–" : (n / 1024 / 1024 / 1024).to
 const entries = [];
 for (const M of D.machines) for (const s of M.systems) entries.push({ ...s, machine: M.machine, key: s.directory + " (" + M.machine + ")" });
 const machines = D.machines.map(m => m.machine);
-const selectors = { machine: Object.fromEntries(machines.map(m => [m, true])), system: Object.fromEntries(entries.map(e => [e.directory, true])), metric: "geomean" };
+/// The systems without a result (they failed to install, start or load): shown in the summary only.
+const failedEntries = [];
+for (const M of D.machines) for (const f of (M.failed || [])) failedEntries.push({ ...f, machine: M.machine, key: f.directory + " (" + M.machine + ")" });
+const selectors = { machine: Object.fromEntries(machines.map(m => [m, true])), system: Object.fromEntries([...entries, ...failedEntries].map(e => [e.directory, true])), metric: "geomean" };
+/// No run of the system returned a correct (or at least unverified) result.
+const allFailed = e => !(e.counts.ok || e.counts.unverified);
 const METRICS = { geomean: "Geomean of relative times", total: "Total time", penalized: "Penalized time", load: "Load time", size: "Data size" };
 
 /// The same as lib/metrics.py, for the selected entries of one machine.
@@ -275,7 +285,7 @@ function selectorRow(id, items, isActive, onClick) {
 
 function render() {
     selectorRow("selectors_machine", machines.map(m => [m, m]), m => selectors.machine[m], m => { selectors.machine[m] = !selectors.machine[m]; });
-    selectorRow("selectors_system", [...new Set(entries.map(e => e.directory))].map(d => [d, d]), d => selectors.system[d], d => { selectors.system[d] = !selectors.system[d]; });
+    selectorRow("selectors_system", [...new Set([...entries, ...failedEntries].map(e => e.directory))].sort().map(d => [d, d]), d => selectors.system[d], d => { selectors.system[d] = !selectors.system[d]; });
     selectorRow("selectors_metric", Object.entries(METRICS), m => selectors.metric === m, m => { selectors.metric = m; });
 
     const selected = entries.filter(e => selectors.machine[e.machine] && selectors.system[e.directory]);
@@ -292,8 +302,9 @@ function render() {
     const vals = selected.map(value).filter(v => typeof v === "number" && v > 0);
     const min = Math.min(...vals);
     const ratio = e => { const v = value(e); return typeof v === "number" && v > 0 ? (selectors.metric === "geomean" ? v : v / min) : null; };
-    const sorted = [...selected].sort((a, b) => (ratio(a) ?? Infinity) - (ratio(b) ?? Infinity));
-    const maxRatio = Math.max(...sorted.map(ratio).filter(x => x !== null));
+    // The systems that failed on every query come after the others, with the skull.
+    const sorted = [...selected].sort((a, b) => (allFailed(a) - allFailed(b)) || ((ratio(a) ?? Infinity) - (ratio(b) ?? Infinity)));
+    const maxRatio = Math.max(1, ...sorted.filter(e => !allFailed(e)).map(ratio).filter(x => x !== null));
     document.getElementById("what").textContent = selectors.metric === "size" ? "size" : "time";
 
     const summary = document.getElementById("summary");
@@ -302,15 +313,27 @@ function render() {
         const r = ratio(e);
         const c = e.counts;
         const failed = FAILED.reduce((s, k) => s + (c[k] || 0), 0);
-        const text = r === null ? "–" : selectors.metric === "geomean" ? `×${r.toFixed(2)}`
+        const dead = allFailed(e);
+        const text = dead ? "☠" : r === null ? "–" : selectors.metric === "geomean" ? `×${r.toFixed(2)}`
             : selectors.metric === "size" ? `${fmtSize(e.data_size)} (×${r.toFixed(2)})` : `${fmtTime(value(e))} (×${r.toFixed(2)})`;
-        const tr = el("tr", { class: "summary-row" },
+        const tr = el("tr", { class: dead ? "summary-row summary-row-failed" : "summary-row" },
             el("td", { class: "summary-name" }, e.key + ": "),
-            el("td", { class: "summary-bar-cell" }, el("div", { class: "summary-bar", style: `background:${r === null ? "none" : barGradient(r / maxRatio * 100)}` })),
+            el("td", { class: "summary-bar-cell" }, dead ? el("div", { class: "summary-bar summary-bar-failed" })
+                : el("div", { class: "summary-bar", style: `background:${r === null ? "none" : barGradient(r / maxRatio * 100)}` })),
             el("td", { class: "summary-number" }, text),
             el("td", { class: "summary-counts" }, `${c.ok || 0} correct` + (c.wrong ? `, ${c.wrong} wrong` : "") + (failed - (c.wrong || 0) ? `, ${failed - (c.wrong || 0)} failed` : "")));
         tr.addEventListener("mousemove", ev => showTip(ev, `${e.key}\ngeomean ×${(geo.get(e.key) ?? NaN).toFixed(3)}\ntotal time ${fmtTime(e.total)}, penalized ${fmtTime(e.penalized)}\nload ${fmtTime(e.load_time)}, data size ${fmtSize(e.data_size)}\n` +
             Object.entries(c).map(([k, v]) => `${STATUS_TEXT[k] || k}: ${v}`).join(", ") + `\ntranslator: ${e.translator || "none"}`));
+        tr.addEventListener("mouseleave", hideTip);
+        summary.append(tr);
+    }
+    for (const f of failedEntries.filter(f => selectors.machine[f.machine] && selectors.system[f.directory])) {
+        const tr = el("tr", { class: "summary-row summary-row-failed" },
+            el("td", { class: "summary-name" }, f.key + ": "),
+            el("td", { class: "summary-bar-cell" }, el("div", { class: "summary-bar summary-bar-failed" })),
+            el("td", { class: "summary-number" }, "☠"),
+            el("td", { class: "summary-counts" }, "no result"));
+        tr.addEventListener("mousemove", ev => showTip(ev, `${f.key}\nfailed without a result:\n${f.error}`));
         tr.addEventListener("mouseleave", hideTip);
         summary.append(tr);
     }

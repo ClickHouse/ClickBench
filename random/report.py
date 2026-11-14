@@ -150,7 +150,8 @@ def report(results, group, missing=()):
     for machine in sorted({m for m, _ in latest}):
         here = [r for (m, _), r in latest.items() if m == machine]
         geo = metrics.geomeans(here)
-        rows = sorted(here, key=lambda r: (geo[r["directory"]] is None, geo[r["directory"]] or 0))
+        rows = sorted(here, key=lambda r: (not (r["counts"].get("ok") or r["counts"].get("unverified")),
+                                           geo[r["directory"]] is None, geo[r["directory"]] or 0))
         lines += [f"## {machine}", "",
                   "| System | Geomean | Total time | Penalized time | OK | Wrong | Errors | Unverified | Load time | Data size |",
                   "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
@@ -159,10 +160,17 @@ def report(results, group, missing=()):
             errors = sum(counts.get(s, 0) for s in ("error", "timeout", "unsupported"))
             load = f"{r['load_time']:.0f} s" if isinstance(r.get("load_time"), (int, float)) else "-"
             g = geo[r["directory"]]
+            if not (counts.get("ok") or counts.get("unverified")):
+                g = None  # every run failed: ☠
             lines.append(f"| {r['directory']} | {g:.2f} | {r['total_time']:.0f} s | {metrics.penalized_time(r):.0f} s | "
                          f"{counts.get('ok', 0)} | {counts.get('wrong', 0)} | {errors} | {counts.get('unverified', 0)} | "
                          f"{load} | {human_size(r.get('data_size'))} |" if g is not None else
-                         f"| {r['directory']} | - | {r['total_time']:.0f} s | {metrics.penalized_time(r):.0f} s | - | - | - | - | {load} | - |")
+                         f"| {r['directory']} | ☠ | {r['total_time']:.0f} s | {metrics.penalized_time(r):.0f} s | "
+                         f"{counts.get('ok', 0)} | {counts.get('wrong', 0)} | {errors} | {counts.get('unverified', 0)} | "
+                         f"{load} | {human_size(r.get('data_size'))} |")
+        for m in missing:
+            if m["machine"] == machine:
+                lines.append(f"| {m['directory']} | ☠ | - | - | - | - | - | - | - | - |")
         lines += ["", "Geomean: for every query, the average time of the system (a failed execution counts as 5x the "
                   "slowest correct execution of the query in the group), relative to the best system's average as "
                   "(0.01 + time) / (0.01 + best); the geometric mean over the queries. Lower is better; 1 is the best "

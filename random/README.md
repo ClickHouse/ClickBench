@@ -142,7 +142,9 @@ reference may be wrong. The formulas are in `lib/metrics.py`.
 `report.py <group> --output <dir>` also writes `report.html`, a
 self-contained page in the style of the ClickBench page (`lib/report_html.py`).
 It has selectors of the machines, the systems and the metric, recomputed for
-the selected systems, the summary with the bars of ClickBench, the detailed
+the selected systems, the summary with the bars of ClickBench (a system that
+failed entirely, even in the load, or on every query has a black bar and a
+skull and crossbones, as on JSONBench), the detailed
 comparison of queries and systems colored as on ClickBench, and every query in
 detail: its SQL, the translation for every system, the time and status of
 every run, the errors and the beginning of the outputs. The workflow **Report the randomized benchmark** publishes it
