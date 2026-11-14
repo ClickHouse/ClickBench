@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+find . -maxdepth 1 -name 'hits.parquet' -printf '%s\n' \
+    | awk '{ s += $1 } END { print s+0 }'

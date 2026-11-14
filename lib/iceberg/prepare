@@ -1,0 +1,17 @@
+#!/bin/bash
+# Called at the beginning of the ./load of every Iceberg entry: makes sure the
+# `clickbench` namespace exists. Unlike in ./start, whose output the benchmark
+# driver discards, a failure here is in the log, together with the end of
+# the storage log.
+source "$(dirname "$0")/env.sh"
+
+if ! "$LAKE_LIB_DIR/catalog" wait || ! "$LAKE_LIB_DIR/catalog" create-namespace; then
+    echo "lib/iceberg: cannot create the namespace '$LAKE_NAMESPACE'" >&2
+    case "$LAKE_STORAGE" in
+    seaweedfs)
+        echo "lib/iceberg: the end of seaweedfs.log:" >&2
+        tail -n 50 "$LAKE_ENTRY_DIR/seaweedfs.log" >&2
+        ;;
+    esac
+    exit 1
+fi

@@ -10,7 +10,7 @@
         "column-oriented",
         "dataframe",
         "in-memory",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 276,
     "data_size": 31942135808,

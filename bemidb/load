@@ -1,0 +1,62 @@
+#!/bin/bash
+set -eu
+
+# BemiDB can only ingest data by syncing it from a source PostgreSQL database.
+# So loading the ClickBench dataset into BemiDB is a two-step pipeline, and
+# both steps count as load time because together they are what it takes to get
+# the dataset queryable in BemiDB:
+#   1. bulk-load hits into a staging PostgreSQL database, then
+#   2. run `bemidb sync` to convert it into BemiDB's local Iceberg storage.
+
+PGVERSION="${PGVERSION:-17}"
+STORAGE_PATH="${STORAGE_PATH:-iceberg}"
+
+# --- Step 1: stage the dataset in PostgreSQL ---
+sudo systemctl start postgresql@$PGVERSION-main
+
+# Drop+create a role and database so this is idempotent. BemiDB connects over
+# TCP, so the role needs a password (the PGDG default pg_hba uses scram for
+# host connections).
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t -c "DROP DATABASE IF EXISTS clickbench"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t -c "DROP ROLE IF EXISTS clickbench"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t -c "CREATE ROLE clickbench LOGIN PASSWORD 'clickbench'"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -t -c "CREATE DATABASE clickbench OWNER clickbench"
+
+sudo -u postgres psql -v ON_ERROR_STOP=1 clickbench -t < create.sql
+sudo -u postgres psql -v ON_ERROR_STOP=1 clickbench -t -c "ALTER TABLE hits OWNER TO clickbench"
+
+# TRUNCATE and \copy FREEZE in a single transaction: PostgreSQL requires the
+# table to be created or truncated in the current subtransaction for COPY
+# FREEZE to be allowed. ON_ERROR_STOP makes psql exit non-zero on data errors.
+sudo -u postgres psql -v ON_ERROR_STOP=1 clickbench <<'EOF'
+BEGIN;
+TRUNCATE TABLE hits;
+\copy hits FROM 'hits.tsv' WITH FREEZE;
+COMMIT;
+EOF
+
+sudo -u postgres psql -v ON_ERROR_STOP=1 clickbench -t -c 'VACUUM ANALYZE hits'
+
+# --- Step 2: sync into BemiDB (local Iceberg storage) ---
+# Stop the server (started empty by the driver) so nothing reads the storage
+# while the sync rewrites it, then re-read the fresh catalog on restart.
+./stop || true
+
+rm -rf "$STORAGE_PATH"
+./bemidb \
+    --pg-database-url "postgres://clickbench:clickbench@127.0.0.1:5432/clickbench" \
+    --storage-path "$STORAGE_PATH" \
+    --disable-anonymous-analytics \
+    sync
+
+# The staging PostgreSQL is no longer needed: BemiDB serves from its own
+# Iceberg storage. Stop it so it doesn't hold RAM during the query phase —
+# only the system under test should be resident.
+sudo systemctl stop postgresql@$PGVERSION-main || true
+
+rm -f hits.tsv
+sync
+
+# Bring BemiDB back up so the driver's post-load ./check succeeds and it picks
+# up the newly synced table.
+./start

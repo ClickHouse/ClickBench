@@ -1,0 +1,13 @@
+{
+  "system": "BemiDB",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "Go",
+    "column-oriented",
+    "DuckDB derivative",
+    "PostgreSQL compatible"
+  ]
+}

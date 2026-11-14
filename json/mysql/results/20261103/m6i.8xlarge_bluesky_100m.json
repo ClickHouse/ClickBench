@@ -1,0 +1,25 @@
+{
+  "system": "MySQL",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "row-oriented",
+    "MySQL compatible"
+  ],
+  "version": "26.10.0",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 100000000,
+  "num_loaded_documents": 99999968,
+  "load_time": 1564.668,
+  "total_size": 60150513664,
+  "result": [
+    [259.38, 258.736, 258.748],
+    [null, null, null],
+    [291.774, 294.806, 293.871],
+    [969.259, 984.965, 966.627],
+    [1087.702, 1103.294, 1095.118]
+  ]
+}

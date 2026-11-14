@@ -1,0 +1,8 @@
+#!/bin/bash
+set -eu
+python3 - <<'PY'
+import os
+from pathlib import Path
+root = Path(os.environ.get("KEYTEN_NATIVE", "hits.k10dir"))
+print(sum(path.stat().st_size for path in root.rglob("*") if path.is_file()))
+PY

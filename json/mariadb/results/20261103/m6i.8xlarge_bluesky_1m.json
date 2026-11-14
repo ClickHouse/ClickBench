@@ -1,0 +1,25 @@
+{
+  "system": "MariaDB",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "row-oriented",
+    "MySQL compatible"
+  ],
+  "version": "13.0.2",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "load_time": 14.6,
+  "total_size": 574619648,
+  "result": [
+    [3.306, 3.415, 3.267],
+    [70.262, 70.461, 70.766],
+    [4.53, 4.497, 4.568],
+    [3.095, 3.101, 3.149],
+    [3.201, 3.196, 3.177]
+  ]
+}

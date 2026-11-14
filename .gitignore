@@ -19,6 +19,7 @@ arc_token.txt
 data-size.txt
 .doris_home
 .sirius_env
+create.rewritten.sql
 
 # Per-system data files
 hits.db
@@ -26,6 +27,19 @@ mydb
 hits*.hyper
 hits.vortex
 *.vortex
+
+# BemiDB single binary and local Iceberg storage
+bemidb/bemidb
+bemidb/iceberg
+
+# DolphinDB's unpacked server tree, generated config and -home data directory
+dolphindb/dolphindb
+dolphindb/clickbench.cfg
+dolphindb/db
+__pycache__/
+
+# ArcticDB's LMDB store
+arcticdb/store
 
 # Python venvs created by install scripts
 myenv
@@ -35,3 +49,9 @@ __pycache__/
 gluten/
 gluten.jar
 libch.so
+
+# Pivot's local datastores and generated server configs
+pivot-parquet/catalog
+pivot-parquet/config.yaml
+pivot-parquet-partitioned/catalog
+pivot-parquet-partitioned/config.yaml

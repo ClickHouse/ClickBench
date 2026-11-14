@@ -20,10 +20,16 @@ sudo mariadb test < create.sql
 # /home/ubuntu is mode 751 (o+x only) so DuckDB can traverse but not list it,
 # causing "No files found" errors. Hardlink to /var/lib/mysql/ (mysql-owned,
 # mode 755) resolves this instantly without copying 14 GB.
+# Falls back to a symlink when the source lives on a different filesystem
+# — the playground exposes hits.parquet via an overlayfs whose lower is a
+# read-only mount, so hardlink returns EXDEV ("Invalid cross-device link").
 HITS_LINK=/var/lib/mysql/hits.parquet
 if [ ! -f "$HITS_LINK" ]; then
-    sudo ln "$(realpath hits.parquet)" "$HITS_LINK"
-    sudo chmod 644 "$HITS_LINK"
+    src=$(realpath hits.parquet)
+    if ! sudo ln "$src" "$HITS_LINK" 2>/dev/null; then
+        sudo ln -sf "$src" "$HITS_LINK"
+    fi
+    sudo chmod 644 "$HITS_LINK" 2>/dev/null || true
 fi
 duck "INSERT INTO test.hits
 SELECT * REPLACE (

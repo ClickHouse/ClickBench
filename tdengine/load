@@ -1,0 +1,67 @@
+#!/bin/bash
+set -e
+
+DB="${TDENGINE_DB:-clickbench}"
+
+# vgroups is how TDengine shards a database: every table lives in exactly one
+# vgroup, and a query runs one task per vgroup. The default is 2, so a table
+# in a 2-vgroup database is scanned by at most 2 threads no matter how many
+# cores the machine has. The vendor's capacity planning guide sizes it the
+# other way round -- "each CPU core can serve 1 to 2 vnodes" -- so match the
+# core count. Memory follows vgroups x (buffer + pages x pagesize +
+# cachesize) ~= 258 MB per vgroup with the default buffer of 256 MB.
+VGROUPS=$(nproc)
+[ "$VGROUPS" -gt 1024 ] && VGROUPS=1024
+
+# KEEP is a retention window, not a tuning knob: it defaults to 3650 days and
+# TDengine rejects any row whose primary timestamp is older than now - KEEP
+# with "Timestamp out of range". hits is from July 2013, over 4600 days ago,
+# so the whole dataset is unloadable at the default. 36500 days (the
+# documented range is [1, 365000]) puts it comfortably inside.
+taos -s "DROP DATABASE IF EXISTS $DB" >/dev/null
+taos -s "CREATE DATABASE $DB VGROUPS $VGROUPS KEEP 36500" >/dev/null
+
+# create.sql is kept readable over 109 lines, but `taos -f` executes one
+# statement per line, so collapse it into a single -s argument.
+taos -d "$DB" -s "$(tr '\n' ' ' < create.sql)" >/dev/null
+
+# csv-columns.txt is hits.csv's own column order, with CounterID replaced by
+# tbname: that is what routes each row to the subtable for its counter and
+# creates that subtable on first sight. create.sql has to declare EventTime
+# first (TDengine requires the primary timestamp in column 1), so the two
+# orders differ and the INSERT has to spell one of them out.
+python3 load-csv.py hits.csv "$(tr '\n' ' ' < csv-columns.txt)" hits.chunk.csv
+
+# The subtables were auto-created by the INSERT, which cannot also supply a
+# tag value, so each one's CounterID tag is still NULL. Every subtable is
+# named after the counter that produced it, so the values are already in the
+# catalog: read them back and set the tag. Batched ~1000 subtables per
+# statement, which is the range the vendor recommends for batch DDL.
+rm -f subtables.csv
+taos -d "$DB" -s "SELECT table_name FROM information_schema.ins_tables WHERE db_name = '$DB' >> subtables.csv" >/dev/null
+# tr strips the quotes the exporter puts around string values and the CR of
+# its CRLF line endings -- a stray CR inside the backticks makes every ALTER
+# fail with "Table does not exist".
+tail -n +2 subtables.csv | tr -d '"\r' | awk '
+    { if (n % 1000 == 0) { if (n) printf ";\n"; printf "ALTER TABLE" }
+      printf " `%s` SET TAG CounterID = %s", $1, $1; n++ }
+    END { if (n) printf ";\n" }' > set-tags.sql
+# taos -f reports a failed statement on stdout and carries on with exit 0, so
+# check the output rather than the status: a silently half-tagged table would
+# only show up much later, as NULLs in Q28's CounterID column.
+tag_output=$(taos -d "$DB" -f set-tags.sql)
+if printf '%s' "$tag_output" | grep -q 'DB error'; then
+    echo "load: setting the CounterID tags failed:" >&2
+    printf '%s\n' "$tag_output" | grep 'DB error' | head -5 >&2
+    exit 1
+fi
+rm -f subtables.csv set-tags.sql
+
+# Commit the write buffers to the TSDB files. Without this the rows sit in
+# each vnode's in-memory buffer, where a scan is an order of magnitude
+# slower than over committed data, and ./data-size cannot see them. This is
+# the TDengine-side counterpart of the fsync the shared driver does for
+# every system right after ./load.
+taos -s "FLUSH DATABASE $DB" >/dev/null
+
+rm -f hits.csv

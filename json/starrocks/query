@@ -1,0 +1,15 @@
+#!/bin/bash
+# Reads a query from stdin, runs it with the mysql client.
+# Stdout: the result. Stderr: the runtime in fractional seconds on the last
+# line: the wall-clock time of the mysql client, as in the original JSONBench
+# (which used /usr/bin/time).
+set -e
+source ./env.sh
+
+query=$(cat)
+
+start=$(date +%s.%N)
+sr_mysql --skip-auto-rehash --batch --silent bluesky -e "$query"
+end=$(date +%s.%N)
+
+awk -v s="$start" -v e="$end" 'BEGIN { printf "%.3f\n", e - s }' >&2

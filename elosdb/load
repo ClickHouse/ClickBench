@@ -1,0 +1,36 @@
+#!/bin/bash
+# load — hits.parquet (downloaded into this directory by ClickBench's driver) into
+# elosdb's own column store, then the row count through the running server.
+. "$(dirname "$0")/common.sh"
+cd "$ELOSDB_HOME"
+
+mkdir -p data/clickbench
+[ -f hits.parquet ] && mv hits.parquet data/clickbench/hits.parquet
+[ -f data/clickbench/hits.parquet ] || { echo "load: no hits.parquet here or under data/clickbench" >&2; exit 1; }
+
+# THE LOAD IS TWO SQL STATEMENTS, through the server ClickBench already started.
+# create.sql declares the 105 columns, their types and their nullability; the COPY
+# reads the whole dataset in one statement, which is what lets the string
+# dictionaries be global and every column's encoding be priced on that column's
+# own values. Nothing is pre-built: the store is written inside the timed window.
+rm -rf data/elosdb
+"${PSQL[@]}" -tA -v ON_ERROR_STOP=1 -f "$ELOSDB_HOME/create.sql"
+# An absolute path: the statement is resolved by the SERVER, whose working
+# directory is not this script's.
+copied=$("${PSQL[@]}" -tA -c "COPY hits FROM '$ELOSDB_HOME/data/clickbench/hits.parquet'")
+echo "load: $copied"
+case "$copied" in
+  "COPY "*) ;;
+  *) echo "load: the COPY did not report a row count: '$copied'" >&2; exit 1 ;;
+esac
+
+# ClickBench's hits is exactly 99,997,497 rows; anything else is a partial load.
+expected=99997497
+got=$("${PSQL[@]}" -tAq -c 'SELECT count(*) FROM hits')
+if [ "$got" != "$expected" ]; then
+  echo "load: hits has '$got' rows, expected $expected" >&2
+  exit 1
+fi
+
+rm -f data/clickbench/hits.parquet
+sync

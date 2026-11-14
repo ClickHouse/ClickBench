@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+# No ingestion — the reported size is the parquet the table reads.
+stat -c%s data/hits.parquet

@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","embedded","in-memory","lukewarm-cold-run"],
+    "tags": ["C++","column-oriented","embedded","in-memory"],
     "load_time": 659,
     "data_size": 31228624896,
     "concurrent_qps": null,

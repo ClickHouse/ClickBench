@@ -1,4 +1,12 @@
 #!/bin/bash
 set -eu
 
+# CedarDB's system-scoped systemd unit binds only /tmp/.s.PGSQL.5432 and
+# 127.0.0.1:5432. Point psql at /tmp so it doesn't fall through to the
+# postgres default /var/run/postgresql. PGUSER pinned to postgres —
+# the installer creates only that role, and defaulting to $USER (root
+# in the playground) trips 'role "root" does not exist'.
+export PGHOST=${PGHOST:-/tmp}
+export PGUSER=${PGUSER:-postgres}
+
 sudo systemctl start cedardb.service

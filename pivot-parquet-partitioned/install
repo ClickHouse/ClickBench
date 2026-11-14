@@ -1,0 +1,9 @@
+#!/bin/bash
+set -eu
+
+sudo apt-get update -y
+sudo apt-get install -y curl postgresql-client
+
+# The official installer: it puts the `pivot` binary under $HOME/.pivot (or
+# $PIVOT_HOME) and needs no root. ./start runs it from there.
+curl https://pivotlake.io | sh

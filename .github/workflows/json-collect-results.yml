@@ -1,0 +1,85 @@
+name: "Collect JSONBench results"
+
+on:
+  workflow_dispatch:
+    inputs:
+      since_hours:
+        description: "Look at the results that arrived in the last N hours"
+        default: "24"
+  schedule:
+    - cron: '53 * * * *'
+
+permissions:
+  contents: write       # To push the results branch and the results of PRs.
+  pull-requests: write  # To open and merge the automated pull request, and to comment.
+  actions: write        # To start the website build after merging.
+
+# Two overlapping runs would publish the same results twice.
+concurrency:
+  group: json-collect-results
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the ClickHouse client
+        working-directory: ${{ runner.temp }}   # not the checkout: it must stay clean
+        run: |
+          curl -fsSL https://clickhouse.com/ | sh
+          sudo ln -sf "$PWD/clickhouse" /usr/local/bin/clickhouse-client
+
+      # The runs of the main branch: one automated, auto-merged pull request.
+      - name: Collect the results of main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SINCE_HOURS: ${{ inputs.since_hours || '24' }}
+        run: ./json/collect-new-results.sh
+
+      # The script of main (this checkout) runs on a checkout of the pull
+      # request (JSON_DIR), so no code of the pull request runs here, with the
+      # write permissions of this job.
+      # The runs launched for pull requests (by benchmark-pr.yml): their
+      # results are committed to the pull request, if its branch is in this
+      # repository, or else listed in a comment for the author to commit.
+      - name: Collect the results of pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SINCE_HOURS: ${{ inputs.since_hours || '24' }}
+        run: |
+          prs=$(clickhouse-client --user sink --host play.clickhouse.com --secure --query "
+              SELECT DISTINCT JSONExtractString(content, 'clickbench_pr') AS pr
+              FROM sink.data
+              WHERE time >= now() - INTERVAL ${SINCE_HOURS} HOUR
+                AND JSONExtractString(content, 'kind') = 'json-benchmark' AND match(pr, '^[0-9]+\$')
+              FORMAT TSV")
+          for pr in $prs; do
+              info=$(gh pr view "$pr" --json state,headRefName,headRepository,headRepositoryOwner,isCrossRepository)
+              state=$(jq -r .state <<< "$info")
+              # The runs that finish after their pull request was merged (the
+              # 1000m size takes days) go to main, as the runs of main do,
+              # from the current main: an earlier step may have merged into it.
+              if [ "$state" = "MERGED" ]; then
+                  git fetch -q origin main
+                  dir=$(mktemp -d)
+                  git worktree add -q --detach "$dir" FETCH_HEAD
+                  PR="$pr" PUBLISH_TO_MAIN=1 BRANCH="auto-results/json-pr$pr" JSON_DIR="$dir/json" ./json/collect-new-results.sh || echo "Failed to collect the results of the merged PR #$pr" | tee -a "$GITHUB_STEP_SUMMARY"
+                  git worktree remove --force "$dir"
+                  continue
+              fi
+              if [ "$state" != "OPEN" ]; then
+                  continue
+              fi
+              if [ "$(jq -r .isCrossRepository <<< "$info")" = "true" ]; then
+                  echo "PR #$pr is from a fork: its results are not committed automatically." | tee -a "$GITHUB_STEP_SUMMARY"
+                  continue
+              fi
+              branch=$(jq -r .headRefName <<< "$info")
+              dir=$(mktemp -d)
+              git fetch -q origin "$branch"
+              git worktree add -q --detach "$dir" FETCH_HEAD
+              PR="$pr" PUSH_PR=1 PR_HEAD_BRANCH="$branch" JSON_DIR="$dir/json" ./json/collect-new-results.sh || echo "Failed to collect the results of PR #$pr" | tee -a "$GITHUB_STEP_SUMMARY"
+              git worktree remove --force "$dir"
+          done

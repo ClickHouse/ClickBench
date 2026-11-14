@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+[ -x target/release/datafusion-iceberg ]

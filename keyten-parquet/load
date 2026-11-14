@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+# Stateless: the first timed query opens the source file.
+test -s hits.parquet

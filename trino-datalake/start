@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+# Idempotent: if running, do nothing. If exists but stopped, start it. Else run.
 if sudo docker ps --format '{{.Names}}' | grep -qx trino; then
     exit 0
 fi
@@ -12,10 +13,8 @@ fi
 sudo docker run -d --name trino \
     -p 8080:8080 \
     -v "$PWD/etc/catalog/hive.properties:/etc/trino/catalog/hive.properties:ro" \
-    -v "$PWD/etc/core-site.xml:/etc/trino/core-site.xml:ro" \
     -v "$PWD/data/meta:/data/meta" \
-    -v "$PWD/shim/S3AnonymousProvider.jar:/usr/lib/trino/plugin/hive/hdfs/S3AnonymousProvider.jar:ro" \
-    trinodb/trino:455
+    trinodb/trino:latest
 
 # One-shot diagnostic: trino is slow to come up and the agent's
 # check loop only watches /v1/info. If the container died or trino

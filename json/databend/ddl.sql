@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS bluesky;
+CREATE TABLE bluesky (data VARIANT NOT NULL);

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -eu
+
+# BemiDB's on-disk footprint: the local Iceberg storage (compressed Parquet
+# data files plus Iceberg metadata). The staging PostgreSQL is torn down after
+# load, so it is not part of the reported size.
+STORAGE_PATH="${STORAGE_PATH:-iceberg}"
+
+du -bcs "$STORAGE_PATH" | grep total | awk '{print $1}'

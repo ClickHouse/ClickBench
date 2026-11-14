@@ -3,5 +3,26 @@
 pkill -f 'pinot-admin' 2>/dev/null || true
 pkill -f 'pinot.tools.admin' 2>/dev/null || true
 pkill -f 'org.apache.pinot' 2>/dev/null || true
-sleep 2
+
+# pkill only sends SIGTERM; the actual teardown (JVM shutdown hook
+# stopping controller/broker/server, then the embedded Zookeeper
+# releasing its port) is asynchronous and takes several seconds. Two
+# things were previously observed to still be alive well after a fixed
+# short sleep or even after the broker itself stopped responding:
+#   - the broker itself (was seen answering 200 for ~7-8s after SIGTERM)
+#   - the embedded Zookeeper's port 2123, which a fixed sleep or a
+#     broker-only check does not account for; the next ./start's fresh
+#     Zookeeper can then fail to bind/connect on the still-held port,
+#     surfacing as "ZkTimeoutException: Unable to connect to zookeeper
+#     server within timeout" in the next start's controller.
+# The only reliable signal that teardown is actually finished is that
+# the pinot-admin JVM process itself is gone. Poll for that (up to 30s)
+# instead of guessing a delay or checking a single port.
+for _ in $(seq 1 30); do
+    if ! pgrep -f 'org.apache.pinot.tools.admin.PinotAdministrator' > /dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
 exit 0

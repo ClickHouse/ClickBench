@@ -12,7 +12,7 @@
         "DuckDB derivative",
         "PostgreSQL compatible",
         "serverless",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 92,
     "data_size": 26843545600,

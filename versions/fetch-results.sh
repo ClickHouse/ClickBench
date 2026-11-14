@@ -10,10 +10,20 @@
 #       ./fetch-results.sh
 #
 # Then regenerate the page data with ./generate-results.sh.
+#
+# By default every version in the sink is refetched and results/ is rebuilt from
+# scratch. SINCE_HOURS=<n> instead fetches only the versions that sent a result within
+# the last n hours and leaves the other files alone -- the incremental mode the hourly
+# collector uses (collect-new-results.sh).
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${HERE}"
 CH() { clickhouse-client ${CONNECTION_PARAMS} "$@"; }
+
+SINCE_HOURS="${SINCE_HOURS:-}"
+[[ "${SINCE_HOURS}" =~ ^[0-9]*$ ]] || { echo "SINCE_HOURS must be a number of hours" >&2; exit 1; }
+WINDOW=""
+if [ -n "${SINCE_HOURS}" ]; then WINDOW="AND time >= now() - INTERVAL ${SINCE_HOURS} HOUR"; fi
 
 mkdir -p results
 
@@ -47,16 +57,25 @@ reldate() {
     printf '%s' "${d}"
 }
 
+# Only ClickHouse: the same kind was also used for runs of other systems (DuckDB, StarRocks,
+# CedarDB in 2026-07), which carry a `system` field; the ClickHouse runs have none.
+#
+# A complete result has one entry per query: 349 now, or 344 for the runs made before
+# jsonbench was added (apply-minvers.py pads those with nulls for its queries).
 mapfile -t VERSIONS < <(CH --query "
     SELECT DISTINCT JSONExtractString(content, 'version') AS v
     FROM sink.data
     WHERE JSONExtractString(content, 'kind') = 'versions-benchmark' AND v != ''
-      AND length(JSONExtractArrayRaw(content, 'result')) = 344
+      AND length(JSONExtractArrayRaw(content, 'result')) IN (344, 349)
+      AND JSONExtractString(content, 'system') IN ('', 'ClickHouse')
+      ${WINDOW}
     ORDER BY v
     FORMAT TSV")
 
-echo "fetching ${#VERSIONS[@]} versions from the sink" >&2
-rm -f results/*.json
+echo "fetching ${#VERSIONS[@]} versions from the sink${SINCE_HOURS:+ (results of the last ${SINCE_HOURS}h)}" >&2
+# A full fetch rebuilds the directory; an incremental one only overwrites the versions
+# it fetched, keeping the files of everything that did not run in the window.
+if [ -z "${SINCE_HOURS}" ]; then rm -f results/*.json; fi
 for v in "${VERSIONS[@]}"; do
     [ -z "${v}" ] && continue
     # argMax over time keeps the most recent run for this version.
@@ -64,7 +83,8 @@ for v in "${VERSIONS[@]}"; do
         SELECT argMax(content, time) FROM sink.data
         WHERE JSONExtractString(content, 'kind') = 'versions-benchmark'
           AND JSONExtractString(content, 'version') = '${v}'
-          AND length(JSONExtractArrayRaw(content, 'result')) = 344
+          AND length(JSONExtractArrayRaw(content, 'result')) IN (344, 349)
+      AND JSONExtractString(content, 'system') IN ('', 'ClickHouse')
         FORMAT TSVRaw" > /tmp/vb-content.json
     # Skip runs whose data load did not complete: an OOM during the (parallel) load can
     # kill the server mid-INSERT and take the container down, leaving data_size null
@@ -114,6 +134,17 @@ for f in results/*.json; do
     else
         rm -f "${f}"; echo "  dropped ${v}.json (duplicate of ${av})" >&2
     fi
+done
+
+# One result per release line: like list-versions.sh, keep only the latest patch within each
+# major.minor of the calendar versions (18.x onwards), which the page shows as major.minor.
+# When a newer patch of a line is benchmarked (e.g. the JSONBench backfill ran 26.3.60.2
+# where 26.3.13.31 had run before), its result replaces the older one instead of appearing
+# as a second "26.3".
+for f in $(ls results/*.json 2>/dev/null | sed 's|^results/||; s|\.json$||' \
+           | awk -F. '$1 ~ /^[0-9]+$/ && $1 >= 18 && NF >= 3' | sort -V \
+           | awk -F. '{k = $1"."$2; if (k in last) print last[k]; last[k] = $0}'); do
+    rm -f "results/${f}.json"; echo "  dropped ${f}.json (a later patch of its release line is in)" >&2
 done
 
 # Normalise every result to the current per-query minimum versions (queries/*.minver):

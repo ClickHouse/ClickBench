@@ -3,5 +3,6 @@
     "proprietary": "no",
   "hardware": "cpu",
     "tuned": "no",
-    "tags": ["Python","dataframe","in-memory","row-oriented", "lukewarm-cold-run"]
+    "category": "challenger",
+    "tags": ["Python", "dataframe", "in-memory", "row-oriented"]
 }

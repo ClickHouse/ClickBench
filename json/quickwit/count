@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e -o pipefail
+
+curl -sSf http://127.0.0.1:7280/api/v1/indexes/jsonbench/describe | jq -r '.num_published_docs'

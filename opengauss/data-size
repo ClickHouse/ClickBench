@@ -1,0 +1,6 @@
+#!/bin/bash
+set -eu
+
+OG_ROOT=${OG_ROOT:-/opt/opengauss}
+
+sudo du -bcs "$OG_ROOT/data" | grep total | awk '{print $1}'

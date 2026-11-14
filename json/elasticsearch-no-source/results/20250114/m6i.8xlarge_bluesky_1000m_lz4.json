@@ -1,0 +1,44 @@
+{
+  "system": "Elasticsearch",
+  "version": "8.17.0",
+  "os": "Ubuntu 24.04",
+  "date": "2025-01-14",
+  "machine": "m6i.8xlarge",
+  "cluster_size": 1,
+  "comment": "",
+  "tags": [
+    "historical"
+  ],
+  "num_documents": 1000000000,
+  "num_documents_readable": "1000m",
+  "data_compression": "lz4",
+  "data_size": 224035646620,
+  "data_size_readable": "208.6 GB",
+  "result": [
+    [
+      12.777609,
+      12.909939,
+      12.899958
+    ],
+    [
+      144.766562,
+      138.326106,
+      138.608342
+    ],
+    [
+      34.149149,
+      34.266363,
+      34.364472
+    ],
+    [
+      6.239734,
+      6.073332,
+      6.234369
+    ],
+    [
+      7.612392,
+      7.633316,
+      7.606286
+    ]
+  ]
+}

@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e -o pipefail
+
+# Idempotent: start from an empty database file.
+rm -f bluesky.db bluesky.db-journal
+
+sqlite3 bluesky.db < ddl.sql
+
+# One transaction per file. The shell's `.import` reads the decompressed file
+# from a pipe in the `ascii` mode, which has no quoting: with the newlines
+# translated to the record separator 0x1E (raw control characters cannot
+# occur in valid JSON), every line becomes one text value of a staging table.
+# The lines are then converted to JSONB, the binary JSON of SQLite 3.45+.
+#
+# A few lines in the dataset are not valid JSON (documents of more than
+# 64 KiB that were cut into two lines): `jsonb` would fail the whole INSERT
+# on them, so they are skipped with `json_valid`.
+for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+    echo "load: ${file}" >&2
+    sqlite3 bluesky.db <<SQL
+.bail on
+CREATE TEMP TABLE staging (line TEXT);
+.mode ascii
+.import '|gzip -dc ${file} | tr "\\\\n" "\\\\036"' staging
+BEGIN;
+INSERT INTO bluesky SELECT jsonb(line) FROM staging WHERE CASE WHEN json_valid(line) THEN json_type(line) = 'object' ELSE 0 END;
+.mode list
+SELECT 'load: skipped ' || ((SELECT count(*) FROM staging) - changes()) || ' invalid lines';
+COMMIT;
+SQL
+done
+
+# As json/postgresql, an index over the expressions used by the queries. It
+# is created after the load, which is faster than maintaining it during the
+# load, and the statistics for the query planner are collected.
+sqlite3 bluesky.db < index.sql

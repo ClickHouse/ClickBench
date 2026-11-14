@@ -1,0 +1,6 @@
+#!/bin/bash
+set -eu
+sudo apt-get update -y
+sudo apt-get install -y python3-pip python3-venv curl
+python3 -m venv myenv
+myenv/bin/pip install keyten==0.1.53

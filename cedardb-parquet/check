@@ -1,4 +1,13 @@
 #!/bin/bash
 set -e
 
+# CedarDB's system-scoped systemd unit binds only /tmp/.s.PGSQL.5432 and
+# 127.0.0.1:5432 (see the installer output). Point psql at /tmp so this
+# doesn't fall through to the postgres default /var/run/postgresql path
+# and fail with "No such file or directory" on a healthy CedarDB. The
+# installer only creates a `postgres` role, so also pin PGUSER — psql's
+# default is $USER, and under the playground agent that's `root`, which
+# cedardb rejects with 'role "root" does not exist'.
+export PGHOST=${PGHOST:-/tmp}
+export PGUSER=${PGUSER:-postgres}
 psql -c 'SELECT 1' >/dev/null

@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+curl -sSf -o /dev/null http://localhost:4000/health
+curl -sSf -o /dev/null http://localhost:4000/v1/sql --data-urlencode "sql=SELECT 1"

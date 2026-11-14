@@ -1,0 +1,13 @@
+{
+  "system": "DataFusion (Iceberg)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "embedded",
+    "DataFusion derivative"
+  ]
+}

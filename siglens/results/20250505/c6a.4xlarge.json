@@ -9,7 +9,7 @@
     "tags": [
         "Go",
         "search",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 5199,
     "data_size": 28396387,

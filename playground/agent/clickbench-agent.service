@@ -1,0 +1,39 @@
+[Unit]
+Description=ClickBench in-VM playground agent
+# Wait for clickbench-net.service to assign eth0's IP — without it the
+# kernel-set IP (firecracker-ci kernel via CONFIG_IP_PNP) is a no-op on
+# the Ubuntu generic kernel and we'd bind 0.0.0.0:50080 on an interface
+# that doesn't have an IP yet.
+After=local-fs.target clickbench-net.service
+Wants=clickbench-net.service
+
+[Service]
+Type=simple
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/root
+# Several ClickBench install/load scripts (monetdb, ...) reference $USER
+# and `set -u`-fail without it. systemd's default service environment
+# has no USER/LOGNAME, so stamp them. We run as root in the VM (no
+# multi-tenant separation inside a per-VM playground), so these are
+# correct.
+Environment=USER=root
+Environment=LOGNAME=root
+# needrestart's default mode on Ubuntu 24.04 is 'i' (interactive) which
+# in non-tty contexts falls back to 'a' (automatically restart every
+# service whose libs were upgraded). apt install inside install/ can
+# then restart our own clickbench-agent.service — the /provision HTTP
+# connection drops mid-flight and the host sees ServerDisconnectedError.
+# 'l' = list only: needrestart still scans and reports, restarts
+# nothing. Seen on arcticdb and rayforce; will bite any future system
+# whose install path upgrades libpython or another lib the agent
+# links against.
+Environment=NEEDRESTART_MODE=l
+Environment=NEEDRESTART_SUSPEND=1
+ExecStart=/usr/bin/python3 /opt/clickbench-agent/agent.py
+Restart=on-failure
+RestartSec=2
+KillMode=mixed
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,9 @@
+; Stream hits.parquet row group by row group into a compressed splayed table
+; under ./hits. `types` gives the column types in file order; HITS_SYMFILE
+; (set by ./load) picks one shared .sym file or one symbol file per column.
+(load "create.rfl")
+(set opts (if (== (.os.getenv "HITS_SYMFILE") "column")
+  (dict [types compress symfile] (list hits-types true 'column))
+  (dict [types compress] (list hits-types true))))
+(.parquet.splayed opts "hits.parquet" "hits")
+(exit 0)

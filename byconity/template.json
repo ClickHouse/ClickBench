@@ -3,5 +3,6 @@
     "proprietary": "no",
   "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++", "column-oriented", "ClickHouse derivative","lukewarm-cold-run"]
+    "category": "retired",
+    "tags": ["C++", "column-oriented", "ClickHouse derivative"]
 }

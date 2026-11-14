@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Table + TOAST + the index, as `total_size` in the original JSONBench.
+sudo -u postgres psql -X -d bluesky -t -A -c "SELECT pg_total_relation_size('bluesky')"

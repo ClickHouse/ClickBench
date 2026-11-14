@@ -11,6 +11,14 @@ if sudo docker ps -a --format '{{.Names}}' | grep -qx presto; then
     exit 0
 fi
 
+# Belt-and-suspenders: `docker ps -a` occasionally misses a container
+# that dockerd has re-registered from its on-disk state but not yet
+# published to the ps table (observed right after dockerd restart in
+# the playground). Without this, `docker run` fails with
+#   "Conflict. The container name "/presto" is already in use"
+# and the whole start step exits 125.
+sudo docker rm -f presto 2>/dev/null || true
+
 sudo docker run -d --name presto \
     -p 8081:8080 \
     -v "$PWD/etc/catalog/hive.properties:/opt/presto-server/etc/catalog/hive.properties:ro" \

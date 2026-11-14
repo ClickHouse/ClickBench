@@ -135,7 +135,7 @@
       "forceGuaranteedRollup": true,
       "logParseExceptions": true,
       "maxParseExceptions": 1,
-      "maxNumConcurrentSubTasks": 10
+      "maxNumConcurrentSubTasks": 4
     },
     "dataSchema": {
       "dataSource": "hits",

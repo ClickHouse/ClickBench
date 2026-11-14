@@ -1,0 +1,39 @@
+#!/bin/bash
+# As in the original PR: a fresh database with the result cache disabled, the
+# table from ddl.sql, then one \copy per file. Before loading, the documents
+# are cleaned like in the PR: \u0000 escapes are removed (JSONB rejects them)
+# and the documents split over two lines by a raw newline are joined.
+set -e -o pipefail
+
+source ./env.sh
+
+hg_psql postgres -c "DROP DATABASE IF EXISTS ${HOLOGRES_DB}"
+hg_psql postgres -c "CREATE DATABASE ${HOLOGRES_DB}"
+hg_psql postgres -c "ALTER DATABASE ${HOLOGRES_DB} SET hg_experimental_enable_result_cache TO off"
+hg_psql "${HOLOGRES_DB}" < ddl.sql
+
+# Record the settings of the instance in the log, for reproducibility.
+hg_psql "${HOLOGRES_DB}" -c "SELECT version()" -c "SHOW ALL" >&2
+
+for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+    for attempt in 1 2 3; do
+        status=0
+        pigz -dc "${file}" \
+            | sed 's/\\u0000//g' \
+            | awk 'NR == 1 { printf "%s", $0; next } /^{/ { printf "\n%s", $0; next } { printf "%s", $0 } END { print "" }' \
+            | timeout 300 env PGUSER="${PG_USER}" PGPASSWORD="${PG_PASSWORD}" \
+                psql -h "${PG_HOSTNAME}" -p "${PG_PORT}" -d "${HOLOGRES_DB}" -v ON_ERROR_STOP=1 \
+                -c "\\copy bluesky (data) FROM STDIN WITH (format csv, quote e'\\x01', delimiter e'\\x02', escape e'\\x01')" \
+            || status=$?
+        # COPY is atomic, so a timed-out file can be loaded again.
+        [ "${status}" -ne 124 ] && break
+        echo "load: ${file} timed out, attempt ${attempt}" >&2
+    done
+    if [ "${status}" -ne 0 ]; then
+        echo "load: failed to load ${file}" >&2
+        exit 1
+    fi
+done
+
+hg_psql "${HOLOGRES_DB}" -c "VACUUM bluesky"
+hg_psql "${HOLOGRES_DB}" -c "ANALYZE bluesky"

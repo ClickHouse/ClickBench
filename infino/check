@@ -1,0 +1,6 @@
+#!/bin/bash
+# Client: ping the running infino server so the driver can tell it is up
+# (after ./start) or down (after ./stop). Exits non-zero when it cannot reach
+# the server.
+set -e
+exec ./bench/target/release/clickbench-infino check

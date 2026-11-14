@@ -1,4 +1,4 @@
-CREATE SCHEMA IF NOT EXISTS hive.clickbench WITH (location = 'local:///meta/cb');
+CREATE SCHEMA IF NOT EXISTS hive.clickbench WITH (location = 'file:///data/meta/cb');
 -- Schema metadata is stored on the writable local filesystem at /data/meta;
 -- the read-only S3 bucket is exposed through the FUSE mount at /data/bucket.
 

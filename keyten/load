@@ -1,0 +1,8 @@
+#!/bin/bash
+set -eu
+myenv/bin/python - <<'PY'
+import os
+import keyten as kt
+
+kt.scan_parquet("hits.parquet").collect_to_native(os.environ.get("KEYTEN_NATIVE", "hits.k10dir"))
+PY

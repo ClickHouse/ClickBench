@@ -1,0 +1,36 @@
+#!/bin/bash
+set -eu
+
+# Start the BemiDB server. It serves queries from its local Iceberg storage
+# (./iceberg) over the PostgreSQL wire protocol on port 54321. This manages
+# only BemiDB; the staging PostgreSQL is handled separately in ./load and is
+# intentionally left down during the query phase so it doesn't hold RAM.
+
+STORAGE_PATH="${STORAGE_PATH:-iceberg}"
+
+# Idempotent: if BemiDB already answers on 54321, we're done.
+if psql "postgres://127.0.0.1:54321/bemidb" -c 'SELECT 1' >/dev/null 2>&1; then
+    exit 0
+fi
+
+# `bemidb start` refuses to boot if the storage directory doesn't exist ("run
+# 'bemidb sync' first"). The driver starts the server once before ./load has
+# produced any data, so create an empty storage dir to let it boot with no
+# tables. An empty directory is enough; ./load repopulates it via the sync.
+mkdir -p "$STORAGE_PATH"
+
+nohup ./bemidb \
+    --host 127.0.0.1 \
+    --port 54321 \
+    --storage-path "$STORAGE_PATH" \
+    --disable-anonymous-analytics \
+    start </dev/null >server.log 2>&1 &
+echo $! > server.pid
+
+# Wait for the wire protocol to come up so callers that run ./check just once
+# (e.g. the shared driver right after ./load) see a ready server.
+for _ in $(seq 1 60); do
+    psql "postgres://127.0.0.1:54321/bemidb" -c 'SELECT 1' >/dev/null 2>&1 && exit 0
+    sleep 1
+done
+exit 1

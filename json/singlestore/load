@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e -o pipefail
+source ./env.sh
+
+ss_mysql -e "DROP DATABASE IF EXISTS bluesky"
+ss_mysql -e "CREATE DATABASE bluesky"
+ss_mysql bluesky < create.sql
+
+# As in the original JSONBench: one LOAD DATA per file, from the compressed
+# file. If any document of a file cannot be parsed, SingleStore rejects the
+# whole file (SKIP PARSER ERRORS is not supported for JSON); such a file is
+# skipped (the number of loaded documents shows it).
+loaded=0
+failed=0
+for file in $(ls "$BENCH_DATA_DIR"/file_*.json.gz | head -n "$BENCH_FILES"); do
+    if ss_mysql --local-infile=1 bluesky -e "LOAD DATA LOCAL INFILE '${file}' INTO TABLE bluesky (data <- %) FORMAT JSON"; then
+        loaded=$((loaded + 1))
+    else
+        failed=$((failed + 1))
+        echo "load: skipping ${file}" >&2
+    fi
+done
+
+echo "load: ${loaded} files loaded, ${failed} files failed" >&2
+[ "$loaded" -gt 0 ]

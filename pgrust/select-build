@@ -1,0 +1,21 @@
+#!/bin/bash
+# select-build [arch] [cpuinfo file]: prints "<build> <reason>", where <build> is the release tarball suffix:
+#   linux-aarch64-neoverse-v2  aarch64 with a Neoverse-V2 core (CPU part 0xd4f, e.g. Graviton4)
+#   linux-x86_64-znver3        x86_64 AMD with cpu family >= 25 (0x19 Zen 3 / Zen 4, 0x1a Zen 5)
+#   linux-<arch>               anything else: the generic build, which runs on any CPU of the architecture
+# Defaults: arch = uname -m, cpuinfo = /proc/cpuinfo.
+arch="${1:-$(uname -m)}"; cpuinfo="${2:-/proc/cpuinfo}"
+field() { awk -F: -v k="$1" '{ gsub(/^[ \t]+|[ \t]+$/, "", $1) } $1 == k { gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit }' "$cpuinfo" 2>/dev/null; }
+case "$arch" in
+aarch64)
+    part=$(field "CPU part")
+    if [ "$part" = "0xd4f" ]; then echo "linux-aarch64-neoverse-v2 CPU part $part = Neoverse-V2"; exit 0; fi
+    echo "linux-aarch64 generic: CPU part '${part:-unknown}' is not Neoverse-V2 (0xd4f)" ;;
+x86_64)
+    vendor=$(field "vendor_id"); family=$(field "cpu family")
+    case "$family" in ''|*[!0-9]*) family=0 ;; esac
+    if [ "$vendor" = "AuthenticAMD" ] && [ "$family" -ge 25 ]; then echo "linux-x86_64-znver3 $vendor cpu family $family (Zen 3 or newer)"; exit 0; fi
+    echo "linux-x86_64 generic: ${vendor:-unknown vendor} cpu family $family is not AMD Zen 3 or newer" ;;
+*)
+    echo "linux-$arch generic: no tuned build for $arch" ;;
+esac

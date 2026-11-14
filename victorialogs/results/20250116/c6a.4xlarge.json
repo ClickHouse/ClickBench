@@ -9,7 +9,7 @@
     "tags": [
         "Go",
         "column-oriented",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 1265,
     "data_size": 17110607560,

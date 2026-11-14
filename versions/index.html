@@ -56,7 +56,7 @@
             --selector-hover-background-color: white;
 
             --summary-every-other-row-color: #042e41;
-            --highlight-color: #064663;
+            --highlight-color: #000;
             --bar-color: #088;
             --bar-color1: oklch(calc(0.4 + 0.6) 0.1 calc(250 - 180));
             --bar-color2: oklch(calc(0.4 + 0.4) 0.1 calc(250 - 120));
@@ -87,6 +87,43 @@
 
         h1 {
             color: var(--title-color);
+        }
+
+        .title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .github-stars {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4em;
+            font-size: 0.95rem;
+            line-height: 1;
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid rgba(127, 127, 127, 0.4);
+            border-radius: 6px;
+            padding: 0.4em 0.7em;
+            background: rgba(127, 127, 127, 0.08);
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+
+        .github-stars:hover {
+            background: rgba(127, 127, 127, 0.18);
+        }
+
+        .github-stars-icon {
+            width: 1.1em;
+            height: 1.1em;
+            fill: currentColor;
+        }
+
+        .github-stars-count {
+            font-weight: 600;
         }
 
         table {
@@ -291,6 +328,14 @@
             text-align: left;
         }
 
+        #details.details-fixed {
+            table-layout: fixed;
+        }
+
+        #details .details-spacer {
+            padding: 0;
+        }
+
         #details td {
             white-space: pre;
             font-family: monospace;
@@ -413,8 +458,15 @@
 
 <div class="header stick-left">
     <span class="nowrap themes"><span id="toggle-dark">🌚</span><span id="toggle-light">🌞</span></span>
-    <h1>ClickHouse Versions Benchmark</h1>
-    <a href="https://github.com/ClickHouse/ClickBench/tree/main/versions">Source</a> | <a href="https://github.com/ClickHouse/ClickBench/issues">Report Mistake</a> | <a href="https://benchmark.clickhouse.com/">Benchmark For Analytical DBMS</a> | <a href="https://benchmark.clickhouse.com/hardware">Hardware Benchmark</a>
+    <div class="title-row">
+        <h1>ClickHouse Versions Benchmark</h1>
+        <a class="github-stars" href="https://github.com/ClickHouse/ClickBench/" target="_blank" rel="noopener noreferrer" aria-label="Star ClickBench on GitHub" title="Star ClickBench on GitHub">
+            <svg class="github-stars-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
+            <span>Star</span>
+            <span class="github-stars-count" id="github-stars-count"></span>
+        </a>
+    </div>
+    <a href="https://github.com/ClickHouse/ClickBench/tree/main/versions">Source</a> | <a href="https://github.com/ClickHouse/ClickBench/issues">Report Mistake</a> | <a href="https://benchmark.clickhouse.com/">Benchmark For Analytical DBMS</a> | <a href="https://benchmark.clickhouse.com/hardware">Hardware Benchmark</a> | <a href="https://benchmark.clickhouse.com/json/">JSON Benchmark</a>
 </div>
 
 <table class="selectors-container stick-left">
@@ -492,9 +544,10 @@
         <li><b>tpch</b> &mdash; TPC-H at scale factor 40 (~10&nbsp;GB), 8 tables. 22 queries.</li>
         <li><b>tpcds</b> &mdash; TPC-DS at scale factor 32 (~10&nbsp;GB), 24 tables. 103 queries.</li>
         <li><b>job</b> &mdash; Join Order Benchmark over the IMDb dataset, 21 tables. 113 queries.</li>
+        <li><b>jsonbench</b> &mdash; <a href="../json/">JSONBench</a>: 100&nbsp;million Bluesky events, each a JSON document stored whole in a <code>JSON</code> column. 5 queries. The <code>JSON</code> type exists from 24.8, so older versions have no results.</li>
     </ul>
     <p>The data is stored using only types available in the oldest releases, so one set of files
-    loads into every version. A query a version does not support (a missing function or syntax) is
+    loads into every version (except jsonbench, which is loaded from the original JSON files). A query a version does not support (a missing function or syntax) is
     recorded as no result, and a dataset that does not fully load on a version is skipped entirely
     for it.</p>
 </div>
@@ -564,14 +617,30 @@ let unique_versions = [...new Set(data.map(elem => elem.version))].sort((a, b) =
     return c != 0 ? c : b.localeCompare(a, undefined, { numeric: true });
 });
 
-function toggle(e, elem, selectors_map) {
-    selectors_map[elem] = !selectors_map[elem];
-    e.target.className = selectors_map[elem] ? 'selector selector-active' : 'selector';
+/// A click flips a single toggle, while a right click or Ctrl/Cmd + click selects only this toggle in its group.
+/// The group is passed by name and looked up at click time: restoring the state from the URL or
+/// from the history replaces the `selectors` maps, so a map captured when the listener was added
+/// would be a stale copy, and the clicks would change nothing on the page.
+function toggle(e, elem, group) {
+    const selectors_map = selectors[group];
+    if (e.type == 'contextmenu' || e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        Object.keys(selectors_map).forEach(k => { selectors_map[k] = k == String(elem) });
+    } else {
+        selectors_map[elem] = !selectors_map[elem];
+    }
+    updateSelectors();
     render();
     updateHistory();
 }
 
-function toggleAll(e, selectors_map) {
+function addToggleListener(selector, elem, group) {
+    selector.addEventListener('click', e => toggle(e, elem, group));
+    selector.addEventListener('contextmenu', e => toggle(e, elem, group));
+}
+
+function toggleAll(e, group) {
+    const selectors_map = selectors[group];
     const new_value = Object.keys(selectors_map).filter(k => selectors_map[k]).length * 2 < Object.keys(selectors_map).length;
     [...e.target.parentElement.querySelectorAll('a')].map(
         elem => { elem.className = new_value ? 'selector selector-active' : 'selector' });
@@ -589,7 +658,7 @@ unique_versions.map(elem => {
     selector.appendChild(document.createTextNode(displayVersion(elem)));
     versions_elem.appendChild(selector);
     if (!(elem in selectors.version)) { selectors.version[elem] = true; }
-    selector.addEventListener('click', e => toggle(e, elem, selectors.version));
+    addToggleListener(selector, elem, 'version');
 
     /// Highlight the matching summary row and details column when hovering a version.
     selector.addEventListener('mouseover', e => {
@@ -603,7 +672,7 @@ unique_versions.map(elem => {
         [...document.querySelectorAll('.th-entry')].map(row => { row.className = 'th-entry' });
     });
 });
-document.getElementById('select-all-versions').addEventListener('click', e => toggleAll(e, selectors.version));
+document.getElementById('select-all-versions').addEventListener('click', e => toggleAll(e, 'version'));
 
 datasets.map(d => {
     let selector = document.createElement('a');
@@ -611,9 +680,9 @@ datasets.map(d => {
     selector.appendChild(document.createTextNode(d.name));
     datasets_elem.appendChild(selector);
     if (!(d.name in selectors.dataset)) { selectors.dataset[d.name] = true; }
-    selector.addEventListener('click', e => toggle(e, d.name, selectors.dataset));
+    addToggleListener(selector, d.name, 'dataset');
 });
-document.getElementById('select-all-datasets').addEventListener('click', e => toggleAll(e, selectors.dataset));
+document.getElementById('select-all-datasets').addEventListener('click', e => toggleAll(e, 'dataset'));
 
 document.getElementById('selector-metric-cold').addEventListener('click', e => { selectors.metric = 'cold'; updateSelectors(); render(); updateHistory(); });
 document.getElementById('selector-metric-hot').addEventListener('click', e => { selectors.metric = 'hot'; updateSelectors(); render(); updateHistory(); });
@@ -622,11 +691,16 @@ document.getElementById('selector-metric-size').addEventListener('click', e => {
 
 if (!selectors.queries.length) { selectors.queries = query_meta.map(() => true); }
 
+/// Keeps the hover highlighting of the element intact, and skips the "All" toggle.
+function setSelectorActive(elem, active) {
+    if (elem.tagName !== 'A' || elem.id.startsWith('select-all-')) return;
+    elem.classList.remove('selector-passive');
+    elem.classList.toggle('selector-active', !!active);
+}
+
 function updateSelectors() {
-    [...versions_elem.querySelectorAll('a')].filter(e => e.id != 'select-all-versions').map(elem => {
-        elem.className = selectors.version[elem.dataset.version] ? 'selector selector-active' : 'selector' });
-    [...datasets_elem.querySelectorAll('a')].filter(e => e.id != 'select-all-datasets').map(elem => {
-        elem.className = selectors.dataset[elem.innerText] ? 'selector selector-active' : 'selector' });
+    [...versions_elem.childNodes].map(elem => { setSelectorActive(elem, selectors.version[elem.dataset?.version]) });
+    [...datasets_elem.childNodes].map(elem => { setSelectorActive(elem, selectors.dataset[elem.textContent]) });
     [...document.getElementById('selectors_run').querySelectorAll('a')].map(elem => {
         elem.className = elem.id == 'selector-metric-' + selectors.metric ? 'selector selector-active' : 'selector' });
     [...document.querySelectorAll('.query-checkbox')].map(elem => { elem.checked = selectors.queries[+elem.dataset.query] });
@@ -637,8 +711,11 @@ function clearElement(elem) { while (elem.firstChild) { elem.removeChild(elem.la
 function selectRun(timings) {
     if (!timings) { return null; }
     if (selectors.metric == 'cold') { return timings[0]; }
-    const hot = timings.slice(1).filter(x => x !== null);
-    return hot.length ? Math.min(...hot) : null;
+    let hot = null;
+    for (let i = 1; i < timings.length; ++i) {
+        if (timings[i] !== null && (hot === null || timings[i] < hot)) { hot = timings[i]; }
+    }
+    return hot;
 }
 
 /// A query counts in the summary when its dataset is enabled and its checkbox is on.
@@ -868,18 +945,35 @@ function displayVersion(v) {
     return (m && +m[1] >= 18) ? `${m[1]}.${m[2]}` : v;
 }
 
-function render() {
-    let details_head = document.getElementById('details_head');
-    let details_body = document.getElementById('details_body');
-    clearElement(details_head);
-    clearElement(details_body);
+/// Laying out the details table takes a while even with only the visible columns rendered, so it is
+/// rebuilt after the summary is painted, for the page to respond to clicks right away. If the page
+/// is scrolled before that, it is rebuilt immediately, so that the outdated table is not shown.
+let pending_details = null;
 
+function renderPendingDetails() {
+    if (pending_details) {
+        const f = pending_details;
+        pending_details = null;
+        f();
+    }
+}
+
+function scheduleDetails(f) {
+    pending_details = f;
+    requestAnimationFrame(() => setTimeout(renderPendingDetails, 0));
+}
+
+document.addEventListener('scroll', renderPendingDetails, {capture: true, passive: true});
+
+function render() {
     let filtered_data = data.filter(elem => selectors.version[elem.version]);
 
     let nothing = document.getElementById('nothing-selected');
     if (filtered_data.length == 0) {
         nothing.style.display = 'block';
         [...document.querySelectorAll('.comparison')].map(e => e.style.display = 'none');
+        pending_details = null;
+        clearDetails();
         return;
     }
     nothing.style.display = 'none';
@@ -893,10 +987,200 @@ function render() {
 
     const sorted_indices = renderSummary(filtered_data, baseline_data);
 
+    scheduleDetails(() => renderDetails(filtered_data, sorted_indices, baseline_data));
+}
+
+/// Only the cells of the details table close to the viewport are rendered, because laying out
+/// all of them takes hundreds of milliseconds. First, the sizes of the columns and rows are measured
+/// on the table with all the header cells and a single row of the widest cells; then they are fixed,
+/// so that the table doesn't change while it is scrolled.
+let virtual_details = null;
+
+function clearDetails() {
+    const table = document.getElementById('details');
+    virtual_details = null;
+    table.classList.remove('details-fixed');
+    table.style.width = '';
+    table.querySelector('colgroup')?.remove();
+    clearElement(document.getElementById('details_head'));
+    clearElement(document.getElementById('details_body'));
+}
+
+function makeDetailsCell(cell) {
+    let td = document.createElement('td');
+    td.appendChild(document.createTextNode(cell.text));
+    colorize(td, cell.ratio);
+    return td;
+}
+
+/// `header` contains a function creating the header cell for every column, `rows` - the rows
+/// of the table body to fill, as {tr, cells: [{text, ratio}, ...]}. The cells on the left side
+/// of the columns (the query names, etc.) are already in the rows.
+function virtualizeDetails(header, rows, num_prefix = document.getElementById('details_head').children.length) {
+    const table = document.getElementById('details');
+    const details_head = document.getElementById('details_head');
+    const details_body = document.getElementById('details_body');
+    const num_columns = header.length;
+
+    /// Remove the cells rendered before, if the table is measured again.
+    [details_head, ...rows.map(row => row.tr)].forEach(tr => {
+        while (tr.children.length > num_prefix) { tr.lastElementChild.remove(); }
+    });
+
+    table.classList.remove('details-fixed');
+    table.style.width = '';
+    table.querySelector('colgroup')?.remove();
+    virtual_details = null;
+
+    header.forEach(make => details_head.appendChild(make()));
+
+    /// The width of a column is the width of its widest cell, as the text is monospace.
+    const measureRow = cells => {
+        let tr = document.createElement('tr');
+        for (let i = 0; i < num_prefix; ++i) { tr.appendChild(document.createElement('td')); }
+        cells.forEach(cell => tr.appendChild(cell ? makeDetailsCell(cell) : document.createElement('td')));
+        details_body.appendChild(tr);
+        return tr;
+    };
+    let widest = new Array(num_columns).fill(null);
+    for (const row of rows) {
+        row.cells.forEach((cell, c) => {
+            const w = widest[c];
+            if (!w || cell.text.length > w.text.length || (cell.text.length == w.text.length && cell.ratio == 1)) { widest[c] = cell; }
+        });
+    }
+    const measure_tr = measureRow(widest);
+    /// The skull can be taken from another font, with a different height.
+    const measure_skull_tr = measureRow([{text: '☠', ratio: null}]);
+
+    const table_rect = table.getBoundingClientRect();
+    const rects = [...details_head.children].map(th => th.getBoundingClientRect());
+    const row_height = measure_tr.getBoundingClientRect().height;
+    const skull_row_height = Math.max(row_height, measure_skull_tr.getBoundingClientRect().height);
+
+    measure_tr.remove();
+    measure_skull_tr.remove();
+    while (details_head.children.length > num_prefix) { details_head.lastElementChild.remove(); }
+
+    let colgroup = document.createElement('colgroup');
+    rects.forEach(rect => {
+        let col = document.createElement('col');
+        col.style.width = `${rect.width}px`;
+        colgroup.appendChild(col);
+    });
+    table.insertBefore(colgroup, table.firstChild);
+    table.style.width = `${table_rect.width}px`;
+    table.classList.add('details-fixed');
+
+    rows.forEach(row => {
+        row.tr.style.height = `${row.cells.some(cell => cell.text == '☠') ? skull_row_height : row_height}px`;
+        row.filled = null;
+    });
+
+    const columns = rects.slice(num_prefix).map(rect => [rect.left - table_rect.left, rect.right - table_rect.left]);
+    const prefix_widths = rects.slice(0, num_prefix).map(rect => rect.width);
+    virtual_details = {header, rows, num_prefix, prefix_widths, columns, safe: null};
+    updateDetailsWindow();
+}
+
+/// Fills the row with the cells of the columns [begin, end), replacing the columns [filled[0], filled[1]).
+/// If the ranges overlap, only the cells at the edges are added and removed.
+function fillDetailsRow(tr, num_prefix, filled, begin, end, num_columns, tag, make) {
+    const spacer = span => {
+        let cell = document.createElement(tag);
+        cell.className = 'details-spacer';
+        cell.colSpan = span;
+        return cell;
+    };
+
+    if (!filled || filled[0] >= filled[1] || begin >= end || end <= filled[0] || begin >= filled[1]) {
+        while (tr.children.length > num_prefix) { tr.lastElementChild.remove(); }
+        if (begin >= end) { return; }
+        if (begin > 0) { tr.appendChild(spacer(begin)); }
+        for (let c = begin; c < end; ++c) { tr.appendChild(make(c)); }
+        if (end < num_columns) { tr.appendChild(spacer(num_columns - end)); }
+        return;
+    }
+
+    const [old_begin, old_end] = filled;
+    if (old_begin > 0) { tr.children[num_prefix].remove(); }
+    if (old_end < num_columns) { tr.lastElementChild.remove(); }
+
+    for (let c = old_begin; c < begin; ++c) { tr.children[num_prefix].remove(); }
+    for (let c = end; c < old_end; ++c) { tr.lastElementChild.remove(); }
+
+    const first = tr.children[num_prefix];
+    for (let c = begin; c < old_begin; ++c) { tr.insertBefore(make(c), first); }
+    for (let c = old_end; c < end; ++c) { tr.appendChild(make(c)); }
+
+    if (begin > 0) { tr.insertBefore(spacer(begin), tr.children[num_prefix]); }
+    if (end < num_columns) { tr.appendChild(spacer(num_columns - end)); }
+}
+
+/// Renders the cells within a screen size from the visible part of the table,
+/// unless the visible part is still well inside the cells that are already rendered.
+function updateDetailsWindow() {
+    const v = virtual_details;
+    if (!v) { return; }
+
+    const table_rect = document.getElementById('details').getBoundingClientRect();
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const visible_left = -table_rect.left;
+    const visible_right = width - table_rect.left;
+    const visible_top = -table_rect.top;
+    const visible_bottom = height - table_rect.top;
+    if (v.safe && visible_left >= v.safe[0] && visible_right <= v.safe[1]
+        && visible_top >= v.safe[2] && visible_bottom <= v.safe[3]) { return; }
+
+    const num_columns = v.columns.length;
+    let begin = 0;
+    while (begin < num_columns && v.columns[begin][1] < visible_left - width) { ++begin; }
+    let end = begin;
+    while (end < num_columns && v.columns[end][0] < visible_right + width) { ++end; }
+
+    const row_rects = v.rows.map(row => row.tr.getBoundingClientRect());
+    const row_visible = row_rects.map(rect =>
+        rect.bottom - table_rect.top > visible_top - height && rect.top - table_rect.top < visible_bottom + height);
+    const first_row = row_visible.indexOf(true);
+    const last_row = row_visible.lastIndexOf(true);
+
+    /// If none of the rows are close to the viewport, it is checked again on every scroll.
+    v.safe = first_row == -1 ? null : [
+        begin == 0 ? -Infinity : visible_left - width / 2,
+        end == num_columns ? Infinity : visible_right + width / 2,
+        first_row == 0 ? -Infinity : visible_top - height / 2,
+        last_row == v.rows.length - 1 ? Infinity : visible_bottom + height / 2];
+
+    if (!v.header_filled || v.header_filled[0] != begin || v.header_filled[1] != end) {
+        fillDetailsRow(document.getElementById('details_head'), v.num_prefix, v.header_filled, begin, end, num_columns, 'th', c => v.header[c]());
+        v.header_filled = [begin, end];
+    }
+    v.rows.forEach((row, i) => {
+        const [row_begin, row_end] = row_visible[i] ? [begin, end] : [0, 0];
+        if (row.filled && row.filled[0] == row_begin && row.filled[1] == row_end) { return; }
+        fillDetailsRow(row.tr, v.num_prefix, row.filled, row_begin, row_end, num_columns, 'td', c => makeDetailsCell(row.cells[c]));
+        row.filled = [row_begin, row_end];
+    });
+}
+
+document.addEventListener('scroll', updateDetailsWindow, {capture: true, passive: true});
+
+/// The widths of the columns depend on the fonts, which can be loaded after the table is rendered.
+document.fonts?.addEventListener('loadingdone', () => {
+    if (virtual_details) { virtualizeDetails(virtual_details.header, virtual_details.rows, virtual_details.num_prefix); }
+});
+window.addEventListener('resize', () => { if (virtual_details) { virtual_details.safe = null; updateDetailsWindow(); } });
+
+function renderDetails(filtered_data, sorted_indices, baseline_data) {
+    let details_head = document.getElementById('details_head');
+    let details_body = document.getElementById('details_body');
+    clearDetails();
+
     /// Details header: two label columns (checkbox + name), then a column per version.
     details_head.appendChild(document.createElement('th'));
     details_head.appendChild(document.createElement('th'));
-    sorted_indices.map(idx => {
+    const header = sorted_indices.map(idx => () => {
         const elem = filtered_data[idx];
         let th = document.createElement('th');
         th.className = 'th-entry';
@@ -910,8 +1194,10 @@ function render() {
             d.appendChild(document.createTextNode(elem.release_date));
             th.appendChild(d);
         }
-        details_head.appendChild(th);
+        return th;
     });
+
+    let rows = [];
 
     const enabled_datasets = datasets.filter(d => selectors.dataset[d.name]);
 
@@ -953,13 +1239,10 @@ function render() {
         td_title.className = 'note';
         td_title.appendChild(document.createTextNode(label));
         tr.appendChild(td_title);
-        values.forEach(v => {
+        rows.push({tr, cells: values.map(v => {
             const ratio = (v != null && isFinite(base) && base > 0) ? v / base : null;
-            let td = document.createElement('td');
-            td.appendChild(document.createTextNode(v != null ? `${fmt(v)} (×${(ratio ?? 1).toFixed(2)})` : '—'));
-            colorize(td, ratio);
-            tr.appendChild(td);
-        });
+            return {text: v != null ? `${fmt(v)} (×${(ratio ?? 1).toFixed(2)})` : '—', ratio};
+        })});
         details_body.appendChild(tr);
     }
 
@@ -1029,24 +1312,26 @@ function render() {
             td_query_num.appendChild(tooltip);
             tr.appendChild(td_query_num);
 
-            sorted_indices.map(idx => {
+            const base = selectRun(baseline_data[query_num]);
+            rows.push({tr, cells: sorted_indices.map(idx => {
                 const curr = selectRun(filtered_data[idx].result[query_num]);
-                const base = selectRun(baseline_data[query_num]);
                 const ratio = (curr !== null && base !== null) ? (constant_time_add + curr) / (constant_time_add + base) : null;
-                let td = document.createElement('td');
-                td.appendChild(document.createTextNode(curr !== null ? `${curr.toFixed(2)}s (×${ratio.toFixed(2)})` : '☠'));
-                colorize(td, ratio);
-                tr.appendChild(td);
-            });
+                return {text: curr !== null ? `${curr.toFixed(2)}s (×${ratio.toFixed(2)})` : '☠', ratio};
+            })});
             details_body.appendChild(tr);
         }
     });
 
+    virtualizeDetails(header, rows);
+
     /// Pin the second sticky column (query number) right after the first (checkbox):
     /// set its left offset to column 1's actual rendered width.
-    const col1 = details_head.children[0];
-    if (col1) {
-        document.documentElement.style.setProperty('--qn-left', col1.getBoundingClientRect().width + 'px');
+    /// The width is taken from the measurement of the table, as reading it from the table again
+    /// would lay it out once more. Only write the property when it changes: writing it invalidates
+    /// the styles of the whole page.
+    const qn_left = virtual_details.prefix_widths[0] + 'px';
+    if (qn_left !== document.documentElement.style.getPropertyValue('--qn-left')) {
+        document.documentElement.style.setProperty('--qn-left', qn_left);
     }
 }
 
@@ -1149,6 +1434,34 @@ document.getElementById('scale_hint').textContent =
 render();
 updateSelectors();
 
+</script>
+<script>
+(function () {
+    var el = document.getElementById('github-stars-count');
+    if (!el) return;
+    var REPO = 'ClickHouse/ClickBench';
+    var CACHE_KEY = 'github-stars-' + REPO;
+    var TTL = 6 * 3600 * 1000;
+
+    function format(n) {
+        return '' + n;
+    }
+    function show(n) { el.textContent = format(n); }
+
+    try {
+        var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (cached && (Date.now() - cached.t) < TTL) { show(cached.n); return; }
+    } catch (e) {}
+
+    fetch('https://api.github.com/repos/' + REPO)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+            if (!d || typeof d.stargazers_count !== 'number') return;
+            show(d.stargazers_count);
+            try { localStorage.setItem(CACHE_KEY, JSON.stringify({ n: d.stargazers_count, t: Date.now() })); } catch (e) {}
+        })
+        .catch(function () {});
+})();
 </script>
 </body>
 </html>

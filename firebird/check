@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+/opt/firebird/bin/fbsvcmgr localhost:service_mgr user SYSDBA password clickbench info_server_version >/dev/null

@@ -1,0 +1,14 @@
+# Playground cwd is an overlayfs merge of the system scripts (upper) and
+# /opt/clickbench/datasets_ro (lower), so hits.parquet / hits.tsv /
+# hits.csv / hits.json / hits.json.gz / hits_partitioned/ all appear next
+# to the Dockerfile. Without this ignore file, `docker build .` streams
+# them (75+ GB each) into /var/lib/docker/tmp as build context and the
+# sysdisk fills before the first step runs:
+#   Error response from daemon: write /hits.json: no space left on device
+hits.parquet
+hits.tsv
+hits.csv
+hits.json
+hits.json.gz
+hits_*.parquet
+hits_partitioned/

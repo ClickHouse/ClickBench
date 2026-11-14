@@ -1,0 +1,56 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via gizmosql_client.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# gizmosql_client's ".timer on" "Run Time: <secs>s" output).
+# Exit non-zero on error.
+set -e
+
+. ./util.sh
+
+query=$(cat)
+
+# .timer on: emit "Run Time: <secs>s" per statement.
+# `.mode box` keeps the result readable in the playground UI; the
+# original ClickBench runner used `.mode trash` to discard rows
+# for clean timing, but the user wants to see output here. The
+# Run Time line still parses fine.
+#
+# .maxrows -1 / .maxwidth 0: gizmosql_client is a DuckDB-cli fork
+# and inherits its non-TTY truncation behavior, which collapses any
+# table taller than the default page to a "<N> rows (<M> columns)"
+# summary line. Disable both row and column truncation so the user
+# sees the whole result.
+script=$(printf '.timer on\n.maxrows -1\n.maxwidth 0\n.mode box\n%s\n' "$query")
+
+raw=$(printf '%s' "$script" | gizmosql_client 2>&1) && exit_code=0 || exit_code=$?
+
+clean=$(printf '%s\n' "$raw" | tr -d '\r')
+
+# A run fails when the client exits non-zero or prints one of its own
+# diagnostics ("Error: ..." at the start of a line once ANSI colour codes
+# are stripped, or a crash/kill notice). Result rows are box-drawn (they
+# start with │ ┌ ├ └) and may legitimately contain words such as "error"
+# in URLs or titles, so they are excluded from that check: the query
+# ORDER BY ... LIMIT ... OFFSET windows over tied counts return a
+# different subset of rows on every run, and one such row must not turn
+# a valid timing into a failed run.
+diagnostics=$(printf '%s\n' "$clean" | sed 's/\x1b\[[0-9;]*m//g' | grep -vE '^[│┌├└]' || true)
+
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$diagnostics" | grep -qE '^(Error|.*Exception|Killed|Segmentation fault)'; then
+    printf '%s\n' "$clean" >&2
+    exit 1
+fi
+
+printf '%s\n' "$clean"
+
+secs=$(printf '%s\n' "$clean" \
+    | grep -oP 'Run Time:\s*\K[0-9.]+' \
+    | tail -n1)
+
+if [ -z "$secs" ]; then
+    echo "no timing in gizmosql_client output" >&2
+    exit 1
+fi
+
+awk -v s="$secs" 'BEGIN { printf "%.3f\n", s }' >&2

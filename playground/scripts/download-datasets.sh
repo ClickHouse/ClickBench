@@ -1,0 +1,85 @@
+#!/bin/bash
+# Eagerly download every ClickBench dataset format into the playground
+# datasets dir. Run idempotent: each download script is `wget --continue`-based
+# so re-running picks up where the previous run left off.
+#
+# Output:
+#   /opt/clickbench-playground/datasets/
+#     hits.parquet                       single-file Athena parquet
+#     hits_partitioned/hits_0..99.parquet  partitioned parquet
+#     hits.tsv                           decompressed TSV (~75 GB)
+#     hits.csv                           decompressed CSV (~75 GB)
+#
+# These files are read-only-mounted into every Firecracker VM via a virtio-blk
+# device built by `build-datasets-image.sh`.
+
+set -e
+
+STATE_DIR="${PLAYGROUND_STATE_DIR:-/opt/clickbench-playground}"
+DATASETS="${STATE_DIR}/datasets"
+LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)/lib"
+
+mkdir -p "$DATASETS"
+mkdir -p "$DATASETS/hits_partitioned"
+
+step() { echo "[$(date -u +%FT%TZ)] $*"; }
+
+step "parquet (single)"
+if [ ! -f "$DATASETS/hits.parquet" ] || [ "$(stat -c%s "$DATASETS/hits.parquet" 2>/dev/null || echo 0)" -lt 14000000000 ]; then
+    "$LIB/download-hits-parquet-single" "$DATASETS"
+else
+    step "  cached"
+fi
+
+step "parquet (partitioned)"
+need=0
+for i in $(seq 0 99); do
+    f="$DATASETS/hits_partitioned/hits_${i}.parquet"
+    if [ ! -f "$f" ] || [ "$(stat -c%s "$f" 2>/dev/null || echo 0)" -lt 100000000 ]; then
+        need=1
+        break
+    fi
+done
+if [ "$need" = "1" ]; then
+    "$LIB/download-hits-parquet-partitioned" "$DATASETS/hits_partitioned"
+else
+    step "  cached"
+fi
+
+step "tsv"
+if [ ! -f "$DATASETS/hits.tsv" ] || [ "$(stat -c%s "$DATASETS/hits.tsv" 2>/dev/null || echo 0)" -lt 70000000000 ]; then
+    "$LIB/download-hits-tsv" "$DATASETS"
+else
+    step "  cached"
+fi
+
+step "csv"
+if [ ! -f "$DATASETS/hits.csv" ] || [ "$(stat -c%s "$DATASETS/hits.csv" 2>/dev/null || echo 0)" -lt 70000000000 ]; then
+    "$LIB/download-hits-csv" "$DATASETS"
+else
+    step "  cached"
+fi
+
+step "json.gz"
+# Used by parseable. The full hits.json.gz is ~23 GB on
+# datasets.clickhouse.com.
+if [ ! -f "$DATASETS/hits.json.gz" ] || [ "$(stat -c%s "$DATASETS/hits.json.gz" 2>/dev/null || echo 0)" -lt 22000000000 ]; then
+    wget --continue --progress=dot:giga \
+        -O "$DATASETS/hits.json.gz" \
+        'https://datasets.clickhouse.com/hits_compatible/hits.json.gz'
+else
+    step "  cached"
+fi
+
+step "json (decompressed)"
+# parseable / victorialogs decompress hits.json.gz at load time and
+# blow out the 200 GB sysdisk; stage the decompressed copy on the
+# read-only dataset disk so they can stream it without a temp file.
+if [ ! -f "$DATASETS/hits.json" ] || [ "$(stat -c%s "$DATASETS/hits.json" 2>/dev/null || echo 0)" -lt 70000000000 ]; then
+    pigz -dk -c "$DATASETS/hits.json.gz" > "$DATASETS/hits.json"
+else
+    step "  cached"
+fi
+
+step "done"
+du -sh "$DATASETS"/*

@@ -1,0 +1,41 @@
+#!/bin/bash
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+# The Ubuntu package is older than the latest release, so take the official
+# precompiled command-line shell of the latest release from sqlite.org. The
+# download page lists the files in a machine-readable form, lines
+# "PRODUCT,<version>,<relative url>,<size>,<sha3>".
+if [ "$(uname -m)" != "x86_64" ]; then
+    echo "install: sqlite.org provides the precompiled shell only for x86_64" >&2
+    exit 1
+fi
+
+for i in $(seq 1 10); do
+    sudo -E apt-get update -y && sudo -E apt-get install -y unzip curl gzip && break
+    [ "$i" -eq 10 ] && { echo "install: apt-get failed" >&2; exit 1; }
+    sleep 30
+done
+
+tmp=$(mktemp -d /var/tmp/sqlite-install.XXXXXX)
+trap 'rm -rf "${tmp}"' EXIT
+
+for i in $(seq 1 10); do
+    url=$(curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors https://sqlite.org/download.html \
+        | grep -oE '^PRODUCT,[0-9.]+,[0-9]+/sqlite-tools-linux-x64-[0-9]+\.zip' | head -n1 | cut -d, -f3) || url=""
+    if [ -n "${url}" ] \
+        && curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors -o "${tmp}/sqlite-tools.zip" "https://sqlite.org/${url}" \
+        && unzip -o -q "${tmp}/sqlite-tools.zip" -d "${tmp}"; then
+        break
+    fi
+    [ "$i" -eq 10 ] && { echo "install: cannot download the SQLite tools" >&2; exit 1; }
+    sleep 30
+done
+echo "install: https://sqlite.org/${url}"
+
+sudo install -m 0755 "$(find "${tmp}" -type f -name sqlite3 | head -n1)" /usr/local/bin/sqlite3
+hash -r
+
+# JSONB needs SQLite 3.45 or newer.
+sqlite3 --version

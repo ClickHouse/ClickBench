@@ -10,7 +10,8 @@
         "ClickHouse derivative",
         "managed",
         "gcp",
-        "historical"
+        "historical",
+        "no-cold"
     ],
     "load_time": 867,
     "data_size": 9967271540,

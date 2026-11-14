@@ -6,7 +6,7 @@
     "proprietary":  "no",
     "hardware": "cpu",
     "tuned":  "no",
-    "tags":  ["Go", "row-oriented", "PostgreSQL compatible", "lukewarm-cold-run"],
+    "tags":  ["Go", "row-oriented", "PostgreSQL compatible", "no-cold"],
     "load_time": 760,
     "data_size": 67948956585,
     "result": [

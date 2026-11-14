@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# Column files and symbol files, all under ./hits.
+du -sb hits | cut -f1

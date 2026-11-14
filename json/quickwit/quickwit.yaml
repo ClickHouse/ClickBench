@@ -1,0 +1,15 @@
+version: 0.8
+
+data_dir: /var/lib/quickwit/qwdata
+
+searcher:
+  # As in the original PR: the defaults (500 MB, 30 s) are too low for the
+  # high-cardinality aggregations on `did` at 100m and 1000m documents.
+  aggregation_memory_limit: 64G
+  request_timeout_secs: 300
+  # Not in the original PR. The partial request cache keeps the leaf search
+  # results per split, so the hot runs replayed memoized answers (about 2 ms
+  # for Q1 on 1000m documents). JSONBench does not allow caching (intermediate)
+  # results between hot runs.
+  partial_request_cache:
+    capacity: 0

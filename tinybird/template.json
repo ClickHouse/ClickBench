@@ -1,0 +1,14 @@
+{
+  "system": "Tinybird (Free Trial)",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "enthusiast",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative",
+    "managed",
+    "no-cold"
+  ]
+}

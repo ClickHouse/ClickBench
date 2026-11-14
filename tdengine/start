@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+# taosd is the database engine; taosadapter is the HTTP gateway that ./query
+# and ./check talk to. taoskeeper and taos-explorer are the other two units
+# the installer enables; ./install disabled them (see README).
+sudo systemctl start taosd
+sudo systemctl start taosadapter

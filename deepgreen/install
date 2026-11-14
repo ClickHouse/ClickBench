@@ -1,0 +1,244 @@
+#!/bin/bash
+# Deepgreen DB 18.16 (Vitesse Data), a Greenplum 5.17 fork with a
+# vectorized/JIT executor.
+#
+# Two things shape this script.
+#
+# 1. The only surviving distribution of the software is a Docker image.
+#    Vitesse Data's site is gone (vitessedata.com is a parked domain), the
+#    download page it used to serve is only in the Wayback Machine with the
+#    files unarchived, and the S3 bucket the vendor's own setup scripts point
+#    at (s3.amazonaws.com/vitessedata/download/) now answers 403. The vendor's
+#    own Docker Hub image `vitessedata/deepgreen-ml` still carries the
+#    self-extracting installer, because its build ran the vendor's
+#    quicksetup/u16.alveo/01_download.sh. We pull that one layer straight
+#    from the registry with curl (no docker pull of the 2.4 GB ML image) and
+#    verify its sha256. Override with DEEPGREEN_BIN_URL if you have the file
+#    from somewhere else.
+#
+# 2. The build targets Ubuntu 16.04 and Greenplum 5's management utilities
+#    are Python 2. Ubuntu 24.04 has no python2 at all, so — like the
+#    greengage entry — everything runs inside a privileged ubuntu:22.04
+#    container (the newest release that still ships python2), and the other
+#    scripts docker-exec into it. The engine's own libraries are bundled;
+#    see the lib-compat step below for the handful the host must supply.
+#
+# Idempotent: re-running this script after a successful install does nothing.
+set -eu
+
+NAME=clickbench-deepgreen
+IMAGE=ubuntu:22.04
+
+DG_BIN=deepgreendb.18.16.ubuntu16.x86_64.190419.bin
+DG_BIN_SHA256=033aa54694d7580a10d3f1252fa3dd3f0cff85611bb6b88befd3df580875c72e
+# Immutable, content-addressed layer of vitessedata/deepgreen-ml:latest that
+# holds the installer at home/mluser/quicksetup/u16.alveo/$DG_BIN.
+DG_REGISTRY_REPO=vitessedata/deepgreen-ml
+DG_LAYER=sha256:e75c60f910f49ea20acc2dac37d418d28fd61f88c58a83275fbe83f929d2851e
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# 1. Make sure docker is installed and the daemon is up.
+if ! command -v docker >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update -y
+        sudo apt-get install -y docker.io
+    elif command -v yum >/dev/null 2>&1; then
+        sudo yum install -y docker
+    else
+        echo "deepgreen/install: install docker manually first" >&2
+        exit 1
+    fi
+fi
+sudo systemctl start docker 2>/dev/null || sudo service docker start || true
+
+# 2. Skip if the container is already created and the cluster is initialized.
+if sudo docker container inspect "$NAME" >/dev/null 2>&1; then
+    if sudo docker exec "$NAME" test -d /data0/coordinator/gpseg-1 2>/dev/null; then
+        echo "deepgreen: container '$NAME' already initialized; nothing to do" >&2
+        exit 0
+    fi
+fi
+
+# 3. Fetch the installer next to this script. The benchmark directory is
+# bind-mounted into the container below, so the container reads it from
+# there and nothing has to be copied into the container's writable layer.
+if [ ! -f "$DIR/$DG_BIN" ]; then
+    if [ -n "${DEEPGREEN_BIN_URL:-}" ]; then
+        curl -fsSL -o "$DIR/$DG_BIN" "$DEEPGREEN_BIN_URL"
+    else
+        token=$(curl -fsSL \
+            "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${DG_REGISTRY_REPO}:pull" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+        curl -fsSL -H "Authorization: Bearer $token" \
+            "https://registry-1.docker.io/v2/${DG_REGISTRY_REPO}/blobs/${DG_LAYER}" \
+            -o "$DIR/dg-layer.tar.gz"
+        tar -xzf "$DIR/dg-layer.tar.gz" -C "$DIR" --strip-components=4 \
+            "home/mluser/quicksetup/u16.alveo/$DG_BIN"
+        rm -f "$DIR/dg-layer.tar.gz"
+    fi
+fi
+echo "$DG_BIN_SHA256  $DIR/$DG_BIN" | sha256sum -c -
+
+sudo docker pull "$IMAGE"
+
+# 4. Long-lived privileged container. Bridge mode + --hostname localhost so
+# gpinitsystem's ssh-to-localhost lands on the container's own sshd. The
+# benchmark directory is mounted so gpfdist can serve hits.tsv in place
+# instead of the load script copying 75 GB into the container.
+if ! sudo docker container inspect "$NAME" >/dev/null 2>&1; then
+    sudo docker run -d --privileged --hostname localhost -p 5432:5432 \
+        -v "$DIR":/mnt/clickbench \
+        --name "$NAME" "$IMAGE" sleep infinity
+fi
+
+# 5. Inside the container: dependencies, kernel tuning, gpadmin user, sshd,
+# then the Deepgreen installer.
+sudo docker exec -i "$NAME" bash -s <<EOF
+set -eu
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y curl ca-certificates sudo openssh-server openssh-client \
+    iproute2 iputils-ping less net-tools rsync zip libcap2-bin procps \
+    locales python2 python2.7
+
+# gpinitsystem defaults its locale to en_US.utf8 and refuses to continue
+# if it isn't present; the minimal ubuntu:22.04 image ships only C/POSIX.
+locale-gen en_US.UTF-8
+update-locale LANG=en_US.UTF-8
+
+# Greenplum 5's utilities invoke a bare \`python\` and mean Python 2.
+# gpinitsystem's host sorter and gpstart/gpstop/gpstate all die with
+# "/usr/bin/env: 'python': No such file" without this. The symlink goes in
+# /usr/local/bin so the dpkg-managed /usr/bin slot stays clean.
+ln -sf /usr/bin/python2 /usr/local/bin/python
+
+# Kernel tuning. --privileged means these affect the host kernel;
+# gpinitsystem checks them so they must be set.
+SHMALL=\$(expr \$(getconf _PHYS_PAGES) / 2)
+SHMAX=\$(expr \$(getconf _PHYS_PAGES) / 2 \* \$(getconf PAGE_SIZE))
+sysctl -w kernel.shmall=\$SHMALL >/dev/null
+sysctl -w kernel.shmmax=\$SHMAX >/dev/null
+sysctl -w kernel.shmmni=4096 >/dev/null
+sysctl -w vm.overcommit_memory=2 >/dev/null
+sysctl -w vm.overcommit_ratio=95 >/dev/null
+sysctl -w net.ipv4.ip_local_port_range="10000 65535" >/dev/null
+sysctl -w kernel.sem="250 2048000 200 8192" >/dev/null
+
+cat > /etc/security/limits.d/99-gpadmin.conf <<LIMITS
+* soft nofile 524288
+* hard nofile 524288
+* soft nproc 131072
+* hard nproc 131072
+LIMITS
+
+# gpadmin user with passwordless ssh to localhost (gpinitsystem requirement).
+groupadd -f gpadmin
+id -u gpadmin >/dev/null 2>&1 || useradd gpadmin -m -g gpadmin -s /bin/bash
+echo "gpadmin ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gpadmin
+sudo -u gpadmin bash -c '
+    set -e
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+    [ -f ~/.ssh/id_rsa ] || ssh-keygen -t rsa -b 4096 -N "" -f ~/.ssh/id_rsa
+    cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+'
+
+# /bin/ping in this image has no caps, so even root can't open a raw socket.
+# gpinitsystem pings every host in the host file.
+setcap cap_net_raw+ep /bin/ping
+[ -e /bin/ping6 ] && setcap cap_net_raw+ep /bin/ping6 || true
+
+# sshd setup.
+ssh-keygen -A
+mkdir -p /run/sshd
+echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
+echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
+/usr/sbin/sshd
+
+# The installer is interactive: it stops on "Press [ENTER] to proceed" both
+# before unpacking and after, and on the licence text unless
+# --accept-license is given. Feed it newlines.
+mkdir -p /opt
+if [ ! -e /opt/deepgreendb ]; then
+    (cd /opt && printf '\n\n\n' | bash /mnt/clickbench/$DG_BIN --accept-license)
+fi
+
+GPHOME=/opt/deepgreendb
+
+# Deepgreen bundles its own libraries in \$GPHOME/lib and keeps a second set
+# of Ubuntu 16.04 system libraries in \$GPHOME/lib2 as spares. Four sonames
+# the engine needs are gone from Ubuntu 22.04 — libldap_r-2.4.so.2 (OpenLDAP
+# dropped the reentrant variant in 2.5), libtinfo.so.5, libicuuc.so.55 and
+# libreadline.so.6 — and pulling those in drags their own 16.04 dependency
+# closure (heimdal, nettle 6, libidn 11, ...). So link, into a directory of
+# its own, every lib2 spare the host does not already provide.
+#
+# lib2 also carries Ubuntu 16.04's glibc. That set must never be linked:
+# ld.so comes from the host and mixing a 2.23 libc under a 2.35 loader does
+# not work. Skip them explicitly rather than relying on the host always
+# having them.
+mkdir -p "\$GPHOME/lib-compat"
+for so in "\$GPHOME"/lib2/*.so*; do
+    name=\$(basename "\$so")
+    case "\$name" in
+        libc.so.6|libm.so.6|libpthread.so.0|libdl.so.2|librt.so.1|\
+libresolv.so.2|libcrypt.so.1|libgcc_s.so.1) continue ;;
+    esac
+    ldconfig -p | grep -qE "^[[:space:]]*\${name} " && continue
+    ln -sf "\$so" "\$GPHOME/lib-compat/\$name"
+done
+
+# One environment file, sourced from both .bash_profile (login shells, which
+# is what every \`bash -lc\` in these scripts gives us) and the top of .bashrc,
+# before Ubuntu's early return for non-interactive shells — gpinitsystem
+# reaches the segment hosts with \`ssh host cmd\`, which reads .bashrc and not
+# .bash_profile.
+cat > /home/gpadmin/.dgenv <<'PROFILE'
+source /opt/deepgreendb/greenplum_path.sh
+export LD_LIBRARY_PATH="\$GPHOME/lib:\$GPHOME/lib-compat:\$LD_LIBRARY_PATH"
+# Deepgreen is a Greenplum 5 fork: the utilities look up
+# MASTER_DATA_DIRECTORY, not the COORDINATOR_DATA_DIRECTORY of Greenplum 7.
+export MASTER_DATA_DIRECTORY=/data0/coordinator/gpseg-1
+PROFILE
+echo "source /home/gpadmin/.dgenv" > /home/gpadmin/.bash_profile
+printf '%s\n' 'source /home/gpadmin/.dgenv' | \
+    cat - /home/gpadmin/.bashrc > /home/gpadmin/.bashrc.new
+mv /home/gpadmin/.bashrc.new /home/gpadmin/.bashrc
+chown gpadmin:gpadmin /home/gpadmin/.dgenv /home/gpadmin/.bash_profile \
+    /home/gpadmin/.bashrc
+
+mkdir -p /data0/primary /data0/coordinator
+chown -R gpadmin:gpadmin /data0
+
+echo localhost > /home/gpadmin/hosts
+chown gpadmin:gpadmin /home/gpadmin/hosts
+EOF
+
+# The installer copy is 600 MB and is not needed again.
+rm -f "$DIR/$DG_BIN"
+
+# 6. Drop gpinitsystem_config in and run gpinitsystem.
+sudo docker cp "$DIR/gpinitsystem_config" \
+    "$NAME":/home/gpadmin/gpinitsystem_config
+sudo docker exec "$NAME" chown gpadmin:gpadmin /home/gpadmin/gpinitsystem_config
+
+# `cd` first: gpinitsystem takes its config and host file as relative paths
+# and writes its logs next to them. `sudo -iu` would have moved to the home
+# directory by itself, but see ./start for why -i is not usable here.
+#
+# gpinitsystem returns non-zero (typically 2) whenever its post-init log scan
+# finds any WARN/ERROR line, even harmless ones ("AGENTS_DATADIR variable not
+# set. Deepmesh agents will not be started", "Detected a single host GPDB
+# array build"). The cluster itself comes up cleanly — "Database successfully
+# started" / "Greenplum Database instance successfully created" both run
+# before the exit. Tolerate the exit code and use gpstate -s as the
+# authoritative health check.
+sudo docker exec "$NAME" sudo -H -u gpadmin bash -lc \
+    'cd ~ && ulimit -n 65536 && gpinitsystem -a -c gpinitsystem_config -h hosts' || true
+sudo docker exec "$NAME" sudo -H -u gpadmin bash -lc 'gpstate -s' >/dev/null || {
+    echo "deepgreen/install: cluster not running after gpinitsystem" >&2
+    exit 1
+}

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+roastedDuck -c "SELECT 1" >/dev/null

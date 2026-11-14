@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+clickhouse-client --query "DROP TABLE IF EXISTS bluesky SYNC"
+clickhouse-client < create.sql
+
+# One INSERT per file, as in the original JSONBench. The client decompresses
+# the file itself. A few documents in the dataset are not valid JSON: if a
+# file fails, it is loaded again with the broken documents skipped.
+for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+    if ! clickhouse-client --query "INSERT INTO bluesky FROM INFILE '${file}' SETTINGS min_insert_block_size_rows = 1000000, min_insert_block_size_bytes = 0 FORMAT JSONAsObject"; then
+        echo "load: retrying ${file} with errors allowed" >&2
+        clickhouse-client --query "INSERT INTO bluesky FROM INFILE '${file}' SETTINGS min_insert_block_size_rows = 1000000, min_insert_block_size_bytes = 0, input_format_allow_errors_num = 1000000000, input_format_allow_errors_ratio = 1 FORMAT JSONAsObject"
+    fi
+done

@@ -1,0 +1,14 @@
+#!/bin/bash
+set -eu
+
+OG_ROOT=${OG_ROOT:-/opt/opengauss}
+OG_USER=${OG_USER:-omm}
+
+# setsid: gs_ctl forks the server but leaves it in the caller's process
+# group and session, so anything that later signals that group -- a
+# `timeout` around the driver, a killed shell -- takes the database down
+# with it. Detaching here keeps the server alive for the next ./query.
+# -t bounds the wait: the driver's own check loop is the authoritative
+# readiness signal, so there is no reason for gs_ctl to sit here longer.
+sudo -u "$OG_USER" setsid "$OG_ROOT/run" gs_ctl start -D "$OG_ROOT/data" \
+    -Z single_node -t 300 -l "$OG_ROOT/log/gs_ctl.log"

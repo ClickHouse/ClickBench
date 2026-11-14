@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e -o pipefail
+
+PSQL="sudo -u postgres psql -X -v ON_ERROR_STOP=1"
+
+# Idempotent: recreate the database.
+${PSQL} -t -c "DROP DATABASE IF EXISTS bluesky WITH (FORCE)"
+${PSQL} -t -c "CREATE DATABASE bluesky"
+${PSQL} -d bluesky -t -c "CREATE EXTENSION IF NOT EXISTS pg_search CASCADE"
+${PSQL} -d bluesky -t < ddl.sql
+
+# The same load as ../postgresql/load: one COPY per file, in the CSV format
+# with the quote and delimiter characters that never occur in the data, so
+# that every line becomes one JSONB value; `\u0000` is removed because JSONB
+# cannot store it, and ON_ERROR ignore skips the few lines that are not valid
+# JSON (documents longer than 64 KiB split over two lines).
+for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+    echo "load: ${file}"
+    gzip -dc "${file}" \
+        | sed 's/\\u0000//g' \
+        | ${PSQL} -d bluesky -c "\\copy bluesky FROM STDIN WITH (format csv, quote e'\\x01', delimiter e'\\x02', escape e'\\x01', on_error ignore)"
+done
+
+${PSQL} -d bluesky -t -c "VACUUM ANALYZE bluesky"

@@ -29,6 +29,14 @@ from fastapi import FastAPI, HTTPException, Request
 # Streaming engine will be the default soon.
 pl.Config.set_engine_affinity("streaming")
 
+# ClickBench timings must include serializing the full query result back
+# to the client (README, "Output Suppression"), so render tables without
+# any row/column/cell truncation — nothing may be suppressed.
+pl.Config.set_tbl_rows(-1)
+pl.Config.set_tbl_cols(-1)
+pl.Config.set_tbl_width_chars(-1)
+pl.Config.set_fmt_str_lengths(65535)
+
 app = FastAPI()
 hits_df: pl.DataFrame | None = None
 hits: pl.LazyFrame | None = None
@@ -67,9 +75,13 @@ async def query(request: Request):
     except SyntaxError as e:
         raise HTTPException(status_code=400, detail=f"syntax error: {e}")
     start = timeit.default_timer()
-    result = eval(compiled, {"hits": hits, "pl": pl, "date": date})
+    value = eval(compiled, {"hits": hits, "pl": pl, "date": date})
+    # Rendering the result is part of the timed run: ClickBench measures
+    # back-to-back runtimes including returning the result to the client
+    # (issue #1397).
+    result = str(value)
     elapsed = round(timeit.default_timer() - start, 3)
-    return {"elapsed": elapsed, "result": str(result)}
+    return {"elapsed": elapsed, "result": result}
 
 
 @app.get("/data-size")

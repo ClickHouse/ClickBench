@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+du -bcs server-data/user_files/hits.vortex | awk 'END { print $1 }'

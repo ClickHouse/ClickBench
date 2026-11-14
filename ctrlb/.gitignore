@@ -1,0 +1,4 @@
+# Benchmark byproducts — never commit these.
+run.log
+# Any local engine data dir.
+data/

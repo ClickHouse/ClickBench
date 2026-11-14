@@ -20,7 +20,7 @@ hits.groupby([hits['UserID'], hits['EventTime'].dt.minute, 'SearchPhrase']).size
 hits[hits['UserID'] == 435090932899640449]
 hits[hits['URL'].str.contains('google')].shape[0]
 hits[hits['URL'].str.contains('google') & (hits['SearchPhrase'] != '')].groupby('SearchPhrase').agg({'URL': 'min', 'SearchPhrase': 'size'}).nlargest(10, 'SearchPhrase')
-hits[hits['Title'].str.contains('Google') & ~hits['URL'].str.contains('.google.') & (hits['SearchPhrase'] != '')].groupby('SearchPhrase').agg({'URL': 'min', 'Title': 'min', 'SearchPhrase': 'size', 'UserID': 'nunique'}).nlargest(10, 'SearchPhrase')
+hits[hits['Title'].str.contains('Google') & ~hits['URL'].str.contains('.google.', regex=False) & (hits['SearchPhrase'] != '')].groupby('SearchPhrase').agg({'URL': 'min', 'Title': 'min', 'SearchPhrase': 'size', 'UserID': 'nunique'}).nlargest(10, 'SearchPhrase')
 hits[hits['URL'].str.contains('google')].sort_values(by='EventTime').head(10)
 hits[hits['SearchPhrase'] != ''].sort_values(by='EventTime')[['SearchPhrase']].head(10)
 hits[hits['SearchPhrase'] != ''].sort_values(by='SearchPhrase')[['SearchPhrase']].head(10)

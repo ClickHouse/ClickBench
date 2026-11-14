@@ -1,9 +1,11 @@
 #!/bin/bash
 set -e
 
-# 1.3.0 was retired from the Apache mirror; bump to a currently-published
-# Pinot release.
-PINOT_VERSION=1.5.0
+# Apache retires older Pinot releases from downloads.apache.org fairly
+# aggressively (`downloads.apache.org/pinot/apache-pinot-1.5.0/...` now
+# 404s); bump this to the current mirror-hosted version whenever we hit
+# a 404 at install time.
+PINOT_VERSION=1.5.1
 PINOT_DIR="apache-pinot-$PINOT_VERSION-bin"
 
 if [ ! -d "$PINOT_DIR" ]; then

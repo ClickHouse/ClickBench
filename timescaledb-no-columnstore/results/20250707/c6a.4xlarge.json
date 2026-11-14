@@ -12,7 +12,7 @@
         "PostgreSQL compatible",
         "row-oriented",
         "time-series",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 2633,
     "data_size": 72021778432,

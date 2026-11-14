@@ -3,9 +3,9 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "enthusiast",
   "tags": [
     "C",
-    "column-oriented",
-    "lukewarm-cold-run"
+    "column-oriented"
   ]
 }

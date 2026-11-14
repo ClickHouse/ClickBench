@@ -1,0 +1,39 @@
+#!/bin/bash
+set -eu
+
+# Exasol Personal: https://github.com/exasol/exasol-personal
+# The launcher runs the database in a Docker container on the host.
+# Installing it accepts the Exasol Personal End User License Agreement:
+# https://www.exasol.com/terms-and-conditions/#h-exasol-personal-end-user-license-agreement
+EXASOL_VERSION=${EXASOL_VERSION:-2.4.0}
+
+sudo apt-get update -y
+sudo apt-get install -y python3-venv ca-certificates curl
+
+# The launcher needs Docker Engine 29 or later, newer than Ubuntu's docker.io.
+docker_version=$(sudo docker version --format '{{.Server.Version}}' 2>/dev/null || true)
+if [ "${docker_version%%.*}" -lt 29 ] 2>/dev/null || [ -z "$docker_version" ]; then
+    curl -fsSL https://get.docker.com | sudo sh
+fi
+sudo docker version --format 'Docker Engine {{.Server.Version}}'
+
+case "$(uname -m)" in
+    x86_64) arch=x86_64 ;;
+    aarch64) arch=arm64 ;;
+    *) echo "unsupported architecture $(uname -m)" >&2; exit 1 ;;
+esac
+
+archive="exasol-personal_Linux_${arch}.tar.gz"
+base="https://github.com/exasol/exasol-personal/releases/download/v${EXASOL_VERSION}"
+curl -fsSL -o "$archive" "$base/$archive"
+curl -fsSL "$base/exasol-personal_${EXASOL_VERSION}_checksums.txt" | grep " $archive\$" | sha256sum -c
+mkdir -p bin
+tar -xzf "$archive" -C bin exasol
+rm -f "$archive"
+
+python3 -m venv venv
+./venv/bin/pip install --quiet pyexasol
+
+# Creates the deployment in ./deploy and starts the database.
+rm -rf deploy
+./bin/exasol install local --deployment-dir deploy --container-engine docker --no-launcher-version-check < /dev/null

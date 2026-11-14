@@ -1,0 +1,361 @@
+:root {
+    --fg: black;
+    --muted: #6e7681;
+    --border: black;
+    --bg: #fff8f0;
+    --bg-alt: white;
+    --fg-output: lightgray;
+    --bg-output: black;
+    --bg-error: #f88;
+    --accent: yellow;
+    --accent-fg: black;
+    --good: black;
+    --bad: #cf222e;
+    --warn: #9a6700;
+    --info: #0969da;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
+body { font: 14px sans-serif; }
+header, main, footer { max-width: 100%; margin: 0; padding: 0 1em; }
+
+header { padding: 1em 1em; }
+header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+.muted { color: var(--muted); font-weight: normal; }
+
+.title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75em;
+    flex-wrap: wrap;
+}
+.github-stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    font-size: 13px;
+    line-height: 1;
+    text-decoration: none;
+    color: var(--fg);
+    border: 1px solid var(--muted);
+    border-radius: 6px;
+    padding: 0.4em 0.7em;
+    background: var(--bg-alt);
+    white-space: nowrap;
+}
+.github-stars:hover { background: var(--accent); color: var(--accent-fg); }
+.github-stars-icon { width: 1.1em; height: 1.1em; fill: currentColor; }
+.github-stars-count { font-weight: 600; }
+
+section { margin: 12px 0; }
+
+label { display: block; font-weight: 600; font-size: 12px; text-transform: uppercase;
+        letter-spacing: 0.04em; color: var(--muted); margin-bottom: 4px; }
+
+textarea, pre, input {
+    font-family: monospace;
+    font-size: 14px;
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+    color: var(--fg);
+    border-radius: 0;
+    max-height: 50vh;
+}
+
+textarea { width: 100%; padding: 0.5em; resize: vertical; }
+
+pre#output {
+    padding: 10px;
+    color: var(--fg-output);
+    background: var(--bg-output);
+    margin: 0;
+    overflow: auto;
+    white-space: pre;
+    line-height: 1;
+}
+
+pre#last-error {
+    padding: 10px;
+    background: var(--bg-error);
+    margin: 0;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1;
+}
+
+pre#state-blob {
+    padding: 10px;
+    background: var(--bg-alt);
+    margin: 0;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+button {
+    background: var(--accent); color: var(--accent-fg);
+    border: 1px solid var(--border); border-radius: 0; padding: 6px 16px;
+    font-weight: 600; cursor: pointer;
+}
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+button:hover:not(:disabled) { filter: brightness(0.95); }
+
+/* "Run all" — faint secondary button, pushed to the right end of the
+   buttons row via margin-left:auto so it sits opposite the primary
+   Run/Example controls. */
+button.run-all {
+    background: transparent;
+    color: var(--muted);
+    border-color: var(--muted);
+    font-weight: normal;
+    padding: 4px 10px;
+    margin-left: auto;
+}
+button.run-all:hover:not(:disabled) {
+    background: var(--accent);
+    color: var(--accent-fg);
+    border-color: var(--border);
+    filter: none;
+}
+/* Armed: a multi-selection exists, so "Run all" becomes "Run selected"
+   and lights up yellow like a primary action. */
+button.run-all.armed {
+    background: var(--accent);
+    color: var(--accent-fg);
+    border-color: var(--border);
+    font-weight: 600;
+}
+
+/* Competition-mode table. */
+#runall-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+}
+#runall-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #eee;
+    font-family: monospace;
+}
+#runall-table td.time { text-align: right; }
+#runall-table tr.done td.time { color: var(--good); font-weight: 600; }
+#runall-table tr.failed td.time { color: var(--bad); }
+#runall-table tr.running td.time { color: var(--muted); }
+#runall-table tr { cursor: pointer; }
+#runall-table tr:hover td { background: #f5f5f5; }
+#runall-table tr.selected td { background: white; color: var(--fg); font-weight: 600; }
+#runall-table tr.selected:hover td { background: white; }
+/* Hovering the matching slab in the system picker highlights the
+   competition row, so the user can move between picker and result
+   without losing track of which system they're looking at. */
+#runall-table tr.slab-hover td { background: #fff4d6; }
+#runall-table tr.selected.slab-hover td { background: #fff4d6; }
+#runall-table td.time.pending { color: var(--muted); }
+
+/* Default view: #ui-main fills the row, the (hidden) aside takes no
+   space. The .split modifier is added by JS only when competition
+   mode is active; that's when the grid actually splits into rail +
+   main and the rail shrinks to max-content. */
+#ui-split { margin: 12px 0; }
+#ui-split.split {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 16px;
+    /* start (not stretch) so the rail is only as tall as its rows;
+       no forced height so the split doesn't stretch the page. */
+    align-items: start;
+}
+#ui-main { min-width: 0; overflow: auto; }
+#ui-main > section:first-child { margin-top: 0; }
+aside#ui-runall {
+    margin: 0;
+    overflow-y: auto;
+    /* Reserve scrollbar gutter even when content fits — without this
+       the rail's width fluctuates as rows finish, briefly making the
+       right pane overflow and the page grow a horizontal scrollbar. */
+    scrollbar-gutter: stable;
+    /* Fit the content, but never taller than what's left of the
+       viewport below the split — then scroll inside the rail. */
+    max-height: calc(100vh - var(--ui-split-offset, 200px));
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+    outline: none;
+}
+aside#ui-runall #runall-table {
+    width: max-content;
+    border: 0;
+}
+@media (max-width: 800px) {
+    #ui-split.split { grid-template-columns: 1fr; }
+}
+
+/* Flash on every state change in competition mode: yellow that
+   fades out over a second. .flash is added by JS only to rows whose
+   stringified status differs from the previous render. */
+@keyframes runall-flash {
+    from { background-color: var(--accent); }
+    to   { background-color: transparent; }
+}
+#runall-table tr.flash td {
+    animation: runall-flash 1s ease-out;
+}
+
+.row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.row label { margin: 0; }
+.stats { font-family: monospace; }
+.stats span { color: var(--fg); }
+#time { font-weight: bold; }
+
+/* System slabs — horizontal flex-wrap row of chiclets like the main
+   ClickBench results page. Each slab is a clickable button, background
+   colored by current state. */
+.system-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3em;
+}
+.system-item {
+    display: inline-block;
+    /* Don't let flex compress a slab below its (nowrap) text — a shrunk
+       slab overflows its own box, and those overflows add up into a
+       page-wide horizontal scrollbar. Keep natural width; wrap instead. */
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+    color: var(--fg);
+    line-height: 1.2;
+    white-space: nowrap;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.system-item::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    color: #fff;
+    padding: 3px 6px;
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+    /* display:none (not visibility:hidden) so the balloon isn't laid out
+       until hover — a laid-out, wider-than-slab absolute balloon on every
+       slab otherwise inflates the page's scroll width (horizontal scroll). */
+    display: none;
+    z-index: 10;
+}
+
+.system-item::before {
+    content: "";
+    position: absolute;
+    /* Tip touches the slab; body fills the gap to the tooltip box. */
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 8px solid transparent;
+    border-top-color: #000;
+    border-bottom-width: 0;
+    pointer-events: none;
+    display: none;
+    z-index: 10;
+}
+
+.system-item:hover::after,
+.system-item:hover::before {
+    display: block;
+}
+.system-item:hover { filter: brightness(0.95); }
+.system-item.selected {
+    outline: 2px solid #000;
+    outline-offset: -2px;
+}
+
+.system-item.state-snapshotted { background: #c8f0d4; color: var(--good); }
+.system-item.state-ready       { background: #a4e6b6; color: var(--good); font-weight: 600; }
+.system-item.state-provisioning {
+    background: #eaeef2;
+    color: var(--muted);
+    cursor: not-allowed;
+}
+.system-item.state-down        { background: #f6d1ce; color: var(--bad); }
+
+/* Multi-selection ("compare selected systems"): bright blue, overriding
+   the state color. Placed after the state rules so it wins on equal
+   specificity. */
+.system-item.multi-selected {
+    background: #1a8cff;
+    color: #fff;
+    border-color: #0a5bd0;
+    font-weight: 600;
+}
+.system-item.multi-selected:hover { filter: brightness(1.08); }
+/* Keep the single-selection outline readable on top of blue. */
+.system-item.multi-selected.selected { outline-color: #002b6b; }
+
+/* Discoverability hint for multi-selection. On pointer devices it sits
+   in the top-right corner and fades in while the system list is hovered.
+   On touch devices (no hover) it falls back to a static muted caption
+   under the list so the long-press gesture is still discoverable. */
+#multi-hint {
+    position: fixed;
+    top: 10px;
+    right: 12px;
+    /* ~400px wraps the tip to two lines; never wider than the viewport. */
+    width: 400px;
+    max-width: calc(100vw - 24px);
+    background: #000;
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.35;
+    padding: 8px 12px;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    pointer-events: none;
+    /* Below the slabs' uptime balloons (z-index:10) so a balloon that
+       overlaps the tip stays readable on top of it. */
+    z-index: 9;
+}
+#multi-hint b { color: var(--accent); font-weight: 600; }
+.system-list:hover + #multi-hint { opacity: 1; transform: translateY(0); }
+
+@media (hover: none) {
+    #multi-hint {
+        position: static;
+        width: auto;
+        max-width: none;
+        margin-top: 8px;
+        padding: 0;
+        opacity: 1;
+        transform: none;
+        background: transparent;
+        color: var(--muted);
+        box-shadow: none;
+        pointer-events: auto;
+    }
+    #multi-hint b { color: var(--fg); }
+}
+
+select { padding: 0.5em; border-radius: 0; }
+/* The example dropdown's options carry long query text; without a cap the
+   <select> grows to the widest option and pushes the page wider than the
+   viewport (horizontal scroll on mobile). min-width:0 lets it shrink as a
+   flex item; max-width keeps it within the row. */
+#example { min-width: 0; max-width: 100%; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }

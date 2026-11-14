@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+# Bring CtrlB up ready to query. Called by the harness once initially (before the
+# parquet is downloaded) and again at the top of every query (RESTARTABLE=yes).
+#
+# The DDL lives in ./create.sql (like the other Parquet engines). Running it here
+# infers the schema from the parquet footer. Because ./start is UNtimed, that
+# schema/footer parse is excluded from the cold-query number, which therefore
+# measures the data scan only — the same treatment the other in-place Parquet
+# engines get.
+set -u
+# shellcheck disable=SC1091
+source "$(dirname "$0")/config.sh"
+
+# Clean slate: remove any leftover container so we get a fresh session.
+stop_container
+
+# Run the CtrlB container (publishes 5080, mounts this dir so hits.parquet is
+# readable inside at the same path); discard its output.
+start_container
+
+if ! wait_for_health; then
+  # Don't hard-fail: bench_check_loop (./check) is the authoritative readiness
+  # signal and will keep polling.
+  echo "WARN: lake not healthy within ${LAKE_STARTUP}s" >&2
+fi
+
+# Session setup — the DDL comes from ./create.sql (single source of truth, same
+# as the other Parquet engines). Runs only once the parquet exists
+# (skipped on the initial pre-download start). hits.parquet is mounted into the
+# container at $PARQUET_PATH, so we rewrite create.sql's relative LOCATION to that
+# absolute path, strip comments, then POST each ';'-separated statement.
+if [ -f "$PARQUET_PATH" ]; then
+  ddl="$(sed 's/--.*$//' "$(dirname "$0")/create.sql" \
+         | sed "s#'hits.parquet'#'$PARQUET_PATH'#g" \
+         | tr '\n' ' ')"
+  while IFS= read -r -d ';' stmt; do
+    stmt="$(printf '%s' "$stmt" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+    [ -z "$stmt" ] && continue
+    if ! post_sql "$stmt" > /dev/null; then
+      echo "ERROR: setup statement failed: $stmt" >&2
+      exit 1
+    fi
+  done <<< "$ddl"
+fi
+exit 0

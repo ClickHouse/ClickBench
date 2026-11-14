@@ -1,0 +1,10 @@
+{
+  "system": "CLP",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "search"
+  ]
+}

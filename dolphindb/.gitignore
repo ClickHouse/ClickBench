@@ -1,0 +1,13 @@
+# The DolphinDB Software Evaluation License Agreement, which the download
+# requires you to accept (README.txt: "Before you install and use DolphinDB,
+# you must read and agree to the included license agreements"), grants use
+# "internally within Your facilities solely for the purpose of evaluation"
+# (§3), and §6 CONFIDENTIALITY then adds: "You may not use the Evaluation
+# Software or any information relating to the Evaluation Software except for
+# the purposes stated in Section 3 above."
+#
+# No clause names benchmarks, but publishing measurements is not internal
+# evaluation. So treat the numbers the way ClickBench treats a DeWitt clause
+# (top-level README, "If The Results Cannot Be Published"): keep the
+# reproduction scripts, keep the results out of the repository.
+results/

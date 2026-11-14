@@ -1,0 +1,53 @@
+#!/bin/bash
+set -e
+
+CONTAINER=kylin-clickbench
+
+# --- Dataset: expects hits.parquet already downloaded, no column rewrite needed ---
+# Official hits.parquet, unmodified. See README.md ("No Parquet
+# rewrite needed").
+if [ ! -f hits.parquet ]; then
+    echo "hits.parquet not found in cwd; run ../lib/download-hits-parquet-single first" >&2
+    exit 1
+fi
+
+# --- Stage the file into HDFS inside the container -----------------------
+sudo docker cp hits.parquet "$CONTAINER":/tmp/hits.parquet
+# Drop the host copy so docker cp and hdfs put do not occupy the disk twice.
+rm -f hits.parquet
+sync
+sudo docker exec "$CONTAINER" bash -c '
+    set -e
+    hdfs dfs -mkdir -p /clickbench/hits_dir
+    hdfs dfs -put -f /tmp/hits.parquet /clickbench/hits_dir/hits.parquet
+    rm -f /tmp/hits.parquet
+'
+
+# --- Register the Hive external table + ClickBench-typed view ------------
+sudo docker cp create.sql "$CONTAINER":/tmp/create.sql
+sudo docker exec "$CONTAINER" hive -f /tmp/create.sql
+
+# --- Load the Hive table's metadata into Kylin via REST API --------------
+# Stock standalone credentials, encoded at runtime.
+KYLIN_USER=ADMIN
+KYLIN_PASS=KYLIN
+AUTH_TOKEN=$(printf '%s:%s' "$KYLIN_USER" "$KYLIN_PASS" | base64)
+HTTP_AUTH_SCHEME=Basic
+REQUEST_AUTH_HEADER_NAME=Authorization
+AUTH_HEADER="${REQUEST_AUTH_HEADER_NAME}: ${HTTP_AUTH_SCHEME} ${AUTH_TOKEN}"
+
+# Create project; ignore already-exists.
+curl -sf -X POST http://localhost:7070/kylin/api/projects \
+    -H "$AUTH_HEADER" -H 'Content-Type: application/json' \
+    -d '{"name":"clickbench","description":"ClickBench hits benchmark"}' \
+    >/dev/null 2>&1 || true
+
+# Load table metadata (project/tables in the body).
+load_resp=$(curl -sf -X POST \
+    "http://localhost:7070/kylin/api/tables" \
+    -H "$AUTH_HEADER" -H 'Content-Type: application/json' \
+    -d '{"project":"clickbench","tables":["CLICKBENCH.HITS"],"data_source_type":9}')
+echo "table load response: $load_resp"
+
+rm -f hits.parquet
+sync

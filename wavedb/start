@@ -1,0 +1,10 @@
+#!/bin/bash
+# Start the server in the background. At startup it loads every kernel the engine ships (src/wdb_preload.py)
+# and opens the database, then answers HTTP; ./check succeeds from that moment. Before the load there is no
+# database yet: the server starts anyway and opens it when it is first asked.
+cd "$(dirname "$0")"
+if [ -f wdb.pid ] && kill -0 "$(cat wdb.pid)" 2>/dev/null; then
+    exit 0
+fi
+nohup WaveDB/venv/bin/python WaveDB/bin/wdb serve "$PWD/cbdb" --port 8765 > wdb_serve.log 2>&1 &
+echo $! > wdb.pid

@@ -1,0 +1,3 @@
+#!/bin/bash
+set -eu
+curl --fail --silent "http://127.0.0.1:${BENCH_KEYTEN_PORT:-8000}/health" >/dev/null

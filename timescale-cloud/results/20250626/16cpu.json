@@ -10,7 +10,8 @@
         "PostgreSQL compatible",
         "column-oriented",
         "time-series",
-        "managed"
+        "managed",
+        "no-cold"
     ],
     "load_time": 3582,
     "data_size": 19304824832,

@@ -1,0 +1,11 @@
+{
+  "system": "Opteryx",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "stateless",
+    "column-oriented",
+    "embedded"
+  ]
+}

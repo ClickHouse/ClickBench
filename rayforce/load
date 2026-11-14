@@ -1,0 +1,21 @@
+#!/bin/bash
+# Loads hits.parquet into the splayed table ./hits, in its own process; the
+# server picks the table up at its next restart. With more RAM than the
+# Parquet file the text columns share one .sym file, otherwise each gets its
+# own compressed symbol file.
+set -e
+
+rm -rf hits
+
+mem=$(awk '/^MemTotal:/ { print $2 * 1024 }' /proc/meminfo)
+if [ "$mem" -gt "$(stat -L -c %s hits.parquet)" ]; then
+    export HITS_SYMFILE=shared
+else
+    export HITS_SYMFILE=column
+fi
+echo "MemTotal $mem bytes: $HITS_SYMFILE symbol file"
+
+rayforce load.rfl
+
+rm -f hits.parquet
+sync

@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+# Idempotent: do nothing if it is already running.
+if pidof victoria-logs-prod >/dev/null; then
+    exit 0
+fi
+
+# The same flags as in the original JSONBench. The data is in
+# ./victoria-logs-data (the default -storageDataPath).
+nohup ./victoria-logs-prod -loggerOutput=stdout -retentionPeriod=20y -search.maxQueryDuration=5m > server.log 2>&1 &
+disown

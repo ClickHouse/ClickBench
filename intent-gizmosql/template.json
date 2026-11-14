@@ -1,0 +1,12 @@
+{
+  "system": "intent-gizmosql",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "yes",
+  "category": "joke",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "DuckDB derivative"
+  ]
+}

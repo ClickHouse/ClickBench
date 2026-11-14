@@ -3,9 +3,9 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "enthusiast",
   "tags": [
     "Java",
-    "search",
-    "lukewarm-cold-run"
+    "search"
   ]
 }

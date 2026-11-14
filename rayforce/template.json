@@ -1,0 +1,12 @@
+{
+  "system": "Rayforce",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "C",
+    "column-oriented",
+    "embedded"
+  ]
+}

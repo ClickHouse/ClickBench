@@ -1,0 +1,11 @@
+{
+  "system": "Pinot (with star-tree index)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "yes",
+  "category": "challenger",
+  "tags": [
+    "Java",
+    "column-oriented"
+  ]
+}

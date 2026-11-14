@@ -1,0 +1,13 @@
+{
+  "system": "SlateDB",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "Rust",
+    "key-value",
+    "row-oriented",
+    "embedded"
+  ]
+}

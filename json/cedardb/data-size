@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+source ./env.sh
+
+${PSQL} -t -A -c "SELECT pg_total_relation_size('bluesky')"

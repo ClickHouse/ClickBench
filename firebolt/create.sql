@@ -111,7 +111,7 @@ CREATE EXTERNAL TABLE hits_external
     "CLID" INTEGER NOT NULL
 )
 URL = 'file:///firebolt-core/clickbench'
-OBJECT_PATTERN = 'hits.parquet'
+OBJECT_PATTERN = 'hits_*.parquet'
 TYPE = PARQUET;
 
 CREATE TABLE hits

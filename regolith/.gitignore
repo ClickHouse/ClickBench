@@ -1,0 +1,4 @@
+hits-regolith/target/
+db/
+rust-init.sh
+run-logs/

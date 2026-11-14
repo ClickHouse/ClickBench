@@ -1,0 +1,57 @@
+#!/bin/bash
+# Run SQL from stdin through Kylin's REST API.
+# Stdout: raw JSON response. Last stderr line on success: runtime in seconds.
+# Exit nonzero on HTTP or response-body errors.
+set -e
+
+query=$(cat)
+
+KYLIN_TOKEN=$(printf 'ADMIN:KYLIN' | base64)
+REQUEST_AUTH_HEADER_NAME=Authorization
+HTTP_AUTH_SCHEME=Basic
+
+req=$(python3 -c '
+import json, sys
+q = sys.stdin.read()
+print(json.dumps({"sql": q, "project": "clickbench", "acceptPartial": False}))
+' <<< "$query")
+
+tmp_body=$(mktemp)
+trap 'rm -f "$tmp_body"' EXIT
+
+status_line=$(curl -s -o "$tmp_body" \
+    -w '%{http_code} %{time_total}\n' \
+    -X POST -H "${REQUEST_AUTH_HEADER_NAME}: ${HTTP_AUTH_SCHEME} ${KYLIN_TOKEN}" \
+    -H 'Content-Type: application/json' \
+    http://localhost:7070/kylin/api/query \
+    --data-binary "$req")
+
+http_code=$(echo "$status_line" | awk '{print $1}')
+time_total=$(echo "$status_line" | awk '{print $2}')
+
+cat "$tmp_body"
+
+if [ "$http_code" != "200" ]; then
+    echo "kylin query failed: HTTP $http_code" >&2
+    cat "$tmp_body" >&2
+    exit 1
+fi
+
+# HTTP 200 can still carry isException:true; see README.md.
+is_exception=$(python3 -c '
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    if not isinstance(d, dict) or "isException" not in d:
+        print("true")
+    else:
+        print("true" if d.get("isException") else "false")
+except Exception:
+    print("true")
+' "$tmp_body")
+if [ "$is_exception" = "true" ]; then
+    echo "kylin query returned isException:true" >&2
+    exit 1
+fi
+
+printf '%s\n' "$time_total" >&2

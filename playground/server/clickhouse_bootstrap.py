@@ -1,0 +1,215 @@
+"""ClickHouse bootstrap: schema + writer/reader users.
+
+Runs on server startup using the default-user credentials supplied in
+<state_dir>/clickhouse.conf (or env vars). Idempotent:
+
+* Schema DDL (DB + tables + parameterized view) lives in the sibling
+  clickhouse-bootstrap.sql file — that file is the canonical source
+  of truth for the request/event tables and the request_by_id view.
+* The two human users are created here in Python because CREATE USER
+  doesn't accept HTTP query parameters for the password / host clauses
+  and rotating those at bootstrap time is convenient.
+
+Generated credentials persist to <state_dir>/clickhouse-credentials.json
+so the writer/reader users keep the same password across restarts; if
+the file is missing, fresh random passwords are generated and the
+users' passwords are reset to match.
+"""
+from __future__ import annotations
+
+import contextlib
+import json
+import logging
+import secrets
+from pathlib import Path
+from typing import NamedTuple
+from urllib.parse import urlencode
+
+import aiohttp
+
+from .config import Config
+
+log = logging.getLogger("clickhouse_bootstrap")
+
+_SQL_FILE = Path(__file__).parent / "clickhouse-bootstrap.sql"
+
+
+class Credentials(NamedTuple):
+    url: str
+    db: str
+    writer_user: str
+    writer_password: str
+    # The reader's password is *always* empty — the user is created
+    # in CH with sha256_hash(""), and clients just pass their name
+    # with no password — so we don't keep it as a field.
+    reader_user: str
+
+
+def _gen_pw(n: int = 32) -> str:
+    # URL-safe random string with at least one digit + one special char
+    # (CH Cloud's password policy requires both).
+    body = secrets.token_urlsafe(n)
+    return body + "!1"
+
+
+# SHA-256 of the empty string. Lets us tell ClickHouse "no password"
+# in a form the server understands (it stores sha256_hash users) while
+# the operator-facing identity is plainly empty.
+_SHA256_EMPTY = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+
+def _credentials_path(cfg: Config) -> Path:
+    return cfg.state_dir / "clickhouse-credentials.json"
+
+
+def _load_or_make_credentials(cfg: Config) -> str:
+    """Return the writer's password. Persist on first run.
+
+    The reader has no password — it's an unauthenticated public identity
+    that can only SELECT from the parameterized request_by_id view —
+    so we don't manage one here.
+    """
+    path = _credentials_path(cfg)
+    if path.exists():
+        with contextlib.suppress(Exception):
+            data = json.loads(path.read_text())
+            return data["writer_password"]
+    creds = {"writer_password": _gen_pw()}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(creds, indent=2))
+    path.chmod(0o600)
+    return creds["writer_password"]
+
+
+async def _ch_exec(session: aiohttp.ClientSession,
+                   url: str, user: str, password: str,
+                   sql: str, params: dict[str, str] | None = None) -> str:
+    """Run `sql` via HTTP and return the response body. Raises on
+    non-2xx."""
+    qs = {f"param_{k}": v for k, v in (params or {}).items()}
+    full = url + ("?" + urlencode(qs) if qs else "")
+    async with session.post(
+        full, data=sql,
+        auth=aiohttp.BasicAuth(user, password),
+        timeout=aiohttp.ClientTimeout(total=60),
+    ) as r:
+        body = await r.text()
+        if r.status >= 300:
+            raise RuntimeError(f"CH bootstrap {r.status}: {body[:500]} (sql={sql[:200]})")
+        return body
+
+
+async def bootstrap(cfg: Config) -> Credentials | None:
+    """Run the bootstrap. Returns the credentials the runtime should
+    use for the writer (logging sink) and the reader (saved-query
+    lookups). Returns None if the bootstrap config isn't present
+    (CH integration disabled)."""
+    if not (cfg.ch_cloud_url and cfg.ch_cloud_user and cfg.ch_cloud_password):
+        return None
+    db = cfg.ch_cloud_db or "playground"
+    writer_pw = _load_or_make_credentials(cfg)
+    async with aiohttp.ClientSession() as session:
+        # The writer user is host-pinned to our public IP. Resolve it
+        # via api.ipify.org rather than asking CH (its various
+        # client-address functions vary by interface and version).
+        try:
+            async with session.get(
+                "https://api.ipify.org",
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as r:
+                writer_host = (await r.text()).strip()
+        except Exception:
+            writer_host = "0.0.0.0"  # fallback: no IP restriction
+        log.info("writer host (public IP) = %s", writer_host)
+
+        # Schema DDL from the .sql file. We substitute {db:Identifier}
+        # in Python rather than via HTTP params because the CREATE VIEW
+        # body contains a *view-time* parameter ({q_id:UInt64}) and
+        # ClickHouse skips HTTP param substitution for DDL when there
+        # are unbound placeholders — the result is the VIEW DDL going
+        # out with literal `{db:Identifier}` and the parser barking
+        # "Database `` does not exist". Python substitution is fine
+        # because the db name is our own (no SQL-injection vector).
+        sql_blob = _SQL_FILE.read_text().replace("{db:Identifier}", db)
+        statements = _split_sql_statements(sql_blob)
+        for stmt in statements:
+            await _ch_exec(
+                session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
+                stmt,
+            )
+
+        # Users — passwords + host clause go inline; ALTER on every
+        # bootstrap rotates / re-pins them.
+        await _ch_exec(
+            session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
+            f"CREATE USER IF NOT EXISTS playground_writer "
+            f"IDENTIFIED WITH sha256_password BY '{writer_pw}' "
+            f"HOST IP '{writer_host}'",
+        )
+        await _ch_exec(
+            session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
+            f"ALTER USER playground_writer "
+            f"IDENTIFIED WITH sha256_password BY '{writer_pw}' "
+            f"HOST IP '{writer_host}'",
+        )
+        # Strict scope: revoke everything then re-grant only INSERT.
+        await _ch_exec(
+            session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
+            f"REVOKE ALL ON *.* FROM playground_writer",
+        )
+        await _ch_exec(
+            session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
+            f"GRANT INSERT ON {db}.requests TO playground_writer",
+        )
+        await _ch_exec(
+            session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
+            f"GRANT INSERT ON {db}.events TO playground_writer",
+        )
+
+        # Reader: public, no password — SELECT-only on the parameterized
+        # view, with tight resource caps. The empty password is
+        # expressed as sha256_hash of the empty string so CH stores it
+        # in the same shape as any other sha256 user but the
+        # operator-facing identity is plainly "no password".
+        await _ch_exec(
+            session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
+            f"CREATE USER IF NOT EXISTS playground_reader "
+            f"IDENTIFIED WITH sha256_hash BY '{_SHA256_EMPTY}' "
+            f"DEFAULT DATABASE {db} "
+            f"SETTINGS readonly = 2, "
+            f"max_execution_time = 5, "
+            f"max_memory_usage = 100000000, "
+            f"max_result_rows = 1, "
+            f"max_rows_to_read = 1048576, "
+            f"max_threads = 2",
+        )
+        await _ch_exec(
+            session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
+            f"ALTER USER playground_reader "
+            f"IDENTIFIED WITH sha256_hash BY '{_SHA256_EMPTY}'",
+        )
+        await _ch_exec(
+            session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
+            f"REVOKE ALL ON *.* FROM playground_reader",
+        )
+        await _ch_exec(
+            session, cfg.ch_cloud_url, cfg.ch_cloud_user, cfg.ch_cloud_password,
+            f"GRANT SELECT ON {db}.request_by_id TO playground_reader",
+        )
+
+    log.info("ClickHouse bootstrap complete (writer host=%s)", writer_host)
+    return Credentials(
+        url=cfg.ch_cloud_url, db=db,
+        writer_user="playground_writer", writer_password=writer_pw,
+        reader_user="playground_reader",
+    )
+
+
+def _split_sql_statements(blob: str) -> list[str]:
+    """Strip --line comments, split on top-level `;`. Naive — fine for
+    the bootstrap file which has no string literals or nested blocks."""
+    stripped = "\n".join(
+        line for line in blob.splitlines()
+        if not line.lstrip().startswith("--")
+    )
+    return [s.strip() for s in stripped.split(";") if s.strip()]

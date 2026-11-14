@@ -1,0 +1,11 @@
+#!/bin/bash
+# Launch the long-lived query server and nothing else: no warm-up query, no
+# touching the dataset. ./check is the readiness signal.
+set -e
+
+if [ -f server.pid ] && kill -0 "$(cat server.pid)" 2>/dev/null; then
+    exit 0
+fi
+
+nohup "$HOME/opteryx_venv/bin/python" server.py >>server.log 2>&1 &
+echo $! > server.pid

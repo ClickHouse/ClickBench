@@ -9,7 +9,7 @@
     "tuned": "no",
     "comment": "",
 
-    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "aws"],
+    "tags": ["C++", "column-oriented", "ClickHouse derivative", "managed", "aws", "no-cold"],
 
     "load_time": 97.946,
     "data_size": 10254813213,

@@ -1,0 +1,34 @@
+#!/bin/bash
+set -e
+
+# Idempotent: start from an empty data directory.
+./stop
+rm -rf greptimedb_data
+./start
+for i in $(seq 1 300); do
+    ./check >/dev/null 2>&1 && break
+    [ "$i" -eq 300 ] && { echo "load: GreptimeDB did not start" >&2; exit 1; }
+    sleep 1
+done
+
+# The pipeline (the same as in the original JSONBench) extracts the fields
+# and creates the table on the first insert.
+curl -sS --fail -X POST http://localhost:4000/v1/pipelines/jsonbench -F 'file=@pipeline.yaml'
+echo
+
+# One request per file, sent compressed, as in the original. ignore_errors
+# skips the lines that are not valid JSON (a few documents longer than 64 KiB
+# are split into two lines in the dataset); skip_error makes a row that fails
+# in the pipeline skip just this row rather than fail the whole file.
+for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+    echo "load: ${file}"
+    curl -sS --fail \
+        "http://localhost:4000/v1/ingest?db=public&table=bluesky&pipeline_name=jsonbench&ignore_errors=true&skip_error=true" \
+        -H "Content-Type: application/x-ndjson" \
+        -H "Content-Encoding: gzip" \
+        --data-binary "@${file}"
+    echo
+done
+
+curl -sS --fail http://localhost:4000/v1/sql --data-urlencode "sql=admin flush_table('bluesky')"
+echo

@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+# axiom_sql is an embedded CLI, so "ready" just means the binary runs a trivial
+# query. It exits 0 even when a statement fails, so look at the output instead
+# of the exit code. No --data_path here: this has to work before ./load, and
+# SELECT 1 needs no table.
+out=$(axiom/_build/release/axiom/cli/axiom_sql --query "SELECT 1" 2>&1)
+case "$out" in
+    *"Query failed"*) printf '%s\n' "$out" >&2; exit 1 ;;
+esac

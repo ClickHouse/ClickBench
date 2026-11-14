@@ -1,0 +1,7 @@
+#!/bin/bash
+# The size of the index on disk (primary store, there are no replicas).
+set -e -o pipefail
+
+. ./os-common.sh
+
+os_curl "${OS_URL}/${OS_INDEX}/_stats/store" | jq -r '._all.total.store.size_in_bytes'

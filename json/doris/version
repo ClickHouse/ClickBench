@@ -1,0 +1,6 @@
+#!/bin/bash
+# Prints e.g. doris-4.1.5-rc03-0123456789, the format of the original results.
+set -e
+source ./env.sh
+
+doris_mysql -N -B -e "SELECT @@version_comment" | sed -E 's/^[Dd]oris version //'

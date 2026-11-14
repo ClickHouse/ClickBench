@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# `du` counts blocks actually allocated to the LMDB store, which is the
+# number we want. ArcticDB's own accounting,
+# lib.admin_tools().get_sizes_for_symbol("hits"), lands within a couple of
+# percent of this; the difference is LMDB's B-tree overhead, which belongs
+# in the reported figure. Works whether or not the server is running.
+du -s --block-size=1 store | cut -f1

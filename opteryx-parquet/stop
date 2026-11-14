@@ -1,0 +1,12 @@
+#!/bin/bash
+# The driver waits for ./check to fail after this, so the process must be gone,
+# not just signalled.
+if [ -f server.pid ]; then
+    pid=$(cat server.pid)
+    kill "$pid" 2>/dev/null || true
+    while kill -0 "$pid" 2>/dev/null; do
+        sleep 0.1
+    done
+    rm -f server.pid
+fi
+exit 0

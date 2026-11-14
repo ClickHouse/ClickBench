@@ -1,0 +1,3 @@
+#!/bin/bash
+# Embedded: nothing to start.
+exit 0

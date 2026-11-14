@@ -1,0 +1,32 @@
+#!/bin/bash
+# Reads one SQL statement from stdin and runs it against ravel-server.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error, which the driver records as `null`.
+set -e
+. ./ravel-env.sh
+
+query=$(cat)
+
+# The SQL endpoint's `start`/`end` default to the last hour. ClickBench's hits
+# rows carry 2013 EventTime values, so every query has to state a window that
+# spans the whole dataset or it would legitimately match nothing.
+body=$(jq -n --arg q "$query" '{query: $q, start: 0, end: 4102444800, timeout: 3600}')
+
+t1=$(date +%s%3N)
+out=$(curl -sS --fail-with-body -X POST \
+    -H 'Content-Type: application/json' \
+    -H "x-ravel-tenant: $RAVEL_TENANT" \
+    --data-binary "$body" \
+    "http://${RAVEL_HTTP}/api/v1/sql") && exit_code=0 || exit_code=$?
+t2=$(date +%s%3N)
+
+if [ "$exit_code" -ne 0 ]; then
+    printf '%s\n' "$out" >&2
+    exit "$exit_code"
+fi
+
+printf '%s\n' "$out"
+
+duration=$((t2 - t1))
+awk -v d="$duration" 'BEGIN { printf "%.3f\n", d / 1000 }' >&2

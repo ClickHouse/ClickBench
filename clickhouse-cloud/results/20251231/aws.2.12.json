@@ -12,7 +12,8 @@
         "column-oriented",
         "ClickHouse derivative",
         "managed",
-        "aws"
+        "aws",
+        "no-cold"
     ],
     "load_time": 184,
     "data_size": 9946445455,

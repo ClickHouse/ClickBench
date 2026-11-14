@@ -1,0 +1,8 @@
+{
+  "system": "CtrlB (Parquet, single)",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "enthusiast",
+  "tags": ["Rust", "column-oriented", "stateless"]
+}

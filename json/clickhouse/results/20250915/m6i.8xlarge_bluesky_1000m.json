@@ -1,0 +1,22 @@
+{
+  "system": "ClickHouse",
+  "version": "25.9.1.1913",
+  "os": "Ubuntu 24.04",
+  "date": "2025-09-15",
+  "machine": "m6i.8xlarge",
+  "retains_structure": "yes",
+  "tags": [
+  ],
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 999999258,
+  "total_size": 99560268152,
+  "data_size": 99068986216,
+  "index_size": 491281201,
+  "result": [
+      [0.457, 0.444, 0.396],
+      [19.340, 5.543, 5.771],
+      [30.254, 2.869, 2.937],
+      [7.953, 1.001, 1.006],
+      [8.058, 1.086, 1.093]
+  ]
+}

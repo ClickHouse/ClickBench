@@ -1,0 +1,15 @@
+#!/bin/bash
+# Stop the infino server. Wait for the process to actually exit so the
+# drop_caches the driver runs next (while the server is down) is effective:
+# a still-running server pins its mmapped superfiles in the page cache.
+if [ -f infino.pid ]; then
+    pid=$(cat infino.pid)
+    kill "$pid" 2>/dev/null || true
+    for _ in $(seq 1 120); do
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.25
+    done
+    rm -f infino.pid
+fi
+rm -f infino.sock
+exit 0

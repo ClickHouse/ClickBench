@@ -42,6 +42,12 @@ in its own container — from `1.1.54xxx` (2018) to today — with no host insta
    - `job_*.native` — Join Order Benchmark, 21 tables (a snapshot of IMDB) from
      the canonical CSV dump.
    - `taxi.native` — NYC `trips` (narrowed to the 5 columns its queries use).
+   - `bluesky/file_*.json.gz` — [JSONBench](../json/): the Bluesky dataset, 100
+     files of a million JSON documents each, downloaded as is (not converted to
+     Native). They load whole into a `JSON` column (`INSERT ... FORMAT
+     JSONAsObject`, one INSERT per file as in JSONBench, skipping the few documents
+     that are not valid JSON). A single INSERT of all 100 files runs out of memory
+     on 26.8 and 26.9 (memory accumulates over one long INSERT there).
 
    Type downgrades: `LowCardinality`→`String`, `IPv4`→`String`,
    `DateTime64`→`DateTime`, enums→`String`, TPC-H/TPC-DS `Decimal`→`Float64`
@@ -56,13 +62,17 @@ in its own container — from `1.1.54xxx` (2018) to today — with no host insta
    earliest `1.1.x` (before custom partitioning, < `1.1.54310`) use the legacy
    positional `ENGINE = MergeTree(date, (key), 8192)`. Column lists live in
    `create/schema/*.columns` (dataset-qualified, e.g. `tpcds_customer.columns`,
-   where a table name is shared across datasets).
+   where a table name is shared across datasets). The JSONBench table `bluesky`
+   is written out in `create.sh` itself: a `JSON` column with the typed paths of
+   JSONBench, sorted by them from 24.12 (earlier versions reject a JSON subcolumn
+   in `ORDER BY`, so 24.8 .. 24.11 get `ORDER BY tuple()`); before 25.3 the
+   runner creates it with `allow_experimental_json_type`.
 
 4. **`run-version.sh <version> [image]`** — starts the server, creates each
    dataset's tables **in its own database** (so same-named tables like TPC-H and
    TPC-DS `customer` don't collide), loads each Native file with the simplest
    possible `clickhouse-client INSERT … FORMAT Native`, then times every query in
-   `queries/{mgbench,ssb,hits,tpch,tpcds,coffeeshop,taxi}.sql` (`TRIES` runs each,
+   `queries/{mgbench,ssb,hits,tpch,tpcds,coffeeshop,taxi,...,jsonbench}.sql` (`TRIES` runs each,
    dropping the page cache between queries) and writes `results/<version>.json`.
 
 5. **`run-all.sh`** — runs `run-version.sh` for every selected version.
@@ -123,20 +133,60 @@ retry). The VM installs Docker, downloads the prepared Native files from
 image from source if the version has none (`clickhouse-built:*`, using the tag +
 GCC from `build-from-source/versions.txt`), runs `run-version.sh`, and POSTs the
 result JSON (enriched with the machine type, `kind:"versions-benchmark"`) plus
-the log to `sink.data` on play.clickhouse.com. A server-side materialized view
-turns those into the published report, exactly as the main benchmark does.
+the log to `sink.data` on play.clickhouse.com. Unlike the main benchmark, there
+is no materialized view here: the whole result is one row of `sink.data`, and
+`fetch-results.sh` reads it back out of those rows (see below).
+
+The same thing on demand from GitHub: the **Run the versions benchmark**
+workflow (`.github/workflows/versions-benchmark.yml`, `workflow_dispatch`) takes
+the versions (exact, a prefix, or `master`), the machine types, and optionally
+the datasets / tries / timeout / repository / branch, and launches one machine
+per (version, machine type) with `run-benchmark.sh`. Its defaults for the
+repository and branch are the ones the workflow was dispatched from, so a branch
+can be tested without merging it first.
 
 Notes: all datasets run by default (`datasets="hits ssb mgbench tpch tpcds
-coffeeshop taxi"`); the taxi table is narrowed to the five columns its queries
+coffeeshop ontime uk job taxi jsonbench"`; the versions before 24.8, which have no
+`JSON` type, don't download jsonbench); the taxi table is narrowed to the five columns its queries
 use (~15 GB), so it no longer dominates. Pass a subset via `datasets=` to skip
 some. While this branch is unmerged, pass `branch=versions-benchmark-rework`.
 Missing dataset files in the bucket are skipped (their queries report null).
 
+## Collecting the results
+
+`fetch-results.sh` reads the results back from the sink — for each version the
+latest complete run (`argMax(content, time)` over the `kind: versions-benchmark`
+rows) — adds the release date, drops incomplete loads, and writes
+`results/<version>.json`; `apply-minvers.py` then normalises every file to the
+current `queries/*.minver`. The committed result files are produced solely by
+this script; don't edit them by hand.
+
+```bash
+CONNECTION_PARAMS='--user clickbench --password *** --host play.clickhouse.com --secure' \
+    ./fetch-results.sh              # every version; rebuilds results/ from scratch
+SINCE_HOURS=24 ... ./fetch-results.sh   # only what arrived in the last 24 hours
+./generate-results.sh               # rebuild data.generated.js for the page
+```
+
+This runs by itself: the **Collect versions benchmark results** workflow
+(`.github/workflows/versions-collect-results.yml`) calls
+`collect-new-results.sh` every hour, which fetches the last day's results,
+rebuilds `data.generated.js` when they changed, and commits both as an
+automated, auto-merged pull request (branch `auto-results/versions`). Runs that
+sent a log but no complete result — still running, crashed, or an incomplete
+load — are listed in the job summary. Dispatch it manually with `full: true` to
+refetch every version (it refuses to publish if that loses more than a tenth of
+the result files, which would mean a broken query rather than lost results).
+
 ## Query set
 
-344 queries in a fixed order: mgbench (15) + Star Schema Benchmark (13) +
+349 queries in a fixed order: mgbench (15) + Star Schema Benchmark (13) +
 ClickBench/hits (43) + TPC-H (22) + TPC-DS (103) + Coffee Shop (17) + ontime (11)
-+ UK price-paid (3) + Join Order Benchmark (113) + taxi (4). See `queries/*.sql`.
++ UK price-paid (3) + Join Order Benchmark (113) + taxi (4) + JSONBench (5). See `queries/*.sql`.
+A new dataset is appended at the end of the order, so the results of earlier runs
+stay valid: `apply-minvers.py` pads them with nulls for its queries (the runs made
+before JSONBench was added have 344 results).
+JSONBench's queries are the ones of the ClickHouse entry of [JSONBench](../json/clickhouse/queries.sql).
 The TPC-H, TPC-DS and JOB queries are the official sets taken
 from the ClickHouse repository (`tests/benchmarks/tpc-{h,ds}/queries`), flattened
 to one line each (TPC-H Q15 is rewritten from its `CREATE VIEW` form into a single
