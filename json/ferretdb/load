@@ -1,0 +1,27 @@
+#!/bin/bash
+# The same as ../mongodb/load: the collection and the index from ../mongodb/ddl.js
+# (FerretDB ignores the WiredTiger compression option there), then one
+# mongoimport per file with the invalid lines of the dataset dropped.
+set -e -o pipefail
+
+mongosh --quiet bluesky --eval 'db.dropDatabase()' >/dev/null
+mongosh --quiet bluesky --file ddl.js
+
+# Permissive, as in the original JSONBench: a file that fails anyway is skipped (the
+# documents that were loaded are reported as the data quality), and the load fails
+# only if nothing was loaded.
+loaded=0
+for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+    echo "load: ${file}" >&2
+    if gzip -dc "${file}" \
+        | python3 -I ../lib/filter-documents.py \
+        | mongoimport --db bluesky --collection bluesky; then
+        loaded=$((loaded + 1))
+    else
+        echo "load: failed to load ${file}, skipped" >&2
+    fi
+done
+if [ "${loaded}" -eq 0 ]; then
+    echo "load: no file was loaded" >&2
+    exit 1
+fi

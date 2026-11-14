@@ -1,0 +1,25 @@
+{
+  "system": "ClickHouse",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative"
+  ],
+  "version": "26.10.3.7",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-09",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 999999258,
+  "load_time": 5334.081,
+  "total_size": 196427148705,
+  "result": [
+    [0.661, 0.588, 0.578],
+    [7.494, 6.999, 7.015],
+    [3.759, 2.519, 2.52],
+    [1.185, 0.797, 0.792],
+    [1.211, 0.88, 0.853]
+  ]
+}

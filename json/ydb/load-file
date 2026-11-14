@@ -1,0 +1,36 @@
+#!/bin/bash
+# Usage: load-file <path to file_NNNN.json.gz>
+set -e -o pipefail
+
+cd "$(dirname "$0")"
+source ./env.sh
+
+file="$1"
+number=$(basename "${file}" .json.gz)
+number=$((10#${number#file_}))
+csv="csv/file_${number}.csv"
+
+gzip -dc "${file}" | python3 -I to-csv.py "${number}" > "${csv}"
+
+# BulkUpsert in batches with the default settings, from the CSV that has no
+# line breaks inside the values. One import at a time: each one already writes
+# with as many threads as there are CPUs, and four at once overloaded the
+# column shards of the single node ("Cannot write data (TIMEOUT) into shard"
+# at 10m and 100m). The conversion of the next files still runs in parallel.
+# A failed import is retried: the rows are upserted by their primary key
+# (file, line), so a retry overwrites the rows written by the failed attempt.
+(
+    flock 9
+    for attempt in 1 2 3 4 5; do
+        if "${YDB[@]}" import file csv --path bluesky --header --newline-delimited "${csv}"; then
+            break
+        fi
+        if [ "${attempt}" -eq 5 ]; then
+            echo "load-file: the import of ${file} failed 5 times" >&2
+            exit 1
+        fi
+        echo "load-file: the import of ${file} failed, retrying (attempt ${attempt})" >&2
+        sleep 10
+    done
+) 9> csv/.import.lock
+rm -f "${csv}"

@@ -1,0 +1,25 @@
+{
+  "system": "Spark",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Java",
+    "column-oriented",
+    "Spark derivative"
+  ],
+  "version": "4.3.0",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 999999266,
+  "load_time": 1029.587,
+  "total_size": 181747824948,
+  "result": [
+    [176.76415, 173.999539, 173.766428],
+    [195.520001, 193.003947, 192.770207],
+    [177.731446, 175.266039, 173.337798],
+    [180.463326, 178.330123, 178.661886],
+    [182.028086, 179.524906, 178.865113]
+  ]
+}

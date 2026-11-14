@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+source ./env.sh
+hg_psql "${HOLOGRES_DB}" -t -A -c "SELECT count(*) FROM bluesky"

@@ -1,0 +1,99 @@
+#!/bin/bash
+# Installs the latest release of the clp-json package (the Docker Compose
+# deployment of CLP for JSON logs, https://github.com/y-scope/clp) into
+# /clp/clp-json, and the Presto deployment of the same release
+# (tools/deployment/presto-clp of the source tree) into /clp/presto-clp.
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+sudo -E apt-get update -y
+# CLP needs Docker >= 27.0.3 and Docker Compose >= 2.28.1 (Ubuntu 24.04 has
+# 29.x and 2.40.x); the Presto set-up script needs python3-venv.
+sudo -E apt-get install -y docker.io docker-compose-v2 python3-venv curl jq wget
+sudo systemctl enable --now docker
+docker version --format '{{.Server.Version}}'
+docker compose version --short
+
+retry() {
+    local i
+    for i in $(seq 1 10); do
+        if "$@"; then
+            return 0
+        fi
+        echo "install: '$*' failed, retrying (${i}/10)" >&2
+        sleep 30
+    done
+    return 1
+}
+
+CLP_ROOT=/clp
+CLP_HOME="${CLP_ROOT}/clp-json"
+PRESTO_DIR="${CLP_ROOT}/presto-clp"
+
+if [ ! -f "${CLP_HOME}/VERSION" ]; then
+    TAG=$(curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors \
+        https://api.github.com/repos/y-scope/clp/releases/latest | jq -r .tag_name)
+    [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "install: unexpected CLP release tag '${TAG}'" >&2; exit 1; }
+    echo "install: CLP ${TAG}"
+
+    TMP=$(mktemp -d /var/tmp/clp-install.XXXXXX)
+    retry curl -fsSL -o "${TMP}/clp-json.tar.gz" \
+        "https://github.com/y-scope/clp/releases/download/${TAG}/clp-json-${TAG}.tar.gz"
+    retry curl -fsSL -o "${TMP}/clp-src.tar.gz" \
+        "https://github.com/y-scope/clp/archive/refs/tags/${TAG}.tar.gz"
+
+    sudo mkdir -p "${CLP_ROOT}"
+    sudo rm -rf "${CLP_HOME}" "${PRESTO_DIR}"
+    sudo mkdir -p "${CLP_HOME}" "${PRESTO_DIR}"
+    sudo tar -xzf "${TMP}/clp-json.tar.gz" -C "${CLP_HOME}" --strip-components=1
+    sudo tar -xzf "${TMP}/clp-src.tar.gz" -C "${PRESTO_DIR}" --strip-components=4 \
+        "clp-${TAG#v}/tools/deployment/presto-clp"
+    rm -rf "${TMP}"
+
+    # The only change to the package config: no usage telemetry from the
+    # benchmark machines. Everything else is the default (archives in
+    # var/data/archives, logs input from the host filesystem).
+    sudo sed -i 's/^\(\s*\)disable: false/\1disable: true/' "${CLP_HOME}/etc/clp-config.yaml"
+    grep -q 'disable: true' "${CLP_HOME}/etc/clp-config.yaml"
+
+    # The Presto coordinator of this deployment comes with a sample cluster-
+    # wide limit of 1 GB of memory per query (the worker gets a share of the
+    # RAM of the machine, computed by scripts/set-up-config.sh). The
+    # aggregations over the user ids do not fit into 1 GB at the larger
+    # dataset sizes, so the limit is set to the worker's query memory, half of
+    # the RAM, the same ratio as scripts/init.py uses for the worker. The
+    # per-node limit is the coordinator's own (it runs no query fragments,
+    # its heap is 4 GB) and stays as it is.
+    QUERY_GB=$(awk '/MemTotal/ { printf "%d", $2 / 1024 / 1024 / 2 }' /proc/meminfo)
+    sudo sed -i \
+        -e "s/^PRESTO_COORDINATOR_CONFIGPROPERTIES_QUERY_MAX_MEMORY=.*/PRESTO_COORDINATOR_CONFIGPROPERTIES_QUERY_MAX_MEMORY=${QUERY_GB}GB/" \
+        "${PRESTO_DIR}/coordinator.env"
+    cat "${PRESTO_DIR}/coordinator.env"
+fi
+
+# Pull the images in advance, with retries: ./start (and docker compose
+# there) would otherwise pull them on the first start.
+VERSION=$(tr -d '[:space:]' < "${CLP_HOME}/VERSION")
+retry sudo docker pull "ghcr.io/y-scope/clp/clp-package:${VERSION}"
+# shellcheck disable=SC2013
+for image in $(grep -ho '^\s*image: "[^"]*"' "${CLP_HOME}/docker-compose-all.yaml" | cut -d'"' -f2 \
+        | sed 's/^\${[A-Z_]*:-\(.*\)}$/\1/' | grep -v '^\$\|^clp-package$' | sort -u); do
+    retry sudo docker pull "${image}"
+done
+# shellcheck disable=SC2013
+for image in $(sed -n 's/.*\(ghcr\.io\/y-scope\/presto\/[a-z-]*\):\${[A-Z_]*:-\([^}]*\)}.*/\1:\2/p' "${PRESTO_DIR}/docker-compose.yaml"); do
+    retry sudo docker pull "${image}"
+done
+
+# The package's results cache (MongoDB, used by its own search UI, not by
+# Presto) is MongoDB 8.0, which refuses to start on Linux 6.19 and newer
+# (https://jira.mongodb.org/browse/SERVER-121912), and the kernel of the
+# benchmark machines is 7.0. MongoDB 7.0 does not have this check: it is put
+# under the image name that the package uses.
+MONGO_IMAGE=$(grep -ho '^\s*image: "mongo:[^"]*"' "${CLP_HOME}/docker-compose-all.yaml" | cut -d'"' -f2)
+if [ -n "${MONGO_IMAGE}" ] && [ "${MONGO_IMAGE}" != "mongo:7.0" ]; then
+    retry sudo docker pull mongo:7.0
+    sudo docker tag mongo:7.0 "${MONGO_IMAGE}"
+fi
+
+cat "${CLP_HOME}/VERSION"

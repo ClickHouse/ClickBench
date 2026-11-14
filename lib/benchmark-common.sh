@@ -70,6 +70,14 @@
 #                          (the per-connection permutation is derived
 #                          deterministically from this seed + the
 #                          connection index). Default "clickbench".
+#   BENCH_STARTUP_TRIES    Number of cold startups measured after the load.
+#                          Default 3, the median is reported. 0 skips the
+#                          measurement (emits null).
+#   BENCH_STARTUP_QUERY    The trivial query that an embedded
+#                          (BENCH_RESTARTABLE=no) system runs through
+#                          ./query to measure its startup. Default
+#                          "SELECT 1". Systems whose query language is not
+#                          SQL set their equivalent. See bench_startup_time.
 
 set -e
 
@@ -91,6 +99,8 @@ export HOME="${HOME:-/root}"
 : "${BENCH_CONCURRENT_CONNECTIONS:=10}"
 : "${BENCH_CONCURRENT_DURATION:=600}"
 : "${BENCH_CONCURRENT_SEED:=clickbench}"
+: "${BENCH_STARTUP_TRIES:=3}"
+: "${BENCH_STARTUP_QUERY:=SELECT 1}"
 
 # Resolve the directory containing this script so we can find sibling
 # helpers (download-hits-*).
@@ -372,6 +382,160 @@ bench_run_query() {
     echo "$out"
 }
 
+# The current time in microseconds since the epoch, in BENCH_NOW_US. Called
+# without a command substitution, it does not fork: EPOCHREALTIME is kept by
+# bash itself (5.0+), so the timestamps around a measured command cost
+# microseconds. Its decimal separator follows the locale; drop it, whatever it
+# is.
+bench_now_us() {
+    if [ -z "${EPOCHREALTIME:-}" ]; then
+        echo "bench: EPOCHREALTIME is unset, bash 5.0+ is required" >&2
+        return 1
+    fi
+    BENCH_NOW_US="${EPOCHREALTIME//[^0-9]/}"
+}
+
+# Microseconds as seconds with three decimals.
+bench_format_us() {
+    local ms=$((($1 + 500) / 1000))
+    printf '%d.%03d' $((ms / 1000)) $((ms % 1000))
+}
+
+# One cold startup of a client-server system, from launching ./start until
+# the server answers ./check. Sets BENCH_STARTUP_US, or leaves it empty if the
+# startup could not be measured.
+#
+# ./start runs in the background while ./check is polled every 10 ms from the
+# moment it was launched, because about a third of the start scripts wait for
+# readiness themselves with a loop of `sleep 1` (or longer), which would
+# round the measurement up to their polling interval.
+#
+# ./check includes the startup of its client and the round trip of a trivial
+# query. With s_k the moment the first successful ./check was launched and
+# e_k the moment it returned, the server became ready between the connection
+# attempt of the previous ./check and that of the successful one, at about
+# s_k + (client startup) = e_k - (the duration of ./check against a running
+# server). The latter is measured right after, as the minimum of three runs,
+# and subtracted. This is an upper bound; the lower one is the same moment of
+# the previous, failed ./check, launched at s_{k-1}. The reported value is
+# the middle of the interval, with the error of at most a half of it, which
+# is a half of the duration of a failed ./check plus 5 ms. Both are printed
+# to the log; for a client that fails fast on a refused connection the error
+# is about 10 ms.
+bench_startup_server_try() {
+    BENCH_STARTUP_US=""
+
+    ./stop >/dev/null 2>&1 || true
+    bench_wait_stopped
+    if ./check >/dev/null 2>&1; then
+        echo "bench: startup: ./check still succeeds after ./stop, cannot measure the startup" >&2
+        return 0
+    fi
+    bench_flush_caches
+
+    local t0 s prev_s e deadline start_pid ready=0
+    bench_now_us; t0=$BENCH_NOW_US
+    ./start </dev/null >/dev/null 2>&1 &
+    start_pid=$!
+    deadline=$((t0 + BENCH_CHECK_TIMEOUT * 1000000))
+    prev_s=$t0
+    while :; do
+        bench_now_us; s=$BENCH_NOW_US
+        if ./check </dev/null >/dev/null 2>&1; then
+            bench_now_us; e=$BENCH_NOW_US
+            ready=1
+            break
+        fi
+        [ "$s" -ge "$deadline" ] && break
+        prev_s=$s
+        sleep 0.01
+    done
+    # ./start may still be finishing its own readiness loop or setup.
+    wait "$start_pid" || true
+
+    if [ "$ready" -eq 0 ]; then
+        echo "bench: startup: ./check did not succeed within ${BENCH_CHECK_TIMEOUT}s" >&2
+        return 0
+    fi
+
+    local i a b warm=""
+    for i in 1 2 3; do
+        bench_now_us; a=$BENCH_NOW_US
+        if ! ./check </dev/null >/dev/null 2>&1; then
+            echo "bench: startup: ./check failed right after a successful one" >&2
+            return 0
+        fi
+        bench_now_us; b=$BENCH_NOW_US
+        if [ -z "$warm" ] || [ $((b - a)) -lt "$warm" ]; then
+            warm=$((b - a))
+        fi
+    done
+
+    local gap=$((s - prev_s))
+    BENCH_STARTUP_US=$((e - t0 - warm - gap / 2))
+    [ "$BENCH_STARTUP_US" -lt 0 ] && BENCH_STARTUP_US=0
+    echo "bench: startup: ready after $(bench_format_us "$BENCH_STARTUP_US") ± $(bench_format_us $((gap / 2))) s" \
+        "(the first successful ./check returned after $(bench_format_us $((e - t0))) s," \
+        "./check takes $(bench_format_us "$warm") s on a running server)" >&2
+}
+
+# One cold startup of an embedded system: the wall-clock time of running a
+# trivial query (BENCH_STARTUP_QUERY) with ./query in a new process, after
+# dropping the caches. This is the time from the process startup to the
+# result, including opening the database. The query must succeed by the same
+# criterion as in the main run (exit code zero and a timing line). Sets
+# BENCH_STARTUP_US, or leaves it empty if the query has failed.
+bench_startup_embedded_try() {
+    BENCH_STARTUP_US=""
+    bench_flush_caches
+
+    local t0 e raw_stderr exit_code
+    bench_now_us; t0=$BENCH_NOW_US
+    raw_stderr=$(printf '%s\n' "$BENCH_STARTUP_QUERY" | ./query 2>&1 >/dev/null) && exit_code=0 || exit_code=$?
+    bench_now_us; e=$BENCH_NOW_US
+
+    if [ "$exit_code" -ne 0 ] || [ -z "$(bench_extract_timing "$raw_stderr")" ]; then
+        echo "bench: startup: the query '${BENCH_STARTUP_QUERY}' has failed:" >&2
+        printf '%s\n' "$raw_stderr" | tail -n 20 | sed 's/^/    /' >&2
+        return 0
+    fi
+    BENCH_STARTUP_US=$((e - t0))
+    echo "bench: startup: '${BENCH_STARTUP_QUERY}' took $(bench_format_us "$BENCH_STARTUP_US") s" >&2
+}
+
+# Startup time: how long a cold system takes to become ready, with the data
+# loaded. For a client-server system (BENCH_RESTARTABLE=yes), from launching
+# ./start to accepting connections and answering ./check; for an embedded one,
+# from starting a process to the result of a trivial query. Each try starts
+# from dropped caches; the median of BENCH_STARTUP_TRIES tries is reported as
+# "Startup time: <seconds>", or "Startup time: null" if any try failed.
+#
+# Leaves a client-server system running.
+bench_startup_time() {
+    if [ "$BENCH_STARTUP_TRIES" -le 0 ]; then
+        echo "Startup time: null"
+        return 0
+    fi
+
+    local i values=()
+    for i in $(seq 1 "$BENCH_STARTUP_TRIES"); do
+        if [ "$BENCH_RESTARTABLE" = "yes" ]; then
+            bench_startup_server_try
+        else
+            bench_startup_embedded_try
+        fi
+        if [ -z "$BENCH_STARTUP_US" ]; then
+            echo "Startup time: null"
+            return 0
+        fi
+        values+=("$BENCH_STARTUP_US")
+    done
+
+    local sorted
+    mapfile -t sorted < <(printf '%s\n' "${values[@]}" | sort -n)
+    echo "Startup time: $(bench_format_us "${sorted[$(((${#sorted[@]} - 1) / 2))]}")"
+}
+
 # Concurrent-QPS sustained-throughput test. Runs after the cold/warm sweep
 # from a freshly-restarted server (we cold-cycle once more before counting
 # so the test doesn't inherit whatever caches the last bench_run_query
@@ -538,6 +702,11 @@ bench_main() {
     bench_download
     bench_wait_fs_init
     bench_load
+
+    # After the load, so that the startup includes opening the loaded data.
+    # Every query below starts from its own restart, so it does not matter
+    # in which state this leaves the system.
+    bench_startup_time
 
     : > result.csv
     local query_num=1

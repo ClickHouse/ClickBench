@@ -1,0 +1,13 @@
+#!/bin/bash
+# Wait until the process is gone: the driver drops the page cache next.
+if [ -f quickwit.pid ]; then
+    pid=$(cat quickwit.pid)
+    kill "$pid" 2>/dev/null || true
+    for i in $(seq 1 600); do
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.1
+    done
+    kill -9 "$pid" 2>/dev/null || true
+    rm -f quickwit.pid
+fi
+exit 0

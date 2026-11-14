@@ -1,0 +1,14 @@
+{
+  "system": "PostgreSQL",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C",
+    "row-oriented",
+    "PostgreSQL compatible"
+  ],
+  "date": "2026-11-02",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000000,
+  "error": "ERROR:  invalid byte sequence for encoding \"UTF8\": 0xc3 0x0a"
+}

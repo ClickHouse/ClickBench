@@ -1,0 +1,25 @@
+{
+  "system": "FerretDB",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Go",
+    "document",
+    "PostgreSQL derivative"
+  ],
+  "version": "2.7.0",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 100000000,
+  "num_loaded_documents": 99999968,
+  "load_time": 21429.958,
+  "total_size": 76793798656,
+  "result": [
+    [280.355, 77.752, 77.977],
+    [null, null, null],
+    [4188.663, 252.737, 252],
+    [2999.568, 125.493, 124.8],
+    [3014.553, 140.219, 139.84]
+  ]
+}

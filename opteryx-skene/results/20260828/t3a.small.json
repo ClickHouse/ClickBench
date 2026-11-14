@@ -6,7 +6,7 @@
       "proprietary": "no",
       "hardware": "cpu",
       "tuned": "no",
-      "tags": ["C++","stateless","column-oriented","embedded"],
+      "tags": ["C++","stateless","column-oriented","embedded","historical"],
       "load_time": 6452,
       "data_size": 11703394952,
       "concurrent_qps": null,

@@ -3,10 +3,10 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "challenger",
   "tags": [
     "Rust",
     "column-oriented",
-    "stateless",
     "S3"
   ]
 }

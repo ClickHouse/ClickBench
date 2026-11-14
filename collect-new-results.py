@@ -330,13 +330,14 @@ def manual_result_files(pr_number, systems, bot_paths):
 
 def preview_line(pr_number, head, rows, removals=()):
     """A line linking to the preview of the benchmark page with the results
-    of the PR (see results_preview.py): the result files the PR changes at
+    of the PR, and to the comparison with the previous results if there are
+    any (see results_preview.py): the result files the PR changes at
     its head commit, if any, and the new results. None if it failed."""
     try:
         changes = results_preview.pr_changes(pr_number, head) if pr_number and head else {}
         changes.update({result_path(r): r["output"].encode() for r in rows})
         changes.update({path: None for path in removals})
-        return results_preview.preview_line(results_preview.publish("origin/main", changes))
+        return results_preview.preview_line(results_preview.publish("origin/main", changes, head))
     except Exception as e:
         note(f"Preview of #{pr_number or 'new PR'} failed: {e}")
         return None
@@ -448,6 +449,12 @@ def process_main(system, rows):
            check=False) == "":
         note(f"{system}: no such directory in main, skipping {len(rows)} run(s)")
         return
+    # Several runs of a day (e.g. the scheduled one and a manual rerun) write
+    # the same file: only the latest one counts. Otherwise the older run differs
+    # from what main has after the newer one was merged, and every pass would
+    # commit them in turn. Rows come ordered by time.
+    latest = {result_path(r): r for r in rows if r["good"]}
+    rows = [r for r in rows if not r["good"] or latest[result_path(r)] is r]
     # A result identical to what main already has was posted and merged before.
     rows = [r for r in rows
             if not (r["good"] and file_in_main(result_path(r)) == r["output"])]

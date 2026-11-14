@@ -1,0 +1,10 @@
+{
+  "system": "Spark",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Java",
+    "column-oriented",
+    "Spark derivative"
+  ]
+}

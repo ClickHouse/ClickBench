@@ -1,0 +1,30 @@
+#!/bin/bash
+set -e
+source ./env.sh
+
+if ./check >/dev/null 2>&1; then
+    exit 0
+fi
+
+ulimit -n 655350
+
+# start_*.sh exit with an error when the process is already running; the
+# readiness checks below are what matters.
+"$STARROCKS_HOME"/fe/bin/start_fe.sh --daemon || true
+"$STARROCKS_HOME"/be/bin/start_be.sh --daemon || true
+
+for _ in $(seq 1 300); do
+    sr_mysql -e 'SELECT 1' >/dev/null 2>&1 && break
+    sleep 1
+done
+
+# Register the BE on the first start; it fails with "already exists" later.
+sr_mysql -e "ALTER SYSTEM ADD BACKEND '127.0.0.1:9050'" >/dev/null 2>&1 || true
+
+for _ in $(seq 1 300); do
+    sr_backend_alive && exit 0
+    sleep 1
+done
+echo "starrocks: the BE did not become alive" >&2
+sr_mysql -e 'SHOW BACKENDS\G' >&2 || true
+exit 1

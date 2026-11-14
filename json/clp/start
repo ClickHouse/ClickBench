@@ -1,0 +1,33 @@
+#!/bin/bash
+# Starts the CLP package (its database holds the archive metadata that Presto
+# reads) and the Presto cluster (a coordinator and a Prestissimo worker with
+# the CLP connector, reading the archives directly).
+set -e
+
+# The driver discards the output of ./start; ./check shows the end of it.
+exec > >(tee -a /var/tmp/clp-start.log) 2>&1
+
+CLP_HOME=/clp/clp-json
+PRESTO_DIR=/clp/presto-clp
+
+cd "${CLP_HOME}"
+# `docker compose up --wait` inside: a no-op when it is already running.
+if ! sbin/start-clp.sh; then
+    echo "start: CLP failed to start; the containers that are not healthy:"
+    docker ps -a --format '{{.Names}}\t{{.Status}}'
+    for c in $(docker ps -a --format '{{.Names}}\t{{.Status}}' | grep -v '(healthy)\|Exited (0)' | cut -f1); do
+        echo "--- docker logs ${c}:"
+        docker logs --tail 20 "${c}" 2>&1
+    done
+    echo "--- the results cache log:"
+    tail -n 20 var/log/results_cache/mongod.log 2>&1 | cut -c1-600
+    exit 1
+fi
+
+cd "${PRESTO_DIR}"
+# The Presto configuration is generated from the package configuration; the
+# Docker network name in it is known only after the first start of CLP.
+if [ ! -f .env ]; then
+    scripts/set-up-config.sh "${CLP_HOME}"
+fi
+docker compose up --detach --wait

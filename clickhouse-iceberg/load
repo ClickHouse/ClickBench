@@ -1,0 +1,31 @@
+#!/bin/bash
+# Creates the Iceberg table through the REST catalog and writes the dataset
+# into it with a single INSERT with the default settings.
+set -e
+
+../lib/iceberg/prepare
+source ../lib/iceberg/env.sh
+
+./clickhouse client --query "
+    CREATE DATABASE IF NOT EXISTS lake
+    ENGINE = DataLakeCatalog('$LAKE_CATALOG_URI/v1')
+    SETTINGS
+        catalog_type = 'rest',
+        warehouse = '$LAKE_WAREHOUSE',
+        catalog_credential = '$LAKE_CLIENT_ID:$LAKE_CLIENT_SECRET',
+        oauth_server_uri = '$LAKE_OAUTH_URI',
+        auth_scope = 'catalog',
+        storage_endpoint = '$LAKE_S3_ENDPOINT',
+        vended_credentials = 0,
+        aws_access_key_id = '$AWS_ACCESS_KEY_ID',
+        aws_secret_access_key = '$AWS_SECRET_ACCESS_KEY'"
+
+./clickhouse client < create.sql
+
+mkdir -p server-data/user_files
+for f in hits_*.parquet; do
+    ln -sf "$PWD/$f" "server-data/user_files/$f"
+done
+./clickhouse client < insert.sql
+
+rm -f server-data/user_files/hits_*.parquet hits_*.parquet

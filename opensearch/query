@@ -1,0 +1,32 @@
+#!/bin/bash
+# Reads one search request (query DSL, JSON) from stdin and runs it.
+# Stdout: the response without the per-document metadata.
+# Stderr: the runtime in fractional seconds on the last line: the `took` of the
+# response, in milliseconds, as in the Elasticsearch entry.
+#
+# request_cache=false: the shard request cache keeps the results of the
+# requests with size 0 by default, which would answer the second and third
+# tries from the cache.
+set -e -o pipefail
+
+query=$(cat)
+
+if ! response=$(curl -sS --fail-with-body -H 'Content-Type: application/json' \
+        -X POST 'http://localhost:9200/hits/_search?request_cache=false' -d "${query}"); then
+    printf '%s\n' "${response}" >&2
+    exit 1
+fi
+
+if printf '%s' "${response}" | jq -e '.timed_out == true or ._shards.failed > 0' >/dev/null; then
+    printf 'query: incomplete result: %s\n' "${response}" >&2
+    exit 1
+fi
+
+printf '%s' "${response}" | jq -c '{total: .hits.total.value, hits: [.hits.hits[]._source], aggregations}'
+
+took=$(printf '%s' "${response}" | jq -r '.took // empty')
+if [ -z "${took}" ]; then
+    echo "query: no took in the response" >&2
+    exit 1
+fi
+awk -v ms="${took}" 'BEGIN { printf "%.3f\n", ms / 1000 }' >&2

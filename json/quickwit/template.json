@@ -1,0 +1,9 @@
+{
+  "system": "Quickwit",
+  "proprietary": "no",
+  "retains_structure": "no",
+  "tags": [
+    "Rust",
+    "search"
+  ]
+}

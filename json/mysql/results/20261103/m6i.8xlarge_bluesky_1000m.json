@@ -1,0 +1,14 @@
+{
+  "system": "MySQL",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "row-oriented",
+    "MySQL compatible"
+  ],
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000000,
+  "error": "ERROR 3157 (22032) at line 1: The JSON document exceeds the maximum depth."
+}

@@ -1,0 +1,15 @@
+{
+  "system": "Timescale ☁️",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "production",
+  "tags": [
+    "C",
+    "PostgreSQL compatible",
+    "column-oriented",
+    "time-series",
+    "managed",
+    "no-cold"
+  ]
+}

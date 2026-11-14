@@ -1,4 +1,8 @@
 #!/bin/bash
 set -eu
 
+# CedarDB listens on /tmp/.s.PGSQL.5432; see ./check for context.
+export PGHOST=${PGHOST:-/tmp}
+export PGUSER=${PGUSER:-postgres}
+
 psql -q -t -A -c "SELECT pg_total_relation_size('hits');"

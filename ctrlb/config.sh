@@ -11,14 +11,14 @@ CTRLB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # directory into the container at the SAME path, so the hits.parquet the harness
 # downloads to $PARQUET_PATH is visible inside the container at the identical
 # path and the CREATE EXTERNAL TABLE LOCATION resolves unchanged.
-CTRLB_IMAGE="${CTRLB_IMAGE:-ghcr.io/ctrlb-hq/ctrlb-public:c8eead4}"
+CTRLB_IMAGE="${CTRLB_IMAGE:-ghcr.io/ctrlb-hq/ctrlb-public:ddce3b4}"
 CONTAINER_NAME="${CONTAINER_NAME:-ctrlb}"
 LAKE_STARTUP="${LAKE_STARTUP:-30}"
 
 # ---- query endpoint --------------------------------------------------------
 BASE_URL="${BASE_URL:-http://localhost:5080}"
 ORG_ID="${ORG_ID:-default}"
-SEARCH_URL="${SEARCH_URL:-${BASE_URL}/api/${ORG_ID}/_search_parquet?type=logs}"
+QUERY_URL="${QUERY_URL:-${BASE_URL}/api/${ORG_ID}/_query_parquet?type=logs}"
 START_TIME="${START_TIME:-1}"
 END_TIME="${END_TIME:-9999999999999999}"
 
@@ -33,7 +33,7 @@ PARQUET_PATH="${PARQUET_PATH:-$CTRLB_DIR/hits.parquet}"
 # Benchmark queries are measured by time_sql (below), not this.
 post_sql() {
   local sql="$1" response et
-  response="$(curl -s -X POST "$SEARCH_URL" \
+  response="$(curl -s -X POST "$QUERY_URL" \
     -H 'Content-Type: application/json' \
     -d "$(printf '{"sql": %s, "start_time": %s, "end_time": %s}' \
            "$(printf '%s' "$sql" | jq -Rs .)" "$START_TIME" "$END_TIME")")"
@@ -61,7 +61,7 @@ post_sql() {
 time_sql() {
   local sql="$1" outfile="$2" out http_code time_total
   out="$(LC_ALL=C curl -s -o "$outfile" -w '%{http_code} %{time_total}' \
-    -X POST "$SEARCH_URL" \
+    -X POST "$QUERY_URL" \
     -H 'Content-Type: application/json' \
     -d "$(printf '{"sql": %s, "start_time": %s, "end_time": %s}' \
            "$(printf '%s' "$sql" | jq -Rs .)" "$START_TIME" "$END_TIME")")"

@@ -4,7 +4,13 @@
 The preview is the website's index.html with the data of generate-results.sh
 embedded into it, for the results of the base branch (origin/main) with the
 result files of the pull request laid over them. It is published on
-pastila.nl unencrypted, as a gzipped .html paste, and the link is posted on
+pastila.nl unencrypted, as a gzipped .html paste. If the pull request updates
+existing results, a second page compares them: it has only the old and the
+new results of the updated (system, machine) pairs, as separate systems,
+"<name> (old)" and "<name> (new)". If the pull request changes index.html,
+the page is built from its index.html instead, so that the change of the
+website can be seen - with its result files, if any, or with those of the
+base branch. The links are posted on
 the pull request: appended to the last comment if that is a comment of this
 automation (collect-new-results.py also puts the link into its comments),
 otherwise as a new comment.
@@ -85,7 +91,30 @@ def base_complexity(rev):
     return {entry["source"].split("/")[0]: entry.get("complexity") for entry in data if "source" in entry}
 
 
-def generate_data(files, complexity={}):
+def categories(rev):
+    """{system directory: category} from the template.json files of a commit,
+    as generate-results.sh takes them."""
+    oids = {}
+    for line in git("ls-tree", "-r", "-z", rev).decode().split("\0"):
+        if not line:
+            continue
+        meta, path = line.split("\t", 1)
+        mode, kind, oid = meta.split()
+        if kind == "blob" and re.fullmatch(r"[^/]+/template\.json", path):
+            oids[path.split("/")[0]] = oid
+    blobs = read_blobs(oids.values())
+    result = {}
+    for system, oid in oids.items():
+        try:
+            category = json.loads(blobs[oid]).get("category")
+        except (ValueError, AttributeError):
+            continue
+        if isinstance(category, str):
+            result[system] = category
+    return result
+
+
+def generate_data(files, complexity={}, category={}):
     """The data array of the website, as built by generate-results.sh from
     {path: content}: the latest dated copy per (system, file name), without
     failed runs ({"error": ...}) and entries tagged "historical"."""
@@ -110,43 +139,106 @@ def generate_data(files, complexity={}):
             entry["date"] = f"{date_dir[:4]}-{date_dir[4:6]}-{date_dir[6:8]}"
         entry["source"] = path
         entry["complexity"] = complexity.get(path.split("/")[0])
+        entry["category"] = category.get(path.split("/")[0])
         data.append(entry)
     return data
 
 
-def build_page(base, changes):
-    """index.html of the base revision with the data embedded, for the result
-    files of the base revision updated with changes: {path: content, or None
-    for a removed file}."""
+def build_data(base, changes, head=None):
+    """The data arrays of the website for the result files of the base
+    revision and for them updated with changes: {path: content, or None for
+    a removed file}. The categories are from the head revision, if any, so
+    that new systems have them, and from the base otherwise."""
     oids = result_files(base)
-    for path in changes:
-        oids.pop(path, None)
     blobs = read_blobs(oids.values())
-    files = {path: blobs[oid] for path, oid in oids.items()}
-    files.update({path: content for path, content in changes.items() if content is not None})
+    old_files = {path: blobs[oid] for path, oid in oids.items()}
+    new_files = {path: content for path, content in old_files.items() if path not in changes}
+    new_files.update({path: content for path, content in changes.items() if content is not None})
+    complexity = base_complexity(base)
+    category = categories(base)
+    if head:
+        category.update(categories(head))
+    return generate_data(old_files, complexity, category), generate_data(new_files, complexity, category)
 
-    page = git("show", f"{base}:index.html").decode()
+
+def comparison_data(old_data, new_data):
+    """The entries that changed, old and new, as separate systems: for every
+    (system directory, file name) that has a result both before and after."""
+    def key(entry):
+        m = RESULT_RE.match(entry["source"])
+        return m.group(1), m.group(3)
+    old = {key(entry): entry for entry in old_data}
+    data = []
+    for entry in new_data:
+        previous = old.get(key(entry))
+        if previous is None or previous == entry:
+            continue
+        for e, label in ((previous, "old"), (entry, "new")):
+            e = dict(e, system=f"{e['system']} ({label})")
+            e.pop("hide", None)
+            data.append(e)
+    return data
+
+
+# For the comparison: show all the entries, regardless of the default filters
+# (some machines, tuned systems, GPUs, enthusiast and joke categories are not
+# selected by default). Every group of checkboxes is selected - not a fixed
+# list of them, so that a new filter of index.html can't hide the entries.
+SELECT_ALL_SCRIPT = """<script type="text/javascript">
+if (!window.location.hash) {
+    for (const group of Object.values(selectors))
+        if (group && typeof group === 'object' && !Array.isArray(group))
+            Object.keys(group).forEach(x => { group[x] = true });
+    updateSelectors();
+    render();
+}
+</script>
+"""
+
+
+def build_page(page_rev, data, select_all=False):
+    """index.html of a revision with the data embedded. It is published, never
+    run here, so it can be taken from the head of a PR from a fork."""
+    page = git("show", f"{page_rev}:index.html").decode()
     if DATA_SCRIPT not in page:
         raise RuntimeError("index.html does not load data.generated.js")
     # Results come from pull requests: escape "<" so that no string in them
     # can close the script element.
-    data = json.dumps(generate_data(files, base_complexity(base)), ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
+    data = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
     script = f'<script type="text/javascript">\nconst data = {data};\n</script>'
-    return page.replace(DATA_SCRIPT, script, 1)
+    page = page.replace(DATA_SCRIPT, script, 1)
+    if select_all:
+        if "</body>" not in page:
+            raise RuntimeError("index.html has no </body>")
+        page = page.replace("</body>", SELECT_ALL_SCRIPT + "</body>", 1)
+    return page
 
 
-def publish(base, changes):
-    """Publish the preview page and return its URL."""
-    return pastila.post(build_page(base, changes), extension=".html", compress=True)
+def publish(base, changes, head=None, page_rev=None):
+    """Publish the preview page and, if the changes update existing results,
+    the comparison page of the old and new results. Returns their URLs: the
+    second one is None without the comparison. The page is index.html of
+    page_rev, by default of the base revision."""
+    page_rev = page_rev or base
+    old_data, new_data = build_data(base, changes, head)
+    url = pastila.post(build_page(page_rev, new_data), extension=".html", compress=True)
+    comparison = comparison_data(old_data, new_data)
+    comparison_url = None
+    if comparison:
+        comparison_url = pastila.post(build_page(page_rev, comparison, select_all=True), extension=".html", compress=True)
+    return url, comparison_url
 
 
-def preview_line(url):
-    return f"[Preview of the benchmark page with these results]({url}) {MARKER}"
+def preview_line(urls, what="these results"):
+    url, comparison_url = urls
+    line = f"[Preview of the benchmark page with {what}]({url})"
+    if comparison_url:
+        line += f" · [Comparison with the previous results]({comparison_url})"
+    return f"{line} {MARKER}"
 
 
-def pr_changes(pr_number, head):
-    """{path: content or None} of the result files that the PR adds, changes
-    or removes, with the contents at the head commit (which must be fetched)."""
+def pr_paths(pr_number):
+    """The paths of the files that the PR adds, changes, removes or renames."""
     pages = json.loads(subprocess.run(
         ["gh", "api", f"repos/{REPO}/pulls/{pr_number}/files", "--paginate", "--slurp"],
         capture_output=True, text=True, check=True).stdout)
@@ -155,21 +247,29 @@ def pr_changes(pr_number, head):
         paths.add(f["filename"])
         if f.get("previous_filename"):
             paths.add(f["previous_filename"])
+    return paths
+
+
+def pr_changes(pr_number, head, paths=None):
+    """{path: content or None} of the result files that the PR adds, changes
+    or removes, with the contents at the head commit (which must be fetched)."""
+    if paths is None:
+        paths = pr_paths(pr_number)
     head_files = result_files(head)
     paths = {p for p in paths if RESULT_RE.match(p)}
     blobs = read_blobs(head_files[p] for p in paths if p in head_files)
     return {p: blobs[head_files[p]] if p in head_files else None for p in paths}
 
 
-def with_preview(body, url):
+def with_preview(body, line):
     """A comment body with the preview line added, replacing an older one."""
-    lines = [line for line in body.split("\n") if MARKER not in line]
+    lines = [l for l in body.split("\n") if MARKER not in l]
     while lines and not lines[-1].strip():
         lines.pop()
-    return "\n".join(lines) + "\n\n" + preview_line(url)
+    return "\n".join(lines) + "\n\n" + line
 
 
-def post_link(pr_number, url):
+def post_link(pr_number, urls, what="these results"):
     comments = json.loads(subprocess.run(
         ["gh", "api", f"repos/{REPO}/issues/{pr_number}/comments", "--paginate", "--slurp"],
         capture_output=True, text=True, check=True).stdout)
@@ -177,14 +277,14 @@ def post_link(pr_number, url):
     last = comments[-1] if comments else None
     if (last and last["user"]["login"] == BOT_LOGIN
             and (MARKER in last["body"] or COLLECT_MARKER in last["body"])):
-        if url in last["body"]:
-            print(f"The last comment already links to {url}")
+        if urls[0] in last["body"]:
+            print(f"The last comment already links to {urls[0]}")
             return
-        body = with_preview(last["body"], url)
+        body = with_preview(last["body"], preview_line(urls, what))
         cmd = ["gh", "api", "-X", "PATCH", f"repos/{REPO}/issues/comments/{last['id']}",
                "-f", "body=" + body]
     else:
-        body = preview_line(url)
+        body = preview_line(urls, what)
         cmd = ["gh", "api", f"repos/{REPO}/issues/{pr_number}/comments", "-f", "body=" + body]
     if DRY_RUN:
         print(f"DRY_RUN: would run {cmd[:4]} with:\n{body}\n---")
@@ -202,13 +302,20 @@ def main():
     git("fetch", "-q", "--depth=1", "origin", f"refs/pull/{pr_number}/head")
     head = git("rev-parse", "FETCH_HEAD").decode().strip()
 
-    changes = pr_changes(pr_number, head)
-    if not changes:
-        print("The pull request does not change any results.")
+    paths = pr_paths(pr_number)
+    changes = pr_changes(pr_number, head, paths)
+    page_changed = "index.html" in paths
+    if not changes and not page_changed:
+        print("The pull request changes neither results nor index.html.")
         return 0
-    url = publish(base, changes)
-    print(f"Preview: {url}")
-    post_link(pr_number, url)
+    urls = publish(base, changes, head, head if page_changed else base)
+    print(f"Preview: {urls[0]}")
+    if urls[1]:
+        print(f"Comparison: {urls[1]}")
+    what = "these results"
+    if page_changed:
+        what = "this change and these results" if changes else "this change"
+    post_link(pr_number, urls, what)
     return 0
 
 

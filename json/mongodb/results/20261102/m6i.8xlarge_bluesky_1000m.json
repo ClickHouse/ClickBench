@@ -1,0 +1,14 @@
+{
+  "system": "MongoDB",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "row-oriented",
+    "document",
+    "C++"
+  ],
+  "date": "2026-11-02",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000000,
+  "error": "BrokenPipeError: [Errno 32] Broken pipe"
+}

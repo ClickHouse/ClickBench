@@ -1,0 +1,43 @@
+{
+  "system": "PostgreSQL (pglz)",
+  "version": "16.6",
+  "os": "Ubuntu 24.04",
+  "date": "2025-01-13",
+  "machine": "m6i.8xlarge",
+  "retains_structure": "yes",
+  "tags": [
+    "historical"
+  ],
+  "dataset_size": 10000000,
+  "num_loaded_documents": 7000000,
+  "total_size": 5806309376,
+  "data_size": 4652408832,
+  "index_size": 1153900544,
+  "result": [
+    [
+      35.0929,
+      0.96023,
+      0.95458
+    ],
+    [
+      51.5695,
+      9.64536,
+      9.63683
+    ],
+    [
+      36.0052,
+      2.64818,
+      2.63788
+    ],
+    [
+      175.362,
+      2.05905,
+      1.99866
+    ],
+    [
+      176.367,
+      2.21498,
+      2.23456
+    ]
+  ]
+}

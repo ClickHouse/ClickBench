@@ -1,0 +1,5 @@
+#!/bin/bash
+# The size of the database directory, as in the main ClickBench entry.
+set -eu
+
+sudo du -bs db | awk '{print $1}'

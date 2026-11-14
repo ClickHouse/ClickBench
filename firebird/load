@@ -1,0 +1,39 @@
+#!/bin/bash
+set -eu
+
+DB=/var/lib/firebird/data/hits.fdb
+FB=/opt/firebird/bin
+
+# The database is created and loaded in embedded mode (the engine runs inside
+# the client process), which avoids a network round trip per batch. Embedded
+# access needs the database file to be free, so the server is stopped
+# meanwhile. Everything runs as the `firebird` user to keep file ownership
+# usable by the server.
+sudo systemctl stop firebird
+
+sudo mv hits.tsv /var/lib/firebird/data/hits.tsv
+sudo chown firebird:firebird /var/lib/firebird/data/hits.tsv
+sudo rm -f "$DB"
+
+{
+    echo "CREATE DATABASE '$DB' USER SYSDBA PAGE_SIZE 32768;"
+    cat create.sql
+    echo "COMMIT;"
+} | sudo -u firebird "$FB/isql" -q -b
+
+# Forced writes (synchronous page writes) make the bulk load ~6 times slower.
+# They are disabled for the load and enabled again below.
+sudo -u firebird "$FB/gfix" -user SYSDBA -write async "$DB"
+
+# Inserting from more threads contends on the engine's internal locks; four
+# was the fastest setting in local tests.
+sudo -u firebird /usr/local/bin/firebird-hits-loader "$DB" /var/lib/firebird/data/hits.tsv 4
+
+# Built after the load, using ParallelWorkers threads.
+echo "ALTER TABLE hits ADD CONSTRAINT hits_pk PRIMARY KEY (CounterID, EventDate, UserID, EventTime, WatchID); COMMIT;" \
+    | sudo -u firebird "$FB/isql" -q -b -user SYSDBA "$DB"
+
+sudo -u firebird "$FB/gfix" -user SYSDBA -write sync "$DB"
+
+sudo rm -f /var/lib/firebird/data/hits.tsv
+sudo systemctl start firebird

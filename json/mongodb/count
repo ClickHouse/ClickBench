@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+mongosh --quiet bluesky --eval 'print(String(db.bluesky.estimatedDocumentCount()))'

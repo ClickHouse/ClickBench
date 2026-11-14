@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+echo 'SELECT count(*) AS c FROM bluesky' | ./query 2>/dev/null | grep -oE '^\| *[0-9]+ *\|$' | grep -oE '[0-9]+' | tail -n1

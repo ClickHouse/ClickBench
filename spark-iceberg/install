@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+PYSPARK_VERSION=4.1.4
+ICEBERG_VERSION=1.12.0
+
+sudo apt-get update -y
+sudo apt-get install -y python3-pip python3-venv openjdk-17-jdk-headless
+
+if [ ! -d myenv ]; then
+    python3 -m venv myenv
+fi
+source myenv/bin/activate
+pip install -q "pyspark==$PYSPARK_VERSION" psutil
+
+# The Iceberg runtime for Spark and the bundle with the AWS SDK for S3FileIO.
+mkdir -p jars
+maven=https://repo1.maven.org/maven2/org/apache/iceberg
+[ -f jars/iceberg-spark-runtime.jar ] || curl -fsSL --retry 10 -o jars/iceberg-spark-runtime.jar \
+    "$maven/iceberg-spark-runtime-4.1_2.13/$ICEBERG_VERSION/iceberg-spark-runtime-4.1_2.13-$ICEBERG_VERSION.jar"
+[ -f jars/iceberg-aws-bundle.jar ] || curl -fsSL --retry 10 -o jars/iceberg-aws-bundle.jar \
+    "$maven/iceberg-aws-bundle/$ICEBERG_VERSION/iceberg-aws-bundle-$ICEBERG_VERSION.jar"
+
+../lib/iceberg/install

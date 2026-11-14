@@ -1,0 +1,5 @@
+* | by (commit.collection) count() count | sort (count desc)
+{kind=commit,commit.operation=create} | by (commit.collection) count() count, count_uniq(did) users | sort (count desc)
+{kind=commit,commit.operation=create,commit.collection=~"app\\.bsky\\.feed\\.(post|repost|like)"} | math floor(_time/1h)%24 hour_of_day | by (commit.collection, hour_of_day) count() count | sort (hour_of_day, commit.collection)
+{kind=commit,commit.operation=create,commit.collection=app.bsky.feed.post} | by (did) min(_time) first_post_ts | first 3 (first_post_ts)
+{kind=commit,commit.operation=create,commit.collection=app.bsky.feed.post} | by (did) min(_time) tmin, max(_time) tmax | math round((tmax-tmin)/1e6) activity_span | keep did, activity_span | first 3 (activity_span desc)

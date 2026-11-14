@@ -12,13 +12,9 @@ if ! command -v docker >/dev/null 2>&1; then
     sudo apt-get update -y
     sudo apt-get install -y docker.io
 fi
-sudo apt-get install -y openjdk-21-jre-headless bc wget
-
-if [ ! -f presto-cli.jar ]; then
-    wget --continue --quiet -O presto-cli.jar \
-        "https://github.com/prestodb/presto/releases/download/${PRESTO_VERSION}/presto-cli-${PRESTO_VERSION}-executable.jar"
-    chmod +x presto-cli.jar
-fi
+sudo apt-get install -y bc python3-venv
+python3 -m venv venv
+venv/bin/pip install --quiet presto-python-client
 
 sudo docker pull prestodb/presto:${PRESTO_VERSION}
 sudo docker pull trinodb/trino:latest
@@ -42,23 +38,20 @@ public class S3AnonymousProvider implements AWSCredentialsProvider {
 }
 EOF
 
-# Compile the shim against AWS SDK + Hadoop jars bundled in the presto
-# image. The presto image ships with a JRE only, so use the trino image
-# for the JDK and target Java 11 bytecode for compatibility. Skip if
-# already built.
+# Compile the shim against the AWS SDK and Hadoop jars of the presto
+# image's hive-hadoop2 plugin. The presto image ships with a JRE only, so
+# use the trino image for the JDK and target Java 11 bytecode for
+# compatibility. Skip if already built.
 if [ ! -f shim/S3AnonymousProvider.jar ]; then
+    container=$(sudo docker create prestodb/presto:${PRESTO_VERSION})
+    sudo docker cp "$container:/opt/presto-server/plugin/hive-hadoop2" shim/lib
+    sudo docker rm "$container" >/dev/null
     sudo docker run --rm \
         -v "$PWD/shim:/shim" \
         --entrypoint sh trinodb/trino:latest -c '
             set -e
             cd /shim
-            CP=$(find /usr/lib/trino \( -name "*aws-java-sdk*.jar" -o -name "*hadoop-apache*.jar" \) 2>/dev/null | tr "\n" ":")
-            if [ -z "$CP" ]; then
-                # Last resort: every jar under trino. Order matters for classpath
-                # only in case of duplicate classes, which we do not have here.
-                CP=$(find /usr/lib/trino -name "*.jar" 2>/dev/null | tr "\n" ":")
-            fi
-            javac --release 11 -cp "$CP" S3AnonymousProvider.java
+            javac --release 11 -cp "lib/*" S3AnonymousProvider.java
             jar cf S3AnonymousProvider.jar S3AnonymousProvider.class
         '
 fi
