@@ -6,7 +6,7 @@ DUCKDB="$(pwd)/duckdb-vortex/build/release/duckdb"
 # Convert each parquet partition to a vortex file in parallel.
 seq 0 99 | xargs -P"$(nproc)" -I{} bash -c '
     if [ ! -f "hits_{}.vortex" ]; then
-        "'"$DUCKDB"'" -c "
+        "'"$DUCKDB"'" -no-agent -c "
             COPY (
                 SELECT *
                 REPLACE (
@@ -22,7 +22,7 @@ seq 0 99 | xargs -P"$(nproc)" -I{} bash -c '
 
 # Build a persistent VIEW over the resulting vortex files.
 rm -f hits.db
-"$DUCKDB" hits.db -c "CREATE VIEW hits AS SELECT * FROM read_vortex('hits_*.vortex')"
+"$DUCKDB" -no-agent hits.db -c "CREATE VIEW hits AS SELECT * FROM read_vortex('hits_*.vortex')"
 
 # Free the source parquet files.
 rm -f hits_*.parquet
