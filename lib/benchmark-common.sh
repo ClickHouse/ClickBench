@@ -670,12 +670,17 @@ PY
                 for qi in "${perm[@]}"; do
                     ordered+=("${queries[$qi]}")
                 done
-                if ! printf '%s\n' "${ordered[@]}" \
-                    | "$BENCH_CONCURRENT_WORKER" "$deadline" > "$stats_dir/$c"; then
+                local worker_out
+                if ! worker_out=$(printf '%s\n' "${ordered[@]}" \
+                    | "$BENCH_CONCURRENT_WORKER" "$deadline"); then
                     # No stats file: the whole result becomes null rather
                     # than silently undercounting.
                     echo "bench: concurrent worker $c failed" >&2
-                    rm -f "$stats_dir/$c"
+                elif ! [[ "$worker_out" =~ ^[0-9]+\ [0-9]+$ ]]; then
+                    echo "bench: concurrent worker $c printed '$worker_out'" \
+                        "instead of '<successful> <failed>'" >&2
+                else
+                    printf '%s\n' "$worker_out" > "$stats_dir/$c"
                 fi
                 exit 0
             fi
