@@ -4,6 +4,6 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
-  "category": "challenger",
+  "category": "enthusiast",
   "tags": ["Rust", "PostgreSQL compatible", "column-oriented"]
 }

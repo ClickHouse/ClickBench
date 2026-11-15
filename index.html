@@ -41,6 +41,13 @@
 
             --nothing-selected-color: #CCC;
             --shadow-color: grey;
+
+            --category-elite-color: #0055DD;
+            --category-production-color: var(--color);
+            --category-challenger-color: #E0307A;
+            --category-enthusiast-color: #008800;
+            --category-retired-color: #999;
+            --category-joke-color: #8833DD;
         }
 
         [data-theme="dark"] {
@@ -74,6 +81,13 @@
 
             --nothing-selected-color: #666;
             --shadow-color: black;
+
+            --category-elite-color: #66AAFF;
+            --category-production-color: var(--color);
+            --category-challenger-color: #FF88BB;
+            --category-enthusiast-color: #66DD66;
+            --category-retired-color: #888;
+            --category-joke-color: #C899FF;
         }
 
         html, body {
@@ -249,7 +263,15 @@
             paint-order: stroke fill;
             pointer-events: none;
             font-family: monospace;
+            gap: 1ch;
         }
+
+        .summary-category-elite { color: var(--category-elite-color); }
+        .summary-category-production { color: var(--category-production-color); }
+        .summary-category-challenger { color: var(--category-challenger-color); }
+        .summary-category-enthusiast { color: var(--category-enthusiast-color); }
+        .summary-category-retired { color: var(--category-retired-color); }
+        .summary-category-joke { color: var(--category-joke-color); }
 
         .summary-bar {
             height: 1rem;
@@ -1554,10 +1576,18 @@ function renderSummary(filtered_data) {
 
         td_bar.appendChild(bar);
 
-        if (elem.date) {
+        if (elem.date || elem.category) {
             let date_span = document.createElement('span');
             date_span.className = 'summary-date';
-            date_span.textContent = elem.date;
+            if (elem.category) {
+                let category_span = document.createElement('span');
+                category_span.className = `summary-category-${elem.category}`;
+                category_span.textContent = elem.category;
+                date_span.appendChild(category_span);
+            }
+            if (elem.date) {
+                date_span.appendChild(document.createTextNode(elem.date));
+            }
             td_bar.appendChild(date_span);
         }
 

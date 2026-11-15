@@ -1,3 +1,6 @@
+-- The table as ./load stores it (`wdb load` reads the schema from hits.parquet; this file is not run).
+-- Sort order: EventTime (`--cluster-by EventTime`); no key or index is declared. EventTime and EventDate
+-- are cast from integers at load (`--cast`); every other column keeps its parquet type.
 CREATE TABLE hits
 (
     WatchID BIGINT NOT NULL,
@@ -45,7 +48,7 @@ CREATE TABLE hits
     WindowClientWidth SMALLINT NOT NULL,
     WindowClientHeight SMALLINT NOT NULL,
     ClientTimeZone SMALLINT NOT NULL,
-    ClientEventTime TIMESTAMP NOT NULL,
+    ClientEventTime BIGINT NOT NULL,
     SilverlightVersion1 SMALLINT NOT NULL,
     SilverlightVersion2 SMALLINT NOT NULL,
     SilverlightVersion3 INTEGER NOT NULL,
@@ -64,7 +67,7 @@ CREATE TABLE hits
     DontCountHits SMALLINT NOT NULL,
     WithHash SMALLINT NOT NULL,
     HitColor CHAR NOT NULL,
-    LocalEventTime TIMESTAMP NOT NULL,
+    LocalEventTime BIGINT NOT NULL,
     Age SMALLINT NOT NULL,
     Sex SMALLINT NOT NULL,
     Income SMALLINT NOT NULL,

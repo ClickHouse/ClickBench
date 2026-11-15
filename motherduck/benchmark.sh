@@ -9,6 +9,15 @@
 # the SDK-style uppercase one used by other cloud entries in the harness.
 export motherduck_token="${motherduck_token:-${MOTHERDUCK_TOKEN:-}}"
 
+if [ "$1" != "--skip-setup" ]; then
+  # Install python and dependencies
+  sudo apt-get update -y
+  sudo apt-get install -y python3-pip python3-venv
+  python3 -m venv myenv
+  source myenv/bin/activate
+  pip install duckdb==1.5.6 psutil
+fi
+
 # Empty: the data lives in MotherDuck cloud. ./load CTAS'es directly from the
 # canonical ClickBench parquet on S3 into the cloud database, so there is
 # nothing to fetch onto the client VM.
