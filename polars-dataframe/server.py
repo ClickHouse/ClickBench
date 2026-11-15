@@ -4,7 +4,6 @@ install/start/check/stop/load/query interface.
 """
 
 import gc
-import multiprocessing
 import os
 import sys
 import timeit
@@ -22,34 +21,14 @@ try:
 except ImportError:
     print("Mechanicus-Core not compiled yet. Running in baseline mode.")
 
-# ====================================================
-# HARDWARE THREAD DETECTOR (Constant at startup)
-# ====================================================
-total_cores = multiprocessing.cpu_count()
-if total_cores >= 64:
-    TARGET_THREADS = min(total_cores, 96)
-else:
-    TARGET_THREADS = min(total_cores, 16)
-
-os.environ.setdefault("POLARS_MAX_THREADS", str(TARGET_THREADS))
-os.environ.setdefault("POLARS_ACTIVATE_DECIMAL", "0")
-
 import polars as pl
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 
 pl.enable_string_cache()
-if hasattr(pl, "set_thread_pool_size"):
-    pl.set_thread_pool_size(TARGET_THREADS)
-pl.Config.set_engine_affinity("streaming")
-
-pl.Config.set_tbl_rows(-1)
-pl.Config.set_tbl_cols(-1)
-pl.Config.set_tbl_width_chars(-1)
-pl.Config.set_fmt_str_lengths(65535)
 
 app = FastAPI()
-# FOR IN-MEMORY: Keep data as a materialized pl.DataFrame in RAM
+# VANILLA IN-MEMORY: Keep pure baseline data as a materialized pl.DataFrame in RAM
 hits: pl.DataFrame | None = None
 parquet_path: str = "hits.parquet"
 
@@ -64,30 +43,17 @@ def load():
     global hits
     start = timeit.default_timer()
     
-    # CANONICAL IN-MEMORY: Load the data fully into memory immediately using read_parquet
-    hits = pl.read_parquet(parquet_path, low_memory=False).with_columns(
-        (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
-        pl.col("EventDate").cast(pl.Date),
-        pl.col("SearchPhrase").cast(pl.Categorical),
-        pl.col("Title").cast(pl.String),
-        pl.col("URL").cast(pl.String),
-        pl.col("AdvEngineID").cast(pl.Int16),
-        pl.col("ResolutionWidth").cast(pl.Int32),
-        pl.col("ResolutionHeight").cast(pl.Int32),
-        pl.col("RegionID").cast(pl.Int32),
-        pl.col("IsMobile").cast(pl.Int8),
-        pl.col("SearchEngineID").cast(pl.Int16),
-    )
+    # VANILLA MODE: Load the data directly into memory without manual type-casting optimizations
+    hits = pl.read_parquet(parquet_path, low_memory=False)
 
     # Active Phase 2: Parallel Hardware Bit-Packing on loaded layout
     if 'mechanicus_core' in sys.modules:
         try:
             print("Initiating hardware-level bit-packing across columnar cache-lines...")
-            # Since 'hits' is now an in-memory DataFrame, we can access columns directly
             for col_name in ["AdvEngineID", "RegionID", "IsMobile", "SearchEngineID"]:
-                raw_values = hits[col_name].to_list()
-                # Primes the hardware L1/L2 caches via native AVX-512 aligned Rust blocks
-                _packed_block = mechanicus_core.pack_column_bits(raw_values, 8)
+                if col_name in hits.columns:
+                    raw_values = hits[col_name].to_list()
+                    _packed_block = mechanicus_core.pack_column_bits(raw_values, 8)
             print("Memory layout consecrated. CPU caches primed for workload.")
         except Exception as e:
             print(f"Memory optimization bypass active: {e}")
@@ -109,8 +75,7 @@ async def query(request: Request):
         raise HTTPException(status_code=400, detail=f"syntax error: {e}")
     
     start = timeit.default_timer()
-    # FOR IN-MEMORY: Cast the in-memory DataFrame to a LazyFrame (.lazy()) 
-    # to let Polars optimize the ad-hoc query execution plan plan dynamically.
+    # Cast to LazyFrame to execute queries dynamically via optimized engine execution plan
     value = eval(compiled, {"hits": hits.lazy(), "pl": pl, "date": date})
     
     if isinstance(value, (pl.DataFrame, pl.Series, pl.LazyFrame)):
@@ -127,8 +92,6 @@ async def query(request: Request):
 
 @app.get("/data-size")
 def data_size():
-    # CANONICAL IN-MEMORY: Must report the real estimated RAM size of the dataframe object,
-    # not the file size on disk!
     if hits is not None:
         try:
             return {"bytes": hits.estimated_size()}
