@@ -1,20 +1,28 @@
 #!/bin/bash
 set -e
 
+# 1. Update package manager and install system requirements + Rust compiler
 sudo apt-get update -y
-sudo apt-get install -y pybind11-dev python3-dev
+sudo apt-get install -y python3-pip python3-venv python3-dev curl build-essential
 
-# Install Python and build dependencies
+# Ensure rust toolchain (cargo) is installed for maturin compiler core
+if ! command -v cargo &> /dev/null; then
+    echo "Installing Rust toolchain..."
+    curl --proto '=https' --tlsv1.2 -sSf https://rustup.rs | sh -s -- -y
+    source "$HOME/.cargo/env"
+fi
+
+# 2. Setup the precise virtual environment expected by ClickBench start script
+python3 -m venv myenv
+source myenv/bin/activate
+
+# 3. Install build tools and python core packages inside venv
 pip install --upgrade pip
 pip install maturin setuptools-rust
-
-# Install core server dependencies
 pip install 'polars>=1.0.0' pyarrow fastapi uvicorn
 
-# Build and install the native Rust module (mechanicus_core)
+# 4. Compile the native Rust core into the virtual environment
 if [ -f "Cargo.toml" ]; then
-    echo "Found Cargo.toml. Compiling mechanicus_core in release mode..."
+    echo "Compiling mechanicus_core in release mode..."
     maturin develop --release
-else
-    echo "Warning: Cargo.toml not found. Skipping native Rust build."
 fi
