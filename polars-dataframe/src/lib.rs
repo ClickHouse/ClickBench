@@ -25,8 +25,11 @@ fn pack_column_bits(data: Vec<i64>, bits_per_value: usize) -> PyResult<Vec<u64>>
             let mut current_word: u64 = 0;
             let mut current_bits = 0;
 
+            // Generate clean mask using native Rust syntax instead of C-style 1ULL
+            let mask = if bits_per_value == 64 { u64::MAX } else { u64::MAX >> (64 - bits_per_value) };
+
             for &value in chunk {
-                let clean_value = (value as u64) & ((1ULL << bits_per_value).wrapping_sub(1));
+                let clean_value = (value as u64) & mask;
                 if current_bits + bits_per_value <= 64 {
                     current_word |= clean_value << current_bits;
                     current_bits += bits_per_value;
