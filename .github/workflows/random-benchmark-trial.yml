@@ -5,7 +5,7 @@ name: "Randomized benchmark trial"
 # Scrutiny of two new entrants, ParticleDB (https://github.com/ClickHouse/ClickBench/pull/2952)
 # and WaveDB (https://github.com/ClickHouse/ClickBench/pull/3160), with ClickHouse for comparison:
 # a new group on c6a.4xlarge, the only machine with results of all three in the main benchmark.
-# This branch is not for merging.
+# This branch is not for merging. (Relaunched after the fix of the parsing of BENCH_DOWNLOAD_SCRIPT.)
 
 on:
   push:
