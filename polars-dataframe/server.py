@@ -10,17 +10,21 @@ app = FastAPI()
 available_cores = os.cpu_count() or 1
 pl.threadpool_size = available_cores
 
+# ClickBench test suite addresses the base data matrix as global variable 'hits'
 state = {"df": None}
+hits = None
 
 def load_data():
+    global hits
     path = "hits.parquet"
     df = pl.read_parquet(path)
     
-    # Correct timestamp scaling to prevent the 1970 microsecond shift
+    # Correct timestamp scaling to prevent microsecond parsing shifts
     df = df.with_columns([
         (pl.col("EventTime") * 1_000_000).cast(pl.Datetime),
         pl.col("EventDate").cast(pl.Date)
     ])
+    hits = df
     return df
 
 @app.get("/health")
@@ -37,13 +41,14 @@ def load_endpoint():
 
 @app.get("/data-size")
 def data_size_endpoint():
-    if state["df"] is not None:
-        # Returns the raw text value expected by data-size script
-        return Response(content=str(state["df"].estimated_size()), media_type="text/plain")
-    return Response(content="0", media_type="text/plain")
+    if state["df"] is None:
+        state["df"] = load_data()
+    # Contract requires JSON return mapping containing evaluated byte metrics
+    return {"bytes": state["df"].estimated_size()}
 
 @app.post("/query")
 async def query_endpoint(request: Request):
+    global hits
     body = await request.body()
     query_str = body.decode("utf-8").strip()
     
@@ -52,22 +57,16 @@ async def query_endpoint(request: Request):
         
     start_time = time.time()
     try:
-        # Fallback to standard eager execution loop for canonical queries
-        # Executes the benchmark query safely without mixing text formats
-        result = state["df"].lazy().sql(query_str).collect()
+        # Framework executing logic: evaluate the incoming Python expression string directly
+        # 'hits' is globally exposed inside the expression namespace boundary
+        result = eval(query_str)
         print(result)
-    except Exception:
-        # Strict compatibility fallback if direct SQL mapping fails
-        try:
-            ctx = pl.SQLContext(hits=state["df"])
-            result = ctx.execute(query_str, eager=True)
-            print(result)
-        except Exception as e:
-            return Response(content=str(e), status_code=500)
+    except Exception as e:
+        return Response(content=str(e), status_code=500)
         
     elapsed = time.time() - start_time
-    # Returns the plain elapsed time string required by query script contract
-    return Response(content=str(elapsed), media_type="text/plain")
+    # Returns synchronized execution performance tracking metrics back to reporting script
+    return {"elapsed": elapsed}
 
 if __name__ == "__main__":
     pl.Config.set_tbl_cols(-1)
