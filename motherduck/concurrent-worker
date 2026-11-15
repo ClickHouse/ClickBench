@@ -1,0 +1,34 @@
+#!/bin/bash
+# One connection of the shared driver's concurrent-QPS test (see
+# BENCH_CONCURRENT_WORKER in ../lib/benchmark-common.sh).
+#   $1:     deadline, Unix seconds.
+#   Stdin:  this connection's query order, one query per line.
+#   Stdout: "<successful> <failed>" query counts.
+# Unlike ./query, it opens the md: connection once and reuses it for every
+# query, so the test measures MotherDuck's throughput under concurrent clients
+# instead of the client-side Python start + connection + catalog load. The
+# driver runs BENCH_CONCURRENT_CONNECTIONS of these in parallel, each with its
+# own connection.
+set -e
+
+: "${motherduck_token:?motherduck_token is required}"
+
+PY=.venv/bin/python3; [ -x "$PY" ] || PY=python3
+
+exec "$PY" -c '
+import duckdb, sys, time
+deadline = float(sys.argv[1])
+queries = [q for q in sys.stdin.read().splitlines() if q.strip()]
+# Same connection settings as ./query.
+con = duckdb.connect("md:clickbench", config={"motherduck_attach_mode": "single"})
+ok = err = i = 0
+while time.time() < deadline:
+    try:
+        con.execute(queries[i]).fetchall()
+        ok += 1
+    except duckdb.Error as e:
+        err += 1
+        print(f"concurrent-worker: {e}", file=sys.stderr)
+    i = (i + 1) % len(queries)
+print(ok, err)
+' "$1"
