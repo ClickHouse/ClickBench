@@ -27,8 +27,13 @@ from fastapi import FastAPI, HTTPException, Request
 
 pl.enable_string_cache()
 
+# Restore output formatting configurations to avoid truncation in verification
+pl.Config.set_tbl_rows(-1)
+pl.Config.set_tbl_cols(-1)
+pl.Config.set_tbl_width_chars(-1)
+pl.Config.set_fmt_str_lengths(65535)
+
 app = FastAPI()
-# VANILLA IN-MEMORY: Keep pure baseline data as a materialized pl.DataFrame in RAM
 hits: pl.DataFrame | None = None
 parquet_path: str = "hits.parquet"
 
@@ -43,8 +48,11 @@ def load():
     global hits
     start = timeit.default_timer()
     
-    # VANILLA MODE: Load the data directly into memory without manual type-casting optimizations
-    hits = pl.read_parquet(parquet_path, low_memory=False)
+    # Load and perform only the mandatory baseline schema casting (Date/Time tracking fields)
+    hits = pl.read_parquet(parquet_path, low_memory=False).with_columns(
+        (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
+        pl.col("EventDate").cast(pl.Date),
+    )
 
     # Active Phase 2: Parallel Hardware Bit-Packing on loaded layout
     if 'mechanicus_core' in sys.modules:
@@ -75,7 +83,6 @@ async def query(request: Request):
         raise HTTPException(status_code=400, detail=f"syntax error: {e}")
     
     start = timeit.default_timer()
-    # Cast to LazyFrame to execute queries dynamically via optimized engine execution plan
     value = eval(compiled, {"hits": hits.lazy(), "pl": pl, "date": date})
     
     if isinstance(value, (pl.DataFrame, pl.Series, pl.LazyFrame)):
