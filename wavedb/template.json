@@ -2,7 +2,6 @@
     "system": "WaveDB",
     "proprietary": "no",
     "hardware": "cpu",
-    "tuned": "yes",
-    "category": "enthusiast",
+    "tuned": "no",
     "tags": ["Python", "column-oriented"]
 }

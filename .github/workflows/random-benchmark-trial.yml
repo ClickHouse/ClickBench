@@ -2,12 +2,14 @@ name: "Randomized benchmark trial"
 
 # Temporary: a group of the randomized benchmark from the branch of PR #3271,
 # before random-benchmark.yml is on main (workflow_dispatch needs that).
-# Remove before merging. Group 3 (1492dae5): gizmosql again, with CSV output
-# (retry: the previous launch could not resolve the latest GizmoSQL release).
+# Scrutiny of two new entrants, ParticleDB (https://github.com/ClickHouse/ClickBench/pull/2952)
+# and WaveDB (https://github.com/ClickHouse/ClickBench/pull/3160), with ClickHouse for comparison:
+# a new group on c6a.4xlarge, the only machine with results of all three in the main benchmark.
+# This branch is not for merging.
 
 on:
   push:
-    branches: [randomized-benchmark]
+    branches: [random-scrutiny-particledb-wavedb]
     paths: [".github/workflows/random-benchmark-trial.yml"]
 
 permissions:
@@ -25,7 +27,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install anthropic openai duckdb
+      - run: pip install anthropic openai
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -33,22 +35,21 @@ jobs:
           aws-region: us-east-1
           role-session-name: clickbench-random-trial-${{ github.run_id }}
 
-      # gizmosql again in group 1492dae5 (the same seed and payload): its box
-      # output cut wide values, which could not be compared with the reference.
       - shell: bash
         env:
-          machine: c6a.metal
-          group: 1492dae5-02e4-41bb-bfb6-7772b6557b42
-          seed: d70a416ebe9dcd991754b6144f3f0f7e
-          rows: "1000000000"
-          clickhouse_version: 26.10.2.103-stable
-          parallel: "4"
-          repeats: "3"
-          query_timeout: "600"
+          SYSTEMS: "clickhouse particledb wavedb"
+          MACHINES: "c6a.4xlarge"
+          RANDOM_ROWS: "100000000"
+          RANDOM_QUERIES: "100"
+          RANDOM_PARALLEL_QUERIES: "4"
+          RANDOM_REPEATS: "3"
+          RANDOM_QUERY_TIMEOUT: "600"
+          RANDOM_LLM_BACKEND: "anthropic"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OUT: ${{ github.workspace }}/random-group
           repo: ${{ github.repository }}
-          branch: randomized-benchmark
-        run: |
-          system=gizmosql payload_hash=be6a6b998ac335018cd7e6adbba3110f9b749d3f4336b533de34a2ecdcd85b1c ./random/run-benchmark.sh
+          branch: random-scrutiny-particledb-wavedb
+        run: ./random/launch.sh
 
       - uses: actions/upload-artifact@v4
         if: always()
