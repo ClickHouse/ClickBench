@@ -4,6 +4,7 @@
   "storage": "native",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "enthusiast",
   "tags": [
     "Rust",
     "column-oriented"
