@@ -33,12 +33,12 @@ def load_endpoint():
     if state["df"] is None:
         state["df"] = load_data()
     elapsed = time.time() - start_time
-    # Framework contract requires returning the exact elapsed loading time
     return {"status": "success", "elapsed": elapsed}
 
 @app.get("/data-size")
 def data_size_endpoint():
     if state["df"] is not None:
+        # Returns the raw text value expected by data-size script
         return Response(content=str(state["df"].estimated_size()), media_type="text/plain")
     return Response(content="0", media_type="text/plain")
 
@@ -52,14 +52,21 @@ async def query_endpoint(request: Request):
         
     start_time = time.time()
     try:
-        # Resolve analytics via standard Polars context mapping
-        ctx = pl.SQLContext(hits=state["df"])
-        result = ctx.execute(query_str, eager=True)
+        # Fallback to standard eager execution loop for canonical queries
+        # Executes the benchmark query safely without mixing text formats
+        result = state["df"].lazy().sql(query_str).collect()
         print(result)
-    except Exception as e:
-        return Response(content=str(e), status_code=500)
+    except Exception:
+        # Strict compatibility fallback if direct SQL mapping fails
+        try:
+            ctx = pl.SQLContext(hits=state["df"])
+            result = ctx.execute(query_str, eager=True)
+            print(result)
+        except Exception as e:
+            return Response(content=str(e), status_code=500)
         
     elapsed = time.time() - start_time
+    # Returns the plain elapsed time string required by query script contract
     return Response(content=str(elapsed), media_type="text/plain")
 
 if __name__ == "__main__":
