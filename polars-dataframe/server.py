@@ -63,16 +63,17 @@ async def query_endpoint(request: Request):
     try:
         # Evaluate the incoming Python expression string directly
         result = eval(query_str)
+        # Render the result string INSIDE the active timer window to comply with benchmark rules
+        result_str = str(result)
     except Exception as e:
         return Response(content=str(e), status_code=500)
         
     elapsed = time.time() - start_time
     
-    # Render the result inside the timing layout and return it alongside elapsed time
-    # This aligns exactly with the output verification contract of the benchmark framework
+    # Return synchronized performance metrics containing the fully timed string output
     return {
         "elapsed": elapsed,
-        "result": str(result),
+        "result": result_str,
         "bytes": state["df"].estimated_size()
     }
 
