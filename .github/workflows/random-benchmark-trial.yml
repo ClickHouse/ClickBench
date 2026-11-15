@@ -5,7 +5,7 @@ name: "Randomized benchmark trial"
 # Scrutiny of two new entrants, ParticleDB (https://github.com/ClickHouse/ClickBench/pull/2952)
 # and WaveDB (https://github.com/ClickHouse/ClickBench/pull/3160), with ClickHouse for comparison:
 # a new group on c6a.4xlarge, the only machine with results of all three in the main benchmark.
-# This branch is not for merging. (Relaunched after the fix of the parsing of BENCH_DOWNLOAD_SCRIPT.)
+# This branch is not for merging. Group 729fa873; particledb and wavedb again after the driver fix.
 
 on:
   push:
@@ -35,21 +35,24 @@ jobs:
           aws-region: us-east-1
           role-session-name: clickbench-random-trial-${{ github.run_id }}
 
+      # particledb and wavedb again in group 729fa873 (the same seed and
+      # payloads), after the fix of the driver: the workers wait while a system
+      # that went down is restarted.
       - shell: bash
         env:
-          SYSTEMS: "clickhouse particledb wavedb"
-          MACHINES: "c6a.4xlarge"
-          RANDOM_ROWS: "100000000"
-          RANDOM_QUERIES: "100"
-          RANDOM_PARALLEL_QUERIES: "4"
-          RANDOM_REPEATS: "3"
-          RANDOM_QUERY_TIMEOUT: "600"
-          RANDOM_LLM_BACKEND: "anthropic"
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OUT: ${{ github.workspace }}/random-group
+          machine: c6a.4xlarge
+          group: 729fa873-daa0-478c-8c79-163bebd5ab65
+          seed: eb4ecf7061be27a22d8f9e4a81cbf564
+          rows: "100000000"
+          clickhouse_version: 26.10.2.103-stable
+          parallel: "4"
+          repeats: "3"
+          query_timeout: "600"
           repo: ${{ github.repository }}
           branch: random-scrutiny-particledb-wavedb
-        run: ./random/launch.sh
+        run: |
+          system=particledb payload_hash=a4333fcffd007bbefbaa1261a61e4db2ff68f93f76768c19bd5d3fe7d8d5535a ./random/run-benchmark.sh
+          system=wavedb payload_hash=dd4ad2441af8d09181b335b2fc5708eebeec0d629fbf01c22f8f014076e61b78 ./random/run-benchmark.sh
 
       - uses: actions/upload-artifact@v4
         if: always()
