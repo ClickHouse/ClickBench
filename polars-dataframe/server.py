@@ -24,9 +24,17 @@ def load_data():
         try:
             import mechanicus_core
             
-            # TODO: Transition from memory-copying operations to direct Arrow pointer sharing (Zero-Copy)
-            # This unlocks the sub-2-second target boundary on bare-metal machines like c6a.metal
-            pass
+            # Target dense integer columns for high-performance bit-packing
+            # .to_numpy() exposes the underlying Arrow memory array as a zero-copy view directly to Rust
+            packed_adv = mechanicus_core.pack_column_bits(df["AdvEngineID"].to_numpy(), 16)
+            packed_region = mechanicus_core.pack_column_bits(df["RegionID"].to_numpy(), 16)
+            
+            # Inject the optimized, densely packed hardware streams back into the active query context
+            # This retains maximum cache locality for the execution phase
+            df = df.with_columns([
+                pl.Series("AdvEngineID_packed", packed_adv),
+                pl.Series("RegionID_packed", packed_region)
+            ])
         except ImportError:
             # Safe fallback to vanilla Polars memory layout if the native extension module is missing
             pass
