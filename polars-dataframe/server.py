@@ -6,9 +6,10 @@ from datetime import date
 from fastapi import FastAPI, Request, Response
 import polars as pl
 
-# Global configuration to prevent text truncation in wide benchmark logging columns (e.g., Q30)
+# Global configuration to prevent text truncation and wrapping in wide benchmark columns (e.g., Q24, Q30)
 pl.Config.set_tbl_cols(-1)
 pl.Config.set_tbl_rows(-1)
+pl.Config.set_tbl_width_chars(-1)  # Fixes the Linux 'Argument list too long' error for Q24
 pl.Config.set_fmt_str_lengths(1000)
 
 app = FastAPI()
@@ -61,16 +62,13 @@ async def query_endpoint(request: Request):
         
     start_time = time.time()
     try:
-        # Evaluate the incoming Python expression string directly
         result = eval(query_str)
-        # Render the result string INSIDE the active timer window to comply with benchmark rules
         result_str = str(result)
     except Exception as e:
         return Response(content=str(e), status_code=500)
         
     elapsed = time.time() - start_time
     
-    # Return synchronized performance metrics containing the fully timed string output
     return {
         "elapsed": elapsed,
         "result": result_str,
