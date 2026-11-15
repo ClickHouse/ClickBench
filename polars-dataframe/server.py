@@ -4,6 +4,7 @@ install/start/check/stop/load/query interface.
 """
 
 import gc
+import json
 import os
 import sys
 import timeit
@@ -14,7 +15,6 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 gc.enable()
 
-# Try loading the hardware-level bit-packing core
 try:
     import mechanicus_core
     print(mechanicus_core.verify_spirit())
@@ -36,6 +36,8 @@ pl.Config.set_fmt_str_lengths(65535)
 app = FastAPI()
 hits: pl.DataFrame | None = None
 parquet_path: str = "hits.parquet"
+results_json: str = "results.json"
+results_txt: str = "results.txt"
 
 
 @app.get("/health")
@@ -48,7 +50,7 @@ def load():
     global hits
     start = timeit.default_timer()
     
-    # Load and perform only the mandatory baseline schema casting (Date/Time tracking fields)
+    # Load and perform only the mandatory baseline schema casting
     hits = pl.read_parquet(parquet_path, low_memory=False).with_columns(
         (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
         pl.col("EventDate").cast(pl.Date),
@@ -65,6 +67,12 @@ def load():
             print("Memory layout consecrated. CPU caches primed for workload.")
         except Exception as e:
             print(f"Memory optimization bypass active: {e}")
+
+    # Reset metrics and output files on fresh data load
+    with open(results_json, "w") as f:
+        json.dump([], f)
+    with open(results_txt, "w") as f:
+        f.write("")
 
     elapsed = round(timeit.default_timer() - start, 3)
     return {"elapsed": elapsed}
@@ -94,6 +102,26 @@ async def query(request: Request):
         result = repr(value)
     
     elapsed = round(timeit.default_timer() - start, 3)
+
+    # 1. Log metrics incrementally into JSON
+    try:
+        data = []
+        if os.path.exists(results_json):
+            with open(results_json, "r") as f:
+                data = json.load(f)
+        data.append({"query": code, "elapsed": elapsed})
+        with open(results_json, "w") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        print(f"Failed to log benchmark JSON: {e}")
+
+    # 2. Append the exact plain text result into results.txt for verification
+    try:
+        with open(results_txt, "a") as f:
+            f.write(f"--- Query ---\n{code}\n--- Result ---\n{result}\n\n")
+    except Exception as e:
+        print(f"Failed to log benchmark TXT: {e}")
+    
     return {"elapsed": elapsed, "result": result}
 
 
