@@ -70,22 +70,39 @@ def run_one(sql, out_path, timeout):
     return "ok", elapsed, reported, ""
 
 
-def watchdog(stop, restarts, lock):
-    while not stop.wait(5):
-        if subprocess.run(["./check"], capture_output=True).returncode == 0:
-            continue
-        with lock:
-            restarts.append(time.time())
-            print("driver: the system is down, restarting", file=sys.stderr)
-            subprocess.run(["./stop"], capture_output=True)
-            subprocess.run(["./start"], capture_output=True)
-            for _ in range(300):
-                if subprocess.run(["./check"], capture_output=True).returncode == 0:
-                    break
-                time.sleep(1)
-            # The data of an in-memory system is gone with the process.
-            if os.environ.get("BENCH_DURABLE", "yes") != "yes":
-                subprocess.run(["./load"], capture_output=True)
+def is_up():
+    return subprocess.run(["./check"], capture_output=True).returncode == 0
+
+
+def watchdog(stop, restarts, up, dead):
+    """Restarts the system when it is down: every 5 s, or at once when a worker
+    finds it down after a failed query (up cleared). The workers wait while it
+    is down (up), so the queries of the schedule don't fail one after another
+    in the restart. A system that doesn't come back in 300 s is dead: the
+    workers go on, and the rest of the queries fail without being sent."""
+    while not stop.is_set():
+        if up.is_set():
+            stop.wait(5)
+            if stop.is_set() or is_up():
+                continue
+            up.clear()
+        restarts.append(time.time())
+        print("driver: the system is down, restarting", file=sys.stderr)
+        subprocess.run(["./stop"], capture_output=True)
+        subprocess.run(["./start"], capture_output=True)
+        for _ in range(300):
+            if is_up():
+                break
+            time.sleep(1)
+        else:
+            print("driver: the system did not come back in 300 s", file=sys.stderr)
+            dead.set()
+            up.set()
+            return
+        # The data of an in-memory system is gone with the process.
+        if os.environ.get("BENCH_DURABLE", "yes") != "yes":
+            subprocess.run(["./load"], capture_output=True)
+        up.set()
 
 
 def main():
@@ -118,21 +135,30 @@ def main():
                 q, r = work.get_nowait()
             except queue.Empty:
                 return
+            up.wait()
             begin = time.time() - start
             if not q["sql"]:
                 status, elapsed, reported, error = "unsupported", 0.0, None, "no translation"
+            elif dead.is_set():
+                status, elapsed, reported, error = "error", 0.0, None, "the system is down and did not come back"
             else:
                 status, elapsed, reported, error = run_one(q["sql"], os.path.join(out_dir, f"{q['id']}.{r}.out"),
                                                            args.timeout)
+                # The system went down in this query (it still counts as a
+                # failure): the next queries wait for the restart.
+                if status != "ok" and watched and not is_up():
+                    up.clear()
             record = {"id": q["id"], "repeat": r, "worker": n, "status": status, "start": round(begin, 3),
                       "time": round(elapsed, 3), "reported_time": reported, "error": error}
             with lock:
                 executions.append(record)
             print(f"driver: {q['id']}.{r} {status} {elapsed:.3f} s", file=sys.stderr)
 
-    stop, restarts, restart_lock = threading.Event(), [], threading.Lock()
-    if not args.no_watchdog:
-        threading.Thread(target=watchdog, args=(stop, restarts, restart_lock), daemon=True).start()
+    stop, restarts, up, dead = threading.Event(), [], threading.Event(), threading.Event()
+    up.set()
+    watched = not args.no_watchdog
+    if watched:
+        threading.Thread(target=watchdog, args=(stop, restarts, up, dead), daemon=True).start()
     threads = [threading.Thread(target=worker, args=(n,)) for n in range(args.parallel)]
     for t in threads:
         t.start()
