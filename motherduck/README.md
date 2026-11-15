@@ -30,9 +30,13 @@ driver, which installs the client, loads the data, and runs each query
   stop/start/drop-caches cold-cycle is skipped; MotherDuck is inherently
   "no-cold" (reflected in `template.json` tags).
 * `BENCH_DURABLE=yes` — data persists in the cloud across client restarts.
-* `BENCH_CONCURRENT_DURATION=0` — the concurrent-QPS test is disabled by
-  default because each `./query` opens a fresh connection (so it would mostly
-  measure cloud connection setup). Export a non-zero value to re-enable it.
+* `BENCH_CONCURRENT_WORKER=./concurrent-worker` — the concurrent-QPS test
+  runs `BENCH_CONCURRENT_CONNECTIONS` (default 10) copies of
+  `concurrent-worker`, each keeping one `md:` connection open for the whole
+  window (default 600 s), instead of forking `./query` per query. Otherwise
+  every query would pay for a fresh Python start, `md:` connection, and catalog
+  load on the client VM, and the test would measure connection setup rather
+  than MotherDuck's throughput.
 
 ### Script layout
 
@@ -46,6 +50,7 @@ The shared driver invokes these scripts in the system directory:
 | `load`      | create the `clickbench` database + INSERT from S3 parquet     |
 | `query`     | run one query from stdin; result → stdout, seconds → stderr   |
 | `data-size` | `pragma_database_size()`, converted to bytes                 |
+| `concurrent-worker` | one concurrent-QPS connection (`BENCH_CONCURRENT_WORKER`) |
 | `template.json` | system metadata (name, proprietary, tuned, tags)         |
 
 The next two scripts are MotherDuck-specific helpers, not part of the shared

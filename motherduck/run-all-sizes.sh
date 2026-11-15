@@ -13,7 +13,7 @@
 # Between runs it calls ./set-instance-size to change the account's read_write
 # Duckling size and waits (including a >=2 min stabilization margin) for the
 # change to go live. Each run reloads the data (load time is itself a per-size
-# metric) and runs all 43 queries plus, if enabled, the concurrent-QPS test.
+# metric) and runs all 43 queries plus the concurrent-QPS test.
 #
 # Env:
 #   motherduck_token / MOTHERDUCK_TOKEN   required (same PAT used for md:)

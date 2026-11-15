@@ -65,6 +65,17 @@
 #                          for daemons and the in-process server wrappers
 #                          (pandas/polars/*-dataframe), which do share one
 #                          process. See issue #946.
+#   BENCH_CONCURRENT_WORKER
+#                          Optional path to a per-connection worker for the
+#                          QPS test, used instead of forking ./query for every
+#                          query. Called once per connection with the deadline
+#                          (Unix seconds) as its argument and this connection's
+#                          query order on stdin, one query per line; it cycles
+#                          through the queries until the deadline, then prints
+#                          "<successful> <failed>" on stdout. For systems whose
+#                          ./query must open a new remote connection each time
+#                          (e.g. motherduck), so the test measures the
+#                          service's throughput, not connection setup.
 #   BENCH_CONCURRENT_SEED  Seed shared across systems so that connection
 #                          N hits the same query order on every engine
 #                          (the per-connection permutation is derived
@@ -99,6 +110,7 @@ export HOME="${HOME:-/root}"
 : "${BENCH_CONCURRENT_CONNECTIONS:=10}"
 : "${BENCH_CONCURRENT_DURATION:=600}"
 : "${BENCH_CONCURRENT_SEED:=clickbench}"
+: "${BENCH_CONCURRENT_WORKER:=}"
 : "${BENCH_STARTUP_TRIES:=3}"
 : "${BENCH_STARTUP_QUERY:=SELECT 1}"
 
@@ -648,6 +660,31 @@ print('\n'.join(map(str, xs)))
 PY
 )
 
+            # A system may supply its own worker (BENCH_CONCURRENT_WORKER)
+            # that keeps one connection open for the whole window instead of
+            # forking ./query per query. It gets this connection's query
+            # order on stdin and the deadline as its argument, and prints
+            # "<ok> <err>".
+            if [ -n "$BENCH_CONCURRENT_WORKER" ]; then
+                local ordered=()
+                for qi in "${perm[@]}"; do
+                    ordered+=("${queries[$qi]}")
+                done
+                local worker_out
+                if ! worker_out=$(printf '%s\n' "${ordered[@]}" \
+                    | "$BENCH_CONCURRENT_WORKER" "$deadline"); then
+                    # No stats file: the whole result becomes null rather
+                    # than silently undercounting.
+                    echo "bench: concurrent worker $c failed" >&2
+                elif ! [[ "$worker_out" =~ ^[0-9]+\ [0-9]+$ ]]; then
+                    echo "bench: concurrent worker $c printed '$worker_out'" \
+                        "instead of '<successful> <failed>'" >&2
+                else
+                    printf '%s\n' "$worker_out" > "$stats_dir/$c"
+                fi
+                exit 0
+            fi
+
             local ok=0 err=0 idx=0 qi q_text raw_stderr
             while [ "$(date +%s)" -lt "$deadline" ]; do
                 qi="${perm[$idx]}"
@@ -668,8 +705,10 @@ PY
     done
     wait
 
-    local total_ok=0 total_err=0 ok err
+    local total_ok=0 total_err=0 ok err workers_done
+    workers_done=$(find "$stats_dir" -type f | wc -l)
     for f in "$stats_dir"/*; do
+        [ -f "$f" ] || continue
         read -r ok err < "$f"
         total_ok=$((total_ok + ok))
         total_err=$((total_err + err))
@@ -677,15 +716,16 @@ PY
     rm -rf "$stats_dir"
 
     local qps err_ratio
-    if [ "$total_ok" -eq 0 ]; then
+    if [ "$total_ok" -eq 0 ] || [ "$workers_done" -ne "$connections" ]; then
         # Watchdog never managed to bring the system back up, or no query
-        # ever succeeded — record as null per spec.
+        # ever succeeded, or a BENCH_CONCURRENT_WORKER failed — record as
+        # null per spec.
         qps="null"
     else
         qps=$(awk -v ok="$total_ok" -v d="$duration" 'BEGIN{printf "%.3f", ok/d}')
     fi
     local total=$((total_ok + total_err))
-    if [ "$total" -eq 0 ]; then
+    if [ "$total" -eq 0 ] || [ "$workers_done" -ne "$connections" ]; then
         err_ratio="null"
     else
         err_ratio=$(awk -v e="$total_err" -v t="$total" 'BEGIN{printf "%.3f", e/t}')

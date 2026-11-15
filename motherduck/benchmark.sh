@@ -35,10 +35,10 @@ export BENCH_RESTARTABLE=no
 export BENCH_DURABLE=yes
 
 # Each ./query opens a fresh Python -> DuckDB -> md: connection (network
-# handshake + catalog fetch), so the concurrent-QPS workers would mostly
-# measure cloud connection setup rather than steady-state throughput. Skip by
-# default; override BENCH_CONCURRENT_DURATION to re-enable once the query path
-# pools connections. See issue #946.
-export BENCH_CONCURRENT_DURATION="${BENCH_CONCURRENT_DURATION:-0}"
+# handshake + catalog fetch), so concurrent-QPS workers forking ./query would
+# mostly measure client-side connection setup. Use our own worker instead: each
+# of the concurrent connections keeps one md: connection open for the whole
+# window. See issue #946.
+export BENCH_CONCURRENT_WORKER=./concurrent-worker
 
 exec ../lib/benchmark-common.sh
