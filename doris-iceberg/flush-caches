@@ -1,0 +1,8 @@
+#!/bin/bash
+# Called by the driver between ./stop and ./start for the cold runs. The
+# file cache of the backend keeps the data of external tables on local disk,
+# which would survive the restart and make the cold run warm.
+DORIS_HOME=$(cat .doris_home 2>/dev/null) || exit 0
+if ! pgrep -f "$DORIS_HOME/be/lib/doris_be" >/dev/null; then
+    rm -rf "$DORIS_HOME/be/file_cache"
+fi

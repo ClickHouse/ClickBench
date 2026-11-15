@@ -1,0 +1,25 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it with psql on the bluesky database.
+# Stdout: the result. Stderr: the runtime in fractional seconds on the last
+# line, from psql's `\timing`, as in the original JSONBench.
+set -e
+
+query=$(cat)
+
+out=$(printf '\\timing on\n%s\n' "${query}" | sudo -u postgres psql -X -d bluesky -t -v ON_ERROR_STOP=1 2>&1) && status=0 || status=$?
+
+if [ "${status}" -ne 0 ]; then
+    printf '%s\n' "${out}" >&2
+    exit "${status}"
+fi
+
+# "Time: 1234.567 ms" or "Time: 123456.789 ms (02:03.457)"
+time_ms=$(printf '%s\n' "${out}" | grep -oP '^Time: \K[0-9]+(\.[0-9]+)?' | tail -n1)
+if [ -z "${time_ms}" ]; then
+    printf '%s\n' "${out}" >&2
+    echo "query: no timing in the psql output" >&2
+    exit 1
+fi
+
+printf '%s\n' "${out}" | grep -v '^Time: \|^Timing is on\.'
+awk -v ms="${time_ms}" 'BEGIN { printf "%.3f\n", ms / 1000 }' >&2

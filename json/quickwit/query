@@ -1,0 +1,29 @@
+#!/bin/bash
+# Reads one search request (JSON) from stdin, or the literal null for a query
+# that Quickwit cannot express.
+# Stdout: the aggregations of the response.
+# Stderr: the runtime in fractional seconds on the last line, from
+# .elapsed_time_micros of the response (server-side), as in the original PR.
+set -e -o pipefail
+
+query=$(cat)
+if [ "${query}" = "null" ] || [ -z "${query}" ]; then
+    echo "query: not expressible in Quickwit" >&2
+    exit 1
+fi
+
+resp=$(curl -sS -X POST -H 'Content-Type: application/json' -d "${query}" \
+    -w '\n%{http_code}' http://127.0.0.1:7280/api/v1/jsonbench/search)
+code=$(printf '%s\n' "${resp}" | tail -n1)
+body=$(printf '%s\n' "${resp}" | sed '$d')
+if [ "${code}" != "200" ]; then
+    printf 'query: HTTP %s\n%s\n' "${code}" "${body}" >&2
+    exit 1
+fi
+micros=$(printf '%s' "${body}" | jq -r '.elapsed_time_micros // empty')
+if [ -z "${micros}" ]; then
+    printf 'query: no elapsed_time_micros in the response\n%s\n' "${body}" >&2
+    exit 1
+fi
+printf '%s' "${body}" | jq -c '.aggregations'
+awk -v us="${micros}" 'BEGIN { printf "%.6f\n", us / 1000000 }' >&2

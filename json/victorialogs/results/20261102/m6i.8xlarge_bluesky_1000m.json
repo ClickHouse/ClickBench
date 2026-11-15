@@ -1,0 +1,24 @@
+{
+  "system": "VictoriaLogs",
+  "proprietary": "no",
+  "retains_structure": "no",
+  "tags": [
+    "Go",
+    "column-oriented"
+  ],
+  "version": "v1.53.0",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-02",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 999999241,
+  "load_time": 1077.838,
+  "total_size": 121355378338,
+  "result": [
+    [0.098005, 0.033199, 0.034856],
+    [21.309583, 19.155488, 19.198709],
+    [1.674873, 1.52321, 1.520921],
+    [7.090075, 5.918412, 5.914264],
+    [10.044531, 8.453082, 8.053091]
+  ]
+}

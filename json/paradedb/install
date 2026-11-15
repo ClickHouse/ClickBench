@@ -1,0 +1,70 @@
+#!/bin/bash
+# ParadeDB = PostgreSQL + the pg_search extension. Installed the way that
+# https://docs.paradedb.com/deploy/self-hosted/extension describes for a
+# self-managed server: PostgreSQL from the PGDG repository, the pgvector
+# extension (a dependency of pg_search since 0.25), the pg_search package of
+# the latest ParadeDB release from GitHub, and `pg_search` in
+# shared_preload_libraries. The server otherwise runs with the default
+# settings (the JSONBench rule). The main ClickBench runs the Docker image
+# instead (../../paradedb/install); its PostgreSQL is configured the same way.
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+for i in $(seq 1 10); do
+    if sudo -E apt-get update -y \
+        && sudo -E apt-get install -y postgresql-common gzip sed curl jq \
+        && sudo -E /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+        && sudo -E apt-get update -y; then
+        break
+    fi
+    [ "$i" -eq 10 ] && { echo "install: cannot set up the PGDG repository" >&2; exit 1; }
+    sleep 30
+done
+
+# The latest ParadeDB release and its packages.
+for i in $(seq 1 10); do
+    if release=$(curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors \
+            https://api.github.com/repos/paradedb/paradedb/releases/latest); then
+        break
+    fi
+    [ "$i" -eq 10 ] && { echo "install: cannot get the latest ParadeDB release" >&2; exit 1; }
+    sleep 30
+done
+TAG=$(jq -r .tag_name <<< "${release}")
+VERSION="${TAG#v}"
+ARCH=$(dpkg --print-architecture)
+
+# The highest PostgreSQL major version that both PGDG and the ParadeDB release
+# provide for this distribution.
+PGVERSION=""
+for v in $(apt-cache pkgnames postgresql- | grep -E '^postgresql-[0-9]+$' | sed 's/^postgresql-//' | sort -rn); do
+    if jq -e --arg n "postgresql-${v}-pg-search_${VERSION}-1PARADEDB-noble_${ARCH}.deb" \
+            '.assets[] | select(.name == $n)' <<< "${release}" >/dev/null; then
+        PGVERSION="${v}"
+        break
+    fi
+done
+if [ -z "${PGVERSION}" ] || [ "${PGVERSION}" -lt 17 ]; then
+    # `COPY ... ON_ERROR ignore` in ./load needs PostgreSQL 17 or newer.
+    echo "install: no pg_search ${VERSION} package for PostgreSQL 17+ on noble/${ARCH}" >&2
+    exit 1
+fi
+echo "install: ParadeDB ${VERSION} on PostgreSQL ${PGVERSION}"
+
+for i in $(seq 1 10); do
+    sudo -E apt-get install -y "postgresql-${PGVERSION}" "postgresql-${PGVERSION}-pgvector" && break
+    [ "$i" -eq 10 ] && { echo "install: cannot install postgresql-${PGVERSION}" >&2; exit 1; }
+    sleep 30
+done
+
+DEB="/tmp/postgresql-${PGVERSION}-pg-search_${VERSION}-1PARADEDB-noble_${ARCH}.deb"
+curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors -o "${DEB}" \
+    "https://github.com/paradedb/paradedb/releases/download/${TAG}/$(basename "${DEB}")"
+sudo -E apt-get install -y "${DEB}"
+rm -f "${DEB}"
+
+echo "shared_preload_libraries = 'pg_search'" \
+    | sudo tee "/etc/postgresql/${PGVERSION}/main/conf.d/pg_search.conf" >/dev/null
+
+sudo systemctl restart "postgresql@${PGVERSION}-main"

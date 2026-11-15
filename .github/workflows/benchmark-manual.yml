@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       systems:
-        description: "Systems to benchmark (directory names, space-separated)"
+        description: "Systems to benchmark (directory names, space-separated; json/<name> for the JSONBench systems)"
         required: true
       machines:
         description: "EC2 instance types (space-separated)"
@@ -21,8 +21,14 @@ on:
         description: "Branch to clone (empty: from the PR, or main)"
         default: ""
       timeout:
-        description: "Time limit for benchmark.sh, seconds"
-        default: "36000"
+        description: "Time limit for benchmark.sh, seconds (empty: 36000, and for JSONBench by the dataset size)"
+        default: ""
+      json_machines:
+        description: "EC2 instance types for the JSONBench systems (json/<name>)"
+        default: "m6i.8xlarge"
+      json_sizes:
+        description: "Dataset sizes for the JSONBench systems, millions of documents: any of 1 10 100 1000"
+        default: "1 10 100 1000"
 
 permissions:
   id-token: write  # To assume the federated IAM role.
@@ -42,3 +48,5 @@ jobs:
           repo: ${{ inputs.repo }}
           branch: ${{ inputs.branch }}
           timeout: ${{ inputs.timeout }}
+          json-machines: ${{ inputs.json_machines }}
+          json-sizes: ${{ inputs.json_sizes }}

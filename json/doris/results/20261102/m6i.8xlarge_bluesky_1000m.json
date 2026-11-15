@@ -1,0 +1,26 @@
+{
+  "system": "Apache Doris",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "MySQL compatible",
+    "ClickHouse derivative"
+  ],
+  "version": "doris-4.1.5-release-917b20be838",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-02",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 999999220,
+  "load_time": 10630.63,
+  "total_size": 174991458426,
+  "result": [
+    [16.24, 16.28, 16.11],
+    [17.68, 13.61, 14.06],
+    [4.6, 3.97, 3.93],
+    [2.48, 0.92, 0.83],
+    [2.56, 0.91, 0.97]
+  ]
+}

@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# Idempotent: if already up, do nothing.
-if clickhouse-client --query "SELECT 1" >/dev/null 2>&1; then
-    exit 0
+if ! [ -f server-data/clickhouse.pid ] || ! kill -0 "$(cat server-data/clickhouse.pid)" 2>/dev/null; then
+    mkdir -p server-data
+    setsid nohup ./clickhouse server --config-file=config.yaml --pid-file=server-data/clickhouse.pid \
+        > server-data/stdout.log 2>&1 < /dev/null &
 fi
-sudo clickhouse start

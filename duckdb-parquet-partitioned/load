@@ -3,5 +3,6 @@ set -e
 
 # create.sql defines a VIEW over hits_*.parquet — no ingestion happens.
 rm -f hits.db
-duckdb hits.db -f create.sql
+# -no-agent: keep the plain CLI output; see ./query.
+duckdb -no-agent hits.db -f create.sql
 sync

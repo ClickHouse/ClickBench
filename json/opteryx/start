@@ -1,0 +1,11 @@
+#!/bin/bash
+# Launch the query server and nothing else: no warm-up query, the data is not
+# touched. ./check is the readiness signal.
+set -e
+
+if [ -f server.pid ] && kill -0 "$(cat server.pid)" 2>/dev/null; then
+    exit 0
+fi
+
+OPTERYX_JSONL_DIR=/var/lib/opteryx/bluesky nohup /opt/opteryx_venv/bin/python server.py >>server.log 2>&1 &
+echo $! > server.pid

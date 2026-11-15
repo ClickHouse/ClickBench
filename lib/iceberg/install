@@ -1,0 +1,18 @@
+#!/bin/bash
+# Installs the storage of the Iceberg entries. Run from the entry directory.
+set -e
+source "$(dirname "$0")/env.sh"
+
+case "$LAKE_STORAGE" in
+seaweedfs)
+    if [ ! -x "$WEED_BIN" ]; then
+        case "$(uname -m)" in
+            x86_64) arch=amd64 ;;
+            aarch64) arch=arm64 ;;
+        esac
+        curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors \
+            "https://github.com/seaweedfs/seaweedfs/releases/download/${SEAWEEDFS_VERSION}/linux_${arch}.tar.gz" |
+            tar xz -C "$(dirname "$WEED_BIN")" weed
+    fi
+    ;;
+esac

@@ -1,0 +1,5 @@
+#!/bin/bash
+# The storage is the decompressed NDJSON files themselves.
+set -e
+
+du -sb /var/lib/opteryx/bluesky | cut -f1

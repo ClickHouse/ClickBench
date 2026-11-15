@@ -1,0 +1,36 @@
+#!/bin/bash
+# Starts PostgreSQL with DocumentDB and FerretDB in front of it (on the
+# standard MongoDB port), creating the containers on the first start. The data
+# directory of PostgreSQL is on the host, for ./data-size.
+set -e
+source ./env.sh
+source ./images.env
+
+sudo docker network inspect "${NETWORK}" >/dev/null 2>&1 || sudo docker network create "${NETWORK}" >/dev/null
+
+if ! sudo docker container inspect postgres >/dev/null 2>&1; then
+    sudo mkdir -p "${PGDATA_DIR}"
+    # enable_indexscan and enable_indexonlyscan as in the original entry (they
+    # are on by default in PostgreSQL).
+    sudo docker run -d --name postgres --network "${NETWORK}" \
+        -e POSTGRES_USER=username -e POSTGRES_PASSWORD=password -e POSTGRES_DB=postgres \
+        -v "${PGDATA_DIR}":/var/lib/postgresql/data \
+        "${POSTGRES_IMAGE}" \
+        -c enable_indexscan=on -c enable_indexonlyscan=on >/dev/null
+else
+    sudo docker start postgres >/dev/null
+fi
+
+for _ in $(seq 1 300); do
+    sudo docker exec postgres pg_isready -U username -d postgres >/dev/null 2>&1 && break
+    sleep 1
+done
+
+if ! sudo docker container inspect ferretdb >/dev/null 2>&1; then
+    sudo docker run -d --name ferretdb --network "${NETWORK}" -p 27017:27017 \
+        -e FERRETDB_POSTGRESQL_URL=postgres://username:password@postgres:5432/postgres \
+        -e FERRETDB_AUTH=false \
+        "${FERRETDB_IMAGE}" >/dev/null
+else
+    sudo docker start ferretdb >/dev/null
+fi

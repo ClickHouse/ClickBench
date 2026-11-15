@@ -1,0 +1,11 @@
+# Settings of the reference ClickHouse, one `name=value` per line. They make
+# ClickHouse follow the SQL standard where its defaults don't, so that the
+# reference results are the ones the other systems are expected to return.
+join_use_nulls=1
+aggregate_functions_null_for_empty=1
+group_by_use_nulls=1
+union_default_mode=DISTINCT
+intersect_default_mode=DISTINCT
+except_default_mode=DISTINCT
+allow_experimental_correlated_subqueries=1
+session_timezone=UTC

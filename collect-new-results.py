@@ -337,7 +337,7 @@ def preview_line(pr_number, head, rows, removals=()):
         changes = results_preview.pr_changes(pr_number, head) if pr_number and head else {}
         changes.update({result_path(r): r["output"].encode() for r in rows})
         changes.update({path: None for path in removals})
-        return results_preview.preview_line(results_preview.publish("origin/main", changes))
+        return results_preview.preview_line(results_preview.publish("origin/main", changes, head))
     except Exception as e:
         note(f"Preview of #{pr_number or 'new PR'} failed: {e}")
         return None

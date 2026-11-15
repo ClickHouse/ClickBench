@@ -4,6 +4,9 @@
 # minvers that were in effect WHEN each version ran -- not the current ones -- so this makes
 # every result consistent with the current minvers regardless of when it was benchmarked:
 #
+#   * a result made before the last datasets were added (they are appended at the end of
+#     QUERY_ORDER) is padded with null entries for their queries, so every result has one
+#     entry per query of the current layout, and
 #   * a query below its minimum version is nulled (its whole per-query timing array), and
 #   * a dataset every query of which is above the version (i.e. the version is below the
 #     dataset's lowest minimum) has its load_time / data_size dropped too -- such a version
@@ -18,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(HERE)
 
 # Same fixed order the runner concatenates per-dataset results in (see run-version.sh).
-QUERY_ORDER = ["mgbench", "ssb", "hits", "uk", "ontime", "taxi", "coffeeshop", "tpch", "tpcds", "job"]
+QUERY_ORDER = ["mgbench", "ssb", "hits", "uk", "ontime", "taxi", "coffeeshop", "tpch", "tpcds", "job", "jsonbench"]
 
 def sql_count(ds):
     with open(f"queries/{ds}.sql") as f:
@@ -56,13 +59,19 @@ for ds in QUERY_ORDER:
     dmin[ds] = "0" if any(m == "0" for m in mvs) else min(mvs, key=vkey)
 
 edited = 0
+total = len(global_minver)
 for f in sorted(glob.glob("results/*.json")):
-    v = subprocess.check_output(["jq", "-r", ".version", f], text=True).strip()
+    v, n = subprocess.check_output(["jq", "-r", '.version, (.result | length)', f], text=True).rstrip("\n").rsplit("\n", 1)
+    n = int(n)
+    if n > total:
+        sys.exit(f"{f}: {n} results, more than the {total} queries")
     idx = [i for i, m in enumerate(global_minver) if below(v, m)]
     drop = [ds for ds in QUERY_ORDER if below(v, dmin[ds])]
-    if not idx and not drop:
+    if n == total and not idx and not drop:
         continue
-    prog = ("reduce $idx[] as $i (.; .result[$i] |= map(null)) "
+    # Padding: one null per try (the length of the first entry), like a skipped query.
+    prog = (f".result |= ((.[0] | length) as $tries | . + [range({total} - length) | [range($tries) | null]]) "
+            "| reduce $idx[] as $i (.; .result[$i] |= map(null)) "
             "| reduce $drop[] as $d (.; del(.load_time[$d], .data_size[$d]))")
     out = subprocess.check_output(
         ["jq", "-cS", "--argjson", "idx", str(idx), "--argjson", "drop",

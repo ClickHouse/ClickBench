@@ -1,0 +1,10 @@
+{
+  "system": "GreptimeDB",
+  "proprietary": "no",
+  "retains_structure": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "time-series"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "system": "Umbra",
+  "proprietary": "yes",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "PostgreSQL compatible"
+  ]
+}

@@ -64,8 +64,15 @@ for ds in ${DATASETS}; do
         uk)      FILES="${FILES} uk_price_paid.native.zst" ;;
         job)     FILES="${FILES} job_aka_name.native.zst job_aka_title.native.zst job_cast_info.native.zst job_char_name.native.zst job_comp_cast_type.native.zst job_company_name.native.zst job_company_type.native.zst job_complete_cast.native.zst job_info_type.native.zst job_keyword.native.zst job_kind_type.native.zst job_link_type.native.zst job_movie_companies.native.zst job_movie_info.native.zst job_movie_info_idx.native.zst job_movie_keyword.native.zst job_movie_link.native.zst job_name.native.zst job_person_info.native.zst job_role_type.native.zst job_title.native.zst" ;;
         taxi)    FILES="${FILES} taxi.native.zst" ;;
+        # JSONBench: the original Bluesky files, which are not in the versions-benchmark
+        # directory (and only in the eu-central-1 bucket), so they are fetched on their own.
+        jsonbench) JSONBENCH=1 ;;
     esac
 done
+if [ -n "${JSONBENCH:-}" ]; then
+    echo "downloading the JSONBench data"
+    bash prepare-data/jsonbench.sh
+fi
 echo "downloading in parallel:${FILES}"
 if command -v aria2c >/dev/null 2>&1; then
     # One aria2c per file, run several at once with xargs -P. Each splits its

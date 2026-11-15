@@ -1,0 +1,25 @@
+{
+  "system": "SQLite",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C",
+    "embedded",
+    "row-oriented"
+  ],
+  "version": "3.54.1",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "load_time": 6.316,
+  "total_size": 566317056,
+  "result": [
+    [3.242834, 1.291707, 1.27013],
+    [0.460899, 0.168426, 0.169435],
+    [0.46545, 0.379514, 0.376544],
+    [0.066707, 0.035961, 0.0356],
+    [0.070299, 0.039832, 0.038608]
+  ]
+}

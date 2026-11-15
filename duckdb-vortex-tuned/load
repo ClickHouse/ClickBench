@@ -7,11 +7,12 @@ set -e
 # https://github.com/vortex-data/vortex/issues/10046 for the full
 # investigation and raw evidence). `threads=2` is the largest thread
 # count that completed in our testing; default (`threads=4`) OOMs.
-duckdb -c "LOAD vortex; SET threads = 2; COPY 'hits.parquet' TO 'hits.vortex' (FORMAT vortex);"
+# -no-agent: keep the plain CLI output; see ./query.
+duckdb -no-agent -c "LOAD vortex; SET threads = 2; COPY 'hits.parquet' TO 'hits.vortex' (FORMAT vortex);"
 
 # Create the persistent VIEW (over hits.vortex) in hits.db.
 rm -f hits.db
-duckdb hits.db -f create.sql
+duckdb -no-agent hits.db -f create.sql
 
 # Source parquet no longer needed.
 rm -f hits.parquet

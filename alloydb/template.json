@@ -1,0 +1,15 @@
+{
+  "system": "AlloyDB",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "C",
+    "column-oriented",
+    "PostgreSQL compatible",
+    "managed",
+    "gcp",
+    "no-cold"
+  ]
+}

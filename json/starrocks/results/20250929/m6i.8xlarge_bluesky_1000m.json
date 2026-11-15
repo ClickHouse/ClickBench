@@ -1,0 +1,20 @@
+{
+  "system": "Starrocks",
+  "version": "4.0.0-rc02",
+  "os": "Ubuntu 24.04",
+  "date": "2025-09-29",
+  "machine": "m6i.8xlarge",
+  "retains_structure": "yes",
+  "tags": [
+  ],
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 996999662,
+  "total_size": 192981470543,
+  "result": [
+      [2.01,1.59,1.58],
+      [76.14,11.26,11.29],
+      [20.50,3.40,3.32],
+      [14.74,2.59,2.72],
+      [2.93,3.02,2.74]
+  ]
+}

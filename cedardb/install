@@ -5,7 +5,7 @@ sudo apt-get update -y
 sudo apt-get install -y postgresql-client
 
 # Stop any running instance before reinstalling
-./stop || true
+./stop
 
 # Delete potential previously created database
 rm -rf ./db

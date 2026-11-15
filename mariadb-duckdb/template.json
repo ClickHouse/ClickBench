@@ -4,5 +4,6 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
+    "category": "enthusiast",
     "tags": ["C++", "column-oriented", "MySQL compatible", "DuckDB derivative"]
 }

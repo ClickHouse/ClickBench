@@ -1,0 +1,42 @@
+#!/bin/bash
+# Compresses the documents into CLP archives with the package's compression
+# pipeline (`sbin/compress.sh`: a compression job, split into tasks run by
+# the compression workers, one per two CPU cores by default), into the
+# `default` dataset.
+set -e -o pipefail
+
+CLP_HOME=/clp/clp-json
+STAGING=/clp/staging
+
+# Idempotent: start from an empty dataset.
+if [ -n "$(ls -A "${CLP_HOME}/var/data/archives" 2>/dev/null)" ]; then
+    (cd "${CLP_HOME}" && sbin/admin-tools/dataset-manager.sh del --all)
+fi
+
+# A few lines in the dataset are not valid JSON: documents of more than
+# 64 KiB that were cut into two lines. CLP fails the whole input file on the
+# first invalid document, so the invalid lines are dropped first, the other
+# lines are passed through unchanged, into uncompressed staging files (all the
+# files in parallel). The inputs given to CLP may be compressed, but this way
+# the decompression is not paid twice.
+sudo rm -rf "${STAGING}"
+sudo mkdir -p "${STAGING}"
+# shellcheck disable=SC2016,SC2012
+ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}" \
+    | xargs -P "$(nproc)" -n 1 sh -c \
+        'gzip -dc "$2" | python3 -I "$1" "$2" > "$0/$(basename "$2" .gz)"' \
+        "${STAGING}" "${PWD}/filter-json.py"
+
+# No --timestamp-key: none of the queries filters by time, and with it the
+# time_us field would be stored as a timestamp rather than as an integer.
+# compress.sh exits 0 even when the job fails, so its output is checked.
+log=$(mktemp /var/tmp/clp-compress.XXXXXX)
+(cd "${CLP_HOME}" && sbin/compress.sh --no-progress-reporting "${STAGING}") 2>&1 | tee "${log}"
+if grep -q 'Compression failed\|Compression killed' "${log}"; then
+    rm -f "${log}"
+    echo "load: compression failed" >&2
+    exit 1
+fi
+rm -f "${log}"
+
+sudo rm -rf "${STAGING}"

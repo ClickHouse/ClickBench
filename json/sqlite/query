@@ -1,0 +1,28 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it with the SQLite shell on bluesky.db.
+# Stdout: the result. Stderr: the runtime in fractional seconds on the last
+# line (the "real" time of `.timer on`).
+set -e
+
+query=$(cat)
+
+err=$(mktemp /var/tmp/sqlite-query.XXXXXX)
+trap 'rm -f "${err}"' EXIT
+
+out=$(printf '.timer on\n%s\n' "${query}" | sqlite3 -bail bluesky.db 2>"${err}") && status=0 || status=$?
+
+if [ "${status}" -ne 0 ]; then
+    cat "${err}" >&2
+    exit "${status}"
+fi
+
+# "Run Time: real 1.234 user 1.100000 sys 0.120000"
+time_s=$(printf '%s\n' "${out}" | awk '/^Run Time:/ { t = $4 } END { print t }')
+if [ -z "${time_s}" ]; then
+    printf '%s\n' "${out}" >&2
+    echo "query: no timing in the SQLite output" >&2
+    exit 1
+fi
+
+printf '%s\n' "${out}" | grep -v '^Run Time: '
+echo "${time_s}" >&2

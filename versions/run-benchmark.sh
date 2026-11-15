@@ -18,7 +18,7 @@ VERSION="${1:?usage: run-benchmark.sh <version>}"
 machine="${machine:=c7a.4xlarge}"
 repo="${repo:=ClickHouse/ClickBench}"
 branch="${branch:=main}"
-datasets="${datasets:=hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi}"   # each loads into its own database
+datasets="${datasets:=hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi jsonbench}"   # each loads into its own database
 tries="${tries:=6}"   # 1 cold + 5 hot runs
 timeout="${timeout:-18000}"                 # load + (optional source build) + queries
 volume="${volume:-1000}"                    # GB; headroom for loading all datasets in parallel (peak usage is higher than the on-disk total)
@@ -77,6 +77,12 @@ if [[ "${VERSION}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] \
    || [ "$(awk -v v="${VERSION}" 'BEGIN{n=split(v,a,"."); print (n==1? a[1] : (a[1]==1? a[3] : 1000000))}')" -lt 53991 ] 2>/dev/null; then
     datasets="$(printf '%s' "${datasets}" | tr ' ' '\n' | grep -vxE 'ssb|tpch|tpcds|coffeeshop|job' | tr '\n' ' ' | xargs)"
     echo "pre-Docker/prehistoric ${VERSION}: datasets reduced to [${datasets}]" >&2
+fi
+
+# The JSON type, which jsonbench needs, exists from 24.8 (queries/jsonbench.minver); don't
+# download its 13 GB to the machines of the older versions, which never load it.
+if [ "${VERSION}" != "master" ] && ! awk -v v="${VERSION}" 'BEGIN{n=split(v,a,"."); exit !(n>=3 && (a[1]>24 || (a[1]==24 && a[2]>=8)) && a[1]<1000)}'; then
+    datasets="$(printf '%s' "${datasets}" | tr ' ' '\n' | grep -vxF jsonbench | tr '\n' ' ' | xargs)"
 fi
 
 # For source-built versions, get the tag and required GCC from versions.txt (the tagged /

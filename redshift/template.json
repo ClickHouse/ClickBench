@@ -1,0 +1,13 @@
+{
+  "system": "Redshift",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "production",
+  "tags": [
+    "managed",
+    "column-oriented",
+    "aws",
+    "no-cold"
+  ]
+}

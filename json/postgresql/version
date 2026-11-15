@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# "18.1 (Ubuntu 18.1-1.pgdg24.04+1)" -> "18.1"
+sudo -u postgres psql -X -t -A -c "SHOW server_version" | awk '{ print $1 }'

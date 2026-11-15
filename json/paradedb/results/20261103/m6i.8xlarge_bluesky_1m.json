@@ -1,0 +1,26 @@
+{
+  "system": "ParadeDB",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Rust",
+    "row-oriented",
+    "search",
+    "PostgreSQL compatible"
+  ],
+  "version": "0.26.4 (PostgreSQL 18.6)",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "load_time": 15.647,
+  "total_size": 731111424,
+  "result": [
+    [1.638, 0.107, 0.107],
+    [39.342, 2.875, 3.148],
+    [2.413, 0.447, 0.449],
+    [6.22, 0.177, 0.181],
+    [6.228, 0.203, 0.202]
+  ]
+}

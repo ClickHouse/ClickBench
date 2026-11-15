@@ -1,0 +1,11 @@
+{
+  "system": "Hologres",
+  "proprietary": "yes",
+  "retains_structure": "yes",
+  "tags": [
+    "managed",
+    "PostgreSQL compatible",
+    "column-oriented",
+    "no-cold"
+  ]
+}

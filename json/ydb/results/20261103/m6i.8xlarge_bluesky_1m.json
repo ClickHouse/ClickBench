@@ -1,0 +1,24 @@
+{
+  "system": "YDB",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented"
+  ],
+  "version": "26.2.1.14",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "load_time": 25.968,
+  "total_size": 280096336,
+  "result": [
+    [2.363886, 0.153062, 0.153638],
+    [2.17983, 0.569665, 0.547395],
+    [1.595979, 1.056057, 1.069252],
+    [1.590402, 0.638978, 0.625427],
+    [1.614269, 0.647271, 0.615193]
+  ]
+}

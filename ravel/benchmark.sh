@@ -2,8 +2,8 @@
 # Ravel: object-storage-native telemetry database, queried over SQL.
 #
 # Ravel keeps every durable byte in S3-compatible object storage; there is no
-# local-disk storage mode. For this benchmark the store is a single-node RustFS
-# that ./install downloads, starts and provisions on this machine's disk, with
+# local-disk storage mode. For this benchmark the store is a single-node s3s-fs
+# that ./install sets up, starts and provisions on this machine's disk, with
 # credentials it generates into a file readable by the current user only, so
 # nothing is required from the operator and no key is stored in this
 # repository. See README.md.

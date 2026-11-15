@@ -1,0 +1,3 @@
+#!/bin/bash
+
+./bin/exasol stop --deployment-dir deploy < /dev/null || true

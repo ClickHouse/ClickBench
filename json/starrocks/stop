@@ -1,0 +1,6 @@
+#!/bin/bash
+source ./env.sh
+
+"$STARROCKS_HOME"/fe/bin/stop_fe.sh || true
+"$STARROCKS_HOME"/be/bin/stop_be.sh || true
+exit 0

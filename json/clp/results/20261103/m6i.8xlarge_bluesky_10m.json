@@ -1,0 +1,25 @@
+{
+  "system": "CLP",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "search"
+  ],
+  "version": "0.14.1",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 10000000,
+  "num_loaded_documents": 9999994,
+  "load_time": 22.523,
+  "total_size": 948304821,
+  "result": [
+    [4.379, 4.208, 3.878],
+    [5.344, 4.678, 4.699],
+    [4.433, 3.536, 3.52],
+    [2.207, 1.685, 1.566],
+    [2.236, 1.528, 1.384]
+  ]
+}

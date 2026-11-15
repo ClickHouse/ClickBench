@@ -1,0 +1,11 @@
+{
+  "system": "StarRocks (Iceberg)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "C++",
+    "column-oriented"
+  ]
+}

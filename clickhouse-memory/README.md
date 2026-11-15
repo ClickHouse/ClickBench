@@ -35,8 +35,9 @@ The dataset needs 30 GB of RAM plus the insert's working memory, so this entry
 only runs on machines with substantially more than 32 GB: on `c6a.4xlarge` and
 `c8g.4xlarge` the `INSERT` dies with `MEMORY_LIMIT_EXCEEDED` against the
 26.8 GiB `max_server_memory_usage` (0.9 of RAM), and the smaller machines
-never had a chance. It is not part of the daily fleet for that reason; launch
-it with the "Run a benchmark" workflow on a metal instance.
+never had a chance. For that reason the daily run (`benchmark-daily.yml`)
+launches it only on the metal instances: `c6a.metal`, `c8g.metal-48xl` and
+`c7a.metal-48xl`.
 
 ## What the first run showed
 

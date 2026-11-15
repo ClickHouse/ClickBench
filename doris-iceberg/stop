@@ -1,0 +1,8 @@
+#!/bin/bash
+# Stops Doris only. The storage keeps running: it plays the role of the
+# remote object storage, which survives restarts of the database.
+
+DORIS_HOME=$(cat .doris_home 2>/dev/null) || exit 0
+"$DORIS_HOME"/fe/bin/stop_fe.sh 2>/dev/null || true
+"$DORIS_HOME"/be/bin/stop_be.sh 2>/dev/null || true
+exit 0

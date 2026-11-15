@@ -1,0 +1,6 @@
+#!/bin/bash
+source ./env.sh
+
+"$DORIS_HOME"/fe/bin/stop_fe.sh || true
+"$DORIS_HOME"/be/bin/stop_be.sh || true
+exit 0

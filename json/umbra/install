@@ -1,0 +1,17 @@
+#!/bin/bash
+set -eu
+source ./env.sh
+
+export DEBIAN_FRONTEND=noninteractive
+sudo apt-get update -y
+sudo apt-get install -y docker.io postgresql-client python3
+sudo systemctl enable --now docker
+
+for i in $(seq 1 10); do
+    sudo docker pull -q "${UMBRA_IMAGE}" && break
+    [ "$i" -eq 10 ] && exit 1
+    sleep 10
+done
+
+mkdir -p db
+chmod 777 db

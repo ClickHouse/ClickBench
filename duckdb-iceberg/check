@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+duckdb -init /dev/null -c "SELECT 1" >/dev/null

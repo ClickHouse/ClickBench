@@ -1,0 +1,24 @@
+{
+  "system": "Elasticsearch",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Java",
+    "search"
+  ],
+  "version": "9.5.6",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-02",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "load_time": 65.849,
+  "total_size": 399289201,
+  "result": [
+    [0.668, 0.16, 0.022],
+    [0.865, 0.118, 0.038],
+    [0.75, 0.098, 0.07],
+    [0.707, 0.081, 0.049],
+    [0.796, 0.083, 0.081]
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "system": "MariaDB",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "row-oriented",
+    "MySQL compatible"
+  ]
+}

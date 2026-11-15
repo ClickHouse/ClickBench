@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+sudo systemctl start cedardb.service

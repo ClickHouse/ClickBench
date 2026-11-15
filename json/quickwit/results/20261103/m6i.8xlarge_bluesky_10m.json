@@ -1,0 +1,24 @@
+{
+  "system": "Quickwit",
+  "proprietary": "no",
+  "retains_structure": "no",
+  "tags": [
+    "Rust",
+    "search"
+  ],
+  "version": "0.9.3",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 10000000,
+  "num_loaded_documents": 9999994,
+  "load_time": 87.455,
+  "total_size": 2241878987,
+  "result": [
+    [0.090299, 0.036617, 0.036536],
+    [0.290858, 0.182364, 0.176989],
+    [null, null, null],
+    [0.157822, 0.053948, 0.050542],
+    [null, null, null]
+  ]
+}

@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# -no-agent: keep the plain CLI output; see ../../duckdb/query.
+duckdb -no-agent bluesky.duckdb -noheader -list -c "SELECT count() FROM bluesky"

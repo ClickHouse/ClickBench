@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+
+: "${motherduck_token:?motherduck_token is required}"
+
+PY=.venv/bin/python3; [ -x "$PY" ] || PY=python3
+
+# Data lives in S3; create.sql defines a VIEW over the remote parquet plus the
+# toDateTime macro the queries use. Create it in its own MotherDuck database
+# (separate from the `clickbench` database the motherduck entry loads into).
+#
+# The S3 read happens on the remote Duckling, not on this VM, so the bucket
+# should be the copy closest to the MotherDuck region. dataset-bucket.sh picks
+# by the client's EC2 region, which matches when the client runs in the same
+# region as the MotherDuck organization (us-east-1 for US orgs); force a
+# choice with CLICKBENCH_DATASET_BUCKET if they differ.
+. ../lib/dataset-bucket.sh
+bench_dataset_sql < create.sql | "$PY" -c '
+import duckdb, sys
+sql = sys.stdin.read()
+con = duckdb.connect("md:")
+con.execute("CREATE OR REPLACE DATABASE clickbench_datalake")
+con.execute("USE clickbench_datalake")
+con.execute(sql)
+'

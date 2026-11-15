@@ -1,0 +1,10 @@
+{
+  "system": "SingleStore",
+  "proprietary": "yes",
+  "retains_structure": "yes",
+  "tags": [
+    "MySQL compatible",
+    "column-oriented",
+    "no-cold"
+  ]
+}

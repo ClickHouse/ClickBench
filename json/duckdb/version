@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# "v2.0.0 (Cyanoptera) d54cbbe3df" -> "2.0.0"
+duckdb --version | awk '{ sub(/^v/, "", $1); print $1 }'
