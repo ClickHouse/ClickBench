@@ -4,7 +4,15 @@ set -e
 # Place the parquet file inside the Hive external_location directory.
 ln -f hits.parquet data/hits/hits.parquet
 
-java -jar presto-cli.jar --server http://localhost:8081 --file create.sql
+venv/bin/python - create.sql <<'EOF'
+import sys, prestodb
+
+cursor = prestodb.dbapi.connect(host="localhost", port=8081, user="clickbench").cursor()
+for statement in open(sys.argv[1]).read().split(";"):
+    if statement.strip():
+        cursor.execute(statement)
+        cursor.fetchall()
+EOF
 
 rm -f hits.parquet
 sync

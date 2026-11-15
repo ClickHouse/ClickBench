@@ -6,6 +6,9 @@ if ! command -v docker >/dev/null 2>&1; then
     sudo apt-get update -y
     sudo apt-get install -y docker.io
 fi
+sudo apt-get install -y python3-venv
+python3 -m venv venv
+venv/bin/pip install --quiet trino
 
 sudo docker pull trinodb/trino:latest
 

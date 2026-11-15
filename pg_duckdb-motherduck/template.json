@@ -1,0 +1,15 @@
+{
+  "system": "pg_duckdb (MotherDuck enabled)",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "managed",
+    "column-oriented",
+    "DuckDB derivative",
+    "PostgreSQL compatible",
+    "serverless",
+    "no-cold"
+  ]
+}

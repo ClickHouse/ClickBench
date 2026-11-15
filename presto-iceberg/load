@@ -11,6 +11,14 @@ for f in hits_*.parquet; do
 done
 
 cat source.sql create.sql insert.sql > load.sql
-java -jar presto-cli.jar --server http://localhost:8080 --file load.sql
+venv/bin/python - load.sql <<'EOF'
+import sys, prestodb
+
+cursor = prestodb.dbapi.connect(host="localhost", port=8080, user="clickbench").cursor()
+for statement in open(sys.argv[1]).read().split(";"):
+    if statement.strip():
+        cursor.execute(statement)
+        cursor.fetchall()
+EOF
 
 rm -f hits_*.parquet data/hits/hits_*.parquet load.sql

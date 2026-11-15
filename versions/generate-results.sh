@@ -17,7 +17,7 @@ cd "${HERE}"
 
 # The order the runner concatenates per-dataset query results into result[] (see
 # QUERY_ORDER in run-version.sh). datasets[].queries line up with result[] by offset.
-QUERY_ORDER="mgbench ssb hits uk ontime taxi coffeeshop tpch tpcds job"
+QUERY_ORDER="mgbench ssb hits uk ontime taxi coffeeshop tpch tpcds job jsonbench"
 
 OUT=data.generated.js
 

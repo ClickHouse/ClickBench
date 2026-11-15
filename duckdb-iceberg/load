@@ -6,9 +6,10 @@ set -e
 ../lib/iceberg/prepare
 source ../lib/iceberg/env.sh
 
+# -no-agent: keep the plain CLI output; see ../duckdb/query.
 {
     ../lib/iceberg/substitute < attach.sql
     cat create.sql insert.sql
-} | duckdb -init /dev/null -bail
+} | duckdb -no-agent -init /dev/null -bail
 
 rm -f hits_*.parquet

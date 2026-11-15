@@ -1,0 +1,12 @@
+{
+  "system": "InfiniDB",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "retired",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "MySQL compatible"
+  ]
+}

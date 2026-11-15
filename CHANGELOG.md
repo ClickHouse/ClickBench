@@ -2,6 +2,9 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-11-05
+Introduced system categories: Elite, Production, Challenger, Enthusiast, Retired, and Joke. The requirements for each category are described in the [README](README.md#system-categories). The category is set in the `template.json` of every system, and the report has a "Category" selector. Enthusiast and Joke entries are hidden by default; the other categories are shown. The selectors now also work correctly after opening a link with a saved selection. (Alexey Milovidov)
+
 ### 2026-11-04
 Merged [JSONBench](https://benchmark.clickhouse.com/json/) - a benchmark for data analytics on JSON - into the ClickBench repository. The original JSONBench was not updated for more than a year. Now it has been revived, all contributions have been merged, and a dozen new entrants have been added. It adds all UI advancements and automations from ClickBench. (Alexey Milovidov)
 

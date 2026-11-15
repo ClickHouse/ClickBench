@@ -31,6 +31,10 @@ CREATE TABLE sink.results
     -- BENCH_CONCURRENT_DURATION was set to 0).
     concurrent_qps Nullable(Float64),
     concurrent_error_ratio Nullable(Float64),
+    -- Median time in seconds for a cold system to become ready with the data
+    -- loaded (lib/benchmark-common.sh bench_startup_time). NULL when it could
+    -- not be measured, and for logs predating the measurement.
+    startup_time Nullable(Float64),
     -- The pull request number when the run was launched by the PR workflow;
     -- 0 for runs of main and for logs predating this column.
     clickbench_pr UInt32,
@@ -64,6 +68,7 @@ WITH
     -- ends up as a NULL in the column.
     toFloat64OrNull(extract(content, 'Concurrent QPS: ([0-9.]+|null)')) AS concurrent_qps,
     toFloat64OrNull(extract(content, 'Concurrent error ratio: ([0-9.]+|null)')) AS concurrent_error_ratio,
+    toFloat64OrNull(extract(content, 'Startup time: ([0-9.]+|null)')) AS startup_time,
 
     -- \d* rather than \d+: the header line is 'ClickBench PR: ' with no number
     -- for runs of main, and the empty match there stops the search before any
@@ -74,7 +79,7 @@ WITH
         AND arrayExists(x -> arrayExists(y -> toFloat64OrZero(y) > 0.1, x), runtimes) AS good
 
 SELECT time, system, machine, system_name, proprietary, tuned, tags, total_time, disk_space_diff, load_time, data_size, length(runtimes) AS num_results, runtimes, runtimes_formatted,
-    concurrent_qps, concurrent_error_ratio, clickbench_pr,
+    concurrent_qps, concurrent_error_ratio, startup_time, clickbench_pr,
 '{
     "system": "' || system_name || '",
     "date": "' || time::Date || '",
@@ -88,6 +93,7 @@ SELECT time, system, machine, system_name, proprietary, tuned, tags, total_time,
     "data_size": ' || data_size || ',
     "concurrent_qps": ' || ifNull(toString(concurrent_qps), 'null') || ',
     "concurrent_error_ratio": ' || ifNull(toString(concurrent_error_ratio), 'null') || ',
+    "startup_time": ' || ifNull(toString(startup_time), 'null') || ',
     "result": ' || runtimes_formatted || '
 }
 ' AS output

@@ -36,7 +36,7 @@ bemidb/iceberg
 dolphindb/dolphindb
 dolphindb/clickbench.cfg
 dolphindb/db
-dolphindb/__pycache__
+__pycache__/
 
 # ArcticDB's LMDB store
 arcticdb/store

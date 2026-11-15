@@ -253,9 +253,19 @@ The earlier reference, v0.16.1 with ~4 MB objects, measured a 483 s cold and
   every query states a time window covering the dataset because the SQL
   endpoint's window defaults to the last hour.
 - The heaviest whole-table aggregates can exceed the derived per-query memory
-  pool on a small instance and are reported as errors rather than being run
-  with a raised limit. q33 reserves about 10.9 GB. It completes on c6a.4xlarge
-  and larger; on instances with less memory it can still be refused.
+  pool on a small instance; q33 reserves about 10.9 GB in memory. Since v0.31.0
+  Ravel answers such a statement by retrying it once with spilling to disk,
+  under `sql-spill/` in this directory, instead of raising the limit. Spill
+  files are scratch, never durable state. Since v0.32.0 a statement whose
+  group keys are fixed-width retries through a bucketed aggregate that writes
+  its state to disk once; one grouping by a string key retries with a
+  sort-merge spill. In the v0.32.0 results (`results/20261112`) all 43
+  statements answered on every machine. q33 took 9.3 s hot on c6a.2xlarge,
+  against 82.0 s in our v0.31.1 run; on c6a.large it still takes the
+  sort-merge retry, at 114.2 s. Concurrent throughput on c6a.large,
+  c6a.xlarge and c6a.2xlarge is 0.79 to 0.87 of the v0.28.0 results, which
+  refused statements these runs answer. The t3a.small result is from
+  v0.28.0.
 - q28 averages `octet_length("URL")`. ClickHouse's `length()` counts bytes and
   DataFusion's counts characters, so `octet_length` is the faithful
   translation; q29 still uses `length("Referer")`.
