@@ -9,6 +9,10 @@
 # instead of the client-side Python start + connection + catalog load. The
 # driver runs BENCH_CONCURRENT_CONNECTIONS of these in parallel, each with its
 # own connection.
+#
+# The sibling entries (../motherduck-datalake, ../motherduck-ducklake) reuse
+# this worker with MOTHERDUCK_DATABASE set to their database; the driver runs
+# it from the entry's directory, so .venv below is the entry's own.
 set -e
 
 : "${motherduck_token:?motherduck_token is required}"
@@ -25,7 +29,8 @@ os.dup2(2, 1)
 deadline = float(sys.argv[1])
 queries = [q for q in sys.stdin.read().splitlines() if q.strip()]
 # Same connection settings as ./query.
-con = duckdb.connect("md:clickbench", config={"motherduck_attach_mode": "single"})
+database = os.environ.get("MOTHERDUCK_DATABASE", "clickbench")
+con = duckdb.connect(f"md:{database}", config={"motherduck_attach_mode": "single"})
 con.execute("SET enable_progress_bar = false")
 ok = err = i = 0
 while time.time() < deadline:

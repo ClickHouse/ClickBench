@@ -44,7 +44,7 @@ The shared driver invokes these scripts in the system directory:
 
 | script      | role                                                          |
 |-------------|--------------------------------------------------------------|
-| `install`   | apt Python + venv, `pip install duckdb`                       |
+| `install`   | apt Python + venv, `pip install duckdb==1.5.6` (MotherDuck-supported) |
 | `start`/`stop` | no-ops (remote service, no local daemon)                  |
 | `check`     | `SELECT 1` over `md:` to confirm connectivity                 |
 | `load`      | create the `clickbench` database + INSERT from S3 parquet     |
@@ -108,6 +108,10 @@ then runs the full benchmark (reload + all 43 queries), capturing output to
 size when the sweep finishes. Note the sweep is slow: size changes take ~2 min
 (pulse/standard/jumbo) to ~10 min (giga) to take effect, and each run reloads the
 full dataset.
+
+`../motherduck-datalake/run-all-sizes.sh` and
+`../motherduck-ducklake/run-all-sizes.sh` run this same script on their own
+directory (via `MOTHERDUCK_ENTRY`), with logs named `<entry>-<size>.log`.
 
 ### Producing committable results
 
