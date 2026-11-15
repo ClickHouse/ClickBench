@@ -49,7 +49,8 @@ pl.Config.set_tbl_width_chars(-1)
 pl.Config.set_fmt_str_lengths(65535)
 
 app = FastAPI()
-hits: pl.LazyFrame | None = None
+# FOR IN-MEMORY: Keep data as a materialized pl.DataFrame in RAM
+hits: pl.DataFrame | None = None
 parquet_path: str = "hits.parquet"
 
 
@@ -63,8 +64,8 @@ def load():
     global hits
     start = timeit.default_timer()
     
-    # Lazy baseline with optimized execution plan and tight bit-widths
-    hits = pl.scan_parquet(parquet_path, low_memory=False).with_columns(
+    # CANONICAL IN-MEMORY: Load the data fully into memory immediately using read_parquet
+    hits = pl.read_parquet(parquet_path, low_memory=False).with_columns(
         (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
         pl.col("EventDate").cast(pl.Date),
         pl.col("SearchPhrase").cast(pl.Categorical),
@@ -82,10 +83,9 @@ def load():
     if 'mechanicus_core' in sys.modules:
         try:
             print("Initiating hardware-level bit-packing across columnar cache-lines...")
-            # We materialize a quick sample profile to align the underlying register streams
-            sample_df = hits.select(["AdvEngineID", "RegionID", "IsMobile", "SearchEngineID"]).collect()
-            for col_name in sample_df.columns:
-                raw_values = sample_df[col_name].to_list()
+            # Since 'hits' is now an in-memory DataFrame, we can access columns directly
+            for col_name in ["AdvEngineID", "RegionID", "IsMobile", "SearchEngineID"]:
+                raw_values = hits[col_name].to_list()
                 # Primes the hardware L1/L2 caches via native AVX-512 aligned Rust blocks
                 _packed_block = mechanicus_core.pack_column_bits(raw_values, 8)
             print("Memory layout consecrated. CPU caches primed for workload.")
@@ -104,15 +104,20 @@ async def query(request: Request):
     if not code:
         raise HTTPException(status_code=400, detail="empty query")
     try:
-        compiled = compile(code, "<query>", "eval")
+        compiled = compile(code, "QUERY", "eval")
     except SyntaxError as e:
         raise HTTPException(status_code=400, detail=f"syntax error: {e}")
     
     start = timeit.default_timer()
-    value = eval(compiled, {"hits": hits, "pl": pl, "date": date})
+    # FOR IN-MEMORY: Cast the in-memory DataFrame to a LazyFrame (.lazy()) 
+    # to let Polars optimize the ad-hoc query execution plan plan dynamically.
+    value = eval(compiled, {"hits": hits.lazy(), "pl": pl, "date": date})
     
     if isinstance(value, (pl.DataFrame, pl.Series, pl.LazyFrame)):
-        result = str(value)
+        if isinstance(value, pl.LazyFrame):
+            result = str(value.collect())
+        else:
+            result = str(value)
     else:
         result = repr(value)
     
@@ -122,10 +127,14 @@ async def query(request: Request):
 
 @app.get("/data-size")
 def data_size():
-    try:
-        return {"bytes": os.path.getsize(parquet_path)}
-    except OSError:
-        return {"bytes": 0}
+    # CANONICAL IN-MEMORY: Must report the real estimated RAM size of the dataframe object,
+    # not the file size on disk!
+    if hits is not None:
+        try:
+            return {"bytes": hits.estimated_size()}
+        except Exception:
+            return {"bytes": 0}
+    return {"bytes": 0}
 
 
 if __name__ == "__main__":
