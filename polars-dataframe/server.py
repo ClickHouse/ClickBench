@@ -18,6 +18,12 @@ one Python expression per line (the filename matches the cross-system
 convention; the contents are not SQL).
 """
 
+try:
+    import mechanicus_core
+    print(mechanicus_core.verify_spirit())
+except ImportError:
+    print("Mechanicus-Core not compiled yet. Running in baseline mode.")
+
 import os
 import timeit
 from datetime import date
