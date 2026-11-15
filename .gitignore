@@ -43,12 +43,11 @@ arcticdb/store
 
 # Python venvs created by install scripts
 myenv
-__pycache__/
 
 # spark-gluten-clickhouse: from-source build tree and symlinked artifacts
-gluten/
-gluten.jar
-libch.so
+spark-gluten-clickhouse/gluten/
+spark-gluten-clickhouse/*.jar
+spark-gluten-clickhouse/libch.so
 
 # Pivot's local datastores and generated server configs
 pivot-parquet/catalog

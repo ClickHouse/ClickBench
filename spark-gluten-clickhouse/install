@@ -34,14 +34,6 @@ sudo apt-get install -y python3-pip python3-venv \
     maven git cmake ccache ninja-build nasm yasm gawk \
     lsb-release wget software-properties-common gnupg
 
-# ClickHouse (libch.so) starts core-scaled thread pools at init; on a 192-core
-# box the process needs far more threads and memory-map areas than the defaults
-# allow, and JavaSparkContext init otherwise dies with `OutOfMemoryError:
-# unable to create native thread`. Raise the kernel ceilings once here
-# (best-effort; ./query also raises the matching per-process ulimits).
-sudo sysctl -w kernel.threads-max=4000000 kernel.pid_max=4000000 \
-    vm.max_map_count=2000000 >/dev/null 2>&1 || true
-
 # Install Clang 19 via apt.llvm.org.
 if ! command -v clang-19 >/dev/null 2>&1; then
     wget -O - https://apt.llvm.org/llvm.sh | sudo bash -s -- 19
@@ -82,26 +74,6 @@ if [ ! -d "$CH_DIR" ]; then
     git clone --recursive --shallow-submodules \
         --branch "$CH_BRANCH" \
         "https://github.com/${CH_ORG}/ClickHouse.git" "$CH_DIR"
-fi
-
-# Build libch.so WITHOUT jemalloc. ClickHouse enables jemalloc by default and
-# Gluten hardcodes -DENABLE_JEMALLOC=ON for the inner ClickHouse cmake in
-# cpp-ch/CMakeLists.txt (there is no env hook to override it). jemalloc is only
-# safe when it interposes malloc/free process-wide, which requires preloading
-# libch.so. We load it lazily (System.load in query.py, via the static-TLS
-# tunable) rather than LD_PRELOAD, so jemalloc does NOT interpose: the first
-# time ClickHouse frees a pointer the system/JVM allocator made, jemalloc's
-# radix tree has no metadata for it and SIGSEGVs in rtree_metadata_read during
-# the CH backend's native init (CHListenerApi.initialize -> nativeInitNative).
-# Building without jemalloc makes ClickHouse use the system allocator uniformly,
-# removing the cross-allocator boundary. Patch + verify so a future Gluten bump
-# that changes the flag fails loudly instead of silently re-enabling jemalloc.
-CH_CMAKELISTS="$GLUTEN_DIR/cpp-ch/CMakeLists.txt"
-sed -i 's/-DENABLE_JEMALLOC=ON/-DENABLE_JEMALLOC=OFF/g' "$CH_CMAKELISTS"
-if grep -q -- '-DENABLE_JEMALLOC=ON' "$CH_CMAKELISTS" \
-   || ! grep -q -- '-DENABLE_JEMALLOC=OFF' "$CH_CMAKELISTS"; then
-    echo "ERROR: could not disable jemalloc in $CH_CMAKELISTS" >&2
-    exit 1
 fi
 
 # Scala 2.12 compat for the Delta 3.3 backend sources. On Gluten main,
@@ -211,6 +183,15 @@ if [ -z "$GLUTEN_JAR" ]; then
     exit 1
 fi
 
-# query.py expects the jar and native library as ./gluten.jar and ./libch.so.
+# The CH backend registers Delta Lake data sources at startup, but Gluten marks
+# delta-spark as `provided`; the Maven build above has downloaded the matching
+# jars into the local repository.
+DELTA_SPARK_JAR=$(ls "$HOME"/.m2/repository/io/delta/delta-spark_2.12/*/delta-spark_2.12-*.jar | grep -v -- '-sources\|-javadoc' | head -n1)
+DELTA_STORAGE_JAR=$(ls "$HOME"/.m2/repository/io/delta/delta-storage/*/delta-storage-*.jar | grep -v -- '-sources\|-javadoc' | head -n1)
+
+# query.py expects these as ./gluten.jar, ./libch.so, ./delta-spark.jar and
+# ./delta-storage.jar.
 ln -sf "$GLUTEN_JAR" gluten.jar
 ln -sf "$LIBCH_SO" libch.so
+ln -sf "$DELTA_SPARK_JAR" delta-spark.jar
+ln -sf "$DELTA_STORAGE_JAR" delta-storage.jar

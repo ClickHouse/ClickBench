@@ -1,4 +1,4 @@
-This entry runs Apache Spark with the [Apache Gluten](https://gluten.apache.org/) plugin configured to use the **ClickHouse backend** ('ch'). Gluten loads `libch.so` (a fork of ClickHouse v23.1) into the Spark executor JVM and runs the columnar physical plan natively through it. See also [`spark-gluten/`](../spark-gluten/) (Velox backend), [`spark-velox/`](../spark-velox/), and the [accelerators README](../spark/README-accelerators.md).
+This entry runs Apache Spark with the [Apache Gluten](https://gluten.apache.org/) plugin configured to use the **ClickHouse backend** ('ch'). Gluten loads `libch.so` (Kyligence's fork of ClickHouse, built as a library) into the Spark JVM and runs the columnar physical plan natively through it. See also [`spark-gluten/`](../spark-gluten/) (Velox backend), [`spark-velox/`](../spark-velox/), and the [accelerators README](../spark/README-accelerators.md).
 
 ### Run
 
@@ -12,20 +12,19 @@ source (no pre-built bundle is published for the CH backend).
 
 ### Build
 
-The CH backend is not part of Apache Gluten's release tarball — only the Velox bundle is published. As a result `install` builds two things from source:
+The CH backend is not part of Apache Gluten's release tarball — only the Velox bundle is published. Release tags also carry a ClickHouse fork that is years old, so `install` pins a commit of Gluten `main` (currently ClickHouse 25.12, Kyligence branch `rebase_ch/20260425-25.12.10.7`) and builds two things from source:
 
-1. **`libch.so`** — built from [Kyligence/ClickHouse](https://github.com/Kyligence/ClickHouse) at the org/branch/commit pinned in `gluten/cpp-ch/clickhouse.version`. The build uses Clang 19 / cmake / ninja (Gluten v1.4.0's CH backend requires Clang 19). Its `extern-local-engine` module links against JNI **including AWT**, so `install` uses the full `openjdk-17-jdk` (not `-headless`, which omits `jawt.h`/`libjawt.so` and makes cmake fail with `Could NOT find JNI (missing: AWT)`).
-2. **The Gluten Spark plugin** — built via Maven with `-Pbackends-clickhouse -Pspark-3.5 -Pscala-2.12 -Pdelta`. The `delta` profile is required by the `backends-clickhouse` module's enforcer; `spark-3.5` pins the matching Delta version (3.2.0). JDK 8 is required at compile time (Gluten's POM); Spark itself runs under JDK 17 (see `./query`).
-
-Building libch.so essentially compiles ClickHouse from source: it is **memory-hungry** (Gluten's docs note that 64 GB RAM is recommended). On a c6a.4xlarge (32 GB RAM) the compile may OOM; use c6a.8xlarge or larger for a clean run.
+1. **`libch.so`** — built from [Kyligence/ClickHouse](https://github.com/Kyligence/ClickHouse) at the org/branch/commit pinned in `gluten/cpp-ch/clickhouse.version`, with Gluten's own wrapper (`ep/build-clickhouse/src/build-clickhouse.sh`), Clang 19, cmake and ninja. Its `extern-local-engine` module links against JNI **including AWT**, so `install` uses the full `openjdk-17-jdk` (not `-headless`). The build is a ThinLTO ClickHouse build: the final link alone needs tens of GB of RAM.
+2. **The Gluten Spark plugin** — built via Maven with `-Pbackends-clickhouse -Pspark-3.5 -Pscala-2.12 -Pdelta` under JDK 8. The `delta` profile is required by the module's enforcer. `install` adds `Option.when` for Scala 2.12 to one Delta 3.3 source file that uses it.
 
 ### Configuration
 
-- `spark.gluten.sql.columnar.backend.lib=ch` selects the ClickHouse backend over Velox.
-- `spark.gluten.sql.columnar.libpath=<libch.so>` points to the native library. Gluten's wrapper cmakes into `gluten/cpp-ch/build_ch`, which drives an inner ClickHouse cmake that builds `libch.so` under `gluten/cpp-ch/build/.../extern-local-engine/`; `install` globs for it under `cpp-ch/` and symlinks it as `libch.so` in the entry directory.
-- Memory is split 50/50 between Spark heap and Gluten off-heap, identical to the Velox entry — the CH backend also runs off-heap via JNI.
-- `libch.so` is preloaded into the JVM via `LD_PRELOAD` (set in `query.py`). Because the library carries initial-exec-model TLS, a lazy `dlopen` from the running JVM otherwise fails with `cannot allocate memory in static TLS block`; preloading it at JVM startup — while the static TLS block still has room — avoids this. Gluten's docs use `spark.executorEnv.LD_PRELOAD` for this, but in `local[*]` mode the driver JVM is the executor and launches before that config is read, so the preload is done through the JVM's environment instead.
-- Queries use ClickHouse-style regex backreferences (`\1`) rather than Spark's `$1`, since the regex evaluation happens inside libch.so. See the discussion in [`spark-gluten/README.md`](../spark-gluten/README.md) and [Gluten issue #7545](https://github.com/apache/incubator-gluten/issues/7545).
+- `spark.gluten.sql.columnar.backend.lib=ch` selects the ClickHouse backend, and `spark.gluten.sql.columnar.libpath` points to `libch.so`.
+- `libch.so` is preloaded into the JVM with `LD_PRELOAD` (set in `query.py` before the JVM starts), as Gluten's own launcher does. It needs static TLS, which a lazy `dlopen` cannot get, and its jemalloc must replace `malloc` for the whole process.
+- `spark.gluten.sql.enable.native.validation=false`: the CH backend has no native plan validator, and with validation on, every operator silently falls back to vanilla Spark. Gluten's own CH benchmarks and tests set it the same way.
+- Gluten marks `delta-spark` as `provided`, but the CH backend registers Delta Lake data sources at startup, so `delta-spark` and `delta-storage` (downloaded by the Maven build) are added to the classpath.
+- Memory: 70% of the available RAM, a quarter for the Spark heap and the rest off-heap, because the ClickHouse engine does nearly all the work off-heap and each task's memory limit is `off-heap / cores`.
+- The queries are the same as in `spark-gluten/`, including Spark's `$1` backreference syntax in `REGEXP_REPLACE`: the backend translates Spark semantics.
 
 ### Links
 
