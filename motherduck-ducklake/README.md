@@ -15,7 +15,14 @@ Related entries: `../motherduck` (native MotherDuck storage) and
 ```
 motherduck_token=<TOKEN> ./benchmark.sh            # at the current Duckling size
 motherduck_token=<TOKEN> ./run-size.sh jumbo       # resize if needed, run, write results/<date>/jumbo.json
+motherduck_token=<TOKEN> ./run-all-sizes.sh        # mega jumbo standard pulse, largest first
 ```
+
+`run-all-sizes.sh` is `../motherduck/run-all-sizes.sh` pointed at this
+directory: it resizes the Duckling before every size (with the settle wait),
+runs the benchmark into `motherduck-ducklake-<size>.log`, and writes
+`results/<date>/<size>.json`. Same size arguments and env (`INCLUDE_GIGA=1`,
+`RESTORE_SIZE`) as there.
 
 `run-size.sh` reuses `../motherduck/set-instance-size` (only called when the
 live size differs) and `../motherduck/make-result`, which labels the result
@@ -31,5 +38,9 @@ live size differs) and `../motherduck/make-result`, which labels the result
   from `ducklake_list_files()`.
 * `create.sql` and `queries.sql` are the same as `../motherduck` (typed
   TIMESTAMP/DATE columns). Driver settings (`BENCH_RESTARTABLE=no`,
-  `BENCH_DURABLE=yes`, `BENCH_CONCURRENT_DURATION=0`) and the `no-cold` tag
-  match `../motherduck`.
+  `BENCH_DURABLE=yes`) and the `no-cold` tag match `../motherduck`.
+* **Concurrent QPS** uses `../motherduck/concurrent-worker` with
+  `MOTHERDUCK_DATABASE=clickbench_ducklake`: each of the
+  `BENCH_CONCURRENT_CONNECTIONS` (default 10) workers keeps one `md:`
+  connection open for the whole window, so the result measures the Duckling,
+  not client-side connection setup.

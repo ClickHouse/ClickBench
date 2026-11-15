@@ -15,7 +15,14 @@ For the native-storage variant (data CTAS'ed into MotherDuck), see
 ```
 motherduck_token=<TOKEN> ./benchmark.sh            # at the current Duckling size
 motherduck_token=<TOKEN> ./run-size.sh jumbo       # resize if needed, run, write results/<date>/jumbo.json
+motherduck_token=<TOKEN> ./run-all-sizes.sh        # mega jumbo standard pulse, largest first
 ```
+
+`run-all-sizes.sh` is `../motherduck/run-all-sizes.sh` pointed at this
+directory: it resizes the Duckling before every size (with the settle wait),
+runs the benchmark into `motherduck-datalake-<size>.log`, and writes
+`results/<date>/<size>.json`. Same size arguments and env (`INCLUDE_GIGA=1`,
+`RESTORE_SIZE`) as there.
 
 `run-size.sh` reuses the motherduck entry's helpers:
 `../motherduck/set-instance-size` (only called when the live size differs) and
@@ -33,5 +40,10 @@ because the client EC2 type is meaningless for a remote service.
   of each query is whatever state the Duckling is in.
 * **Load time / data size** are the view creation time and the fixed size of
   the parquet file, as for the other data-lake entries.
-* Driver settings (`BENCH_RESTARTABLE=no`, `BENCH_DURABLE=yes`,
-  `BENCH_CONCURRENT_DURATION=0`) and their rationale match `../motherduck`.
+* Driver settings (`BENCH_RESTARTABLE=no`, `BENCH_DURABLE=yes`) and their
+  rationale match `../motherduck`.
+* **Concurrent QPS** uses `../motherduck/concurrent-worker` with
+  `MOTHERDUCK_DATABASE=clickbench_datalake`: each of the
+  `BENCH_CONCURRENT_CONNECTIONS` (default 10) workers keeps one `md:`
+  connection open for the whole window, so the result measures the Duckling,
+  not client-side connection setup.

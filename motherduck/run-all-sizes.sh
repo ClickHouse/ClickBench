@@ -10,7 +10,7 @@
 # giga is excluded by default because some trial accounts don't have it enabled;
 # opt in with INCLUDE_GIGA=1 or by naming giga explicitly as an argument.
 #
-# Between runs it calls ./set-instance-size to change the account's read_write
+# Between runs it calls set-instance-size to change the account's read_write
 # Duckling size and waits (including a >=2 min stabilization margin) for the
 # change to go live. Each run reloads the data (load time is itself a per-size
 # metric) and runs all 43 queries plus the concurrent-QPS test.
@@ -20,8 +20,17 @@
 #   motherduck_username                   optional; auto-discovered via SQL
 #   INCLUDE_GIGA                          set to also run giga in the default set
 #   RESTORE_SIZE                          optional size to restore when done
+#   MOTHERDUCK_ENTRY                      entry directory to benchmark (default:
+#                                         this one); ../motherduck-datalake and
+#                                         ../motherduck-ducklake set it from
+#                                         their own run-all-sizes.sh
+#
+# The logs are named <entry>-<size>.log and the results JSONs are written to
+# <entry>/results/<date>/<size>.json.
 set -eu
-cd "$(dirname "$0")"
+helpers=$(cd "$(dirname "$0")" && pwd)
+cd "${MOTHERDUCK_ENTRY:-$helpers}"
+entry=$(basename "$(pwd)")
 
 export motherduck_token="${motherduck_token:-${MOTHERDUCK_TOKEN:-}}"
 : "${motherduck_token:?motherduck_token is required}"
@@ -61,17 +70,17 @@ done
 summary=()
 for size in "${sizes[@]}"; do
     echo "============================================================"
-    echo "=== MotherDuck size: $size"
+    echo "=== $entry, MotherDuck size: $size"
     echo "============================================================"
     # A size the account can't use (e.g. mega/giga on a trial plan) shouldn't
     # kill the whole sweep — log it and move on.
-    if ! ./set-instance-size "$size"; then
+    if ! "$helpers/set-instance-size" "$size"; then
         echo "  set-instance-size failed for $size (size unavailable on this account?); skipping"
         summary+=("$size: SKIPPED (set-instance-size failed)")
         continue
     fi
 
-    log="motherduck-${size}.log"
+    log="${entry}-${size}.log"
     # Record the size for downstream labeling (the shared cloud-init only logs
     # the client EC2 type as "machine"), then run the benchmark.
     if {
@@ -80,7 +89,7 @@ for size in "${sizes[@]}"; do
     } > "$log" 2>&1; then
         echo "  -> $log"
         # Emit a committable results JSON labeled by Duckling size.
-        if json=$(./make-result "$size" "$log" "$RUN_DATE"); then
+        if json=$("$helpers/make-result" "$size" "$log" "$RUN_DATE"); then
             echo "  -> $json"
             summary+=("$size: $log, $json")
         else
@@ -95,7 +104,7 @@ done
 
 if [ -n "${RESTORE_SIZE:-}" ]; then
     echo "=== restoring size to $RESTORE_SIZE"
-    ./set-instance-size "$RESTORE_SIZE"
+    "$helpers/set-instance-size" "$RESTORE_SIZE"
 fi
 
 echo "============================================================"

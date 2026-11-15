@@ -109,6 +109,10 @@ size when the sweep finishes. Note the sweep is slow: size changes take ~2 min
 (pulse/standard/jumbo) to ~10 min (giga) to take effect, and each run reloads the
 full dataset.
 
+`../motherduck-datalake/run-all-sizes.sh` and
+`../motherduck-ducklake/run-all-sizes.sh` run this same script on their own
+directory (via `MOTHERDUCK_ENTRY`), with logs named `<entry>-<size>.log`.
+
 ### Producing committable results
 
 The shared cloud-init derives a result's `machine` from the **client EC2

@@ -22,9 +22,12 @@ export BENCH_RESTARTABLE=no
 # The view persists in MotherDuck across client restarts.
 export BENCH_DURABLE=yes
 
-# Each ./query opens a fresh md: connection, so the concurrent-QPS workers
-# would mostly measure connection setup. Skip by default; override
-# BENCH_CONCURRENT_DURATION to re-enable. See issue #946.
-export BENCH_CONCURRENT_DURATION="${BENCH_CONCURRENT_DURATION:-0}"
+# Each ./query opens a fresh md: connection (network handshake + catalog
+# fetch), so concurrent-QPS workers forking ./query would mostly measure
+# client-side connection setup. Use the motherduck entry's worker instead:
+# each of the concurrent connections keeps one md:clickbench_datalake
+# connection open for the whole window. See issue #946.
+export MOTHERDUCK_DATABASE=clickbench_datalake
+export BENCH_CONCURRENT_WORKER=../motherduck/concurrent-worker
 
 exec ../lib/benchmark-common.sh
