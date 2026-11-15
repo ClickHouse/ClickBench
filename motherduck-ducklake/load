@@ -1,0 +1,42 @@
+#!/bin/bash
+set -e
+
+: "${motherduck_token:?motherduck_token is required}"
+
+PY=.venv/bin/python3; [ -x "$PY" ] || PY=python3
+
+# Create an empty MotherDuck-managed DuckLake database, create the table from
+# create.sql, then INSERT from the canonical ClickBench parquet on S3. The
+# INSERT writes fresh DuckLake data files into MotherDuck-managed storage; the
+# source files are copied, not adopted. The parquet stores the *EventTime
+# family as integer epochs and EventDate as a day count, so coerce them into
+# TIMESTAMP/DATE values to match create.sql.
+#
+# The S3 read happens on the remote Duckling, so the bucket should be the copy
+# closest to the MotherDuck region. dataset-bucket.sh picks by the client's
+# EC2 region; run the client in the MotherDuck organization's region or force
+# a choice with CLICKBENCH_DATASET_BUCKET.
+. ../lib/dataset-bucket.sh
+file=$(echo 'https://clickhouse-public-datasets.s3.eu-central-1.amazonaws.com/hits_compatible/hits.parquet' | bench_dataset_sql)
+
+"$PY" - "$file" <<'PY'
+import duckdb, sys
+
+file = sys.argv[1]
+con = duckdb.connect("md:")
+con.execute("DROP DATABASE IF EXISTS clickbench_ducklake")
+con.execute("CREATE DATABASE clickbench_ducklake (TYPE DUCKLAKE)")
+con.execute("USE clickbench_ducklake")
+
+con.execute(open("create.sql").read())
+
+con.execute(f"""
+    INSERT INTO hits
+    SELECT * REPLACE
+    (epoch_ms(EventTime * 1000) AS EventTime,
+     epoch_ms(ClientEventTime * 1000) AS ClientEventTime,
+     epoch_ms(LocalEventTime * 1000) AS LocalEventTime,
+     DATE '1970-01-01' + INTERVAL (EventDate) DAYS AS EventDate)
+    FROM read_parquet('{file}', binary_as_string=True)
+""")
+PY

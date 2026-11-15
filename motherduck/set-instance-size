@@ -50,7 +50,7 @@ try:
     import duckdb
 except ImportError:
     sys.exit("set-instance-size: the duckdb Python package is required "
-             "(run ./install first, or pip install duckdb)")
+             "(run ./install first, or pip install duckdb==1.5.6)")
 
 def md_one(query):
     return duckdb.connect("md:").execute(query).fetchone()
