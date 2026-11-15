@@ -8,11 +8,11 @@ sudo apt-get install -y python3-pip python3-venv python3-dev curl build-essentia
 # Ensure rust toolchain (cargo) is installed for maturin compiler core
 if ! command -v cargo &> /dev/null; then
     echo "Installing Rust toolchain..."
-    curl --proto '=https' --tlsv1.2 -sSf https://rustup.rs | sh -s -- -y
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     source "$HOME/.cargo/env"
 fi
 
-# 2. Setup the precise virtual environment expected by ClickBench start script
+# 2. Setup the virtual environment expected by ClickBench
 python3 -m venv myenv
 source myenv/bin/activate
 
