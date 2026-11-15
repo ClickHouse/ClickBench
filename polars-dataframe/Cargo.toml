@@ -1,0 +1,19 @@
+[package]
+name = "mechanicus_core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "mechanicus_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.21", features = ["extension-module"] }
+rayon = "1.10" 
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
