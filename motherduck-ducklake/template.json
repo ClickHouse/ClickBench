@@ -4,6 +4,7 @@
   "hardware": "cpu",
   "tuned": "no",
   "storage": "datalake",
+  "category": "challenger",
   "tags": [
     "C++",
     "column-oriented",
