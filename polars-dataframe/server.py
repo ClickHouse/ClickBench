@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import uvicorn
+from datetime import date  # Mandatory import required for queries 37-43 (eval namespace)
 from fastapi import FastAPI, Request, Response
 import polars as pl
 
@@ -24,7 +25,9 @@ def load_data():
         (pl.col("EventTime") * 1_000_000).cast(pl.Datetime),
         pl.col("EventDate").cast(pl.Date)
     ])
-    hits = df
+    
+    # Enforce LazyFrame binding because all 43 queries execute via .collect()
+    hits = df.lazy()
     return df
 
 @app.get("/health")
@@ -43,7 +46,6 @@ def load_endpoint():
 def data_size_endpoint():
     if state["df"] is None:
         state["df"] = load_data()
-    # Contract requires JSON return mapping containing evaluated byte metrics
     return {"bytes": state["df"].estimated_size()}
 
 @app.post("/query")
@@ -58,14 +60,13 @@ async def query_endpoint(request: Request):
     start_time = time.time()
     try:
         # Framework executing logic: evaluate the incoming Python expression string directly
-        # 'hits' is globally exposed inside the expression namespace boundary
+        # 'hits' and 'date' are globally exposed inside the expression namespace boundary
         result = eval(query_str)
         print(result)
     except Exception as e:
         return Response(content=str(e), status_code=500)
         
     elapsed = time.time() - start_time
-    # Returns synchronized execution performance tracking metrics back to reporting script
     return {"elapsed": elapsed}
 
 if __name__ == "__main__":
