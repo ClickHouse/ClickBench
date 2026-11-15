@@ -2,12 +2,19 @@
 set -e
 
 sudo apt-get update -y
-sudo apt-get install -y python3-pip python3-venv
+sudo apt-get install -y pybind11-dev python3-dev
 
-if [ ! -d myenv ]; then
-    python3 -m venv myenv
+# Install Python and build dependencies
+pip install --upgrade pip
+pip install maturin setuptools-rust
+
+# Install core server dependencies
+pip install 'polars>=1.0.0' pyarrow fastapi uvicorn
+
+# Build and install the native Rust module (mechanicus_core)
+if [ -f "Cargo.toml" ]; then
+    echo "Found Cargo.toml. Compiling mechanicus_core in release mode..."
+    maturin develop --release
+else
+    echo "Warning: Cargo.toml not found. Skipping native Rust build."
 fi
-# shellcheck disable=SC1091
-source myenv/bin/activate
-# Benchmark Polars 2 or newer (ClickBench#2425).
-pip install --quiet 'polars>=2' pyarrow fastapi uvicorn
