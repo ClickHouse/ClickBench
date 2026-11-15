@@ -1,6 +1,7 @@
 use pyo3::prelude::*;
 use pyo3::exceptions::PyTypeError;
 use numpy::PyArray1;
+use numpy::prelude::*; // Mandatory trait required for array methods like .readonly()
 use rayon::prelude::*;
 
 #[pyfunction]
@@ -14,7 +15,6 @@ fn pack_column_bits(data: &Bound<'_, PyArray1<i64>>, bits_per_value: usize) -> P
         return Err(PyTypeError::new_err("bits_per_value must be between 1 and 64"));
     }
 
-    // Safely access the continuous memory space using numpy zero-copy read view
     let readonly_array = data.readonly();
     let view = readonly_array.as_slice()?;
 
