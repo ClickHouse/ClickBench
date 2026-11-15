@@ -1,4 +1,4 @@
-"""The requirements of the "Production" category that the randomized benchmark checks.
+"""The requirements of the "Production" and "Challenger" categories that the randomized benchmark checks.
 
 From the README of ClickBench, a Production system:
   - "changing benchmark queries does not lead to crashes or deadlocks";
@@ -23,6 +23,15 @@ results of the system and of ClickHouse in the main benchmark on the same
 machine type (queries without a result on either side are skipped). The gap
 widens by random gap / standard gap; more than 2 fails.
 
+A Challenger system: "changing benchmark queries or data does not lead to
+crashes and does not widen the performance gap to the baseline by more than ten
+times compared to ClickHouse": the same, but timeouts don't count, and the gap may
+widen up to 10 times.
+
+The level of a system is the highest category whose requirements it passes here:
+production, challenger or enthusiast. A system in a higher category (Elite counts
+as Production) is marked for demotion.
+
 The baseline is the "clickhouse" entry of the group; the standard gap of a
 directory is taken from the directory of the same name in the main benchmark.
 """
@@ -38,12 +47,18 @@ import metrics
 CLICKBENCH_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BASELINE = "clickhouse"
 MAX_WIDENING = 2.0
+# The Challenger requirement: "changing benchmark queries or data does not lead to
+# crashes and does not widen the performance gap to the baseline by more than ten
+# times compared to ClickHouse" (timeouts are not crashes).
+CHALLENGER_MAX_WIDENING = 10.0
+LEVELS = ("enthusiast", "challenger", "production")
 
 # Errors that mean the server is gone, not that it refused the query.
 CRASH = re.compile(r"connection (?:refused|reset|closed|lost|aborted)|server closed the connection|"
                    r"broken pipe|segmentation fault|sigsegv|core dumped|terminated abnormally|"
                    r"terminating connection|unexpected eof|end of file|no route to host|"
-                   r"could not connect|failed to connect|cannot connect|can't connect|"
+                   r"could not connect|failed to connect|cannot connect|can't connect|couldn't connect|"
+                   r"connection to server on socket|the database system is|http 000|empty reply from server|"
                    r"remotedisconnected|connectionerror|killed", re.IGNORECASE)
 
 
@@ -136,19 +151,28 @@ def check(results, machine, missing=()):
                                                     f"no result in the main benchmark on {machine}"))
         elif widening > MAX_WIDENING:
             reasons.append(f"the gap to ClickHouse widens {widening:.1f} times")
+        challenger = [x for x in reasons if "timeout" not in x and "the gap to ClickHouse" not in x]
+        if widening is not None and widening > CHALLENGER_MAX_WIDENING:
+            challenger.append(f"the gap to ClickHouse widens {widening:.1f} times")
         out.append({"directory": d, "category": category(d), "restarts": restarts, "crashed": crashed,
                     "timeouts": timeouts, "random_gap": gap, "standard_gap": standard[0] if standard else None,
                     "standard_date": standard[1] if standard else None, "widening": widening,
-                    "passes": not reasons, "reasons": reasons})
+                    "passes": not reasons, "reasons": reasons,
+                    "challenger_passes": not challenger, "challenger_reasons": challenger,
+                    "level": "production" if not reasons else "challenger" if not challenger else "enthusiast"})
     for m in missing:
         if m.get("machine") in (None, machine):
             out.append({"directory": m["directory"], "category": category(m["directory"]), "restarts": None,
                         "crashed": None, "timeouts": None, "random_gap": None, "standard_gap": None,
                         "standard_date": None, "widening": None, "passes": False,
-                        "reasons": ["no result: " + (m.get("error") or "the run failed")]})
+                        "reasons": ["no result: " + (m.get("error") or "the run failed")],
+                        "challenger_passes": False, "challenger_reasons": ["no result"], "level": "enthusiast"})
     return out
 
 
 def demote(verdict):
-    """Whether the verdict means the system must leave its category."""
-    return verdict["category"] in ("production", "elite") and not verdict["passes"]
+    """Whether the verdict means the system must leave its category: a Production
+    or Elite system that fails the Production requirements, or a Challenger that
+    fails the Challenger requirement."""
+    category = "production" if verdict["category"] == "elite" else verdict["category"]
+    return category in LEVELS and LEVELS.index(category) > LEVELS.index(verdict["level"])

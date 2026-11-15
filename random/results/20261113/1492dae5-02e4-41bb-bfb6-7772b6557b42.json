@@ -37863,11 +37863,14 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 1.0400044491190743,
-   "standard_gap": 1.0199490920663143,
+   "standard_gap": 1.3661234999076841,
    "standard_date": "2026-08-29",
-   "widening": 1.019663096137602,
+   "widening": 0.7612814282086156,
    "passes": true,
    "reasons": [],
+   "challenger_passes": true,
+   "challenger_reasons": [],
+   "level": "production",
    "demote": false
   },
   {
@@ -37878,14 +37881,19 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 117.42505864634244,
-   "standard_gap": 2.1973061033298387,
+   "standard_gap": 2.9430797356445964,
    "standard_date": "2026-09-07",
-   "widening": 53.44046442523157,
+   "widening": 39.89870108654188,
    "passes": false,
    "reasons": [
-    "the gap to ClickHouse widens 53.4 times"
+    "the gap to ClickHouse widens 39.9 times"
    ],
-   "demote": false
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "the gap to ClickHouse widens 39.9 times"
+   ],
+   "level": "enthusiast",
+   "demote": true
   },
   {
    "machine": "c6a.metal",
@@ -37895,11 +37903,14 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 0.8713060533824146,
-   "standard_gap": 0.9700905687725369,
+   "standard_gap": 1.299342813624279,
    "standard_date": "2026-11-02",
-   "widening": 0.8981698012845182,
+   "widening": 0.6705744198115552,
    "passes": true,
    "reasons": [],
+   "challenger_passes": true,
+   "challenger_reasons": [],
+   "level": "production",
    "demote": false
   },
   {
@@ -37915,6 +37926,9 @@
    "widening": 1.0,
    "passes": true,
    "reasons": [],
+   "challenger_passes": true,
+   "challenger_reasons": [],
+   "level": "production",
    "demote": false
   },
   {
@@ -37925,11 +37939,14 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 1.059829307946193,
-   "standard_gap": 1.026828526187119,
+   "standard_gap": 1.375337838830677,
    "standard_date": "2026-05-11",
-   "widening": 1.0321385517810011,
+   "widening": 0.7705956151451981,
    "passes": true,
    "reasons": [],
+   "challenger_passes": true,
+   "challenger_reasons": [],
+   "level": "production",
    "demote": false
   },
   {
@@ -37940,14 +37957,19 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 117.42505864634244,
-   "standard_gap": 0.8092091172078205,
+   "standard_gap": 1.083857615989014,
    "standard_date": "2026-11-10",
-   "widening": 145.11089426614234,
+   "widening": 108.3399303691682,
    "passes": false,
    "reasons": [
-    "the gap to ClickHouse widens 145.1 times"
+    "the gap to ClickHouse widens 108.3 times"
    ],
-   "demote": false
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "the gap to ClickHouse widens 108.3 times"
+   ],
+   "level": "enthusiast",
+   "demote": true
   },
   {
    "machine": "c6a.metal",
@@ -37957,13 +37979,16 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 4.45703358552386,
-   "standard_gap": 1.3435549269093212,
+   "standard_gap": 1.7995623245755463,
    "standard_date": "2026-10-25",
-   "widening": 3.3173437842073965,
+   "widening": 2.4767319945838038,
    "passes": false,
    "reasons": [
-    "the gap to ClickHouse widens 3.3 times"
+    "the gap to ClickHouse widens 2.5 times"
    ],
+   "challenger_passes": true,
+   "challenger_reasons": [],
+   "level": "challenger",
    "demote": false
   },
   {
@@ -37974,15 +37999,22 @@
    "crashed": 189,
    "timeouts": 0,
    "random_gap": 70.90239271520811,
-   "standard_gap": 0.5702841051385995,
+   "standard_gap": 0.7638405913723894,
    "standard_date": "2026-10-25",
-   "widening": 124.3281937482306,
+   "widening": 92.82354658295661,
    "passes": false,
    "reasons": [
     "went down 8 times",
     "189 executions lost the server",
-    "the gap to ClickHouse widens 124.3 times"
+    "the gap to ClickHouse widens 92.8 times"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "went down 8 times",
+    "189 executions lost the server",
+    "the gap to ClickHouse widens 92.8 times"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -37993,31 +38025,39 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 14.953312954811247,
-   "standard_gap": 2.0756183075487598,
+   "standard_gap": 2.780090662207889,
    "standard_date": "2026-09-26",
-   "widening": 7.204269157015984,
+   "widening": 5.378714139824362,
    "passes": false,
    "reasons": [
-    "the gap to ClickHouse widens 7.2 times"
+    "the gap to ClickHouse widens 5.4 times"
    ],
+   "challenger_passes": true,
+   "challenger_reasons": [],
+   "level": "challenger",
    "demote": false
   },
   {
    "machine": "c6a.metal",
    "directory": "pivot-parquet",
-   "category": "challenger",
+   "category": "enthusiast",
    "restarts": 0,
    "crashed": 0,
    "timeouts": 81,
    "random_gap": 110.45415732638276,
-   "standard_gap": 0.7354695605953615,
+   "standard_gap": 0.9850905873749003,
    "standard_date": "2026-10-01",
-   "widening": 150.18182021968425,
+   "widening": 112.12588846344009,
    "passes": false,
    "reasons": [
     "81 executions hit the timeout of 600 s",
-    "the gap to ClickHouse widens 150.2 times"
+    "the gap to ClickHouse widens 112.1 times"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "the gap to ClickHouse widens 112.1 times"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -38028,15 +38068,20 @@
    "crashed": 0,
    "timeouts": 132,
    "random_gap": 111.74696459115765,
-   "standard_gap": 0.7051956104081282,
+   "standard_gap": 0.9445415490870901,
    "standard_date": "2026-11-06",
-   "widening": 158.46236553640017,
+   "widening": 118.30815139806431,
    "passes": false,
    "reasons": [
     "132 executions hit the timeout of 600 s",
-    "the gap to ClickHouse widens 158.5 times"
+    "the gap to ClickHouse widens 118.3 times"
    ],
-   "demote": false
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "the gap to ClickHouse widens 118.3 times"
+   ],
+   "level": "enthusiast",
+   "demote": true
   },
   {
    "machine": "c6a.metal",
@@ -38046,14 +38091,17 @@
    "crashed": 0,
    "timeouts": 5,
    "random_gap": 11.093463645745214,
-   "standard_gap": 1.4938273665275135,
+   "standard_gap": 2.000837773269728,
    "standard_date": "2026-09-26",
-   "widening": 7.426201912161108,
+   "widening": 5.544409343900232,
    "passes": false,
    "reasons": [
     "5 executions hit the timeout of 600 s",
-    "the gap to ClickHouse widens 7.4 times"
+    "the gap to ClickHouse widens 5.5 times"
    ],
+   "challenger_passes": true,
+   "challenger_reasons": [],
+   "level": "challenger",
    "demote": false
   },
   {
@@ -38071,6 +38119,11 @@
    "reasons": [
     "no result: ERROR 1105 (HY000) at line 1: errCode = 2, detailMessage = (127.0.0.1)[MEM_LIMIT_EXCEEDED]PreCatch error code:11, [E11] Allocator mem tracker check failed, [MEM_LIMIT_EXCEEDED]failed alloc size 256.00 KB, memory tracker limit exceeded, tracker label:Load#Id=63821a6376ac41d9-855d49f81a06f269, type:load, limit 93.27 GB, peak used 117.48 GB, current used 116.75 GB. backend 127.0.0.1, process memory used 254.01 GB. exec node:<>, can `set exec_mem_limit` to change limit, details see be.INFO."
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "no result"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -38088,6 +38141,11 @@
    "reasons": [
     "no result: Traceback (most recent call last):"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "no result"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -38105,6 +38163,11 @@
    "reasons": [
     "no result: the run failed without a result"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "no result"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -38122,12 +38185,17 @@
    "reasons": [
     "no result: the run failed without a result"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "no result"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
    "machine": "c6a.metal",
    "directory": "pgrust",
-   "category": "challenger",
+   "category": "enthusiast",
    "restarts": null,
    "crashed": null,
    "timeouts": null,
@@ -38139,6 +38207,11 @@
    "reasons": [
     "no result: ERROR:  out of memory"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "no result"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -38156,6 +38229,11 @@
    "reasons": [
     "no result: psql:create.sql:216: error: connection to server was lost"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "no result"
+   ],
+   "level": "enthusiast",
    "demote": false
   }
  ]

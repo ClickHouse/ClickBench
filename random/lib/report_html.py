@@ -184,6 +184,7 @@ footer { padding: 2rem 0; }
 .prod-badge { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 0.5rem; font-size: 85%; font-weight: 600; white-space: nowrap; }
 .prod-pass { color: var(--pass-color); background: var(--pass-background); }
 .prod-fail { color: var(--fail-color); background: var(--fail-background); }
+.prod-mid { color: var(--color); background: var(--selector-background-color); }
 .prod-demote { color: var(--fail-color); background: var(--fail-background); outline: 2px solid var(--fail-color); }
 .prod-reason { font-size: 85%; opacity: 0.8; margin-left: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 </style>
@@ -207,8 +208,8 @@ footer { padding: 2rem 0; }
 <div class="stick-left"><h2>Detailed Comparison</h2>
 <p class="intro muted">The average time of the runs of every query and its ratio to the best system's average; a failed run counts as 5× the slowest correct run of the query. Hover over a cell for the runs; click a query for its SQL, the translations and the outputs.</p></div>
 <table id="details"><thead><tr id="details_head"></tr></thead><tbody id="details_body"></tbody></table>
-<div class="stick-left"><h2>Production Requirements</h2>
-<p class="intro muted">Two requirements of the Production category of ClickBench are checked by changing the queries: "changing benchmark queries does not lead to crashes or deadlocks" (no restarts of the system, no executions that lost the server, no timeouts) and "changing benchmark queries does not widen the performance gap to the baseline by more than two times compared to ClickHouse" (the gap to ClickHouse on these queries, the geomean of the ratios of the average times, over the gap of the hot runs in the main benchmark on the same machine). A Production or Elite system that fails is demoted.</p>
+<div class="stick-left"><h2>Production and Challenger Requirements</h2>
+<p class="intro muted">Two requirements of the Production category of ClickBench are checked by changing the queries: "changing benchmark queries does not lead to crashes or deadlocks" (no restarts of the system, no executions that lost the server, no timeouts) and "changing benchmark queries does not widen the performance gap to the baseline by more than two times compared to ClickHouse" (the gap to ClickHouse on these queries, the geomean of the ratios of the average times, over the gap of the hot runs in the main benchmark on the same machine). The Challenger requirement, "changing benchmark queries or data does not lead to crashes and does not widen the performance gap to the baseline by more than ten times compared to ClickHouse", is checked the same way, without the timeouts and with a widening of at most 10. The level is the highest category whose requirements the system passes; a system in a higher category is demoted.</p>
 <div id="production"></div></div>
 <div class="stick-left"><h2>Queries</h2></div>
 <div class="stick-left" id="queries"></div>
@@ -455,12 +456,13 @@ function renderProduction() {
                 el("th", { class: "prod-group-start", title: "Geomean of (0.01 + average) / (0.01 + average of ClickHouse) on the random queries" }, "Random"),
                 el("th", { title: "The same ratio of the hot runs in the main benchmark on this machine" }, "Standard"),
                 el("th", { title: `Random over standard; more than ${2} fails` }, "Widening"),
-                el("th", { class: "prod-left prod-group-start" }, "Verdict")));
+                el("th", { class: "prod-left prod-group-start" }, "Level")));
         const body = el("tbody");
         for (const v of rows) {
-            const badge = v.passes ? el("span", { class: "prod-badge prod-pass" }, "✓ passes")
-                : v.demote ? el("span", { class: "prod-badge prod-demote" }, "▼ demote")
-                : el("span", { class: "prod-badge prod-fail" }, "✗ fails");
+            const badge = v.demote ? el("span", { class: "prod-badge prod-demote" }, "▼ demote to " + v.level)
+                : v.level === "production" ? el("span", { class: "prod-badge prod-pass" }, "✓ production")
+                : v.level === "challenger" ? el("span", { class: "prod-badge prod-mid" }, "◐ challenger")
+                : el("span", { class: "prod-badge prod-fail" }, "✗ enthusiast");
             const reason = v.reasons.join("; ");
             const verdict = el("td", { class: "prod-verdict prod-group-start" }, el("div", { class: "prod-verdict-line" }, badge,
                 reason ? el("div", { class: "prod-reason", title: reason }, reason) : null));

@@ -114,15 +114,16 @@ def human_size(n):
 def production_section(results, machine, missing=()):
     """The requirements of the Production category that the randomized queries check (lib/production.py)."""
     verdicts = production.check(results, machine, [m for m in missing if m["machine"] == machine])
-    lines = [f"### Production requirements on {machine}", "",
-             "| System | Category | Restarts | Lost server | Timeouts | Gap, random | Gap, standard | Widening | Verdict |",
+    lines = [f"### Production and Challenger requirements on {machine}", "",
+             "| System | Category | Restarts | Lost server | Timeouts | Gap, random | Gap, standard | Widening | Level |",
              "|---|---|---:|---:|---:|---:|---:|---:|---|"]
 
     def num(x, fmt="{:.2f}"):
         return "-" if x is None else fmt.format(x)
 
     for v in sorted(verdicts, key=lambda v: (not v["passes"], v["widening"] or math.inf)):
-        verdict = "passes" if v["passes"] else ("**demote**: " if production.demote(v) else "fails: ") + "; ".join(v["reasons"])
+        verdict = (f"**demote to {v['level']}**" if production.demote(v) else v["level"]) + \
+            ("" if v["passes"] else ": " + "; ".join(v["reasons"]))
         lines.append(f"| {v['directory']} | {v['category'] or '-'} | {num(v['restarts'], '{}')} | {num(v['crashed'], '{}')} | "
                      f"{num(v['timeouts'], '{}')} | {num(v['random_gap'])} | {num(v['standard_gap'])} | "
                      f"{num(v['widening'])} | {verdict} |")
@@ -130,7 +131,9 @@ def production_section(results, machine, missing=()):
               "no executions that lost the server, no timeouts. \"changing benchmark queries does not widen the "
               f"performance gap to the baseline by more than two times compared to ClickHouse\": the gap to ClickHouse "
               "(geomean of the time ratios) on the random queries over the gap of the hot runs in the main benchmark "
-              f"on {machine}, at most {production.MAX_WIDENING:g}. A Production or Elite system that fails is demoted.", ""]
+              f"on {machine}, at most {production.MAX_WIDENING:g}. Challenger: no restarts and no executions that lost the "
+              f"server, and a widening of at most {production.CHALLENGER_MAX_WIDENING:g}. The level is the highest category "
+              "whose requirements the system passes; a system in a higher category is demoted.", ""]
     return lines
 
 

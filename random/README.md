@@ -151,7 +151,7 @@ every run, the errors and the beginning of the outputs. The workflow **Report th
 on pastila.nl (`--publish`), links it in the job summary, and keeps it in the
 artifact.
 
-## Production requirements
+## Production and Challenger requirements
 
 The benchmark is meant to find immature systems, so it is not adjusted to the
 limits of any of them: the data has the layout of the original files at a larger
@@ -173,7 +173,14 @@ every system and machine type (`lib/production.py`):
   directory and of `clickhouse` in the main benchmark on the same machine type.
   The widening is their ratio; more than 2 fails.
 
-A Production or Elite system that fails is marked for demotion in the report;
+The Challenger requirement, "changing benchmark queries or data does not lead
+to crashes and does not widen the performance gap to the baseline by more than ten
+times compared to ClickHouse", is checked the same way, without the timeouts and
+with a widening of at most 10. The report shows the level of every system: the
+highest category whose requirements it passes (production, challenger or
+enthusiast).
+
+A system in a higher category than its level is marked for demotion in the report;
 the category itself is changed in its `template.json`, as for the other
 requirements.
 

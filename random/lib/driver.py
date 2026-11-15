@@ -70,8 +70,21 @@ def run_one(sql, out_path, timeout):
     return "ok", elapsed, reported, ""
 
 
+CHECK_TIMEOUT = 60
+
+
 def is_up():
-    return subprocess.run(["./check"], capture_output=True).returncode == 0
+    """./check succeeds within CHECK_TIMEOUT seconds. A check that hangs (a hung
+    server keeps its port open, and a check with curl without --max-time waits
+    forever) counts as down, with its process group killed."""
+    process = subprocess.Popen(["./check"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               start_new_session=True)
+    try:
+        return process.wait(timeout=CHECK_TIMEOUT) == 0
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
+        return False
 
 
 def watchdog(stop, restarts, up, dead):
@@ -146,8 +159,11 @@ def main():
                                                            args.timeout)
                 # The system went down in this query (it still counts as a
                 # failure): the next queries wait for the restart.
-                if status != "ok" and watched and not is_up():
+                # Once the watchdog has given up (dead), nobody would set it back.
+                if status != "ok" and watched and not dead.is_set() and not is_up():
                     up.clear()
+                    if dead.is_set():
+                        up.set()
             record = {"id": q["id"], "repeat": r, "worker": n, "status": status, "start": round(begin, 3),
                       "time": round(elapsed, 3), "reported_time": reported, "error": error}
             with lock:

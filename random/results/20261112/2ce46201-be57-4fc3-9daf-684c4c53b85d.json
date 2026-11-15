@@ -3119,11 +3119,14 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 1.1639952522668624,
-   "standard_gap": 2.3758286651946103,
+   "standard_gap": 3.4686606709263916,
    "standard_date": "2026-11-10",
-   "widening": 0.48993232101251566,
+   "widening": 0.3355748407514272,
    "passes": true,
    "reasons": [],
+   "challenger_passes": true,
+   "challenger_reasons": [],
+   "level": "production",
    "demote": false
   },
   {
@@ -3139,6 +3142,9 @@
    "widening": 1.0,
    "passes": true,
    "reasons": [],
+   "challenger_passes": true,
+   "challenger_reasons": [],
+   "level": "production",
    "demote": false
   },
   {
@@ -3149,15 +3155,20 @@
    "crashed": 0,
    "timeouts": 4,
    "random_gap": 11.95706307431727,
-   "standard_gap": 0.4573280963838858,
+   "standard_gap": 0.6676895539125417,
    "standard_date": "2026-11-06",
-   "widening": 26.14548104274003,
+   "widening": 17.90811763378806,
    "passes": false,
    "reasons": [
     "4 executions hit the timeout of 600 s",
-    "the gap to ClickHouse widens 26.1 times"
+    "the gap to ClickHouse widens 17.9 times"
    ],
-   "demote": false
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "the gap to ClickHouse widens 17.9 times"
+   ],
+   "level": "enthusiast",
+   "demote": true
   }
  ]
 }

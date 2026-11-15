@@ -29685,6 +29685,9 @@
    "widening": 1.0,
    "passes": true,
    "reasons": [],
+   "challenger_passes": true,
+   "challenger_reasons": [],
+   "level": "production",
    "demote": false
   },
   {
@@ -29695,32 +29698,42 @@
    "crashed": 0,
    "timeouts": 3,
    "random_gap": 1.2142192548474307,
-   "standard_gap": 1.0199490920663143,
+   "standard_gap": 1.3661234999076841,
    "standard_date": "2026-08-29",
-   "widening": 1.190470450233496,
+   "widening": 0.8888063596955046,
    "passes": false,
    "reasons": [
     "3 executions hit the timeout of 600 s"
    ],
+   "challenger_passes": true,
+   "challenger_reasons": [],
+   "level": "challenger",
    "demote": false
   },
   {
    "machine": "c6a.metal",
    "directory": "pivot-parquet",
-   "category": "challenger",
+   "category": "enthusiast",
    "restarts": 1,
    "crashed": 137,
    "timeouts": 0,
    "random_gap": 13.688409056873619,
-   "standard_gap": 0.7354695605953615,
+   "standard_gap": 0.9850905873749003,
    "standard_date": "2026-10-01",
-   "widening": 18.61179549809359,
+   "widening": 13.895584053189374,
    "passes": false,
    "reasons": [
     "went down 1 times",
     "137 executions lost the server",
-    "the gap to ClickHouse widens 18.6 times"
+    "the gap to ClickHouse widens 13.9 times"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "went down 1 times",
+    "137 executions lost the server",
+    "the gap to ClickHouse widens 13.9 times"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -29731,32 +29744,45 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 18.055159179114675,
-   "standard_gap": 0.8092091172078205,
+   "standard_gap": 1.083857615989014,
    "standard_date": "2026-11-10",
-   "widening": 22.312105480736644,
+   "widening": 16.658238972320586,
    "passes": false,
    "reasons": [
-    "the gap to ClickHouse widens 22.3 times"
+    "the gap to ClickHouse widens 16.7 times"
    ],
-   "demote": false
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "the gap to ClickHouse widens 16.7 times"
+   ],
+   "level": "enthusiast",
+   "demote": true
   },
   {
    "machine": "c6a.metal",
    "directory": "ctrlb",
    "category": "enthusiast",
    "restarts": 1,
-   "crashed": 0,
+   "crashed": 292,
    "timeouts": 1,
    "random_gap": 18.055159179114675,
-   "standard_gap": 1.3435549269093212,
+   "standard_gap": 1.7995623245755463,
    "standard_date": "2026-10-25",
-   "widening": 13.438348382710554,
+   "widening": 10.033083562900915,
    "passes": false,
    "reasons": [
     "went down 1 times",
+    "292 executions lost the server",
     "1 executions hit the timeout of 600 s",
-    "the gap to ClickHouse widens 13.4 times"
+    "the gap to ClickHouse widens 10.0 times"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "went down 1 times",
+    "292 executions lost the server",
+    "the gap to ClickHouse widens 10.0 times"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -29767,14 +29793,19 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 16.664000955924088,
-   "standard_gap": 1.026828526187119,
+   "standard_gap": 1.375337838830677,
    "standard_date": "2026-05-11",
-   "widening": 16.22861123444033,
+   "widening": 12.116296436730012,
    "passes": false,
    "reasons": [
-    "the gap to ClickHouse widens 16.2 times"
+    "the gap to ClickHouse widens 12.1 times"
    ],
-   "demote": false
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "the gap to ClickHouse widens 12.1 times"
+   ],
+   "level": "enthusiast",
+   "demote": true
   },
   {
    "machine": "c6a.metal",
@@ -29784,34 +29815,46 @@
    "crashed": 0,
    "timeouts": 1,
    "random_gap": 17.185417422559386,
-   "standard_gap": 0.9700905687725369,
+   "standard_gap": 1.299342813624279,
    "standard_date": "2026-11-02",
-   "widening": 17.715271105361047,
+   "widening": 13.22623809695288,
    "passes": false,
    "reasons": [
     "1 executions hit the timeout of 600 s",
-    "the gap to ClickHouse widens 17.7 times"
+    "the gap to ClickHouse widens 13.2 times"
    ],
-   "demote": false
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "the gap to ClickHouse widens 13.2 times"
+   ],
+   "level": "enthusiast",
+   "demote": true
   },
   {
    "machine": "c6a.metal",
    "directory": "pgrust",
-   "category": "challenger",
+   "category": "enthusiast",
    "restarts": 1,
-   "crashed": 4,
+   "crashed": 241,
    "timeouts": 2,
    "random_gap": 14.918172414634975,
-   "standard_gap": 0.47910721252191024,
+   "standard_gap": 0.6417179318974202,
    "standard_date": "2026-10-25",
-   "widening": 31.137440691216366,
+   "widening": 23.247242554879506,
    "passes": false,
    "reasons": [
     "went down 1 times",
-    "4 executions lost the server",
+    "241 executions lost the server",
     "2 executions hit the timeout of 600 s",
-    "the gap to ClickHouse widens 31.1 times"
+    "the gap to ClickHouse widens 23.2 times"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "went down 1 times",
+    "241 executions lost the server",
+    "the gap to ClickHouse widens 23.2 times"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -29822,15 +29865,20 @@
    "crashed": 0,
    "timeouts": 139,
    "random_gap": 17.59923635273431,
-   "standard_gap": 0.7051956104081282,
+   "standard_gap": 0.9445415490870901,
    "standard_date": "2026-11-06",
-   "widening": 24.956531341068395,
+   "widening": 18.632569810977788,
    "passes": false,
    "reasons": [
     "139 executions hit the timeout of 600 s",
-    "the gap to ClickHouse widens 25.0 times"
+    "the gap to ClickHouse widens 18.6 times"
    ],
-   "demote": false
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "the gap to ClickHouse widens 18.6 times"
+   ],
+   "level": "enthusiast",
+   "demote": true
   },
   {
    "machine": "c6a.metal",
@@ -29847,6 +29895,11 @@
    "reasons": [
     "no result: Traceback (most recent call last):"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "no result"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -29864,6 +29917,11 @@
    "reasons": [
     "no result: driver: q036.3 error 19.152 s"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "no result"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -29881,6 +29939,11 @@
    "reasons": [
     "no result: Error.check(hapi.hyper_execute_command(self._cdata,"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "no result"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -29898,6 +29961,11 @@
    "reasons": [
     "no result: the run failed without a result"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "no result"
+   ],
+   "level": "enthusiast",
    "demote": false
   },
   {
@@ -29915,6 +29983,11 @@
    "reasons": [
     "no result: psql:create.sql:216: error: connection to server was lost"
    ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "no result"
+   ],
+   "level": "enthusiast",
    "demote": false
   }
  ]
