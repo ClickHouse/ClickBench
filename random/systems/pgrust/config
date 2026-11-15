@@ -1,0 +1,6 @@
+# pgrust's install downloads the original hits.parquet into /var/lib/pgrust
+# when it isn't there, and the server (as the postgres user, which can't read
+# /root) loads it from there: write the generated file there, after the
+# install, so that it replaces the original.
+BENCH_DOWNLOAD_SCRIPT=download-hits-parquet-single
+RANDOM_DATA_DIR=/var/lib/pgrust

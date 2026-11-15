@@ -40,7 +40,7 @@ COLLECT_MARKER = "<!-- clickbench-collect: "
 
 # The same files as in generate-results.sh: <system>/results/<date>/<name>.json.
 RESULT_RE = re.compile(r"([^/]+)/results/([^/]+)/([^/]+\.json)$")
-SKIP_SYSTEMS = {"hardware", "versions", "gravitons"}
+SKIP_SYSTEMS = {"hardware", "versions", "gravitons", "random"}
 DATA_SCRIPT = '<script type="text/javascript" src="data.generated.js"></script>'
 
 

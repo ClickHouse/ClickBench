@@ -13,7 +13,7 @@ EXPECTED_RUNS = 3
 OUTLIER_SECONDS = 24 * 60 * 60
 DATE_DIR_RE = re.compile(r"^\d{8}$")
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-SKIP_SYSTEMS = {"hardware", "versions", "gravitons"}
+SKIP_SYSTEMS = {"hardware", "versions", "gravitons", "random"}
 # See "System Categories" in README.md.
 CATEGORIES = {"elite", "production", "challenger", "enthusiast", "retired", "joke"}
 

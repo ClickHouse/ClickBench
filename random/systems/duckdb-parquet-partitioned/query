@@ -1,0 +1,27 @@
+#!/bin/bash
+# The query script of the main benchmark, with -csv: the default output mode
+# shows at most 40 rows and cuts long values. -readonly lets several queries run
+# at once, which the concurrent workers of the randomized benchmark need.
+# Reads a SQL query from stdin, runs it via duckdb against hits.db (a VIEW
+# over hits_*.parquet).
+# Stdout: query result. Stderr: runtime in fractional seconds on the last
+# line. Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+# -no-agent: the 2.0 CLI turns on "agent mode" when it detects an AI coding
+# agent in the environment (AI_AGENT, CLAUDECODE, CURSOR_AGENT, ...) and
+# stdout is not a terminal: Markdown tables, truncated results, JSON errors
+# and a progress bar. Keep the plain output regardless of who runs this.
+out=$(duckdb -no-agent -readonly -csv hits.db -c "SET parquet_metadata_cache=true" -c ".timer on" -c "$query" 2>/tmp/duckdb.err.$$) && status=0 || status=$?
+
+if [ "$status" -ne 0 ]; then
+    cat /tmp/duckdb.err.$$ >&2
+    rm -f /tmp/duckdb.err.$$
+    exit "$status"
+fi
+rm -f /tmp/duckdb.err.$$
+
+printf '%s\n' "$out" | grep -v '^Run Time '
+printf '%s\n' "$out" | awk '/^Run Time/ { print $5 }' | tail -n1 >&2
