@@ -47,7 +47,9 @@ note() {
 # Only the systems that load one of the generated formats can take part.
 for s in ${SYSTEMS}; do
     [ -f "${CLICKBENCH_DIR}/${s}/benchmark.sh" ] || { echo "No such system: ${s}" >&2; exit 1; }
-    kind=$(grep -oE 'BENCH_DOWNLOAD_SCRIPT="[^"]*"' "${CLICKBENCH_DIR}/${s}/benchmark.sh" | cut -d'"' -f2 || true)
+    # The exports of benchmark.sh, evaluated as lib/run-system.sh does on the
+    # machine: quoted or not (keyten, particledb write it without quotes).
+    kind=$(eval "$(grep -E '^\s*export BENCH_[A-Z_]+=' "${CLICKBENCH_DIR}/${s}/benchmark.sh")"; echo "${BENCH_DOWNLOAD_SCRIPT:-}")
     # random/systems/<system>/config can set it, for a system that sets it elsewhere.
     if [ -f "${HERE}/systems/${s}/config" ] && grep -q '^BENCH_DOWNLOAD_SCRIPT=' "${HERE}/systems/${s}/config"; then
         kind=$(grep '^BENCH_DOWNLOAD_SCRIPT=' "${HERE}/systems/${s}/config" | tail -1 | cut -d= -f2 | tr -d '"')
