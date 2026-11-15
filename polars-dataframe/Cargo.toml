@@ -8,12 +8,6 @@ name = "mechanicus_core"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.21", features = ["extension-module"] }
-rayon = "1.10" 
-
-[profile.release]
-opt-level = 3
-lto = "fat"
-codegen-units = 1
-panic = "abort"
-strip = true
+pyo3 = { version = "0.21.2", features = ["extension-module", "abi3-py37"] }
+rayon = "1.10"
+numpy = "0.21.0"
