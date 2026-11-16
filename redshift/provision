@@ -1,0 +1,95 @@
+#!/bin/bash
+# Create the Redshift cluster (or serverless namespace + workgroup) described
+# by env.sh, if it does not exist, and wait until it is available. Also
+# creates the IAM role that COPY uses to read the dataset from S3.
+set -e
+cd "$(dirname "$0")"
+source ./env.sh
+
+if ! role_arn=$(aws iam get-role --role-name "$REDSHIFT_ROLE" --output text --query Role.Arn 2>/dev/null); then
+    role_arn=$(aws iam create-role --role-name "$REDSHIFT_ROLE" --output text --query Role.Arn \
+        --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":["redshift.amazonaws.com","redshift-serverless.amazonaws.com"]},"Action":"sts:AssumeRole"}]}')
+    aws iam attach-role-policy --role-name "$REDSHIFT_ROLE" \
+        --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+    sleep 15  # IAM propagation
+fi
+
+if [ "$REDSHIFT_MODE" = provisioned ]; then
+    if ! aws redshift describe-clusters --cluster-identifier "$REDSHIFT_CLUSTER" >/dev/null 2>&1; then
+        aws redshift create-cluster \
+            --cluster-identifier "$REDSHIFT_CLUSTER" \
+            --node-type "$REDSHIFT_NODE_TYPE" \
+            --number-of-nodes "$REDSHIFT_NODES" \
+            --cluster-type "$([ "$REDSHIFT_NODES" -eq 1 ] && echo single-node || echo multi-node)" \
+            --db-name "$REDSHIFT_DATABASE" \
+            --master-username awsuser --manage-master-password \
+            --iam-roles "$role_arn" --default-iam-role-arn "$role_arn" \
+            --no-publicly-accessible >/dev/null
+    fi
+    echo "waiting for cluster $REDSHIFT_CLUSTER" >&2
+    aws redshift wait cluster-available --cluster-identifier "$REDSHIFT_CLUSTER"
+else
+    if ! aws redshift-serverless get-namespace --namespace-name "$REDSHIFT_NAMESPACE" >/dev/null 2>&1; then
+        aws redshift-serverless create-namespace \
+            --namespace-name "$REDSHIFT_NAMESPACE" \
+            --db-name "$REDSHIFT_DATABASE" \
+            --admin-username awsuser --manage-admin-password \
+            --iam-roles "$role_arn" --default-iam-role-arn "$role_arn" >/dev/null
+    fi
+    until [ "$(aws redshift-serverless get-namespace --namespace-name "$REDSHIFT_NAMESPACE" \
+                --output text --query namespace.status)" = AVAILABLE ]; do sleep 10; done
+    if ! aws redshift-serverless get-workgroup --workgroup-name "$REDSHIFT_WORKGROUP" >/dev/null 2>&1; then
+        aws redshift-serverless create-workgroup \
+            --workgroup-name "$REDSHIFT_WORKGROUP" \
+            --namespace-name "$REDSHIFT_NAMESPACE" \
+            --base-capacity "$REDSHIFT_RPU" \
+            --no-publicly-accessible >/dev/null
+    fi
+    echo "waiting for workgroup $REDSHIFT_WORKGROUP" >&2
+    until [ "$(aws redshift-serverless get-workgroup --workgroup-name "$REDSHIFT_WORKGROUP" \
+                --output text --query workgroup.status)" = AVAILABLE ]; do sleep 10; done
+fi
+
+# Connection details for the native client (./query, ./check, concurrent-worker).
+if [ "$REDSHIFT_MODE" = provisioned ]; then
+    read -r host port secret sgs < <(aws redshift describe-clusters --cluster-identifier "$REDSHIFT_CLUSTER" \
+        --output text --query 'Clusters[0].[Endpoint.Address, Endpoint.Port, MasterPasswordSecretArn, join(`,`, VpcSecurityGroups[].VpcSecurityGroupId)]')
+else
+    read -r host port sgs < <(aws redshift-serverless get-workgroup --workgroup-name "$REDSHIFT_WORKGROUP" \
+        --output text --query 'workgroup.[endpoint.address, endpoint.port, join(`,`, securityGroupIds)]')
+    secret=$(aws redshift-serverless get-namespace --namespace-name "$REDSHIFT_NAMESPACE" \
+        --output text --query namespace.adminPasswordSecretArn)
+fi
+password=$(aws secretsmanager get-secret-value --secret-id "$secret" --output text --query SecretString \
+    | python3 -I -c 'import json, sys; print(json.load(sys.stdin)["password"])')
+(umask 077; printf '%s\n' "$host" "$port" awsuser "$password" "$secret" > "$REDSHIFT_CONN_FILE")
+
+# Let the client reach port 5439 inside the VPC (the cluster is not publicly
+# accessible): allow the client instance's security groups, found from the
+# EC2 instance metadata, or REDSHIFT_CLIENT_SG (comma-separated) if set.
+client_sgs="${REDSHIFT_CLIENT_SG:-}"
+if [ -z "$client_sgs" ]; then
+    token=$(curl -fsS --connect-timeout 1 --max-time 2 -X PUT \
+        -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' http://169.254.169.254/latest/api/token || true)
+    if [ -n "$token" ]; then
+        md() { curl -fsS --max-time 2 -H "X-aws-ec2-metadata-token: $token" "http://169.254.169.254/latest/meta-data/$1"; }
+        client_sgs=$(md "network/interfaces/macs/$(md mac)/security-group-ids" | paste -sd,)
+    fi
+fi
+if [ -z "$client_sgs" ]; then
+    echo "provision: could not find the client's security group; set REDSHIFT_CLIENT_SG" >&2
+    exit 1
+fi
+for sg in ${sgs//,/ }; do
+    for client_sg in ${client_sgs//,/ }; do
+        out=$(aws ec2 authorize-security-group-ingress --group-id "$sg" \
+            --ip-permissions "IpProtocol=tcp,FromPort=${port},ToPort=${port},UserIdGroupPairs=[{GroupId=${client_sg}}]" 2>&1) \
+            || grep -q InvalidPermission.Duplicate <<< "$out" || { echo "$out" >&2; exit 1; }
+    done
+done
+
+# The rule can take a few seconds to apply.
+for i in $(seq 1 30); do
+    .venv/bin/python3 -I rs.py "$REDSHIFT_CONN_FILE" check 2>/dev/null && break
+    sleep 2
+done

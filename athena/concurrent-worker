@@ -1,0 +1,10 @@
+#!/bin/bash
+# One connection of the shared driver's concurrent-QPS test (see
+# BENCH_CONCURRENT_WORKER in ../lib/benchmark-common.sh): one boto3 client
+# cycling through the queries on stdin until the deadline ($1, Unix seconds),
+# then printing "<successful> <failed>". Forking ./query per query would
+# measure Python and client start-up rather than Athena.
+set -e
+cd "$(dirname "$0")"
+source ./env.sh
+exec .venv/bin/python3 -I athena.py worker "$1"

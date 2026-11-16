@@ -1,0 +1,9 @@
+#!/bin/bash
+# One connection of the shared driver's concurrent-QPS test (see
+# BENCH_CONCURRENT_WORKER in ../lib/benchmark-common.sh). It keeps one native
+# connection open and cycles through the queries on stdin until the deadline
+# ($1, Unix seconds), then prints "<successful> <failed>".
+set -e
+cd "$(dirname "$0")"
+source ./env.sh
+exec .venv/bin/python3 -I rs.py "$REDSHIFT_CONN_FILE" worker "$1"

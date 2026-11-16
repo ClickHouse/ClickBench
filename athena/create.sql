@@ -1,4 +1,4 @@
-CREATE EXTERNAL TABLE IF NOT EXISTS `test`.`hits` (
+CREATE EXTERNAL TABLE IF NOT EXISTS hits (
 `watchid` bigint,
 `javaenable` smallint,
 `title` string,
@@ -108,5 +108,5 @@ CREATE EXTERNAL TABLE IF NOT EXISTS `test`.`hits` (
 ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
 WITH SERDEPROPERTIES (
 'serialization.format' = '1'
-) LOCATION 's3://clickhouse-public-datasets/hits_compatible/athena_partitioned'
+) LOCATION '{LOCATION}'
 TBLPROPERTIES ('has_encrypted_data'='false');
