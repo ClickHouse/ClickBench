@@ -10427,16 +10427,16 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 36.21727155895527,
-   "standard_gap": 1.0395900918288066,
+   "standard_gap": 1.0570358327124953,
    "standard_date": "2026-11-15",
-   "widening": 34.83803072347799,
+   "widening": 34.26304997250368,
    "passes": false,
    "reasons": [
-    "the gap to ClickHouse widens 34.8 times"
+    "the gap to ClickHouse widens 34.3 times"
    ],
    "challenger_passes": false,
    "challenger_reasons": [
-    "the gap to ClickHouse widens 34.8 times"
+    "the gap to ClickHouse widens 34.3 times"
    ],
    "level": "enthusiast",
    "demote": false
@@ -10449,21 +10449,21 @@
    "crashed": 8,
    "timeouts": 42,
    "random_gap": 27.24999293529587,
-   "standard_gap": 1.1031322096217215,
+   "standard_gap": 1.1216442739832204,
    "standard_date": "2026-11-04",
-   "widening": 24.702381725070154,
+   "widening": 24.294683766828133,
    "passes": false,
    "reasons": [
     "went down 2 times",
     "8 executions lost the server",
     "42 executions hit the timeout of 600 s",
-    "the gap to ClickHouse widens 24.7 times"
+    "the gap to ClickHouse widens 24.3 times"
    ],
    "challenger_passes": false,
    "challenger_reasons": [
     "went down 2 times",
     "8 executions lost the server",
-    "the gap to ClickHouse widens 24.7 times"
+    "the gap to ClickHouse widens 24.3 times"
    ],
    "level": "enthusiast",
    "demote": false
