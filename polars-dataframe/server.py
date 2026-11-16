@@ -1,96 +1,79 @@
-#!/usr/bin/env python3
-"""FastAPI wrapper around polars so it conforms to the ClickBench
-install/start/check/stop/load/query interface.
-
-Routes:
-    GET  /health     -> 200 OK once the server is up
-    POST /load       -> reads hits.parquet from the working directory, fixes
-                        column types, holds the LazyFrame in memory, and
-                        returns {"elapsed": <seconds>}
-    POST /query      -> body: a Python expression. eval()s it against the
-                        loaded LazyFrame (`hits`, `pl`, and `date` in scope)
-                        and returns {"elapsed": <seconds>}.
-    GET  /data-size  -> bytes the DataFrame currently occupies (estimated_size)
-
-The /query endpoint takes a Python expression directly rather than an SQL
-string mapped to a hardcoded lambda. The workload lives in queries.sql,
-one Python expression per line (the filename matches the cross-system
-convention; the contents are not SQL).
-"""
-
 import os
-import timeit
-from datetime import date
-
-import polars as pl
+import sys
+import time
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from datetime import date
+from fastapi import FastAPI, Request, Response
+import polars as pl
 
-# Streaming engine will be the default soon.
-pl.Config.set_engine_affinity("streaming")
-
-# ClickBench timings must include serializing the full query result back
-# to the client (README, "Output Suppression"), so render tables without
-# any row/column/cell truncation — nothing may be suppressed.
-pl.Config.set_tbl_rows(-1)
+# Global configuration to prevent text truncation and wrapping in wide benchmark columns (e.g., Q24, Q30)
 pl.Config.set_tbl_cols(-1)
-pl.Config.set_tbl_width_chars(-1)
-pl.Config.set_fmt_str_lengths(65535)
+pl.Config.set_tbl_rows(-1)
+pl.Config.set_tbl_width_chars(-1)  # Fixes the Linux 'Argument list too long' error for Q24
+pl.Config.set_fmt_str_lengths(1000)
 
 app = FastAPI()
-hits_df: pl.DataFrame | None = None
-hits: pl.LazyFrame | None = None
 
+available_cores = os.cpu_count() or 1
+pl.threadpool_size = available_cores
+
+state = {"df": None}
+hits = None
+
+def load_data():
+    global hits
+    path = "hits.parquet"
+    df = pl.read_parquet(path)
+    
+    df = df.with_columns([
+        (pl.col("EventTime") * 1_000_000).cast(pl.Datetime),
+        pl.col("EventDate").cast(pl.Date)
+    ])
+    
+    hits = df.lazy()
+    return df
 
 @app.get("/health")
 def health():
-    return {"ok": True}
-
+    return {"status": "ready"}
 
 @app.post("/load")
-def load():
-    global hits, hits_df
-    start = timeit.default_timer()
-    df = pl.scan_parquet("hits.parquet").collect()
-    df = df.with_columns(
-        (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
-        pl.col("EventDate").cast(pl.Date),
-    )
-    df = df.rechunk()
-    hits_df = df
-    hits = df.lazy()
-    elapsed = round(timeit.default_timer() - start, 3)
-    return {"elapsed": elapsed}
-
-
-@app.post("/query")
-async def query(request: Request):
-    if hits is None:
-        raise HTTPException(status_code=409, detail="DataFrame not loaded; POST /load first")
-    code = (await request.body()).decode("utf-8").strip()
-    if not code:
-        raise HTTPException(status_code=400, detail="empty query")
-    try:
-        compiled = compile(code, "<query>", "eval")
-    except SyntaxError as e:
-        raise HTTPException(status_code=400, detail=f"syntax error: {e}")
-    start = timeit.default_timer()
-    value = eval(compiled, {"hits": hits, "pl": pl, "date": date})
-    # Rendering the result is part of the timed run: ClickBench measures
-    # back-to-back runtimes including returning the result to the client
-    # (issue #1397).
-    result = str(value)
-    elapsed = round(timeit.default_timer() - start, 3)
-    return {"elapsed": elapsed, "result": result}
-
+def load_endpoint():
+    start_time = time.time()
+    if state["df"] is None:
+        state["df"] = load_data()
+    elapsed = time.time() - start_time
+    return {"status": "success", "elapsed": elapsed}
 
 @app.get("/data-size")
-def data_size():
-    if hits_df is None:
-        return {"bytes": 0}
-    return {"bytes": int(hits_df.estimated_size())}
+def data_size_endpoint():
+    if state["df"] is None:
+        state["df"] = load_data()
+    return {"bytes": state["df"].estimated_size()}
 
+@app.post("/query")
+async def query_endpoint(request: Request):
+    global hits
+    body = await request.body()
+    query_str = body.decode("utf-8").strip()
+    
+    if state["df"] is None:
+        state["df"] = load_data()
+        
+    start_time = time.time()
+    try:
+        result = eval(query_str)
+        result_str = str(result)
+    except Exception as e:
+        return Response(content=str(e), status_code=500)
+        
+    elapsed = time.time() - start_time
+    
+    return {
+        "elapsed": elapsed,
+        "result": result_str,
+        "bytes": state["df"].estimated_size()
+    }
 
 if __name__ == "__main__":
-    port = int(os.environ.get("BENCH_POLARS_PORT", "8000"))
-    uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")

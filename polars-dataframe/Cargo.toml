@@ -1,0 +1,13 @@
+[package]
+name = "mechanicus_core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "mechanicus_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.21.2", features = ["extension-module", "abi3-py37"] }
+rayon = "1.10"
+numpy = "0.21.0"
