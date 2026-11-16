@@ -5,21 +5,20 @@ set -e
 sudo apt-get update -y
 sudo apt-get install -y python3-pip python3-venv python3-dev build-essential curl
 
-# Install Rust toolchain directly if not present (required for maturin builds)
+# Install Rust toolchain directly if not present using the correct raw script URL
 if ! command -v cargo &> /dev/null; then
     echo "[Mechanicus Install] Installing Rust toolchain..."
-    curl --proto '=https' --tlsv1.2 -sSf https://rustup.rs | sh -s -- -y
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     source "$HOME/.cargo/env"
 fi
 
-# 2. Setup the virtual environment required by ClickBench
-python3 -m venv venv
-source venv/bin/activate
+# 2. Setup the virtual environment using the official expected framework name 'myenv'
+python3 -m venv myenv
+source myenv/bin/activate
 
-# 3. Install build tools and precise python packages following the protocol
+# 3. Install build tools and light precise python packages (dropped tabular and pandas)
 pip install --upgrade pip
-pip install wheel maturin numpy
-pip install fastapi uvicorn polars pyarrow pandas tabular
+pip install wheel maturin numpy fastapi uvicorn polars pyarrow
 
 # 4. Compile the native Rust core into the Python virtual environment
 if [ -f "Cargo.toml" ]; then
