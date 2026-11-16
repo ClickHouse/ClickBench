@@ -1,0 +1,10 @@
+#!/bin/bash
+# Reads a SQL query from stdin and runs it once on Athena (result reuse off).
+#   Stdout: query result rows.
+#   Stderr: query runtime in fractional seconds on the last line: Athena's
+#           TotalExecutionTimeInMillis, so the client's polling does not count.
+#   Exit:   non-zero on error.
+set -e
+cd "$(dirname "$0")"
+source ./env.sh
+exec .venv/bin/python3 -I athena.py query

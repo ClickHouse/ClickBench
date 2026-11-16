@@ -1,0 +1,6 @@
+#!/bin/bash
+# SELECT 1 over a native connection.
+set -e
+cd "$(dirname "$0")"
+source ./env.sh
+exec .venv/bin/python3 -I rs.py "$REDSHIFT_CONN_FILE" check

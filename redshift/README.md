@@ -1,56 +1,98 @@
-This benchmark is not automated.
+## Amazon Redshift
 
-Go to AWS Redshift service.
-Create a cluster. Note: this is a classic Redshift, not "serverless".
+Every step is scripted with the AWS CLI v2 and uses the shared ClickBench driver
+(`../lib/benchmark-common.sh`). Setup and load go through the Redshift Data API
+(`aws redshift-data`); the queries run over a native connection
+(`redshift_connector`), because a Data API round trip costs seconds of client
+overhead, which would swamp the startup and concurrent-QPS measurements.
 
-Choose the node type and cluster size.
-I've selected 4 nodes of ra3.xlplus 4vCPU to get 16vCPU in total.
+There are two entries over the same scripts:
 
-Set up some password for the admin user.
-The cluster will take a few minutes to start.
+* `redshift` — a provisioned cluster (node type × number of nodes);
+* `redshift-serverless` — a Serverless workgroup (base capacity in RPUs).
+  Its scripts are symlinks to the ones here; only `REDSHIFT_MODE=serverless`
+  and `template.json` differ.
 
-We need to perform two modifications:
-1. Allow inbound access. Go to VPC and edit the security group. Modify inbound rules. Allow connections from any IPv4 to port 5439.
-2. Add IAM role. Just create something by default.
+### Prerequisites
 
-To create a table, you can go to the Query Editor v2.
-Open the "dev" database.
-Run the CREATE TABLE statement you find in `create.sql`.
-
-Note: Redshift prefers VARCHAR(MAX) instead of TEXT and uses Numeric(38, 0) rather than BIGINT for UserID.
-
-Then press on the "Load data".
-This will generate a statement:
+AWS credentials allowed to manage Redshift / Redshift Serverless, the Data API,
+and IAM roles — environment variables, an instance profile, or SSO:
 
 ```
-COPY dev.public.hits FROM 's3://clickhouse-public-datasets/hits_compatible/hits.csv.gz' GZIP
-IAM_ROLE 'arn:aws:iam::...:role/service-role/AmazonRedshift-CommandsAccessRole-...'
-FORMAT AS CSV DELIMITER ',' QUOTE '"'
-REGION AS 'eu-central-1'
+aws sso login --profile <profile>
+export AWS_PROFILE=<profile>
 ```
 
-> Elapsed time: 35m 35.9s
+The cluster and the workgroup are created in the default VPC of the region and
+are not publicly accessible, so the benchmark client must be an EC2 instance in
+that VPC. `./provision` allows port 5439 on the cluster's security group from the
+client instance's security groups (found from the instance metadata, or set
+`REDSHIFT_CLIENT_SG`), and stores the managed admin password in
+`.redshift-conn-<name>` (mode 600, not committed; removed by `./deprovision`).
 
-We will run the queries from another server with `psql` client.
+### Running
 
 ```
-sudo apt-get install -y postgresql-client
-
-echo "*:*:*:*:your_password" > ~/.pgpass
-chmod 400 .pgpass
-
-psql -h redshift-cluster-1.chedgchbam32.eu-central-1.redshift.amazonaws.com -U awsuser -d dev -p 5439
+./run-all.sh                                    # every ra3/rg node type at 1..4 nodes (2..4 for multi-node-only types)
+./run-all.sh ra3.xlplus:4 rg.4xlarge:2          # <node type>:<nodes> ...
+../redshift-serverless/run-all.sh               # 128 RPU (the default base capacity)
+../redshift-serverless/run-all.sh 32 128 512    # <RPU> ...
 ```
 
-Then run the benchmark:
+For each configuration, `run-all.sh` creates the cluster (`./provision`), runs
+the benchmark into `log-<configuration>.txt`, writes
+`results/<date>/<nodes>x.<node type>.json` (or `serverless.json` for 128 RPU,
+`<rpu>rpu.json` otherwise), and deletes the cluster (`./deprovision`; set
+`KEEP_CLUSTER=1` to keep it).
+
+To run the steps by hand:
+
 ```
-export FQDN=...
-./run.sh 2>&1 | tee log.txt
-
-cat log.txt | grep -oP 'Time: \d+\.\d+ ms|ERROR' | sed -r -e 's/Time: ([0-9]+\.[0-9]+) ms/\1/' |
-  awk '{ if ($1 == "ERROR") { skip = 1 } else { if (i % 3 == 0) { printf "[" }; printf skip ? "null" : ($1 / 1000); if (i % 3 != 2) { printf "," } else { print "]," }; ++i; skip = 0; } }'
+export REDSHIFT_NODE_TYPE=ra3.4xlarge REDSHIFT_NODES=4   # or REDSHIFT_MODE=serverless REDSHIFT_RPU=128
+./provision
+./benchmark.sh > log.txt 2>&1
+./make-result log.txt
+./deprovision
 ```
 
-`SELECT sum(used * 1048576) FROM stv_node_storage_capacity`
+Configuration (all optional):
 
-> 30 794 579 968 
+| variable             | default                                           |
+|----------------------|---------------------------------------------------|
+| `REDSHIFT_MODE`      | `provisioned` (`serverless` in `redshift-serverless`) |
+| `REDSHIFT_NODE_TYPE` | `ra3.xlplus`                                      |
+| `REDSHIFT_NODES`     | `4`                                               |
+| `REDSHIFT_RPU`       | `128`                                             |
+| `AWS_REGION`         | the CLI's configured region, else `us-east-1`     |
+
+### Script layout
+
+| script          | role                                                            |
+|-----------------|-----------------------------------------------------------------|
+| `env.sh`        | sourced by the others: names, Data API target, `redshift_run`   |
+| `install`       | installs the AWS CLI if missing, a venv with `redshift_connector`, checks credentials |
+| `provision`     | creates the IAM role for COPY (`clickbench-redshift-s3`) and the cluster / namespace + workgroup, waits until available, opens port 5439 to the client, writes the connection file |
+| `deprovision`   | deletes the cluster / workgroup + namespace (no final snapshot) |
+| `start`/`stop`  | no-ops                                                          |
+| `check`         | `SELECT 1` over a native connection                             |
+| `load`          | `create.sql`, then `COPY` of `hits.csv.gz` from S3, then `ANALYZE` |
+| `query`         | runs one query from stdin; result → stdout, seconds → stderr    |
+| `data-size`     | size of `hits` from `svv_table_info`                            |
+| `concurrent-worker` | one concurrent-QPS client, keeping one native connection open |
+| `rs.py`         | the native client behind `query`, `check`, `concurrent-worker`  |
+| `make-result`   | converts a log into a results JSON                              |
+| `run-all.sh`    | provision → benchmark → result → deprovision, per configuration |
+
+### Notes
+
+* Each query runs in a new session with
+  `SET enable_result_cache_for_session TO off`. The reported time is the
+  client's wall-clock of execute + fetch, like psql's `\timing` used for the
+  earlier results; it includes query compilation.
+* Redshift prefers `VARCHAR(MAX)` to `TEXT`, and `UserID` is `NUMERIC(38, 0)`
+  rather than `BIGINT`.
+* The data is loaded from `hits.csv.gz`, a single gzip file, so the load is
+  not parallel. Outside the EU it is read from the us-east-1 mirror of the
+  dataset bucket.
+* There is no way to make the cluster cold from the client, so the first try
+  is not a cold run (the `no-cold` tag).

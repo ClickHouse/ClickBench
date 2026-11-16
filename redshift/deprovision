@@ -1,0 +1,19 @@
+#!/bin/bash
+# Delete the cluster (or serverless workgroup + namespace) created by
+# ./provision, without a final snapshot. The IAM role is kept.
+set -e
+cd "$(dirname "$0")"
+source ./env.sh
+
+if [ "$REDSHIFT_MODE" = provisioned ]; then
+    aws redshift delete-cluster --cluster-identifier "$REDSHIFT_CLUSTER" \
+        --skip-final-cluster-snapshot >/dev/null
+    aws redshift wait cluster-deleted --cluster-identifier "$REDSHIFT_CLUSTER"
+else
+    aws redshift-serverless delete-workgroup --workgroup-name "$REDSHIFT_WORKGROUP" >/dev/null
+    while aws redshift-serverless get-workgroup --workgroup-name "$REDSHIFT_WORKGROUP" >/dev/null 2>&1; do
+        sleep 10
+    done
+    aws redshift-serverless delete-namespace --namespace-name "$REDSHIFT_NAMESPACE" >/dev/null
+fi
+rm -f "$REDSHIFT_CONN_FILE"

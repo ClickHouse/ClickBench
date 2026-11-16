@@ -17,6 +17,8 @@ server.endpoint.tmp
 hyperd.log
 arc_token.txt
 data-size.txt
+.athena-output
+.redshift-conn-*
 .doris_home
 .sirius_env
 create.rewritten.sql
@@ -49,3 +51,5 @@ pivot-parquet/catalog
 pivot-parquet/config.yaml
 pivot-parquet-partitioned/catalog
 pivot-parquet-partitioned/config.yaml
+redshift/log-*.txt
+redshift-serverless/log-*.txt
