@@ -5,7 +5,6 @@ import uvicorn
 from datetime import date
 from fastapi import FastAPI, Request, Response
 import polars as pl
-import mechanicus_core
 
 # Global configuration to prevent text truncation and wrapping in wide benchmark columns
 pl.Config.set_tbl_cols(-1)
@@ -32,16 +31,8 @@ def load_data():
         pl.col("EventDate").cast(pl.Date)
     ])
     
-    # MECHANICUS CORE: Optimizing columnar layout with dynamic CPU-feature detection
-    try:
-        # Fixed: Using the exported pack_column function to apply native bit-packing
-        df = df.with_columns([
-            pl.Series("RegionID", mechanicus_core.pack_column(df["RegionID"].to_list())),
-            pl.Series("CounterID", mechanicus_core.pack_column(df["CounterID"].to_list()))
-        ])
-    except Exception as e:
-        # Automated graceful fallback to standard uncompressed processing if hardware features differ
-        print(f"[MECHANICUS CORE] Fallback active due to runtime error: {e}")
+    # REMOVED packed columns to prevent data truncation and ensure absolute data validity
+    # Polars now queries the verified original data as requested by the maintainer
     
     hits = df.lazy()
     return df
