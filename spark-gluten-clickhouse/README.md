@@ -26,6 +26,10 @@ The CH backend is not part of Apache Gluten's release tarball — only the Velox
 - Memory: 70% of the available RAM, a quarter for the Spark heap and the rest off-heap, because the ClickHouse engine does nearly all the work off-heap and each task's memory limit is `off-heap / cores`.
 - The queries are the same as in `spark-gluten/`, including Spark's `$1` backreference syntax in `REGEXP_REPLACE`: the backend translates Spark semantics.
 
+### Hangs
+
+The benchmark driver has no per-query time limit. `./query` kills a query after `QUERY_TIMEOUT` seconds (600 by default), printing the process tree, the Java stacks (`jcmd`) and the native stacks (`gdb`, aggregated by `stacks.py`) to stderr, and then fails the remaining queries at once.
+
 ### Links
 
 - [Gluten ClickHouse-backend getting started](https://gluten.apache.org/docs/get-started/ClickHouse/).

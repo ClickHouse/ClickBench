@@ -9,5 +9,59 @@ arch=$(dpkg --print-architecture)
 export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-${arch}"
 export PATH="$JAVA_HOME/bin:$PATH"
 
+# The benchmark driver has no per-query time limit, so a hung query would
+# stall the whole run until the job's limit, with nothing in the log. Kill a
+# query after QUERY_TIMEOUT seconds, print the stacks of its processes first,
+# and fail the remaining queries right away: once the engine hangs, every
+# following query would hang the same way.
+QUERY_TIMEOUT="${QUERY_TIMEOUT:-600}"
+HUNG_MARKER=query_hung
+if [ -e "$HUNG_MARKER" ]; then
+    echo "query: an earlier query hung; failing without running" >&2
+    exit 1
+fi
+
 query=$(cat)
-printf '%s' "$query" | python3 query.py
+printf '%s' "$query" | python3 query.py &
+pid=$!
+
+# All processes started for the query, $1 first: python3, spark-submit's
+# bash, the JVMs (libch.so is preloaded into all of them).
+descendants() {
+    echo "$1"
+    local child
+    for child in $(pgrep -P "$1"); do
+        descendants "$child"
+    done
+}
+
+(
+    sleep "$QUERY_TIMEOUT" </dev/null >/dev/null 2>&1
+    echo "query: no result after ${QUERY_TIMEOUT}s; processes and stacks:" >&2
+    procs=$(descendants "$pid")
+    for p in $procs; do
+        ps -o pid=,ppid=,stat=,etimes=,nlwp=,rss=,args= -p "$p" | cut -c1-300 >&2
+    done
+    for p in $procs; do
+        if [ "$(ps -o comm= -p "$p")" = java ]; then
+            echo "query: Java stacks of $p:" >&2
+            timeout 120 jcmd "$p" Thread.print 2>&1 | python3 stacks.py >&2 || true
+        fi
+        echo "query: native stacks of $p:" >&2
+        timeout 600 sudo gdb -p "$p" -batch -ex 'thread apply all bt 16' 2>/dev/null | python3 stacks.py >&2 || true
+    done
+    # Only now: a query that finishes during the dump has not hung.
+    touch "$HUNG_MARKER"
+    for p in $procs; do
+        kill -KILL "$p" 2>/dev/null || true
+    done
+) &
+watchdog=$!
+
+rc=0
+wait "$pid" || rc=$?
+# Killing the subshell, not its sleep: if the sleep ended first, the subshell
+# would go on to the stack dump. The orphaned sleep holds only /dev/null.
+kill "$watchdog" 2>/dev/null || true
+wait "$watchdog" 2>/dev/null || true
+exit "$rc"

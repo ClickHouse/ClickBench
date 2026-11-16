@@ -31,7 +31,7 @@ SPARK_PROFILE=spark-3.5
 sudo apt-get update -y
 sudo apt-get install -y python3-pip python3-venv \
     openjdk-8-jdk-headless openjdk-17-jdk \
-    maven git cmake ccache ninja-build nasm yasm gawk \
+    maven git cmake ccache ninja-build nasm yasm gawk gdb \
     lsb-release wget software-properties-common gnupg
 
 # Install Clang 19 via apt.llvm.org.
