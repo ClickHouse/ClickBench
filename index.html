@@ -752,6 +752,7 @@ const additional_data_size_points = [
                 <a id="selector-storage-cloud" class="selector selector-active">Cloud</a>
                 <a id="selector-storage-memory" class="selector selector-active">Memory</a>
                 <a id="selector-storage-parquet" class="selector selector-active">Parquet</a>
+                <a id="selector-storage-vortex" class="selector selector-active">Vortex</a>
                 <a id="selector-storage-datalake" class="selector selector-active">Data Lake</a>
                 <a id="selector-storage-iceberg" class="selector selector-active">Iceberg</a>
                 <a id="selector-storage-web" class="selector selector-active">Web</a>
@@ -847,7 +848,7 @@ const missing_result_time = 300;
 
 /// Every storage kind is enabled by default: the selector is for narrowing the
 /// report down to a single way of keeping the data, not for the default view.
-const default_storage = {"native": true, "cloud": true, "memory": true, "parquet": true, "datalake": true, "iceberg": true, "web": true};
+const default_storage = {"native": true, "cloud": true, "memory": true, "parquet": true, "vortex": true, "datalake": true, "iceberg": true, "web": true};
 
 /// See "System Categories" in README.md. Enthusiasts and jokes are hidden by default.
 const default_category = {"elite": true, "production": true, "challenger": true, "enthusiast": false, "retired": true, "joke": false};
@@ -1006,12 +1007,13 @@ data.forEach(d => {
 
 /// Where a benchmark entry keeps its data, see
 /// https://github.com/ClickHouse/ClickBench/issues/2048:
-/// - native — the database native format on local storage; formats like Vortex or Lance
-///   are also here, when the entry creates the data in them on load;
+/// - native — the database native format on local storage; formats like Lance are also
+///   here, when the entry creates the data in them on load;
 /// - cloud — a cloud service, as its storage is opaque;
 /// - memory — the full dataset has to be represented in memory for the system to operate;
 /// - parquet — Parquet files on local storage: either the benchmark-provided ones, or
 ///   converted on load, in which case the conversion is accounted as the load time;
+/// - vortex — Vortex files on local storage, converted on load;
 /// - datalake — Parquet or a bunch of other files in a bucket on AWS S3 (it is a
 ///   simplification to call it a data lake, but it distills what matters);
 /// - iceberg — an Iceberg table that the system creates and writes itself, through an
@@ -1075,6 +1077,7 @@ function storageOf(elem) {
     if (/\(web\)/i.test(elem.system)) return 'web';
     if (/-iceberg$/.test(directory)) return 'iceberg';
     if (/data.?lake/i.test(elem.system + ' ' + directory)) return 'datalake';
+    if (/vortex/i.test(elem.system + ' ' + directory)) return 'vortex';
     if (/parquet/i.test(elem.system + ' ' + directory)) return 'parquet';
     if (/dataframe|\(memory\)/i.test(elem.system) || (elem.tags || []).includes('in-memory')) return 'memory';
 
