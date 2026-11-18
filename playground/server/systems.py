@@ -111,6 +111,30 @@ DATALAKE_FILTERED: frozenset[str] = frozenset({
     "clickhouse-web",
     "duckdb-datalake",
     "duckdb-datalake-partitioned",
+    # duckflight-datalake{,-partitioned}: harness.py reads parquet
+    # directly from s3://clickhouse-public-datasets at query time
+    # via DuckDB's httpfs/s3 extensions. Same post-snapshot egress
+    # need as the duckdb-datalake variants.
+    "duckflight-datalake",
+    "duckflight-datalake-partitioned",
+    # roastedduck-datalake{,-partitioned}: same pattern — httpfs/s3
+    # reads from clickhouse-public-datasets in create.sql / load.
+    "roastedduck-datalake",
+    "roastedduck-datalake-partitioned",
+    # Every *-iceberg variant uses an Iceberg catalog over S3-backed
+    # data; several do explicit s3:// reads in create.sql / load.
+    # Blanket-include the whole family — the SNI proxy allowlists
+    # only s3.amazonaws.com + its regional/wildcard patterns, so
+    # misuse remains constrained to the same bucket allowlist.
+    "clickhouse-iceberg",
+    "databend-iceberg",
+    "datafusion-iceberg",
+    "doris-iceberg",
+    "duckdb-iceberg",
+    "presto-iceberg",
+    "spark-iceberg",
+    "starrocks-iceberg",
+    "trino-iceberg",
     "presto-datalake",
     "presto-datalake-partitioned",
     "trino-datalake",
