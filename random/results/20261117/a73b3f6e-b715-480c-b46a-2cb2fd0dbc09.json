@@ -1283,7 +1283,7 @@
    "data_size_after": 95402950560,
    "total_time": 2475.673,
    "penalized_time": 4575.673,
-   "geomean": 1.0,
+   "geomean": 1.058,
    "counts": {
     "ok": 286,
     "error": 14
@@ -4111,6 +4111,3020 @@
    ]
   },
   {
+   "directory": "pg_clickhouse",
+   "system": "pg_clickhouse",
+   "machine": "c6a.4xlarge",
+   "proprietary": "no",
+   "tuned": "no",
+   "tags": [
+    "C",
+    "column-oriented",
+    "PostgreSQL compatible"
+   ],
+   "repo": "ClickHouse/ClickBench",
+   "branch": "main",
+   "commit": "e36d0eee9c453a9cc78e72e180018d60c5887e60",
+   "translator": "anthropic:claude-opus-5-5",
+   "translations": {
+    "q001": "WITH ordered AS (SELECT \"UserID\", \"RefererCategoryID\", ROW_NUMBER() OVER (PARTITION BY \"UserID\" ORDER BY \"EventTime\", \"WatchID\", \"RefererCategoryID\") AS rn FROM hits WHERE \"EventDate\" >= '2013-07-01' AND \"EventDate\" <= '2013-07-31'), first_touch AS (SELECT \"UserID\", \"RefererCategoryID\" AS first_category FROM ordered WHERE rn = 1), activity AS (SELECT \"UserID\", COUNT(DISTINCT \"EventDate\") AS active_days, COUNT(*) AS total_hits FROM hits GROUP BY \"UserID\") SELECT f.first_category AS first_category, COUNT(*) AS users, AVG(a.active_days) AS avg_active_days, SUM(CASE WHEN a.active_days > 1 THEN 1 ELSE 0 END) AS returning_users, CAST(SUM(CASE WHEN a.active_days > 1 THEN 1 ELSE 0 END) AS DOUBLE PRECISION) / NULLIF(COUNT(*), 0) AS return_rate FROM first_touch f JOIN activity a ON f.\"UserID\" = a.\"UserID\" GROUP BY f.first_category HAVING COUNT(*) >= 10 ORDER BY users DESC, first_category LIMIT 25",
+    "q002": "WITH top_regions AS (SELECT \"RegionID\" FROM hits GROUP BY \"RegionID\" ORDER BY COUNT(*) DESC, \"RegionID\" LIMIT 100), rd AS (SELECT \"RegionID\", CAST(EXTRACT(DAY FROM \"EventDate\") AS INTEGER) AS d, COUNT(*) AS hits FROM hits WHERE \"RegionID\" IN (SELECT \"RegionID\" FROM top_regions) GROUP BY \"RegionID\", CAST(EXTRACT(DAY FROM \"EventDate\") AS INTEGER)) SELECT \"RegionID\", d, hits, region_avg, CAST(hits AS DOUBLE PRECISION) / region_avg AS spike_ratio FROM (SELECT r.\"RegionID\", r.d, r.hits, (SELECT AVG(CAST(r2.hits AS DOUBLE PRECISION)) FROM rd r2 WHERE r2.\"RegionID\" = r.\"RegionID\") AS region_avg FROM rd r) x WHERE hits > region_avg ORDER BY spike_ratio DESC, \"RegionID\", d LIMIT 30",
+    "q003": "WITH early AS (SELECT \"IPNetworkID\" FROM hits WHERE \"EventDate\" <= '2013-07-07' GROUP BY \"IPNetworkID\" HAVING COUNT(*) >= 10 EXCEPT SELECT DISTINCT \"IPNetworkID\" FROM hits WHERE \"EventDate\" >= '2013-07-29') SELECT h.\"IPNetworkID\", COUNT(*) AS early_hits, COUNT(DISTINCT h.\"UserID\") AS early_users, COUNT(DISTINCT h.\"EventDate\") AS active_days FROM hits h WHERE h.\"EventDate\" <= '2013-07-07' AND h.\"IPNetworkID\" IN (SELECT \"IPNetworkID\" FROM early) GROUP BY h.\"IPNetworkID\" ORDER BY early_hits DESC, h.\"IPNetworkID\" LIMIT 20",
+    "q004": "WITH ranked AS (SELECT \"UserID\", \"TraficSourceID\", ROW_NUMBER() OVER (PARTITION BY \"UserID\" ORDER BY \"EventTime\", \"WatchID\") AS rn FROM hits), firsts AS (SELECT \"UserID\", \"TraficSourceID\" AS first_source FROM ranked WHERE rn = 1), act AS (SELECT \"UserID\", COUNT(DISTINCT \"EventDate\") AS active_days FROM hits GROUP BY \"UserID\") SELECT f.first_source AS source_id, COUNT(*) AS users, ROUND(CAST(AVG(a.active_days) AS NUMERIC), 3) AS avg_active_days, SUM(CASE WHEN a.active_days >= 2 THEN 1 ELSE 0 END) AS returning_users FROM firsts f JOIN act a ON f.\"UserID\" = a.\"UserID\" GROUP BY f.first_source ORDER BY users DESC, source_id",
+    "q005": "SELECT kind, hits_cnt FROM (SELECT 'self_referred' AS kind, COUNT(*) AS hits_cnt FROM hits h WHERE h.\"EventDate\" = '2013-07-15' AND h.\"Referer\" <> '' AND EXISTS (SELECT 1 FROM hits p WHERE p.\"EventDate\" = '2013-07-15' AND p.\"UserID\" = h.\"UserID\" AND p.\"URLHash\" = h.\"RefererHash\") UNION ALL SELECT 'outside_entry' AS kind, COUNT(*) AS hits_cnt FROM hits h WHERE h.\"EventDate\" = '2013-07-15' AND h.\"Referer\" <> '' AND NOT EXISTS (SELECT 1 FROM hits p WHERE p.\"EventDate\" = '2013-07-15' AND p.\"UserID\" = h.\"UserID\" AND p.\"URLHash\" = h.\"RefererHash\")) t ORDER BY kind COLLATE \"C\"",
+    "q006": "SELECT EXTRACT(DAY FROM \"EventDate\") AS day_of_month, COUNT(*) AS hit_count, COUNT(DISTINCT \"UserID\") AS users FROM hits GROUP BY EXTRACT(DAY FROM \"EventDate\") HAVING COUNT(*) > (SELECT AVG(c) FROM (SELECT COUNT(*) AS c FROM hits GROUP BY \"EventDate\") x) ORDER BY day_of_month",
+    "q007": "SELECT campaign_prefix, COUNT(*) AS hit_count, COUNT(DISTINCT \"UserID\") AS users, COUNT(DISTINCT \"UTMTerm\") AS distinct_terms, AVG(CHAR_LENGTH(\"UTMCampaign\")) AS avg_campaign_chars FROM (SELECT \"UserID\", \"UTMTerm\", \"UTMCampaign\", CASE WHEN \"UTMCampaign\" = '' THEN '(none)' ELSE SUBSTRING(\"UTMCampaign\", 1, 4) END AS campaign_prefix FROM hits WHERE \"IsRefresh\" = 0) c GROUP BY campaign_prefix HAVING COUNT(DISTINCT \"UserID\") >= 2 ORDER BY users DESC, campaign_prefix COLLATE \"C\" LIMIT 20",
+    "q008": "SELECT week_start_day, \"URLRegionID\", users, rnk FROM (SELECT week_start_day, \"URLRegionID\", users, RANK() OVER (PARTITION BY week_start_day ORDER BY users DESC) AS rnk FROM (SELECT EXTRACT(DAY FROM DATE_TRUNC('week', CAST(\"EventDate\" AS TIMESTAMP))) AS week_start_day, \"URLRegionID\", COUNT(DISTINCT \"UserID\") AS users FROM hits GROUP BY EXTRACT(DAY FROM DATE_TRUNC('week', CAST(\"EventDate\" AS TIMESTAMP))), \"URLRegionID\") a) t WHERE rnk <= 3 ORDER BY week_start_day, rnk, \"URLRegionID\" LIMIT 100",
+    "q009": "WITH burners AS (SELECT DISTINCT \"UserID\" FROM hits WHERE \"EventDate\" < '2013-07-08' EXCEPT SELECT DISTINCT \"UserID\" FROM hits WHERE \"EventDate\" >= '2013-07-08'), per_user AS (SELECT \"UserID\", COUNT(*) AS hits_cnt FROM hits WHERE \"EventDate\" < '2013-07-08' AND \"UserID\" IN (SELECT \"UserID\" FROM burners) GROUP BY \"UserID\") SELECT CASE WHEN hits_cnt = 1 THEN '1' WHEN hits_cnt <= 10 THEN '2-10' WHEN hits_cnt <= 100 THEN '11-100' ELSE '101+' END AS bucket, COUNT(*) AS users, SUM(hits_cnt) AS hits_total FROM per_user GROUP BY CASE WHEN hits_cnt = 1 THEN '1' WHEN hits_cnt <= 10 THEN '2-10' WHEN hits_cnt <= 100 THEN '11-100' ELSE '101+' END ORDER BY MIN(hits_cnt), bucket COLLATE \"C\"",
+    "q010": "WITH reg AS (SELECT \"RegionID\" AS region, COUNT(*) AS n_hits, COUNT(DISTINCT \"UserID\") AS users FROM hits GROUP BY \"RegionID\" HAVING COUNT(*) >= 10000), soc AS (SELECT \"RegionID\" AS s_region, COUNT(DISTINCT \"UserID\") AS social_users FROM hits WHERE \"SocialSourceNetworkID\" <> 0 GROUP BY \"RegionID\") SELECT r.region AS region_id, r.n_hits AS total_hits, r.users AS total_users FROM reg r WHERE EXISTS (SELECT 1 FROM soc s WHERE s.s_region = r.region AND s.social_users >= 5) ORDER BY total_hits DESC, region_id LIMIT 25",
+    "q011": "WITH lang AS (SELECT \"BrowserLanguage\" AS lang_code, COUNT(*) AS total_hits FROM hits GROUP BY \"BrowserLanguage\" ORDER BY total_hits DESC, lang_code COLLATE \"C\" LIMIT 10), daily AS (SELECT h.\"BrowserLanguage\" AS lang_code, h.\"EventDate\" AS day_date, COUNT(*) AS day_hits FROM hits h INNER JOIN lang l ON h.\"BrowserLanguage\" = l.lang_code GROUP BY h.\"BrowserLanguage\", h.\"EventDate\"), ranked AS (SELECT lang_code, day_date, day_hits, ROW_NUMBER() OVER (PARTITION BY lang_code ORDER BY day_hits, day_date) AS rn_low, COUNT(*) OVER (PARTITION BY lang_code) AS active_days, MAX(day_hits) OVER (PARTITION BY lang_code) AS peak_day_hits FROM daily) SELECT r.lang_code, r.day_date AS quietest_day, r.day_hits AS quietest_hits, r.peak_day_hits, r.active_days, l.total_hits FROM ranked r INNER JOIN lang l ON r.lang_code = l.lang_code WHERE r.rn_low = 1 ORDER BY l.total_hits DESC, r.lang_code COLLATE \"C\"",
+    "q012": "SELECT \"MobilePhoneModel\", CHAR_LENGTH(\"MobilePhoneModel\") AS model_len FROM (SELECT \"MobilePhoneModel\" FROM hits WHERE \"MobilePhoneModel\" <> '' AND \"EventDate\" < '2013-07-16' GROUP BY \"MobilePhoneModel\" EXCEPT SELECT \"MobilePhoneModel\" FROM hits WHERE \"MobilePhoneModel\" <> '' AND \"EventDate\" >= '2013-07-16' GROUP BY \"MobilePhoneModel\") x ORDER BY model_len, \"MobilePhoneModel\" COLLATE \"C\" LIMIT 50",
+    "q013": "WITH ud AS (SELECT \"UserID\", \"EventDate\" FROM hits GROUP BY \"UserID\", \"EventDate\"), fs AS (SELECT \"UserID\", MIN(\"EventDate\") AS first_day FROM ud GROUP BY \"UserID\") SELECT EXTRACT(DAY FROM fs.first_day) AS cohort_day, COUNT(DISTINCT fs.\"UserID\") AS cohort_users, COUNT(DISTINCT CASE WHEN EXTRACT(DAY FROM ud.\"EventDate\") - EXTRACT(DAY FROM fs.first_day) BETWEEN 1 AND 7 THEN ud.\"UserID\" END) AS returned_week1, CAST(COUNT(DISTINCT CASE WHEN EXTRACT(DAY FROM ud.\"EventDate\") - EXTRACT(DAY FROM fs.first_day) BETWEEN 1 AND 7 THEN ud.\"UserID\" END) AS DOUBLE PRECISION) / COUNT(DISTINCT fs.\"UserID\") AS retention_week1 FROM fs JOIN ud ON fs.\"UserID\" = ud.\"UserID\" WHERE fs.first_day <= '2013-07-24' GROUP BY EXTRACT(DAY FROM fs.first_day) ORDER BY cohort_day",
+    "q014": "WITH top_regions AS (SELECT \"RefererRegionID\" FROM hits WHERE \"SearchPhrase\" <> '' GROUP BY \"RefererRegionID\" ORDER BY COUNT(*) DESC, \"RefererRegionID\" LIMIT 5), phrase_stats AS (SELECT \"RefererRegionID\", \"SearchPhrase\", COUNT(DISTINCT \"UserID\") AS users FROM hits WHERE \"SearchPhrase\" <> '' AND \"RefererRegionID\" IN (SELECT \"RefererRegionID\" FROM top_regions) GROUP BY \"RefererRegionID\", \"SearchPhrase\"), ranked AS (SELECT \"RefererRegionID\", \"SearchPhrase\", users, ROW_NUMBER() OVER (PARTITION BY \"RefererRegionID\" ORDER BY users DESC, \"SearchPhrase\" COLLATE \"C\") AS rn FROM phrase_stats) SELECT \"RefererRegionID\", rn, \"SearchPhrase\", users FROM ranked WHERE rn <= 3 ORDER BY \"RefererRegionID\", rn",
+    "q015": "WITH w1 AS (SELECT \"UserID\" FROM hits WHERE \"EventDate\" >= '2013-07-01' AND \"EventDate\" <= '2013-07-07' GROUP BY \"UserID\"), w4 AS (SELECT \"UserID\" FROM hits WHERE \"EventDate\" >= '2013-07-22' AND \"EventDate\" <= '2013-07-31' GROUP BY \"UserID\"), both_weeks AS (SELECT \"UserID\" FROM w1 INTERSECT SELECT \"UserID\" FROM w4) SELECT (SELECT COUNT(*) FROM w1) AS week1_users, (SELECT COUNT(*) FROM both_weeks) AS retained_users, CAST((SELECT COUNT(*) FROM both_weeks) AS DOUBLE PRECISION) / NULLIF((SELECT COUNT(*) FROM w1), 0) AS retention_rate ORDER BY week1_users",
+    "q016": "WITH rd AS (SELECT \"RegionID\" AS region, \"EventDate\" AS dt, COUNT(DISTINCT \"UserID\") AS dau FROM hits GROUP BY \"RegionID\", \"EventDate\" HAVING COUNT(DISTINCT \"UserID\") >= 20) SELECT CAST(EXTRACT(DAY FROM o.dt) AS INTEGER) AS day_of_month, COUNT(*) AS spiking_regions, SUM(o.dau) AS users_in_spikes FROM rd o WHERE o.dau > 1.5 * (SELECT AVG(i.dau) FROM rd i WHERE i.region = o.region) GROUP BY o.dt ORDER BY day_of_month",
+    "q017": "SELECT start_hour, COUNT(*) AS sessions, COUNT(DISTINCT \"UserID\") AS users FROM (SELECT \"UserID\", hr AS start_hour, CASE WHEN ROW_NUMBER() OVER (PARTITION BY \"UserID\" ORDER BY \"EventTime\", \"WatchID\") = 1 OR secs - LAG(secs) OVER (PARTITION BY \"UserID\" ORDER BY \"EventTime\", \"WatchID\") > 1800 THEN 1 ELSE 0 END AS is_start FROM (SELECT \"UserID\", \"EventTime\", \"WatchID\", CAST(EXTRACT(HOUR FROM \"EventTime\") AS INTEGER) AS hr, CAST(EXTRACT(HOUR FROM \"EventTime\") * 3600 + EXTRACT(MINUTE FROM \"EventTime\") * 60 + EXTRACT(SECOND FROM \"EventTime\") AS INTEGER) AS secs FROM hits WHERE \"EventDate\" = '2013-07-15') b) s WHERE is_start = 1 GROUP BY start_hour ORDER BY start_hour",
+    "q018": "WITH ud AS (SELECT DISTINCT \"UserID\", CAST(EXTRACT(DAY FROM \"EventDate\") AS INTEGER) AS d FROM hits), fu AS (SELECT \"UserID\", MIN(d) AS first_d FROM ud GROUP BY \"UserID\"), cm AS (SELECT CAST(FLOOR(CAST(f.first_d - 1 AS DOUBLE PRECISION) / 7) AS INTEGER) AS cohort_week, CAST(FLOOR(CAST(u.d - f.first_d AS DOUBLE PRECISION) / 7) AS INTEGER) AS weeks_since_first, COUNT(DISTINCT u.\"UserID\") AS users FROM ud u JOIN fu f ON u.\"UserID\" = f.\"UserID\" GROUP BY CAST(FLOOR(CAST(f.first_d - 1 AS DOUBLE PRECISION) / 7) AS INTEGER), CAST(FLOOR(CAST(u.d - f.first_d AS DOUBLE PRECISION) / 7) AS INTEGER)) SELECT cohort_week, weeks_since_first, users, CAST(users AS DOUBLE PRECISION) / NULLIF(MAX(users) OVER (PARTITION BY cohort_week), 0) AS retention FROM cm ORDER BY cohort_week, weeks_since_first",
+    "q019": "WITH cv AS (SELECT DISTINCT \"CodeVersion\", CAST(EXTRACT(DAY FROM \"EventDate\") AS INTEGER) AS d FROM hits) SELECT a.d, COUNT(*) AS new_versions FROM cv a WHERE a.d > 1 AND NOT EXISTS (SELECT 1 FROM cv b WHERE b.\"CodeVersion\" = a.\"CodeVersion\" AND b.d = a.d - 1) GROUP BY a.d ORDER BY a.d",
+    "q020": "SELECT scheme, has_query, COUNT(*) AS hit_count, COUNT(DISTINCT \"UserID\") AS users, AVG(CHAR_LENGTH(\"URL\")) AS avg_url_chars, SUM(CASE WHEN \"URL\" LIKE '%.html%' THEN 1 ELSE 0 END) AS html_hits FROM (SELECT \"UserID\", \"URL\", CASE WHEN \"URL\" LIKE 'https://%' THEN 'https' WHEN \"URL\" LIKE 'http://%' THEN 'http' WHEN \"URL\" = '' THEN 'empty' ELSE 'other' END AS scheme, CASE WHEN \"URL\" LIKE '%?%' THEN 1 ELSE 0 END AS has_query FROM hits) u GROUP BY scheme, has_query ORDER BY scheme COLLATE \"C\", has_query",
+    "q021": "WITH oh AS (SELECT \"OS\", \"ResolutionHeight\" AS height, COUNT(DISTINCT \"UserID\") AS users FROM hits WHERE \"ResolutionHeight\" > 0 AND \"OS\" IN (SELECT \"OS\" FROM hits GROUP BY \"OS\" ORDER BY COUNT(*) DESC, \"OS\" LIMIT 5) GROUP BY \"OS\", \"ResolutionHeight\"), r AS (SELECT \"OS\" AS os_id, height, users, DENSE_RANK() OVER (PARTITION BY \"OS\" ORDER BY users DESC) AS dr FROM oh) SELECT os_id, height, users, dr AS height_rank FROM r WHERE dr <= 3 ORDER BY os_id, height_rank, height",
+    "q022": "SELECT g.\"Age\", g.hits_cnt, COALESCE(z.c, 0) AS zero_history_hits FROM (SELECT \"Age\", COUNT(*) AS hits_cnt FROM hits GROUP BY \"Age\") g LEFT JOIN (SELECT \"Age\", COUNT(*) AS c FROM hits WHERE \"HistoryLength\" = 0 GROUP BY \"Age\") z ON z.\"Age\" = g.\"Age\" ORDER BY g.\"Age\"",
+    "q023": "WITH daily AS (SELECT \"UserID\", \"EventDate\", COUNT(DISTINCT \"RemoteIP\") AS ips FROM hits GROUP BY \"UserID\", \"EventDate\" HAVING COUNT(DISTINCT \"RemoteIP\") >= 5), overall AS (SELECT \"UserID\", COUNT(DISTINCT \"EventDate\") AS active_days, COUNT(DISTINCT \"ClientTimeZone\") AS tz_count FROM hits WHERE \"UserID\" IN (SELECT \"UserID\" FROM daily) GROUP BY \"UserID\") SELECT d.\"UserID\", MAX(d.ips) AS max_daily_ips, COUNT(*) AS hopping_days, o.active_days, o.tz_count FROM daily d JOIN overall o ON d.\"UserID\" = o.\"UserID\" GROUP BY d.\"UserID\", o.active_days, o.tz_count ORDER BY max_daily_ips DESC, hopping_days DESC, d.\"UserID\" LIMIT 25",
+    "q024": "SELECT d, hr, hits, avg_fetch FROM (SELECT \"EventDate\" AS d, EXTRACT(HOUR FROM \"EventTime\") AS hr, COUNT(*) AS hits, AVG(\"FetchTiming\") AS avg_fetch, ROW_NUMBER() OVER (PARTITION BY \"EventDate\" ORDER BY AVG(\"FetchTiming\") DESC, EXTRACT(HOUR FROM \"EventTime\")) AS rn FROM hits GROUP BY \"EventDate\", EXTRACT(HOUR FROM \"EventTime\") HAVING COUNT(*) >= 100) t WHERE rn = 1 ORDER BY d",
+    "q025": "WITH flip AS (SELECT DISTINCT \"UserID\" FROM hits WHERE \"JavascriptEnable\" = 0 INTERSECT SELECT DISTINCT \"UserID\" FROM hits WHERE \"JavascriptEnable\" = 1), us AS (SELECT \"UserID\", COUNT(DISTINCT \"EventDate\") AS days_active, COUNT(*) AS n_hits FROM hits WHERE \"UserID\" IN (SELECT \"UserID\" FROM flip) GROUP BY \"UserID\") SELECT days_active, COUNT(*) AS users, ROUND(AVG(n_hits), 2) AS avg_hits FROM us GROUP BY days_active ORDER BY days_active",
+    "q026": "SELECT charset_family, age_band, COUNT(*) AS hits_cnt, COUNT(DISTINCT \"UserID\") AS users FROM (SELECT \"UserID\", CASE WHEN \"PageCharset\" = '' THEN 'empty' WHEN LOWER(\"PageCharset\") LIKE '%utf%' THEN 'utf' WHEN LOWER(\"PageCharset\") LIKE '%1251%' OR LOWER(\"PageCharset\") LIKE '%cp%' THEN 'cyrillic_legacy' ELSE 'other' END AS charset_family, CASE WHEN \"Age\" = 0 THEN 'unknown' WHEN \"Age\" < 18 THEN 'minor' WHEN \"Age\" < 35 THEN 'young' ELSE 'older' END AS age_band FROM hits) t GROUP BY charset_family, age_band ORDER BY charset_family, age_band",
+    "q027": "SELECT h.\"Age\", COUNT(DISTINCT h.\"UserID\") AS churned_users, COUNT(*) AS early_hits FROM hits h WHERE h.\"EventDate\" < '2013-07-08' AND NOT EXISTS (SELECT 1 FROM hits l WHERE l.\"UserID\" = h.\"UserID\" AND l.\"EventDate\" >= '2013-07-25') GROUP BY h.\"Age\" ORDER BY h.\"Age\"",
+    "q028": "WITH both_langs AS (SELECT \"BrowserLanguage\" FROM hits WHERE \"IsMobile\" = 1 AND \"BrowserLanguage\" <> '' GROUP BY \"BrowserLanguage\" HAVING COUNT(*) >= 100 INTERSECT SELECT \"BrowserLanguage\" FROM hits WHERE \"ResolutionWidth\" >= 1600 AND \"BrowserLanguage\" <> '' GROUP BY \"BrowserLanguage\" HAVING COUNT(*) >= 100) SELECT h.\"BrowserLanguage\", COUNT(*) AS hit_count, COUNT(DISTINCT h.\"UserID\") AS users FROM hits h WHERE h.\"BrowserLanguage\" IN (SELECT \"BrowserLanguage\" FROM both_langs) GROUP BY h.\"BrowserLanguage\" ORDER BY hit_count DESC, h.\"BrowserLanguage\" COLLATE \"C\" LIMIT 30",
+    "q029": "SELECT day_of_month, peak_hour, peak_hits, day_hits, CAST(peak_hits AS DOUBLE PRECISION) / CAST(NULLIF(day_hits, 0) AS DOUBLE PRECISION) AS peak_share FROM (SELECT day_of_month, hour_of_day AS peak_hour, hit_count AS peak_hits, SUM(hit_count) OVER (PARTITION BY day_of_month) AS day_hits, ROW_NUMBER() OVER (PARTITION BY day_of_month ORDER BY hit_count DESC, hour_of_day) AS rn FROM (SELECT EXTRACT(DAY FROM \"EventTime\") AS day_of_month, EXTRACT(HOUR FROM \"EventTime\") AS hour_of_day, COUNT(*) AS hit_count FROM hits WHERE \"IsRefresh\" = 0 GROUP BY EXTRACT(DAY FROM \"EventTime\"), EXTRACT(HOUR FROM \"EventTime\")) h) r WHERE rn = 1 ORDER BY day_of_month",
+    "q030": "WITH cvd AS (SELECT \"CodeVersion\", CAST(EXTRACT(DAY FROM \"EventDate\") AS INTEGER) AS d, COUNT(*) AS hits FROM hits GROUP BY \"CodeVersion\", CAST(EXTRACT(DAY FROM \"EventDate\") AS INTEGER)), top_cv AS (SELECT \"CodeVersion\", SUM(hits) AS total_hits FROM cvd GROUP BY \"CodeVersion\" ORDER BY total_hits DESC, \"CodeVersion\" LIMIT 15) SELECT t.\"CodeVersion\", t.total_hits, x.d AS first_day, x.hits AS first_day_hits FROM top_cv t JOIN cvd x ON x.\"CodeVersion\" = t.\"CodeVersion\" WHERE x.d = (SELECT MIN(y.d) FROM cvd y WHERE y.\"CodeVersion\" = x.\"CodeVersion\") ORDER BY t.total_hits DESC, t.\"CodeVersion\"",
+    "q031": "SELECT EXTRACT(HOUR FROM \"EventTime\") AS hr, COUNT(*) AS hits_cnt, SUM(CASE WHEN \"IsDownload\" = 1 THEN 1 ELSE 0 END) AS downloads, SUM(CASE WHEN \"IsLink\" = 1 THEN 1 ELSE 0 END) AS links, COUNT(DISTINCT \"UserID\") AS users FROM hits WHERE \"EventDate\" = (SELECT \"EventDate\" FROM hits GROUP BY \"EventDate\" ORDER BY COUNT(*) DESC, \"EventDate\" LIMIT 1) GROUP BY EXTRACT(HOUR FROM \"EventTime\") ORDER BY hr",
+    "q032": "WITH top_regions AS (SELECT \"RegionID\" FROM hits WHERE \"MobilePhoneModel\" <> '' GROUP BY \"RegionID\" ORDER BY COUNT(DISTINCT \"UserID\") DESC, \"RegionID\" LIMIT 10), mm AS (SELECT \"RegionID\" AS region, \"MobilePhoneModel\" AS model, COUNT(DISTINCT \"UserID\") AS users FROM hits WHERE \"MobilePhoneModel\" <> '' AND \"RegionID\" IN (SELECT \"RegionID\" FROM top_regions) GROUP BY \"RegionID\", \"MobilePhoneModel\"), ranked AS (SELECT region, model, users, ROW_NUMBER() OVER (PARTITION BY region ORDER BY users DESC, model COLLATE \"C\") AS rn FROM mm) SELECT region AS region_id, model AS phone_model, users, rn AS model_rank FROM ranked WHERE rn <= 3 ORDER BY region_id, model_rank",
+    "q033": "WITH s AS (SELECT \"RegionID\", COUNT(*) AS hits, COUNT(DISTINCT \"UserID\") AS users, COUNT(DISTINCT \"IPNetworkID\") AS nets FROM hits GROUP BY \"RegionID\"), core AS (SELECT \"RegionID\" FROM (SELECT \"RegionID\" FROM s ORDER BY hits DESC, \"RegionID\" LIMIT 30) a INTERSECT SELECT \"RegionID\" FROM (SELECT \"RegionID\" FROM s ORDER BY users DESC, \"RegionID\" LIMIT 30) b INTERSECT SELECT \"RegionID\" FROM (SELECT \"RegionID\" FROM s ORDER BY nets DESC, \"RegionID\" LIMIT 30) c) SELECT s.\"RegionID\", s.hits, s.users, s.nets, CAST(s.hits AS DOUBLE PRECISION) / NULLIF(s.users, 0) AS hits_per_user FROM s JOIN core ON s.\"RegionID\" = core.\"RegionID\" ORDER BY s.hits DESC, s.\"RegionID\"",
+    "q034": "SELECT utm_shape, COUNT(*) AS hits_cnt, COUNT(DISTINCT \"UserID\") AS users, MIN(CHAR_LENGTH(\"UTMSource\")) AS min_len, MAX(CHAR_LENGTH(\"UTMSource\")) AS max_len FROM (SELECT \"UserID\", \"UTMSource\", CASE WHEN \"UTMSource\" <> TRIM(\"UTMSource\") THEN 'padded' WHEN \"UTMSource\" LIKE '%.%' THEN 'domain_like' WHEN CHAR_LENGTH(\"UTMSource\") <= 3 THEN 'short' ELSE 'plain' END AS utm_shape FROM hits WHERE \"UTMSource\" <> '') t GROUP BY utm_shape ORDER BY hits_cnt DESC, utm_shape",
+    "q035": "WITH ev AS (SELECT \"UserID\", \"WatchID\", \"EventTime\", \"IsMobile\", CAST(EXTRACT(DAY FROM \"EventTime\") * 86400 + EXTRACT(HOUR FROM \"EventTime\") * 3600 + EXTRACT(MINUTE FROM \"EventTime\") * 60 + EXTRACT(SECOND FROM \"EventTime\") AS INTEGER) AS secs FROM hits WHERE \"EventDate\" >= '2013-07-08' AND \"EventDate\" <= '2013-07-14'), marked AS (SELECT \"UserID\", \"WatchID\", \"EventTime\", \"IsMobile\", secs, CASE WHEN secs - LAG(secs) OVER (PARTITION BY \"UserID\" ORDER BY \"EventTime\", \"WatchID\") <= 1800 THEN 0 ELSE 1 END AS is_start FROM ev), numbered AS (SELECT \"UserID\", \"IsMobile\", secs, SUM(is_start) OVER (PARTITION BY \"UserID\" ORDER BY \"EventTime\", \"WatchID\" ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS session_no FROM marked), sessions AS (SELECT \"UserID\", session_no, MAX(\"IsMobile\") AS mobile_flag, COUNT(*) AS depth, MAX(secs) - MIN(secs) AS duration FROM numbered GROUP BY \"UserID\", session_no) SELECT mobile_flag, CASE WHEN duration = 0 THEN 'b0_instant' WHEN duration < 60 THEN 'b1_under_minute' WHEN duration < 600 THEN 'b2_under_10min' WHEN duration < 1800 THEN 'b3_under_30min' ELSE 'b4_long' END AS duration_band, COUNT(*) AS sessions, SUM(depth) AS hits_cnt, COUNT(DISTINCT \"UserID\") AS users FROM sessions GROUP BY mobile_flag, duration_band ORDER BY mobile_flag, duration_band",
+    "q036": "SELECT \"OS\", COUNT(*) AS hits_cnt, SUM(CASE WHEN \"ConnectTiming\" > (SELECT AVG(\"ConnectTiming\") FROM hits) THEN 1 ELSE 0 END) AS slow_hits, ROUND(AVG(\"ConnectTiming\"), 2) AS avg_connect FROM hits GROUP BY \"OS\" HAVING COUNT(*) >= 10000 ORDER BY hits_cnt DESC, \"OS\" LIMIT 15",
+    "q037": "SELECT \"OS\", \"MobilePhoneModel\", users, rn FROM (SELECT \"OS\", \"MobilePhoneModel\", users, ROW_NUMBER() OVER (PARTITION BY \"OS\" ORDER BY users DESC, \"MobilePhoneModel\" COLLATE \"C\") AS rn FROM (SELECT \"OS\", \"MobilePhoneModel\", COUNT(DISTINCT \"UserID\") AS users FROM hits WHERE \"MobilePhoneModel\" <> '' GROUP BY \"OS\", \"MobilePhoneModel\") a) t WHERE rn <= 3 ORDER BY \"OS\", rn LIMIT 100",
+    "q038": "WITH busy AS (SELECT \"IPNetworkID\", COUNT(*) AS hits FROM hits GROUP BY \"IPNetworkID\" ORDER BY hits DESC, \"IPNetworkID\" LIMIT 200) SELECT b.\"IPNetworkID\", b.hits FROM busy b WHERE EXISTS (SELECT 1 FROM hits h WHERE h.\"IPNetworkID\" = b.\"IPNetworkID\" AND h.\"JavascriptEnable\" = 0 AND h.\"IsRefresh\" = 1) ORDER BY b.hits DESC, b.\"IPNetworkID\" LIMIT 25",
+    "q039": "WITH late_only AS (SELECT DISTINCT \"UserAgent\", \"UserAgentMinor\" FROM hits WHERE \"EventDate\" >= '2013-07-16' EXCEPT SELECT DISTINCT \"UserAgent\", \"UserAgentMinor\" FROM hits WHERE \"EventDate\" < '2013-07-16') SELECT h.\"UserAgent\" AS ua, h.\"UserAgentMinor\" AS ua_minor, COUNT(*) AS n_hits, COUNT(DISTINCT h.\"UserID\") AS users, CAST(MIN(EXTRACT(DAY FROM h.\"EventDate\")) AS INTEGER) AS first_seen_day FROM hits h JOIN late_only l ON h.\"UserAgent\" = l.\"UserAgent\" AND h.\"UserAgentMinor\" = l.\"UserAgentMinor\" WHERE h.\"EventDate\" >= '2013-07-16' GROUP BY h.\"UserAgent\", h.\"UserAgentMinor\" ORDER BY users DESC, n_hits DESC, h.\"UserAgent\", h.\"UserAgentMinor\" COLLATE \"C\" LIMIT 30",
+    "q040": "WITH u AS (SELECT \"BrowserLanguage\" AS lang, \"UserID\", MAX(CASE WHEN \"EventDate\" <= '2013-07-15' THEN 1 ELSE 0 END) AS in_first, MAX(CASE WHEN \"EventDate\" > '2013-07-15' THEN 1 ELSE 0 END) AS in_second FROM hits WHERE \"BrowserLanguage\" <> '' GROUP BY \"BrowserLanguage\", \"UserID\") SELECT lang, SUM(in_first) AS first_half_users, SUM(in_first * in_second) AS retained_users, CAST(SUM(in_first * in_second) AS DOUBLE PRECISION) / NULLIF(SUM(in_first), 0) AS retention FROM u GROUP BY lang HAVING SUM(in_first) >= 200 ORDER BY first_half_users DESC, lang COLLATE \"C\" LIMIT 20",
+    "q041": "WITH m AS (SELECT DATE_TRUNC('minute', \"EventTime\") AS minute_ts, COUNT(*) AS hits_cnt, SUM(\"ConnectTiming\") AS connect_sum FROM hits WHERE \"EventDate\" = (SELECT \"EventDate\" FROM hits GROUP BY \"EventDate\" ORDER BY COUNT(*) DESC, \"EventDate\" LIMIT 1) GROUP BY DATE_TRUNC('minute', \"EventTime\")), w AS (SELECT minute_ts, hits_cnt, connect_sum, SUM(connect_sum) OVER (ORDER BY minute_ts ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) AS rolling_connect, SUM(hits_cnt) OVER (ORDER BY minute_ts ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) AS rolling_hits FROM m) SELECT minute_ts, hits_cnt, rolling_hits, rolling_connect, CAST(rolling_connect AS DOUBLE PRECISION) / NULLIF(CAST(rolling_hits AS DOUBLE PRECISION), 0) AS rolling_avg_connect FROM w ORDER BY rolling_connect DESC, minute_ts LIMIT 20",
+    "q042": "SELECT \"PageCharset\", \"RegionID\", hits, avg_rst FROM (SELECT \"PageCharset\", \"RegionID\", COUNT(*) AS hits, AVG(\"ResponseStartTiming\") AS avg_rst, ROW_NUMBER() OVER (PARTITION BY \"PageCharset\" ORDER BY AVG(\"ResponseStartTiming\") DESC, \"RegionID\") AS rn FROM hits WHERE \"PageCharset\" <> '' GROUP BY \"PageCharset\", \"RegionID\" HAVING COUNT(*) >= 500) t WHERE rn <= 3 ORDER BY \"PageCharset\" COLLATE \"C\", rn LIMIT 100",
+    "q043": "SELECT h.\"TraficSourceID\", COUNT(*) AS refresh_hits, COUNT(DISTINCT h.\"UserID\") AS users FROM hits h WHERE h.\"IsRefresh\" = 1 AND EXISTS (SELECT 1 FROM hits h2 WHERE h2.\"UserID\" = h.\"UserID\" AND h2.\"URLHash\" = h.\"URLHash\" AND h2.\"IsRefresh\" = 0) GROUP BY h.\"TraficSourceID\" ORDER BY refresh_hits DESC, h.\"TraficSourceID\"",
+    "q044": "SELECT CHAR_LENGTH(CAST(c AS VARCHAR)) AS digits, COUNT(*) AS versions, MIN(c) AS min_hits, MAX(c) AS max_hits FROM (SELECT \"CodeVersion\", COUNT(*) AS c FROM hits GROUP BY \"CodeVersion\") t GROUP BY CHAR_LENGTH(CAST(c AS VARCHAR)) ORDER BY digits",
+    "q045": "WITH mw AS (SELECT \"MobilePhoneModel\", \"ResolutionWidth\", COUNT(*) AS c FROM hits WHERE \"MobilePhoneModel\" <> '' GROUP BY \"MobilePhoneModel\", \"ResolutionWidth\"), tot AS (SELECT \"MobilePhoneModel\", SUM(c) AS total_c, COUNT(*) AS widths FROM mw GROUP BY \"MobilePhoneModel\"), top_m AS (SELECT \"MobilePhoneModel\", total_c, widths FROM tot ORDER BY total_c DESC, \"MobilePhoneModel\" COLLATE \"C\" LIMIT 20), ranked AS (SELECT \"MobilePhoneModel\", \"ResolutionWidth\", c, ROW_NUMBER() OVER (PARTITION BY \"MobilePhoneModel\" ORDER BY c DESC, \"ResolutionWidth\") AS rn FROM mw) SELECT t.\"MobilePhoneModel\", t.total_c, t.widths, r.\"ResolutionWidth\" AS modal_width, r.c AS modal_hits FROM top_m t INNER JOIN ranked r ON t.\"MobilePhoneModel\" = r.\"MobilePhoneModel\" WHERE r.rn = 1 ORDER BY t.total_c DESC, t.\"MobilePhoneModel\" COLLATE \"C\"",
+    "q046": "WITH a AS (SELECT \"SearchPhrase\" FROM hits WHERE \"SearchPhrase\" <> '' AND \"IsNotBounce\" = 1 GROUP BY \"SearchPhrase\"), b AS (SELECT \"SearchPhrase\" FROM hits WHERE \"SearchPhrase\" <> '' AND \"IsNotBounce\" = 0 GROUP BY \"SearchPhrase\") SELECT (SELECT COUNT(*) FROM a) AS engaged_phrases, (SELECT COUNT(*) FROM b) AS bounced_phrases, (SELECT COUNT(*) FROM (SELECT \"SearchPhrase\" FROM a EXCEPT SELECT \"SearchPhrase\" FROM b) x) AS only_engaged, (SELECT COUNT(*) FROM (SELECT \"SearchPhrase\" FROM a INTERSECT SELECT \"SearchPhrase\" FROM b) y) AS both_kinds ORDER BY engaged_phrases",
+    "q047": "WITH top_agents AS (SELECT \"UserAgent\" FROM hits GROUP BY \"UserAgent\" ORDER BY COUNT(*) DESC, \"UserAgent\" LIMIT 10), agg AS (SELECT \"UserAgent\", \"ResolutionWidth\", \"ResolutionHeight\", COUNT(*) AS hit_count FROM hits WHERE \"UserAgent\" IN (SELECT \"UserAgent\" FROM top_agents) AND \"ResolutionWidth\" > 0 GROUP BY \"UserAgent\", \"ResolutionWidth\", \"ResolutionHeight\"), ranked AS (SELECT \"UserAgent\", \"ResolutionWidth\", \"ResolutionHeight\", hit_count, ROW_NUMBER() OVER (PARTITION BY \"UserAgent\" ORDER BY hit_count DESC, \"ResolutionWidth\", \"ResolutionHeight\") AS rn FROM agg) SELECT \"UserAgent\", rn, \"ResolutionWidth\", \"ResolutionHeight\", hit_count FROM ranked WHERE rn <= 3 ORDER BY \"UserAgent\", rn",
+    "q048": "WITH firsts AS (SELECT \"UserID\", MIN(\"EventDate\") AS fd FROM hits GROUP BY \"UserID\"), days AS (SELECT \"UserID\", \"EventDate\" FROM hits GROUP BY \"UserID\", \"EventDate\") SELECT EXTRACT(DAY FROM f.fd) AS first_day, COUNT(DISTINCT f.\"UserID\") AS cohort_users, COUNT(DISTINCT CASE WHEN EXTRACT(DAY FROM d.\"EventDate\") - EXTRACT(DAY FROM f.fd) = 1 THEN d.\"UserID\" END) AS back_next_day, COUNT(DISTINCT CASE WHEN EXTRACT(DAY FROM d.\"EventDate\") - EXTRACT(DAY FROM f.fd) BETWEEN 7 AND 13 THEN d.\"UserID\" END) AS back_week_two FROM firsts f INNER JOIN days d ON d.\"UserID\" = f.\"UserID\" GROUP BY EXTRACT(DAY FROM f.fd) ORDER BY first_day",
+    "q049": "SELECT h.\"IsMobile\", COUNT(*) AS hit_count, COUNT(DISTINCT h.\"ClientIP\") AS ips FROM hits h WHERE h.\"JavascriptEnable\" = 0 AND NOT EXISTS (SELECT 1 FROM hits h2 WHERE h2.\"ClientIP\" = h.\"ClientIP\" AND h2.\"JavascriptEnable\" = 1) GROUP BY h.\"IsMobile\" ORDER BY h.\"IsMobile\"",
+    "q050": "SELECT \"UserID\", COUNT(*) AS rapid_hits, COUNT(DISTINCT sod) AS distinct_seconds FROM (SELECT \"UserID\", sod, sod - LAG(sod, 1, -100000) OVER (PARTITION BY \"UserID\" ORDER BY sod) AS gap FROM (SELECT \"UserID\", CAST(EXTRACT(HOUR FROM \"EventTime\") * 3600 + EXTRACT(MINUTE FROM \"EventTime\") * 60 + EXTRACT(SECOND FROM \"EventTime\") AS INTEGER) AS sod FROM hits WHERE \"EventDate\" = '2013-07-15') s) g WHERE gap <= 1 GROUP BY \"UserID\" HAVING COUNT(*) >= 10 ORDER BY rapid_hits DESC, distinct_seconds, \"UserID\" LIMIT 25",
+    "q051": "WITH ev AS (SELECT \"UserID\", EXTRACT(DAY FROM \"EventTime\") * 86400 + EXTRACT(HOUR FROM \"EventTime\") * 3600 + EXTRACT(MINUTE FROM \"EventTime\") * 60 + EXTRACT(SECOND FROM \"EventTime\") AS ts FROM hits WHERE \"EventDate\" >= '2013-07-08' AND \"EventDate\" <= '2013-07-14'), gaps AS (SELECT \"UserID\", ts, ROW_NUMBER() OVER (PARTITION BY \"UserID\" ORDER BY ts) AS rn, MAX(ts) OVER (PARTITION BY \"UserID\" ORDER BY ts ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING) AS prev_ts FROM ev), flagged AS (SELECT \"UserID\", CASE WHEN rn = 1 OR ts - prev_ts > 1800 THEN 1 ELSE 0 END AS new_session FROM gaps), per_user AS (SELECT \"UserID\", SUM(new_session) AS sessions, COUNT(*) AS hit_count FROM flagged GROUP BY \"UserID\") SELECT CASE WHEN sessions >= 10 THEN 10 ELSE sessions END AS sessions_bucket, COUNT(*) AS users, SUM(hit_count) AS total_hits, AVG(hit_count) AS avg_hits_per_user FROM per_user GROUP BY CASE WHEN sessions >= 10 THEN 10 ELSE sessions END ORDER BY sessions_bucket",
+    "q052": "SELECT LOWER(\"BrowserLanguage\") || '/' || CAST(\"UserAgentMajor\" AS VARCHAR) AS lang_agent, COUNT(*) AS hits_cnt, COUNT(DISTINCT \"UserID\") AS users FROM hits GROUP BY LOWER(\"BrowserLanguage\") || '/' || CAST(\"UserAgentMajor\" AS VARCHAR) HAVING COUNT(*) >= 2 ORDER BY hits_cnt, (LOWER(\"BrowserLanguage\") || '/' || CAST(\"UserAgentMajor\" AS VARCHAR)) COLLATE \"C\" LIMIT 40",
+    "q053": "SELECT first_day, COUNT(*) AS cohort_users, SUM(CASE WHEN last_day - first_day >= 7 THEN 1 ELSE 0 END) AS retained_7d, SUM(CASE WHEN active_days >= 3 THEN 1 ELSE 0 END) AS active_3plus, CAST(SUM(CASE WHEN last_day - first_day >= 7 THEN 1 ELSE 0 END) AS DOUBLE PRECISION) / NULLIF(COUNT(*), 0) AS retention_7d FROM (SELECT \"UserID\", MIN(EXTRACT(DAY FROM \"EventDate\")) AS first_day, MAX(EXTRACT(DAY FROM \"EventDate\")) AS last_day, COUNT(DISTINCT \"EventDate\") AS active_days FROM hits GROUP BY \"UserID\") u WHERE first_day <= 24 GROUP BY first_day ORDER BY first_day",
+    "q054": "WITH s AS (SELECT \"FlashMajor\", \"JavascriptEnable\", COUNT(*) AS c FROM hits GROUP BY \"FlashMajor\", \"JavascriptEnable\") SELECT s.\"FlashMajor\", s.\"JavascriptEnable\", s.c AS hit_count FROM s WHERE s.c > (SELECT AVG(s2.c) FROM s s2 WHERE s2.\"JavascriptEnable\" = s.\"JavascriptEnable\") ORDER BY s.\"JavascriptEnable\", hit_count DESC, s.\"FlashMajor\" LIMIT 50",
+    "q055": "SELECT a.\"RegionID\", a.hits AS week1_hits, b.hits AS week4_hits, a.avg_rst AS week1_rst, b.avg_rst AS week4_rst, b.avg_rst - a.avg_rst AS rst_delta FROM (SELECT \"RegionID\", COUNT(*) AS hits, AVG(\"ResponseStartTiming\") AS avg_rst FROM hits WHERE \"EventDate\" BETWEEN '2013-07-01' AND '2013-07-07' GROUP BY \"RegionID\" HAVING COUNT(*) >= 1000) a JOIN (SELECT \"RegionID\", COUNT(*) AS hits, AVG(\"ResponseStartTiming\") AS avg_rst FROM hits WHERE \"EventDate\" BETWEEN '2013-07-22' AND '2013-07-28' GROUP BY \"RegionID\" HAVING COUNT(*) >= 1000) b ON a.\"RegionID\" = b.\"RegionID\" ORDER BY rst_delta DESC, a.\"RegionID\" LIMIT 20",
+    "q056": "SELECT h.\"SearchEngineID\", COUNT(*) AS searches, COUNT(DISTINCT h.\"UserID\") AS users FROM hits h WHERE h.\"SearchPhrase\" <> '' AND EXISTS (SELECT 1 FROM hits d WHERE d.\"UserID\" = h.\"UserID\" AND d.\"EventDate\" = h.\"EventDate\" AND d.\"IsNotBounce\" = 1) GROUP BY h.\"SearchEngineID\" ORDER BY searches DESC, h.\"SearchEngineID\" LIMIT 20",
+    "q057": "WITH t AS (SELECT \"UserID\", CAST(EXTRACT(HOUR FROM \"EventTime\") AS INTEGER) * 60 + CAST(EXTRACT(MINUTE FROM \"EventTime\") AS INTEGER) AS m FROM hits WHERE \"EventDate\" = '2013-07-15'), w AS (SELECT \"UserID\", m, ROW_NUMBER() OVER (PARTITION BY \"UserID\" ORDER BY m) AS rn, MAX(m) OVER (PARTITION BY \"UserID\" ORDER BY m ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING) AS pm FROM t), s AS (SELECT \"UserID\", SUM(CASE WHEN rn = 1 OR m - pm > 30 THEN 1 ELSE 0 END) AS sessions, COUNT(*) AS hits FROM w GROUP BY \"UserID\") SELECT sessions, COUNT(*) AS users, SUM(hits) AS hits FROM s GROUP BY sessions ORDER BY sessions LIMIT 50",
+    "q058": "SELECT \"SearchEngineID\", day_num, searches, SUM(searches) OVER (PARTITION BY \"SearchEngineID\" ORDER BY day_num ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS searches_3d FROM (SELECT \"SearchEngineID\", EXTRACT(DAY FROM \"EventDate\") AS day_num, COUNT(*) AS searches FROM hits WHERE \"SearchPhrase\" <> '' AND \"SearchEngineID\" IN (SELECT \"SearchEngineID\" FROM hits WHERE \"SearchEngineID\" <> 0 GROUP BY \"SearchEngineID\" ORDER BY COUNT(*) DESC, \"SearchEngineID\" LIMIT 3) GROUP BY \"SearchEngineID\", EXTRACT(DAY FROM \"EventDate\")) t ORDER BY \"SearchEngineID\", day_num",
+    "q059": "WITH ev AS (SELECT \"UserID\", \"WatchID\", CAST(EXTRACT(DAY FROM \"EventTime\") AS INTEGER) * 1440 + CAST(EXTRACT(HOUR FROM \"EventTime\") AS INTEGER) * 60 + CAST(EXTRACT(MINUTE FROM \"EventTime\") AS INTEGER) AS m FROM hits WHERE \"IsRefresh\" = 0), g AS (SELECT \"UserID\", m, LAG(m) OVER (PARTITION BY \"UserID\" ORDER BY m, \"WatchID\") AS prev_m, ROW_NUMBER() OVER (PARTITION BY \"UserID\" ORDER BY m, \"WatchID\") AS rn FROM ev), per_user AS (SELECT \"UserID\", COUNT(*) AS n_hits, SUM(CASE WHEN rn = 1 OR m - prev_m > 30 THEN 1 ELSE 0 END) AS sessions FROM g GROUP BY \"UserID\") SELECT CASE WHEN sessions >= 10 THEN 10 ELSE sessions END AS sessions_bucket, COUNT(*) AS users, ROUND(AVG(CAST(n_hits AS DOUBLE PRECISION)) * 100) / 100 AS avg_hits_per_user FROM per_user GROUP BY CASE WHEN sessions >= 10 THEN 10 ELSE sessions END ORDER BY sessions_bucket",
+    "q060": "SELECT CHAR_LENGTH(\"URL\") - CHAR_LENGTH(REPLACE(\"URL\", '/', '')) AS slash_count, COUNT(*) AS hits_cnt, COUNT(DISTINCT \"UserID\") AS users, ROUND(AVG(CAST(\"IsNotBounce\" AS DOUBLE PRECISION)) * 10000) / 10000 AS not_bounce_rate FROM hits WHERE \"URL\" <> '' GROUP BY CHAR_LENGTH(\"URL\") - CHAR_LENGTH(REPLACE(\"URL\", '/', '')) HAVING COUNT(*) >= 100 ORDER BY slash_count LIMIT 30",
+    "q061": "SELECT h.\"Age\", COUNT(DISTINCT h.\"UserID\") AS users, COUNT(*) AS hits_cnt FROM hits h WHERE EXISTS (SELECT 1 FROM hits w WHERE w.\"UserID\" = h.\"UserID\" AND w.\"WindowClientHeight\" BETWEEN 1 AND 199) GROUP BY h.\"Age\" ORDER BY h.\"Age\"",
+    "q062": "WITH dh AS (SELECT CAST(EXTRACT(DAY FROM \"EventTime\") AS INTEGER) AS dom, CAST(EXTRACT(HOUR FROM \"EventTime\") AS INTEGER) AS hod, COUNT(*) AS n_hits, COUNT(DISTINCT \"UserID\") AS users FROM hits WHERE \"IsRefresh\" = 0 GROUP BY CAST(EXTRACT(DAY FROM \"EventTime\") AS INTEGER), CAST(EXTRACT(HOUR FROM \"EventTime\") AS INTEGER)), r AS (SELECT dom, hod, n_hits, users, SUM(n_hits) OVER (PARTITION BY dom) AS day_hits, ROW_NUMBER() OVER (PARTITION BY dom ORDER BY users DESC, hod) AS rn FROM dh) SELECT dom AS day_of_month, hod AS peak_hour, users AS peak_users, n_hits AS peak_hits, CAST(n_hits AS DOUBLE PRECISION) / NULLIF(CAST(day_hits AS DOUBLE PRECISION), 0) AS share_of_day_hits FROM r WHERE rn = 1 ORDER BY day_of_month",
+    "q063": "WITH first_seen AS (SELECT \"UserID\", MIN(\"EventDate\") AS first_day FROM hits GROUP BY \"UserID\"), daily AS (SELECT \"EventDate\", \"UserID\" FROM hits GROUP BY \"EventDate\", \"UserID\") SELECT d.\"EventDate\", COUNT(*) AS active_users, SUM(CASE WHEN d.\"EventDate\" = f.first_day THEN 1 ELSE 0 END) AS new_users FROM daily d JOIN first_seen f ON d.\"UserID\" = f.\"UserID\" GROUP BY d.\"EventDate\" ORDER BY d.\"EventDate\"",
+    "q064": "SELECT FLOOR(deep_share * 10) AS decile, COUNT(*) AS counters, SUM(hits_cnt) AS hits_cnt FROM (SELECT \"CounterID\", COUNT(*) AS hits_cnt, CAST(SUM(CASE WHEN \"HistoryLength\" >= 10 THEN 1 ELSE 0 END) AS DOUBLE PRECISION) / COUNT(*) AS deep_share FROM hits GROUP BY \"CounterID\" HAVING COUNT(*) >= 100) c GROUP BY FLOOR(deep_share * 10) ORDER BY decile",
+    "q065": "SELECT \"EventDate\", COUNT(*) AS hits, SUM(\"IsRefresh\") AS refreshes, CAST(SUM(\"IsRefresh\") AS DOUBLE PRECISION) / COUNT(*) AS refresh_share FROM hits GROUP BY \"EventDate\" HAVING CAST(SUM(\"IsRefresh\") AS DOUBLE PRECISION) / COUNT(*) > (SELECT CAST(SUM(\"IsRefresh\") AS DOUBLE PRECISION) / COUNT(*) FROM hits) ORDER BY \"EventDate\"",
+    "q066": "SELECT dominant_daypart, COUNT(*) AS users, AVG(active_days) AS avg_active_days, AVG(hit_count) AS avg_hits FROM (SELECT \"UserID\", COUNT(*) AS hit_count, COUNT(DISTINCT \"EventDate\") AS active_days, CASE WHEN SUM(CASE WHEN EXTRACT(HOUR FROM \"EventTime\") < 6 THEN 1 ELSE 0 END) * 2 > COUNT(*) THEN 'night' WHEN SUM(CASE WHEN EXTRACT(HOUR FROM \"EventTime\") >= 18 THEN 1 ELSE 0 END) * 2 > COUNT(*) THEN 'evening' WHEN SUM(CASE WHEN EXTRACT(HOUR FROM \"EventTime\") BETWEEN 6 AND 11 THEN 1 ELSE 0 END) * 2 > COUNT(*) THEN 'morning' WHEN SUM(CASE WHEN EXTRACT(HOUR FROM \"EventTime\") BETWEEN 12 AND 17 THEN 1 ELSE 0 END) * 2 > COUNT(*) THEN 'afternoon' ELSE 'mixed' END AS dominant_daypart FROM hits GROUP BY \"UserID\") u GROUP BY dominant_daypart ORDER BY dominant_daypart",
+    "q067": "SELECT h.\"TraficSourceID\", COUNT(*) AS link_hits, COUNT(DISTINCT h.\"UserID\") AS users FROM hits h WHERE h.\"IsLink\" = 1 AND NOT EXISTS (SELECT 1 FROM hits d WHERE d.\"UserID\" = h.\"UserID\" AND d.\"IsDownload\" = 1) GROUP BY h.\"TraficSourceID\" ORDER BY link_hits DESC, h.\"TraficSourceID\"",
+    "q068": "WITH mr AS (SELECT \"MobilePhoneModel\" AS model, \"RegionID\" AS region, COUNT(*) AS cnt FROM hits WHERE \"MobilePhoneModel\" <> '' GROUP BY \"MobilePhoneModel\", \"RegionID\") SELECT o.model AS phone_model, COUNT(*) AS strong_regions, SUM(o.cnt) AS hits_in_strong_regions FROM mr o WHERE o.cnt > (SELECT AVG(i.cnt) FROM mr i WHERE i.model = o.model) GROUP BY o.model HAVING COUNT(*) >= 3 ORDER BY strong_regions DESC, hits_in_strong_regions DESC, phone_model COLLATE \"C\" LIMIT 20",
+    "q069": "SELECT EXTRACT(DAY FROM \"EventDate\") AS day_of_month, hr AS peak_hour, c AS peak_hits, ROUND(CAST(CAST(c AS DOUBLE PRECISION) / CAST(day_total AS DOUBLE PRECISION) AS NUMERIC), 4) AS peak_share FROM (SELECT \"EventDate\", hr, c, SUM(c) OVER (PARTITION BY \"EventDate\") AS day_total, ROW_NUMBER() OVER (PARTITION BY \"EventDate\" ORDER BY c DESC, hr) AS rn FROM (SELECT \"EventDate\", EXTRACT(HOUR FROM \"EventTime\") AS hr, COUNT(*) AS c FROM hits GROUP BY \"EventDate\", EXTRACT(HOUR FROM \"EventTime\")) a) b WHERE rn = 1 ORDER BY day_of_month",
+    "q070": "SELECT CASE WHEN \"UTMCampaign\" = '' THEN 'none' WHEN \"UTMCampaign\" LIKE '%-%' THEN 'dashed' WHEN \"UTMCampaign\" LIKE '%.%' THEN 'dotted' WHEN \"UTMCampaign\" LIKE '% %' THEN 'spaced' ELSE 'plain' END AS campaign_shape, COUNT(*) AS hits_cnt, COUNT(DISTINCT \"UTMCampaign\") AS campaigns, MAX(CHAR_LENGTH(\"UTMCampaign\")) AS max_len, SUM(\"IsNotBounce\") AS engaged FROM hits GROUP BY campaign_shape ORDER BY hits_cnt DESC, campaign_shape",
+    "q071": "SELECT \"URLRegionID\" AS url_region, hits_cnt, SUM(hits_cnt) OVER (ORDER BY hits_cnt DESC, \"URLRegionID\" ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_hits, CAST(SUM(hits_cnt) OVER (ORDER BY hits_cnt DESC, \"URLRegionID\" ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS DOUBLE PRECISION) / (SELECT COUNT(*) FROM hits) AS cumulative_share FROM (SELECT \"URLRegionID\", COUNT(*) AS hits_cnt FROM hits GROUP BY \"URLRegionID\") t ORDER BY hits_cnt DESC, url_region LIMIT 20",
+    "q072": "WITH buyers AS (SELECT \"UserID\" FROM hits WHERE \"ParamPrice\" > 0 GROUP BY \"UserID\") SELECT CASE WHEN \"UserID\" IN (SELECT \"UserID\" FROM buyers) THEN 'priced' ELSE 'unpriced' END AS segment, COUNT(*) AS hits_cnt, COUNT(DISTINCT \"UserID\") AS users, ROUND(AVG(\"IsNotBounce\"), 4) AS engage_rate, SUM(\"IsLink\") AS link_hits FROM hits GROUP BY segment ORDER BY segment",
+    "q073": "SELECT weekday_index, CASE WHEN weekday_index >= 5 THEN 'weekend' ELSE 'weekday' END AS day_type, COUNT(*) AS days_observed, AVG(dau) AS avg_dau, AVG(day_hits) AS avg_day_hits FROM (SELECT \"EventDate\", (CAST(EXTRACT(DAY FROM \"EventDate\") AS INTEGER) - 1) % 7 AS weekday_index, COUNT(DISTINCT \"UserID\") AS dau, COUNT(*) AS day_hits FROM hits GROUP BY \"EventDate\") AS d GROUP BY weekday_index ORDER BY weekday_index",
+    "q074": "SELECT next_gap AS gap_days, COUNT(*) AS transitions, COUNT(DISTINCT \"UserID\") AS users FROM (SELECT \"UserID\", LEAD(day_num) OVER (PARTITION BY \"UserID\" ORDER BY day_num) - day_num AS next_gap, ROW_NUMBER() OVER (PARTITION BY \"UserID\" ORDER BY day_num) AS rn, COUNT(*) OVER (PARTITION BY \"UserID\") AS days_cnt FROM (SELECT \"UserID\", CAST(EXTRACT(DAY FROM \"EventDate\") AS INTEGER) AS day_num FROM hits GROUP BY \"UserID\", CAST(EXTRACT(DAY FROM \"EventDate\") AS INTEGER)) d) g WHERE rn < days_cnt GROUP BY next_gap ORDER BY gap_days",
+    "q075": "WITH f AS (SELECT \"UserID\", MIN(\"EventTime\") AS first_ts FROM hits GROUP BY \"UserID\"), fa AS (SELECT \"UserID\", MIN(\"EventTime\") AS first_ad_ts FROM hits WHERE \"AdvEngineID\" <> 0 GROUP BY \"UserID\") SELECT CASE WHEN fa.first_ad_ts = f.first_ts THEN 'ad_first' WHEN EXTRACT(DAY FROM fa.first_ad_ts) = EXTRACT(DAY FROM f.first_ts) THEN 'ad_same_day' ELSE 'ad_later' END AS entry_kind, COUNT(*) AS users FROM f INNER JOIN fa ON f.\"UserID\" = fa.\"UserID\" GROUP BY entry_kind ORDER BY users DESC, entry_kind",
+    "q076": "SELECT \"RegionID\" AS region_id, COUNT(DISTINCT \"UserID\") AS users, AVG(\"Income\") AS avg_income FROM hits WHERE \"Income\" > 0 GROUP BY \"RegionID\" HAVING COUNT(DISTINCT \"UserID\") >= 50 AND AVG(\"Income\") > (SELECT AVG(\"Income\") FROM hits WHERE \"Income\" > 0) ORDER BY avg_income DESC, region_id LIMIT 20",
+    "q077": "SELECT \"TraficSourceID\", \"MobilePhoneModel\", users FROM (SELECT \"TraficSourceID\", \"MobilePhoneModel\", users, ROW_NUMBER() OVER (PARTITION BY \"TraficSourceID\" ORDER BY users DESC, \"MobilePhoneModel\" COLLATE \"C\") AS rn FROM (SELECT \"TraficSourceID\", \"MobilePhoneModel\", COUNT(DISTINCT \"UserID\") AS users FROM hits WHERE \"MobilePhoneModel\" <> '' GROUP BY \"TraficSourceID\", \"MobilePhoneModel\") AS a) AS b WHERE rn <= 3 ORDER BY \"TraficSourceID\", rn",
+    "q078": "SELECT CASE WHEN \"UTMMedium\" = '' THEN 'empty' WHEN LOWER(\"UTMMedium\") LIKE '%cpc%' THEN 'cpc_like' WHEN \"UTMMedium\" LIKE '%-%' THEN 'hyphenated' WHEN CHAR_LENGTH(\"UTMMedium\") <= 4 THEN 'short' ELSE 'other' END AS medium_shape, COUNT(*) AS hits_cnt, COUNT(DISTINCT \"UTMMedium\") AS variants, SUM(\"HasGCLID\") AS gclid_hits FROM hits GROUP BY medium_shape ORDER BY hits_cnt DESC, medium_shape",
+    "q079": "WITH user_days AS (SELECT \"UserID\", CAST(EXTRACT(DAY FROM \"EventDate\") AS INTEGER) AS d FROM hits WHERE \"IsRefresh\" = 0 GROUP BY \"UserID\", CAST(EXTRACT(DAY FROM \"EventDate\") AS INTEGER)), shifted AS (SELECT \"UserID\", d + 1 AS next_d, d AS base_d FROM user_days), retained AS (SELECT s.base_d AS d, COUNT(*) AS retained_users FROM shifted s JOIN user_days u ON s.\"UserID\" = u.\"UserID\" AND s.next_d = u.d GROUP BY s.base_d), totals AS (SELECT d, COUNT(*) AS active_users FROM user_days GROUP BY d) SELECT t.d AS day_of_month, t.active_users AS active_users, r.retained_users AS retained_users, CAST(r.retained_users AS DOUBLE PRECISION) / NULLIF(t.active_users, 0) AS next_day_retention FROM totals t JOIN retained r ON t.d = r.d ORDER BY day_of_month",
+    "q080": "SELECT \"CodeVersion\", hits_cnt, zero_timing, zero_share, RANK() OVER (ORDER BY zero_share DESC) AS share_rank FROM (SELECT \"CodeVersion\", COUNT(*) AS hits_cnt, SUM(CASE WHEN \"SendTiming\" = 0 AND \"ConnectTiming\" = 0 THEN 1 ELSE 0 END) AS zero_timing, CAST(SUM(CASE WHEN \"SendTiming\" = 0 AND \"ConnectTiming\" = 0 THEN 1 ELSE 0 END) AS DOUBLE PRECISION) / COUNT(*) AS zero_share FROM hits GROUP BY \"CodeVersion\" HAVING COUNT(*) >= 10000) t ORDER BY share_rank, \"CodeVersion\" LIMIT 20",
+    "q081": "SELECT day_of_month, users, prev_users, CAST(users AS BIGINT) - CAST(prev_users AS BIGINT) AS delta_users FROM (SELECT day_of_month, users, MAX(users) OVER (ORDER BY day_of_month ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING) AS prev_users, ROW_NUMBER() OVER (ORDER BY day_of_month) AS rn FROM (SELECT EXTRACT(DAY FROM \"EventDate\") AS day_of_month, COUNT(DISTINCT \"UserID\") AS users FROM hits WHERE \"IsRefresh\" = 0 GROUP BY EXTRACT(DAY FROM \"EventDate\")) a) d WHERE rn > 1 ORDER BY day_of_month",
+    "q082": "SELECT \"EventDate\", COUNT(*) AS adv_hits, COUNT(DISTINCT \"AdvEngineID\") AS engines FROM hits WHERE \"AdvEngineID\" <> 0 GROUP BY \"EventDate\" HAVING COUNT(*) > (SELECT CAST(COUNT(*) AS DOUBLE PRECISION) / COUNT(DISTINCT \"EventDate\") FROM hits WHERE \"AdvEngineID\" <> 0) ORDER BY \"EventDate\"",
+    "q083": "SELECT \"RefererCategoryID\", rn AS rank_in_category, \"URLRegionID\", users FROM (SELECT \"RefererCategoryID\", \"URLRegionID\", users, ROW_NUMBER() OVER (PARTITION BY \"RefererCategoryID\" ORDER BY users DESC, \"URLRegionID\") AS rn FROM (SELECT \"RefererCategoryID\", \"URLRegionID\", COUNT(DISTINCT \"UserID\") AS users FROM hits GROUP BY \"RefererCategoryID\", \"URLRegionID\") a) t WHERE rn <= 3 ORDER BY \"RefererCategoryID\", rank_in_category LIMIT 100",
+    "q084": "WITH a AS (SELECT \"BrowserLanguage\" AS lang, COUNT(*) AS c1 FROM hits WHERE \"EventDate\" BETWEEN '2013-07-01' AND '2013-07-07' GROUP BY \"BrowserLanguage\"), b AS (SELECT \"BrowserLanguage\" AS lang, COUNT(*) AS c2 FROM hits WHERE \"EventDate\" BETWEEN '2013-07-25' AND '2013-07-31' GROUP BY \"BrowserLanguage\") SELECT CASE WHEN COALESCE(a.c1, 0) = 0 THEN b.lang ELSE a.lang END AS lang_key, COALESCE(a.c1, 0) AS early_hits, COALESCE(b.c2, 0) AS late_hits FROM a FULL OUTER JOIN b ON a.lang = b.lang ORDER BY COALESCE(a.c1, 0) + COALESCE(b.c2, 0) DESC, lang_key LIMIT 30",
+    "q085": "SELECT day_of_month, COUNT(*) AS user_days FROM (SELECT \"UserID\", EXTRACT(DAY FROM \"EventDate\") AS day_of_month FROM hits WHERE \"SearchEngineID\" <> 0 GROUP BY \"UserID\", EXTRACT(DAY FROM \"EventDate\") INTERSECT SELECT \"UserID\", EXTRACT(DAY FROM \"EventDate\") AS day_of_month FROM hits WHERE \"Referer\" = '' GROUP BY \"UserID\", EXTRACT(DAY FROM \"EventDate\")) t GROUP BY day_of_month ORDER BY day_of_month",
+    "q086": "SELECT SUBSTRING(\"OriginalURL\", 1, 5) AS original_proto, SUBSTRING(\"URL\", 1, 5) AS final_proto, COUNT(*) AS hits_cnt, COUNT(DISTINCT \"UserID\") AS users, SUM(CASE WHEN \"OriginalURL\" = \"URL\" THEN 1 ELSE 0 END) AS identical_urls FROM hits WHERE \"OriginalURL\" LIKE 'http%' AND \"URL\" LIKE 'http%' GROUP BY SUBSTRING(\"OriginalURL\", 1, 5), SUBSTRING(\"URL\", 1, 5) ORDER BY hits_cnt DESC, original_proto, final_proto",
+    "q087": "SELECT \"HitColor\", \"ResolutionHeight\", users FROM (SELECT \"HitColor\", \"ResolutionHeight\", users, ROW_NUMBER() OVER (PARTITION BY \"HitColor\" ORDER BY users DESC, \"ResolutionHeight\") AS rn FROM (SELECT \"HitColor\", \"ResolutionHeight\", COUNT(DISTINCT \"UserID\") AS users FROM hits WHERE \"ResolutionHeight\" > 0 GROUP BY \"HitColor\", \"ResolutionHeight\") AS a) AS b WHERE rn <= 3 ORDER BY \"HitColor\", rn",
+    "q088": "WITH s AS (SELECT \"UserID\", \"SearchEngineID\", MIN(\"EventDate\") AS first_search FROM hits WHERE \"SearchEngineID\" <> 0 GROUP BY \"UserID\", \"SearchEngineID\"), last_seen AS (SELECT \"UserID\", MAX(\"EventDate\") AS last_day FROM hits GROUP BY \"UserID\") SELECT s.\"SearchEngineID\", COUNT(*) AS searchers, SUM(CASE WHEN l.last_day > s.first_search THEN 1 ELSE 0 END) AS came_back, CAST(SUM(CASE WHEN l.last_day > s.first_search THEN 1 ELSE 0 END) AS DOUBLE PRECISION) / COUNT(*) AS came_back_share FROM s LEFT JOIN last_seen l ON l.\"UserID\" = s.\"UserID\" GROUP BY s.\"SearchEngineID\" ORDER BY searchers DESC, s.\"SearchEngineID\" LIMIT 20",
+    "q089": "SELECT \"CounterClass\", COUNT(*) AS hits_cnt, COUNT(DISTINCT \"UserID\") AS users, SUM(\"IsNotBounce\") AS engaged, SUM(\"IsLink\") AS link_hits FROM hits WHERE \"UserID\" IN (SELECT \"UserID\" FROM hits WHERE \"SearchPhrase\" <> '' AND \"IsRefresh\" = 0 GROUP BY \"UserID\" HAVING COUNT(DISTINCT \"SearchPhrase\") >= 3) GROUP BY \"CounterClass\" ORDER BY \"CounterClass\"",
+    "q090": "SELECT COUNT(*) AS churned_searchers FROM (SELECT \"UserID\" FROM hits WHERE \"SearchPhrase\" <> '' AND \"EventDate\" <= '2013-07-10' GROUP BY \"UserID\" EXCEPT SELECT \"UserID\" FROM hits WHERE \"EventDate\" > '2013-07-10' GROUP BY \"UserID\") t ORDER BY churned_searchers",
+    "q091": "SELECT CASE WHEN \"UTMTerm\" LIKE '% %' THEN 1 ELSE 0 END AS multiword, CHAR_LENGTH(TRIM(\"UTMTerm\")) AS term_len, COUNT(*) AS hits_cnt, COUNT(DISTINCT \"UTMTerm\") AS distinct_terms FROM hits GROUP BY CASE WHEN \"UTMTerm\" LIKE '% %' THEN 1 ELSE 0 END, CHAR_LENGTH(TRIM(\"UTMTerm\")) ORDER BY multiword, term_len LIMIT 60",
+    "q092": "SELECT \"CounterClass\", \"RefererRegionID\", users, rn FROM (SELECT \"CounterClass\", \"RefererRegionID\", COUNT(DISTINCT \"UserID\") AS users, ROW_NUMBER() OVER (PARTITION BY \"CounterClass\" ORDER BY COUNT(DISTINCT \"UserID\") DESC, \"RefererRegionID\") AS rn FROM hits WHERE \"Referer\" <> '' GROUP BY \"CounterClass\", \"RefererRegionID\") t WHERE rn <= 5 ORDER BY \"CounterClass\", rn",
+    "q093": "SELECT \"IsNotBounce\", COUNT(*) AS hits_cnt, COUNT(DISTINCT \"UserID\") AS users, COUNT(DISTINCT \"ClientIP\") AS ips FROM hits WHERE \"ClientIP\" IN (SELECT \"ClientIP\" FROM hits GROUP BY \"ClientIP\" HAVING COUNT(DISTINCT \"UserID\") >= 20) GROUP BY \"IsNotBounce\" ORDER BY \"IsNotBounce\"",
+    "q094": "SELECT EXTRACT(HOUR FROM \"EventTime\") AS hr, COUNT(*) AS hits_cnt, SUM(CASE WHEN \"HTTPError\" <> 0 THEN 1 ELSE 0 END) AS error_hits, SUM(CASE WHEN \"URLRegionID\" = \"RegionID\" THEN 1 ELSE 0 END) AS local_landing_hits FROM hits WHERE \"RegionID\" = (SELECT \"RegionID\" FROM hits GROUP BY \"RegionID\" ORDER BY COUNT(*) DESC, \"RegionID\" LIMIT 1) GROUP BY EXTRACT(HOUR FROM \"EventTime\") ORDER BY hr",
+    "q095": "WITH h AS (SELECT \"EventDate\", EXTRACT(HOUR FROM \"EventTime\") AS hr, COUNT(*) AS hits_cnt FROM hits GROUP BY \"EventDate\", EXTRACT(HOUR FROM \"EventTime\")), r AS (SELECT \"EventDate\", hr, hits_cnt, SUM(hits_cnt) OVER (PARTITION BY \"EventDate\") AS day_hits, ROW_NUMBER() OVER (PARTITION BY \"EventDate\" ORDER BY hits_cnt DESC, hr) AS rn FROM h) SELECT \"EventDate\", hr, hits_cnt, day_hits, CAST(hits_cnt AS DOUBLE PRECISION) / NULLIF(day_hits, 0) AS peak_share FROM r WHERE rn = 1 ORDER BY \"EventDate\"",
+    "q096": "SELECT \"Age\", hits_cnt, headless_hits, headless_share, RANK() OVER (ORDER BY headless_share DESC) AS share_rank FROM (SELECT \"Age\", COUNT(*) AS hits_cnt, SUM(CASE WHEN \"JavascriptEnable\" = 0 OR \"CookieEnable\" = 0 THEN 1 ELSE 0 END) AS headless_hits, CAST(SUM(CASE WHEN \"JavascriptEnable\" = 0 OR \"CookieEnable\" = 0 THEN 1 ELSE 0 END) AS DOUBLE PRECISION) / COUNT(*) AS headless_share FROM hits GROUP BY \"Age\" HAVING COUNT(*) >= 1000) t ORDER BY share_rank, \"Age\" LIMIT 50",
+    "q097": "SELECT segment, users FROM (SELECT 'churned' AS segment, COUNT(*) AS users FROM (SELECT \"UserID\" FROM hits WHERE \"EventDate\" < '2013-07-16' GROUP BY \"UserID\" EXCEPT SELECT \"UserID\" FROM hits WHERE \"EventDate\" >= '2013-07-16' GROUP BY \"UserID\") a UNION ALL SELECT 'newcomer' AS segment, COUNT(*) AS users FROM (SELECT \"UserID\" FROM hits WHERE \"EventDate\" >= '2013-07-16' GROUP BY \"UserID\" EXCEPT SELECT \"UserID\" FROM hits WHERE \"EventDate\" < '2013-07-16' GROUP BY \"UserID\") b UNION ALL SELECT 'retained' AS segment, COUNT(*) AS users FROM (SELECT \"UserID\" FROM hits WHERE \"EventDate\" < '2013-07-16' GROUP BY \"UserID\" INTERSECT SELECT \"UserID\" FROM hits WHERE \"EventDate\" >= '2013-07-16' GROUP BY \"UserID\") c) u ORDER BY segment",
+    "q098": "SELECT CASE WHEN CHAR_LENGTH(\"Params\") = 0 THEN 0 WHEN CHAR_LENGTH(\"Params\") <= 20 THEN 1 WHEN CHAR_LENGTH(\"Params\") <= 100 THEN 2 ELSE 3 END AS params_len_bucket, COUNT(*) AS n_hits, SUM(CASE WHEN \"URL\" LIKE '%?%' THEN 1 ELSE 0 END) AS urls_with_query, SUM(CASE WHEN \"Params\" LIKE '%=%' THEN 1 ELSE 0 END) AS params_with_kv, SUM(CASE WHEN SUBSTRING(\"URL\", 1, 5) = 'https' THEN 1 ELSE 0 END) AS https_hits, COUNT(DISTINCT \"UserID\") AS users FROM hits GROUP BY CASE WHEN CHAR_LENGTH(\"Params\") = 0 THEN 0 WHEN CHAR_LENGTH(\"Params\") <= 20 THEN 1 WHEN CHAR_LENGTH(\"Params\") <= 100 THEN 2 ELSE 3 END ORDER BY params_len_bucket",
+    "q099": "SELECT \"FlashMajor\", COUNT(DISTINCT \"UserID\") AS one_day_users, COUNT(*) AS hit_count FROM hits WHERE \"UserID\" NOT IN (SELECT \"UserID\" FROM hits GROUP BY \"UserID\" HAVING COUNT(DISTINCT \"EventDate\") > 1) GROUP BY \"FlashMajor\" ORDER BY one_day_users DESC, \"FlashMajor\" LIMIT 20",
+    "q100": "SELECT \"ClientTimeZone\", \"RemoteIP\", users, hits_cnt, rnk FROM (SELECT \"ClientTimeZone\", \"RemoteIP\", users, hits_cnt, ROW_NUMBER() OVER (PARTITION BY \"ClientTimeZone\" ORDER BY users DESC, hits_cnt DESC, \"RemoteIP\") AS rnk FROM (SELECT \"ClientTimeZone\", \"RemoteIP\", COUNT(DISTINCT \"UserID\") AS users, COUNT(*) AS hits_cnt FROM hits WHERE \"RemoteIP\" <> 0 GROUP BY \"ClientTimeZone\", \"RemoteIP\") a) r WHERE rnk <= 3 ORDER BY \"ClientTimeZone\", rnk LIMIT 100"
+   },
+   "load_time": 1043.237,
+   "data_size": 95416684406,
+   "data_size_after": 95385141398,
+   "total_time": 12142.642,
+   "penalized_time": 38542.642,
+   "geomean": 4.8265,
+   "counts": {
+    "ok": 124,
+    "error": 131,
+    "timeout": 45
+   },
+   "revalidated": true,
+   "error_rate": 0.5867,
+   "restarts": 15,
+   "reference": {
+    "q001": {
+     "status": "error",
+     "time": 117.307
+    },
+    "q002": {
+     "status": "ok",
+     "time": 5.079
+    },
+    "q003": {
+     "status": "ok",
+     "time": 1.746
+    },
+    "q004": {
+     "status": "error",
+     "time": 91.825
+    },
+    "q005": {
+     "status": "ok",
+     "time": 10.004
+    },
+    "q006": {
+     "status": "ok",
+     "time": 7.175
+    },
+    "q007": {
+     "status": "ok",
+     "time": 15.538
+    },
+    "q008": {
+     "status": "ok",
+     "time": 6.951
+    },
+    "q009": {
+     "status": "ok",
+     "time": 41.008
+    },
+    "q010": {
+     "status": "ok",
+     "time": 7.885
+    },
+    "q011": {
+     "status": "ok",
+     "time": 5.678
+    },
+    "q012": {
+     "status": "ok",
+     "time": 0.77
+    },
+    "q013": {
+     "status": "ok",
+     "time": 147.047
+    },
+    "q014": {
+     "status": "ok",
+     "time": 14.338
+    },
+    "q015": {
+     "status": "ok",
+     "time": 10.429
+    },
+    "q016": {
+     "status": "ok",
+     "time": 13.464
+    },
+    "q017": {
+     "status": "ok",
+     "time": 6.789
+    },
+    "q018": {
+     "status": "ok",
+     "time": 315.299
+    },
+    "q019": {
+     "status": "ok",
+     "time": 1.381
+    },
+    "q020": {
+     "status": "ok",
+     "time": 27.613
+    },
+    "q021": {
+     "status": "ok",
+     "time": 4.292
+    },
+    "q022": {
+     "status": "ok",
+     "time": 1.008
+    },
+    "q023": {
+     "status": "ok",
+     "time": 67.127
+    },
+    "q024": {
+     "status": "ok",
+     "time": 2.301
+    },
+    "q025": {
+     "status": "ok",
+     "time": 56.683
+    },
+    "q026": {
+     "status": "ok",
+     "time": 15.934
+    },
+    "q027": {
+     "status": "ok",
+     "time": 3.516
+    },
+    "q028": {
+     "status": "ok",
+     "time": 11.738
+    },
+    "q029": {
+     "status": "ok",
+     "time": 1.802
+    },
+    "q030": {
+     "status": "ok",
+     "time": 2.168
+    },
+    "q031": {
+     "status": "ok",
+     "time": 3.022
+    },
+    "q032": {
+     "status": "ok",
+     "time": 2.693
+    },
+    "q033": {
+     "status": "ok",
+     "time": 12.819
+    },
+    "q034": {
+     "status": "ok",
+     "time": 0.818
+    },
+    "q035": {
+     "status": "ok",
+     "time": 31.19
+    },
+    "q036": {
+     "status": "ok",
+     "time": 1.725
+    },
+    "q037": {
+     "status": "ok",
+     "time": 1.523
+    },
+    "q038": {
+     "status": "ok",
+     "time": 1.642
+    },
+    "q039": {
+     "status": "ok",
+     "time": 4.62
+    },
+    "q040": {
+     "status": "ok",
+     "time": 61.487
+    },
+    "q041": {
+     "status": "ok",
+     "time": 1.065
+    },
+    "q042": {
+     "status": "ok",
+     "time": 5.414
+    },
+    "q043": {
+     "status": "ok",
+     "time": 249.378
+    },
+    "q044": {
+     "status": "ok",
+     "time": 0.508
+    },
+    "q045": {
+     "status": "ok",
+     "time": 1.44
+    },
+    "q046": {
+     "status": "ok",
+     "time": 8.605
+    },
+    "q047": {
+     "status": "ok",
+     "time": 2.201
+    },
+    "q048": {
+     "status": "ok",
+     "time": 72.23
+    },
+    "q049": {
+     "status": "ok",
+     "time": 3.042
+    },
+    "q050": {
+     "status": "ok",
+     "time": 4.091
+    },
+    "q051": {
+     "status": "ok",
+     "time": 11.399
+    },
+    "q052": {
+     "status": "ok",
+     "time": 10.528
+    },
+    "q053": {
+     "status": "ok",
+     "time": 61.339
+    },
+    "q054": {
+     "status": "ok",
+     "time": 1.301
+    },
+    "q055": {
+     "status": "ok",
+     "time": 1.379
+    },
+    "q056": {
+     "status": "ok",
+     "time": 4.639
+    },
+    "q057": {
+     "status": "ok",
+     "time": 6.017
+    },
+    "q058": {
+     "status": "ok",
+     "time": 1.411
+    },
+    "q059": {
+     "status": "error",
+     "time": 18.964
+    },
+    "q060": {
+     "status": "ok",
+     "time": 35.716
+    },
+    "q061": {
+     "status": "ok",
+     "time": 3.833
+    },
+    "q062": {
+     "status": "ok",
+     "time": 10.168
+    },
+    "q063": {
+     "status": "ok",
+     "time": 67.325
+    },
+    "q064": {
+     "status": "ok",
+     "time": 0.748
+    },
+    "q065": {
+     "status": "ok",
+     "time": 1.075
+    },
+    "q066": {
+     "status": "ok",
+     "time": 105.511
+    },
+    "q067": {
+     "status": "ok",
+     "time": 1.152
+    },
+    "q068": {
+     "status": "ok",
+     "time": 2.292
+    },
+    "q069": {
+     "status": "ok",
+     "time": 1.737
+    },
+    "q070": {
+     "status": "ok",
+     "time": 6.386
+    },
+    "q071": {
+     "status": "ok",
+     "time": 0.595
+    },
+    "q072": {
+     "status": "ok",
+     "time": 12.828
+    },
+    "q073": {
+     "status": "ok",
+     "time": 6.495
+    },
+    "q074": {
+     "status": "ok",
+     "time": 43.281
+    },
+    "q075": {
+     "status": "ok",
+     "time": 36.26
+    },
+    "q076": {
+     "status": "ok",
+     "time": 5.942
+    },
+    "q077": {
+     "status": "ok",
+     "time": 1.859
+    },
+    "q078": {
+     "status": "ok",
+     "time": 6.119
+    },
+    "q079": {
+     "status": "ok",
+     "time": 172.796
+    },
+    "q080": {
+     "status": "ok",
+     "time": 1.013
+    },
+    "q081": {
+     "status": "ok",
+     "time": 6.109
+    },
+    "q082": {
+     "status": "ok",
+     "time": 0.394
+    },
+    "q083": {
+     "status": "ok",
+     "time": 8.179
+    },
+    "q084": {
+     "status": "ok",
+     "time": 0.799
+    },
+    "q085": {
+     "status": "ok",
+     "time": 20.221
+    },
+    "q086": {
+     "status": "ok",
+     "time": 24.347
+    },
+    "q087": {
+     "status": "ok",
+     "time": 9.562
+    },
+    "q088": {
+     "status": "ok",
+     "time": 34.365
+    },
+    "q089": {
+     "status": "ok",
+     "time": 10.304
+    },
+    "q090": {
+     "status": "ok",
+     "time": 20.764
+    },
+    "q091": {
+     "status": "ok",
+     "time": 4.169
+    },
+    "q092": {
+     "status": "ok",
+     "time": 7.658
+    },
+    "q093": {
+     "status": "ok",
+     "time": 60.64
+    },
+    "q094": {
+     "status": "ok",
+     "time": 2.656
+    },
+    "q095": {
+     "status": "ok",
+     "time": 1.208
+    },
+    "q096": {
+     "status": "ok",
+     "time": 0.967
+    },
+    "q097": {
+     "status": "ok",
+     "time": 37.802
+    },
+    "q098": {
+     "status": "ok",
+     "time": 19.057
+    },
+    "q099": {
+     "status": "ok",
+     "time": 59.16
+    },
+    "q100": {
+     "status": "ok",
+     "time": 82.249
+    }
+   },
+   "runs": [
+    {
+     "id": "q066",
+     "repeat": 3,
+     "status": "ok",
+     "start": 0.0,
+     "time": 144.657,
+     "reported_time": 144.465
+    },
+    {
+     "id": "q020",
+     "repeat": 2,
+     "status": "error",
+     "start": 0.001,
+     "time": 9.646,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.23 GiB (attempt to allocate chunk of 4.02 MiB), current RSS: 26.24 GiB, maximum: 26.23 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q023",
+     "repeat": 2,
+     "status": "error",
+     "start": 0.001,
+     "time": 14.441,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.38 GiB (attempt to allocate chunk of 0.00 B), current RSS: 26.39 GiB, maximum: 26.39 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads: "
+    },
+    {
+     "id": "q040",
+     "repeat": 2,
+     "status": "error",
+     "start": 0.001,
+     "time": 18.704,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.38 GiB (attempt to allocate chunk of 4.00 MiB), current RSS: 26.39 GiB, maximum: 26.39 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q062",
+     "repeat": 3,
+     "status": "error",
+     "start": 9.864,
+     "time": 71.613,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.39 GiB (attempt to allocate chunk of 4.07 MiB), current RSS: 21.52 GiB, maximum: 26.37 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q092",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 14.709,
+     "time": 600.123,
+     "reported_time": null
+    },
+    {
+     "id": "q088",
+     "repeat": 3,
+     "status": "error",
+     "start": 19.028,
+     "time": 26.706,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.39 GiB (attempt to allocate chunk of 0.00 B), current RSS: 22.84 GiB, maximum: 26.37 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads: "
+    },
+    {
+     "id": "q098",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 45.899,
+     "time": 600.086,
+     "reported_time": null
+    },
+    {
+     "id": "q027",
+     "repeat": 1,
+     "status": "ok",
+     "start": 81.645,
+     "time": 44.078,
+     "reported_time": 43.995
+    },
+    {
+     "id": "q051",
+     "repeat": 2,
+     "status": "ok",
+     "start": 125.726,
+     "time": 306.703,
+     "reported_time": 306.643
+    },
+    {
+     "id": "q064",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 144.658,
+     "time": 600.101,
+     "reported_time": null
+    },
+    {
+     "id": "q040",
+     "repeat": 1,
+     "status": "ok",
+     "start": 432.431,
+     "time": 99.234,
+     "reported_time": 99.178
+    },
+    {
+     "id": "q093",
+     "repeat": 3,
+     "status": "error",
+     "start": 531.665,
+     "time": 115.519,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.37 GiB (attempt to allocate chunk of 0.00 B), current RSS: 23.68 GiB, maximum: 26.37 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: 20"
+    },
+    {
+     "id": "q016",
+     "repeat": 3,
+     "status": "error",
+     "start": 614.948,
+     "time": 32.017,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.37 GiB (attempt to allocate chunk of 0.00 B), current RSS: 23.68 GiB, maximum: 26.37 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: 22"
+    },
+    {
+     "id": "q084",
+     "repeat": 3,
+     "status": "ok",
+     "start": 646.101,
+     "time": 256.278,
+     "reported_time": 256.224
+    },
+    {
+     "id": "q035",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 647.08,
+     "time": 600.022,
+     "reported_time": null
+    },
+    {
+     "id": "q050",
+     "repeat": 3,
+     "status": "ok",
+     "start": 647.353,
+     "time": 44.386,
+     "reported_time": 44.301
+    },
+    {
+     "id": "q086",
+     "repeat": 3,
+     "status": "ok",
+     "start": 691.739,
+     "time": 59.535,
+     "reported_time": 59.47
+    },
+    {
+     "id": "q049",
+     "repeat": 2,
+     "status": "ok",
+     "start": 744.926,
+     "time": 8.793,
+     "reported_time": 8.717
+    },
+    {
+     "id": "q073",
+     "repeat": 1,
+     "status": "ok",
+     "start": 751.274,
+     "time": 11.219,
+     "reported_time": 11.141
+    },
+    {
+     "id": "q027",
+     "repeat": 3,
+     "status": "ok",
+     "start": 753.719,
+     "time": 46.568,
+     "reported_time": 46.501
+    },
+    {
+     "id": "q084",
+     "repeat": 1,
+     "status": "ok",
+     "start": 762.493,
+     "time": 231.654,
+     "reported_time": 231.581
+    },
+    {
+     "id": "q063",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 800.287,
+     "time": 600.003,
+     "reported_time": null
+    },
+    {
+     "id": "q053",
+     "repeat": 3,
+     "status": "ok",
+     "start": 902.379,
+     "time": 104.675,
+     "reported_time": 104.621
+    },
+    {
+     "id": "q035",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 994.148,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q090",
+     "repeat": 3,
+     "status": "ok",
+     "start": 1007.054,
+     "time": 97.632,
+     "reported_time": 97.576
+    },
+    {
+     "id": "q091",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 1104.687,
+     "time": 600.068,
+     "reported_time": null
+    },
+    {
+     "id": "q013",
+     "repeat": 2,
+     "status": "error",
+     "start": 1247.216,
+     "time": 502.951,
+     "reported_time": null
+    },
+    {
+     "id": "q028",
+     "repeat": 3,
+     "status": "error",
+     "start": 1400.404,
+     "time": 10.24,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 25.72 GiB (attempt to allocate chunk of 4.10 MiB), current RSS: 25.72 GiB, maximum: 25.72 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q032",
+     "repeat": 1,
+     "status": "error",
+     "start": 1411.109,
+     "time": 204.198,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 25.59 GiB (attempt to allocate chunk of 0.00 B), current RSS: 22.38 GiB, maximum: 25.59 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: 10"
+    },
+    {
+     "id": "q089",
+     "repeat": 3,
+     "status": "error",
+     "start": 1594.414,
+     "time": 157.845,
+     "reported_time": null
+    },
+    {
+     "id": "q046",
+     "repeat": 3,
+     "status": "error",
+     "start": 1615.42,
+     "time": 134.67,
+     "reported_time": null
+    },
+    {
+     "id": "q027",
+     "repeat": 2,
+     "status": "ok",
+     "start": 1704.87,
+     "time": 36.758,
+     "reported_time": 36.682
+    },
+    {
+     "id": "q042",
+     "repeat": 2,
+     "status": "error",
+     "start": 1741.63,
+     "time": 14.706,
+     "reported_time": null
+    },
+    {
+     "id": "q085",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 1768.02,
+     "time": 600.106,
+     "reported_time": null
+    },
+    {
+     "id": "q065",
+     "repeat": 3,
+     "status": "ok",
+     "start": 1768.022,
+     "time": 2.927,
+     "reported_time": 2.811
+    },
+    {
+     "id": "q073",
+     "repeat": 2,
+     "status": "ok",
+     "start": 1768.022,
+     "time": 6.801,
+     "reported_time": 6.708
+    },
+    {
+     "id": "q030",
+     "repeat": 2,
+     "status": "ok",
+     "start": 1768.024,
+     "time": 5.231,
+     "reported_time": 5.12
+    },
+    {
+     "id": "q026",
+     "repeat": 3,
+     "status": "ok",
+     "start": 1770.949,
+     "time": 22.839,
+     "reported_time": 22.754
+    },
+    {
+     "id": "q069",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 1773.256,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q044",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 1774.824,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q076",
+     "repeat": 1,
+     "status": "ok",
+     "start": 1793.789,
+     "time": 5.547,
+     "reported_time": 5.496
+    },
+    {
+     "id": "q081",
+     "repeat": 2,
+     "status": "error",
+     "start": 1799.336,
+     "time": 206.507,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 16.83 GiB (attempt to allocate chunk of 4.08 MiB), current RSS: 6.47 GiB, maximum: 16.44 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads:"
+    },
+    {
+     "id": "q029",
+     "repeat": 1,
+     "status": "error",
+     "start": 2005.957,
+     "time": 486.594,
+     "reported_time": null
+    },
+    {
+     "id": "q085",
+     "repeat": 1,
+     "status": "error",
+     "start": 2368.244,
+     "time": 125.056,
+     "reported_time": null
+    },
+    {
+     "id": "q067",
+     "repeat": 3,
+     "status": "ok",
+     "start": 2373.473,
+     "time": 1.305,
+     "reported_time": 1.245
+    },
+    {
+     "id": "q088",
+     "repeat": 1,
+     "status": "error",
+     "start": 2374.778,
+     "time": 8.696,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.50 GiB (attempt to allocate chunk of 4.38 MiB), current RSS: 25.10 GiB, maximum: 26.49 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q029",
+     "repeat": 3,
+     "status": "error",
+     "start": 2375.093,
+     "time": 90.422,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 13.41 GiB (attempt to allocate chunk of 4.19 MiB), current RSS: 10.03 GiB, maximum: 12.65 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q063",
+     "repeat": 1,
+     "status": "error",
+     "start": 2383.589,
+     "time": 33.716,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 22.64 GiB (attempt to allocate chunk of 4.15 MiB), current RSS: 20.78 GiB, maximum: 22.62 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q038",
+     "repeat": 1,
+     "status": "ok",
+     "start": 2417.419,
+     "time": 4.743,
+     "reported_time": 4.684
+    },
+    {
+     "id": "q066",
+     "repeat": 1,
+     "status": "error",
+     "start": 2422.163,
+     "time": 69.549,
+     "reported_time": null
+    },
+    {
+     "id": "q021",
+     "repeat": 1,
+     "status": "error",
+     "start": 2465.68,
+     "time": 5.877,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 13.51 GiB (attempt to allocate chunk of 4.00 MiB), current RSS: 9.94 GiB, maximum: 13.51 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads:"
+    },
+    {
+     "id": "q010",
+     "repeat": 1,
+     "status": "ok",
+     "start": 2471.723,
+     "time": 15.029,
+     "reported_time": 14.96
+    },
+    {
+     "id": "q089",
+     "repeat": 2,
+     "status": "error",
+     "start": 2486.754,
+     "time": 11.363,
+     "reported_time": null
+    },
+    {
+     "id": "q041",
+     "repeat": 3,
+     "status": "ok",
+     "start": 2506.027,
+     "time": 172.549,
+     "reported_time": 172.47
+    },
+    {
+     "id": "q068",
+     "repeat": 3,
+     "status": "error",
+     "start": 2506.028,
+     "time": 0.088,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  column \"phone_model\" does not exist\nLINE 1: ...strong_regions DESC, hits_in_strong_regions DESC, phone_mode...\n                                                             ^\nTime: 18.923 ms\n"
+    },
+    {
+     "id": "q010",
+     "repeat": 2,
+     "status": "ok",
+     "start": 2506.028,
+     "time": 12.725,
+     "reported_time": 12.653
+    },
+    {
+     "id": "q022",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 2506.029,
+     "time": 600.115,
+     "reported_time": null
+    },
+    {
+     "id": "q053",
+     "repeat": 2,
+     "status": "ok",
+     "start": 2506.332,
+     "time": 100.487,
+     "reported_time": 100.393
+    },
+    {
+     "id": "q031",
+     "repeat": 2,
+     "status": "ok",
+     "start": 2518.754,
+     "time": 2.672,
+     "reported_time": 2.619
+    },
+    {
+     "id": "q057",
+     "repeat": 2,
+     "status": "ok",
+     "start": 2521.427,
+     "time": 127.972,
+     "reported_time": 127.919
+    },
+    {
+     "id": "q100",
+     "repeat": 3,
+     "status": "ok",
+     "start": 2606.82,
+     "time": 6.898,
+     "reported_time": 6.846
+    },
+    {
+     "id": "q080",
+     "repeat": 2,
+     "status": "ok",
+     "start": 2613.718,
+     "time": 1.154,
+     "reported_time": 1.103
+    },
+    {
+     "id": "q006",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 2614.873,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q038",
+     "repeat": 3,
+     "status": "ok",
+     "start": 2649.399,
+     "time": 2.405,
+     "reported_time": 2.354
+    },
+    {
+     "id": "q096",
+     "repeat": 2,
+     "status": "ok",
+     "start": 2651.805,
+     "time": 0.817,
+     "reported_time": 0.766
+    },
+    {
+     "id": "q020",
+     "repeat": 1,
+     "status": "error",
+     "start": 2652.622,
+     "time": 7.049,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.56 GiB (attempt to allocate chunk of 4.21 MiB), current RSS: 26.56 GiB, maximum: 26.56 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q019",
+     "repeat": 3,
+     "status": "error",
+     "start": 2660.186,
+     "time": 559.575,
+     "reported_time": null
+    },
+    {
+     "id": "q015",
+     "repeat": 2,
+     "status": "ok",
+     "start": 2678.577,
+     "time": 59.86,
+     "reported_time": 59.806
+    },
+    {
+     "id": "q071",
+     "repeat": 3,
+     "status": "ok",
+     "start": 2738.439,
+     "time": 0.467,
+     "reported_time": 0.417
+    },
+    {
+     "id": "q097",
+     "repeat": 3,
+     "status": "ok",
+     "start": 2738.906,
+     "time": 390.265,
+     "reported_time": 390.096
+    },
+    {
+     "id": "q010",
+     "repeat": 3,
+     "status": "ok",
+     "start": 3106.261,
+     "time": 15.469,
+     "reported_time": 15.39
+    },
+    {
+     "id": "q028",
+     "repeat": 2,
+     "status": "error",
+     "start": 3121.731,
+     "time": 97.83,
+     "reported_time": null
+    },
+    {
+     "id": "q003",
+     "repeat": 1,
+     "status": "error",
+     "start": 3129.173,
+     "time": 90.333,
+     "reported_time": null
+    },
+    {
+     "id": "q024",
+     "repeat": 3,
+     "status": "error",
+     "start": 3215.095,
+     "time": 8.023,
+     "reported_time": null
+    },
+    {
+     "id": "q081",
+     "repeat": 3,
+     "status": "error",
+     "start": 3231.049,
+     "time": 194.141,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.33 GiB (attempt to allocate chunk of 4.30 MiB), current RSS: 26.32 GiB, maximum: 26.32 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q013",
+     "repeat": 1,
+     "status": "error",
+     "start": 3231.049,
+     "time": 277.386,
+     "reported_time": null
+    },
+    {
+     "id": "q052",
+     "repeat": 2,
+     "status": "error",
+     "start": 3231.05,
+     "time": 0.122,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: FixedString data type family must have exactly one argument - size in bytes: In scope SELECT (concat((concat(lowerUTF8(BrowserLanguage), '/')), CAST(UserAgentMajor, 'FixedString'))), count(*), countDistinct(UserID), (concat((concat(lowerUTF8(Browse"
+    },
+    {
+     "id": "q045",
+     "repeat": 2,
+     "status": "ok",
+     "start": 3231.052,
+     "time": 5.8,
+     "reported_time": 5.691
+    },
+    {
+     "id": "q009",
+     "repeat": 2,
+     "status": "error",
+     "start": 3231.441,
+     "time": 0.124,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  column \"bucket\" does not exist\nLINE 1: ... '11-100' ELSE '101+' END ORDER BY MIN(hits_cnt), bucket COL...\n                                                             ^\nTime: 7.084 ms\n"
+    },
+    {
+     "id": "q055",
+     "repeat": 2,
+     "status": "error",
+     "start": 3231.835,
+     "time": 276.872,
+     "reported_time": null
+    },
+    {
+     "id": "q041",
+     "repeat": 2,
+     "status": "ok",
+     "start": 3236.853,
+     "time": 162.574,
+     "reported_time": 162.47
+    },
+    {
+     "id": "q025",
+     "repeat": 2,
+     "status": "error",
+     "start": 3399.428,
+     "time": 109.091,
+     "reported_time": null
+    },
+    {
+     "id": "q094",
+     "repeat": 1,
+     "status": "ok",
+     "start": 3425.306,
+     "time": 5.301,
+     "reported_time": 5.238
+    },
+    {
+     "id": "q015",
+     "repeat": 1,
+     "status": "ok",
+     "start": 3430.607,
+     "time": 67.101,
+     "reported_time": 67.049
+    },
+    {
+     "id": "q001",
+     "repeat": 3,
+     "status": "error",
+     "start": 3497.71,
+     "time": 27.556,
+     "reported_time": null
+    },
+    {
+     "id": "q041",
+     "repeat": 1,
+     "status": "ok",
+     "start": 3533.816,
+     "time": 180.404,
+     "reported_time": 180.321
+    },
+    {
+     "id": "q047",
+     "repeat": 3,
+     "status": "error",
+     "start": 3533.818,
+     "time": 485.309,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.17 GiB (attempt to allocate chunk of 0.00 B), current RSS: 26.17 GiB, maximum: 26.17 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: 8."
+    },
+    {
+     "id": "q006",
+     "repeat": 2,
+     "status": "error",
+     "start": 3533.818,
+     "time": 490.468,
+     "reported_time": null
+    },
+    {
+     "id": "q017",
+     "repeat": 2,
+     "status": "ok",
+     "start": 3533.82,
+     "time": 83.835,
+     "reported_time": 83.733
+    },
+    {
+     "id": "q090",
+     "repeat": 2,
+     "status": "ok",
+     "start": 3617.655,
+     "time": 85.225,
+     "reported_time": 85.155
+    },
+    {
+     "id": "q084",
+     "repeat": 2,
+     "status": "ok",
+     "start": 3702.88,
+     "time": 297.177,
+     "reported_time": 297.122
+    },
+    {
+     "id": "q005",
+     "repeat": 1,
+     "status": "ok",
+     "start": 3714.222,
+     "time": 61.416,
+     "reported_time": 61.364
+    },
+    {
+     "id": "q077",
+     "repeat": 3,
+     "status": "ok",
+     "start": 3775.638,
+     "time": 67.205,
+     "reported_time": 67.152
+    },
+    {
+     "id": "q025",
+     "repeat": 1,
+     "status": "error",
+     "start": 3842.844,
+     "time": 186.884,
+     "reported_time": null
+    },
+    {
+     "id": "q062",
+     "repeat": 1,
+     "status": "error",
+     "start": 4000.058,
+     "time": 7.08,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.18 GiB (attempt to allocate chunk of 0.00 B), current RSS: 26.17 GiB, maximum: 26.17 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: 10"
+    },
+    {
+     "id": "q018",
+     "repeat": 3,
+     "status": "error",
+     "start": 4007.303,
+     "time": 21.449,
+     "reported_time": null
+    },
+    {
+     "id": "q004",
+     "repeat": 1,
+     "status": "error",
+     "start": 4034.631,
+     "time": 12.025,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.39 GiB (attempt to allocate chunk of 3.83 MiB), current RSS: 26.40 GiB, maximum: 26.39 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q078",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 4034.631,
+     "time": 600.096,
+     "reported_time": null
+    },
+    {
+     "id": "q058",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 4034.631,
+     "time": 600.111,
+     "reported_time": null
+    },
+    {
+     "id": "q028",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 4034.632,
+     "time": 600.102,
+     "reported_time": null
+    },
+    {
+     "id": "q098",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 4046.873,
+     "time": 600.112,
+     "reported_time": null
+    },
+    {
+     "id": "q076",
+     "repeat": 2,
+     "status": "ok",
+     "start": 4634.88,
+     "time": 43.492,
+     "reported_time": 43.434
+    },
+    {
+     "id": "q061",
+     "repeat": 3,
+     "status": "ok",
+     "start": 4634.882,
+     "time": 32.279,
+     "reported_time": 32.22
+    },
+    {
+     "id": "q052",
+     "repeat": 1,
+     "status": "error",
+     "start": 4634.908,
+     "time": 0.1,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: FixedString data type family must have exactly one argument - size in bytes: In scope SELECT (concat((concat(lowerUTF8(BrowserLanguage), '/')), CAST(UserAgentMajor, 'FixedString'))), count(*), countDistinct(UserID), (concat((concat(lowerUTF8(Browse"
+    },
+    {
+     "id": "q013",
+     "repeat": 3,
+     "status": "error",
+     "start": 4635.125,
+     "time": 61.158,
+     "reported_time": null
+    },
+    {
+     "id": "q065",
+     "repeat": 2,
+     "status": "ok",
+     "start": 4647.151,
+     "time": 5.291,
+     "reported_time": 5.219
+    },
+    {
+     "id": "q098",
+     "repeat": 2,
+     "status": "error",
+     "start": 4652.445,
+     "time": 43.771,
+     "reported_time": null
+    },
+    {
+     "id": "q048",
+     "repeat": 3,
+     "status": "error",
+     "start": 4667.162,
+     "time": 32.182,
+     "reported_time": null
+    },
+    {
+     "id": "q094",
+     "repeat": 2,
+     "status": "error",
+     "start": 4678.373,
+     "time": 15.915,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 25.90 GiB (attempt to allocate chunk of 0.00 B), current RSS: 21.12 GiB, maximum: 25.90 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: 12"
+    },
+    {
+     "id": "q034",
+     "repeat": 3,
+     "status": "error",
+     "start": 4694.403,
+     "time": 0.054,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: connection error: DB::Exception: (total) memory limit exceeded: would use 25.91 GiB (attempt to allocate chunk of 0.00 B), current RSS: 21.15 GiB, maximum: 25.90 GiB. Untracked memory across all threads: 362.11 KiB.\nTime: 4.169 ms\n"
+    },
+    {
+     "id": "q018",
+     "repeat": 2,
+     "status": "error",
+     "start": 4705.155,
+     "time": 18.931,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.16 GiB (attempt to allocate chunk of 3.80 MiB), current RSS: 26.16 GiB, maximum: 26.16 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q081",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 4705.156,
+     "time": 600.111,
+     "reported_time": null
+    },
+    {
+     "id": "q070",
+     "repeat": 1,
+     "status": "error",
+     "start": 4705.157,
+     "time": 15.715,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.16 GiB (attempt to allocate chunk of 4.24 MiB), current RSS: 26.16 GiB, maximum: 26.16 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q072",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 4705.157,
+     "time": 600.109,
+     "reported_time": null
+    },
+    {
+     "id": "q074",
+     "repeat": 1,
+     "status": "error",
+     "start": 4721.089,
+     "time": 14.295,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.42 GiB (attempt to allocate chunk of 4.74 MiB), current RSS: 26.41 GiB, maximum: 26.41 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q035",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 4724.201,
+     "time": 600.09,
+     "reported_time": null
+    },
+    {
+     "id": "q056",
+     "repeat": 3,
+     "status": "ok",
+     "start": 4735.599,
+     "time": 66.514,
+     "reported_time": 66.429
+    },
+    {
+     "id": "q002",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 4802.113,
+     "time": 600.109,
+     "reported_time": null
+    },
+    {
+     "id": "q082",
+     "repeat": 2,
+     "status": "ok",
+     "start": 5305.382,
+     "time": 1.203,
+     "reported_time": 1.138
+    },
+    {
+     "id": "q004",
+     "repeat": 2,
+     "status": "error",
+     "start": 5305.384,
+     "time": 29.647,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.10 GiB (attempt to allocate chunk of 4.05 MiB), current RSS: 25.70 GiB, maximum: 26.08 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q058",
+     "repeat": 1,
+     "status": "error",
+     "start": 5306.585,
+     "time": 28.072,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.08 GiB (attempt to allocate chunk of 0.00 B), current RSS: 25.68 GiB, maximum: 26.08 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: 21"
+    },
+    {
+     "id": "q007",
+     "repeat": 2,
+     "status": "error",
+     "start": 5324.507,
+     "time": 24.614,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.35 GiB (attempt to allocate chunk of 4.18 MiB), current RSS: 24.55 GiB, maximum: 26.35 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q016",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 5334.824,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q006",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 5335.296,
+     "time": 600.108,
+     "reported_time": null
+    },
+    {
+     "id": "q033",
+     "repeat": 1,
+     "status": "ok",
+     "start": 5349.235,
+     "time": 23.499,
+     "reported_time": 23.44
+    },
+    {
+     "id": "q024",
+     "repeat": 1,
+     "status": "error",
+     "start": 5372.734,
+     "time": 68.857,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.08 GiB (attempt to allocate chunk of 4.18 MiB), current RSS: 18.23 GiB, maximum: 26.08 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q001",
+     "repeat": 1,
+     "status": "error",
+     "start": 5402.339,
+     "time": 59.295,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.37 GiB (attempt to allocate chunk of 3.19 MiB), current RSS: 18.06 GiB, maximum: 26.37 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q091",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 5441.709,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q045",
+     "repeat": 1,
+     "status": "ok",
+     "start": 5461.751,
+     "time": 4.627,
+     "reported_time": 4.549
+    },
+    {
+     "id": "q011",
+     "repeat": 2,
+     "status": "error",
+     "start": 5466.379,
+     "time": 0.05,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  column \"lang_code\" does not exist\nLINE 1: ...UP BY \"BrowserLanguage\" ORDER BY total_hits DESC, lang_code ...\n                                                             ^\nTime: 2.858 ms\n"
+    },
+    {
+     "id": "q039",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 5466.543,
+     "time": 600.039,
+     "reported_time": null
+    },
+    {
+     "id": "q087",
+     "repeat": 2,
+     "status": "error",
+     "start": 5935.044,
+     "time": 104.195,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.29 GiB (attempt to allocate chunk of 3.05 MiB), current RSS: 23.93 GiB, maximum: 26.29 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q095",
+     "repeat": 1,
+     "status": "error",
+     "start": 5935.574,
+     "time": 240.097,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 12.53 GiB (attempt to allocate chunk of 807.02 KiB), current RSS: 4.22 GiB, maximum: 12.46 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all thread"
+    },
+    {
+     "id": "q033",
+     "repeat": 3,
+     "status": "ok",
+     "start": 6039.354,
+     "time": 13.083,
+     "reported_time": 13.03
+    },
+    {
+     "id": "q036",
+     "repeat": 2,
+     "status": "ok",
+     "start": 6041.978,
+     "time": 3.891,
+     "reported_time": 3.82
+    },
+    {
+     "id": "q072",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 6045.87,
+     "time": 600.116,
+     "reported_time": null
+    },
+    {
+     "id": "q029",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 6052.437,
+     "time": 600.106,
+     "reported_time": null
+    },
+    {
+     "id": "q059",
+     "repeat": 1,
+     "status": "error",
+     "start": 6066.698,
+     "time": 32.443,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.28 GiB (attempt to allocate chunk of 935.48 KiB), current RSS: 24.40 GiB, maximum: 26.28 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threa"
+    },
+    {
+     "id": "q085",
+     "repeat": 3,
+     "status": "ok",
+     "start": 6099.256,
+     "time": 190.224,
+     "reported_time": 190.052
+    },
+    {
+     "id": "q095",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 6175.788,
+     "time": 600.107,
+     "reported_time": null
+    },
+    {
+     "id": "q031",
+     "repeat": 1,
+     "status": "ok",
+     "start": 6289.483,
+     "time": 5.708,
+     "reported_time": 5.655
+    },
+    {
+     "id": "q043",
+     "repeat": 2,
+     "status": "ok",
+     "start": 6295.191,
+     "time": 54.152,
+     "reported_time": 54.098
+    },
+    {
+     "id": "q045",
+     "repeat": 3,
+     "status": "ok",
+     "start": 6349.344,
+     "time": 1.164,
+     "reported_time": 1.112
+    },
+    {
+     "id": "q054",
+     "repeat": 3,
+     "status": "ok",
+     "start": 6350.509,
+     "time": 1.234,
+     "reported_time": 1.182
+    },
+    {
+     "id": "q012",
+     "repeat": 2,
+     "status": "ok",
+     "start": 6351.742,
+     "time": 0.667,
+     "reported_time": 0.615
+    },
+    {
+     "id": "q004",
+     "repeat": 3,
+     "status": "error",
+     "start": 6352.41,
+     "time": 23.406,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.26 GiB (attempt to allocate chunk of 4.03 MiB), current RSS: 15.72 GiB, maximum: 26.25 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q030",
+     "repeat": 3,
+     "status": "ok",
+     "start": 6375.932,
+     "time": 3.74,
+     "reported_time": 3.687
+    },
+    {
+     "id": "q099",
+     "repeat": 3,
+     "status": "ok",
+     "start": 6379.673,
+     "time": 25.517,
+     "reported_time": 25.463
+    },
+    {
+     "id": "q069",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 6405.191,
+     "time": 600.109,
+     "reported_time": null
+    },
+    {
+     "id": "q049",
+     "repeat": 1,
+     "status": "ok",
+     "start": 6646.103,
+     "time": 5.698,
+     "reported_time": 5.645
+    },
+    {
+     "id": "q058",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 6651.801,
+     "time": 600.107,
+     "reported_time": null
+    },
+    {
+     "id": "q019",
+     "repeat": 1,
+     "status": "error",
+     "start": 6652.711,
+     "time": 5.334,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.04 GiB (attempt to allocate chunk of 4.13 MiB), current RSS: 20.27 GiB, maximum: 26.03 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q032",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 6658.16,
+     "time": 600.107,
+     "reported_time": null
+    },
+    {
+     "id": "q088",
+     "repeat": 2,
+     "status": "error",
+     "start": 6776.064,
+     "time": 239.459,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.29 GiB (attempt to allocate chunk of 3.12 MiB), current RSS: 21.29 GiB, maximum: 26.28 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q095",
+     "repeat": 2,
+     "status": "error",
+     "start": 7005.417,
+     "time": 268.737,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.30 GiB (attempt to allocate chunk of 2.56 MiB), current RSS: 23.01 GiB, maximum: 26.29 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q093",
+     "repeat": 1,
+     "status": "error",
+     "start": 7015.689,
+     "time": 8.983,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.32 GiB (attempt to allocate chunk of 4.19 MiB), current RSS: 19.25 GiB, maximum: 26.32 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q003",
+     "repeat": 3,
+     "status": "error",
+     "start": 7024.839,
+     "time": 253.633,
+     "reported_time": null
+    },
+    {
+     "id": "q042",
+     "repeat": 3,
+     "status": "error",
+     "start": 7252.075,
+     "time": 6.561,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.30 GiB (attempt to allocate chunk of 4.25 MiB), current RSS: 22.89 GiB, maximum: 26.29 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q036",
+     "repeat": 1,
+     "status": "ok",
+     "start": 7258.434,
+     "time": 6.424,
+     "reported_time": 6.331
+    },
+    {
+     "id": "q051",
+     "repeat": 1,
+     "status": "error",
+     "start": 7258.803,
+     "time": 19.882,
+     "reported_time": null
+    },
+    {
+     "id": "q039",
+     "repeat": 1,
+     "status": "error",
+     "start": 7264.861,
+     "time": 18.641,
+     "reported_time": null
+    },
+    {
+     "id": "q075",
+     "repeat": 1,
+     "status": "error",
+     "start": 7274.32,
+     "time": 15.072,
+     "reported_time": null
+    },
+    {
+     "id": "q012",
+     "repeat": 1,
+     "status": "ok",
+     "start": 7298.355,
+     "time": 1.613,
+     "reported_time": 1.511
+    },
+    {
+     "id": "q031",
+     "repeat": 3,
+     "status": "ok",
+     "start": 7298.355,
+     "time": 6.844,
+     "reported_time": 6.768
+    },
+    {
+     "id": "q054",
+     "repeat": 1,
+     "status": "ok",
+     "start": 7298.356,
+     "time": 1.077,
+     "reported_time": 0.981
+    },
+    {
+     "id": "q079",
+     "repeat": 1,
+     "status": "ok",
+     "start": 7298.356,
+     "time": 422.275,
+     "reported_time": 422.074
+    },
+    {
+     "id": "q064",
+     "repeat": 2,
+     "status": "error",
+     "start": 7299.434,
+     "time": 425.649,
+     "reported_time": null
+    },
+    {
+     "id": "q063",
+     "repeat": 3,
+     "status": "error",
+     "start": 7299.97,
+     "time": 426.461,
+     "reported_time": null
+    },
+    {
+     "id": "q100",
+     "repeat": 2,
+     "status": "error",
+     "start": 7305.199,
+     "time": 11.788,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.39 GiB (attempt to allocate chunk of 3.50 MiB), current RSS: 26.38 GiB, maximum: 26.38 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q070",
+     "repeat": 2,
+     "status": "error",
+     "start": 7317.253,
+     "time": 7.054,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.10 GiB (attempt to allocate chunk of 4.19 MiB), current RSS: 26.12 GiB, maximum: 26.12 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q094",
+     "repeat": 3,
+     "status": "ok",
+     "start": 7324.42,
+     "time": 8.826,
+     "reported_time": 8.753
+    },
+    {
+     "id": "q075",
+     "repeat": 2,
+     "status": "error",
+     "start": 7333.247,
+     "time": 392.159,
+     "reported_time": null
+    },
+    {
+     "id": "q087",
+     "repeat": 1,
+     "status": "error",
+     "start": 7720.632,
+     "time": 16.716,
+     "reported_time": null
+    },
+    {
+     "id": "q087",
+     "repeat": 3,
+     "status": "error",
+     "start": 7744.214,
+     "time": 22.97,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.52 GiB (attempt to allocate chunk of 810.94 KiB), current RSS: 26.52 GiB, maximum: 26.52 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threa"
+    },
+    {
+     "id": "q100",
+     "repeat": 1,
+     "status": "ok",
+     "start": 7744.214,
+     "time": 26.226,
+     "reported_time": 26.133
+    },
+    {
+     "id": "q072",
+     "repeat": 2,
+     "status": "error",
+     "start": 7744.214,
+     "time": 144.757,
+     "reported_time": null
+    },
+    {
+     "id": "q018",
+     "repeat": 1,
+     "status": "error",
+     "start": 7744.215,
+     "time": 21.857,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.54 GiB (attempt to allocate chunk of 4.15 MiB), current RSS: 26.54 GiB, maximum: 26.52 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q008",
+     "repeat": 1,
+     "status": "error",
+     "start": 7766.238,
+     "time": 124.816,
+     "reported_time": null
+    },
+    {
+     "id": "q099",
+     "repeat": 1,
+     "status": "error",
+     "start": 7767.549,
+     "time": 47.341,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.49 GiB (attempt to allocate chunk of 0.00 B), current RSS: 26.48 GiB, maximum: 26.50 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: 16"
+    },
+    {
+     "id": "q008",
+     "repeat": 3,
+     "status": "error",
+     "start": 7770.441,
+     "time": 55.879,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.50 GiB (attempt to allocate chunk of 4.04 MiB), current RSS: 26.50 GiB, maximum: 26.50 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q022",
+     "repeat": 2,
+     "status": "error",
+     "start": 7815.104,
+     "time": 74.883,
+     "reported_time": null
+    },
+    {
+     "id": "q061",
+     "repeat": 1,
+     "status": "ok",
+     "start": 7826.434,
+     "time": 8.538,
+     "reported_time": 8.469
+    },
+    {
+     "id": "q099",
+     "repeat": 2,
+     "status": "ok",
+     "start": 7834.973,
+     "time": 23.342,
+     "reported_time": 23.284
+    },
+    {
+     "id": "q037",
+     "repeat": 2,
+     "status": "ok",
+     "start": 7858.315,
+     "time": 8.15,
+     "reported_time": 8.095
+    },
+    {
+     "id": "q054",
+     "repeat": 2,
+     "status": "ok",
+     "start": 7866.466,
+     "time": 0.797,
+     "reported_time": 0.741
+    },
+    {
+     "id": "q025",
+     "repeat": 3,
+     "status": "error",
+     "start": 7867.263,
+     "time": 33.536,
+     "reported_time": null
+    },
+    {
+     "id": "q021",
+     "repeat": 2,
+     "status": "error",
+     "start": 7909.117,
+     "time": 27.635,
+     "reported_time": null
+    },
+    {
+     "id": "q097",
+     "repeat": 2,
+     "status": "error",
+     "start": 7909.118,
+     "time": 21.078,
+     "reported_time": null
+    },
+    {
+     "id": "q068",
+     "repeat": 2,
+     "status": "error",
+     "start": 7909.119,
+     "time": 0.099,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  column \"phone_model\" does not exist\nLINE 1: ...strong_regions DESC, hits_in_strong_regions DESC, phone_mode...\n                                                             ^\nTime: 27.097 ms\n"
+    },
+    {
+     "id": "q061",
+     "repeat": 2,
+     "status": "ok",
+     "start": 7909.119,
+     "time": 9.343,
+     "reported_time": 9.215
+    },
+    {
+     "id": "q014",
+     "repeat": 3,
+     "status": "error",
+     "start": 7909.433,
+     "time": 25.336,
+     "reported_time": null
+    },
+    {
+     "id": "q032",
+     "repeat": 3,
+     "status": "error",
+     "start": 7918.463,
+     "time": 15.154,
+     "reported_time": null
+    },
+    {
+     "id": "q059",
+     "repeat": 2,
+     "status": "error",
+     "start": 7941.496,
+     "time": 21.473,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.22 GiB (attempt to allocate chunk of 3.19 MiB), current RSS: 26.24 GiB, maximum: 26.24 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q039",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 7941.496,
+     "time": 600.118,
+     "reported_time": null
+    },
+    {
+     "id": "q020",
+     "repeat": 3,
+     "status": "error",
+     "start": 7941.497,
+     "time": 8.413,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.24 GiB (attempt to allocate chunk of 4.30 MiB), current RSS: 26.24 GiB, maximum: 26.24 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q033",
+     "repeat": 2,
+     "status": "ok",
+     "start": 7941.498,
+     "time": 12.913,
+     "reported_time": 12.807
+    },
+    {
+     "id": "q023",
+     "repeat": 3,
+     "status": "error",
+     "start": 7950.128,
+     "time": 129.451,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.28 GiB (attempt to allocate chunk of 4.36 MiB), current RSS: 16.45 GiB, maximum: 26.28 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q078",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 7954.411,
+     "time": 600.11,
+     "reported_time": null
+    },
+    {
+     "id": "q001",
+     "repeat": 2,
+     "status": "error",
+     "start": 7963.135,
+     "time": 47.88,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.60 GiB (attempt to allocate chunk of 4.07 MiB), current RSS: 26.04 GiB, maximum: 26.59 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q011",
+     "repeat": 1,
+     "status": "error",
+     "start": 8011.131,
+     "time": 0.054,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  column \"lang_code\" does not exist\nLINE 1: ...UP BY \"BrowserLanguage\" ORDER BY total_hits DESC, lang_code ...\n                                                             ^\nTime: 4.994 ms\n"
+    },
+    {
+     "id": "q047",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 8011.299,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q046",
+     "repeat": 2,
+     "status": "ok",
+     "start": 8079.695,
+     "time": 71.753,
+     "reported_time": 71.677
+    },
+    {
+     "id": "q026",
+     "repeat": 2,
+     "status": "ok",
+     "start": 8151.449,
+     "time": 26.766,
+     "reported_time": 26.712
+    },
+    {
+     "id": "q055",
+     "repeat": 3,
+     "status": "ok",
+     "start": 8178.215,
+     "time": 330.973,
+     "reported_time": 330.903
+    },
+    {
+     "id": "q096",
+     "repeat": 1,
+     "status": "ok",
+     "start": 8509.189,
+     "time": 1.373,
+     "reported_time": 1.297
+    },
+    {
+     "id": "q022",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 8510.562,
+     "time": 600.109,
+     "reported_time": null
+    },
+    {
+     "id": "q026",
+     "repeat": 1,
+     "status": "ok",
+     "start": 8541.782,
+     "time": 24.487,
+     "reported_time": 24.409
+    },
+    {
+     "id": "q050",
+     "repeat": 1,
+     "status": "ok",
+     "start": 8554.693,
+     "time": 59.941,
+     "reported_time": 59.84
+    },
+    {
+     "id": "q021",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 8566.269,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q005",
+     "repeat": 2,
+     "status": "ok",
+     "start": 8611.571,
+     "time": 74.187,
+     "reported_time": 74.107
+    },
+    {
+     "id": "q069",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 8614.634,
+     "time": 600.101,
+     "reported_time": null
+    },
+    {
+     "id": "q071",
+     "repeat": 1,
+     "status": "ok",
+     "start": 8685.759,
+     "time": 1.582,
+     "reported_time": 1.509
+    },
+    {
+     "id": "q047",
+     "repeat": 1,
+     "status": "error",
+     "start": 8687.341,
+     "time": 531.714,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.19 GiB (attempt to allocate chunk of 0.00 B), current RSS: 23.66 GiB, maximum: 26.19 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: -7"
+    },
+    {
+     "id": "q011",
+     "repeat": 3,
+     "status": "error",
+     "start": 9110.892,
+     "time": 0.084,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  column \"lang_code\" does not exist\nLINE 1: ...UP BY \"BrowserLanguage\" ORDER BY total_hits DESC, lang_code ...\n                                                             ^\nTime: 4.658 ms\n"
+    },
+    {
+     "id": "q073",
+     "repeat": 3,
+     "status": "ok",
+     "start": 9111.142,
+     "time": 12.911,
+     "reported_time": 12.796
+    },
+    {
+     "id": "q055",
+     "repeat": 1,
+     "status": "error",
+     "start": 9124.055,
+     "time": 98.86,
+     "reported_time": null
+    },
+    {
+     "id": "q008",
+     "repeat": 2,
+     "status": "error",
+     "start": 9166.589,
+     "time": 56.258,
+     "reported_time": null
+    },
+    {
+     "id": "q070",
+     "repeat": 3,
+     "status": "error",
+     "start": 9214.901,
+     "time": 20.602,
+     "reported_time": null
+    },
+    {
+     "id": "q060",
+     "repeat": 1,
+     "status": "error",
+     "start": 9241.386,
+     "time": 20.95,
+     "reported_time": null
+    },
+    {
+     "id": "q092",
+     "repeat": 1,
+     "status": "error",
+     "start": 9241.386,
+     "time": 28.12,
+     "reported_time": null
+    },
+    {
+     "id": "q075",
+     "repeat": 3,
+     "status": "error",
+     "start": 9241.387,
+     "time": 20.94,
+     "reported_time": null
+    },
+    {
+     "id": "q092",
+     "repeat": 3,
+     "status": "error",
+     "start": 9241.387,
+     "time": 21.874,
+     "reported_time": null
+    },
+    {
+     "id": "q067",
+     "repeat": 2,
+     "status": "ok",
+     "start": 9274.243,
+     "time": 1.524,
+     "reported_time": 1.387
+    },
+    {
+     "id": "q043",
+     "repeat": 3,
+     "status": "ok",
+     "start": 9274.243,
+     "time": 16.389,
+     "reported_time": 16.309
+    },
+    {
+     "id": "q097",
+     "repeat": 1,
+     "status": "error",
+     "start": 9274.243,
+     "time": 278.662,
+     "reported_time": null
+    },
+    {
+     "id": "q051",
+     "repeat": 3,
+     "status": "error",
+     "start": 9274.244,
+     "time": 276.44,
+     "reported_time": null
+    },
+    {
+     "id": "q080",
+     "repeat": 3,
+     "status": "ok",
+     "start": 9275.768,
+     "time": 14.936,
+     "reported_time": 14.841
+    },
+    {
+     "id": "q037",
+     "repeat": 3,
+     "status": "ok",
+     "start": 9290.632,
+     "time": 9.588,
+     "reported_time": 9.513
+    },
+    {
+     "id": "q017",
+     "repeat": 1,
+     "status": "ok",
+     "start": 9290.705,
+     "time": 99.621,
+     "reported_time": 99.564
+    },
+    {
+     "id": "q093",
+     "repeat": 2,
+     "status": "error",
+     "start": 9300.221,
+     "time": 48.342,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 18.92 GiB (attempt to allocate chunk of 4.08 MiB), current RSS: 18.18 GiB, maximum: 18.84 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q049",
+     "repeat": 3,
+     "status": "ok",
+     "start": 9348.678,
+     "time": 12.793,
+     "reported_time": 12.727
+    },
+    {
+     "id": "q046",
+     "repeat": 1,
+     "status": "ok",
+     "start": 9361.471,
+     "time": 57.771,
+     "reported_time": 57.719
+    },
+    {
+     "id": "q064",
+     "repeat": 1,
+     "status": "error",
+     "start": 9390.328,
+     "time": 160.106,
+     "reported_time": null
+    },
+    {
+     "id": "q065",
+     "repeat": 1,
+     "status": "ok",
+     "start": 9419.243,
+     "time": 1.045,
+     "reported_time": 0.991
+    },
+    {
+     "id": "q080",
+     "repeat": 1,
+     "status": "ok",
+     "start": 9420.289,
+     "time": 1.59,
+     "reported_time": 1.539
+    },
+    {
+     "id": "q034",
+     "repeat": 2,
+     "status": "ok",
+     "start": 9421.879,
+     "time": 36.918,
+     "reported_time": 36.865
+    },
+    {
+     "id": "q074",
+     "repeat": 2,
+     "status": "error",
+     "start": 9458.798,
+     "time": 6.587,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 14.29 GiB (attempt to allocate chunk of 4.03 MiB), current RSS: 14.29 GiB, maximum: 14.30 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q086",
+     "repeat": 2,
+     "status": "ok",
+     "start": 9465.55,
+     "time": 65.375,
+     "reported_time": 65.312
+    },
+    {
+     "id": "q042",
+     "repeat": 1,
+     "status": "error",
+     "start": 9530.925,
+     "time": 16.466,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: Query was cancelled\nDETAIL:  Remote Query: SELECT RegionID, PageCharset, ResponseStartTiming FROM default.hits WHERE ((PageCharset <> '')) ORDER BY PageCharset ASC NULLS LAST, RegionID ASC NULLS LAST\nTime: 16400.391 ms (00:16.400)\n"
+    },
+    {
+     "id": "q056",
+     "repeat": 1,
+     "status": "error",
+     "start": 9559.029,
+     "time": 40.853,
+     "reported_time": null
+    },
+    {
+     "id": "q083",
+     "repeat": 2,
+     "status": "error",
+     "start": 9559.03,
+     "time": 30.747,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 27.16 GiB (attempt to allocate chunk of 4.26 MiB), current RSS: 21.89 GiB, maximum: 26.10 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q057",
+     "repeat": 1,
+     "status": "error",
+     "start": 9559.03,
+     "time": 32.529,
+     "reported_time": null
+    },
+    {
+     "id": "q056",
+     "repeat": 2,
+     "status": "error",
+     "start": 9559.031,
+     "time": 28.238,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 30.01 GiB (attempt to allocate chunk of 0.00 B), current RSS: 18.00 GiB, maximum: 26.10 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: 9."
+    },
+    {
+     "id": "q052",
+     "repeat": 3,
+     "status": "error",
+     "start": 9604.615,
+     "time": 0.132,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: FixedString data type family must have exactly one argument - size in bytes: In scope SELECT (concat((concat(lowerUTF8(BrowserLanguage), '/')), CAST(UserAgentMajor, 'FixedString'))), count(*), countDistinct(UserID), (concat((concat(lowerUTF8(Browse"
+    },
+    {
+     "id": "q067",
+     "repeat": 1,
+     "status": "ok",
+     "start": 9604.616,
+     "time": 1.995,
+     "reported_time": 1.887
+    },
+    {
+     "id": "q083",
+     "repeat": 1,
+     "status": "error",
+     "start": 9604.616,
+     "time": 18.232,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.40 GiB (attempt to allocate chunk of 4.14 MiB), current RSS: 26.42 GiB, maximum: 26.41 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q082",
+     "repeat": 3,
+     "status": "ok",
+     "start": 9604.617,
+     "time": 0.761,
+     "reported_time": 0.645
+    },
+    {
+     "id": "q050",
+     "repeat": 2,
+     "status": "ok",
+     "start": 9604.963,
+     "time": 54.265,
+     "reported_time": 54.029
+    },
+    {
+     "id": "q014",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 9605.378,
+     "time": 600.112,
+     "reported_time": null
+    },
+    {
+     "id": "q096",
+     "repeat": 3,
+     "status": "ok",
+     "start": 9606.613,
+     "time": 3.105,
+     "reported_time": 2.966
+    },
+    {
+     "id": "q079",
+     "repeat": 3,
+     "status": "ok",
+     "start": 9609.718,
+     "time": 497.035,
+     "reported_time": 496.835
+    },
+    {
+     "id": "q044",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 9622.963,
+     "time": 600.012,
+     "reported_time": null
+    },
+    {
+     "id": "q077",
+     "repeat": 1,
+     "status": "ok",
+     "start": 9659.229,
+     "time": 57.77,
+     "reported_time": 57.685
+    },
+    {
+     "id": "q068",
+     "repeat": 1,
+     "status": "error",
+     "start": 9717.0,
+     "time": 0.078,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  column \"phone_model\" does not exist\nLINE 1: ...strong_regions DESC, hits_in_strong_regions DESC, phone_mode...\n                                                             ^\nTime: 7.413 ms\n"
+    },
+    {
+     "id": "q082",
+     "repeat": 1,
+     "status": "ok",
+     "start": 9717.251,
+     "time": 0.523,
+     "reported_time": 0.449
+    },
+    {
+     "id": "q024",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 9717.773,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q086",
+     "repeat": 1,
+     "status": "ok",
+     "start": 10106.754,
+     "time": 46.979,
+     "reported_time": 46.907
+    },
+    {
+     "id": "q015",
+     "repeat": 3,
+     "status": "ok",
+     "start": 10153.733,
+     "time": 78.503,
+     "reported_time": 78.432
+    },
+    {
+     "id": "q059",
+     "repeat": 3,
+     "status": "error",
+     "start": 10205.661,
+     "time": 21.621,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 22.60 GiB (attempt to allocate chunk of 4.39 MiB), current RSS: 22.21 GiB, maximum: 22.60 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q078",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 10223.091,
+     "time": 600.105,
+     "reported_time": null
+    },
+    {
+     "id": "q074",
+     "repeat": 3,
+     "status": "error",
+     "start": 10227.396,
+     "time": 8.184,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.30 GiB (attempt to allocate chunk of 4.76 MiB), current RSS: 25.23 GiB, maximum: 26.29 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q019",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 10232.237,
+     "time": 600.103,
+     "reported_time": null
+    },
+    {
+     "id": "q091",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 10235.695,
+     "time": 600.104,
+     "reported_time": null
+    },
+    {
+     "id": "q060",
+     "repeat": 2,
+     "status": "timeout",
+     "start": 10318.043,
+     "time": 600.115,
+     "reported_time": null
+    },
+    {
+     "id": "q057",
+     "repeat": 3,
+     "status": "ok",
+     "start": 10823.361,
+     "time": 220.569,
+     "reported_time": 220.382
+    },
+    {
+     "id": "q007",
+     "repeat": 1,
+     "status": "error",
+     "start": 10832.505,
+     "time": 23.695,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.02 GiB (attempt to allocate chunk of 4.62 MiB), current RSS: 26.01 GiB, maximum: 26.01 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q007",
+     "repeat": 3,
+     "status": "error",
+     "start": 10835.969,
+     "time": 36.665,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.02 GiB (attempt to allocate chunk of 4.46 MiB), current RSS: 25.84 GiB, maximum: 26.01 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q034",
+     "repeat": 1,
+     "status": "ok",
+     "start": 10856.517,
+     "time": 60.907,
+     "reported_time": 60.828
+    },
+    {
+     "id": "q023",
+     "repeat": 1,
+     "status": "error",
+     "start": 10872.802,
+     "time": 67.382,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.13 GiB (attempt to allocate chunk of 4.42 MiB), current RSS: 26.12 GiB, maximum: 26.11 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q037",
+     "repeat": 1,
+     "status": "ok",
+     "start": 10917.427,
+     "time": 14.957,
+     "reported_time": 14.888
+    },
+    {
+     "id": "q048",
+     "repeat": 2,
+     "status": "error",
+     "start": 10918.33,
+     "time": 281.161,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.10 GiB (attempt to allocate chunk of 4.28 MiB), current RSS: 14.01 GiB, maximum: 26.09 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q017",
+     "repeat": 3,
+     "status": "ok",
+     "start": 10932.385,
+     "time": 118.572,
+     "reported_time": 118.323
+    },
+    {
+     "id": "q030",
+     "repeat": 1,
+     "status": "ok",
+     "start": 10940.3,
+     "time": 4.517,
+     "reported_time": 4.456
+    },
+    {
+     "id": "q040",
+     "repeat": 3,
+     "status": "ok",
+     "start": 10944.818,
+     "time": 131.475,
+     "reported_time": 131.415
+    },
+    {
+     "id": "q009",
+     "repeat": 1,
+     "status": "error",
+     "start": 11043.931,
+     "time": 0.064,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  column \"bucket\" does not exist\nLINE 1: ... '11-100' ELSE '101+' END ORDER BY MIN(hits_cnt), bucket COL...\n                                                             ^\nTime: 3.660 ms\n"
+    },
+    {
+     "id": "q016",
+     "repeat": 1,
+     "status": "error",
+     "start": 11044.16,
+     "time": 189.855,
+     "reported_time": null
+    },
+    {
+     "id": "q053",
+     "repeat": 1,
+     "status": "ok",
+     "start": 11050.958,
+     "time": 132.028,
+     "reported_time": 131.955
+    },
+    {
+     "id": "q043",
+     "repeat": 1,
+     "status": "ok",
+     "start": 11076.294,
+     "time": 72.236,
+     "reported_time": 72.164
+    },
+    {
+     "id": "q005",
+     "repeat": 3,
+     "status": "ok",
+     "start": 11148.532,
+     "time": 79.765,
+     "reported_time": 79.584
+    },
+    {
+     "id": "q012",
+     "repeat": 3,
+     "status": "ok",
+     "start": 11182.986,
+     "time": 0.857,
+     "reported_time": 0.797
+    },
+    {
+     "id": "q002",
+     "repeat": 2,
+     "status": "error",
+     "start": 11183.844,
+     "time": 41.764,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.35 GiB (attempt to allocate chunk of 0.00 B), current RSS: 24.74 GiB, maximum: 26.35 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: -2"
+    },
+    {
+     "id": "q048",
+     "repeat": 1,
+     "status": "error",
+     "start": 11199.662,
+     "time": 34.452,
+     "reported_time": null
+    },
+    {
+     "id": "q009",
+     "repeat": 3,
+     "status": "error",
+     "start": 11225.772,
+     "time": 0.07,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  column \"bucket\" does not exist\nLINE 1: ... '11-100' ELSE '101+' END ORDER BY MIN(hits_cnt), bucket COL...\n                                                             ^\nTime: 3.619 ms\n"
+    },
+    {
+     "id": "q002",
+     "repeat": 1,
+     "status": "error",
+     "start": 11226.01,
+     "time": 12.099,
+     "reported_time": null
+    },
+    {
+     "id": "q038",
+     "repeat": 2,
+     "status": "error",
+     "start": 11228.297,
+     "time": 4.758,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.35 GiB (attempt to allocate chunk of 0.00 B), current RSS: 25.35 GiB, maximum: 26.35 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: -1"
+    },
+    {
+     "id": "q089",
+     "repeat": 1,
+     "status": "error",
+     "start": 11233.271,
+     "time": 0.144,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: connection error: DB::Exception: (total) memory limit exceeded: would use 26.36 GiB (attempt to allocate chunk of 2.00 MiB), current RSS: 25.31 GiB, maximum: 26.35 GiB. Untracked memory across all threads: 600.83 KiB.\nTime: 7.778 ms\n"
+    },
+    {
+     "id": "q066",
+     "repeat": 2,
+     "status": "ok",
+     "start": 11248.708,
+     "time": 110.039,
+     "reported_time": 109.963
+    },
+    {
+     "id": "q077",
+     "repeat": 2,
+     "status": "ok",
+     "start": 11248.709,
+     "time": 57.167,
+     "reported_time": 57.09
+    },
+    {
+     "id": "q014",
+     "repeat": 1,
+     "status": "error",
+     "start": 11248.71,
+     "time": 295.367,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.27 GiB (attempt to allocate chunk of 0.00 B), current RSS: 23.02 GiB, maximum: 26.27 GiB. OvercommitTracker decision: Memory overcommit has not freed enough memory. Untracked memory across all threads: -6"
+    },
+    {
+     "id": "q060",
+     "repeat": 3,
+     "status": "timeout",
+     "start": 11248.711,
+     "time": 600.025,
+     "reported_time": null
+    },
+    {
+     "id": "q003",
+     "repeat": 2,
+     "status": "ok",
+     "start": 11305.878,
+     "time": 282.226,
+     "reported_time": 282.158
+    },
+    {
+     "id": "q090",
+     "repeat": 1,
+     "status": "ok",
+     "start": 11358.749,
+     "time": 90.504,
+     "reported_time": 90.451
+    },
+    {
+     "id": "q076",
+     "repeat": 3,
+     "status": "ok",
+     "start": 11449.252,
+     "time": 35.649,
+     "reported_time": 35.596
+    },
+    {
+     "id": "q071",
+     "repeat": 2,
+     "status": "ok",
+     "start": 11484.902,
+     "time": 3.475,
+     "reported_time": 3.421
+    },
+    {
+     "id": "q062",
+     "repeat": 2,
+     "status": "error",
+     "start": 11488.377,
+     "time": 51.487,
+     "reported_time": null,
+     "detail": "Timing is on.\nERROR:  pg_clickhouse: DB::Exception: (total) memory limit exceeded: would use 26.27 GiB (attempt to allocate chunk of 4.08 MiB), current RSS: 23.04 GiB, maximum: 26.27 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker. Untracked memory across all threads"
+    },
+    {
+     "id": "q036",
+     "repeat": 3,
+     "status": "ok",
+     "start": 11539.98,
+     "time": 2.519,
+     "reported_time": 2.467
+    },
+    {
+     "id": "q044",
+     "repeat": 1,
+     "status": "timeout",
+     "start": 11542.5,
+     "time": 600.026,
+     "reported_time": null
+    },
+    {
+     "id": "q083",
+     "repeat": 3,
+     "status": "ok",
+     "start": 11544.243,
+     "time": 185.874,
+     "reported_time": 185.81
+    },
+    {
+     "id": "q079",
+     "repeat": 2,
+     "status": "ok",
+     "start": 11588.105,
+     "time": 372.886,
+     "reported_time": 372.832
+    }
+   ]
+  },
+  {
    "directory": "chdb",
    "system": "chDB",
    "machine": "c6a.4xlarge",
@@ -4234,7 +7248,7 @@
    "data_size_after": 159945203737,
    "total_time": 223.93,
    "penalized_time": 44773.93,
-   "geomean": 5.7081,
+   "geomean": 10.5472,
    "counts": {
     "error": 297,
     "ok": 3
@@ -7350,11 +10364,6 @@
    "directory": "duckdb",
    "machine": null,
    "error": "no result and no log yet"
-  },
-  {
-   "directory": "pg_clickhouse",
-   "machine": null,
-   "error": "no result and no log yet"
   }
  ],
  "production": [
@@ -7383,18 +10392,42 @@
    "restarts": 0,
    "crashed": 0,
    "timeouts": 0,
-   "random_gap": 5.708099354940451,
+   "random_gap": 9.969188754957663,
    "standard_gap": 1.9735067533263713,
    "standard_date": "2026-10-11",
-   "widening": 2.8923637303593592,
+   "widening": 5.051509825418366,
    "passes": false,
    "reasons": [
-    "the gap to ClickHouse widens 2.9 times"
+    "the gap to ClickHouse widens 5.1 times"
    ],
    "challenger_passes": true,
    "challenger_reasons": [],
    "level": "challenger",
    "demote": false
+  },
+  {
+   "machine": "c6a.4xlarge",
+   "directory": "pg_clickhouse",
+   "category": "challenger",
+   "restarts": 15,
+   "crashed": 0,
+   "timeouts": 45,
+   "random_gap": 4.561970537697033,
+   "standard_gap": 2.2123755207454336,
+   "standard_date": "2026-05-11",
+   "widening": 2.0620236008396673,
+   "passes": false,
+   "reasons": [
+    "went down 15 times",
+    "45 executions hit the timeout of 600 s",
+    "the gap to ClickHouse widens 2.1 times"
+   ],
+   "challenger_passes": false,
+   "challenger_reasons": [
+    "went down 15 times"
+   ],
+   "level": "enthusiast",
+   "demote": true
   }
  ]
 }
