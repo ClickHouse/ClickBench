@@ -7384,12 +7384,12 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 5.708099354940451,
-   "standard_gap": 1.8340409629081393,
+   "standard_gap": 1.9735067533263713,
    "standard_date": "2026-10-11",
-   "widening": 3.1123074513501745,
+   "widening": 2.8923637303593592,
    "passes": false,
    "reasons": [
-    "the gap to ClickHouse widens 3.1 times"
+    "the gap to ClickHouse widens 2.9 times"
    ],
    "challenger_passes": true,
    "challenger_reasons": [],
