@@ -1285,7 +1285,7 @@
    "data_size_after": 95739047509,
    "total_time": 540.843,
    "penalized_time": 540.843,
-   "geomean": 1.0,
+   "geomean": 1.1276,
    "counts": {
     "ok": 300
    },
@@ -4096,16 +4096,2951 @@
      "reported_time": 0.165
     }
    ]
+  },
+  {
+   "directory": "duckdb",
+   "system": "DuckDB",
+   "machine": "c6a.metal",
+   "proprietary": "no",
+   "tuned": "no",
+   "tags": [
+    "C++",
+    "column-oriented",
+    "DuckDB derivative",
+    "embedded"
+   ],
+   "repo": "ClickHouse/ClickBench",
+   "branch": "main",
+   "commit": "2b3c03476e801589683007ac9164341e481a6fc6",
+   "translator": "anthropic:claude-opus-5-5",
+   "translations": {
+    "q001": "WITH early AS (SELECT UserID, TraficSourceID, EventTime, WatchID, IsNotBounce FROM hits WHERE EventDate >= '2013-07-01' AND EventDate <= '2013-07-03'), first_touch AS (SELECT UserID, TraficSourceID AS first_source FROM (SELECT UserID, TraficSourceID, ROW_NUMBER() OVER (PARTITION BY UserID ORDER BY EventTime, WatchID, TraficSourceID) AS rn FROM early) r WHERE rn = 1), user_stats AS (SELECT UserID, COUNT(*) AS user_hits, SUM(IsNotBounce) AS engaged, COUNT(DISTINCT TraficSourceID) AS sources FROM early GROUP BY UserID) SELECT f.first_source, COUNT(*) AS users, AVG(s.user_hits) AS avg_hits, CAST(SUM(s.engaged) AS DOUBLE) / SUM(s.user_hits) AS engaged_rate, SUM(CASE WHEN s.sources > 1 THEN 1 ELSE 0 END) AS multi_source_users FROM first_touch f JOIN user_stats s ON f.UserID = s.UserID GROUP BY f.first_source ORDER BY users DESC, f.first_source",
+    "q002": "WITH heavy AS (SELECT BrowserCountry, UserID FROM hits GROUP BY BrowserCountry, UserID HAVING COUNT(*) > 1000) SELECT c.BrowserCountry, c.users, c.hit_count FROM (SELECT BrowserCountry, COUNT(DISTINCT UserID) AS users, COUNT(*) AS hit_count FROM hits GROUP BY BrowserCountry) AS c WHERE EXISTS (SELECT 1 FROM heavy WHERE heavy.BrowserCountry = c.BrowserCountry) ORDER BY c.hit_count DESC, c.BrowserCountry LIMIT 30",
+    "q003": "WITH top_models AS (SELECT MobilePhoneModel FROM hits WHERE MobilePhoneModel <> '' GROUP BY MobilePhoneModel ORDER BY COUNT(*) DESC, MobilePhoneModel LIMIT 10), mh AS (SELECT MobilePhoneModel, ResolutionHeight, COUNT(*) AS c FROM hits WHERE MobilePhoneModel IN (SELECT MobilePhoneModel FROM top_models) GROUP BY MobilePhoneModel, ResolutionHeight), ranked AS (SELECT MobilePhoneModel, ResolutionHeight, c, ROW_NUMBER() OVER (PARTITION BY MobilePhoneModel ORDER BY c DESC, ResolutionHeight) AS rn FROM mh) SELECT MobilePhoneModel, rn, ResolutionHeight, MobilePhoneModel || ' @' || CAST(ResolutionHeight AS VARCHAR) AS device_label, c FROM ranked WHERE rn <= 3 ORDER BY MobilePhoneModel, rn",
+    "q004": "SELECT FLOOR(CAST(span_min AS DOUBLE) / 30) * 30 AS span_bucket, COUNT(*) AS user_days, SUM(c) AS hit_count FROM (SELECT UserID, EventDate, COUNT(*) AS c, MAX(EXTRACT(HOUR FROM ClientEventTime) * 60 + EXTRACT(MINUTE FROM ClientEventTime)) - MIN(EXTRACT(HOUR FROM ClientEventTime) * 60 + EXTRACT(MINUTE FROM ClientEventTime)) AS span_min FROM hits WHERE CounterID = (SELECT CounterID FROM hits GROUP BY CounterID ORDER BY COUNT(*) DESC, CounterID LIMIT 1) GROUP BY UserID, EventDate HAVING COUNT(*) >= 2) s GROUP BY span_bucket ORDER BY span_bucket",
+    "q005": "WITH ct AS (SELECT BrowserCountry, ClientTimeZone, COUNT(*) AS c FROM hits GROUP BY BrowserCountry, ClientTimeZone), dom AS (SELECT BrowserCountry, ClientTimeZone FROM (SELECT BrowserCountry, ClientTimeZone, ROW_NUMBER() OVER (PARTITION BY BrowserCountry ORDER BY c DESC, ClientTimeZone) AS rn FROM ct) AS t WHERE rn = 1), ut AS (SELECT BrowserCountry, UserID, MIN(ClientTimeZone) AS tz_min, MAX(ClientTimeZone) AS tz_max FROM hits GROUP BY BrowserCountry, UserID) SELECT ut.BrowserCountry, COUNT(*) AS users, SUM(CASE WHEN ut.tz_min = d.ClientTimeZone AND ut.tz_max = d.ClientTimeZone THEN 0 ELSE 1 END) AS off_zone_users FROM ut JOIN dom AS d ON ut.BrowserCountry = d.BrowserCountry GROUP BY ut.BrowserCountry HAVING COUNT(*) >= 100 ORDER BY off_zone_users DESC, users DESC, ut.BrowserCountry LIMIT 25",
+    "q006": "WITH daily AS (SELECT EventDate, COUNT(*) AS c, COUNT(DISTINCT UserID) AS users FROM hits GROUP BY EventDate) SELECT EventDate, c, users FROM daily WHERE EventDate IN (SELECT EventDate FROM daily EXCEPT SELECT EventDate FROM daily WHERE c >= (SELECT AVG(c) FROM daily)) ORDER BY EventDate",
+    "q007": "WITH ud AS (SELECT UserID, EXTRACT(DAY FROM EventDate) AS dy FROM hits GROUP BY UserID, EXTRACT(DAY FROM EventDate)), f AS (SELECT UserID, MIN(dy) AS first_day FROM ud GROUP BY UserID) SELECT f.first_day, COUNT(DISTINCT f.UserID) AS cohort_users, COUNT(DISTINCT CASE WHEN ud.dy = f.first_day + 1 THEN ud.UserID END) AS d1_users, COUNT(DISTINCT CASE WHEN ud.dy = f.first_day + 7 THEN ud.UserID END) AS d7_users FROM f JOIN ud ON ud.UserID = f.UserID GROUP BY f.first_day ORDER BY f.first_day",
+    "q008": "SELECT p.SearchPhrase, p.users, p.hit_count FROM (SELECT SearchPhrase, COUNT(DISTINCT UserID) AS users, COUNT(*) AS hit_count FROM hits WHERE SearchPhrase <> '' GROUP BY SearchPhrase HAVING COUNT(*) >= 50) AS p WHERE NOT EXISTS (SELECT 1 FROM hits h WHERE h.SearchPhrase = p.SearchPhrase AND h.AdvEngineID <> 0) ORDER BY p.users DESC, p.hit_count DESC, p.SearchPhrase LIMIT 20",
+    "q009": "WITH churned AS (SELECT UserID FROM hits WHERE EventDate <= '2013-07-07' GROUP BY UserID EXCEPT SELECT UserID FROM hits WHERE EventDate > '2013-07-07' GROUP BY UserID) SELECT TraficSourceID, COUNT(DISTINCT UserID) AS churned_users, COUNT(*) AS week1_hits FROM hits WHERE EventDate <= '2013-07-07' AND UserID IN (SELECT UserID FROM churned) GROUP BY TraficSourceID ORDER BY churned_users DESC, TraficSourceID",
+    "q010": "SELECT SearchEngineID, url_prefix, users, rn FROM (SELECT SearchEngineID, url_prefix, users, ROW_NUMBER() OVER (PARTITION BY SearchEngineID ORDER BY users DESC, url_prefix) AS rn FROM (SELECT SearchEngineID, LOWER(SUBSTRING(URL, 1, 24)) AS url_prefix, COUNT(DISTINCT UserID) AS users FROM hits WHERE SearchEngineID <> 0 AND URL <> '' GROUP BY SearchEngineID, LOWER(SUBSTRING(URL, 1, 24))) g) r WHERE rn <= 3 ORDER BY SearchEngineID, rn LIMIT 100",
+    "q011": "WITH ud AS (SELECT UserID, EXTRACT(DAY FROM EventDate) AS dy FROM hits GROUP BY UserID, EXTRACT(DAY FROM EventDate)), r AS (SELECT UserID, dy, ROW_NUMBER() OVER (PARTITION BY UserID ORDER BY dy) AS rn FROM ud), g AS (SELECT UserID, MAX(CASE WHEN rn = 2 THEN dy END) - MAX(CASE WHEN rn = 1 THEN dy END) AS gap FROM r WHERE rn <= 2 GROUP BY UserID HAVING COUNT(*) = 2) SELECT gap AS days_to_return, COUNT(*) AS users, SUM(COUNT(*)) OVER (ORDER BY gap) AS cumulative_users FROM g GROUP BY gap ORDER BY gap",
+    "q012": "WITH ip_users AS (SELECT ClientIP, COUNT(DISTINCT UserID) AS users, COUNT(*) AS c FROM hits GROUP BY ClientIP HAVING COUNT(DISTINCT UserID) >= 20), ip_flags AS (SELECT ClientIP, SUM(CASE WHEN CookieEnable = 0 THEN 1 ELSE 0 END) AS nocookie, COUNT(DISTINCT MobilePhoneModel) AS models FROM hits WHERE ClientIP IN (SELECT ClientIP FROM ip_users) GROUP BY ClientIP) SELECT i.ClientIP AS client_ip, i.users AS user_count, i.c AS hit_count, f.nocookie AS nocookie_hits, f.models AS model_count FROM ip_users i INNER JOIN ip_flags f ON i.ClientIP = f.ClientIP ORDER BY user_count DESC, hit_count DESC, client_ip LIMIT 30",
+    "q013": "SELECT n.EventDate, COUNT(*) AS search_users_with_ad_click FROM (SELECT EventDate, UserID FROM hits WHERE SearchEngineID > 0 AND IsRefresh = 0 GROUP BY EventDate, UserID) n WHERE EXISTS (SELECT 1 FROM hits h WHERE h.UserID = n.UserID AND h.EventDate = n.EventDate AND h.AdvEngineID > 0) GROUP BY n.EventDate ORDER BY n.EventDate",
+    "q014": "SELECT dim, val, views, users, rn FROM (SELECT dim, val, views, users, ROW_NUMBER() OVER (PARTITION BY dim ORDER BY views DESC, val) AS rn FROM (SELECT 'source' AS dim, UTMSource AS val, COUNT(*) AS views, COUNT(DISTINCT UserID) AS users FROM hits WHERE UTMSource <> '' GROUP BY UTMSource UNION ALL SELECT 'medium' AS dim, UTMMedium AS val, COUNT(*) AS views, COUNT(DISTINCT UserID) AS users FROM hits WHERE UTMMedium <> '' GROUP BY UTMMedium UNION ALL SELECT 'content' AS dim, UTMContent AS val, COUNT(*) AS views, COUNT(DISTINCT UserID) AS users FROM hits WHERE UTMContent <> '' GROUP BY UTMContent) AS u) AS r WHERE rn <= 5 ORDER BY dim, rn",
+    "q015": "SELECT (SELECT COUNT(DISTINCT UserID) FROM hits WHERE EventDate <= '2013-07-07') AS first_week_users, (SELECT COUNT(DISTINCT UserID) FROM hits WHERE EventDate >= '2013-07-25') AS last_week_users, (SELECT COUNT(*) FROM (SELECT UserID FROM hits WHERE EventDate <= '2013-07-07' GROUP BY UserID INTERSECT SELECT UserID FROM hits WHERE EventDate >= '2013-07-25' GROUP BY UserID) x) AS retained_users ORDER BY first_week_users",
+    "q016": "WITH first_hit AS (SELECT UserID, CASE WHEN UTMSource <> '' THEN 'utm' WHEN SocialSourcePage <> '' THEN 'social' WHEN SearchEngineID <> 0 THEN 'search' WHEN FromTag <> '' THEN 'tagged' ELSE 'direct' END AS channel, ROW_NUMBER() OVER (PARTITION BY UserID ORDER BY EventTime, WatchID) AS rn FROM hits WHERE EventDate <= '2013-07-03'), days AS (SELECT UserID, COUNT(DISTINCT EventDate) AS active_days FROM hits GROUP BY UserID) SELECT f.channel AS first_channel, COUNT(*) AS users, round_even(AVG(d.active_days), 2) AS avg_active_days, SUM(CASE WHEN d.active_days >= 7 THEN 1 ELSE 0 END) AS loyal_users FROM first_hit f JOIN days d ON f.UserID = d.UserID WHERE f.rn = 1 GROUP BY f.channel ORDER BY users DESC, first_channel",
+    "q017": "WITH early AS (SELECT UserID, MAX(Income) AS income_band FROM hits WHERE EventDate < '2013-07-16' GROUP BY UserID), late AS (SELECT UserID FROM hits WHERE EventDate >= '2013-07-16' GROUP BY UserID) SELECT e.income_band, COUNT(*) AS churned_users FROM early e WHERE NOT EXISTS (SELECT 1 FROM late l WHERE l.UserID = e.UserID) GROUP BY e.income_band ORDER BY e.income_band",
+    "q018": "SELECT TraficSourceID, COUNT(*) AS hit_count, COUNT(DISTINCT UserID) AS users, round_even(CAST(COUNT(*) AS DOUBLE) / COUNT(DISTINCT UserID), 2) AS hits_per_user FROM hits GROUP BY TraficSourceID HAVING CAST(COUNT(*) AS DOUBLE) / COUNT(DISTINCT UserID) >= (SELECT AVG(r) FROM (SELECT CAST(COUNT(*) AS DOUBLE) / COUNT(DISTINCT UserID) AS r FROM hits GROUP BY TraficSourceID) z) ORDER BY hits_per_user DESC, TraficSourceID",
+    "q019": "WITH t AS (SELECT UserID, WatchID, EXTRACT(HOUR FROM EventTime) * 3600 + EXTRACT(MINUTE FROM EventTime) * 60 + EXTRACT(SECOND FROM EventTime) AS sec FROM hits WHERE EventDate = '2013-07-15'), g AS (SELECT UserID, WatchID, sec, CASE WHEN ROW_NUMBER() OVER (PARTITION BY UserID ORDER BY sec, WatchID) = 1 THEN 1 WHEN sec - MAX(sec) OVER (PARTITION BY UserID ORDER BY sec, WatchID ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING) > 1800 THEN 1 ELSE 0 END AS new_sess FROM t), s AS (SELECT UserID, SUM(new_sess) OVER (PARTITION BY UserID ORDER BY sec, WatchID ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS sess_no FROM g), sz AS (SELECT UserID, sess_no, COUNT(*) AS n FROM s GROUP BY UserID, sess_no) SELECT CASE WHEN n = 1 THEN '1 hit' WHEN n <= 3 THEN '2-3 hits' WHEN n <= 10 THEN '4-10 hits' WHEN n <= 30 THEN '11-30 hits' ELSE '31+ hits' END AS session_size, COUNT(*) AS sessions, COUNT(DISTINCT UserID) AS users FROM sz GROUP BY CASE WHEN n = 1 THEN '1 hit' WHEN n <= 3 THEN '2-3 hits' WHEN n <= 10 THEN '4-10 hits' WHEN n <= 30 THEN '11-30 hits' ELSE '31+ hits' END ORDER BY MIN(n)",
+    "q020": "SELECT EventDate, ClientTimeZone, hit_count, refreshes, refresh_rate, rn FROM (SELECT EventDate, ClientTimeZone, hit_count, refreshes, CAST(refreshes AS DOUBLE) / hit_count AS refresh_rate, ROW_NUMBER() OVER (PARTITION BY EventDate ORDER BY CAST(refreshes AS DOUBLE) / hit_count DESC, ClientTimeZone) AS rn FROM (SELECT EventDate, ClientTimeZone, COUNT(*) AS hit_count, SUM(CASE WHEN IsRefresh = 1 THEN 1 ELSE 0 END) AS refreshes FROM hits WHERE EventDate >= '2013-07-08' AND EventDate <= '2013-07-14' GROUP BY EventDate, ClientTimeZone HAVING COUNT(*) >= 1000) g) r WHERE rn <= 2 ORDER BY EventDate, rn",
+    "q021": "WITH s AS (SELECT SearchEngineID, UserID FROM hits WHERE SearchEngineID <> 0 GROUP BY SearchEngineID, UserID), tot AS (SELECT SearchEngineID, COUNT(*) AS search_users FROM s GROUP BY SearchEngineID), conv AS (SELECT SearchEngineID, COUNT(*) AS linking_users FROM s WHERE EXISTS (SELECT 1 FROM hits l WHERE l.UserID = s.UserID AND l.IsLink = 1) GROUP BY SearchEngineID) SELECT tot.SearchEngineID, tot.search_users, COALESCE(conv.linking_users, 0) AS linking_user_count, CAST(COALESCE(conv.linking_users, 0) AS DOUBLE PRECISION) / tot.search_users AS link_rate FROM tot LEFT JOIN conv ON tot.SearchEngineID = conv.SearchEngineID ORDER BY tot.search_users DESC, tot.SearchEngineID LIMIT 20",
+    "q022": "SELECT RefererCategoryID, COUNT(*) AS hits_count, SUM(CASE WHEN URL LIKE '%.html%' THEN 1 ELSE 0 END) AS html_pages, SUM(CASE WHEN URL LIKE '%?%' THEN 1 ELSE 0 END) AS with_query, SUM(CASE WHEN Referer LIKE 'https://%' THEN 1 ELSE 0 END) AS secure_referers, COUNT(DISTINCT RefererHash) AS distinct_referers FROM hits WHERE Referer <> '' GROUP BY RefererCategoryID HAVING COUNT(*) >= 1000 ORDER BY hits_count DESC, RefererCategoryID LIMIT 15",
+    "q023": "WITH tc AS (SELECT BrowserCountry FROM hits WHERE BrowserCountry <> '' GROUP BY BrowserCountry ORDER BY COUNT(DISTINCT UserID) DESC, BrowserCountry LIMIT 5), x AS (SELECT BrowserCountry, Title, COUNT(DISTINCT UserID) AS users FROM hits WHERE Title <> '' AND BrowserCountry IN (SELECT BrowserCountry FROM tc) GROUP BY BrowserCountry, Title), r AS (SELECT BrowserCountry, Title, users, ROW_NUMBER() OVER (PARTITION BY BrowserCountry ORDER BY users DESC, Title) AS rn FROM x) SELECT BrowserCountry, Title, users, rn FROM r WHERE rn <= 3 ORDER BY BrowserCountry, rn",
+    "q024": "WITH daily AS (SELECT EventDate, COUNT(*) AS c, COUNT(DISTINCT UserID) AS u FROM hits WHERE BrowserCountry = (SELECT BrowserCountry FROM hits GROUP BY BrowserCountry ORDER BY COUNT(*) DESC, BrowserCountry LIMIT 1) GROUP BY EventDate), numbered AS (SELECT EventDate, c, u, ROW_NUMBER() OVER (ORDER BY EventDate) AS rn FROM daily) SELECT a.EventDate, a.c AS hit_count, a.u AS users, CAST(a.c AS BIGINT) - CAST(b.c AS BIGINT) AS delta_hits, CAST(a.u AS BIGINT) - CAST(b.u AS BIGINT) AS delta_users FROM numbered a JOIN numbered b ON a.rn = b.rn + 1 ORDER BY a.EventDate",
+    "q025": "SELECT CounterID, COUNT(*) AS c, SUM(CASE WHEN JavascriptEnable = 0 THEN 1 ELSE 0 END) AS nojs, SUM(CASE WHEN CookieEnable = 0 THEN 1 ELSE 0 END) AS nocookie FROM hits WHERE CounterID IN (SELECT CounterID FROM (SELECT CounterID FROM (SELECT CounterID FROM hits WHERE JavascriptEnable = 0 GROUP BY CounterID ORDER BY COUNT(*) DESC, CounterID LIMIT 100) a INTERSECT SELECT CounterID FROM (SELECT CounterID FROM hits WHERE CookieEnable = 0 GROUP BY CounterID ORDER BY COUNT(*) DESC, CounterID LIMIT 100) b) x) GROUP BY CounterID ORDER BY nojs DESC, nocookie DESC, CounterID",
+    "q026": "SELECT u.EventDate, COUNT(*) AS direct_only_users, SUM(u.hit_count) AS hits_total FROM (SELECT EventDate, UserID, COUNT(*) AS hit_count FROM hits GROUP BY EventDate, UserID HAVING COUNT(*) >= 20) AS u WHERE NOT EXISTS (SELECT 1 FROM hits h WHERE h.UserID = u.UserID AND h.EventDate = u.EventDate AND h.Referer <> '') GROUP BY u.EventDate ORDER BY u.EventDate",
+    "q027": "WITH firsts AS (SELECT EventDate, IsDownload, IsLink, Referer, ROW_NUMBER() OVER (PARTITION BY UserID, EventDate ORDER BY EventTime, WatchID) AS rn FROM hits WHERE EventDate >= '2013-07-01' AND EventDate <= '2013-07-07') SELECT EventDate, COUNT(*) AS user_days, SUM(IsDownload) AS first_download, SUM(IsLink) AS first_link, SUM(CASE WHEN Referer = '' THEN 1 ELSE 0 END) AS first_direct FROM firsts WHERE rn = 1 GROUP BY EventDate ORDER BY EventDate",
+    "q028": "SELECT CASE WHEN hit_count >= 100 THEN 3 WHEN hit_count >= 30 THEN 2 ELSE 1 END AS burst_tier, COUNT(*) AS users, SUM(hit_count) AS hits_total, SUM(refreshes) AS refreshes_total FROM (SELECT UserID, COUNT(*) AS hit_count, SUM(IsRefresh) AS refreshes, MIN(EventTime) AS t_first, MAX(EventTime) AS t_last FROM hits GROUP BY UserID HAVING COUNT(*) >= 10) AS u WHERE DATE_TRUNC('hour', t_first) = DATE_TRUNC('hour', t_last) GROUP BY burst_tier ORDER BY burst_tier",
+    "q029": "SELECT COUNT(*) AS bounced_only_ips, (SELECT COUNT(DISTINCT ClientIP) FROM hits WHERE HasGCLID = 1) AS gclid_ips FROM (SELECT ClientIP FROM hits WHERE HasGCLID = 1 GROUP BY ClientIP EXCEPT SELECT ClientIP FROM hits WHERE IsNotBounce = 1 GROUP BY ClientIP) t ORDER BY bounced_only_ips",
+    "q030": "WITH paid AS (SELECT UserID, COUNT(*) AS paid_hits, COUNT(DISTINCT CounterID) AS paid_counters FROM hits WHERE HasGCLID = 1 OR AdvEngineID <> 0 GROUP BY UserID), behaviour AS (SELECT UserID, COUNT(*) AS total, SUM(IsNotBounce) AS engaged, SUM(CASE WHEN JavascriptEnable = 0 THEN 1 ELSE 0 END) AS nojs FROM hits WHERE UserID IN (SELECT UserID FROM paid) GROUP BY UserID) SELECT p.UserID AS user_id, p.paid_hits AS paid_hit_count, p.paid_counters AS paid_counter_count, b.total AS total_hits, b.engaged AS engaged_hits, b.nojs AS nojs_hits, CAST(p.paid_hits AS DOUBLE PRECISION) / b.total AS paid_share FROM paid p INNER JOIN behaviour b ON p.UserID = b.UserID WHERE p.paid_hits >= 10 ORDER BY paid_share DESC, paid_hit_count DESC, user_id LIMIT 50",
+    "q031": "WITH u AS (SELECT UserID, MIN(EventDate) AS first_date FROM hits GROUP BY UserID) SELECT u.first_date, COUNT(*) AS never_engaged_users FROM u WHERE NOT EXISTS (SELECT 1 FROM hits h WHERE h.UserID = u.UserID AND h.IsNotBounce = 1) GROUP BY u.first_date ORDER BY u.first_date",
+    "q032": "SELECT scheme, has_query, COUNT(*) AS views, AVG(url_len) AS avg_len, COUNT(DISTINCT CounterID) AS counters FROM (SELECT CASE WHEN URL LIKE 'https://%' THEN 'https' WHEN URL LIKE 'http://%' THEN 'http' ELSE 'other' END AS scheme, CASE WHEN URL LIKE '%?%' THEN 1 ELSE 0 END AS has_query, LENGTH(URL) AS url_len, CounterID FROM hits WHERE URL <> '') AS s GROUP BY scheme, has_query ORDER BY scheme, has_query",
+    "q033": "WITH langs AS (SELECT BrowserLanguage FROM hits WHERE SearchPhrase <> '' AND BrowserLanguage <> '' GROUP BY BrowserLanguage ORDER BY COUNT(*) DESC, BrowserLanguage LIMIT 5), ph AS (SELECT BrowserLanguage, SearchPhrase, COUNT(DISTINCT UserID) AS users, COUNT(*) AS c FROM hits WHERE SearchPhrase <> '' AND BrowserLanguage IN (SELECT BrowserLanguage FROM langs) GROUP BY BrowserLanguage, SearchPhrase), ranked AS (SELECT BrowserLanguage, SearchPhrase, users, c, ROW_NUMBER() OVER (PARTITION BY BrowserLanguage ORDER BY users DESC, c DESC, SearchPhrase) AS rn FROM ph) SELECT BrowserLanguage, rn, SearchPhrase, users, c FROM ranked WHERE rn <= 3 ORDER BY BrowserLanguage, rn",
+    "q034": "WITH s AS (SELECT ClientTimeZone, (CAST(EXTRACT(HOUR FROM ClientEventTime) AS INTEGER) - CAST(EXTRACT(HOUR FROM EventTime) AS INTEGER) + 24) % 24 AS hour_shift, COUNT(*) AS c FROM hits GROUP BY ClientTimeZone, (CAST(EXTRACT(HOUR FROM ClientEventTime) AS INTEGER) - CAST(EXTRACT(HOUR FROM EventTime) AS INTEGER) + 24) % 24) SELECT ClientTimeZone, hour_shift, c, total, CAST(c AS DOUBLE PRECISION) / NULLIF(total, 0) AS share FROM (SELECT ClientTimeZone, hour_shift, c, SUM(c) OVER (PARTITION BY ClientTimeZone) AS total, ROW_NUMBER() OVER (PARTITION BY ClientTimeZone ORDER BY c DESC, hour_shift) AS rn FROM s) AS t WHERE rn = 1 ORDER BY total DESC, ClientTimeZone LIMIT 50",
+    "q035": "WITH ranked AS (SELECT UserID, CASE WHEN AdvEngineID <> 0 THEN 'ad' WHEN SearchEngineID <> 0 THEN 'search' WHEN SocialSourceNetworkID <> 0 THEN 'social' WHEN UTMSource <> '' THEN 'utm' ELSE 'other' END AS channel, ROW_NUMBER() OVER (PARTITION BY UserID ORDER BY EventTime, WatchID) AS rn FROM hits), first_touch AS (SELECT UserID, channel FROM ranked WHERE rn = 1), totals AS (SELECT UserID, COUNT(*) AS hits_cnt, SUM(IsNotBounce) AS engaged, SUM(IsDownload) AS downloads FROM hits GROUP BY UserID) SELECT f.channel, COUNT(*) AS users, AVG(t.hits_cnt) AS avg_hits_per_user, AVG(CAST(t.engaged AS DOUBLE PRECISION)) AS avg_engaged_hits, SUM(CASE WHEN t.downloads > 0 THEN 1 ELSE 0 END) AS downloading_users FROM first_touch f INNER JOIN totals t ON f.UserID = t.UserID GROUP BY f.channel ORDER BY users DESC, f.channel",
+    "q036": "SELECT o.OS, o.users, (SELECT COUNT(DISTINCT h.UserID) FROM hits h WHERE h.OS = o.OS AND h.IsNotBounce = 1) AS engaged_users FROM (SELECT OS, COUNT(DISTINCT UserID) AS users FROM hits GROUP BY OS ORDER BY users DESC, OS LIMIT 10) o ORDER BY o.users DESC, o.OS",
+    "q037": "SELECT segment, COUNT(*) AS hits_count, COUNT(DISTINCT UserID) AS users, ROUND(AVG(HistoryLength), 2) AS avg_history, SUM(CASE WHEN IsNotBounce = 1 THEN 1 ELSE 0 END) AS engaged_hits FROM (SELECT CASE WHEN UserID IN (SELECT UserID FROM hits WHERE SearchPhrase <> '' GROUP BY UserID HAVING COUNT(DISTINCT SearchPhrase) >= 5) THEN 'explorer' ELSE 'other' END AS segment, UserID, HistoryLength, IsNotBounce FROM hits) t GROUP BY segment ORDER BY segment",
+    "q038": "WITH h AS (SELECT EventDate, EXTRACT(HOUR FROM EventTime) AS hr, COUNT(*) AS c FROM hits WHERE AdvEngineID <> 0 GROUP BY EventDate, EXTRACT(HOUR FROM EventTime)) SELECT h.EventDate, h.hr, h.c FROM h WHERE h.c = (SELECT MAX(h2.c) FROM h h2 WHERE h2.EventDate = h.EventDate) ORDER BY h.EventDate, h.hr LIMIT 100",
+    "q039": "SELECT UserID, COUNT(*) AS downloads, COUNT(DISTINCT URL) AS files, COUNT(DISTINCT EventDate) AS days FROM hits WHERE IsDownload = 1 AND UserID IN (SELECT UserID FROM (SELECT UserID FROM hits WHERE IsDownload = 1 GROUP BY UserID EXCEPT SELECT UserID FROM hits WHERE IsDownload = 0 GROUP BY UserID) t) GROUP BY UserID ORDER BY downloads DESC, UserID LIMIT 50",
+    "q040": "WITH t AS (SELECT UserID, WatchID, TraficSourceID, EXTRACT(DAY FROM EventTime) * 86400 + EXTRACT(HOUR FROM EventTime) * 3600 + EXTRACT(MINUTE FROM EventTime) * 60 + EXTRACT(SECOND FROM EventTime) AS sec FROM hits WHERE EventDate >= '2013-07-08' AND EventDate <= '2013-07-10' AND IsArtifical = 0), m AS (SELECT UserID, WatchID, TraficSourceID, sec, CASE WHEN ROW_NUMBER() OVER (PARTITION BY UserID ORDER BY sec, WatchID, TraficSourceID) = 1 THEN 1 WHEN sec - MAX(sec) OVER (PARTITION BY UserID ORDER BY sec, WatchID, TraficSourceID ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING) > 1800 THEN 1 ELSE 0 END AS is_start FROM t), s AS (SELECT UserID, TraficSourceID, sec, is_start, SUM(is_start) OVER (PARTITION BY UserID ORDER BY sec, WatchID, TraficSourceID ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS sess_no FROM m), sess AS (SELECT UserID, sess_no, MAX(CASE WHEN is_start = 1 THEN TraficSourceID END) AS entry_source, COUNT(*) AS n, MAX(sec) - MIN(sec) AS duration_sec FROM s GROUP BY UserID, sess_no) SELECT entry_source, COUNT(*) AS sessions, ROUND(AVG(duration_sec), 1) AS avg_duration_sec, ROUND(CAST(100.0 AS DOUBLE) * SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END) / COUNT(*), 2) AS single_hit_pct, MAX(n) AS max_hits FROM sess GROUP BY entry_source ORDER BY sessions DESC, entry_source",
+    "q041": "WITH busy AS (SELECT CounterID, COUNT(*) AS c FROM hits GROUP BY CounterID ORDER BY c DESC, CounterID LIMIT 20) SELECT b.CounterID, b.c, CASE WHEN EXISTS (SELECT 1 FROM hits h WHERE h.CounterID = b.CounterID AND h.OpenstatServiceName <> '') THEN 1 ELSE 0 END AS has_openstat, CASE WHEN EXISTS (SELECT 1 FROM hits h WHERE h.CounterID = b.CounterID AND h.SocialNetwork <> '') THEN 1 ELSE 0 END AS has_social FROM busy b ORDER BY b.c DESC, b.CounterID",
+    "q042": "SELECT EXTRACT(HOUR FROM EventTime) AS hr, COUNT(*) AS hit_count, SUM(IsRefresh) AS refreshes, COUNT(DISTINCT UserID) AS users FROM hits GROUP BY EXTRACT(HOUR FROM EventTime) HAVING CAST(SUM(IsRefresh) AS DOUBLE) / COUNT(*) > (SELECT CAST(SUM(IsRefresh) AS DOUBLE) / COUNT(*) FROM hits) ORDER BY hr",
+    "q043": "WITH dau AS (SELECT EventDate, COUNT(DISTINCT UserID) AS users FROM hits GROUP BY EventDate), fd AS (SELECT UserID, MIN(EventDate) AS first_date FROM hits GROUP BY UserID), nu AS (SELECT first_date, COUNT(*) AS new_users FROM fd GROUP BY first_date) SELECT dau.EventDate, dau.users, nu.new_users, ROUND(AVG(dau.users) OVER (ORDER BY dau.EventDate ROWS BETWEEN 6 PRECEDING AND CURRENT ROW), 1) AS dau_7d_avg, SUM(nu.new_users) OVER (ORDER BY dau.EventDate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_users FROM dau JOIN nu ON nu.first_date = dau.EventDate ORDER BY dau.EventDate",
+    "q044": "SELECT h.ClientTimeZone AS tz, COUNT(DISTINCT h.UserID) AS churned_users, COUNT(*) AS hit_count FROM hits h JOIN (SELECT DISTINCT UserID FROM hits WHERE EventDate < '2013-07-08' EXCEPT SELECT DISTINCT UserID FROM hits WHERE EventDate >= '2013-07-08') c ON h.UserID = c.UserID GROUP BY h.ClientTimeZone ORDER BY churned_users DESC, tz LIMIT 25",
+    "q045": "SELECT proto, has_utm, COUNT(*) AS c, AVG(length(URL)) AS avg_url_len FROM (SELECT URL, CASE WHEN URL LIKE 'https://%' THEN 'https' WHEN URL LIKE 'http://%' THEN 'http' ELSE 'other' END AS proto, CASE WHEN URL LIKE '%utm%' THEN 1 ELSE 0 END AS has_utm FROM hits WHERE AdvEngineID <> 0 OR UTMSource <> '') t GROUP BY proto, has_utm ORDER BY c DESC, proto, has_utm",
+    "q046": "WITH top_counters AS (SELECT CounterID FROM hits WHERE AdvEngineID <> 0 GROUP BY CounterID ORDER BY COUNT(DISTINCT UserID) DESC, CounterID LIMIT 5), weekly AS (SELECT CounterID, CAST(FLOOR(CAST(EXTRACT(DAY FROM EventDate) - 1 AS DOUBLE) / 7) AS INTEGER) AS wk, COUNT(DISTINCT UserID) AS paid_users, COUNT(*) AS paid_hits, SUM(IsNotBounce) AS engaged FROM hits WHERE AdvEngineID <> 0 AND CounterID IN (SELECT CounterID FROM top_counters) GROUP BY CounterID, CAST(FLOOR(CAST(EXTRACT(DAY FROM EventDate) - 1 AS DOUBLE) / 7) AS INTEGER)) SELECT CounterID, wk, paid_users, paid_hits, CAST(engaged AS DOUBLE) / paid_hits AS engaged_rate, RANK() OVER (PARTITION BY wk ORDER BY paid_users DESC, CounterID) AS week_rank FROM weekly ORDER BY wk, week_rank",
+    "q047": "WITH m AS (SELECT MobilePhone, MobilePhoneModel, COUNT(*) AS c, COUNT(DISTINCT UserID) AS u FROM hits WHERE MobilePhone > 0 AND MobilePhoneModel <> '' GROUP BY MobilePhone, MobilePhoneModel HAVING COUNT(DISTINCT UserID) >= 5), r AS (SELECT MobilePhone, MobilePhoneModel, c, u, CAST(c AS DOUBLE) / u AS hits_per_user, ROW_NUMBER() OVER (PARTITION BY MobilePhone ORDER BY CAST(c AS DOUBLE) / u DESC, c DESC, MobilePhoneModel) AS rn FROM m) SELECT MobilePhone, MobilePhoneModel, c, u, hits_per_user, rn FROM r WHERE rn <= 3 ORDER BY MobilePhone, rn LIMIT 100",
+    "q048": "SELECT c.URLCategoryID, c.hit_count, c.users FROM (SELECT URLCategoryID, COUNT(*) AS hit_count, COUNT(DISTINCT UserID) AS users FROM hits GROUP BY URLCategoryID) c WHERE NOT EXISTS (SELECT 1 FROM hits h WHERE h.URLCategoryID = c.URLCategoryID AND h.IsMobile = 1 AND h.HTTPError > 0) ORDER BY c.hit_count DESC, c.URLCategoryID LIMIT 30",
+    "q049": "SELECT hr, c, wh, SUM(c) OVER (ORDER BY hr ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cum_hits, CAST(wh AS DOUBLE) / c AS hash_share FROM (SELECT CAST(EXTRACT(HOUR FROM EventTime) AS INTEGER) AS hr, COUNT(*) AS c, SUM(WithHash) AS wh FROM hits WHERE EventDate = (SELECT EventDate FROM hits GROUP BY EventDate ORDER BY COUNT(*) DESC, EventDate LIMIT 1) GROUP BY CAST(EXTRACT(HOUR FROM EventTime) AS INTEGER)) t ORDER BY hr",
+    "q050": "WITH firsts AS (SELECT UserID, MIN(EventDate) AS first_day FROM hits GROUP BY UserID), activity AS (SELECT DISTINCT UserID, EventDate FROM hits) SELECT f.first_day AS first_day, COUNT(DISTINCT f.UserID) AS cohort_users, COUNT(DISTINCT CASE WHEN a.EventDate = f.first_day + 1 THEN a.UserID END) AS back_next_day, COUNT(DISTINCT CASE WHEN a.EventDate >= f.first_day + 7 THEN a.UserID END) AS back_after_week FROM firsts f JOIN activity a ON a.UserID = f.UserID GROUP BY f.first_day ORDER BY first_day",
+    "q051": "SELECT URLRegionID, UTMMedium, hit_count, rn FROM (SELECT URLRegionID, UTMMedium, hit_count, ROW_NUMBER() OVER (PARTITION BY URLRegionID ORDER BY hit_count DESC, UTMMedium) AS rn FROM (SELECT URLRegionID, UTMMedium, COUNT(*) AS hit_count FROM hits WHERE UTMMedium <> '' AND URLRegionID IN (SELECT URLRegionID FROM hits WHERE UTMMedium <> '' GROUP BY URLRegionID ORDER BY COUNT(*) DESC, URLRegionID LIMIT 10) GROUP BY URLRegionID, UTMMedium) g) x WHERE rn <= 2 ORDER BY URLRegionID, rn",
+    "q052": "WITH lost AS (SELECT DISTINCT RegionID FROM hits WHERE EventDate < '2013-07-08' EXCEPT SELECT DISTINCT RegionID FROM hits WHERE EventDate >= '2013-07-22') SELECT h.RegionID, COUNT(*) AS early_hits, COUNT(DISTINCT h.UserID) AS early_users, MAX(h.EventDate) AS last_seen FROM hits h JOIN lost l ON h.RegionID = l.RegionID GROUP BY h.RegionID ORDER BY early_hits DESC, h.RegionID LIMIT 25",
+    "q053": "WITH u AS (SELECT UserID, MAX(CASE WHEN SearchPhrase <> '' THEN 1 ELSE 0 END) AS searched, MAX(CASE WHEN AdvEngineID <> 0 THEN 1 ELSE 0 END) AS saw_ad, MAX(CASE WHEN IsEvent = 1 THEN 1 ELSE 0 END) AS had_event FROM hits GROUP BY UserID), seg AS (SELECT searched, saw_ad, had_event, COUNT(*) AS users FROM u GROUP BY searched, saw_ad, had_event) SELECT searched, saw_ad, had_event, users, CAST(users AS DOUBLE) / (SELECT SUM(users) FROM seg) AS user_share FROM seg ORDER BY searched, saw_ad, had_event",
+    "q054": "WITH s AS (SELECT UserID, WatchID, CAST(EXTRACT(HOUR FROM EventTime) * 3600 + EXTRACT(MINUTE FROM EventTime) * 60 + EXTRACT(SECOND FROM EventTime) AS BIGINT) AS sec FROM hits WHERE EventDate = '2013-07-15'), g AS (SELECT UserID, sec - LAG(sec, 1, CAST(-100000 AS BIGINT)) OVER (PARTITION BY UserID ORDER BY sec, WatchID) AS gap FROM s) SELECT UserID, COUNT(*) AS hits_day, SUM(CASE WHEN gap <= 1 THEN 1 ELSE 0 END) AS rapid, SUM(CASE WHEN gap >= 1800 AND gap < 100000 THEN 1 ELSE 0 END) AS long_pauses FROM g GROUP BY UserID HAVING COUNT(*) >= 50 ORDER BY rapid DESC, hits_day DESC, UserID LIMIT 30",
+    "q055": "WITH daily AS (SELECT EventDate, COUNT(DISTINCT UserID) AS users FROM hits GROUP BY EventDate) SELECT d.EventDate, d.users FROM daily d WHERE NOT EXISTS (SELECT 1 FROM daily p WHERE p.EventDate < d.EventDate AND p.users >= d.users) ORDER BY d.EventDate",
+    "q056": "SELECT CASE WHEN length(Title) = 0 THEN 'empty' WHEN length(Title) <= 20 THEN '1-20' WHEN length(Title) <= 40 THEN '21-40' WHEN length(Title) <= 80 THEN '41-80' ELSE '81+' END AS title_len, COUNT(*) AS hit_count, COUNT(DISTINCT UserID) AS users, ROUND(CAST(100.0 AS DOUBLE) * SUM(IsNotBounce) / COUNT(*), 2) AS engaged_pct FROM hits GROUP BY CASE WHEN length(Title) = 0 THEN 'empty' WHEN length(Title) <= 20 THEN '1-20' WHEN length(Title) <= 40 THEN '21-40' WHEN length(Title) <= 80 THEN '41-80' ELSE '81+' END ORDER BY MIN(length(Title))",
+    "q057": "SELECT COUNT(*) AS suspicious_users FROM (SELECT UserID FROM hits GROUP BY UserID HAVING COUNT(DISTINCT BrowserCountry) >= 2 INTERSECT SELECT UserID FROM hits GROUP BY UserID HAVING COUNT(DISTINCT ClientTimeZone) >= 2) AS x ORDER BY suspicious_users",
+    "q058": "WITH w1 AS (SELECT BrowserLanguage AS lang, 1 AS present, COUNT(DISTINCT UserID) AS users_w1 FROM hits WHERE EventDate >= '2013-07-01' AND EventDate <= '2013-07-07' GROUP BY BrowserLanguage), w4 AS (SELECT BrowserLanguage AS lang, 1 AS present, COUNT(DISTINCT UserID) AS users_w4 FROM hits WHERE EventDate >= '2013-07-22' AND EventDate <= '2013-07-28' GROUP BY BrowserLanguage) SELECT CASE WHEN COALESCE(w1.present, 0) = 1 THEN w1.lang ELSE w4.lang END AS browser_lang, COALESCE(w1.users_w1, 0) AS week1_users, COALESCE(w4.users_w4, 0) AS week4_users, COALESCE(w4.users_w4, 0) - COALESCE(w1.users_w1, 0) AS user_delta FROM w1 FULL OUTER JOIN w4 ON w1.lang = w4.lang ORDER BY user_delta DESC, browser_lang LIMIT 25",
+    "q059": "WITH ad AS (SELECT SearchPhrase, COUNT(*) AS c, COUNT(DISTINCT UserID) AS users FROM hits WHERE AdvEngineID <> 0 AND SearchPhrase <> '' GROUP BY SearchPhrase), org AS (SELECT DISTINCT SearchPhrase FROM hits WHERE AdvEngineID = 0 AND SearchPhrase <> '') SELECT ad.SearchPhrase, ad.c, ad.users FROM ad WHERE NOT EXISTS (SELECT 1 FROM org WHERE org.SearchPhrase = ad.SearchPhrase) ORDER BY ad.c DESC, ad.users DESC, ad.SearchPhrase LIMIT 20",
+    "q060": "WITH u AS (SELECT UserID, COUNT(*) AS c, SUM(CASE WHEN Referer = '' THEN 1 ELSE 0 END) AS direct_c, COUNT(DISTINCT EventDate) AS days FROM hits GROUP BY UserID HAVING COUNT(*) >= 5) SELECT CASE WHEN direct_c = c THEN 'always_direct' WHEN direct_c = 0 THEN 'always_referred' ELSE 'mixed' END AS segment, COUNT(*) AS users, ROUND(AVG(c), 2) AS avg_hits, ROUND(AVG(days), 2) AS avg_days FROM u GROUP BY segment ORDER BY segment",
+    "q061": "SELECT r.EventDate AS day, r.URLRegionID AS top_region, r.c AS region_hits, t.total AS day_hits, CAST(r.c AS DOUBLE) / NULLIF(t.total, 0) AS share FROM (SELECT EventDate, URLRegionID, c, ROW_NUMBER() OVER (PARTITION BY EventDate ORDER BY c DESC, URLRegionID) AS rn FROM (SELECT EventDate, URLRegionID, COUNT(*) AS c FROM hits GROUP BY EventDate, URLRegionID) reg) r JOIN (SELECT EventDate, COUNT(*) AS total FROM hits GROUP BY EventDate) t ON r.EventDate = t.EventDate WHERE r.rn = 1 ORDER BY day",
+    "q062": "WITH u AS (SELECT BrowserLanguage, UserID, COUNT(DISTINCT FUniqID) AS fu FROM hits WHERE FUniqID <> 0 GROUP BY BrowserLanguage, UserID) SELECT BrowserLanguage, COUNT(*) AS users, SUM(CASE WHEN fu > 1 THEN 1 ELSE 0 END) AS multi_cookie_users, CAST(SUM(CASE WHEN fu > 1 THEN 1 ELSE 0 END) AS DOUBLE) / COUNT(*) AS churn_share FROM u GROUP BY BrowserLanguage HAVING COUNT(*) >= 50 ORDER BY users DESC, BrowserLanguage LIMIT 20",
+    "q063": "WITH paid AS (SELECT SearchPhrase FROM hits WHERE AdvEngineID <> 0 AND SearchPhrase <> '' GROUP BY SearchPhrase), org AS (SELECT SearchPhrase FROM hits WHERE AdvEngineID = 0 AND SearchEngineID <> 0 AND SearchPhrase <> '' GROUP BY SearchPhrase) SELECT COUNT(*) AS overlap_phrases, (SELECT COUNT(*) FROM paid) AS paid_phrases, (SELECT COUNT(*) FROM org) AS organic_phrases FROM (SELECT SearchPhrase FROM paid INTERSECT SELECT SearchPhrase FROM org) x ORDER BY overlap_phrases",
+    "q064": "SELECT word_count, COUNT(*) AS hits_count, COUNT(DISTINCT SearchPhrase) AS distinct_phrases, ROUND(AVG(phrase_len), 2) AS avg_chars FROM (SELECT SearchPhrase, CHAR_LENGTH(TRIM(SearchPhrase)) - CHAR_LENGTH(REPLACE(TRIM(SearchPhrase), ' ', '')) + 1 AS word_count, CHAR_LENGTH(SearchPhrase) AS phrase_len FROM hits WHERE TRIM(SearchPhrase) <> '') t GROUP BY word_count ORDER BY word_count LIMIT 30",
+    "q065": "SELECT a.URLRegionID, a.c AS first_half_hits, b.c AS second_half_hits, CAST(b.c AS BIGINT) - CAST(a.c AS BIGINT) AS delta FROM (SELECT URLRegionID, COUNT(*) AS c FROM hits WHERE EventDate < '2013-07-16' GROUP BY URLRegionID HAVING COUNT(*) >= 500) a JOIN (SELECT URLRegionID, COUNT(*) AS c FROM hits WHERE EventDate >= '2013-07-16' GROUP BY URLRegionID HAVING COUNT(*) >= 500) b ON a.URLRegionID = b.URLRegionID ORDER BY delta DESC, a.URLRegionID LIMIT 20",
+    "q066": "SELECT wk, MobilePhoneModel, c, rnk FROM (SELECT DATE_TRUNC('week', EventTime) AS wk, MobilePhoneModel, COUNT(*) AS c, ROW_NUMBER() OVER (PARTITION BY DATE_TRUNC('week', EventTime) ORDER BY COUNT(*) DESC, MobilePhoneModel) AS rnk FROM hits WHERE MobilePhoneModel <> '' GROUP BY DATE_TRUNC('week', EventTime), MobilePhoneModel) t WHERE rnk <= 3 ORDER BY wk, rnk",
+    "q067": "SELECT EXTRACT(HOUR FROM EventTime) AS hr, COUNT(*) AS hit_count, COUNT(DISTINCT UserID) AS users, SUM(CASE WHEN HTTPError > 0 THEN 1 ELSE 0 END) AS error_hits, ROUND(CAST(100.0 AS DOUBLE) * SUM(IsNotBounce) / COUNT(*), 2) AS engaged_pct FROM hits WHERE CounterID = (SELECT CounterID FROM hits GROUP BY CounterID ORDER BY COUNT(DISTINCT UserID) DESC, CounterID LIMIT 1) GROUP BY EXTRACT(HOUR FROM EventTime) ORDER BY hr",
+    "q068": "SELECT d.EventDate, COUNT(*) AS users_multi_tz FROM (SELECT EventDate, UserID, MIN(ClientTimeZone) AS tz FROM hits GROUP BY EventDate, UserID) AS d WHERE EXISTS (SELECT 1 FROM hits h WHERE h.UserID = d.UserID AND h.EventDate = d.EventDate AND h.ClientTimeZone <> d.tz) GROUP BY d.EventDate ORDER BY d.EventDate",
+    "q069": "WITH ud AS (SELECT UserID, EventDate FROM hits GROUP BY UserID, EventDate), fs AS (SELECT UserID, MIN(EventDate) AS first_day FROM ud GROUP BY UserID) SELECT EXTRACT(DAY FROM fs.first_day) AS cohort_day, EXTRACT(DAY FROM ud.EventDate) - EXTRACT(DAY FROM fs.first_day) AS day_offset, COUNT(*) AS active_users FROM ud JOIN fs ON ud.UserID = fs.UserID WHERE fs.first_day <= DATE '2013-07-07' AND ud.EventDate <= DATE '2013-07-14' GROUP BY cohort_day, day_offset ORDER BY cohort_day, day_offset",
+    "q070": "WITH early AS (SELECT CounterID FROM hits WHERE AdvEngineID <> 0 AND EventDate < '2013-07-16' GROUP BY CounterID), late AS (SELECT CounterID FROM hits WHERE AdvEngineID <> 0 AND EventDate >= '2013-07-16' GROUP BY CounterID), lapsed AS (SELECT CounterID FROM early EXCEPT SELECT CounterID FROM late) SELECT (SELECT COUNT(*) FROM lapsed) AS lapsed_counters, (SELECT COUNT(*) FROM early) AS early_counters, (SELECT COUNT(*) FROM late) AS late_counters ORDER BY lapsed_counters",
+    "q071": "SELECT CASE WHEN Referer = '' THEN 'empty' WHEN Referer LIKE 'https://%' THEN 'https' WHEN Referer LIKE 'http://%' THEN 'http' ELSE 'other' END AS scheme, COUNT(*) AS c, AVG(CHAR_LENGTH(Referer)) AS avg_len, SUM(CASE WHEN Referer = URL THEN 1 ELSE 0 END) AS self_referrals, SUM(CASE WHEN Referer LIKE '%?%' THEN 1 ELSE 0 END) AS with_query, COUNT(DISTINCT UserID) AS u FROM hits GROUP BY CASE WHEN Referer = '' THEN 'empty' WHEN Referer LIKE 'https://%' THEN 'https' WHEN Referer LIKE 'http://%' THEN 'http' ELSE 'other' END ORDER BY c DESC, scheme",
+    "q072": "SELECT ClientTimeZone, hour_offset, hit_count FROM (SELECT ClientTimeZone, hour_offset, hit_count, ROW_NUMBER() OVER (PARTITION BY ClientTimeZone ORDER BY hit_count DESC, hour_offset) AS rn FROM (SELECT ClientTimeZone, (EXTRACT(HOUR FROM ClientEventTime) - EXTRACT(HOUR FROM EventTime) + 24) % 24 AS hour_offset, COUNT(*) AS hit_count FROM hits GROUP BY ClientTimeZone, (EXTRACT(HOUR FROM ClientEventTime) - EXTRACT(HOUR FROM EventTime) + 24) % 24) g) r WHERE rn = 1 ORDER BY ClientTimeZone LIMIT 100",
+    "q073": "SELECT CounterID, COUNT(*) AS ad_hits, COUNT(DISTINCT UserID) AS ad_users FROM hits WHERE AdvEngineID <> 0 AND CounterID IN (SELECT CounterID FROM hits WHERE AdvEngineID <> 0 EXCEPT SELECT CounterID FROM hits WHERE SocialSourceNetworkID <> 0) GROUP BY CounterID ORDER BY ad_hits DESC, CounterID LIMIT 20",
+    "q074": "SELECT a.AdvEngineID, COUNT(*) AS users, SUM(a.ad_hits) AS ad_hits_total FROM (SELECT AdvEngineID, UserID, COUNT(*) AS ad_hits FROM hits WHERE AdvEngineID <> 0 GROUP BY AdvEngineID, UserID) AS a WHERE EXISTS (SELECT 1 FROM hits h WHERE h.UserID = a.UserID AND h.IsRefresh = 1 AND h.AdvEngineID = 0) GROUP BY a.AdvEngineID ORDER BY users DESC, a.AdvEngineID",
+    "q075": "WITH t AS (SELECT UserID, WatchID, CAST(EXTRACT(DAY FROM EventTime) AS INTEGER) * 1440 + CAST(EXTRACT(HOUR FROM EventTime) AS INTEGER) * 60 + CAST(EXTRACT(MINUTE FROM EventTime) AS INTEGER) AS m FROM hits WHERE AdvEngineID <> 0), g AS (SELECT m, LEAD(m, 1, -1) OVER (PARTITION BY UserID ORDER BY m, WatchID) AS next_m FROM t) SELECT gap_bucket, COUNT(*) AS gaps FROM (SELECT CASE WHEN next_m - m < 1 THEN 0 WHEN next_m - m < 10 THEN 1 WHEN next_m - m < 60 THEN 2 WHEN next_m - m < 1440 THEN 3 ELSE 4 END AS gap_bucket FROM g WHERE next_m >= 0) b GROUP BY gap_bucket ORDER BY gap_bucket",
+    "q076": "SELECT CASE WHEN UTMTerm = '' THEN 'none' WHEN CHAR_LENGTH(UTMTerm) <= 8 THEN 'short' WHEN CHAR_LENGTH(UTMTerm) <= 20 THEN 'medium' ELSE 'long' END AS term_bucket, COUNT(*) AS hit_count, COUNT(DISTINCT UTMTerm) AS distinct_terms, AVG(IsNotBounce) AS engaged_rate, AVG(CASE WHEN IsLink = 1 THEN 1 ELSE 0 END) AS link_rate FROM hits GROUP BY term_bucket ORDER BY term_bucket",
+    "q077": "WITH s AS (SELECT CASE WHEN AdvEngineID <> 0 THEN 1 ELSE 0 END AS is_ad, LAG(CASE WHEN AdvEngineID <> 0 THEN 1 ELSE 0 END, 1, -1) OVER (PARTITION BY UserID ORDER BY EventTime, WatchID) AS prev_ad FROM hits WHERE CounterID = (SELECT CounterID FROM hits GROUP BY CounterID ORDER BY COUNT(*) DESC, CounterID LIMIT 1)) SELECT prev_ad, is_ad, COUNT(*) AS transitions FROM s GROUP BY prev_ad, is_ad ORDER BY prev_ad, is_ad",
+    "q078": "WITH busiest AS (SELECT CounterID FROM hits GROUP BY CounterID ORDER BY COUNT(*) DESC, CounterID LIMIT 1), daily AS (SELECT EventDate, COUNT(*) AS c, SUM(CASE WHEN JavascriptEnable = 0 THEN 1 ELSE 0 END) AS nojs FROM hits WHERE CounterID IN (SELECT CounterID FROM busiest) GROUP BY EventDate) SELECT EventDate, c, nojs, CAST(c AS BIGINT) - COALESCE(LAG(CAST(c AS BIGINT), 1) OVER (ORDER BY EventDate), CAST(c AS BIGINT)) AS delta, AVG(nojs) OVER (ORDER BY EventDate ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS nojs_ma3 FROM daily ORDER BY EventDate",
+    "q079": "WITH h AS (SELECT EventDate, EXTRACT(HOUR FROM EventTime) AS hr, COUNT(*) AS c FROM hits WHERE AdvEngineID <> 0 GROUP BY EventDate, EXTRACT(HOUR FROM EventTime)), r AS (SELECT EventDate, hr, c, RANK() OVER (PARTITION BY EventDate ORDER BY c DESC, hr) AS rk FROM h) SELECT EventDate, hr AS peak_hour, c AS paid_hits FROM r WHERE rk = 1 ORDER BY EventDate",
+    "q080": "SELECT distinct_widths, COUNT(*) AS users FROM (SELECT UserID, COUNT(DISTINCT ResolutionWidth) AS distinct_widths FROM hits GROUP BY UserID HAVING COUNT(DISTINCT ResolutionWidth) >= 2) AS u GROUP BY distinct_widths ORDER BY distinct_widths LIMIT 50",
+    "q081": "WITH ad_days AS (SELECT DISTINCT UserID, EventDate FROM hits WHERE AdvEngineID <> 0), search_days AS (SELECT DISTINCT UserID, EventDate FROM hits WHERE AdvEngineID = 0 AND SearchEngineID <> 0 AND IsRefresh = 0) SELECT a.EventDate, COUNT(*) AS ad_users_also_searching FROM ad_days a WHERE EXISTS (SELECT 1 FROM search_days s WHERE s.UserID = a.UserID AND s.EventDate = a.EventDate) GROUP BY a.EventDate ORDER BY a.EventDate",
+    "q082": "SELECT CHAR_LENGTH(TRIM(UTMContent)) AS content_len, COUNT(*) AS hit_count, COUNT(DISTINCT UTMContent) AS distinct_contents, COUNT(DISTINCT UserID) AS users, SUM(CASE WHEN UTMContent LIKE '%-%' THEN 1 ELSE 0 END) AS hyphenated FROM hits WHERE UTMContent <> '' GROUP BY content_len ORDER BY hit_count DESC, content_len LIMIT 25",
+    "q083": "WITH hourly AS (SELECT EventDate, EXTRACT(HOUR FROM EventTime) AS hr, COUNT(*) AS c FROM hits WHERE IsRefresh = 0 GROUP BY EventDate, EXTRACT(HOUR FROM EventTime)), ranked AS (SELECT EventDate, hr, c, SUM(c) OVER (PARTITION BY EventDate) AS day_total, ROW_NUMBER() OVER (PARTITION BY EventDate ORDER BY c DESC, hr) AS rn FROM hourly) SELECT EventDate, hr AS zenith_hour, c AS zenith_hits, day_total FROM ranked WHERE rn = 1 ORDER BY EventDate",
+    "q084": "SELECT UserAgentMajor FROM (SELECT UserAgentMajor FROM hits WHERE MobilePhoneModel <> '' GROUP BY UserAgentMajor HAVING COUNT(*) >= 100 INTERSECT SELECT UserAgentMajor FROM hits WHERE MobilePhoneModel = '' GROUP BY UserAgentMajor HAVING COUNT(*) >= 100) t ORDER BY UserAgentMajor LIMIT 100",
+    "q085": "SELECT h.RefererCategoryID, COUNT(*) AS engaged_hits, COUNT(DISTINCT h.UserID) AS users FROM hits h WHERE h.IsNotBounce = 1 AND EXISTS (SELECT 1 FROM hits s WHERE s.UserID = h.UserID AND (s.SocialAction <> '' OR s.SocialSourceNetworkID <> 0)) GROUP BY h.RefererCategoryID ORDER BY engaged_hits DESC, h.RefererCategoryID LIMIT 20",
+    "q086": "WITH c AS (SELECT CounterID, AdvEngineID, COUNT(*) AS hit_cnt FROM hits GROUP BY CounterID, AdvEngineID) SELECT c1.CounterID, c1.AdvEngineID, c1.hit_cnt, (SELECT SUM(c2.hit_cnt) FROM c c2 WHERE c2.CounterID = c1.CounterID) AS counter_total FROM c c1 WHERE c1.AdvEngineID <> 0 ORDER BY c1.hit_cnt DESC, c1.CounterID, c1.AdvEngineID LIMIT 15",
+    "q087": "SELECT d, new_users, single_hit_users, SUM(new_users) OVER (ORDER BY d) AS cumulative_users FROM (SELECT first_day AS d, COUNT(*) AS new_users, SUM(CASE WHEN hit_count = 1 THEN 1 ELSE 0 END) AS single_hit_users FROM (SELECT UserID, MIN(EventDate) AS first_day, COUNT(*) AS hit_count FROM hits GROUP BY UserID) AS f GROUP BY first_day) AS g ORDER BY d",
+    "q088": "WITH a AS (SELECT DISTINCT UserID, CAST(EXTRACT(DAY FROM EventDate) AS INTEGER) AS d FROM hits WHERE AdvEngineID <> 0), an AS (SELECT UserID, d, d + 1 AS nd FROM a WHERE d < 31), v AS (SELECT DISTINCT UserID, CAST(EXTRACT(DAY FROM EventDate) AS INTEGER) AS vd FROM hits WHERE AdvEngineID = 0) SELECT an.d AS day_of_month, COUNT(*) AS ad_users, SUM(CASE WHEN COALESCE(v.vd, 0) > 0 THEN 1 ELSE 0 END) AS returned_organic_next_day FROM an LEFT JOIN v ON v.UserID = an.UserID AND v.vd = an.nd GROUP BY an.d ORDER BY day_of_month",
+    "q089": "SELECT CASE WHEN OriginalURL LIKE '%gclid=%' THEN 'gclid' WHEN OriginalURL LIKE '%utm_source=%' THEN 'utm' WHEN OriginalURL LIKE '%openstat%' THEN 'openstat' WHEN OriginalURL LIKE '%?%' THEN 'other_params' WHEN OriginalURL <> '' THEN 'plain' ELSE 'missing' END AS url_marker, COUNT(*) AS hit_count, COUNT(DISTINCT UserID) AS users, AVG(IsNotBounce) AS engaged_rate FROM hits GROUP BY url_marker ORDER BY url_marker",
+    "q090": "WITH first_seen AS (SELECT UserID, MIN(EventDate) AS first_day FROM hits GROUP BY UserID) SELECT first_day, COUNT(*) AS new_users, SUM(COUNT(*)) OVER (ORDER BY first_day ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_users FROM first_seen GROUP BY first_day ORDER BY first_day",
+    "q091": "SELECT a.OS, a.users AS users_first_half, b.users AS users_second_half, ROUND(CAST(100.0 AS DOUBLE) * b.users / a.users, 2) AS second_vs_first_pct FROM (SELECT OS, COUNT(DISTINCT UserID) AS users FROM hits WHERE EventDate <= '2013-07-15' GROUP BY OS) a JOIN (SELECT OS, COUNT(DISTINCT UserID) AS users FROM hits WHERE EventDate > '2013-07-15' GROUP BY OS) b ON a.OS = b.OS WHERE a.users >= 500 ORDER BY second_vs_first_pct DESC, a.OS LIMIT 15",
+    "q092": "WITH rd AS (SELECT EventDate, RegionID, COUNT(*) AS c FROM hits GROUP BY EventDate, RegionID) SELECT a.EventDate, a.RegionID, a.c FROM rd a WHERE a.c = (SELECT MAX(b.c) FROM rd b WHERE b.EventDate = a.EventDate) ORDER BY a.EventDate, a.RegionID LIMIT 100",
+    "q093": "SELECT ClientTimeZone, COUNT(DISTINCT UserID) AS organic_users, COUNT(*) AS pageviews, AVG(IsNotBounce) AS engaged_rate FROM hits WHERE TraficSourceID = 2 AND UserID NOT IN (SELECT UserID FROM hits WHERE AdvEngineID <> 0) GROUP BY ClientTimeZone HAVING COUNT(*) > 50 ORDER BY organic_users DESC, ClientTimeZone LIMIT 30",
+    "q094": "WITH top_phrases AS (SELECT SearchPhrase, COUNT(*) AS c FROM hits WHERE SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC, SearchPhrase LIMIT 50) SELECT p.SearchPhrase, p.c FROM top_phrases p WHERE EXISTS (SELECT 1 FROM hits h WHERE h.SearchPhrase = p.SearchPhrase AND h.AdvEngineID <> 0) ORDER BY p.c DESC, p.SearchPhrase",
+    "q095": "WITH first_seen AS (SELECT UserID, MIN(EventDate) AS first_day FROM hits GROUP BY UserID) SELECT first_day, COUNT(*) AS new_users, SUM(COUNT(*)) OVER (ORDER BY first_day) AS cumulative_users FROM first_seen GROUP BY first_day ORDER BY first_day",
+    "q096": "SELECT CASE WHEN UTMTerm = '' THEN 0 WHEN CHAR_LENGTH(UTMTerm) <= 5 THEN 1 WHEN CHAR_LENGTH(UTMTerm) <= 15 THEN 2 WHEN CHAR_LENGTH(UTMTerm) <= 30 THEN 3 ELSE 4 END AS len_bucket, COUNT(*) AS hit_count, COUNT(DISTINCT UTMTerm) AS distinct_terms, COUNT(DISTINCT UserID) AS users FROM hits GROUP BY CASE WHEN UTMTerm = '' THEN 0 WHEN CHAR_LENGTH(UTMTerm) <= 5 THEN 1 WHEN CHAR_LENGTH(UTMTerm) <= 15 THEN 2 WHEN CHAR_LENGTH(UTMTerm) <= 30 THEN 3 ELSE 4 END ORDER BY len_bucket",
+    "q097": "SELECT h.UserAgent, COUNT(*) AS views, AVG(h.FetchTiming) AS avg_fetch, SUM(CASE WHEN h.FetchTiming > t.avg_ft THEN 1 ELSE 0 END) AS slow_views FROM hits h CROSS JOIN (SELECT AVG(FetchTiming) AS avg_ft FROM hits WHERE FetchTiming > 0) t WHERE h.FetchTiming > 0 GROUP BY h.UserAgent HAVING COUNT(*) >= 100 ORDER BY slow_views DESC, h.UserAgent LIMIT 20",
+    "q098": "WITH a AS (SELECT UTMSource, COUNT(*) AS c FROM hits WHERE UTMSource <> '' AND EventDate < '2013-07-16' GROUP BY UTMSource), b AS (SELECT UTMSource, COUNT(*) AS c FROM hits WHERE UTMSource <> '' AND EventDate >= '2013-07-16' GROUP BY UTMSource), j AS (SELECT CASE WHEN COALESCE(a.c, 0) > 0 THEN a.UTMSource ELSE b.UTMSource END AS src, COALESCE(a.c, 0) AS first_half, COALESCE(b.c, 0) AS second_half FROM a FULL OUTER JOIN b ON a.UTMSource = b.UTMSource) SELECT src, first_half, second_half, first_half + second_half AS total FROM j ORDER BY total DESC, src LIMIT 50",
+    "q099": "SELECT URLRegionID FROM (SELECT URLRegionID FROM hits WHERE EventDate < '2013-07-16' AND IsNotBounce = 1 GROUP BY URLRegionID ORDER BY COUNT(*) DESC, URLRegionID LIMIT 50) a INTERSECT SELECT URLRegionID FROM (SELECT URLRegionID FROM hits WHERE EventDate >= '2013-07-16' AND IsNotBounce = 1 GROUP BY URLRegionID ORDER BY COUNT(*) DESC, URLRegionID LIMIT 50) b ORDER BY URLRegionID",
+    "q100": "SELECT NetMajor, NetMinor, COUNT(*) AS hit_count, COUNT(DISTINCT UserID) AS users FROM hits WHERE UserID IN (SELECT UserID FROM hits GROUP BY UserID HAVING COUNT(DISTINCT ClientIP) >= 5) GROUP BY NetMajor, NetMinor ORDER BY hit_count DESC, NetMajor, NetMinor LIMIT 20"
+   },
+   "load_time": 355.614,
+   "data_size": 177995526144,
+   "data_size_after": 177995526144,
+   "total_time": 501.346,
+   "penalized_time": 951.346,
+   "geomean": 2.3337,
+   "counts": {
+    "ok": 297,
+    "wrong": 3
+   },
+   "revalidated": true,
+   "error_rate": 0.01,
+   "restarts": 0,
+   "reference": {
+    "q001": {
+     "status": "ok",
+     "time": 5.108
+    },
+    "q002": {
+     "status": "ok",
+     "time": 6.872
+    },
+    "q003": {
+     "status": "ok",
+     "time": 1.152
+    },
+    "q004": {
+     "status": "ok",
+     "time": 0.784
+    },
+    "q005": {
+     "status": "ok",
+     "time": 10.036
+    },
+    "q006": {
+     "status": "ok",
+     "time": 2.082
+    },
+    "q007": {
+     "status": "ok",
+     "time": 11.753
+    },
+    "q008": {
+     "status": "ok",
+     "time": 4.709
+    },
+    "q009": {
+     "status": "ok",
+     "time": 23.972
+    },
+    "q010": {
+     "status": "ok",
+     "time": 10.316
+    },
+    "q011": {
+     "status": "ok",
+     "time": 5.934
+    },
+    "q012": {
+     "status": "ok",
+     "time": 6.859
+    },
+    "q013": {
+     "status": "ok",
+     "time": 2.53
+    },
+    "q014": {
+     "status": "ok",
+     "time": 1.734
+    },
+    "q015": {
+     "status": "ok",
+     "time": 6.965
+    },
+    "q016": {
+     "status": "ok",
+     "time": 8.603
+    },
+    "q017": {
+     "status": "ok",
+     "time": 19.334
+    },
+    "q018": {
+     "status": "ok",
+     "time": 6.346
+    },
+    "q019": {
+     "status": "ok",
+     "time": 4.378
+    },
+    "q020": {
+     "status": "ok",
+     "time": 0.748
+    },
+    "q021": {
+     "status": "ok",
+     "time": 3.968
+    },
+    "q022": {
+     "status": "ok",
+     "time": 8.611
+    },
+    "q023": {
+     "status": "ok",
+     "time": 92.398
+    },
+    "q024": {
+     "status": "ok",
+     "time": 3.699
+    },
+    "q025": {
+     "status": "ok",
+     "time": 0.397
+    },
+    "q026": {
+     "status": "ok",
+     "time": 11.672
+    },
+    "q027": {
+     "status": "ok",
+     "time": 19.485
+    },
+    "q028": {
+     "status": "ok",
+     "time": 5.488
+    },
+    "q029": {
+     "status": "ok",
+     "time": 2.047
+    },
+    "q030": {
+     "status": "ok",
+     "time": 2.079
+    },
+    "q031": {
+     "status": "ok",
+     "time": 4.849
+    },
+    "q032": {
+     "status": "ok",
+     "time": 5.499
+    },
+    "q033": {
+     "status": "ok",
+     "time": 88.94
+    },
+    "q034": {
+     "status": "ok",
+     "time": 1.91
+    },
+    "q035": {
+     "status": "ok",
+     "time": 43.128
+    },
+    "q036": {
+     "status": "ok",
+     "time": 3.576
+    },
+    "q037": {
+     "status": "ok",
+     "time": 5.709
+    },
+    "q038": {
+     "status": "ok",
+     "time": 0.485
+    },
+    "q039": {
+     "status": "ok",
+     "time": 12.756
+    },
+    "q040": {
+     "status": "ok",
+     "time": 6.56
+    },
+    "q041": {
+     "status": "ok",
+     "time": 0.448
+    },
+    "q042": {
+     "status": "ok",
+     "time": 3.456
+    },
+    "q043": {
+     "status": "ok",
+     "time": 5.751
+    },
+    "q044": {
+     "status": "ok",
+     "time": 40.95
+    },
+    "q045": {
+     "status": "ok",
+     "time": 1.192
+    },
+    "q046": {
+     "status": "ok",
+     "time": 0.437
+    },
+    "q047": {
+     "status": "ok",
+     "time": 1.093
+    },
+    "q048": {
+     "status": "ok",
+     "time": 2.953
+    },
+    "q049": {
+     "status": "ok",
+     "time": 0.399
+    },
+    "q050": {
+     "status": "ok",
+     "time": 73.133
+    },
+    "q051": {
+     "status": "ok",
+     "time": 0.444
+    },
+    "q052": {
+     "status": "ok",
+     "time": 0.808
+    },
+    "q053": {
+     "status": "ok",
+     "time": 6.582
+    },
+    "q054": {
+     "status": "ok",
+     "time": 2.349
+    },
+    "q055": {
+     "status": "ok",
+     "time": 4.612
+    },
+    "q056": {
+     "status": "ok",
+     "time": 6.075
+    },
+    "q057": {
+     "status": "ok",
+     "time": 9.37
+    },
+    "q058": {
+     "status": "ok",
+     "time": 1.786
+    },
+    "q059": {
+     "status": "ok",
+     "time": 8.122
+    },
+    "q060": {
+     "status": "ok",
+     "time": 5.094
+    },
+    "q061": {
+     "status": "ok",
+     "time": 0.455
+    },
+    "q062": {
+     "status": "ok",
+     "time": 6.514
+    },
+    "q063": {
+     "status": "ok",
+     "time": 15.52
+    },
+    "q064": {
+     "status": "ok",
+     "time": 3.358
+    },
+    "q065": {
+     "status": "ok",
+     "time": 0.413
+    },
+    "q066": {
+     "status": "ok",
+     "time": 0.484
+    },
+    "q067": {
+     "status": "ok",
+     "time": 2.565
+    },
+    "q068": {
+     "status": "ok",
+     "time": 111.2
+    },
+    "q069": {
+     "status": "ok",
+     "time": 6.27
+    },
+    "q070": {
+     "status": "ok",
+     "time": 0.519
+    },
+    "q071": {
+     "status": "ok",
+     "time": 6.888
+    },
+    "q072": {
+     "status": "ok",
+     "time": 0.64
+    },
+    "q073": {
+     "status": "ok",
+     "time": 0.636
+    },
+    "q074": {
+     "status": "ok",
+     "time": 0.719
+    },
+    "q075": {
+     "status": "ok",
+     "time": 1.971
+    },
+    "q076": {
+     "status": "ok",
+     "time": 0.891
+    },
+    "q077": {
+     "status": "ok",
+     "time": 0.462
+    },
+    "q078": {
+     "status": "ok",
+     "time": 0.316
+    },
+    "q079": {
+     "status": "ok",
+     "time": 0.389
+    },
+    "q080": {
+     "status": "ok",
+     "time": 4.785
+    },
+    "q081": {
+     "status": "ok",
+     "time": 22.719
+    },
+    "q082": {
+     "status": "ok",
+     "time": 0.253
+    },
+    "q083": {
+     "status": "ok",
+     "time": 0.492
+    },
+    "q084": {
+     "status": "ok",
+     "time": 0.462
+    },
+    "q085": {
+     "status": "ok",
+     "time": 0.815
+    },
+    "q086": {
+     "status": "ok",
+     "time": 0.357
+    },
+    "q087": {
+     "status": "ok",
+     "time": 4.266
+    },
+    "q088": {
+     "status": "ok",
+     "time": 50.32
+    },
+    "q089": {
+     "status": "ok",
+     "time": 8.74
+    },
+    "q090": {
+     "status": "ok",
+     "time": 3.878
+    },
+    "q091": {
+     "status": "ok",
+     "time": 2.841
+    },
+    "q092": {
+     "status": "ok",
+     "time": 0.684
+    },
+    "q093": {
+     "status": "ok",
+     "time": 2.454
+    },
+    "q094": {
+     "status": "ok",
+     "time": 2.782
+    },
+    "q095": {
+     "status": "ok",
+     "time": 3.919
+    },
+    "q096": {
+     "status": "ok",
+     "time": 3.56
+    },
+    "q097": {
+     "status": "ok",
+     "time": 0.471
+    },
+    "q098": {
+     "status": "ok",
+     "time": 0.409
+    },
+    "q099": {
+     "status": "ok",
+     "time": 0.423
+    },
+    "q100": {
+     "status": "ok",
+     "time": 5.371
+    }
+   },
+   "runs": [
+    {
+     "id": "q051",
+     "repeat": 2,
+     "status": "ok",
+     "start": 0.0,
+     "time": 2.045,
+     "reported_time": 1.618
+    },
+    {
+     "id": "q054",
+     "repeat": 1,
+     "status": "ok",
+     "start": 0.001,
+     "time": 9.385,
+     "reported_time": 8.648
+    },
+    {
+     "id": "q018",
+     "repeat": 3,
+     "status": "ok",
+     "start": 0.001,
+     "time": 9.539,
+     "reported_time": 8.823
+    },
+    {
+     "id": "q023",
+     "repeat": 1,
+     "status": "ok",
+     "start": 0.001,
+     "time": 60.924,
+     "reported_time": 57.041
+    },
+    {
+     "id": "q075",
+     "repeat": 3,
+     "status": "ok",
+     "start": 2.045,
+     "time": 15.155,
+     "reported_time": 14.626
+    },
+    {
+     "id": "q066",
+     "repeat": 2,
+     "status": "ok",
+     "start": 9.387,
+     "time": 7.518,
+     "reported_time": 7.174
+    },
+    {
+     "id": "q089",
+     "repeat": 3,
+     "status": "ok",
+     "start": 9.54,
+     "time": 35.189,
+     "reported_time": 30.724
+    },
+    {
+     "id": "q015",
+     "repeat": 3,
+     "status": "ok",
+     "start": 16.905,
+     "time": 2.423,
+     "reported_time": 2.013
+    },
+    {
+     "id": "q053",
+     "repeat": 1,
+     "status": "ok",
+     "start": 17.201,
+     "time": 11.801,
+     "reported_time": 10.914
+    },
+    {
+     "id": "q068",
+     "repeat": 2,
+     "status": "ok",
+     "start": 19.328,
+     "time": 9.241,
+     "reported_time": 8.357
+    },
+    {
+     "id": "q036",
+     "repeat": 1,
+     "status": "ok",
+     "start": 28.569,
+     "time": 5.192,
+     "reported_time": 4.292
+    },
+    {
+     "id": "q065",
+     "repeat": 3,
+     "status": "ok",
+     "start": 29.002,
+     "time": 1.404,
+     "reported_time": 1.076
+    },
+    {
+     "id": "q027",
+     "repeat": 2,
+     "status": "ok",
+     "start": 30.406,
+     "time": 26.379,
+     "reported_time": 22.789
+    },
+    {
+     "id": "q044",
+     "repeat": 3,
+     "status": "ok",
+     "start": 33.761,
+     "time": 3.816,
+     "reported_time": 3.365
+    },
+    {
+     "id": "q019",
+     "repeat": 3,
+     "status": "ok",
+     "start": 37.577,
+     "time": 13.524,
+     "reported_time": 11.23
+    },
+    {
+     "id": "q022",
+     "repeat": 1,
+     "status": "ok",
+     "start": 44.729,
+     "time": 42.616,
+     "reported_time": 33.43
+    },
+    {
+     "id": "q052",
+     "repeat": 2,
+     "status": "ok",
+     "start": 51.102,
+     "time": 3.216,
+     "reported_time": 2.465
+    },
+    {
+     "id": "q010",
+     "repeat": 1,
+     "status": "ok",
+     "start": 54.318,
+     "time": 27.431,
+     "reported_time": 21.922
+    },
+    {
+     "id": "q073",
+     "repeat": 2,
+     "status": "ok",
+     "start": 56.785,
+     "time": 3.288,
+     "reported_time": 2.946
+    },
+    {
+     "id": "q034",
+     "repeat": 3,
+     "status": "ok",
+     "start": 60.073,
+     "time": 10.585,
+     "reported_time": 9.987
+    },
+    {
+     "id": "q057",
+     "repeat": 2,
+     "status": "ok",
+     "start": 60.925,
+     "time": 4.334,
+     "reported_time": 3.348
+    },
+    {
+     "id": "q021",
+     "repeat": 1,
+     "status": "ok",
+     "start": 65.259,
+     "time": 2.909,
+     "reported_time": 2.363
+    },
+    {
+     "id": "q072",
+     "repeat": 3,
+     "status": "ok",
+     "start": 68.167,
+     "time": 2.819,
+     "reported_time": 2.275
+    },
+    {
+     "id": "q050",
+     "repeat": 1,
+     "status": "ok",
+     "start": 70.658,
+     "time": 9.009,
+     "reported_time": 7.692
+    },
+    {
+     "id": "q071",
+     "repeat": 1,
+     "status": "ok",
+     "start": 70.986,
+     "time": 18.807,
+     "reported_time": 11.773
+    },
+    {
+     "id": "q021",
+     "repeat": 3,
+     "status": "ok",
+     "start": 79.667,
+     "time": 3.232,
+     "reported_time": 2.309
+    },
+    {
+     "id": "q096",
+     "repeat": 2,
+     "status": "ok",
+     "start": 81.749,
+     "time": 3.336,
+     "reported_time": 1.882
+    },
+    {
+     "id": "q095",
+     "repeat": 3,
+     "status": "ok",
+     "start": 82.899,
+     "time": 3.032,
+     "reported_time": 2.193
+    },
+    {
+     "id": "q063",
+     "repeat": 2,
+     "status": "ok",
+     "start": 85.085,
+     "time": 4.971,
+     "reported_time": 3.832
+    },
+    {
+     "id": "q085",
+     "repeat": 2,
+     "status": "ok",
+     "start": 85.93,
+     "time": 2.533,
+     "reported_time": 1.957
+    },
+    {
+     "id": "q040",
+     "repeat": 1,
+     "status": "ok",
+     "start": 87.345,
+     "time": 14.248,
+     "reported_time": 12.658
+    },
+    {
+     "id": "q013",
+     "repeat": 3,
+     "status": "ok",
+     "start": 88.464,
+     "time": 2.957,
+     "reported_time": 1.923
+    },
+    {
+     "id": "q035",
+     "repeat": 1,
+     "status": "ok",
+     "start": 89.793,
+     "time": 40.34,
+     "reported_time": 36.227
+    },
+    {
+     "id": "q087",
+     "repeat": 3,
+     "status": "ok",
+     "start": 90.056,
+     "time": 4.326,
+     "reported_time": 3.18
+    },
+    {
+     "id": "q051",
+     "repeat": 3,
+     "status": "ok",
+     "start": 91.421,
+     "time": 1.684,
+     "reported_time": 1.063
+    },
+    {
+     "id": "q005",
+     "repeat": 2,
+     "status": "ok",
+     "start": 93.105,
+     "time": 5.279,
+     "reported_time": 3.956
+    },
+    {
+     "id": "q097",
+     "repeat": 1,
+     "status": "ok",
+     "start": 94.382,
+     "time": 2.209,
+     "reported_time": 1.559
+    },
+    {
+     "id": "q089",
+     "repeat": 2,
+     "status": "ok",
+     "start": 96.591,
+     "time": 13.979,
+     "reported_time": 9.689
+    },
+    {
+     "id": "q056",
+     "repeat": 3,
+     "status": "ok",
+     "start": 98.385,
+     "time": 12.88,
+     "reported_time": 9.187
+    },
+    {
+     "id": "q044",
+     "repeat": 1,
+     "status": "ok",
+     "start": 101.593,
+     "time": 7.863,
+     "reported_time": 6.915
+    },
+    {
+     "id": "q046",
+     "repeat": 1,
+     "status": "ok",
+     "start": 109.456,
+     "time": 1.863,
+     "reported_time": 1.014
+    },
+    {
+     "id": "q027",
+     "repeat": 3,
+     "status": "ok",
+     "start": 110.571,
+     "time": 15.892,
+     "reported_time": 12.635
+    },
+    {
+     "id": "q038",
+     "repeat": 2,
+     "status": "ok",
+     "start": 111.265,
+     "time": 2.268,
+     "reported_time": 1.513
+    },
+    {
+     "id": "q080",
+     "repeat": 1,
+     "status": "ok",
+     "start": 111.32,
+     "time": 4.92,
+     "reported_time": 3.285
+    },
+    {
+     "id": "q006",
+     "repeat": 3,
+     "status": "ok",
+     "start": 113.533,
+     "time": 3.398,
+     "reported_time": 2.498
+    },
+    {
+     "id": "q019",
+     "repeat": 2,
+     "status": "ok",
+     "start": 116.24,
+     "time": 10.096,
+     "reported_time": 9.166
+    },
+    {
+     "id": "q008",
+     "repeat": 2,
+     "status": "ok",
+     "start": 116.931,
+     "time": 16.443,
+     "reported_time": 12.851
+    },
+    {
+     "id": "q091",
+     "repeat": 2,
+     "status": "ok",
+     "start": 126.336,
+     "time": 3.304,
+     "reported_time": 2.181
+    },
+    {
+     "id": "q018",
+     "repeat": 2,
+     "status": "ok",
+     "start": 126.462,
+     "time": 4.573,
+     "reported_time": 3.548
+    },
+    {
+     "id": "q006",
+     "repeat": 1,
+     "status": "ok",
+     "start": 129.64,
+     "time": 2.96,
+     "reported_time": 2.03
+    },
+    {
+     "id": "q017",
+     "repeat": 3,
+     "status": "ok",
+     "start": 130.134,
+     "time": 3.817,
+     "reported_time": 2.87
+    },
+    {
+     "id": "q025",
+     "repeat": 2,
+     "status": "ok",
+     "start": 131.036,
+     "time": 1.192,
+     "reported_time": 0.717
+    },
+    {
+     "id": "q090",
+     "repeat": 2,
+     "status": "ok",
+     "start": 132.228,
+     "time": 3.189,
+     "reported_time": 2.07
+    },
+    {
+     "id": "q039",
+     "repeat": 3,
+     "status": "ok",
+     "start": 132.6,
+     "time": 5.114,
+     "reported_time": 3.921
+    },
+    {
+     "id": "q058",
+     "repeat": 3,
+     "status": "ok",
+     "start": 133.375,
+     "time": 2.199,
+     "reported_time": 1.555
+    },
+    {
+     "id": "q095",
+     "repeat": 1,
+     "status": "ok",
+     "start": 133.951,
+     "time": 3.145,
+     "reported_time": 2.015
+    },
+    {
+     "id": "q023",
+     "repeat": 3,
+     "status": "ok",
+     "start": 135.416,
+     "time": 38.633,
+     "reported_time": 29.777
+    },
+    {
+     "id": "q069",
+     "repeat": 1,
+     "status": "ok",
+     "start": 135.574,
+     "time": 6.876,
+     "reported_time": 5.907
+    },
+    {
+     "id": "q066",
+     "repeat": 1,
+     "status": "ok",
+     "start": 137.096,
+     "time": 2.08,
+     "reported_time": 1.408
+    },
+    {
+     "id": "q039",
+     "repeat": 2,
+     "status": "ok",
+     "start": 137.714,
+     "time": 4.912,
+     "reported_time": 3.935
+    },
+    {
+     "id": "q083",
+     "repeat": 2,
+     "status": "ok",
+     "start": 139.176,
+     "time": 2.33,
+     "reported_time": 1.566
+    },
+    {
+     "id": "q078",
+     "repeat": 2,
+     "status": "ok",
+     "start": 141.507,
+     "time": 0.861,
+     "reported_time": 0.562
+    },
+    {
+     "id": "q043",
+     "repeat": 1,
+     "status": "ok",
+     "start": 142.368,
+     "time": 7.097,
+     "reported_time": 5.628
+    },
+    {
+     "id": "q069",
+     "repeat": 3,
+     "status": "ok",
+     "start": 142.45,
+     "time": 10.764,
+     "reported_time": 9.115
+    },
+    {
+     "id": "q036",
+     "repeat": 3,
+     "status": "ok",
+     "start": 142.626,
+     "time": 6.776,
+     "reported_time": 5.011
+    },
+    {
+     "id": "q004",
+     "repeat": 3,
+     "status": "ok",
+     "start": 149.402,
+     "time": 0.621,
+     "reported_time": 0.374
+    },
+    {
+     "id": "q026",
+     "repeat": 3,
+     "status": "ok",
+     "start": 149.465,
+     "time": 14.308,
+     "reported_time": 9.052
+    },
+    {
+     "id": "q012",
+     "repeat": 2,
+     "status": "ok",
+     "start": 150.023,
+     "time": 25.894,
+     "reported_time": 21.376
+    },
+    {
+     "id": "q062",
+     "repeat": 1,
+     "status": "ok",
+     "start": 153.214,
+     "time": 7.684,
+     "reported_time": 5.076
+    },
+    {
+     "id": "q061",
+     "repeat": 3,
+     "status": "ok",
+     "start": 160.898,
+     "time": 2.099,
+     "reported_time": 1.549
+    },
+    {
+     "id": "q043",
+     "repeat": 2,
+     "status": "ok",
+     "start": 162.998,
+     "time": 4.432,
+     "reported_time": 3.358
+    },
+    {
+     "id": "q077",
+     "repeat": 1,
+     "status": "ok",
+     "start": 163.773,
+     "time": 1.326,
+     "reported_time": 0.927
+    },
+    {
+     "id": "q087",
+     "repeat": 2,
+     "status": "ok",
+     "start": 165.099,
+     "time": 4.445,
+     "reported_time": 2.943
+    },
+    {
+     "id": "q076",
+     "repeat": 3,
+     "status": "ok",
+     "start": 167.429,
+     "time": 1.31,
+     "reported_time": 0.847
+    },
+    {
+     "id": "q028",
+     "repeat": 2,
+     "status": "ok",
+     "start": 168.74,
+     "time": 5.925,
+     "reported_time": 3.967
+    },
+    {
+     "id": "q001",
+     "repeat": 3,
+     "status": "ok",
+     "start": 169.544,
+     "time": 6.815,
+     "reported_time": 5.47
+    },
+    {
+     "id": "q036",
+     "repeat": 2,
+     "status": "ok",
+     "start": 174.049,
+     "time": 3.827,
+     "reported_time": 2.281
+    },
+    {
+     "id": "q075",
+     "repeat": 2,
+     "status": "ok",
+     "start": 174.665,
+     "time": 3.523,
+     "reported_time": 2.416
+    },
+    {
+     "id": "q047",
+     "repeat": 2,
+     "status": "ok",
+     "start": 175.917,
+     "time": 1.612,
+     "reported_time": 0.984
+    },
+    {
+     "id": "q079",
+     "repeat": 2,
+     "status": "ok",
+     "start": 176.359,
+     "time": 1.666,
+     "reported_time": 0.945
+    },
+    {
+     "id": "q013",
+     "repeat": 1,
+     "status": "ok",
+     "start": 177.529,
+     "time": 2.988,
+     "reported_time": 1.949
+    },
+    {
+     "id": "q001",
+     "repeat": 1,
+     "status": "ok",
+     "start": 177.876,
+     "time": 6.475,
+     "reported_time": 5.193
+    },
+    {
+     "id": "q029",
+     "repeat": 1,
+     "status": "ok",
+     "start": 178.025,
+     "time": 2.036,
+     "reported_time": 1.512
+    },
+    {
+     "id": "q042",
+     "repeat": 1,
+     "status": "ok",
+     "start": 178.187,
+     "time": 4.785,
+     "reported_time": 3.524
+    },
+    {
+     "id": "q084",
+     "repeat": 3,
+     "status": "ok",
+     "start": 180.061,
+     "time": 1.531,
+     "reported_time": 1.105
+    },
+    {
+     "id": "q097",
+     "repeat": 3,
+     "status": "ok",
+     "start": 180.517,
+     "time": 1.97,
+     "reported_time": 1.455
+    },
+    {
+     "id": "q062",
+     "repeat": 3,
+     "status": "ok",
+     "start": 181.592,
+     "time": 4.729,
+     "reported_time": 2.997
+    },
+    {
+     "id": "q002",
+     "repeat": 1,
+     "status": "ok",
+     "start": 182.488,
+     "time": 5.321,
+     "reported_time": 3.925
+    },
+    {
+     "id": "q004",
+     "repeat": 2,
+     "status": "ok",
+     "start": 182.973,
+     "time": 1.114,
+     "reported_time": 0.768
+    },
+    {
+     "id": "q070",
+     "repeat": 1,
+     "status": "ok",
+     "start": 184.087,
+     "time": 1.094,
+     "reported_time": 0.695
+    },
+    {
+     "id": "q010",
+     "repeat": 3,
+     "status": "ok",
+     "start": 184.351,
+     "time": 12.641,
+     "reported_time": 7.39
+    },
+    {
+     "id": "q088",
+     "repeat": 3,
+     "status": "ok",
+     "start": 185.181,
+     "time": 4.592,
+     "reported_time": 3.687
+    },
+    {
+     "id": "q052",
+     "repeat": 3,
+     "status": "ok",
+     "start": 186.321,
+     "time": 1.955,
+     "reported_time": 1.474
+    },
+    {
+     "id": "q093",
+     "repeat": 3,
+     "status": "ok",
+     "start": 187.809,
+     "time": 2.918,
+     "reported_time": 2.064
+    },
+    {
+     "id": "q096",
+     "repeat": 1,
+     "status": "ok",
+     "start": 188.276,
+     "time": 3.419,
+     "reported_time": 2.464
+    },
+    {
+     "id": "q040",
+     "repeat": 3,
+     "status": "ok",
+     "start": 189.773,
+     "time": 12.624,
+     "reported_time": 11.079
+    },
+    {
+     "id": "q007",
+     "repeat": 1,
+     "status": "ok",
+     "start": 190.727,
+     "time": 8.259,
+     "reported_time": 6.984
+    },
+    {
+     "id": "q041",
+     "repeat": 3,
+     "status": "ok",
+     "start": 191.695,
+     "time": 1.116,
+     "reported_time": 0.734
+    },
+    {
+     "id": "q010",
+     "repeat": 2,
+     "status": "ok",
+     "start": 192.811,
+     "time": 12.955,
+     "reported_time": 7.577
+    },
+    {
+     "id": "q078",
+     "repeat": 3,
+     "status": "ok",
+     "start": 196.993,
+     "time": 0.845,
+     "reported_time": 0.555
+    },
+    {
+     "id": "q047",
+     "repeat": 1,
+     "status": "ok",
+     "start": 197.838,
+     "time": 2.467,
+     "reported_time": 1.7
+    },
+    {
+     "id": "q003",
+     "repeat": 1,
+     "status": "ok",
+     "start": 198.986,
+     "time": 1.552,
+     "reported_time": 1.223
+    },
+    {
+     "id": "q096",
+     "repeat": 3,
+     "status": "ok",
+     "start": 200.305,
+     "time": 2.888,
+     "reported_time": 1.907
+    },
+    {
+     "id": "q055",
+     "repeat": 2,
+     "status": "ok",
+     "start": 200.538,
+     "time": 3.232,
+     "reported_time": 1.858
+    },
+    {
+     "id": "q050",
+     "repeat": 3,
+     "status": "ok",
+     "start": 202.398,
+     "time": 7.586,
+     "reported_time": 6.033
+    },
+    {
+     "id": "q090",
+     "repeat": 3,
+     "status": "ok",
+     "start": 203.193,
+     "time": 3.424,
+     "reported_time": 2.323
+    },
+    {
+     "id": "q067",
+     "repeat": 2,
+     "status": "ok",
+     "start": 203.77,
+     "time": 3.742,
+     "reported_time": 2.762
+    },
+    {
+     "id": "q070",
+     "repeat": 2,
+     "status": "ok",
+     "start": 205.766,
+     "time": 1.01,
+     "reported_time": 0.625
+    },
+    {
+     "id": "q054",
+     "repeat": 3,
+     "status": "ok",
+     "start": 206.617,
+     "time": 5.238,
+     "reported_time": 4.257
+    },
+    {
+     "id": "q053",
+     "repeat": 3,
+     "status": "ok",
+     "start": 206.776,
+     "time": 4.541,
+     "reported_time": 3.277
+    },
+    {
+     "id": "q091",
+     "repeat": 1,
+     "status": "ok",
+     "start": 207.512,
+     "time": 3.889,
+     "reported_time": 2.919
+    },
+    {
+     "id": "q020",
+     "repeat": 2,
+     "status": "ok",
+     "start": 209.984,
+     "time": 1.199,
+     "reported_time": 0.826
+    },
+    {
+     "id": "q033",
+     "repeat": 1,
+     "status": "ok",
+     "start": 211.183,
+     "time": 19.082,
+     "reported_time": 16.621
+    },
+    {
+     "id": "q081",
+     "repeat": 2,
+     "status": "ok",
+     "start": 211.317,
+     "time": 4.525,
+     "reported_time": 3.289
+    },
+    {
+     "id": "q045",
+     "repeat": 2,
+     "status": "ok",
+     "start": 211.402,
+     "time": 7.012,
+     "reported_time": 5.747
+    },
+    {
+     "id": "q009",
+     "repeat": 3,
+     "status": "ok",
+     "start": 211.855,
+     "time": 6.387,
+     "reported_time": 5.64
+    },
+    {
+     "id": "q056",
+     "repeat": 2,
+     "status": "ok",
+     "start": 215.842,
+     "time": 10.67,
+     "reported_time": 7.381
+    },
+    {
+     "id": "q091",
+     "repeat": 3,
+     "status": "ok",
+     "start": 218.242,
+     "time": 3.668,
+     "reported_time": 2.506
+    },
+    {
+     "id": "q092",
+     "repeat": 2,
+     "status": "ok",
+     "start": 218.414,
+     "time": 1.462,
+     "reported_time": 1.041
+    },
+    {
+     "id": "q032",
+     "repeat": 3,
+     "status": "ok",
+     "start": 219.876,
+     "time": 10.054,
+     "reported_time": 7.562
+    },
+    {
+     "id": "q022",
+     "repeat": 2,
+     "status": "ok",
+     "start": 221.911,
+     "time": 20.802,
+     "reported_time": 12.709
+    },
+    {
+     "id": "q066",
+     "repeat": 3,
+     "status": "ok",
+     "start": 226.512,
+     "time": 1.744,
+     "reported_time": 1.183
+    },
+    {
+     "id": "q016",
+     "repeat": 2,
+     "status": "ok",
+     "start": 228.256,
+     "time": 10.807,
+     "reported_time": 8.49
+    },
+    {
+     "id": "q025",
+     "repeat": 3,
+     "status": "ok",
+     "start": 229.93,
+     "time": 1.387,
+     "reported_time": 0.961
+    },
+    {
+     "id": "q076",
+     "repeat": 2,
+     "status": "ok",
+     "start": 230.265,
+     "time": 1.675,
+     "reported_time": 1.196
+    },
+    {
+     "id": "q021",
+     "repeat": 2,
+     "status": "ok",
+     "start": 231.317,
+     "time": 4.062,
+     "reported_time": 3.014
+    },
+    {
+     "id": "q002",
+     "repeat": 2,
+     "status": "ok",
+     "start": 231.94,
+     "time": 5.44,
+     "reported_time": 4.672
+    },
+    {
+     "id": "q052",
+     "repeat": 1,
+     "status": "ok",
+     "start": 235.379,
+     "time": 1.852,
+     "reported_time": 1.24
+    },
+    {
+     "id": "q063",
+     "repeat": 1,
+     "status": "ok",
+     "start": 237.231,
+     "time": 6.891,
+     "reported_time": 5.03
+    },
+    {
+     "id": "q015",
+     "repeat": 1,
+     "status": "ok",
+     "start": 237.379,
+     "time": 3.902,
+     "reported_time": 3.152
+    },
+    {
+     "id": "q057",
+     "repeat": 1,
+     "status": "ok",
+     "start": 239.063,
+     "time": 6.182,
+     "reported_time": 4.716
+    },
+    {
+     "id": "q018",
+     "repeat": 1,
+     "status": "ok",
+     "start": 241.282,
+     "time": 4.913,
+     "reported_time": 3.931
+    },
+    {
+     "id": "q059",
+     "repeat": 1,
+     "status": "ok",
+     "start": 242.713,
+     "time": 7.367,
+     "reported_time": 5.31
+    },
+    {
+     "id": "q098",
+     "repeat": 1,
+     "status": "ok",
+     "start": 244.122,
+     "time": 1.487,
+     "reported_time": 0.948
+    },
+    {
+     "id": "q061",
+     "repeat": 1,
+     "status": "ok",
+     "start": 245.245,
+     "time": 0.997,
+     "reported_time": 0.608
+    },
+    {
+     "id": "q031",
+     "repeat": 1,
+     "status": "ok",
+     "start": 245.609,
+     "time": 4.482,
+     "reported_time": 3.021
+    },
+    {
+     "id": "q034",
+     "repeat": 1,
+     "status": "ok",
+     "start": 246.195,
+     "time": 3.5,
+     "reported_time": 2.368
+    },
+    {
+     "id": "q081",
+     "repeat": 1,
+     "status": "ok",
+     "start": 246.242,
+     "time": 3.721,
+     "reported_time": 3.076
+    },
+    {
+     "id": "q082",
+     "repeat": 2,
+     "status": "ok",
+     "start": 249.695,
+     "time": 0.688,
+     "reported_time": 0.35
+    },
+    {
+     "id": "q099",
+     "repeat": 3,
+     "status": "wrong",
+     "start": 249.963,
+     "time": 0.71,
+     "reported_time": 0.416,
+     "detail": "order"
+    },
+    {
+     "id": "q026",
+     "repeat": 1,
+     "status": "ok",
+     "start": 250.08,
+     "time": 9.263,
+     "reported_time": 6.355
+    },
+    {
+     "id": "q027",
+     "repeat": 1,
+     "status": "ok",
+     "start": 250.09,
+     "time": 14.607,
+     "reported_time": 11.425
+    },
+    {
+     "id": "q014",
+     "repeat": 3,
+     "status": "ok",
+     "start": 250.383,
+     "time": 2.91,
+     "reported_time": 1.974
+    },
+    {
+     "id": "q009",
+     "repeat": 2,
+     "status": "ok",
+     "start": 250.673,
+     "time": 6.004,
+     "reported_time": 5.27
+    },
+    {
+     "id": "q086",
+     "repeat": 3,
+     "status": "ok",
+     "start": 253.293,
+     "time": 1.357,
+     "reported_time": 1.0
+    },
+    {
+     "id": "q045",
+     "repeat": 1,
+     "status": "ok",
+     "start": 254.65,
+     "time": 7.213,
+     "reported_time": 5.013
+    },
+    {
+     "id": "q086",
+     "repeat": 2,
+     "status": "ok",
+     "start": 256.677,
+     "time": 1.197,
+     "reported_time": 0.674
+    },
+    {
+     "id": "q046",
+     "repeat": 2,
+     "status": "ok",
+     "start": 257.874,
+     "time": 1.662,
+     "reported_time": 1.124
+    },
+    {
+     "id": "q079",
+     "repeat": 1,
+     "status": "ok",
+     "start": 259.343,
+     "time": 1.729,
+     "reported_time": 1.134
+    },
+    {
+     "id": "q012",
+     "repeat": 1,
+     "status": "ok",
+     "start": 259.536,
+     "time": 21.562,
+     "reported_time": 16.866
+    },
+    {
+     "id": "q022",
+     "repeat": 3,
+     "status": "ok",
+     "start": 261.072,
+     "time": 21.6,
+     "reported_time": 13.481
+    },
+    {
+     "id": "q098",
+     "repeat": 3,
+     "status": "ok",
+     "start": 261.863,
+     "time": 1.401,
+     "reported_time": 0.802
+    },
+    {
+     "id": "q080",
+     "repeat": 2,
+     "status": "ok",
+     "start": 263.264,
+     "time": 4.973,
+     "reported_time": 3.261
+    },
+    {
+     "id": "q005",
+     "repeat": 3,
+     "status": "ok",
+     "start": 264.698,
+     "time": 6.425,
+     "reported_time": 5.01
+    },
+    {
+     "id": "q095",
+     "repeat": 2,
+     "status": "ok",
+     "start": 268.238,
+     "time": 3.943,
+     "reported_time": 2.788
+    },
+    {
+     "id": "q098",
+     "repeat": 2,
+     "status": "ok",
+     "start": 271.123,
+     "time": 1.349,
+     "reported_time": 0.942
+    },
+    {
+     "id": "q019",
+     "repeat": 1,
+     "status": "ok",
+     "start": 272.181,
+     "time": 8.677,
+     "reported_time": 7.441
+    },
+    {
+     "id": "q055",
+     "repeat": 1,
+     "status": "ok",
+     "start": 272.472,
+     "time": 2.813,
+     "reported_time": 1.938
+    },
+    {
+     "id": "q015",
+     "repeat": 2,
+     "status": "ok",
+     "start": 275.285,
+     "time": 3.073,
+     "reported_time": 2.519
+    },
+    {
+     "id": "q039",
+     "repeat": 1,
+     "status": "ok",
+     "start": 278.358,
+     "time": 4.509,
+     "reported_time": 3.569
+    },
+    {
+     "id": "q077",
+     "repeat": 2,
+     "status": "ok",
+     "start": 280.858,
+     "time": 0.952,
+     "reported_time": 0.66
+    },
+    {
+     "id": "q014",
+     "repeat": 1,
+     "status": "ok",
+     "start": 281.098,
+     "time": 1.665,
+     "reported_time": 1.006
+    },
+    {
+     "id": "q038",
+     "repeat": 3,
+     "status": "ok",
+     "start": 281.811,
+     "time": 1.258,
+     "reported_time": 0.732
+    },
+    {
+     "id": "q011",
+     "repeat": 1,
+     "status": "ok",
+     "start": 282.672,
+     "time": 9.038,
+     "reported_time": 6.692
+    },
+    {
+     "id": "q042",
+     "repeat": 3,
+     "status": "ok",
+     "start": 282.763,
+     "time": 5.631,
+     "reported_time": 4.397
+    },
+    {
+     "id": "q063",
+     "repeat": 3,
+     "status": "ok",
+     "start": 282.867,
+     "time": 7.106,
+     "reported_time": 5.412
+    },
+    {
+     "id": "q060",
+     "repeat": 3,
+     "status": "ok",
+     "start": 283.068,
+     "time": 17.475,
+     "reported_time": 11.975
+    },
+    {
+     "id": "q092",
+     "repeat": 3,
+     "status": "ok",
+     "start": 288.395,
+     "time": 1.641,
+     "reported_time": 1.104
+    },
+    {
+     "id": "q058",
+     "repeat": 1,
+     "status": "ok",
+     "start": 289.973,
+     "time": 2.245,
+     "reported_time": 1.61
+    },
+    {
+     "id": "q049",
+     "repeat": 2,
+     "status": "ok",
+     "start": 290.036,
+     "time": 1.345,
+     "reported_time": 0.853
+    },
+    {
+     "id": "q085",
+     "repeat": 1,
+     "status": "ok",
+     "start": 291.382,
+     "time": 1.541,
+     "reported_time": 0.888
+    },
+    {
+     "id": "q004",
+     "repeat": 1,
+     "status": "ok",
+     "start": 291.71,
+     "time": 0.64,
+     "reported_time": 0.417
+    },
+    {
+     "id": "q013",
+     "repeat": 2,
+     "status": "ok",
+     "start": 292.218,
+     "time": 3.726,
+     "reported_time": 2.536
+    },
+    {
+     "id": "q028",
+     "repeat": 3,
+     "status": "ok",
+     "start": 292.35,
+     "time": 7.699,
+     "reported_time": 4.236
+    },
+    {
+     "id": "q100",
+     "repeat": 1,
+     "status": "ok",
+     "start": 292.923,
+     "time": 6.073,
+     "reported_time": 3.914
+    },
+    {
+     "id": "q033",
+     "repeat": 3,
+     "status": "ok",
+     "start": 295.944,
+     "time": 19.032,
+     "reported_time": 16.949
+    },
+    {
+     "id": "q008",
+     "repeat": 3,
+     "status": "ok",
+     "start": 298.995,
+     "time": 13.861,
+     "reported_time": 10.81
+    },
+    {
+     "id": "q094",
+     "repeat": 2,
+     "status": "ok",
+     "start": 300.049,
+     "time": 4.08,
+     "reported_time": 2.181
+    },
+    {
+     "id": "q029",
+     "repeat": 3,
+     "status": "ok",
+     "start": 300.543,
+     "time": 2.555,
+     "reported_time": 1.726
+    },
+    {
+     "id": "q020",
+     "repeat": 1,
+     "status": "ok",
+     "start": 303.098,
+     "time": 1.138,
+     "reported_time": 0.554
+    },
+    {
+     "id": "q009",
+     "repeat": 1,
+     "status": "ok",
+     "start": 304.128,
+     "time": 5.734,
+     "reported_time": 4.901
+    },
+    {
+     "id": "q003",
+     "repeat": 2,
+     "status": "ok",
+     "start": 304.236,
+     "time": 0.973,
+     "reported_time": 0.608
+    },
+    {
+     "id": "q079",
+     "repeat": 3,
+     "status": "ok",
+     "start": 305.21,
+     "time": 1.614,
+     "reported_time": 0.916
+    },
+    {
+     "id": "q092",
+     "repeat": 1,
+     "status": "ok",
+     "start": 306.824,
+     "time": 0.826,
+     "reported_time": 0.546
+    },
+    {
+     "id": "q088",
+     "repeat": 1,
+     "status": "ok",
+     "start": 307.65,
+     "time": 5.542,
+     "reported_time": 4.581
+    },
+    {
+     "id": "q031",
+     "repeat": 3,
+     "status": "ok",
+     "start": 309.863,
+     "time": 5.336,
+     "reported_time": 4.393
+    },
+    {
+     "id": "q065",
+     "repeat": 2,
+     "status": "ok",
+     "start": 312.856,
+     "time": 0.629,
+     "reported_time": 0.377
+    },
+    {
+     "id": "q042",
+     "repeat": 2,
+     "status": "ok",
+     "start": 313.192,
+     "time": 4.197,
+     "reported_time": 2.555
+    },
+    {
+     "id": "q099",
+     "repeat": 2,
+     "status": "wrong",
+     "start": 313.486,
+     "time": 1.603,
+     "reported_time": 1.074,
+     "detail": "order"
+    },
+    {
+     "id": "q005",
+     "repeat": 1,
+     "status": "ok",
+     "start": 314.976,
+     "time": 6.159,
+     "reported_time": 4.543
+    },
+    {
+     "id": "q050",
+     "repeat": 2,
+     "status": "ok",
+     "start": 315.088,
+     "time": 8.295,
+     "reported_time": 6.904
+    },
+    {
+     "id": "q048",
+     "repeat": 2,
+     "status": "ok",
+     "start": 315.199,
+     "time": 4.158,
+     "reported_time": 2.791
+    },
+    {
+     "id": "q056",
+     "repeat": 1,
+     "status": "ok",
+     "start": 317.389,
+     "time": 10.232,
+     "reported_time": 7.309
+    },
+    {
+     "id": "q030",
+     "repeat": 2,
+     "status": "ok",
+     "start": 319.357,
+     "time": 3.595,
+     "reported_time": 2.46
+    },
+    {
+     "id": "q062",
+     "repeat": 2,
+     "status": "ok",
+     "start": 321.135,
+     "time": 5.611,
+     "reported_time": 3.619
+    },
+    {
+     "id": "q041",
+     "repeat": 1,
+     "status": "ok",
+     "start": 322.953,
+     "time": 1.576,
+     "reported_time": 1.009
+    },
+    {
+     "id": "q014",
+     "repeat": 2,
+     "status": "ok",
+     "start": 323.384,
+     "time": 2.782,
+     "reported_time": 1.51
+    },
+    {
+     "id": "q008",
+     "repeat": 1,
+     "status": "ok",
+     "start": 324.529,
+     "time": 13.383,
+     "reported_time": 10.415
+    },
+    {
+     "id": "q044",
+     "repeat": 2,
+     "status": "ok",
+     "start": 326.166,
+     "time": 6.725,
+     "reported_time": 5.957
+    },
+    {
+     "id": "q094",
+     "repeat": 3,
+     "status": "ok",
+     "start": 326.746,
+     "time": 4.46,
+     "reported_time": 3.091
+    },
+    {
+     "id": "q082",
+     "repeat": 3,
+     "status": "ok",
+     "start": 327.621,
+     "time": 2.047,
+     "reported_time": 1.313
+    },
+    {
+     "id": "q076",
+     "repeat": 1,
+     "status": "ok",
+     "start": 329.669,
+     "time": 1.062,
+     "reported_time": 0.659
+    },
+    {
+     "id": "q048",
+     "repeat": 1,
+     "status": "ok",
+     "start": 330.73,
+     "time": 2.548,
+     "reported_time": 1.999
+    },
+    {
+     "id": "q001",
+     "repeat": 2,
+     "status": "ok",
+     "start": 331.206,
+     "time": 7.937,
+     "reported_time": 6.324
+    },
+    {
+     "id": "q041",
+     "repeat": 2,
+     "status": "ok",
+     "start": 332.89,
+     "time": 0.75,
+     "reported_time": 0.489
+    },
+    {
+     "id": "q034",
+     "repeat": 2,
+     "status": "ok",
+     "start": 333.278,
+     "time": 4.229,
+     "reported_time": 3.276
+    },
+    {
+     "id": "q068",
+     "repeat": 3,
+     "status": "ok",
+     "start": 333.64,
+     "time": 9.123,
+     "reported_time": 7.546
+    },
+    {
+     "id": "q071",
+     "repeat": 3,
+     "status": "ok",
+     "start": 337.508,
+     "time": 17.937,
+     "reported_time": 11.331
+    },
+    {
+     "id": "q048",
+     "repeat": 3,
+     "status": "ok",
+     "start": 337.912,
+     "time": 3.524,
+     "reported_time": 2.522
+    },
+    {
+     "id": "q030",
+     "repeat": 1,
+     "status": "ok",
+     "start": 339.144,
+     "time": 3.764,
+     "reported_time": 2.579
+    },
+    {
+     "id": "q026",
+     "repeat": 2,
+     "status": "ok",
+     "start": 341.436,
+     "time": 8.957,
+     "reported_time": 6.995
+    },
+    {
+     "id": "q024",
+     "repeat": 2,
+     "status": "ok",
+     "start": 342.763,
+     "time": 3.622,
+     "reported_time": 2.78
+    },
+    {
+     "id": "q072",
+     "repeat": 2,
+     "status": "ok",
+     "start": 342.908,
+     "time": 4.318,
+     "reported_time": 3.338
+    },
+    {
+     "id": "q074",
+     "repeat": 1,
+     "status": "ok",
+     "start": 346.385,
+     "time": 2.809,
+     "reported_time": 2.199
+    },
+    {
+     "id": "q100",
+     "repeat": 3,
+     "status": "ok",
+     "start": 347.226,
+     "time": 4.767,
+     "reported_time": 3.157
+    },
+    {
+     "id": "q055",
+     "repeat": 3,
+     "status": "ok",
+     "start": 349.194,
+     "time": 2.665,
+     "reported_time": 1.618
+    },
+    {
+     "id": "q016",
+     "repeat": 1,
+     "status": "ok",
+     "start": 350.393,
+     "time": 10.406,
+     "reported_time": 7.237
+    },
+    {
+     "id": "q093",
+     "repeat": 2,
+     "status": "ok",
+     "start": 351.859,
+     "time": 3.647,
+     "reported_time": 2.867
+    },
+    {
+     "id": "q090",
+     "repeat": 1,
+     "status": "ok",
+     "start": 351.994,
+     "time": 3.068,
+     "reported_time": 2.339
+    },
+    {
+     "id": "q002",
+     "repeat": 3,
+     "status": "ok",
+     "start": 355.062,
+     "time": 4.934,
+     "reported_time": 3.523
+    },
+    {
+     "id": "q073",
+     "repeat": 3,
+     "status": "ok",
+     "start": 355.444,
+     "time": 2.402,
+     "reported_time": 1.592
+    },
+    {
+     "id": "q030",
+     "repeat": 3,
+     "status": "ok",
+     "start": 355.506,
+     "time": 3.5,
+     "reported_time": 2.435
+    },
+    {
+     "id": "q035",
+     "repeat": 3,
+     "status": "ok",
+     "start": 357.847,
+     "time": 39.362,
+     "reported_time": 34.194
+    },
+    {
+     "id": "q067",
+     "repeat": 3,
+     "status": "ok",
+     "start": 359.007,
+     "time": 3.5,
+     "reported_time": 2.277
+    },
+    {
+     "id": "q089",
+     "repeat": 1,
+     "status": "ok",
+     "start": 359.996,
+     "time": 11.796,
+     "reported_time": 7.964
+    },
+    {
+     "id": "q064",
+     "repeat": 2,
+     "status": "ok",
+     "start": 360.8,
+     "time": 5.565,
+     "reported_time": 4.078
+    },
+    {
+     "id": "q070",
+     "repeat": 3,
+     "status": "ok",
+     "start": 362.507,
+     "time": 1.768,
+     "reported_time": 1.212
+    },
+    {
+     "id": "q084",
+     "repeat": 1,
+     "status": "ok",
+     "start": 364.275,
+     "time": 2.01,
+     "reported_time": 1.595
+    },
+    {
+     "id": "q046",
+     "repeat": 3,
+     "status": "ok",
+     "start": 366.285,
+     "time": 2.078,
+     "reported_time": 1.542
+    },
+    {
+     "id": "q043",
+     "repeat": 3,
+     "status": "ok",
+     "start": 366.365,
+     "time": 4.358,
+     "reported_time": 3.407
+    },
+    {
+     "id": "q061",
+     "repeat": 2,
+     "status": "ok",
+     "start": 368.363,
+     "time": 1.68,
+     "reported_time": 1.222
+    },
+    {
+     "id": "q085",
+     "repeat": 3,
+     "status": "ok",
+     "start": 370.043,
+     "time": 2.392,
+     "reported_time": 1.718
+    },
+    {
+     "id": "q045",
+     "repeat": 3,
+     "status": "ok",
+     "start": 370.723,
+     "time": 8.837,
+     "reported_time": 5.491
+    },
+    {
+     "id": "q020",
+     "repeat": 3,
+     "status": "ok",
+     "start": 371.792,
+     "time": 1.191,
+     "reported_time": 0.802
+    },
+    {
+     "id": "q072",
+     "repeat": 1,
+     "status": "ok",
+     "start": 372.436,
+     "time": 3.659,
+     "reported_time": 2.548
+    },
+    {
+     "id": "q003",
+     "repeat": 3,
+     "status": "ok",
+     "start": 372.984,
+     "time": 1.621,
+     "reported_time": 1.105
+    },
+    {
+     "id": "q067",
+     "repeat": 1,
+     "status": "ok",
+     "start": 374.605,
+     "time": 3.946,
+     "reported_time": 2.404
+    },
+    {
+     "id": "q025",
+     "repeat": 1,
+     "status": "ok",
+     "start": 376.094,
+     "time": 1.21,
+     "reported_time": 0.798
+    },
+    {
+     "id": "q011",
+     "repeat": 2,
+     "status": "ok",
+     "start": 377.304,
+     "time": 9.756,
+     "reported_time": 6.475
+    },
+    {
+     "id": "q038",
+     "repeat": 1,
+     "status": "ok",
+     "start": 378.551,
+     "time": 1.777,
+     "reported_time": 1.086
+    },
+    {
+     "id": "q060",
+     "repeat": 2,
+     "status": "ok",
+     "start": 379.56,
+     "time": 17.252,
+     "reported_time": 13.634
+    },
+    {
+     "id": "q028",
+     "repeat": 1,
+     "status": "ok",
+     "start": 380.329,
+     "time": 6.793,
+     "reported_time": 5.037
+    },
+    {
+     "id": "q058",
+     "repeat": 2,
+     "status": "ok",
+     "start": 387.061,
+     "time": 3.333,
+     "reported_time": 2.545
+    },
+    {
+     "id": "q017",
+     "repeat": 2,
+     "status": "ok",
+     "start": 387.121,
+     "time": 6.158,
+     "reported_time": 4.62
+    },
+    {
+     "id": "q073",
+     "repeat": 1,
+     "status": "ok",
+     "start": 390.394,
+     "time": 1.289,
+     "reported_time": 0.858
+    },
+    {
+     "id": "q032",
+     "repeat": 1,
+     "status": "ok",
+     "start": 391.683,
+     "time": 7.068,
+     "reported_time": 5.227
+    },
+    {
+     "id": "q024",
+     "repeat": 3,
+     "status": "ok",
+     "start": 393.28,
+     "time": 2.914,
+     "reported_time": 1.751
+    },
+    {
+     "id": "q077",
+     "repeat": 3,
+     "status": "ok",
+     "start": 396.194,
+     "time": 0.955,
+     "reported_time": 0.626
+    },
+    {
+     "id": "q035",
+     "repeat": 2,
+     "status": "ok",
+     "start": 396.812,
+     "time": 41.914,
+     "reported_time": 36.895
+    },
+    {
+     "id": "q033",
+     "repeat": 2,
+     "status": "ok",
+     "start": 397.15,
+     "time": 21.617,
+     "reported_time": 18.912
+    },
+    {
+     "id": "q007",
+     "repeat": 3,
+     "status": "ok",
+     "start": 397.209,
+     "time": 9.675,
+     "reported_time": 8.564
+    },
+    {
+     "id": "q053",
+     "repeat": 2,
+     "status": "ok",
+     "start": 398.751,
+     "time": 7.065,
+     "reported_time": 4.701
+    },
+    {
+     "id": "q074",
+     "repeat": 3,
+     "status": "ok",
+     "start": 405.816,
+     "time": 2.457,
+     "reported_time": 1.714
+    },
+    {
+     "id": "q097",
+     "repeat": 2,
+     "status": "ok",
+     "start": 406.885,
+     "time": 1.756,
+     "reported_time": 1.237
+    },
+    {
+     "id": "q007",
+     "repeat": 2,
+     "status": "ok",
+     "start": 408.273,
+     "time": 10.9,
+     "reported_time": 9.622
+    },
+    {
+     "id": "q006",
+     "repeat": 2,
+     "status": "ok",
+     "start": 408.641,
+     "time": 5.292,
+     "reported_time": 3.671
+    },
+    {
+     "id": "q012",
+     "repeat": 3,
+     "status": "ok",
+     "start": 413.934,
+     "time": 23.438,
+     "reported_time": 18.584
+    },
+    {
+     "id": "q099",
+     "repeat": 1,
+     "status": "wrong",
+     "start": 418.767,
+     "time": 1.649,
+     "reported_time": 1.175,
+     "detail": "order",
+     "output": "URLRegionID\n0\n2\n3\n18\n22\n25\n26\n27\n28\n29\n30\n145\n185\n205\n209\n227\n228\n249\n253\n566\n605\n652\n788\n913\n918\n928\n943\n953\n974\n975\n"
+    },
+    {
+     "id": "q059",
+     "repeat": 2,
+     "status": "ok",
+     "start": 419.173,
+     "time": 7.486,
+     "reported_time": 6.279
+    },
+    {
+     "id": "q031",
+     "repeat": 2,
+     "status": "ok",
+     "start": 420.416,
+     "time": 5.513,
+     "reported_time": 4.852
+    },
+    {
+     "id": "q059",
+     "repeat": 3,
+     "status": "ok",
+     "start": 425.93,
+     "time": 7.083,
+     "reported_time": 5.839
+    },
+    {
+     "id": "q017",
+     "repeat": 1,
+     "status": "ok",
+     "start": 426.659,
+     "time": 4.958,
+     "reported_time": 4.047
+    },
+    {
+     "id": "q023",
+     "repeat": 2,
+     "status": "ok",
+     "start": 431.618,
+     "time": 35.857,
+     "reported_time": 26.803
+    },
+    {
+     "id": "q040",
+     "repeat": 2,
+     "status": "ok",
+     "start": 433.013,
+     "time": 16.997,
+     "reported_time": 14.122
+    },
+    {
+     "id": "q082",
+     "repeat": 1,
+     "status": "ok",
+     "start": 437.372,
+     "time": 1.621,
+     "reported_time": 1.1
+    },
+    {
+     "id": "q054",
+     "repeat": 2,
+     "status": "ok",
+     "start": 438.726,
+     "time": 7.822,
+     "reported_time": 6.059
+    },
+    {
+     "id": "q047",
+     "repeat": 3,
+     "status": "ok",
+     "start": 438.993,
+     "time": 3.645,
+     "reported_time": 2.336
+    },
+    {
+     "id": "q029",
+     "repeat": 2,
+     "status": "ok",
+     "start": 442.638,
+     "time": 3.43,
+     "reported_time": 2.28
+    },
+    {
+     "id": "q060",
+     "repeat": 1,
+     "status": "ok",
+     "start": 446.068,
+     "time": 21.319,
+     "reported_time": 14.679
+    },
+    {
+     "id": "q049",
+     "repeat": 1,
+     "status": "ok",
+     "start": 446.548,
+     "time": 1.641,
+     "reported_time": 1.058
+    },
+    {
+     "id": "q083",
+     "repeat": 1,
+     "status": "ok",
+     "start": 448.189,
+     "time": 3.039,
+     "reported_time": 2.043
+    },
+    {
+     "id": "q032",
+     "repeat": 2,
+     "status": "ok",
+     "start": 450.01,
+     "time": 10.208,
+     "reported_time": 8.236
+    },
+    {
+     "id": "q081",
+     "repeat": 3,
+     "status": "ok",
+     "start": 451.228,
+     "time": 5.725,
+     "reported_time": 4.697
+    },
+    {
+     "id": "q011",
+     "repeat": 3,
+     "status": "ok",
+     "start": 456.953,
+     "time": 10.653,
+     "reported_time": 5.125
+    },
+    {
+     "id": "q083",
+     "repeat": 3,
+     "status": "ok",
+     "start": 460.218,
+     "time": 3.311,
+     "reported_time": 1.588
+    },
+    {
+     "id": "q064",
+     "repeat": 1,
+     "status": "ok",
+     "start": 463.529,
+     "time": 3.767,
+     "reported_time": 2.557
+    },
+    {
+     "id": "q100",
+     "repeat": 2,
+     "status": "ok",
+     "start": 467.297,
+     "time": 5.317,
+     "reported_time": 3.565
+    },
+    {
+     "id": "q049",
+     "repeat": 3,
+     "status": "ok",
+     "start": 467.387,
+     "time": 1.056,
+     "reported_time": 0.631
+    },
+    {
+     "id": "q093",
+     "repeat": 1,
+     "status": "ok",
+     "start": 467.475,
+     "time": 4.055,
+     "reported_time": 3.109
+    },
+    {
+     "id": "q064",
+     "repeat": 3,
+     "status": "ok",
+     "start": 467.606,
+     "time": 5.346,
+     "reported_time": 3.653
+    },
+    {
+     "id": "q068",
+     "repeat": 1,
+     "status": "ok",
+     "start": 468.443,
+     "time": 11.066,
+     "reported_time": 9.727
+    },
+    {
+     "id": "q057",
+     "repeat": 3,
+     "status": "ok",
+     "start": 471.53,
+     "time": 6.688,
+     "reported_time": 4.731
+    },
+    {
+     "id": "q016",
+     "repeat": 3,
+     "status": "ok",
+     "start": 472.614,
+     "time": 11.516,
+     "reported_time": 9.54
+    },
+    {
+     "id": "q037",
+     "repeat": 1,
+     "status": "ok",
+     "start": 472.953,
+     "time": 9.422,
+     "reported_time": 6.72
+    },
+    {
+     "id": "q071",
+     "repeat": 2,
+     "status": "ok",
+     "start": 478.218,
+     "time": 19.118,
+     "reported_time": 11.786
+    },
+    {
+     "id": "q024",
+     "repeat": 1,
+     "status": "ok",
+     "start": 479.509,
+     "time": 3.355,
+     "reported_time": 2.645
+    },
+    {
+     "id": "q037",
+     "repeat": 2,
+     "status": "ok",
+     "start": 482.375,
+     "time": 8.487,
+     "reported_time": 6.068
+    },
+    {
+     "id": "q086",
+     "repeat": 1,
+     "status": "ok",
+     "start": 482.864,
+     "time": 1.303,
+     "reported_time": 0.89
+    },
+    {
+     "id": "q074",
+     "repeat": 2,
+     "status": "ok",
+     "start": 484.129,
+     "time": 3.727,
+     "reported_time": 2.73
+    },
+    {
+     "id": "q069",
+     "repeat": 2,
+     "status": "ok",
+     "start": 484.167,
+     "time": 6.983,
+     "reported_time": 6.266
+    },
+    {
+     "id": "q084",
+     "repeat": 2,
+     "status": "ok",
+     "start": 487.856,
+     "time": 1.431,
+     "reported_time": 0.953
+    },
+    {
+     "id": "q078",
+     "repeat": 1,
+     "status": "ok",
+     "start": 489.287,
+     "time": 0.795,
+     "reported_time": 0.48
+    },
+    {
+     "id": "q080",
+     "repeat": 3,
+     "status": "ok",
+     "start": 490.082,
+     "time": 2.993,
+     "reported_time": 1.96
+    },
+    {
+     "id": "q065",
+     "repeat": 1,
+     "status": "ok",
+     "start": 490.862,
+     "time": 0.913,
+     "reported_time": 0.54
+    },
+    {
+     "id": "q088",
+     "repeat": 2,
+     "status": "ok",
+     "start": 491.15,
+     "time": 4.396,
+     "reported_time": 3.483
+    },
+    {
+     "id": "q075",
+     "repeat": 1,
+     "status": "ok",
+     "start": 491.775,
+     "time": 4.007,
+     "reported_time": 2.904
+    },
+    {
+     "id": "q087",
+     "repeat": 1,
+     "status": "ok",
+     "start": 493.075,
+     "time": 3.879,
+     "reported_time": 2.494
+    },
+    {
+     "id": "q094",
+     "repeat": 1,
+     "status": "ok",
+     "start": 495.546,
+     "time": 4.252,
+     "reported_time": 2.518
+    },
+    {
+     "id": "q037",
+     "repeat": 3,
+     "status": "ok",
+     "start": 495.782,
+     "time": 5.564,
+     "reported_time": 3.97
+    },
+    {
+     "id": "q051",
+     "repeat": 1,
+     "status": "ok",
+     "start": 496.954,
+     "time": 1.348,
+     "reported_time": 0.884
+    }
+   ]
   }
  ],
  "missing": [
   {
    "directory": "chdb",
-   "machine": null,
-   "error": "no result and no log yet"
-  },
-  {
-   "directory": "duckdb",
    "machine": null,
    "error": "no result and no log yet"
   },
@@ -4127,6 +7062,24 @@
    "standard_gap": 1.0,
    "standard_date": null,
    "widening": 1.0,
+   "passes": true,
+   "reasons": [],
+   "challenger_passes": true,
+   "challenger_reasons": [],
+   "level": "production",
+   "demote": false
+  },
+  {
+   "machine": "c6a.metal",
+   "directory": "duckdb",
+   "category": "elite",
+   "restarts": 0,
+   "crashed": 0,
+   "timeouts": 0,
+   "random_gap": 2.0696231797282167,
+   "standard_gap": 2.53462508255364,
+   "standard_date": "2026-11-10",
+   "widening": 0.8165401636612335,
    "passes": true,
    "reasons": [],
    "challenger_passes": true,
