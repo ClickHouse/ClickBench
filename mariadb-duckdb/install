@@ -1,29 +1,17 @@
 #!/bin/bash
 set -eu
 
-# The DuckDB engine comes from the packages of MariaDB's CI. Since MariaDB 13
-# it is a separate package, mariadb-plugin-duckdb, built on the main branch;
-# the 11.4 builds don't have it anymore (it was disabled there in favor of an
-# externally built engine), and CI builds expire after a few months, so a
-# pinned build breaks: take the newest successful build of main that has the
-# package. MARIADB_CI_BUILD=<tarball build number> pins one. There are amd64
-# packages only.
-CI_BUILDER=amd64-ubuntu-2404-deb-autobake
-command -v jq >/dev/null || sudo apt-get install -y jq
-[ "$(dpkg --print-architecture)" = amd64 ] || { echo "MariaDB's CI has DuckDB engine packages for amd64 only" >&2; exit 1; }
-if [ -z "${MARIADB_CI_BUILD:-}" ]; then
-    for n in $(curl -fsS --retry 5 'https://buildbot.mariadb.org/api/v2/builders/1/builds?order=-number&limit=300&property=branch&results=0' \
-               | jq -r '.builds[] | select(.properties.branch[0] == "main") | .number'); do
-        if curl -fsS --max-time 60 "https://ci.mariadb.org/${n}/${CI_BUILDER}/debs/Packages" 2>/dev/null \
-               | grep -qx 'Package: mariadb-plugin-duckdb'; then
-            MARIADB_CI_BUILD="$n"
-            break
-        fi
-    done
-fi
-[ -n "${MARIADB_CI_BUILD:-}" ] || { echo "No build of MariaDB's CI with mariadb-plugin-duckdb" >&2; exit 1; }
-echo "MariaDB CI build: ${MARIADB_CI_BUILD}"
-CI_SOURCES_URL="https://ci.mariadb.org/${MARIADB_CI_BUILD}/${CI_BUILDER}/mariadb.sources"
+# MariaDB 11.4.13 comes from archive.mariadb.org, the DuckDB engine from the
+# mariadb-plugin-duckdb package of the release v2.0.1 of
+# https://github.com/drrtuy/duckdb-engine, checked against a pinned sha256.
+# The plugin package is built for this exact server version, so the server is
+# pinned too. There are amd64 packages only.
+MARIADB_VERSION="11.4.13"
+MARIADB_REPO_URL="https://archive.mariadb.org/mariadb-${MARIADB_VERSION}/repo/ubuntu"
+PLUGIN_RELEASE_URL="https://github.com/drrtuy/duckdb-engine/releases/download/v2.0.1"
+PLUGIN_DEB="mariadb-plugin-duckdb-${MARIADB_VERSION}-2.0.1+maria.ubu2404_amd64.deb"
+PLUGIN_SHA256="f3821b54e5efa3673666fae2ec13979487e833a1237a909fb851469d8e05064d"
+[ "$(dpkg --print-architecture)" = amd64 ] || { echo "The DuckDB engine packages are for amd64 only" >&2; exit 1; }
 
 # Idempotent: if DuckDB plugin is already active, nothing to do.
 if sudo mariadb -e "SELECT PLUGIN_STATUS FROM information_schema.PLUGINS WHERE PLUGIN_NAME='DuckDB';" 2>/dev/null | grep -q 'ACTIVE'; then
@@ -41,9 +29,16 @@ if dpkg -l | grep -qE '^ii\s+(mariadb-server|mysql-server)'; then
     sudo rm -rf /var/lib/mysql /etc/mysql
 fi
 
-sudo wget -q -O /etc/apt/sources.list.d/mariadb-duckdb-ci.sources "$CI_SOURCES_URL"
-sudo apt-get update -y
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server mariadb-client mariadb-plugin-duckdb
+sudo wget -q --tries=5 --retry-connrefused -O /etc/apt/trusted.gpg.d/mariadb-release-signing-key.asc https://mariadb.org/mariadb_release_signing_key.asc
+echo "deb ${MARIADB_REPO_URL} noble main" | sudo tee /etc/apt/sources.list.d/mariadb.list >/dev/null
+sudo apt-get -o Acquire::Retries=5 update -y
+sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -y "mariadb-server=1:${MARIADB_VERSION}+maria~ubu2404" "mariadb-client=1:${MARIADB_VERSION}+maria~ubu2404"
+
+plugin_dir=$(mktemp -d)
+wget -q --tries=5 --retry-connrefused -P "$plugin_dir" "${PLUGIN_RELEASE_URL}/${PLUGIN_DEB}"
+echo "${PLUGIN_SHA256}  ${plugin_dir}/${PLUGIN_DEB}" | sha256sum -c -
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${plugin_dir}/${PLUGIN_DEB}"
+rm -rf "$plugin_dir"
 
 # Scale duckdb-memory-limit to guest RAM. The upstream default of 24G
 # was fine on the 32 GB c6a.4xlarge benchmark host, but blows past a
