@@ -2023,7 +2023,7 @@ function renderHistoryBar() {
 
     const range = history_view.range;
     document.getElementById('history-range').style.display = range ? 'inline' : 'none';
-    document.getElementById('history-range-text').textContent = range ? `${range.from} — ${range.to}` : '';
+    document.getElementById('history-range-text').textContent = !range ? '' : range.last ? `Last ${range.last} days` : `${range.from} — ${range.to}`;
 }
 
 document.getElementById('history-range-reset').addEventListener('click', e => {
@@ -2576,7 +2576,13 @@ function updateHistory() {
     history.pushState(historyState(), '',
         window.location.pathname + (window.location.search || '') + '#' + encodeState(selectors)
         + (history_view ? '&history=' + encodeURIComponent(history_view.key) : '')
-        + (history_view?.range ? `&from=${history_view.range.from}&to=${history_view.range.to}` : ''));
+        + (history_view?.range?.last ? `&last=${history_view.range.last}`
+            : history_view?.range ? `&from=${history_view.range.from}&to=${history_view.range.to}` : ''));
+}
+
+/// The range of the last `days` days, relative to today, kept as `&last=` in the URL so that the link stays fresh.
+function lastDaysRange(days) {
+    return {from: new Date(Date.now() - days * 86400000).toISOString().slice(0, 10), to: '9999-12-31', last: days};
 }
 
 /// The selectors and the history view from the URL.
@@ -2586,7 +2592,9 @@ function applyHash() {
         const hash = decodeURIComponent(window.location.hash.substring(1));
         selectors = {...selectors, ...decodeState(hash)};
         const params = Object.fromEntries(hash.split('&').map(kv => kv.split('=')));
-        setHistoryView(params.history, params.from && params.to ? {from: params.from, to: params.to} : null);
+        const last = parseInt(params.last);
+        setHistoryView(params.history, last > 0 ? lastDaysRange(last)
+            : params.from && params.to ? {from: params.from, to: params.to} : null);
     } catch {}
 }
 
