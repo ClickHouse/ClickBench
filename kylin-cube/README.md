@@ -45,4 +45,16 @@ conformance (see `kylin/README.md`).
 layout and index type) or pushed down; the benchmark driver discards it on
 success, so it is useful for manual runs only.
 
+The query result cache (`kylin.query.cache-enabled`, on by default) is
+disabled in `./start`. Answers from indexes go into it, so with the cache the
+hot runs took 0.01-0.02 s regardless of the query (first run, 2026-11-19).
+The `kylin` entry keeps the default, because it caches no pushdown results
+(`kylin.query.pushdown.cache-enabled=false`).
+
+First run on `c6a.4xlarge` (2026-11-19, with the cache): Kylin modeled all
+queries except Q29 (it stayed pushdown). The build took most of the
+17594 s load, and the indexes made the data size 103 GB, against the
+14.8 GB source file. Q24 and Q29 failed; `./query` now prints Kylin's
+`exceptionMessage` on failure.
+
 The image is amd64 only, so there are no results for Graviton machines.

@@ -54,13 +54,9 @@ suggestion = call("POST", "/models/model_suggestion", {
 models = list({m["alias"]: m for m in suggestion["models"] + suggestion.get("optimal_models", [])}.values())
 if not models:
     sys.exit("Kylin suggested no models: " + json.dumps(suggestion))
-for model in models:
-    indexes = model.get("indexes", [])
-    print(f"model {model['alias']}: {len(indexes)} indexes", flush=True)
-    for index in indexes:
-        print("    index {}: {} dimensions, {} measures, {} computed columns, {} queries".format(
-            index.get("index_id"), len(index.get("dimensions", [])), len(index.get("measures", [])),
-            len(index.get("computed_columns", [])), len(index.get("sqls", []))), flush=True)
+# The response does not list the indexes of new models (they go straight to the
+# index plan); they are listed after the build.
+print("suggested models: " + ", ".join(m["alias"] for m in models), flush=True)
 error_sqls = suggestion.get("error_sqls", [])
 print(f"{len(error_sqls)} queries are not answered by any index (pushdown):", flush=True)
 for sql in error_sqls:
@@ -87,10 +83,22 @@ while True:
         sys.exit("build failed: " + json.dumps(failed))
     if all(job["job_status"] == "FINISHED" for job in status.values()):
         break
-    if time.time() - last_report >= 60:
+    if time.time() - last_report >= 600:
         last_report = time.time()
         print("build: " + ", ".join(f"{job['job_status']} {job.get('progress', 0):.0f}%"
                                     for job in status.values()), flush=True)
     time.sleep(5)
 
 print("all indexes are built", flush=True)
+
+# Table indexes have ids from 20000000000, aggregate indexes below.
+for model in models:
+    plan = call("GET", f"/models/{model['alias']}/indexes?project={PROJECT}&page_size=1000")
+    indexes = plan.get("indexes") or []
+    total = sum(index.get("data_size", 0) for index in indexes)
+    print(f"model {model['alias']}: {len(indexes)} indexes, {total} bytes", flush=True)
+    for index in sorted(indexes, key=lambda index: index["id"]):
+        kind = "table" if index["id"] >= 20000000000 else "aggregate"
+        print("    {} index {}: {} columns, {} bytes, sort by {}".format(
+            kind, index["id"], len(index.get("col_order") or []), index.get("data_size", 0),
+            index.get("sort_by_columns") or []), flush=True)

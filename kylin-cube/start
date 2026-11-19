@@ -42,11 +42,12 @@ if [ "$already_existed" -eq 0 ]; then
         exit 1
     fi
 
-    # Canary settings retained from the measured setup; see README.md
-    # "Canary config".
+    # Canary settings as in ../kylin (see ../kylin/README.md "Canary config").
+    # The query result cache is disabled: answers from indexes are cached,
+    # so the hot runs would measure the cache.
     KYLIN_CONF=/home/kylin/apache-kylin-5.0.2-bin/conf/kylin.properties
     sudo docker exec "$CONTAINER" bash -c "
-        printf '\nkylin.canary.sparder-context-canary-enabled=false\nkylin.canary.sqlcontext-enabled=false\n' >> $KYLIN_CONF
+        printf '\nkylin.canary.sparder-context-canary-enabled=false\nkylin.canary.sqlcontext-enabled=false\nkylin.query.cache-enabled=false\n' >> $KYLIN_CONF
         \$KYLIN_HOME/bin/kylin.sh stop
         \$KYLIN_HOME/bin/kylin.sh start
     "
