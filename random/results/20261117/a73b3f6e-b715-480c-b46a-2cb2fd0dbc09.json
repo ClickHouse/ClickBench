@@ -13324,9 +13324,9 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 44.252773102750886,
-   "standard_gap": 1.9735067533263713,
+   "standard_gap": 1.9739069079971316,
    "standard_date": "2026-10-11",
-   "widening": 22.423421165477272,
+   "widening": 22.418875441118416,
    "passes": false,
    "reasons": [
     "the gap to ClickHouse widens 22.4 times"
@@ -13346,9 +13346,9 @@
    "crashed": 0,
    "timeouts": 45,
    "random_gap": 11.61737568247605,
-   "standard_gap": 2.2123755207454336,
+   "standard_gap": 2.212824109227135,
    "standard_date": "2026-05-11",
-   "widening": 5.251086704558055,
+   "widening": 5.250022192922333,
    "passes": false,
    "reasons": [
     "went down 15 times",
@@ -13370,9 +13370,9 @@
    "crashed": 0,
    "timeouts": 15,
    "random_gap": 8.114778920666259,
-   "standard_gap": 2.703751054553487,
+   "standard_gap": 2.7042992759422555,
    "standard_date": "2026-11-12",
-   "widening": 3.0013040242739284,
+   "widening": 3.0006955934412387,
    "passes": false,
    "reasons": [
     "went down 37 times",
