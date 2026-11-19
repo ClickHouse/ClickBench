@@ -1,0 +1,15 @@
+#!/bin/bash
+# Starts the storage and catalog (lib/iceberg, if not running), then the
+# long-lived query server and nothing else: no warm-up query. ./check is the
+# readiness signal.
+set -e
+
+../lib/iceberg/start
+source ./env
+
+if [ -f server.pid ] && kill -0 "$(cat server.pid)" 2>/dev/null; then
+    exit 0
+fi
+
+nohup "$HOME/opteryx_iceberg_venv/bin/python" server.py >>server.log 2>&1 &
+echo $! > server.pid
