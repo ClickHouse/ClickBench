@@ -10308,9 +10308,9 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 2.0696231797282167,
-   "standard_gap": 2.53462508255364,
+   "standard_gap": 2.707895292350157,
    "standard_date": "2026-11-10",
-   "widening": 0.8165401636612335,
+   "widening": 0.764292173916374,
    "passes": true,
    "reasons": [],
    "challenger_passes": true,
@@ -10326,12 +10326,12 @@
    "crashed": 0,
    "timeouts": 0,
    "random_gap": 13.788197576909162,
-   "standard_gap": 1.9565904639093656,
+   "standard_gap": 2.0903454884693997,
    "standard_date": "2026-10-11",
-   "widening": 7.047053448967371,
+   "widening": 6.5961333439694725,
    "passes": false,
    "reasons": [
-    "the gap to ClickHouse widens 7.0 times"
+    "the gap to ClickHouse widens 6.6 times"
    ],
    "challenger_passes": true,
    "challenger_reasons": [],
