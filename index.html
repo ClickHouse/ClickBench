@@ -1539,16 +1539,19 @@ function renderSummary(filtered_data) {
             td_name.appendChild(remove);
 
             const key = historyKey(elem);
+            /// Limit to the recent results only if the latest one is among them, otherwise the view is empty.
+            const recent = lastDaysRange(history_default_days);
+            const range = elem.date >= recent.from ? recent : null;
             let history_link = document.createElement('a');
             history_link.className = 'history-link';
             history_link.innerHTML = history_icon;
             history_link.title = 'Show the history of the results of this system on this machine';
-            history_link.href = state_hash + '&history=' + encodeURIComponent(key) + '&last=' + history_default_days;
+            history_link.href = state_hash + '&history=' + encodeURIComponent(key) + (range ? '&last=' + range.last : '');
             history_link.addEventListener('click', e => {
                 /// Let the browser open the link in a new tab.
                 if (e.ctrlKey || e.metaKey || e.shiftKey || e.button != 0) { return; }
                 e.preventDefault();
-                openHistory(key);
+                openHistory(key, range);
             });
             td_name.appendChild(history_link);
         }
@@ -2057,8 +2060,8 @@ document.getElementById('history-range-reset').addEventListener('click', e => {
 /// The history link from the summary table opens the recent results; "Show all dates" lifts the limit.
 const history_default_days = 15;
 
-function openHistory(key) {
-    setHistoryView(key, lastDaysRange(history_default_days));
+function openHistory(key, range) {
+    setHistoryView(key, range);
     updateHistory();
     render();
     window.scrollTo(0, 0);
@@ -2097,7 +2100,8 @@ function render() {
         const range = history_view.range;
         filtered_data = (history_view.data || []).filter(elem => !range || (elem.date >= range.from && elem.date <= range.to));
         nothing_selected_elem.textContent = history_view.error ? `Cannot load the history: ${history_view.error}`
-            : !history_view.data ? 'Loading…' : history_view.data.length ? 'No results for this metric' : 'No results';
+            : !history_view.data ? 'Loading…' : !history_view.data.length ? 'No results'
+            : filtered_data.length ? 'No results for this metric' : 'No results in this date range';
     } else {
         applyTopRowFilters();
 
