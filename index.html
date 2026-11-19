@@ -422,8 +422,11 @@
             margin-left: 0.5rem;
         }
 
+        #history-from, #history-to {
+            font: inherit;
+        }
+
         #history-range-text {
-            font-family: monospace;
             margin-right: 0.25rem;
         }
 
@@ -711,6 +714,8 @@ const additional_data_size_points = [
     <a id="history-back" class="selector selector-active">← All systems</a>
     History of<b id="history-title"></b>
     <a id="history-share" class="selector" title="Copy the link to this page">🔗 Copy link</a>
+    From <input type="date" id="history-from" class="selector">
+    To <input type="date" id="history-to" class="selector">
     <span id="history-range">
         <span id="history-range-text"></span>
         <a id="history-range-reset" class="selector">Show all dates</a>
@@ -1538,7 +1543,7 @@ function renderSummary(filtered_data) {
             history_link.className = 'history-link';
             history_link.innerHTML = history_icon;
             history_link.title = 'Show the history of the results of this system on this machine';
-            history_link.href = state_hash + '&history=' + encodeURIComponent(key);
+            history_link.href = state_hash + '&history=' + encodeURIComponent(key) + '&last=' + history_default_days;
             history_link.addEventListener('click', e => {
                 /// Let the browser open the link in a new tab.
                 if (e.ctrlKey || e.metaKey || e.shiftKey || e.button != 0) { return; }
@@ -2023,7 +2028,23 @@ function renderHistoryBar() {
 
     const range = history_view.range;
     document.getElementById('history-range').style.display = range ? 'inline' : 'none';
-    document.getElementById('history-range-text').textContent = !range ? '' : range.last ? `Last ${range.last} days` : `${range.from} — ${range.to}`;
+    document.getElementById('history-range-text').textContent = range?.last ? `Last ${range.last} days` : '';
+    document.getElementById('history-from').value = range && range.from != min_date ? range.from : '';
+    document.getElementById('history-to').value = range && range.to != max_date ? range.to : '';
+}
+
+/// An empty input leaves its side of the range open.
+const min_date = '0000-01-01';
+const max_date = '9999-12-31';
+
+for (const id of ['history-from', 'history-to']) {
+    document.getElementById(id).addEventListener('change', () => {
+        const from = document.getElementById('history-from').value;
+        const to = document.getElementById('history-to').value;
+        setHistoryView(history_view.key, from || to ? {from: from || min_date, to: to || max_date} : null);
+        updateHistory();
+        render();
+    });
 }
 
 document.getElementById('history-range-reset').addEventListener('click', e => {
@@ -2033,8 +2054,11 @@ document.getElementById('history-range-reset').addEventListener('click', e => {
     render();
 });
 
+/// The history link from the summary table opens the recent results; "Show all dates" lifts the limit.
+const history_default_days = 15;
+
 function openHistory(key) {
-    setHistoryView(key);
+    setHistoryView(key, lastDaysRange(history_default_days));
     updateHistory();
     render();
     window.scrollTo(0, 0);
@@ -2582,7 +2606,7 @@ function updateHistory() {
 
 /// The range of the last `days` days, relative to today, kept as `&last=` in the URL so that the link stays fresh.
 function lastDaysRange(days) {
-    return {from: new Date(Date.now() - days * 86400000).toISOString().slice(0, 10), to: '9999-12-31', last: days};
+    return {from: new Date(Date.now() - days * 86400000).toISOString().slice(0, 10), to: max_date, last: days};
 }
 
 /// The selectors and the history view from the URL.
