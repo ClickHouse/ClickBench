@@ -1539,19 +1539,16 @@ function renderSummary(filtered_data) {
             td_name.appendChild(remove);
 
             const key = historyKey(elem);
-            /// Limit to the recent results only if the latest one is among them, otherwise the view is empty.
-            const recent = lastDaysRange(history_default_days);
-            const range = elem.date >= recent.from ? recent : null;
             let history_link = document.createElement('a');
             history_link.className = 'history-link';
             history_link.innerHTML = history_icon;
             history_link.title = 'Show the history of the results of this system on this machine';
-            history_link.href = state_hash + '&history=' + encodeURIComponent(key) + (range ? '&last=' + range.last : '');
+            history_link.href = state_hash + '&history=' + encodeURIComponent(key);
             history_link.addEventListener('click', e => {
                 /// Let the browser open the link in a new tab.
                 if (e.ctrlKey || e.metaKey || e.shiftKey || e.button != 0) { return; }
                 e.preventDefault();
-                openHistory(key, range);
+                openHistory(key);
             });
             td_name.appendChild(history_link);
         }
@@ -2056,9 +2053,6 @@ document.getElementById('history-range-reset').addEventListener('click', e => {
     updateHistory();
     render();
 });
-
-/// The history link from the summary table opens the recent results; "Show all dates" lifts the limit.
-const history_default_days = 15;
 
 function openHistory(key, range) {
     setHistoryView(key, range);
