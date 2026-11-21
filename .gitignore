@@ -53,3 +53,4 @@ pivot-parquet-partitioned/catalog
 pivot-parquet-partitioned/config.yaml
 redshift/log-*.txt
 redshift-serverless/log-*.txt
+chdb/chdb.sock
