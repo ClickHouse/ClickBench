@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+# HDFS logical length (hdfs dfs -du -s column 1, without replicas) of the
+# source file plus the project's Kylin working directory, which holds the
+# built indexes, global dictionaries and table snapshots. The source file
+# stays, because queries that no index answers are pushed down to it.
+sudo docker exec kylin-clickbench bash -c \
+    'hdfs dfs -du -s /clickbench/hits_dir/hits.parquet "/kylin/*/clickbench"' \
+    | awk '{ sum += $1 } END { print sum }'
