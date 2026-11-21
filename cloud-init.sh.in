@@ -8,7 +8,18 @@
 # killed, and a trap for early exits. The `shutdown now` at the end replaces
 # the deadline in the normal case.
 shutdown -P "+$(( @timeout@ / 60 + 120 ))"
-trap 'shutdown now' EXIT
+trap 'live_log_stop; shutdown now' EXIT
+
+# The live log (lib/live-log.py, started below) streams the output of this
+# script to sink.logs as it goes; stop it and let it send the rest.
+live_log_pid=
+live_log_stop() {
+    if [ -n "$live_log_pid" ]; then
+        kill -TERM "$live_log_pid"
+        wait "$live_log_pid"
+        live_log_pid=
+    fi
+}
 
 # Cloud-init runs scripts as root with no HOME exported. Tools that follow
 # XDG-ish conventions (DuckDB extensions in ~/.duckdb, the GizmoSQL one-line
@@ -52,6 +63,15 @@ apt-get install -y wget curl git jq earlyoom
 systemctl enable --now earlyoom
 
 git clone --depth 1 'https://github.com/@repo@.git' --branch '@branch@' ClickBench
+
+# Live log: follow the output of this script from its start - the whole
+# cloud-init output, with the commands traced by `bash -x` - and insert it
+# into sink.logs on play.clickhouse.com about once a second, to watch the run
+# as it goes on https://benchmark.clickhouse.com/live.html#@run_id@
+LIVE_LOG_RUN_ID='@run_id@' LIVE_LOG_SYSTEM='@system@' LIVE_LOG_MACHINE='@machine@' \
+    nice -n 19 python3 ClickBench/lib/live-log.py /var/log/cloud-init-output.log &
+live_log_pid=$!
+
 cd ClickBench/@system@
 
 # The log will be sent to ClickHouse and processed then by materialized views:
@@ -119,4 +139,5 @@ send_log() {
 send_log log
 send_log /var/log/cloud-init-output.log
 
+live_log_stop
 shutdown now
