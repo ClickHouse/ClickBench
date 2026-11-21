@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+du -b hits.parquet | cut -f1
