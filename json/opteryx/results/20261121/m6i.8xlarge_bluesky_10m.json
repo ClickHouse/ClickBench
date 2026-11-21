@@ -1,0 +1,46 @@
+{
+  "system": "Opteryx",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "stateless",
+    "column-oriented",
+    "embedded"
+  ],
+  "version": "0.10.3",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-21",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 10000000,
+  "num_loaded_documents": 9999994,
+  "load_time": 4.998,
+  "total_size": 4858741288,
+  "result": [
+    [
+      4.203045,
+      0.259071,
+      0.249767
+    ],
+    [
+      4.281004,
+      0.42391,
+      0.419334
+    ],
+    [
+      4.292474,
+      0.419519,
+      0.426635
+    ],
+    [
+      4.275372,
+      0.305826,
+      0.298325
+    ],
+    [
+      4.285919,
+      0.305684,
+      0.282531
+    ]
+  ]
+}
