@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 export HOME=${HOME:=~}
 # shellcheck disable=SC1091
@@ -17,7 +17,9 @@ export RUST_BACKTRACE=1
 rm -f mydb
 
 tursodb mydb < create.sql
-tursodb mydb <<'EOF' 2>&1 | grep -v '^Inserting batch of'
+# Newer tursodb prints nothing during the import, and grep exits 1 when no
+# lines pass the filter; pipefail still catches a tursodb failure.
+tursodb mydb <<'EOF' 2>&1 | { grep -v '^Inserting batch of' || true; }
 PRAGMA synchronous = OFF;
 BEGIN;
 .import --csv hits.csv hits
