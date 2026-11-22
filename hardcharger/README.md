@@ -1,16 +1,20 @@
 # Hardcharger
 
-[Hardcharger](https://github.com/gizmodata/hardcharger) is a SQL server that runs DuckDB 2.0 and
-speaks [Chargewire](https://github.com/gizmodata/chargewire), an HTTP protocol that returns query
+[Hardcharger](https://github.com/gizmodata/hardcharger) is a SQL server that speaks
+[Chargewire](https://github.com/gizmodata/chargewire), an HTTP protocol that returns query
 results as Apache Arrow. It is the successor to GizmoSQL and is open source (Apache 2.0).
+
+Hardcharger 2.14.0 runs on its own engine, [Hardcharger Engine](https://github.com/gizmodata/hardcharger-engine)
+v2.0.1, a fork derived from DuckDB 2.0.1 and modified for performance
+([changes and benchmark notes](https://github.com/gizmodata/hardcharger-engine/blob/v2.0.1/docs/optimizations.md)).
 
 The scripts follow the `gizmosql` entry:
 
 - `install` runs Hardcharger's official one-line installer
   (`curl https://install.hardcharger.gizmodata.com | sh`), defaulting to the official
-  `2.4.1` release. `HARDCHARGER_VERSION` can override that version; the installer verifies the
+  `2.14.0` release. `HARDCHARGER_VERSION` can override that version; the installer verifies the
   release checksum.
-- `start` runs `hardcharger-server` on `hits.db` with its defaults (all CPUs, DuckDB's default
+- `start` runs `hardcharger-server` on `hits.db` with its defaults (all CPUs, the engine's default
   memory limit, no result cache) and `--storage-version latest`, as the `duckdb` and `gizmosql`
   entries do. It listens on 127.0.0.1:31337, plain HTTP.
 - `load` creates the table and loads `hits.parquet` with the `duckdb` entry's `INSERT`, through the
