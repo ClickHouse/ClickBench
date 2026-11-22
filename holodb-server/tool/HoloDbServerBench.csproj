@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- ClickBench service-mode tool: the loader (offline, writes the store) and the client (query, check) for the HoloDb.Server image.
+       The loader's HoloDb package is pinned to HoloDbVersion, the version of the image (the store format must match). install passes it
+       from bench.env. Local test against a repo checkout: pass the switch HoloDbClientProject with the path of HoloDb.Client.csproj;
+       the projects then replace the packages. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>$(DefineConstants);HOLODB_MULTIBLOCK;HOLODB_DIALECT</DefineConstants>
+    <SelfContained>false</SelfContained>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <HoloDbVersion Condition="'$(HoloDbVersion)' == ''">23.0.2</HoloDbVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="DuckDB.NET.Data.Full" Version="1.5.5" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(HoloDbClientProject)' == ''">
+    <PackageReference Include="EvaluatedApplications.HoloDb" Version="$(HoloDbVersion)" />
+    <PackageReference Include="EvaluatedApplications.HoloDb.Client" Version="2.0.2" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(HoloDbClientProject)' != ''">
+    <ProjectReference Include="$(HoloDbClientProject)" />
+  </ItemGroup>
+</Project>

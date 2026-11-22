@@ -1,0 +1,21 @@
+#!/bin/bash
+# Installs Docker and pulls the HoloDb.Server image; installs the .NET 8 SDK and builds the ClickBench tool (loader and
+# client) in ./tool against the EvaluatedApplications.HoloDb packages pinned to HOLODB_VERSION.
+set -e
+cd "$(dirname "$0")"
+. ./bench.env
+
+if ! command -v docker >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y docker.io
+    sudo systemctl enable --now docker
+fi
+if ! sudo docker image inspect "$HOLODB_IMAGE" >/dev/null 2>&1; then
+    sudo docker pull "$HOLODB_IMAGE"
+fi
+
+if ! command -v dotnet >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y dotnet-sdk-8.0
+fi
+dotnet publish tool/HoloDbServerBench.csproj -c Release -o bin -p:HoloDbVersion="$HOLODB_VERSION"

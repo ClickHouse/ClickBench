@@ -1,0 +1,11 @@
+{
+  "system": "HoloDb (server)",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "enthusiast",
+  "tags": [
+    "column-oriented",
+    "server"
+  ]
+}
