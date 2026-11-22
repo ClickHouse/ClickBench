@@ -1,0 +1,9 @@
+#!/bin/bash
+# One connection of the shared driver's concurrent-QPS test (see
+# BENCH_CONCURRENT_WORKER in ../lib/benchmark-common.sh).
+#   $1:     deadline, Unix seconds.
+#   Stdin:  this connection's query order, one query per line.
+#   Stdout: "<successful> <failed>" query counts.
+# Unlike ./query, it keeps one connection to the server, so one session of the
+# chDB instance, for the whole test.
+exec python3 client.py --worker "$1"
