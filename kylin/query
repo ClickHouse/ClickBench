@@ -51,6 +51,13 @@ except Exception:
 ' "$tmp_body")
 if [ "$is_exception" = "true" ]; then
     echo "kylin query returned isException:true" >&2
+    python3 -c '
+import json, sys
+try:
+    print((json.load(open(sys.argv[1])).get("exceptionMessage") or "")[:2000])
+except Exception:
+    pass
+' "$tmp_body" >&2
     exit 1
 fi
 

@@ -72,13 +72,11 @@ match), checked after the benchmark, not during it.
   `COUNT(DISTINCT)` queries succeed (Q5 unfiltered/ungrouped;
   Q11/Q12/Q14/Q23 filtered before grouping); the distinguishing factor
   wasn't isolated.
-- **Q19, Q29, Q40**: Calcite rejects a `SELECT`-list alias (`m`/`k`/`Src`,
-  none submitted uppercase or quoted) referenced in `GROUP BY`
-  (`Column 'M'/'K'/'SRC' not found`), consistent with case-folding
-  during resolution. This is a validation-time failure before Gluten or Spark
-  runs. Q19's submitted `extract(minute FROM EventTime) AS m` is
-  rewritten by Kylin to `MINUTE(EventTime) AS m` before the alias fails,
-  so the error SQL differs from the submitted SQL.
+- **Q19, Q29, Q40** (in the 20261004 results): Calcite rejected a
+  `SELECT`-list alias (`m`/`k`/`Src`) referenced in `GROUP BY`
+  (`Column 'M'/'K'/'SRC' not found`): Kylin accepts aliases in `GROUP BY`
+  only with the non-default `kylin.query.calcite.extras-props.conformance=LENIENT`.
+  The queries now repeat the expressions in `GROUP BY` instead.
 
 `query` treats non-200 HTTP and in-band `isException:true` (HTTP 200)
 as failures; `isPartial` isn't inspected.
