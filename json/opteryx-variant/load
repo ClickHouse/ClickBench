@@ -1,0 +1,22 @@
+#!/bin/bash
+# Every document is loaded whole into ONE column, `data`, of the VARIANT type, and written as
+# Parquet: rugo's writer stores a VARIANT column as a shredded Parquet VARIANT (the common paths
+# become typed columns inside it, the rest stays in the Variant binary). The table is sorted by
+# the five paths the queries read - a clustered index, as ../clickhouse sorts its table. See
+# load.py. The decompressed NDJSON is only staging and is removed once a file is converted.
+set -e -o pipefail
+
+DIR=/var/lib/opteryx/bluesky_variant
+STAGE=/var/lib/opteryx/staging
+sudo rm -rf "${DIR}" "${STAGE}"
+sudo mkdir -p "${DIR}" "${STAGE}"
+sudo chown "$(id -u):$(id -g)" "${DIR}" "${STAGE}"
+
+ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}" \
+    | xargs -P 8 -I{} sh -c '
+        name=$(basename "$1" .json.gz)
+        pigz -dc "$1" > "$2/$name.jsonl"
+        /opt/opteryx_venv/bin/python load.py "$2/$name.jsonl" "$3/$name.parquet"
+        rm -f "$2/$name.jsonl"' _ {} "${STAGE}" "${DIR}"
+
+rm -rf "${STAGE}"
