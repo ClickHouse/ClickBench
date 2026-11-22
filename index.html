@@ -11,6 +11,7 @@
 
     <style>
         :root {
+            --live-color: #0A0;
             --color: black;
             --title-color: black;
             --background-color: white;
@@ -51,6 +52,7 @@
         }
 
         [data-theme="dark"] {
+            --live-color: #6E6;
             --color: #CCC;
             --title-color: white;
             --background-color: #04293A;
@@ -140,6 +142,23 @@
             width: 1.1em;
             height: 1.1em;
             fill: currentColor;
+        }
+
+        .live-logs {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4em;
+            margin-left: 1em;
+            font-size: 0.95rem;
+            line-height: 1;
+            text-decoration: none;
+            color: inherit;
+            white-space: nowrap;
+        }
+
+        .live-logs-bullet {
+            color: var(--live-color);
+            font-size: 0.6em;
         }
 
         .github-stars-count {
@@ -702,6 +721,10 @@ const additional_data_size_points = [
             <svg class="github-stars-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
             <span>Star</span>
             <span class="github-stars-count" id="github-stars-count"></span>
+        </a>
+        <a class="live-logs" href="https://benchmark.clickhouse.com/live.html" title="Watch benchmark runs live">
+            <span class="live-logs-bullet" aria-hidden="true">●</span>
+            <span>live logs</span>
         </a>
     </div>
     <a href="https://github.com/ClickHouse/ClickBench/">Methodology</a> | <a href="https://github.com/ClickHouse/ClickBench/">Reproduce and Validate the Results</a> | <a href="https://github.com/ClickHouse/ClickBench/">Add a System</a> | <a href="https://benchmark.clickhouse.com/hardware/">Hardware Benchmark</a> | <a href="https://benchmark.clickhouse.com/versions/">Versions Benchmark</a> | <a href="https://benchmark.clickhouse.com/json/">JSON Benchmark</a> | See also: <a href="https://benchmark.clickhouse.com/playground/">🎈 Playground (new)</a>
