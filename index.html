@@ -2130,7 +2130,7 @@ function render() {
     document.getElementById("chart-scale-hint").textContent = document.getElementById("scale_hint").textContent
         + '. Drag over the chart to select an interval';
 
-    scheduleDetails(() => renderDetails(filtered_data, sorted_indices, baseline_data));
+    scheduleDetails(() => renderDetails(filtered_data, sorted_indices));
 }
 
 /// Only the cells of the details table close to the viewport are rendered, because laying out
@@ -2315,7 +2315,7 @@ document.fonts?.addEventListener('loadingdone', () => {
 });
 window.addEventListener('resize', () => { if (virtual_details) { virtual_details.safe = null; updateDetailsWindow(); } });
 
-function renderDetails(filtered_data, sorted_indices, baseline_data) {
+function renderDetails(filtered_data, sorted_indices) {
     let details_head = document.getElementById('details_head');
     let details_body = document.getElementById('details_body');
 
@@ -2471,9 +2471,12 @@ function renderDetails(filtered_data, sorted_indices, baseline_data) {
         td_query.appendChild(query_name);
         tr.appendChild(td_query);
 
-        const baseline_timing = selectRun(baseline_data[query_num], selectors.metric);
-        rows.push({tr, cells: sorted_indices.map(idx => {
-            const curr_timing = selectRun(filtered_data[idx].result[query_num], selectors.metric);
+        /// The baseline is the best of the values in the row. It is not taken from `baseline_data`, as for the combined
+        /// metric that mixes the best cold run of one system with the best hot run of another, and is lower than any
+        /// of the values, so that none of them is colored as the best.
+        const timings = sorted_indices.map(idx => selectRun(filtered_data[idx].result[query_num], selectors.metric));
+        const baseline_timing = Math.min(...timings.filter(x => x !== null));
+        rows.push({tr, cells: timings.map(curr_timing => {
             const ratio = curr_timing !== null ? (constant_time_add + curr_timing) / (constant_time_add + baseline_timing) : null;
             return {text: curr_timing !== null ? `${curr_timing.toFixed(3)}s (×${ratio.toFixed(2)})` : '☠', ratio};
         })});
