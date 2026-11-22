@@ -264,8 +264,19 @@ The earlier reference, v0.16.1 with ~4 MB objects, measured a 483 s cold and
   against 82.0 s in our v0.31.1 run; on c6a.large it still takes the
   sort-merge retry, at 114.2 s. Concurrent throughput on c6a.large,
   c6a.xlarge and c6a.2xlarge is 0.79 to 0.87 of the v0.28.0 results, which
-  refused statements these runs answer. The t3a.small result is from
-  v0.28.0.
+  refused statements these runs answer.
+- In the v0.34.0 results (`results/20261118`) all 43 statements answered on
+  every machine. Against v0.32.0, the cold total falls on six of seven
+  machines, most on the metal machines: c6a.metal from 219.9 s to 89.3 s and
+  c8g.metal-48xl from 204.0 s to 82.5 s, with c8g.metal-48xl's hot total from
+  19.7 s to 8.2 s. c6a.xlarge goes from 419.7 s to 314.0 s cold and from
+  362.3 s to 271.4 s hot, while c6a.large is 4.5% slower cold and 7% slower
+  hot; q33 there
+  drops from 114.2 s to 37.5 s hot. Concurrent throughput on c6a.xlarge is
+  0.133, against 0.202 in v0.32.0. The c8g.4xlarge result is from an
+  instance that ran v0.32.0 just before it, as a check on an earlier
+  v0.34.0 run on another instance whose hot total was 11% higher; on the
+  same instance the two versions' hot totals are equal (16.1 s).
 - q28 averages `octet_length("URL")`. ClickHouse's `length()` counts bytes and
   DataFusion's counts characters, so `octet_length` is the faithful
   translation; q29 still uses `length("Referer")`.
