@@ -1,0 +1,41 @@
+#!/bin/bash
+set -e
+
+# Opteryx (opteryx-core) with its Iceberg catalog backend (opteryx-iceberg,
+# which brings opteryx-catalog and pyiceberg) on stock CPython 3.14 - the same
+# interpreter and reasoning as ../opteryx/install. boto3 is opteryx-catalog's
+# S3 client for writes; it declares it as optional, so it is named here.
+
+sudo apt-get update -y
+sudo apt-get install -y software-properties-common
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt-get update -y
+sudo apt-get install -y python3.14 python3.14-venv wget
+
+if [ ! -d "$HOME/opteryx_iceberg_venv" ]; then
+    python3.14 -m venv "$HOME/opteryx_iceberg_venv"
+fi
+
+"$HOME/opteryx_iceberg_venv/bin/python" -m pip install --upgrade pip
+# Pinned so a published result is reproducible against named releases.
+OPTERYX_VERSION=0.10.2
+OPTERYX_CATALOG_VERSION=0.4.198
+OPTERYX_ICEBERG_VERSION=0.1.25
+"$HOME/opteryx_iceberg_venv/bin/python" -m pip install \
+    "opteryx-core==${OPTERYX_VERSION}" \
+    "opteryx-catalog==${OPTERYX_CATALOG_VERSION}" \
+    "opteryx-iceberg==${OPTERYX_ICEBERG_VERSION}" \
+    boto3
+
+"$HOME/opteryx_iceberg_venv/bin/python" - "$OPTERYX_VERSION" <<'PY'
+import sys
+
+import opteryx
+import opteryx_iceberg
+
+print(f"python  {sys.version.split()[0]}  (GIL enabled: {sys._is_gil_enabled()})")
+print(f"opteryx-core {opteryx.__version__}")
+assert opteryx.__version__ == sys.argv[1], f"expected opteryx-core {sys.argv[1]}, got {opteryx.__version__}"
+PY
+
+../lib/iceberg/install

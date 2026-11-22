@@ -113,6 +113,7 @@ Implemented:
 | `presto-iceberg` | Presto 0.300 Iceberg connector, `CREATE TABLE` + `INSERT` | REST, OAuth2 |
 | `databend-iceberg` | Databend nightly Iceberg catalog, `CREATE TABLE ... ENGINE = ICEBERG` + `INSERT` (column names are lowercase, as Databend folds unquoted identifiers) | REST, OAuth2 |
 | `datafusion-iceberg` | DataFusion through the DataFusion integration of iceberg-rust 0.11, `CREATE TABLE` + `INSERT` (a small binary, `src/main.rs`) | REST, OAuth2 |
+| `opteryx-iceberg` | Opteryx with `opteryx-iceberg` (every data file, manifest and manifest list written by Opteryx; PyIceberg only as the REST client), `CREATE TABLE` + `INSERT ... SELECT` | REST, OAuth2 |
 
 Can be added on top of the same storage:
 
