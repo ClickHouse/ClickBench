@@ -1,0 +1,24 @@
+# SynnoDB at the commit the engine in engine/ was generated with. The release on PyPI (0.1.7) is
+# older: it lacks the routing of statements without parameters, which all of ClickBench's are.
+synnodb @ git+https://github.com/SynnoDB/SynnoDB@5efc9485f845247b4ddb0d63492a20d107b696f5
+
+# Its runtime dependencies, at the versions of SynnoDB's own uv.lock. SynnoDB does not work with
+# DuckDB 2.x yet.
+contourpy==1.3.3
+cycler==0.12.1
+duckdb==1.5.3
+fonttools==4.63.0
+kiwisolver==1.5.0
+matplotlib==3.10.9
+numpy==2.4.6
+packaging==26.2
+pandas==3.0.3
+pillow==12.2.0
+psutil==7.2.2
+pyarrow==24.0.0
+pyparsing==3.3.2
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.2
+six==1.17.0
+sqlglot==30.12.0
+tzdata==2026.2

@@ -1,0 +1,10 @@
+venv/
+engines/
+hits.db
+hits.db.wal
+hits.parquet
+verified.json
+server.log
+server.pid
+synnodb.sock
+result.csv
