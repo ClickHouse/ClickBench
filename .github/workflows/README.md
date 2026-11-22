@@ -11,6 +11,20 @@ carry the PR number in the log (the `ClickBench PR:` line), which the sink
 parses into the `clickbench_pr` column of `sink.results`, so they can be told
 apart from the runs of main and are excluded by `collect-results.sh`.
 
+While it runs, the machine also streams its log live: `lib/live-log.py`
+follows the cloud-init output (`/var/log/cloud-init-output.log`, with the
+commands traced by `bash -x`) and inserts the new lines into `sink.logs` on
+play.clickhouse.com about once a second, as the user `sink_logs`. The page
+[`live.html`](https://benchmark.clickhouse.com/live.html) lists the runs of
+the last three days and follows a run with a streaming query
+(`SELECT ... FROM sink.logs STREAM`, as the user `live_logs`). The launchers
+(`run-benchmark.sh`, `json/run-benchmark.sh`) print the link to the log of
+every machine they start, `live.html#<run id>`, and add it to the job
+summary. The page is self-contained, so it can be published anywhere, e.g. on
+pastila.nl. See `prepare-database.sql` for the table and the users. The live
+log is a convenience: the complete log of a run is sent to `sink.data` at the
+end, as before.
+
 | Workflow | Trigger | What it launches |
 |----------|---------|------------------|
 | `benchmark-daily.yml` | daily, 02:00 UTC | the ClickHouse variants, each on the whole set of machine types, and `clickhouse-memory`, which needs more than 32 GB of RAM, on the metal machines only, from main |
