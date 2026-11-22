@@ -144,8 +144,24 @@
             fill: currentColor;
         }
 
+        .live-logs {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4em;
+            font-size: 0.95rem;
+            line-height: 1;
+            text-decoration: none;
+            color: inherit;
+            white-space: nowrap;
+        }
+
+        .live-logs:hover {
+            text-decoration: underline;
+        }
+
         .live-logs-bullet {
             color: var(--live-color);
+            font-size: 0.6em;
         }
 
         .github-stars-count {
@@ -709,7 +725,7 @@ const additional_data_size_points = [
             <span>Star</span>
             <span class="github-stars-count" id="github-stars-count"></span>
         </a>
-        <a class="github-stars" href="live.html" title="Watch benchmark runs live">
+        <a class="live-logs" href="live.html" title="Watch benchmark runs live">
             <span class="live-logs-bullet" aria-hidden="true">●</span>
             <span>live logs</span>
         </a>
