@@ -35,26 +35,41 @@ descendants() {
     done
 }
 
+# The dump goes to a file, not to stderr: stderr is the pipe the benchmark
+# driver reads until every writer has closed it, so a dump tool that outlives
+# its timeout would hold the driver forever. Each tool is killed with SIGKILL
+# by a `timeout` that is its direct parent (inside sudo: sudo does not relay
+# SIGKILL), because a gdb attached to a wedged process can ignore SIGTERM.
+# The readers get longer than the tools they read from, so that they print
+# what a killed tool has written. No `set -e` here: a killed tool must not end
+# the watchdog before it kills the query.
 (
+    set +e
     sleep "$QUERY_TIMEOUT" </dev/null >/dev/null 2>&1
-    echo "query: no result after ${QUERY_TIMEOUT}s; processes and stacks:" >&2
-    procs=$(descendants "$pid")
-    for p in $procs; do
-        ps -o pid=,ppid=,stat=,etimes=,nlwp=,rss=,args= -p "$p" | cut -c1-300 >&2
-    done
-    for p in $procs; do
-        if [ "$(ps -o comm= -p "$p")" = java ]; then
-            echo "query: Java stacks of $p:" >&2
-            timeout 120 jcmd "$p" Thread.print 2>&1 | python3 stacks.py >&2 || true
-        fi
-        echo "query: native stacks of $p:" >&2
-        timeout 600 sudo gdb -p "$p" -batch -ex 'thread apply all bt 16' 2>/dev/null | python3 stacks.py >&2 || true
-    done
+    dump=$(mktemp)
+    {
+        echo "query: no result after ${QUERY_TIMEOUT}s; processes and stacks:"
+        procs=$(descendants "$pid")
+        for p in $procs; do
+            ps -o pid=,ppid=,stat=,etimes=,nlwp=,rss=,wchan=,args= -p "$p" | cut -c1-300
+        done
+        for p in $procs; do
+            if [ "$(ps -o comm= -p "$p")" = java ]; then
+                echo "query: Java stacks of $p:"
+                timeout -s KILL 120 jcmd "$p" Thread.print 2>&1 | timeout -s KILL 180 python3 stacks.py
+            fi
+            echo "query: native stacks of $p:"
+            sudo timeout -s KILL 300 gdb -p "$p" -batch -nx -iex 'set auto-load off' \
+                -ex 'thread apply all bt 16' 2>/dev/null | timeout -s KILL 360 python3 stacks.py
+        done
+    } </dev/null >"$dump" 2>&1
     # Only now: a query that finishes during the dump has not hung.
     touch "$HUNG_MARKER"
     for p in $procs; do
         kill -KILL "$p" 2>/dev/null || true
     done
+    cat "$dump" >&2
+    rm -f "$dump"
 ) &
 watchdog=$!
 
