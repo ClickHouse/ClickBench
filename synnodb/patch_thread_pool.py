@@ -36,7 +36,11 @@ for path in files:
     if "Portability shim, not part of upstream SynnoDB" in text:
         print(f"{path}: already patched")
     elif OLD in text:
-        path.write_text(text.replace(OLD, NEW, 1))
+        # Replace the file instead of rewriting it in place: the installer may have hard-linked
+        # it from its package cache.
+        patched = path.with_name(path.name + ".patched")
+        patched.write_text(text.replace(OLD, NEW, 1))
+        patched.replace(path)
         print(f"{path}: patched")
     else:
         sys.exit(f"{path}: expected '#include <immintrin.h>' not found")

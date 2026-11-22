@@ -9,15 +9,16 @@ engine's in-memory copy of the data survives between queries, as it would in an 
 Routes (HTTP over the Unix socket synnodb.sock):
     GET  /health     -> 200 once the server is up.
     POST /load       -> builds hits.db from hits.parquet, loads the engine, verifies every
-                        benchmark query against DuckDB. Returns {"elapsed": seconds, ...}.
+                        benchmark query on it against DuckDB. Returns {"elapsed": seconds, ...}.
     POST /query      -> body: SQL text. Returns {"elapsed": seconds, "served_by": ...}.
     GET  /data-size  -> {"bytes": size of hits.db}.
 
-Whether the engine may serve a query is decided once, in /load, by SynnoDB's own cross-check:
-every query of queries.sql runs through the router with cross_check_rate=1.0, which executes it
-on both the engine and DuckDB and compares the results. The outcome is stored in verified.json.
-Timed runs then use cross_check_rate=0.0 (no second execution on DuckDB). A query whose engine
-answer was rejected in /load is not sent to the router again; DuckDB answers it.
+Whether the engine may serve a query is decided once, in /load: every query the engine has an
+implementation for runs on the engine and on DuckDB, and the two results are compared with the
+comparison SynnoDB's factory validates an engine with (see `engine_matches_duckdb`). The outcome
+is stored in verified.json. A query whose engine answer was rejected is not sent to the router in
+the timed runs; DuckDB answers it. The router itself runs with `cross_check_rate=0.0`, that is,
+it does not execute the routed statements on DuckDB a second time.
 """
 
 import json
@@ -32,6 +33,14 @@ from pathlib import Path
 import duckdb
 import synnodb
 from synnodb.router import RouterMode, RouterPolicy
+from synnodb.router.adapt import candidate_superset, results_equal
+from synnodb.router.normalize import (
+    has_order_by,
+    order_by_key_indices,
+    top_level_limit_offset,
+    widened_query,
+)
+from synnodb.utils.sql_utils import extract_order_by_columns
 
 HERE = Path(__file__).resolve().parent
 DB = HERE / "hits.db"
@@ -63,34 +72,28 @@ def duckdb_memory_limit():
     return f"{int(total * DUCKDB_MEMORY_FRACTION / 2**20)}MiB"
 
 
-def open_connection(cross_check):
+def open_connection():
     """Open hits.db behind the SynnoDB router.
 
     The number of threads is not set. DuckDB then uses all cores, and SynnoDB runs the engine
     with the number of threads recorded in its manifest: the one it was generated and validated
     with. An engine may keep per-thread structures, so another number is a configuration the
     factory has never checked."""
-    policy = RouterPolicy(
-        mode=RouterMode.SAMPLED,
-        cross_check_rate=1.0 if cross_check else 0.0,
-        verbose=False,
-    )
     return synnodb.connect(
         str(DB),
         read_only=True,
         config={"memory_limit": duckdb_memory_limit()},
         engines=str(ENGINES),
-        policy=policy,
+        policy=RouterPolicy(mode=RouterMode.SAMPLED, cross_check_rate=0.0, verbose=False),
     )
 
 
-def open_for_queries():
-    global con, rejected
+def use_verified():
+    global rejected
     outcome = json.loads(VERIFIED.read_text())
     rejected = {normalize(QUERIES[n - 1]) for n in outcome["rejected"]}
-    con = open_connection(cross_check=False)
     log(
-        f"opened {DB.name}: the engine serves {len(outcome['engine'])} of {len(QUERIES)} queries,"
+        f"{DB.name}: the engine serves {len(outcome['engine'])} of {len(QUERIES)} queries,"
         f" {len(outcome['rejected'])} rejected, {len(outcome['no_engine'])} without an engine"
     )
 
@@ -119,38 +122,91 @@ def build_database():
     return rows
 
 
-def verify_engine():
-    """Run every benchmark query once through the router with the cross-check on.
+def sort_key_columns(sql, names):
+    """The positions of the `ORDER BY` keys among the result columns, or None if a key is not a
+    result column (the comparison is then strictly positional). As in the factory's validator,
+    `ORDER BY COUNT(*)` refers to the column DuckDB names `count_star()`."""
+    keys = order_by_key_indices(sql, names)
+    if keys is None:
+        columns = [
+            "count_star()" if column.lower() == "count(*)" else column
+            for column, _ in extract_order_by_columns(sql)
+        ]
+        if columns and all(column in names for column in columns):
+            keys = [names.index(column) for column in columns]
+    return keys
 
-    Returns three lists of query numbers: answered by the engine identically to DuckDB; having an
-    engine whose answer was rejected (it differed, or the engine failed); having no engine."""
-    check = open_connection(cross_check=True)
-    try:
-        check.refresh_engines()
-        templates = check.router_stats()["registry"]["templates"]
-        if templates == 0:
-            raise RuntimeError(
-                "no SynnoDB engine was registered for hits.db. The engine is loaded through "
-                "/dev/shm, which must have room for the whole table as Arrow (about 67 GiB); "
-                "see README.md"
-            )
-        if check.synno_ingest_data() == 0:
-            raise RuntimeError("the SynnoDB engine failed to load the data")
-        log(f"engine loaded: {templates} statements registered")
 
-        engine, engine_rejected, no_engine = [], [], []
-        for number, sql in enumerate(QUERIES, 1):
-            has_engine = check.why(sql)["decision"] == "would-route"
-            check.execute(sql).fetchall()
-            if (check._last or {}).get("served_by") == "engine":
-                engine.append(number)
-            elif has_engine:
-                engine_rejected.append(number)
-            else:
-                no_engine.append(number)
-        return engine, engine_rejected, no_engine, check.router_stats()["session"]
-    finally:
-        check.close()
+def engine_matches_duckdb(conn, sql):
+    """Run the statement on the engine and on DuckDB and compare the results the way SynnoDB's
+    factory does when it validates an engine (synnodb/tools/validate/run_and_check_queries.py):
+    `results_equal`, which for `ORDER BY` requires the same sequence of sort keys and the same
+    rows, and, for a `LIMIT` that cuts through rows tied on the sort keys, `candidate_superset`:
+    DuckDB re-runs the query with a larger `LIMIT` until the group of tied rows is complete, and
+    the engine's rows must be members of it. Which of the tied rows are returned is not defined
+    by SQL, and DuckDB's own choice differs from run to run.
+
+    SynnoDB's router has a cross-check too (`cross_check_rate`), but it compares without the
+    second step and so rejects correct answers to such queries."""
+    engine = conn.execute(sql).to_arrow_table()
+    if (conn._last or {}).get("served_by") != "engine":
+        return False  # the engine failed and SynnoDB fell back to DuckDB
+    reference = conn.duckdb.execute(sql).to_arrow_table()
+
+    ordered = has_order_by(sql)
+    order_keys = sort_key_columns(sql, reference.column_names) if ordered else None
+    row_limit, row_offset = top_level_limit_offset(sql)
+    candidates = None
+    if ordered and order_keys and row_limit is not None:
+
+        def fetch_widened(limit):
+            widened = widened_query(sql, limit)
+            return None if widened is None else conn.duckdb.execute(widened).to_arrow_table()
+
+        candidates = candidate_superset(
+            reference,
+            order_keys=order_keys,
+            row_limit=row_limit,
+            row_offset=row_offset,
+            fetch_widened=fetch_widened,
+        )
+    return results_equal(
+        engine,
+        reference,
+        ordered=ordered,
+        order_keys=order_keys,
+        row_limit=row_limit,
+        candidates=candidates,
+    )
+
+
+def verify_engine(conn):
+    """Returns three lists of query numbers: answered by the engine in agreement with DuckDB;
+    having an engine implementation whose answer was rejected; having none."""
+    conn.refresh_engines()
+    templates = conn.router_stats()["registry"]["templates"]
+    if templates == 0:
+        raise RuntimeError(
+            "no SynnoDB engine was registered for hits.db. The engine is loaded through "
+            "/dev/shm, which must have room for the whole table as Arrow (about 67 GiB); "
+            "see README.md"
+        )
+    if conn.synno_ingest_data() == 0:
+        raise RuntimeError("the SynnoDB engine failed to load the data")
+    log(f"engine loaded: {templates} statements registered")
+
+    engine, engine_rejected, no_engine = [], [], []
+    for number, sql in enumerate(QUERIES, 1):
+        if conn.why(sql)["decision"] != "would-route":
+            no_engine.append(number)
+            continue
+        try:
+            ok = engine_matches_duckdb(conn, sql)
+        except Exception as e:
+            log(f"query {number}: the comparison failed: {e!r}")
+            ok = False
+        (engine if ok else engine_rejected).append(number)
+    return engine, engine_rejected, no_engine
 
 
 def do_load():
@@ -165,21 +221,25 @@ def do_load():
     t_db = time.perf_counter()
     log(f"hits.db built: {rows} rows in {t_db - start:.1f} s")
 
-    engine, engine_rejected, no_engine, session = verify_engine()
+    conn = open_connection()
+    try:
+        engine, engine_rejected, no_engine = verify_engine(conn)
+    except BaseException:
+        conn.close()
+        raise
     t_verify = time.perf_counter()
     log(
         f"verified in {t_verify - t_db:.1f} s: engine {engine}, rejected {engine_rejected},"
-        f" no engine {no_engine}; {session}"
+        f" no engine {no_engine}"
     )
     if not engine:
-        raise RuntimeError(
-            f"the SynnoDB engine did not answer any query identically to DuckDB: {session}"
-        )
+        conn.close()
+        raise RuntimeError("the SynnoDB engine did not answer any query in agreement with DuckDB")
     VERIFIED.write_text(
         json.dumps({"engine": engine, "rejected": engine_rejected, "no_engine": no_engine})
     )
-
-    open_for_queries()
+    use_verified()
+    con = conn
     return {
         "elapsed": round(time.perf_counter() - start, 3),
         "rows": rows,
@@ -261,7 +321,8 @@ class Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
 if __name__ == "__main__":
     SOCKET.unlink(missing_ok=True)
     if DB.exists() and VERIFIED.exists():
-        open_for_queries()
+        use_verified()
+        con = open_connection()
     server = Server(str(SOCKET), Handler)
     log(f"listening on {SOCKET}")
     server.serve_forever()
