@@ -14,7 +14,10 @@ apart from the runs of main and are excluded by `collect-results.sh`.
 While it runs, the machine also streams its log live: `lib/live-log.py`
 follows the cloud-init output (`/var/log/cloud-init-output.log`, with the
 commands traced by `bash -x`) and inserts the new lines into `sink.logs` on
-play.clickhouse.com about once a second, as the user `sink_logs`. The page
+play.clickhouse.com about once a second, as the user `sink_logs`. The machine
+downloads `lib/live-log.py` from the main branch of this repository instead
+of taking it from its clone, so the runs of pull requests have a live log
+whatever their branch contains. The page
 [`live.html`](https://benchmark.clickhouse.com/live.html) lists the runs of
 the last three days and follows a run with a streaming query
 (`SELECT ... FROM sink.logs STREAM`, as the user `live_logs`). The launchers
