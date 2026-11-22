@@ -8,7 +8,8 @@ run time `import synnodb as duckdb` routes the statements the engine knows to th
 everything else to DuckDB.
 
 This entry is `tuned`: the engine was written for exactly the queries of this benchmark. A
-statement that differs from them in anything but formatting is answered by DuckDB.
+statement that differs from them in anything but formatting is answered by DuckDB. For the same
+reason it is in the `joke` category, as [GenDB](../gendb/) is.
 
 ## How it runs in the benchmark
 
@@ -18,7 +19,9 @@ statement that differs from them in anything but formatting is answered by DuckD
   `-march`.
 - `server.py` is one long-lived process that holds a `synnodb.connect("hits.db", ...)`
   connection, the way an application would. The data is in a DuckDB file, loaded as in the
-  [duckdb](../duckdb/) entry.
+  [duckdb](../duckdb/) entry. Every call to SynnoDB is made from one thread of the server:
+  SynnoDB ties the engine process to the thread that started it, and the engine is killed when
+  that thread exits.
 - The engine keeps its own copy of the table in memory. SynnoDB loads it on the first statement
   of a connection: it exports the whole table from DuckDB as Arrow into `/dev/shm`, and the
   engine process builds its structures from that image. The benchmark restarts the server
@@ -30,14 +33,15 @@ statement that differs from them in anything but formatting is answered by DuckD
   queries that agree are the ones the engine serves in the timed runs; the others go to DuckDB.
   The lists are printed to the log. `load` fails, and the benchmark stops, if the engine cannot
   be loaded or agrees with DuckDB on nothing, so that timings of DuckDB are never reported under
-  the name of SynnoDB.
+  the name of SynnoDB. For the same reason a query of the engine's list fails in a timed run if
+  the engine does not answer it, although SynnoDB itself falls back to DuckDB then.
 - In the timed runs SynnoDB's router does not execute the routed statements on DuckDB a second
   time (`cross_check_rate=0.0`; by default it does so for the first ten executions of every
   statement and for a tenth of the later ones).
 - The reported time is the wall-clock time of `execute` and `fetchall` on the drop-in
   connection. For a statement routed to the engine this is more than the time inside the engine:
   for every statement SynnoDB copies the engine's query library (27 MB, as it is built with
-  debug information) and loads the copy anew, which took about 0.1 s where the engine was
+  debug information) and loads the copy anew, which took about 0.06 s where the engine was
   generated and dominates the short queries. The time inside the engine is in the output of
   `query` as `engine_ms`.
 - The engine runs with the number of threads it was generated and validated with, 16. DuckDB

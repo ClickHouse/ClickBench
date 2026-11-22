@@ -25,8 +25,8 @@ import json
 import os
 import socketserver
 import sys
-import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
@@ -54,8 +54,14 @@ QUERIES = [q.strip() for q in (HERE / "queries.sql").read_text().splitlines() if
 # loaded from, so DuckDB cannot have its default 80% of the RAM.
 DUCKDB_MEMORY_FRACTION = float(os.environ.get("BENCH_SYNNODB_DUCKDB_MEMORY_FRACTION", "0.2"))
 
-LOCK = threading.Lock()
+# Every call into SynnoDB is made on this one thread, which lives as long as the server. SynnoDB
+# starts the engine process from the thread that runs the first routed statement, with
+# PR_SET_PDEATHSIG, and Linux delivers that signal when the thread exits, not the process. If
+# each request ran on a thread of its own, the engine would be killed after every query and
+# rebuilt from /dev/shm for the next one.
+WORKER = ThreadPoolExecutor(max_workers=1, thread_name_prefix="synnodb")
 con = None  # the SynnoDB connection; None until hits.db is loaded and verified
+engine_statements = set()  # statements the engine answered in agreement with DuckDB in /load
 rejected = set()  # statements whose engine answer differed from DuckDB's in /load
 
 
@@ -89,8 +95,9 @@ def open_connection():
 
 
 def use_verified():
-    global rejected
+    global engine_statements, rejected
     outcome = json.loads(VERIFIED.read_text())
+    engine_statements = {normalize(QUERIES[n - 1]) for n in outcome["engine"]}
     rejected = {normalize(QUERIES[n - 1]) for n in outcome["rejected"]}
     log(
         f"{DB.name}: the engine serves {len(outcome['engine'])} of {len(QUERIES)} queries,"
@@ -254,17 +261,26 @@ def do_load():
 def do_query(sql):
     if con is None:
         raise LookupError("hits.db is not loaded; POST /load first")
+    statement = normalize(sql)
     result = {}
     start = time.perf_counter()
-    if normalize(sql) in rejected:
+    if statement in rejected:
         rows = con.duckdb.execute(sql).fetchall()
         result["served_by"] = "duckdb"
     else:
-        # The drop-in path. The router sends the statement to the engine if there is one for it;
-        # otherwise, or if the engine fails, SynnoDB itself falls back to DuckDB.
+        # The drop-in path. The router sends the statement to the engine if there is one for it,
+        # and to DuckDB otherwise.
         rows = con.execute(sql).fetchall()
         last = con._last or {}
         result["served_by"] = last.get("served_by", "duckdb")
+        if statement in engine_statements and result["served_by"] != "engine":
+            # SynnoDB falls back to DuckDB when the engine fails. That is right for an
+            # application, but here it would report the time of the failed attempt plus
+            # DuckDB's as the engine's. The query has failed.
+            raise RuntimeError(
+                "the engine did not answer a query it answered in /load;"
+                " SynnoDB fell back to DuckDB"
+            )
         if last.get("engine_ms") is not None:
             # The time inside the engine, for the log only. The reported time is the wall-clock
             # time of the statement, which also has the routing and the transfer of the result.
@@ -300,13 +316,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode()
         try:
-            with LOCK:
-                if self.path == "/load":
-                    self.reply(200, do_load())
-                elif self.path == "/query":
-                    self.reply(200, do_query(body))
-                else:
-                    self.reply(404, {"error": "not found"})
+            if self.path == "/load":
+                self.reply(200, WORKER.submit(do_load).result())
+            elif self.path == "/query":
+                self.reply(200, WORKER.submit(do_query, body).result())
+            else:
+                self.reply(404, {"error": "not found"})
         except LookupError as e:
             self.reply(409, {"error": str(e)})
         except Exception as e:  # reported to ./load or ./query, which exit non-zero
@@ -315,14 +330,22 @@ class Handler(BaseHTTPRequestHandler):
 
 
 class Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
+    """Requests are accepted on threads of their own, so that ./check answers while a query
+    runs. The work itself is queued to WORKER."""
+
     daemon_threads = True
+
+
+def open_loaded():
+    global con
+    use_verified()
+    con = open_connection()
 
 
 if __name__ == "__main__":
     SOCKET.unlink(missing_ok=True)
     if DB.exists() and VERIFIED.exists():
-        use_verified()
-        con = open_connection()
+        WORKER.submit(open_loaded).result()
     server = Server(str(SOCKET), Handler)
     log(f"listening on {SOCKET}")
     server.serve_forever()
