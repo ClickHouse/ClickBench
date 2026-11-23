@@ -3,9 +3,9 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "challenger",
   "tags": [
     "Java",
-    "column-oriented",
-    "lukewarm-cold-run"
+    "column-oriented"
   ]
 }

@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+sudo apt-get update -y
+sudo apt-get install -y python3-pip python3-venv
+
+if [ ! -d myenv ]; then
+    python3 -m venv myenv
+fi
+# shellcheck disable=SC1091
+source myenv/bin/activate
+# The `tiledb` wheel (TileDB-Py) bundles the TileDB library; there are
+# wheels for x86_64 and aarch64. TileDB-Py refuses pandas 3 for its
+# dataframe interface ("Pandas version >= 1.0 and < 3.0 required").
+pip install --quiet tiledb 'pandas<3' pyarrow fastapi uvicorn
+
+python3 -c 'import tiledb; print("TileDB-Py", tiledb.__version__, "TileDB", ".".join(map(str, tiledb.libtiledb.version())))'

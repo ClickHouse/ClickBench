@@ -1,0 +1,13 @@
+{
+  "system": "SynnoDB",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "yes",
+  "category": "joke",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "DuckDB derivative",
+    "in-memory"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "system": "Duckflight (data lake, partitioned)",
+  "proprietary": "yes",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "enthusiast",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "DuckDB derivative"
+  ]
+}

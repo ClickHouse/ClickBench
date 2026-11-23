@@ -1,8 +1,8 @@
 #!/bin/bash
-# Create hits.hyper and COPY hits.csv into it, using the PERSISTENT Hyper
+# Create hits.hyper and load hits.parquet into it, using the PERSISTENT Hyper
 # server started by ./start (descriptor in server.endpoint). Loading through
 # the already-running server avoids briefly running two hyperd instances
-# (each of which would try to claim up to 80% of RAM) during the heavy COPY.
+# (each of which would try to claim up to 80% of RAM) during the heavy load.
 set -e
 
 # shellcheck disable=SC1091
@@ -12,16 +12,21 @@ source myenv/bin/activate
 rm -f hits.hyper
 
 python3 - <<'PY'
-from tableauhyperapi import Connection, Endpoint, CreateMode
+from tableauhyperapi import Connection, Endpoint
 
 with open("server.endpoint") as f:
     descriptor = f.read().strip()
 
 endpoint = Endpoint(connection_descriptor=descriptor, user_agent="clickbench")
-with Connection(endpoint, 'hits.hyper', CreateMode.CREATE_AND_REPLACE) as connection:
-    connection.execute_command(open("create.sql").read())
-    connection.execute_command("copy hits from 'hits.csv' with (format csv)")
+with Connection(endpoint) as connection:
+    connection.execute_command('CREATE DATABASE "hits.hyper" WITH compression=zstd')
+
+with Connection(endpoint, 'hits.hyper') as connection:
+    # The Hyper API accepts one statement per execute_command call.
+    for command in open("create.sql").read().split(";"):
+        if command.strip():
+            connection.execute_command(command)
 PY
 
-rm -f hits.csv
+rm -f hits.parquet
 sync

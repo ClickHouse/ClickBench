@@ -3,11 +3,11 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "enthusiast",
   "tags": [
     "C++",
     "column-oriented",
     "MySQL compatible",
-    "ClickHouse derivative",
-    "lukewarm-cold-run"
+    "ClickHouse derivative"
   ]
 }

@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+# dataDir holds everything taosd persists: the mnode metadata, the per-vnode
+# TSDB files (data/head/last/sma/stt), the tag index and the write-ahead
+# logs. The text logs live in /var/log/taos and are not counted.
+sudo du -sb /var/lib/taos | awk '{ print $1 }'

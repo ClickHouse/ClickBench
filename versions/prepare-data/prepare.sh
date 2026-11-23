@@ -4,6 +4,7 @@
 # Produces, under prepare-data/data/ (zstd-compressed Native, level 6):
 #   hits.native.zst  ssb.native.zst  mgbench{1,2,3}.native.zst
 #   tpch_{nation,region,part,supplier,partsupp,customer,orders,lineitem}.native.zst  taxi.native.zst
+#   bluesky/file_*.json.gz (JSONBench: downloaded as is, see jsonbench.sh)
 #
 # These files use only the oldest-compatible ClickHouse types and load into
 # every version (including 1.1.x): the runner streams `zstd -dc file | INSERT`,
@@ -21,7 +22,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 mkdir -p "${HERE}/data"
 
-DATASETS="${*:-hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi}"
+DATASETS="${*:-hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi jsonbench}"
 for ds in ${DATASETS}; do
     echo "================ preparing: ${ds} ================"
     bash "${HERE}/${ds}.sh"

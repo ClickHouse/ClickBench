@@ -1,0 +1,44 @@
+{
+  "system": "Starrocks (zstd)",
+  "version": "3.4.0-e94580b",
+  "os": "Ubuntu 24.04",
+  "date": "2025-01-13",
+  "machine": "m6i.8xlarge",
+  "cluster_size": 1,
+  "comment": "",
+  "retains_structure": "yes",
+  "tags": [
+    "historical"
+  ],
+  "dataset_size": 100000000,
+  "num_loaded_documents": 100000000,
+  "data_compression": "zstd",
+  "total_size": 31200000000,
+  "result": [
+    [
+      0.22,
+      0.17,
+      0.18
+    ],
+    [
+      28.09,
+      3.94,
+      3.89
+    ],
+    [
+      3.04,
+      3.05,
+      3.11
+    ],
+    [
+      3.99,
+      4.04,
+      3.94
+    ],
+    [
+      4.13,
+      4.12,
+      4.11
+    ]
+  ]
+}

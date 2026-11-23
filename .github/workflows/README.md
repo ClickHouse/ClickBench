@@ -11,14 +11,37 @@ carry the PR number in the log (the `ClickBench PR:` line), which the sink
 parses into the `clickbench_pr` column of `sink.results`, so they can be told
 apart from the runs of main and are excluded by `collect-results.sh`.
 
+While it runs, the machine also streams its log live: `lib/live-log.py`
+follows the cloud-init output (`/var/log/cloud-init-output.log`, with the
+commands traced by `bash -x`) and inserts the new lines into `sink.logs` on
+play.clickhouse.com about once a second, as the user `sink_logs`. The machine
+downloads `lib/live-log.py` from the main branch of this repository instead
+of taking it from its clone, so the runs of pull requests have a live log
+whatever their branch contains. The page
+[`live.html`](https://benchmark.clickhouse.com/live.html) lists the runs of
+the last three days and follows a run with a streaming query
+(`SELECT ... FROM sink.logs STREAM`, as the user `live_logs`). The launchers
+(`run-benchmark.sh`, `json/run-benchmark.sh`) print the link to the log of
+every machine they start, `live.html#<run id>`, and add it to the job
+summary. The page is self-contained, so it can be published anywhere, e.g. on
+pastila.nl. See `prepare-database.sql` for the table and the users. The live
+log is a convenience: the complete log of a run is sent to `sink.data` at the
+end, as before.
+
 | Workflow | Trigger | What it launches |
 |----------|---------|------------------|
-| `benchmark-daily.yml` | daily, 02:00 UTC | the ClickHouse variants, each on the whole set of machine types, from main |
+| `benchmark-daily.yml` | daily, 02:00 UTC | the ClickHouse variants, each on the whole set of machine types, and `clickhouse-memory`, which needs more than 32 GB of RAM, on the metal machines only, from main |
 | `benchmark-manual.yml` | manual | any systems, machines, repository and branch |
 | `benchmark-pr.yml` | pull requests | the systems whose directories the PR changes (results and *.md files don't count), from the PR's repository and branch, after manual approval. A `machine:<ec2-type>` label overrides the default c6a.4xlarge (one run per label; `machine:all`, `machine:all-amd` and `machine:all-arm` expand to the daily-run machine sets); adding such a label relaunches the benchmark |
 | `versions-benchmark.yml` | manual | the [versions benchmark](../../versions/README.md) (`versions/run-benchmark.sh`): one machine per (ClickHouse version, machine type), for an exact version, a version prefix, or `master` (the development build, installed on the machine with `curl https://clickhouse.com/ \| sh`). Sends its result to the same sink, tagged `kind: versions-benchmark` |
 | `versions-collect-results.yml` | hourly | nothing - it collects the versions benchmark results of the last day (`versions/collect-new-results.sh`). That benchmark has no materialized view: every machine POSTs its whole result JSON to `sink.data` with `kind: versions-benchmark`, so the results are read out of those rows by `versions/fetch-results.sh`, `versions/data.generated.js` is rebuilt from them, and the changes are committed as one automated, auto-merged pull request (branch `auto-results/versions`). Runs that sent a log but no complete result are reported in the job summary |
-| `collect-results.yml` | every 30 minutes | nothing - it collects the runs of the last day from the sink database (`collect-new-results.py`): commits result files and posts pastila.nl log links to the corresponding PR, or maintains one automated results PR per system for the runs of main |
+| `hardware-benchmark.yml` | manual | the [hardware benchmark](../../hardware/README.md) (`hardware/run-benchmark.sh`): one machine per EC2 instance type, which assembles its local SSDs (if any) into RAID 0, runs `hardware/hardware.sh` on them (the old table definition and dataset, not the ones of the main benchmark), and sends its result to the same sink, tagged `kind: hardware-benchmark`. `all-general-purpose`, `all-compute-optimized`, `all-memory-optimized` and `all-storage-optimized` expand to the largest size of every current-generation m, c, r or i family (`hardware/list-machines.sh`) |
+| `hardware-collect-results.yml` | hourly | nothing - it collects the hardware benchmark results of the last day (`hardware/collect-new-results.sh`) from the `kind: hardware-benchmark` rows of `sink.data` into `hardware/results/aws_<instance type>.json`, and commits them as one automated, auto-merged pull request (branch `auto-results/hardware`), then starts the website build (`generate-results.yml`), since its pushes trigger no workflows |
+| `json-benchmark-weekly.yml` | weekly, Monday 03:00 UTC | the ClickHouse entry of [JSONBench](../../json/README.md) (`json/clickhouse`) on every dataset size, from main. Any JSONBench system can be launched with `benchmark-manual.yml` (`systems: json/<name>`, with the `json_sizes` and `json_machines` inputs) and by `benchmark-pr.yml` for the pull requests that change `json/<name>/` (sizes 1, 10 and 100 unless overridden by `json-size:<n>` labels). The launch action passes `json/<name>` systems to `json/run-benchmark.sh`: one m6i.8xlarge machine per (system, dataset size), which sends its result to the same sink, tagged `kind: json-benchmark` |
+| `json-collect-results.yml` | hourly | nothing - it collects the JSONBench results of the last day (`json/collect-new-results.sh`) from the `kind: json-benchmark` rows of `sink.data` into `json/<name>/results/<machine>_bluesky_<size>m.json`: the runs of main as one automated, auto-merged pull request (branch `auto-results/json`), then it starts the website build; the runs of pull requests (`clickbench_pr` in the result) are committed to the pull request if its branch is in this repository |
+| `collect-results.yml` | every 30 minutes | nothing - it collects the runs of the last day from the sink database (`collect-new-results.py`): commits result files and posts pastila.nl log links to the corresponding PR, or maintains one automated results PR per system for the runs of main. Its comments also link to a preview of the benchmark page with the new results (`results_preview.py`) |
+| `results-preview.yml` | pull requests that change `*/results/` or `index.html` | nothing - it publishes the benchmark page with the PR's result files laid over main as an unencrypted pastila.nl paste (`results_preview.py`), using the PR's `index.html` if it changes it - and, if the PR updates existing results, a second page with only the old and new results of the updated system/machine pairs as separate systems - and appends the links to the last comment if that is from this automation, or posts a new comment. Results committed by `collect-new-results.py` don't trigger it (GITHUB_TOKEN pushes trigger no workflows), so that script adds the link itself |
+| `upload-history.yml` | every 30 minutes, pushes to main that change `*/results/`, manual | nothing - it replaces the table `clickbench.results` on play.clickhouse.com with all the result files (`upload-history.py`), for the history view of the website (the icon left of a system's name). A run is a no-op unless the set of result files changed, which it tells by a fingerprint of their paths and git blob ids; the manual run can force the upload |
 
 ## Setup
 
@@ -72,3 +95,8 @@ apart from the runs of main and are excluded by `collect-results.sh`.
    tokens. A fine-grained PAT does not work either — it is bound to an
    explicit repository list, which cannot include arbitrary contributors'
    forks.
+
+5. For `upload-history.yml`, the database, tables and the user from the end
+   of `prepare-database.sql` on play.clickhouse.com, with the user's
+   password in the `CLICKBENCH_UPLOAD_PASSWORD` secret. Without the secret
+   the workflow does nothing.

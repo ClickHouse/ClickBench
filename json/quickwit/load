@@ -1,0 +1,56 @@
+#!/bin/bash
+# As in the original PR: the decompressed documents are streamed into
+# `quickwit tool local-ingest`, which builds the splits directly.
+set -e -o pipefail
+
+API=http://127.0.0.1:7280/api/v1
+
+curl -sS -X DELETE "${API}/indexes/jsonbench" >/dev/null || true
+curl -sSf -X POST "${API}/indexes" -H 'Content-Type: application/yaml' \
+    --data-binary @index-config.yaml | jq -c '.index_config.index_id // .'
+
+# local-ingest fails if any line can't be parsed, and a few documents longer
+# than 64 KiB are split over two lines in the dataset (from the 10m size on):
+# drop the lines that are not valid JSON before it, as in ../mongodb/load.
+ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}" | xargs gzip -dc \
+    | python3 -I -c '
+import json
+import sys
+
+out = sys.stdout.buffer
+skipped = 0
+for line in sys.stdin.buffer:
+    try:
+        valid = isinstance(json.loads(line), dict)
+    except ValueError:
+        valid = False
+    if valid:
+        out.write(line)
+    else:
+        skipped += 1
+if skipped:
+    print(f"load: skipped {skipped} invalid lines", file=sys.stderr)
+' \
+    | QW_CONFIG="$PWD/quickwit.yaml" /opt/quickwit/quickwit tool local-ingest --index jsonbench
+
+QW_CONFIG="$PWD/quickwit.yaml" /opt/quickwit/quickwit tool gc --index jsonbench
+
+# Restart the server, so that it reads the splits published by local-ingest
+# now rather than at its next metastore poll, then wait until every published
+# document is searchable.
+./stop
+./start
+for i in $(seq 1 300); do
+    ./check >/dev/null 2>&1 && break
+    sleep 1
+done
+published=$(curl -sSf "${API}/indexes/jsonbench/describe" | jq -r '.num_published_docs')
+echo "load: ${published} documents published"
+for i in $(seq 1 600); do
+    hits=$(curl -sS -X POST -H 'Content-Type: application/json' -d '{"query":"*","max_hits":0}' \
+        "${API}/jsonbench/search" | jq -r '.num_hits // empty') || true
+    [ "${hits}" = "${published}" ] && exit 0
+    sleep 1
+done
+echo "load: only '${hits}' of ${published} documents are searchable" >&2
+exit 1

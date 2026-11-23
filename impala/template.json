@@ -3,10 +3,12 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "enthusiast",
   "tags": [
     "C++",
     "MPP",
     "column-oriented",
-    "stateless"
+    "stateless",
+    "no-cold"
   ]
 }

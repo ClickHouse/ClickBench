@@ -1,0 +1,58 @@
+#!/bin/bash
+# Installs the latest Elasticsearch and Filebeat of the current major version
+# (9.x) from the official repository:
+# https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-with-debian-package
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+ELASTIC_MAJOR="9"
+
+sudo apt-get update -y
+sudo apt-get install -y apt-transport-https ca-certificates curl gpg jq
+
+if [ ! -x /usr/share/elasticsearch/bin/elasticsearch ] || ! command -v filebeat >/dev/null 2>&1; then
+    curl -fsSL --retry 10 --retry-delay 10 --retry-all-errors https://artifacts.elastic.co/GPG-KEY-elasticsearch \
+        | sudo gpg --dearmor --yes -o /usr/share/keyrings/elasticsearch-keyring.gpg
+    echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/${ELASTIC_MAJOR}.x/apt stable main" \
+        | sudo tee "/etc/apt/sources.list.d/elastic-${ELASTIC_MAJOR}.x.list" >/dev/null
+    sudo apt-get update -y
+    # The package configures security automatically: it makes the
+    # certificates in /etc/elasticsearch/certs and their passwords in the
+    # keystore, which elasticsearch.yml refers to.
+    sudo apt-get install -y elasticsearch filebeat
+fi
+
+if [ ! -f /etc/elasticsearch/certs/http.p12 ] || [ ! -f /etc/elasticsearch/certs/transport.p12 ]; then
+    echo "install: the security auto-configuration of the package did not make the certificates" >&2
+    exit 1
+fi
+
+# The configuration of the original JSONBench.
+sudo cp elasticsearch.yml /etc/elasticsearch/elasticsearch.yml
+sudo chown root:elasticsearch /etc/elasticsearch/elasticsearch.yml
+sudo chmod 660 /etc/elasticsearch/elasticsearch.yml
+
+# The only non-default JVM option of the original JSONBench is the heap size.
+# The original replaced the whole jvm.options of an 8.x version, but the
+# file says to put the changes into jvm.options.d, which keeps the defaults
+# of the installed version.
+sudo tee /etc/elasticsearch/jvm.options.d/heap.options >/dev/null <<'OPTIONS'
+-Xms31g
+-Xmx31g
+OPTIONS
+
+# elasticsearch.yml has bootstrap.memory_lock: true, which needs this, see
+# https://www.elastic.co/docs/deploy-manage/deploy/self-managed/setting-system-settings#systemd
+sudo mkdir -p /etc/systemd/system/elasticsearch.service.d
+sudo tee /etc/systemd/system/elasticsearch.service.d/override.conf >/dev/null <<'UNIT'
+[Service]
+LimitMEMLOCK=infinity
+TimeoutStartSec=900
+UNIT
+
+sudo systemctl daemon-reload
+sudo systemctl enable elasticsearch.service
+# Filebeat only runs during ./load.
+sudo systemctl disable filebeat.service || true
+sudo systemctl stop filebeat.service || true

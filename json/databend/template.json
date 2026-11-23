@@ -1,0 +1,10 @@
+{
+  "system": "Databend",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "ClickHouse derivative"
+  ]
+}

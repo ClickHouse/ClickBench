@@ -11,7 +11,7 @@
         "row-oriented",
         "document",
         "C++",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 3972,
     "data_size": 46794025189,

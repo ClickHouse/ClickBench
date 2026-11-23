@@ -1,0 +1,6 @@
+#!/bin/bash
+# The total size of the collection: storage size of the data plus the size of
+# the indexes (`totalSize` of the collection stats, as in the original).
+set -e
+
+mongosh --quiet bluesky --eval 'print(String(db.bluesky.aggregate([{$collStats: {storageStats: {}}}]).toArray()[0].storageStats.totalSize))'

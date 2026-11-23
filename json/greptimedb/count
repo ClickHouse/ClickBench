@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+. ./sql.sh
+
+greptime_sql "SELECT count(*) FROM bluesky"

@@ -1,0 +1,13 @@
+{
+  "system": "Impala (Kudu, single)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "enthusiast",
+  "tags": [
+    "C++",
+    "MPP",
+    "column-oriented",
+    "no-cold"
+  ]
+}

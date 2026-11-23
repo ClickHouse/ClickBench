@@ -7,6 +7,42 @@
 # Entries of the form {"error": "..."} are also skipped: the latest run for a
 # (system, machine) failed, so the system is omitted from the report.
 
+# "Complexity" is the amount of code needed to run the benchmark for a system:
+# the byte size of the zstd-compressed concatenation of all the scripts and
+# configs in the system's directory (install, load, start, stop, query, the
+# Python and Expect scripts they invoke, auxiliary SQL files such as insert.sql,
+# etc.), with full-line comments, blank lines, and redundant whitespace removed.
+# Queries (queries*.sql), table definitions (create*.sql), results, and docs are
+# not counted, nor is update-from-play.sql or the shared driver in lib/.
+# Systems without the install script (with a manual procedure) have no value.
+complexity() {
+    local files
+    if [ -z "$(git ls-files -- "$1/install")" ]; then echo null; return; fi
+    mapfile -d '' files < <(git ls-files -z -- "$1/" \
+        | grep -zvE '(^[^/]+/results/|\.(json|md|txt|lock|pyc)$|(^|/)(queries|create)([-_][^/]*)?\.sql$|(^|/)update-from-play\.sql$|\.sql\.|(^|/)\.(git|docker)ignore$)' \
+        | sort -z \
+        | xargs -0 --no-run-if-empty grep -Il --null '')
+    if [ ${#files[@]} = 0 ]; then echo null; return; fi
+    sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//; s/[[:space:]]+/ /g; /^(#([^a-z]|$)|\/\/)/d; /^$/d' "${files[@]}" \
+        | zstd -19 -q -c \
+        | wc -c
+}
+
+# "Category" is the class of the system (see "System Categories" in README.md),
+# defined in the system's template.json and applied to all its results.
+category() {
+    local category
+    category=$(jq -r '.category // empty' "$1/template.json")
+    if [ -z "$category" ]; then
+        echo "No category in $1/template.json" >&2
+        exit 1
+    fi
+    echo "$category"
+}
+
+declare -A COMPLEXITY
+declare -A CATEGORY
+
 echo "const data = [" > data.generated.js.new
 FIRST=1
 
@@ -15,7 +51,7 @@ FIRST=1
 # Use `find` rather than `ls */results/*/*.json`: to avoid overflowing ARG_MAX
 # (clickhouse-cloud alone has tens of thousands of files)
 LANG="" find */results -mindepth 2 -maxdepth 2 -name '*.json' \
-    | grep -Ev '^(hardware|versions|gravitons)/' \
+    | grep -Ev '^(hardware|versions|gravitons|random)/' \
     | sort \
     | awk -F/ '{ print $1"/"$NF" "$0 }' \
     | awk '{ latest[$1] = $2 } END { for (k in latest) print latest[k] }' \
@@ -26,8 +62,13 @@ do
     # can fall back to it when the JSON itself omits .date.
     date_dir=$(echo "$file" | awk -F/ '{print $3}')
     date_iso="${date_dir:0:4}-${date_dir:4:2}-${date_dir:6:2}"
-    if ! entry=$(jq --compact-output --arg src "$file" --arg date "$date_iso" \
-        'select(.error == null) | select((.tags // []) | index("historical") | not) | (if (.date // "") == "" then .date = $date else . end) | . + {"source": $src}' \
+    system_dir="${file%%/*}"
+    [ -z "${COMPLEXITY[$system_dir]}" ] && COMPLEXITY[$system_dir]=$(complexity "$system_dir")
+    if [ -z "${CATEGORY[$system_dir]}" ]; then
+        CATEGORY[$system_dir]=$(category "$system_dir") || exit 1
+    fi
+    if ! entry=$(jq --compact-output --arg src "$file" --arg date "$date_iso" --argjson complexity "${COMPLEXITY[$system_dir]}" --arg category "${CATEGORY[$system_dir]}" \
+        'select(.error == null) | select((.tags // []) | index("historical") | not) | (if (.date // "") == "" then .date = $date else . end) | . + {"source": $src, "complexity": $complexity, "category": $category}' \
         "$file"); then
         echo "Error in $file — skipping" >&2
         continue
@@ -36,7 +77,7 @@ do
     [ "${FIRST}" = "0" ] && echo -n ','
     printf '%s\n' "$entry"
     FIRST=0
-done >> data.generated.js.new
+done >> data.generated.js.new || exit 1
 echo '];' >> data.generated.js.new
 
 mv data.generated.js data.generated.js.bak

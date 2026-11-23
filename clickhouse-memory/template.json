@@ -1,0 +1,13 @@
+{
+  "system": "ClickHouse (memory)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "ClickHouse derivative",
+    "in-memory"
+  ]
+}

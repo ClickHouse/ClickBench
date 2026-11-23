@@ -51,8 +51,14 @@ fi
 # subsequent chunk fails. 3 × 1000 lines is ~4x lower peak pressure
 # and empirically clears without 408s. curl --retry survives short
 # stalls so a briefly-saturated parseable doesn't fail the load.
-LINES_PER_CHUNK=1000
-INGEST_JOBS=3
+NUM_CORES=$(nproc)
+if [ "$NUM_CORES" -ge 190 ]; then
+    LINES_PER_CHUNK=2500
+    INGEST_JOBS=20
+else
+    LINES_PER_CHUNK=1000
+    INGEST_JOBS=3
+fi
 pv hits.json | parallel --pipe -N$LINES_PER_CHUNK --block 10M \
     --jobs "$INGEST_JOBS" --halt-on-error 0 '
         awk "BEGIN{print \"[\"} NR>1{print prev \",\"} {prev=\$0} END{if (prev) print prev; print \"]\"}" |

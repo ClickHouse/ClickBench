@@ -1,0 +1,48 @@
+#!/bin/bash
+set -e
+
+. ./es-common.sh
+
+sudo systemctl start elasticsearch.service
+
+# Wait for the HTTPS endpoint (it answers 401 without the credentials).
+up=0
+for _ in $(seq 1 300); do
+    code=$(curl -sS -k -o /dev/null -w '%{http_code}' --max-time 5 "${ES_URL}/" 2>/dev/null) || code=000
+    if [ "${code}" != "000" ]; then
+        up=1
+        break
+    fi
+    sleep 1
+done
+if [ "${up}" != 1 ]; then
+    echo "start: Elasticsearch did not answer within 300s" >&2
+    sudo tail -n 60 /var/log/elasticsearch/es-bench.log >&2 || true
+    exit 1
+fi
+
+# Reset the password of the `elastic` user only when there is no stored
+# password that works: on the first start after the installation.
+if ! es_auth_ok; then
+    for attempt in $(seq 1 30); do
+        if password=$(sudo /usr/share/elasticsearch/bin/elasticsearch-reset-password -s -a -b -u elastic) \
+            && [ -n "${password}" ]; then
+            (umask 077 && printf '%s\n' "${password}" > "${ES_PASSWORD_FILE}")
+            break
+        fi
+        echo "start: elasticsearch-reset-password failed (attempt ${attempt}), retrying" >&2
+        sleep 5
+    done
+    es_auth_ok || { echo "start: no working password for the elastic user" >&2; exit 1; }
+fi
+
+# Wait until all primary shards are active.
+for _ in $(seq 1 90); do
+    if es_curl --max-time 20 "${ES_URL}/_cluster/health?wait_for_status=yellow&timeout=10s" 2>/dev/null \
+        | jq -e '.status == "yellow" or .status == "green"' >/dev/null; then
+        exit 0
+    fi
+    sleep 1
+done
+echo "start: the cluster did not become yellow or green" >&2
+exit 1

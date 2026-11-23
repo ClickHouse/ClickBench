@@ -1,0 +1,22 @@
+{
+  "system": "VictoriaLogs",
+  "version": "v1.10.0-victorialogs",
+  "os": "Ubuntu 24.04",
+  "date": "2025-02-13",
+  "machine": "m6i.8xlarge",
+  "retains_structure": "no",
+  "tags": [
+  ],
+  "dataset_size": 100000000,
+  "num_loaded_documents": 99999968,
+  "total_size": 11997996915,
+  "data_size": 10708965860,
+  "index_size": 1288848048,
+  "result": [
+    [0.094, 0.009, 0.009],
+    [10.019, 1.507, 2.024],
+    [0.658, 0.157, 0.156],
+    [1.018, 0.99, 0.975],
+    [1.328, 0.785, 0.815]
+  ]
+}

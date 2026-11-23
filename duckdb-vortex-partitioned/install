@@ -2,9 +2,14 @@
 set -e
 
 # Build duckdb-vortex from source. Idempotent.
-if [ -x duckdb-vortex/build/release/duckdb ]; then
+DUCKDB=duckdb-vortex/build/release/duckdb
+if "$DUCKDB" -c "SELECT vortex_version()" >/dev/null 2>&1; then
     exit 0
 fi
+
+# Vortex 0.90.0 on DuckDB v2.0.0. DuckDB's own `INSTALL vortex` ships an
+# older Vortex, so build the extension statically into the DuckDB CLI.
+DUCKDB_VORTEX_REF=59b149bf38d354951dd078183852ca9ed11cb8d4
 
 # vcpkg fails the build with `unable to read $HOME` when cloud-init runs
 # this script with HOME unset. cloud-init.sh.in already exports it, but
@@ -13,7 +18,7 @@ fi
 export HOME="${HOME:-/root}"
 
 sudo apt-get update -y
-sudo apt-get install -y ninja-build cmake build-essential make ccache pip clang pkg-config
+sudo apt-get install -y ninja-build cmake build-essential make ccache pip clang libclang-dev pkg-config zip unzip
 
 if ! command -v cargo >/dev/null 2>&1; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
@@ -25,14 +30,25 @@ fi
 export CC=clang
 export CXX=clang++
 
+# On many-core hosts ninja and cargo together run hundreds of compiler
+# jobs, which exceeds the default 1024 open-file limit (os error 24).
+ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
+
 if [ ! -d duckdb-vortex ]; then
-    git clone https://github.com/vortex-data/duckdb-vortex --recursive
+    git clone https://github.com/vortex-data/duckdb-vortex
 fi
 
 (
     cd duckdb-vortex
-    git fetch --tags
-    git checkout v0.44.0
+    git fetch origin "$DUCKDB_VORTEX_REF"
+    git checkout "$DUCKDB_VORTEX_REF"
     git submodule update --init --recursive
-    GEN=ninja NATIVE_ARCH=1 LTO=thin make
+    # Since DuckDB 2.0 the shell links only the extensions it is told to.
+    # The extension uses no C++20 modules, and scanning for them needs
+    # clang-scan-deps, which Ubuntu's clang package does not ship.
+    EXT_FLAGS='-DSTATICALLY_LINK_EXTENSIONS="core_functions parquet json icu vortex" -DCMAKE_CXX_SCAN_FOR_MODULES=OFF' \
+        GEN=ninja NATIVE_ARCH=1 LTO=thin make
 )
+
+# Fail here rather than at load time if vortex did not make it into the shell.
+"$DUCKDB" -c "SELECT vortex_version()"

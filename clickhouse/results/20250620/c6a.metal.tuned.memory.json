@@ -11,7 +11,7 @@
         "C++",
         "column-oriented",
         "ClickHouse derivative",
-        "lukewarm-cold-run",
+        "no-cold",
         "historical"
     ],
     "load_time": 285,

@@ -1,0 +1,26 @@
+#!/bin/bash
+# Harness query adapter.
+#   stdin        : one SQL query (references the `hits` view created by ./start)
+#   stdout       : the query result (the harness discards it)
+#   stderr (last): CLIENT-SIDE WALL time of the full request, in seconds
+#   exit         : non-zero on failure (harness records the try as null)
+#
+# Per ClickBench's end-to-end rule, the reported time is the wall-clock time of
+# the whole round-trip — sending the query, the server processing it, AND
+# receiving the entire result body back over HTTP — measured client-side by
+# time_sql (config.sh), NOT the server's own execution_time. time_sql writes the
+# full response to a temp file (no output suppression), validates it is a genuine
+# success payload, and returns curl's total transfer time; we then print the
+# result on stdout (harness convention) and the wall time on stderr.
+#
+set -u
+# shellcheck disable=SC1091
+source "$(dirname "$0")/config.sh"
+
+sql="$(cat)"
+resp="$(mktemp)"
+trap 'rm -f "$resp"' EXIT
+wall="$(time_sql "$sql" "$resp")" || exit 1   # diagnostics to stderr on failure
+cat "$resp"                                    # stdout: query result (harness discards it)
+printf '%s\n' "$wall" >&2                       # stderr (last line): wall-clock timing
+exit 0

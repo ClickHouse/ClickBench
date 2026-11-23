@@ -1,0 +1,49 @@
+#!/bin/bash
+set -e -o pipefail
+
+# The server parameters from /etc/mongod.conf (see ./install) must be in
+# effect: fail rather than run the queries without them.
+mongosh --quiet --eval '
+    const r = db.adminCommand({getParameter: 1, internalQueryMaxAddToSetBytes: 1, internalQueryPlannerGenerateCoveredWholeIndexScans: 1});
+    if (r.ok !== 1 || String(r.internalQueryMaxAddToSetBytes) !== "1073741824" || r.internalQueryPlannerGenerateCoveredWholeIndexScans !== true) {
+        print("load: unexpected server parameters: " + JSON.stringify(r));
+        quit(1);
+    }
+'
+
+# Create the collection (zstd block compression) and the compound index from
+# scratch, as in the original JSONBench.
+mongosh --quiet bluesky --eval 'db.dropDatabase()' >/dev/null
+mongosh --quiet bluesky --file ddl.js
+
+# One mongoimport per file, as in the original JSONBench, with its default
+# settings (a single insertion worker). The file is decompressed into the pipe
+# rather than into a temporary file.
+#
+# A few lines in the dataset are not valid JSON: documents of more than 64 KiB
+# that were cut into two lines. mongoimport stops at the first line that it
+# cannot parse and loses the rest of the file (the original JSONBench run
+# loaded 7.86 of 10 million documents because of that), so the invalid lines
+# are dropped before mongoimport, the other lines are passed through unchanged.
+# So are the documents nested deeper than 100 levels, which MongoDB can't store
+# (BSON allows 100): file 178 has four documents 2163 levels deep, on which
+# mongoimport failed ("BSONObj exceeds maximum nested object depth").
+#
+# Permissive, as in the original JSONBench: a file that fails anyway is skipped (the
+# documents that were loaded are reported as the data quality), and the load fails
+# only if nothing was loaded.
+loaded=0
+for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+    echo "load: ${file}" >&2
+    if gzip -dc "${file}" \
+        | python3 -I ../lib/filter-documents.py --max-depth 100 \
+        | mongoimport --db bluesky --collection bluesky; then
+        loaded=$((loaded + 1))
+    else
+        echo "load: failed to load ${file}, skipped" >&2
+    fi
+done
+if [ "${loaded}" -eq 0 ]; then
+    echo "load: no file was loaded" >&2
+    exit 1
+fi

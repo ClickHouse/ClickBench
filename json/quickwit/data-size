@@ -1,0 +1,5 @@
+#!/bin/bash
+# The splits of the index (data + indexes), as total_size in the original PR.
+set -e
+
+sudo du -sb /var/lib/quickwit/qwdata/indexes/jsonbench | cut -f1

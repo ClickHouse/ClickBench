@@ -1,0 +1,35 @@
+#!/bin/bash
+set -eu
+
+NAME=clickbench-deepgreen
+
+# The benchmark directory is bind-mounted at /mnt/clickbench, so gpfdist
+# serves hits.tsv straight off the host filesystem — no 75 GB copy into the
+# container's writable layer. gpfdist is also how a Greenplum cluster is
+# meant to be loaded: every segment pulls its own slice in parallel, where
+# COPY would funnel all 100M rows through the coordinator.
+#
+# See ./start for why these are `sudo -H -u` and not `sudo -iu`.
+sudo docker exec "$NAME" sudo -H -u gpadmin bash -lc \
+    'psql -d postgres -v ON_ERROR_STOP=1 -f /mnt/clickbench/create.sql'
+
+sudo docker exec "$NAME" sudo -H -u gpadmin bash -lc '
+    pgrep -u gpadmin gpfdist >/dev/null ||
+        nohup gpfdist -d /mnt/clickbench >/tmp/gpfdist.log 2>&1 &
+    # Wait for the listener: the external table scan fails outright if the
+    # segments reach gpfdist before it has bound port 8080.
+    for i in $(seq 1 30); do
+        (exec 3<>/dev/tcp/localhost/8080) 2>/dev/null && exit 0
+        sleep 1
+    done
+    echo "gpfdist did not start; see /tmp/gpfdist.log" >&2
+    exit 1
+'
+
+sudo docker exec "$NAME" sudo -H -u gpadmin bash -lc \
+    'psql -d postgres -v ON_ERROR_STOP=1 -t -c "INSERT INTO hits SELECT * FROM hits_ext;"'
+sudo docker exec "$NAME" sudo -H -u gpadmin bash -lc \
+    'psql -d postgres -v ON_ERROR_STOP=1 -t -c "ANALYZE hits;"'
+
+rm -f hits.tsv
+sync

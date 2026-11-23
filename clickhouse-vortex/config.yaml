@@ -1,0 +1,14 @@
+# A minimal configuration of clickhouse-server running from the entry
+# directory. Everything not listed here is the default.
+path: ./server-data/
+# Relative to `path`.
+tmp_path: ./tmp/
+user_files_path: ./user_files/
+logger:
+    level: information
+    log: ./server-data/clickhouse-server.log
+    errorlog: ./server-data/clickhouse-server.err.log
+tcp_port: 9000
+http_port: 8123
+listen_host: 127.0.0.1
+users_config: users.yaml

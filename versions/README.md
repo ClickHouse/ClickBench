@@ -42,6 +42,12 @@ in its own container — from `1.1.54xxx` (2018) to today — with no host insta
    - `job_*.native` — Join Order Benchmark, 21 tables (a snapshot of IMDB) from
      the canonical CSV dump.
    - `taxi.native` — NYC `trips` (narrowed to the 5 columns its queries use).
+   - `bluesky/file_*.json.gz` — [JSONBench](../json/): the Bluesky dataset, 100
+     files of a million JSON documents each, downloaded as is (not converted to
+     Native). They load whole into a `JSON` column (`INSERT ... FORMAT
+     JSONAsObject`, one INSERT per file as in JSONBench, skipping the few documents
+     that are not valid JSON). A single INSERT of all 100 files runs out of memory
+     on 26.8 and 26.9 (memory accumulates over one long INSERT there).
 
    Type downgrades: `LowCardinality`→`String`, `IPv4`→`String`,
    `DateTime64`→`DateTime`, enums→`String`, TPC-H/TPC-DS `Decimal`→`Float64`
@@ -56,13 +62,17 @@ in its own container — from `1.1.54xxx` (2018) to today — with no host insta
    earliest `1.1.x` (before custom partitioning, < `1.1.54310`) use the legacy
    positional `ENGINE = MergeTree(date, (key), 8192)`. Column lists live in
    `create/schema/*.columns` (dataset-qualified, e.g. `tpcds_customer.columns`,
-   where a table name is shared across datasets).
+   where a table name is shared across datasets). The JSONBench table `bluesky`
+   is written out in `create.sh` itself: a `JSON` column with the typed paths of
+   JSONBench, sorted by them from 24.12 (earlier versions reject a JSON subcolumn
+   in `ORDER BY`, so 24.8 .. 24.11 get `ORDER BY tuple()`); before 25.3 the
+   runner creates it with `allow_experimental_json_type`.
 
 4. **`run-version.sh <version> [image]`** — starts the server, creates each
    dataset's tables **in its own database** (so same-named tables like TPC-H and
    TPC-DS `customer` don't collide), loads each Native file with the simplest
    possible `clickhouse-client INSERT … FORMAT Native`, then times every query in
-   `queries/{mgbench,ssb,hits,tpch,tpcds,coffeeshop,taxi}.sql` (`TRIES` runs each,
+   `queries/{mgbench,ssb,hits,tpch,tpcds,coffeeshop,taxi,...,jsonbench}.sql` (`TRIES` runs each,
    dropping the page cache between queries) and writes `results/<version>.json`.
 
 5. **`run-all.sh`** — runs `run-version.sh` for every selected version.
@@ -136,7 +146,8 @@ repository and branch are the ones the workflow was dispatched from, so a branch
 can be tested without merging it first.
 
 Notes: all datasets run by default (`datasets="hits ssb mgbench tpch tpcds
-coffeeshop taxi"`); the taxi table is narrowed to the five columns its queries
+coffeeshop ontime uk job taxi jsonbench"`; the versions before 24.8, which have no
+`JSON` type, don't download jsonbench); the taxi table is narrowed to the five columns its queries
 use (~15 GB), so it no longer dominates. Pass a subset via `datasets=` to skip
 some. While this branch is unmerged, pass `branch=versions-benchmark-rework`.
 Missing dataset files in the bucket are skipped (their queries report null).
@@ -169,9 +180,13 @@ the result files, which would mean a broken query rather than lost results).
 
 ## Query set
 
-344 queries in a fixed order: mgbench (15) + Star Schema Benchmark (13) +
+349 queries in a fixed order: mgbench (15) + Star Schema Benchmark (13) +
 ClickBench/hits (43) + TPC-H (22) + TPC-DS (103) + Coffee Shop (17) + ontime (11)
-+ UK price-paid (3) + Join Order Benchmark (113) + taxi (4). See `queries/*.sql`.
++ UK price-paid (3) + Join Order Benchmark (113) + taxi (4) + JSONBench (5). See `queries/*.sql`.
+A new dataset is appended at the end of the order, so the results of earlier runs
+stay valid: `apply-minvers.py` pads them with nulls for its queries (the runs made
+before JSONBench was added have 344 results).
+JSONBench's queries are the ones of the ClickHouse entry of [JSONBench](../json/clickhouse/queries.sql).
 The TPC-H, TPC-DS and JOB queries are the official sets taken
 from the ClickHouse repository (`tests/benchmarks/tpc-{h,ds}/queries`), flattened
 to one line each (TPC-H Q15 is rewritten from its `CREATE VIEW` form into a single

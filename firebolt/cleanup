@@ -1,0 +1,10 @@
+#!/bin/bash
+set -eu
+
+# Remove everything a run leaves behind: the container, the engine's data
+# directory and the staged parquet source.
+sudo docker rm -f firebolt-core >/dev/null 2>&1 || true
+# The engine owns its data directory as uid 3473, hence sudo.
+sudo rm -rf fb-volume
+rm -rf data
+rm -f hits_*.parquet

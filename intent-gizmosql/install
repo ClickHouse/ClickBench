@@ -1,0 +1,47 @@
+#!/bin/bash
+set -eu
+
+# cloud-init runs scripts as root with no HOME exported; the per-system
+# scripts expect one, so pin a default (same guard as the upstream entry).
+HOME="${HOME:-/root}"
+export HOME
+
+sudo apt-get update -y
+sudo apt-get install -y curl unzip netcat-openbsd
+
+# Install the released gizmosql_server + gizmosql_client of this entry from
+# https://github.com/bddppqs/intent-gizmosql (tag v1.38.0-intent.8): portable Linux builds
+# (amd64 and arm64) with a glibc 2.28 baseline, so no loader shim is needed
+# on Ubuntu 24.04. Each zip is pinned by URL and SHA-256, and the two
+# binaries by their own SHA-256; a different file fails the install.
+case "$(uname -m)" in
+    x86_64)
+        ZIP_URL="https://github.com/bddppqs/intent-gizmosql/releases/download/v1.38.0-intent.8/gizmosql_cli_linux_amd64.zip"
+        ZIP_SHA256="4494673adfb02cebe1dbb64f778b54a3e283de78d37f8a8109559a4b440c9996"
+        SERVER_SHA256="bd85e46f14dd1471e18f0d71a2b7e9bfba750449fe4d803fb7074ca5c23a8fee"
+        CLIENT_SHA256="3812af0c473e740a2445e930a29c2e62dfd809348dc1cd57a142d31a90fc03dd"
+        ;;
+    aarch64)
+        ZIP_URL="https://github.com/bddppqs/intent-gizmosql/releases/download/v1.38.0-intent.8/gizmosql_cli_linux_arm64.zip"
+        ZIP_SHA256="a31110137d20b3de43757409e9fa3f94f4bb92c674dedb6885cd9fb532eb7b39"
+        SERVER_SHA256="1d1215100b8ede996d0ac5ddbd9da4f4f204ae489826d40357cf967ad10de4c2"
+        CLIENT_SHA256="e38f6f6688ad0d06004f7d6c5c5360406f2992ee04be1d9136a5ce9d03cc792e"
+        ;;
+    *)
+        echo "unsupported architecture: $(uname -m) (this entry ships amd64 and arm64 builds)" >&2
+        exit 1
+        ;;
+esac
+if ! command -v gizmosql_server >/dev/null 2>&1; then
+    tmp=$(mktemp -d)
+    curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 "$ZIP_URL" -o "$tmp/gizmosql.zip"
+    echo "$ZIP_SHA256  $tmp/gizmosql.zip" | sha256sum -c -
+    unzip -q "$tmp/gizmosql.zip" -d "$tmp"
+    sudo install -m 0755 "$tmp/gizmosql_server" "$tmp/gizmosql_client" /usr/local/bin/
+    rm -rf "$tmp"
+fi
+# The installed binaries must be the release's, including ones already
+# installed before this script ran.
+printf '%s  %s\n%s  %s\n' "$SERVER_SHA256" /usr/local/bin/gizmosql_server \
+    "$CLIENT_SHA256" /usr/local/bin/gizmosql_client | sha256sum -c -
+gizmosql_server --version

@@ -1,0 +1,11 @@
+; Sends $RAYFORCE_QUERY to the server, which times it with `timeit` (ms) and
+; keeps the result; a second, untimed round trip fetches the result. The
+; milliseconds go to $RAYFORCE_MS. The connect timeout covers the wait behind
+; other clients' queries in the concurrent test.
+(set h (.ipc.open (format "127.0.0.1:%" (.os.getenv "RAYFORCE_PORT")) 3600000))
+(set ms (.ipc.send h
+    (format "(timeit (set rf-result %))" (read (.os.getenv "RAYFORCE_QUERY")))))
+(show (.ipc.send h "rf-result"))
+(write (.os.getenv "RAYFORCE_MS") (format "%" ms))
+(.ipc.close h)
+(exit 0)

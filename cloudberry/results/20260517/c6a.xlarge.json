@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C","column-oriented","PostgreSQL compatible","lukewarm-cold-run","Greenplum derivative"],
+    "tags": ["C","column-oriented","PostgreSQL compatible","Greenplum derivative"],
     "load_time": 1506,
     "data_size": 36345789580,
     "concurrent_qps": 0.05,

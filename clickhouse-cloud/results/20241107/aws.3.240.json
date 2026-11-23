@@ -10,7 +10,8 @@
         "ClickHouse derivative",
         "managed",
         "aws",
-        "historical"
+        "historical",
+        "no-cold"
     ],
     "load_time": 223,
     "data_size": 9943806256,

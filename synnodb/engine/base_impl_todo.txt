@@ -1,0 +1,119 @@
+BASE IMPLEMENTATION TODO - hits engine (38 queries: 1-17, 19-23, 26, 28-42)
+
+Conventions: [ ] = open step, mark [x] when done. Portable C++20 only (no intrinsics, no asm,
+no `#pragma GCC target`; same code builds on x86-64 and AArch64). No data-dependent constants
+in code: widths, dictionary sizes, chunk counts, bitset sizes come from the data at load time.
+64-bit offsets/counters wherever a quantity scales with the data. Every owning member of
+Database is RAII (std::vector / unique_ptr). Nothing precomputed that answers a query: zone maps,
+dictionaries and narrow types are query-agnostic; every filter/group/aggregate runs at query time.
+
+== A. Conceptual notes ==
+Storage (from storage_plan.txt):
+ - Row-chunked column store, ORIGINAL row order, chunk = 2^16 rows. Per-chunk zone maps (min,max)
+   for CounterID, EventDate, AdvEngineID, SearchEngineID, IsRefresh, DontCountHits, IsLink,
+   IsDownload, TraficSourceID. Zone maps only prune chunks.
+ - Integer columns use the narrowest exact type (as_integer<T>) chosen by a first pass over the
+   input; the loader must handle widening (stored as the widest of the candidate types the code
+   instantiates: the Database declares int8/int16/int32 variants via a small width-tag, or, for
+   simplicity, declares the type from the plan and verifies range at load, throwing if violated
+   rather than silently truncating).
+ - SearchPhrase: global dictionary, id 0 = empty, ids in byte order (id order == string order),
+   uint32 ids. MobilePhoneModel: dictionary, uint8/uint16 ids, id 0 = empty.
+ - URL, Title, Referer: arena (contiguous bytes + offsets), no per-row std::string kept after load.
+ - Remaining columns (never queried) are still loaded losslessly via the same helpers (low
+   cardinality strings -> dictionary, rest narrow ints / arenas).
+ - Ingest: ONLY through column_ingest.hpp helpers (as_integer<T>, as_string, as_date_days).
+   Do not decode Arrow buffers by hand. as_string returns std::vector<std::string>: convert each
+   column to its arena/dictionary form and free the vector before the next column, to bound peak
+   memory (peak = loaded data + one transient string column).
+ - TIMESTAMP columns: the helpers have no timestamp helper in the listed set; EventTime is needed
+   (Q19). Extend column_ingest.hpp generically (timestamp -> int64 epoch seconds/micros via Arrow
+   cast, preserving null mask/range checks) rather than hand decoding.
+Execution:
+ - 16 threads via get_query_pool().parallel_for over morsels (contiguous chunk ranges). Each
+   thread has private accumulators/hash tables; merge after the scan (radix partitioned merge for
+   big group-bys). Results as arrow::Table via the helpers used by the sample queryN.cpp.
+ - Per-query specifics:
+   Q1 count = table length. Q2 count AdvEngineID<>0. Q3 sum/count/avg. Q4 AVG(UserID): sum in
+   __int128 (UserID is BIGINT; the sum can overflow int64), divide in double exactly as DuckDB.
+   Q5 COUNT(DISTINCT UserID): per-thread hash sets of UserID, merged by hash partition (exact).
+   Q6 COUNT(DISTINCT SearchPhrase): per-thread bitsets over dictionary ids (id != 0 only if
+   DuckDB counts '' as a distinct value - it does: '' is a non-NULL value, so include id 0).
+   Q7 min/max EventDate (scan). Q8 group by AdvEngineID (small direct array), order by count desc.
+   Q9-Q12, Q14, Q23: per-group COUNT(DISTINCT UserID): per-thread sets of (group, UserID) pairs,
+   merged by hash partition; Q9/Q10 group RegionID (direct array when max small, else hash),
+   Q11/Q12 group by MobilePhoneModel id (and MobilePhone), Q14 SearchPhrase id.
+   Q13, Q15, Q16, Q17, Q19, Q31-Q33, Q36: high-cardinality group-bys with COUNT(*) top-10;
+   thread-private open-addressing tables keyed by packed 64/128-bit keys, radix-partitioned
+   merge, then top-k with a deterministic tie-break matching the reference ordering.
+   Q19: extract(minute FROM EventTime) from epoch value.
+   Q20: equality scan of UserID. Q21: LIKE '%google%' over URL arena. Q22/Q23: substring filters on
+   URL/Title plus SearchPhrase id group-by with MIN(URL)/MIN(Title) (byte-wise min of strings).
+   Q26: ORDER BY SearchPhrase LIMIT 10 over non-empty ids: smallest 10 ids (rows, duplicates
+   included, so keep count per id; take the 10 smallest rows by id then map to string).
+   Q28: AVG(STRLEN(URL)) by CounterID with HAVING COUNT(*)>100000: per-CounterID sums (direct
+   array if max CounterID is small, else hash); STRLEN = character count (all_ascii flag, else
+   count UTF-8 lead bytes). Q29: REGEXP_REPLACE domain extraction on Referer, group by the
+   extracted string; implement the regex by hand matching `^https?://(?:www\.)?([^/]+)/.*$`
+   exactly (no match -> key is the original Referer; the match requires a '/' after the host).
+   Q30: SUM(w+k) = SUM(w) + k*COUNT computed exactly in 64-bit integer arithmetic.
+   Q34/Q35: group by URL (hash of bytes + string verification), top 10 by count.
+   Q37-Q42: CounterID=62 and EventDate range filters: use zone maps to skip chunks, then group by
+   URL / Title / (TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst) / (URLHash, EventDate) /
+   (WindowClientWidth, WindowClientHeight); LIMIT/OFFSET handled after full sort by
+   (count desc, deterministic tie-break).
+ - Ordering ties: DuckDB's tie order for equal counts is not defined; match the reference by
+   adding secondary keys only if the comparison harness requires it (check results with the
+   fast_check run mode).
+
+== B. Steps ==
+[ ] 1. Read the sample query1.cpp/hpp and result_writer usage pattern; read column_ingest.hpp
+       signatures needed (as_integer, as_string, as_date_days) via the loader build.
+[ ] 0. (Before coding) Measure min/max / distinct for every column with query_data on the FULL
+       dataset (full_dataset=true). C++ members are statically typed, so Database column types
+       are FIXED per column at implementation time from those measurements, with a safety margin
+       where the domain is open-ended (counters/ids/timings stay 32/64-bit); the loader still
+       range-checks every narrowing and throws on violation (never truncates). No runtime
+       width-tag machinery.
+[ ] 1b. Extend column_ingest.hpp (generically) with a timestamp helper (TIMESTAMP -> int64 epoch
+       micros via Arrow cast, preserving null mask and range checks) BEFORE implementing Q19.
+       EventTime, ClientEventTime, LocalEventTime all use it.
+[ ] 2. Define Database in db_loader.hpp: chunk size constant 2^16, row count (uint64_t),
+       per-column std::vector members with narrow types; ColumnStats / ZoneMap structs;
+       StringArena aligned with storage_plan.txt: bytes in super-chunks of ~2^20 rows, each with a
+       uint64_t base, plus uint32_t offsets relative to the super-chunk start (offsets array has
+       rows+1 entries per super-chunk; empty string = zero bytes). Accessor returns
+       std::string_view. Dictionary { arena of distinct values, uint64 offsets, per-row ids } for
+       SearchPhrase (uint32 ids, sorted byte order, id 0 = empty) and MobilePhoneModel (uint8/16).
+[ ] 3. Loader pass 1: as_integer<T> for numeric columns with a range check against T; compute
+       min/max stats per column (kept as metadata); zone maps per chunk for the filter columns.
+[ ] 4. Loader: EventDate via as_date_days narrowed to uint16/int32 per measured range; EventTime
+       via an extended generic timestamp helper.
+[ ] 5. Loader: SearchPhrase dictionary (parallel per-thread dedup, sort distinct bytes, remap
+       ids; id 0 = empty). MobilePhoneModel dictionary likewise. Low-cardinality strings -> dict.
+[ ] 6. Loader: URL/Title/Referer/OriginalURL/Params/SocialSourcePage -> arena + offsets, with
+       per-chunk all_ascii flag for URL and Referer. Free the std::string vectors immediately.
+[ ] 7. Loader: parallelize column conversions over the thread pool where independent; keep
+       peak memory near loaded size.
+[ ] 7b. Memory-footprint check right after the loader works (before any query): report the
+       in-memory size per column group vs rows x natural width; target <= ~10-15% above the
+       raw decompressed size; fix layout (e.g. dictionaries, narrower types) if exceeded.
+       Dictionary build for SearchPhrase uses the thread pool: per-thread dedup -> merged sort of
+       distinct byte strings -> parallel id remap over contiguous row ranges.
+[ ] 7c. Tie-breaking: every ORDER BY ... LIMIT must resolve ties deterministically (secondary
+       key on the group key bytes/values); compare against reference output in the exec and
+       validate stages and adjust to the reference's observed tie order.
+[ ] 8. Implement helpers: parallel morsel dispatcher, packed-key hash table (open addressing,
+       power-of-two capacity grown from observed load), radix-partitioned merge, top-k heap,
+       string_view arena accessors, exact substring search (memmem-style via std::string_view::find),
+       hand-written Q29 pattern matcher, UTF-8 character count.
+[ ] 9. Implement queries in order of dependency: Q1-Q8, Q20, Q30 (scans); Q9-Q17, Q19, Q31-Q33,
+       Q36 (group-bys); Q5/Q6 (distinct); Q21-Q23, Q26, Q28, Q29, Q34, Q35 (strings);
+       Q37-Q42 (zone-map filtered). Each query reads args via the provided parse_qN and returns
+       an arrow::Table through the pattern shown in the sample files.
+[ ] 10. Compile (optimize=false first for fast check), run fast_check on all queries, fix
+        mismatches (tie order, AVG formatting, empty-string semantics, NULL handling).
+[ ] 11. Run exhaustive on all queries, then benchmark; profile the slowest queries and tune
+        (morsel size, hash table sizing, string scan).
+[ ] 12. Verify memory footprint is within ~10-15% of the loaded columns and that no value in
+        any column was truncated (range checks active).

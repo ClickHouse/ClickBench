@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+source ./config.sh
+du -s -B1 "$RUN/data" | awk '{print $1}'

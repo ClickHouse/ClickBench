@@ -1,0 +1,5 @@
+FROM bluesky | STATS count = COUNT() BY commit.collection | SORT count DESC
+FROM bluesky | WHERE kind == "commit" AND commit.operation == "create" | STATS users = COUNT_DISTINCT(did, 40000), count = COUNT() BY commit.collection | SORT count DESC
+FROM bluesky | WHERE kind == "commit" AND commit.operation == "create" AND commit.collection IN ("app.bsky.feed.post", "app.bsky.feed.repost", "app.bsky.feed.like") | STATS count = COUNT() BY commit.collection, DATE_EXTRACT("hour_of_day", time_us) | SORT count, commit.collection
+FROM bluesky | WHERE kind == "commit" AND commit.operation == "create" AND commit.collection == "app.bsky.feed.post" | STATS first_post_ts = MIN(time_us) BY did | SORT first_post_ts ASC | LIMIT 3
+FROM bluesky | WHERE kind == "commit" AND commit.operation == "create" AND commit.collection == "app.bsky.feed.post" | STATS activity_span = date_diff("millisecond",min(time_us), max(time_us)) BY did | SORT activity_span DESC | LIMIT 3

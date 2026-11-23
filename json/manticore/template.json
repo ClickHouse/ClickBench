@@ -1,0 +1,9 @@
+{
+  "system": "Manticore Search",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "search"
+  ]
+}

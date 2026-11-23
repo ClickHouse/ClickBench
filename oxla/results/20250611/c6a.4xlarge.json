@@ -8,7 +8,7 @@
     "tuned": "no",
     "tags": [
         "C",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 636,
     "data_size": 17793214380,

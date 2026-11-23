@@ -1,6 +1,9 @@
 #!/bin/bash
-# Reads a SQL query from stdin, translates it to Elasticsearch DSL via the
-# /_sql/translate endpoint, then runs it against /_search.
+# Reads a query from stdin and runs it against /_search. A SQL query is
+# translated to Elasticsearch DSL via the /_sql/translate endpoint; a line that
+# starts with `{` is already a search request (DSL) and is sent as it is (the
+# queries with exact COUNT(DISTINCT), which the SQL translates to the
+# approximate `cardinality`).
 #
 # Stdout: ES JSON response.
 # Stderr: query runtime in fractional seconds on the last line (the "took"
@@ -13,14 +16,18 @@ query=$(cat)
 # Clear query cache to keep tries comparable.
 curl -sS -X POST 'http://localhost:9200/hits/_cache/clear' >/dev/null 2>&1 || true
 
-# Translate SQL -> DSL.
-sql_json=$(jq -nc --arg q "$query" '{query: $q}')
-dsl=$(curl -sS -X POST 'http://localhost:9200/_sql/translate' \
-    -H 'Content-Type: application/json' -d "$sql_json")
+if [ "${query:0:1}" = "{" ]; then
+    dsl="$query"
+else
+    # Translate SQL -> DSL.
+    sql_json=$(jq -nc --arg q "$query" '{query: $q}')
+    dsl=$(curl -sS -X POST 'http://localhost:9200/_sql/translate' \
+        -H 'Content-Type: application/json' -d "$sql_json")
 
-if printf '%s\n' "$dsl" | jq -e 'has("error")' >/dev/null 2>&1; then
-    printf '%s\n' "$dsl" >&2
-    exit 1
+    if printf '%s\n' "$dsl" | jq -e 'has("error")' >/dev/null 2>&1; then
+        printf '%s\n' "$dsl" >&2
+        exit 1
+    fi
 fi
 
 resp=$(curl -sS -X GET 'http://localhost:9200/hits/_search' \

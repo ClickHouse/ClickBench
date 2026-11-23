@@ -1,0 +1,43 @@
+{
+  "system": "FerretDB (snappy)",
+  "version": "2.0.0",
+  "os": "Ubuntu 24.04",
+  "date": "2025-03-26",
+  "machine": "m6i.8xlarge",
+  "retains_structure": "yes",
+  "tags": [
+    "historical"
+  ],
+  "dataset_size": 10000000,
+  "num_loaded_documents": 6865983,
+  "total_size": 6229532672,
+  "data_size": 4739489792,
+  "index_size": 1490042880,
+  "result": [
+    [
+      37.516,
+      6.396,
+      6.348
+    ],
+    [
+      283.463,
+      18.361,
+      18.279
+    ],
+    [
+      350.791,
+      20.119,
+      20.179
+    ],
+    [
+      251.929,
+      9.968,
+      10.006
+    ],
+    [
+      253.831,
+      11.495,
+      11.524
+    ]
+  ]
+}

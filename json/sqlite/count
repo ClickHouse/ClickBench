@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+sqlite3 bluesky.db "SELECT count(*) FROM bluesky"

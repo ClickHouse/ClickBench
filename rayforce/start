@@ -1,0 +1,28 @@
+#!/bin/bash
+# Starts the Rayforce IPC server; ./check reports it ready once server.rfl has
+# opened the table.
+set -e
+
+port="${RAYFORCE_PORT:-5000}"
+
+# Match the whole command line: clients are also called `rayforce`.
+if pgrep -x -f "rayforce -p $port server.rfl" >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Wait for the port of a server that is still exiting.
+for i in $(seq 1 300); do
+    ss -ltn 2>/dev/null | grep -q ":$port " || break
+    sleep 1
+done
+
+# The table must open on every start after ./load.
+if [ -d hits ]; then
+    export RAYFORCE_REQUIRE_TABLE=1
+else
+    export RAYFORCE_REQUIRE_TABLE=0
+fi
+
+rm -f server.ready
+nohup rayforce -p "$port" server.rfl >> server.log 2>&1 &
+echo $! > server.pid

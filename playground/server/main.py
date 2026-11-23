@@ -2,8 +2,8 @@
 
 Endpoints:
 
-    GET  /                     redirects to /ui/
-    GET  /ui/...               static-serves files from ../
+    GET  /                     serves the UI page
+    GET  /app.js, /style.css   static UI assets
     GET  /api/systems          JSON list of all playground-eligible systems
     GET  /api/state            JSON snapshot of every VM's state
     GET  /api/system/{name}    detail for a single system
@@ -502,35 +502,32 @@ def build_app() -> web.Application:
     app.router.add_get("/api/saved/{b64}", obj.handle_saved)
 
     # Static UI. Files live at playground/{index.html,app.js,style.css}
-    # (not playgrou../) so that GitHub Pages serves the same page
+    # (not playground/web/) so that GitHub Pages serves the same page
     # verbatim at https://benchmark.clickhouse.com/playground/, without
-    # a duplicate copy. The server hides README.md / INSTALL.md / docs/
-    # by only routing /ui/{index.html,app.js,style.css} explicitly.
+    # a duplicate copy. Served at the URL root (/) so URL layouts match
+    # between the two hosts (no /ui/ prefix on either).
     playground_dir = Path(__file__).resolve().parent.parent
-
-    async def root_redirect(_r: web.Request) -> web.Response:
-        raise web.HTTPFound("/ui/")
 
     async def ui_index(_r: web.Request) -> web.FileResponse:
         resp = web.FileResponse(playground_dir / "index.html")
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
-    async def ui_asset(req: web.Request) -> web.FileResponse:
+    def _serve_asset(name: str):
         # Whitelist the two static assets the app references. Serving
         # the whole playground_dir would expose README.md / INSTALL.md
-        # / docs/ / server/ / agent/ at /ui/…, which we don't want.
-        name = req.match_info["name"]
-        if name not in ("app.js", "style.css"):
-            raise web.HTTPNotFound()
-        resp = web.FileResponse(playground_dir / name)
-        resp.headers["Cache-Control"] = "no-store"
-        return resp
+        # / docs/ / server/ / agent/ at the URL root, which we don't
+        # want.
+        async def _handler(_r: web.Request) -> web.FileResponse:
+            resp = web.FileResponse(playground_dir / name)
+            resp.headers["Cache-Control"] = "no-store"
+            return resp
+        return _handler
 
     @web.middleware
     async def no_cache_static(request: web.Request, handler):
         resp = await handler(request)
-        if request.path.startswith("/ui/"):
+        if request.path in ("/", "/app.js", "/style.css"):
             resp.headers["Cache-Control"] = "no-store"
         return resp
 
@@ -561,10 +558,9 @@ def build_app() -> web.Application:
 
     app.middlewares.append(no_cache_static)
     app.middlewares.append(cors)
-    app.router.add_get("/", root_redirect)
-    app.router.add_get("/ui/", ui_index)
-    app.router.add_get("/ui", ui_index)
-    app.router.add_get("/ui/{name}", ui_asset)
+    app.router.add_get("/", ui_index)
+    app.router.add_get("/app.js", _serve_asset("app.js"))
+    app.router.add_get("/style.css", _serve_asset("style.css"))
 
     return app
 

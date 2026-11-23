@@ -1,0 +1,42 @@
+#!/bin/bash
+set -e -o pipefail
+
+PSQL="sudo -u postgres psql -X -v ON_ERROR_STOP=1"
+
+# Idempotent: recreate the database.
+${PSQL} -t -c "DROP DATABASE IF EXISTS bluesky WITH (FORCE)"
+${PSQL} -t -c "CREATE DATABASE bluesky"
+${PSQL} -d bluesky -t < ddl.sql
+
+# As in the original JSONBench: one COPY per file, in the CSV format with the
+# quote and delimiter characters that never occur in the data, so that every
+# line becomes one JSONB value; the index is created before the load.
+# `\u0000` is removed because JSONB cannot store it.
+#
+# The original lost whole files (e.g. 7 million of 10 million documents):
+# a document longer than 64 KiB is split by a raw newline into two lines,
+# none of which is valid JSON, and one bad line aborted the COPY of the
+# whole file. ON_ERROR ignore (PostgreSQL 17+) skips just these lines: JSONB
+# input errors are soft errors, reported as a NOTICE with the number of
+# skipped rows.
+# Permissive, as in the original JSONBench: a file that fails anyway is skipped (the
+# documents that were loaded are reported as the data quality), and the load fails
+# only if nothing was loaded.
+loaded=0
+for file in $(ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}"); do
+    echo "load: ${file}"
+    if gzip -dc "${file}" \
+        | python3 -I ../lib/filter-documents.py \
+        | sed 's/\\u0000//g' \
+        | ${PSQL} -d bluesky -c "\\copy bluesky FROM STDIN WITH (format csv, quote e'\\x01', delimiter e'\\x02', escape e'\\x01', on_error ignore)"; then
+        loaded=$((loaded + 1))
+    else
+        echo "load: failed to load ${file}, skipped" >&2
+    fi
+done
+if [ "${loaded}" -eq 0 ]; then
+    echo "load: no file was loaded" >&2
+    exit 1
+fi
+
+${PSQL} -d bluesky -t -c "VACUUM ANALYZE bluesky"

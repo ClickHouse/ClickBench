@@ -1,0 +1,24 @@
+{
+  "system": "CrateDB",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Java",
+    "column-oriented"
+  ],
+  "version": "6.5.0",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 100000000,
+  "num_loaded_documents": 99999968,
+  "load_time": 354.496,
+  "total_size": 36530918317,
+  "result": [
+    [0.11, 0.009, 0.007],
+    [20.469, 18.35, 17.236],
+    [4.048, 3.214, 3.195],
+    [5.203, 2.619, 2.552],
+    [5.649, 2.887, 3.295]
+  ]
+}

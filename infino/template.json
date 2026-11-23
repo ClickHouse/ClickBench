@@ -1,0 +1,12 @@
+{
+  "system": "Infino",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "search"
+  ]
+}

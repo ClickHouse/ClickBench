@@ -1,0 +1,7 @@
+#!/bin/bash
+# Total size of the objects in the bucket on SeaweedFS (Delta table, logs, indexes).
+set -e
+source "$(dirname "$0")/env.sh"
+
+echo "fs.du /buckets/$AWS_S3_BUCKET" | "$WEED_BIN" shell -master=127.0.0.1:9333 2>/dev/null |
+    grep -oP 'logical size:\s*\K[0-9]+' | tail -n1

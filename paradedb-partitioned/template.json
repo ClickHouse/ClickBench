@@ -3,11 +3,11 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "retired",
   "tags": [
     "Rust",
     "column-oriented",
     "search",
-    "PostgreSQL compatible",
-    "lukewarm-cold-run"
+    "PostgreSQL compatible"
   ]
 }

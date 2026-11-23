@@ -13,7 +13,7 @@ if [ ! -x ./parseable ]; then
     # v2.7.2 fixes the inference; verified locally end-to-end against
     # the bundled static_schema.json and hits.json.
     wget --continue --progress=dot:giga \
-        https://github.com/parseablehq/parseable/releases/download/v2.7.2/Parseable_OSS_x86_64-unknown-linux-gnu
+        https://github.com/parseablehq/parseable/releases/download/v3.0.0/Parseable_OSS_x86_64-unknown-linux-gnu
     mv Parseable_OSS_x86_64-unknown-linux-gnu parseable
     chmod +x parseable
 fi

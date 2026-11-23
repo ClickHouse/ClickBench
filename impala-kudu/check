@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if docker info >/dev/null 2>&1; then
+    DOCKER=(docker)
+else
+    DOCKER=(sudo docker)
+fi
+
+dump_diagnostics() {
+    "${DOCKER[@]}" ps -a --format '  {{.Names}}: {{.Status}}' \
+        --filter 'name=impala-' --filter 'name=kudu-' >&2 || true
+    local container
+    while IFS= read -r container; do
+        [ -n "$container" ] || continue
+        printf '%s\n' "--- $container (last 50 log lines) ---" >&2
+        "${DOCKER[@]}" logs --tail 50 "$container" 2>&1 | sed 's/^/  /' >&2 || true
+    done < <("${DOCKER[@]}" ps -a --format '{{.Names}}' \
+        --filter 'name=impala-' --filter 'name=kudu-')
+}
+
+out=$(curl -sSf -m 5 http://localhost:25000/healthz 2>&1) || {
+    printf 'impala-kudu/check: /healthz unreachable: %s\n' "$out" >&2
+    dump_diagnostics
+    exit 1
+}
+if [ "$out" != "OK" ]; then
+    printf 'impala-kudu/check: /healthz returned: %s\n' "$out" >&2
+    dump_diagnostics
+    exit 1
+fi
+
+kudu_out=$("${DOCKER[@]}" exec kudu-master \
+    kudu cluster ksck kudu-master:7051 2>&1) || {
+    printf 'impala-kudu/check: kudu cluster ksck failed:\n%s\n' "$kudu_out" >&2
+    dump_diagnostics
+    exit 1
+}

@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+[ -s server.endpoint ] || exit 1
+
+python3 - <<'PY'
+from tableauhyperapi import Connection, Endpoint
+
+with open("server.endpoint") as endpoint_file:
+    descriptor = endpoint_file.read().strip()
+
+endpoint = Endpoint(connection_descriptor=descriptor, user_agent="clickbench")
+with Connection(endpoint) as connection:
+    connection.execute_list_query("SELECT 1")
+PY

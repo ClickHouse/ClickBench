@@ -3,11 +3,11 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "challenger",
   "tags": [
     "Rust",
     "row-oriented",
     "search",
-    "PostgreSQL compatible",
-    "lukewarm-cold-run"
+    "PostgreSQL compatible"
   ]
 }

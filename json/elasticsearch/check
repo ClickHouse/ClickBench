@@ -1,0 +1,9 @@
+#!/bin/bash
+# Ready iff the credentials work and all primary shards are active (the shards
+# are still recovering for a while after a restart).
+set -e -o pipefail
+
+. ./es-common.sh
+
+[ -s "${ES_PASSWORD_FILE}" ]
+es_curl --max-time 10 "${ES_URL}/_cluster/health" | jq -e '.status == "yellow" or .status == "green"' >/dev/null

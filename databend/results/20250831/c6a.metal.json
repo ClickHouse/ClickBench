@@ -6,7 +6,7 @@
     "proprietary": "no",
     "hardware": "cpu",
     "tuned": "no",
-    "tags": ["Rust","column-oriented","ClickHouse derivative", "lukewarm-cold-run"],
+    "tags": ["Rust","column-oriented","ClickHouse derivative", "no-cold"],
     "load_time": 77,
     "data_size": 21023288089,
     "result": [

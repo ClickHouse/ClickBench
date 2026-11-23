@@ -1,0 +1,30 @@
+#!/bin/bash
+# Reads a query from stdin, dispatches to the running wrapper server.
+# Stdout: result (rendered table or scalar from the server).
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+tmp=$(mktemp)
+status=$(curl -sS --max-time 3600 -o "$tmp" -w '%{http_code}' \
+    -X POST --data-binary @- "http://127.0.0.1:${BENCH_TILEDB_PORT:-8000}/query" <<<"$query")
+
+if [ "$status" != "200" ]; then
+    echo "query failed: HTTP $status: $(cat "$tmp")" >&2
+    rm -f "$tmp"
+    exit 1
+fi
+
+# Pull `result` for stdout and `elapsed` for stderr (host timing protocol).
+# The body goes through a file, not an argument: a result can be larger
+# than what fits on a command line.
+python3 - "$tmp" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as f:
+    d = json.load(f)
+print(d.get("result", ""))
+sys.stderr.write(str(d["elapsed"]) + "\n")
+PY
+rm -f "$tmp"

@@ -2,11 +2,40 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-11-18
+Added `Vortex` to the "Storage" selector. Vortex entries were `Native` before. (Maksim Dergousov)
+
+### 2026-11-05
+Introduced system categories: Elite, Production, Challenger, Enthusiast, Retired, and Joke. The requirements for each category are described in the [README](README.md#system-categories). The category is set in the `template.json` of every system, and the report has a "Category" selector. Enthusiast and Joke entries are hidden by default; the other categories are shown. The selectors now also work correctly after opening a link with a saved selection. (Alexey Milovidov)
+
+### 2026-11-04
+Merged [JSONBench](https://benchmark.clickhouse.com/json/) - a benchmark for data analytics on JSON - into the ClickBench repository. The original JSONBench was not updated for more than a year. Now it has been revived, all contributions have been merged, and a dozen new entrants have been added. It adds all UI advancements and automations from ClickBench. (Alexey Milovidov)
+
+### 2026-10-15
+Add a history view. Clicking on any entry on the diagram will show the report of its historical results. The dataset is also available in the [public ClickHouse database](https://play.clickhouse.com/play?tab=ClickBench#U0VMRUNUICogRlJPTSBjbGlja2JlbmNoLnJlc3VsdHMgV0hFUkUgc3lzdGVtID0gJ0NsaWNrSG91c2UnIEFORCBtYWNoaW5lID0gJ2M2YS5tZXRhbCc=). (Alexey Milovidov)
+
+### 2026-10-09
+Added a new metric, "Complexity". It shows how much code is needed to run the benchmark for a system: the size of the zstd-compressed concatenation of all scripts and configs in the system's directory (`install`, `load`, `start`, `stop`, `query`, and the Python, Expect, and other scripts they invoke), with comments, blank lines, and redundant whitespace removed. Queries, table definitions, documentation, and the common runner in `lib/` are not counted. Cloud services and systems without the `install` script are excluded, as their setup is not scripted. The metric does not depend on the machine, so each system is shown once. It is not included in the Combined score. (Alexey Milovidov)
+
+### 2026-09-18
+Added a "Storage" selector to the report, as requested in [#2048](https://github.com/ClickHouse/ClickBench/issues/2048). Every benchmark entry is now classified by where it keeps its data, and each kind can be enabled and disabled individually: `Native` — the database native format on local storage; `Cloud` — a cloud service, as its storage is opaque; `Memory` — the full dataset has to be represented in memory for the system to operate; `Parquet` — Parquet files on local storage, either the benchmark-provided ones, or converted on load, in which case the conversion is accounted as the load time; `Data Lake` — Parquet or a bunch of other files in a bucket on AWS S3 (it is a simplification to call it a data lake, but this simplification is good to allow many systems and distill what matters); `Web` — the database native format on a remote HTTP server represented as a bucket on AWS S3.
+
+All six kinds are selected by default, so the default report is unchanged, and the links shared before this change keep working. The notable classification decisions:
+- an entry that converts the dataset into a columnar format of its own on load is `Native` — Vortex, Opteryx's skene, pgpro_tam's feather;
+- an entry that ends up with Parquet files on local storage is `Parquet`, even when the format has another name on top of them — `pg_ducklake`, `pg_mooncake`, and BemiDB with its local Iceberg tables;
+- a managed service is `Cloud` even when it reads the benchmark's Parquet files from an S3 bucket, because everything around its storage — caching, tiering, prewarming — is opaque to us: Athena, Crunchy Bridge for Analytics, S3 Select. `Data Lake` is for the engines that we run ourselves over the files in a bucket;
+- `Memory` is for the systems that have to hold the whole dataset in RAM to answer at all: pandas, Dask, the Polars, DuckDB and chDB DataFrames, `DuckDB (memory)`, Hyrise, and Sirius. Daft is `Parquet` instead, despite its `in-memory` tag, because its data lives in local Parquet files.
+
+(Alexey Milovidov)
+
+### 2026-08-28
+Renamed the `lukewarm-cold-run` tag to `no-cold` — a shorter name for the same thing: an entry whose first run of each query is not a true cold run, because the system is not restarted before it. The classification was also brought up to date. The 37 systems that the common runner in `lib/` already stops, page-cache-flushes and restarts before every cold run lost the tag, as did the 82 result files it had already produced; the managed services that clear nothing at all before a first run (ClickHouse Cloud, Databricks, MotherDuck, Hologres, AlloyDB) gained it, as [#1646](https://github.com/ClickHouse/ClickBench/pull/1646) requires. (Alexey Milovidov)
+
 ### 2026-07-22
-Introducing [ClickBench Playground](https://benchmark.clickhouse.com/playground/), which allows you to run arbitrary SQL queries on 110+ databases using a pre-loaded ClickBench dataset.
+Introducing [ClickBench Playground](https://benchmark.clickhouse.com/playground/), which allows you to run arbitrary SQL queries on 110+ databases using a pre-loaded ClickBench dataset. (Alexey Milovidov)
 
 ### 2026-07-03
-The [versions benchmark](https://benchmark.clickhouse.com/versions/) is reworked. Now it contains 10 datasets and runs every ClickHouse version since [ten years of open source](https://clickhouse.com/blog/open-source-10) and even early historical builds. The visualization was also improved.
+The [versions benchmark](https://benchmark.clickhouse.com/versions/) is reworked. Now it contains 10 datasets and runs every ClickHouse version since [ten years of open source](https://clickhouse.com/blog/open-source-10) and even early historical builds. The visualization was also improved. (Alexey Milovidov)
 
 ### 2026-05-11
 Unified benchmark scripts for different systems by providing a common interface in a set of scripts: `install`, `start`, `check`, `stop`, `load`, `query`, and `data-size`. Make the dataset download scripts common as well. Use a general benchmark runner in `lib/` to ensure different systems get equal treatment. This makes it easier to add more ways of testing, different datasets, and scenarios to the benchmark, and simplifies support of all 88 systems presented. Note: for embedded systems, such as pandas, polars, and the Python duckdb module, wrap them into a Python HTTP server, so that the benchmark can run each query separately.
@@ -94,7 +123,7 @@ Displaying the tuned results can be toggled with [a button](https://github.com/C
 Add a new benchmark, [FastFormats](https://fastformats.clickhouse.com/) comparing the performance on data formats using ClickHouse.  Website by Alexey Milovidov, scripts and methodology by Tom Schreiber.
 
 ### 2025-02-04
-Add a new benchmark, [JSONBench](https://jsonbench.com/) for analytics on semistructured data. Website by Alexey Milovidov, scripts and methodology by Tom Schreiber.
+Add a new benchmark, [JSONBench](https://benchmark.clickhouse.com/json/) for analytics on semistructured data. Website by Alexey Milovidov, scripts and methodology by Tom Schreiber.
 
 ### 2024-11-08
 Add a [new benchmark](https://pastila.nl/?000b1ba6/c224ddf960900f4f2d0d9e100cef5445.html) to compare all generations of AWS Graviton. (Alexey Milovidov)

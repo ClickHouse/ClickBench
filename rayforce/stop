@@ -1,0 +1,21 @@
+#!/bin/bash
+# Stops the server and waits until the process and its port are gone, so that
+# drop_caches can evict the mapped columns. Matches the whole command line:
+# clients are also called `rayforce`.
+port="${RAYFORCE_PORT:-5000}"
+
+rm -f server.ready
+if [ -f server.pid ]; then
+    kill "$(cat server.pid)" 2>/dev/null || true
+    rm -f server.pid
+fi
+pkill -x -f "rayforce -p $port server.rfl" 2>/dev/null || true
+
+for i in $(seq 1 300); do
+    if ! pgrep -x -f "rayforce -p $port server.rfl" >/dev/null 2>&1 \
+       && ! ss -ltn 2>/dev/null | grep -q ":$port "; then
+        break
+    fi
+    sleep 1
+done
+exit 0

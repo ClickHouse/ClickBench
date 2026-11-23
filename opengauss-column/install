@@ -1,0 +1,139 @@
+#!/bin/bash
+# openGauss publishes binaries for openEuler and CentOS only, so there is no
+# apt repository to add. The openEuler 20.03 server tarball is glibc 2.28 and
+# runs unmodified on Ubuntu once two sonames are bridged: libaio.so.1 (Ubuntu
+# renamed it libaio.so.1t64 in the 64-bit time_t transition, an ABI no-op on
+# 64-bit) and libreadline.so.7 (Ubuntu ships readline 8, which gsql only uses
+# for line editing). Both symlinks live in a private directory that is added
+# to LD_LIBRARY_PATH, so nothing outside $OG_ROOT is touched.
+set -eu
+
+OG_VERSION=${OG_VERSION:-6.0.5}
+OG_ROOT=${OG_ROOT:-/opt/opengauss}
+OG_USER=${OG_USER:-omm}
+OG_PORT=${OG_PORT:-5432}
+
+# Nothing to do if a previous run already initialized the cluster.
+if [ -f "$OG_ROOT/data/postgresql.conf" ]; then
+    echo "opengauss: cluster already initialized in $OG_ROOT/data" >&2
+    exit 0
+fi
+
+case "$(uname -m)" in
+    x86_64)  og_arch=x86; og_suffix=x86_64  ;;
+    aarch64) og_arch=arm; og_suffix=aarch64 ;;
+    *) echo "opengauss: unsupported architecture $(uname -m)" >&2; exit 1 ;;
+esac
+og_file="openGauss-Server-${OG_VERSION}-openEuler20.03-${og_suffix}.tar.bz2"
+og_url="https://opengauss.obs.cn-south-1.myhuaweicloud.com/${OG_VERSION}/openEuler20.03/${og_arch}/${og_file}"
+
+sudo apt-get update -y
+sudo apt-get install -y wget bzip2 libreadline8 libncurses6 libncursesw6 libtinfo6 libcrypt1
+# libaio1t64 on Ubuntu 24.04+, libaio1 on older releases.
+sudo apt-get install -y libaio1t64 || sudo apt-get install -y libaio1
+
+# A dedicated OS user: openGauss refuses to start as root.
+if ! id "$OG_USER" >/dev/null 2>&1; then
+    sudo useradd -m -s /bin/bash "$OG_USER"
+fi
+
+sudo mkdir -p "$OG_ROOT/app" "$OG_ROOT/data" "$OG_ROOT/log" "$OG_ROOT/compat" "$OG_ROOT/tmp"
+
+wget --continue --progress=dot:giga -O "/tmp/$og_file" "$og_url"
+sudo tar xjf "/tmp/$og_file" -C "$OG_ROOT/app"
+rm -f "/tmp/$og_file"
+
+libdir="/usr/lib/$(uname -m)-linux-gnu"
+sudo ln -sf "$(ls "$libdir"/libaio.so.1* | head -n1)" "$OG_ROOT/compat/libaio.so.1"
+sudo ln -sf "$(ls "$libdir"/libreadline.so.8* | head -n1)" "$OG_ROOT/compat/libreadline.so.7"
+
+# Every other script runs commands through $OG_ROOT/run, which sources this
+# environment and drops the caller into the openGauss toolchain.
+sudo tee "$OG_ROOT/env.sh" >/dev/null <<EOF
+export GAUSSHOME=$OG_ROOT/app
+export GAUSSLOG=$OG_ROOT/log
+export LD_LIBRARY_PATH=$OG_ROOT/app/lib:$OG_ROOT/compat
+export PATH=$OG_ROOT/app/bin:\$PATH
+export PGDATA=$OG_ROOT/data
+export PGPORT=$OG_PORT
+export PGHOST=$OG_ROOT/tmp
+export TMPDIR=$OG_ROOT/tmp
+# Bound each ./check probe: a server still replaying WAL accepts the
+# connection and then sits on it, which would turn the driver's readiness
+# loop into a multi-minute stall per cold cycle.
+export PGCONNECT_TIMEOUT=5
+EOF
+sudo tee "$OG_ROOT/run" >/dev/null <<EOF
+#!/bin/bash
+# openGauss's installation guide asks for a nofile limit of 1000000, and it
+# means it: the server derives max_safe_fds from whatever the shell had, so
+# under the 1024 that cloud-init leaves in place a hash aggregation that
+# spills dies with 'could not create temporary file ... Too many open files'.
+ulimit -n 1000000 2>/dev/null || ulimit -n "\$(ulimit -Hn)" 2>/dev/null || true
+source $OG_ROOT/env.sh
+exec "\$@"
+EOF
+sudo chmod 755 "$OG_ROOT/run"
+sudo chown -R "$OG_USER:$OG_USER" "$OG_ROOT"
+
+# Initialize the cluster. -A trust keeps the benchmark scripts free of
+# password handling; the instance only listens on a Unix socket anyway.
+sudo -u "$OG_USER" "$OG_ROOT/run" gs_initdb -D "$OG_ROOT/data" \
+    --nodename=clickbench -w 'Clickbench@123' -E UTF8 --locale=C -A trust
+
+memory_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+threads=$(nproc)
+
+# openGauss parallelizes a query only when query_dop is raised above its
+# default of 1; without it a 16-core machine runs every scan on one core.
+# Half the threads is the same share the postgresql entry hands to
+# max_parallel_workers_per_gather, and 64 is the ceiling the GUC accepts.
+query_dop=$((threads / 2))
+[ "$query_dop" -lt 1 ] && query_dop=1
+[ "$query_dop" -gt 64 ] && query_dop=64
+
+# Every thread of a parallel plan takes a connection slot, so the driver's
+# 10-connection throughput test needs roughly 10 x query_dop of them at
+# once; with the default 200 it dies with "No free proc is available to
+# create a new connection". 30 slots per unit of query_dop leaves room for
+# the producer/consumer pairs a stream plan adds on top.
+max_connections=$((query_dop * 30 + 200))
+
+# openGauss caps the whole instance with max_process_memory (default 12 GB
+# regardless of the machine): too small and big GROUP BYs fail with "memory
+# is temporarily unavailable", too large and the OOM killer arrives first.
+# 80% of RAM, floored at the 2 GB the GUC accepts as a minimum.
+max_process_memory=$((memory_kb * 4 / 5))
+[ "$max_process_memory" -lt 2097152 ] && max_process_memory=2097152
+
+# Same 25%-of-RAM rule as the row-store entry. cstore_buffers, the CU cache
+# the column store reads through, is deliberately left at its default: the
+# driver restarts the server and drops the page cache before every query, so
+# a large CU cache is never warm when it matters and only costs memory on the
+# 32 GB machines.
+shared_buffers=$((memory_kb / 4))
+effective_cache_size=$((memory_kb - memory_kb / 4))
+
+# An eighth of RAM for the post-load ANALYZE, but never more than 2 GB --
+# t3a.small only has 2 GB in total.
+maintenance_work_mem=$((memory_kb / 8))
+[ "$maintenance_work_mem" -gt 2097152 ] && maintenance_work_mem=2097152
+
+# 16 MB per segment; 2048 segments is the 32 GB the postgresql entry gives
+# max_wal_size, which keeps checkpoints out of the middle of the load.
+sudo -u "$OG_USER" tee -a "$OG_ROOT/data/postgresql.conf" >/dev/null <<EOF
+
+# ClickBench
+port = $OG_PORT
+max_process_memory = ${max_process_memory}kB
+shared_buffers = ${shared_buffers}kB
+effective_cache_size = ${effective_cache_size}kB
+work_mem = 64MB
+max_files_per_process = 100000
+query_dop = $query_dop
+max_connections = $max_connections
+maintenance_work_mem = ${maintenance_work_mem}kB
+checkpoint_segments = 2048
+unix_socket_directory = '$OG_ROOT/tmp'
+log_directory = '$OG_ROOT/log'
+EOF

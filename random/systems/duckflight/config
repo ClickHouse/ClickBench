@@ -1,0 +1,4 @@
+# duckflight sets these in run.sh (the native mode), not in benchmark.sh.
+BENCH_DOWNLOAD_SCRIPT=download-hits-parquet-single
+BENCH_RESTARTABLE=yes
+BENCH_DURABLE=yes

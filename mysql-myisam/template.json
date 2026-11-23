@@ -3,10 +3,10 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "enthusiast",
   "tags": [
     "C++",
     "row-oriented",
-    "MySQL compatible",
-    "lukewarm-cold-run"
+    "MySQL compatible"
   ]
 }

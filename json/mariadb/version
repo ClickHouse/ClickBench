@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+# "13.0.2-MariaDB-ubu2404" -> "13.0.2"
+sudo mariadb -N -e "SELECT VERSION()" | cut -d- -f1

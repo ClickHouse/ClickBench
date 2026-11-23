@@ -1,0 +1,33 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via mysql client against Doris's `hits` DB.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line.
+# Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+# Clear the FE/BE caches before each query (parquet path).
+curl -sS http://127.0.0.1:8040/api/clear_cache/all >/dev/null 2>&1 || true
+
+out=$(mysql -vvv -h127.0.0.1 -P9030 -uroot hits -e "$query" 2>&1) || status=$?
+status=${status:-0}
+
+printf '%s\n' "$out" | grep -vP '^\([0-9.]+\s+sec\)$|rows? in set|Empty set'
+
+if [ "$status" -ne 0 ] || printf '%s\n' "$out" | grep -qE '^ERROR'; then
+    printf '%s\n' "$out" >&2
+    exit 1
+fi
+
+secs=$(printf '%s\n' "$out" \
+    | grep -oP '\((?:([0-9.]+)\s+min\s+)?([0-9.]+)\s+sec\)' \
+    | tail -n1 \
+    | sed -r 's/\((([0-9.]+) min )?([0-9.]+) sec\)/\2 \3/' \
+    | awk '{ if ($2 != "") print $1*60 + $2; else print $1 }')
+
+if [ -z "$secs" ]; then
+    echo "no timing in mysql output" >&2
+    exit 1
+fi
+printf '%s\n' "$secs" >&2

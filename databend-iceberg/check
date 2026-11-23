@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+./bin/bendsql --query='SELECT 1' >/dev/null

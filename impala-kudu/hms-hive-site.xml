@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Bind-mounted into /opt/hive/conf/hive-site.xml on the hms container.
+  The image's /opt/hive/conf/ ships only *.template files, so without
+  this file:
+
+   * the metastore runs with all defaults (still functional for HMS),
+     BUT
+   * DbNotificationListener is not registered, so any client RPC into
+     get_current_notificationEventId throws TApplicationException.
+
+  Catalogd subscribes to the notification log on startup (controlled
+  by -hms_event_polling_interval_s; we set 0 in compose to opt out),
+  but impalad also calls get_current_notificationEventId during DDL
+  (CREATE DATABASE clickbench in ./load), which can't be opted out of
+  on the client side. Registering DbNotificationListener server-side
+  is the fix.
+
+  schematool -initSchema runs only when the persisted Derby directory is
+  absent. The explicit ConnectionURL below matches the path checked by
+  hms-entrypoint.sh, so stop/start preserves metadata.
+-->
+<configuration>
+  <!-- Persist Derby at the exact path checked by hms-entrypoint.sh so a
+       stopped container can restart without re-running initSchema. -->
+  <property>
+    <name>javax.jdo.option.ConnectionURL</name>
+    <value>jdbc:derby:;databaseName=/var/lib/hive/metastore/metastore_db;create=true</value>
+  </property>
+
+  <!-- Register the listener that writes events to NOTIFICATION_LOG. -->
+  <property>
+    <name>hive.metastore.transactional.event.listeners</name>
+    <value>org.apache.hive.hcatalog.listener.DbNotificationListener</value>
+  </property>
+
+  <!-- Some Hive code paths gate getCurrentNotificationEventId on
+       hive.metastore.event.db.notification.api.auth=false; with auth
+       on (the default), an unauthenticated client (impalad/catalogd
+       connecting as "impala") gets MetaException back, surfaced as
+       TApplicationException "Internal error processing
+       get_current_notificationEventId" to the client. -->
+  <property>
+    <name>hive.metastore.event.db.notification.api.auth</name>
+    <value>false</value>
+  </property>
+
+  <!-- Make the notification API serialize full thrift objects, which
+       newer Hive clients (including Impala 4.x) expect. -->
+  <property>
+    <name>hive.metastore.notifications.add.thrift.objects</name>
+    <value>true</value>
+  </property>
+</configuration>

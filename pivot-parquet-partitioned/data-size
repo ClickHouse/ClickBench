@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+# No ingestion — the reported size is the parquet files the table reads.
+du -bc data/hits_*.parquet | tail -n1 | cut -f1

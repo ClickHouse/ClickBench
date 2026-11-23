@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+mongod --version | sed -n 's/^db version v//p'

@@ -3,5 +3,6 @@
     "proprietary": "no",
   "hardware": "cpu",
     "tuned": "no",
-    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless","Python","dataframe","in-memory","lukewarm-cold-run"]
+    "category": "challenger",
+    "tags": ["C++","column-oriented","ClickHouse derivative","embedded","stateless","Python","dataframe","in-memory"]
 }

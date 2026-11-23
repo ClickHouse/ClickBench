@@ -1,0 +1,49 @@
+{
+  "system": "Elasticsearch",
+  "version": "8.15.3",
+  "date": "2025-01-14",
+  "machine": "m6i.8xlarge",
+  "cluster_size": 1,
+  "comment": "",
+  "tags": [
+    "historical"
+  ],
+  "num_documents": 1000000,
+  "num_documents_readable": "1m",
+  "data_compression": "lz4",
+  "data_size": 253890699,
+  "data_size_readable": "242.1 MB",
+  "timeout_query_ids": [],
+  "timeout_threshold": 7200,
+  "timeout_threshold_readable": "2 hours",
+  "oom_query_ids": [],
+  "oom_threshold": 68719476736,
+  "oom_threshold_readable": "64 GB",
+  "result": [
+    [
+      0.076016,
+      0.066858,
+      0.066721
+    ],
+    [
+      0.574176,
+      0.516991,
+      0.518692
+    ],
+    [
+      0.166576,
+      0.164569,
+      0.162287
+    ],
+    [
+      0.052023,
+      0.049654,
+      0.04985
+    ],
+    [
+      0.058895,
+      0.05943,
+      0.059138
+    ]
+  ]
+}

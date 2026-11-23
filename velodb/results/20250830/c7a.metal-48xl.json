@@ -11,7 +11,7 @@
         "column-oriented",
         "MySQL compatible",
         "ClickHouse derivative",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 364,
     "data_size": 17361427624,

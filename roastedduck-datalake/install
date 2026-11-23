@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+# roastedDuck is an independent Rust engine compatible with DuckDB 1.5.6:
+# https://github.com/amirbaron/roastedDuck
+# All releases are pre-releases, so there is no "latest" link; pin the version.
+VERSION=1.5.6.post2
+
+if [ ! -x roastedduck-dist/bin/roastedDuck ]; then
+    case "$(uname -m)" in
+        x86_64)  target=linux-amd64 ;;
+        aarch64) target=linux-arm64 ;;
+        *) echo "unsupported architecture $(uname -m)" >&2; exit 1 ;;
+    esac
+    archive="roastedduck-${VERSION}-${target}.tar.gz"
+    base="https://github.com/amirbaron/roastedDuck/releases/download/v${VERSION}"
+    curl -sSfL -o "$archive" "$base/$archive"
+    curl -sSfL "$base/SHA256SUMS" | grep " $archive\$" | sha256sum -c -
+    mkdir -p roastedduck-dist
+    tar -xzf "$archive" -C roastedduck-dist
+    rm -f "$archive"
+fi
+sudo ln -sf "$PWD/roastedduck-dist/bin/roastedDuck" /usr/local/bin/roastedDuck

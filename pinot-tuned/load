@@ -1,0 +1,146 @@
+#!/bin/bash
+set -e
+
+PINOT_VERSION=1.5.1
+PINOT_DIR="apache-pinot-$PINOT_VERSION-bin"
+SEGMENTS_DIR="batch/hits/segments"
+
+# Wait for the controller's REST API to be live. `start` only waits for
+# the broker; the controller can lag, and AddTable below talks to the
+# controller, not the broker.
+for _ in $(seq 1 120); do
+    if curl -sf -o /dev/null http://localhost:9000/health 2>/dev/null; then
+        break
+    fi
+    sleep 1
+done
+
+# Wait for at least one broker AND server to register with the
+# DefaultTenant tag. QuickStart launches the components asynchronously
+# and AddTable below rejects the config with
+#   "Failed to find instances with tag: DefaultTenant_BROKER ..."
+# if the broker hasn't checked in yet.
+for _ in $(seq 1 60); do
+    brokers=$(curl -sf http://localhost:9000/brokers 2>/dev/null \
+        | python3 -c 'import json,sys;d=json.load(sys.stdin);print(sum(len(v) for v in d.values()))' \
+        2>/dev/null || echo 0)
+    servers=$(curl -sf http://localhost:9000/instances 2>/dev/null \
+        | python3 -c 'import json,sys;d=json.load(sys.stdin);print(sum(1 for x in d.get("instances",[]) if x.startswith("Server_")))' \
+        2>/dev/null || echo 0)
+    if [ "$brokers" -ge 1 ] && [ "$servers" -ge 1 ]; then
+        break
+    fi
+    sleep 1
+done
+
+# Register the schema and table. AddTable fails with "already exists" on
+# every call after the first (BENCH_DURABLE=no re-runs ./load on every
+# cold cycle; QuickStart's own restart wipes the table registration but
+# not the segment tar files on disk — see the fast path below). Treat
+# that specific failure as success; anything else should still fail loudly
+# as before.
+add_table_out=$("./${PINOT_DIR}/bin/pinot-admin.sh" AddTable \
+    -tableConfigFile offline_table.json \
+    -schemaFile schema.json -exec 2>&1) && add_table_rc=0 || add_table_rc=$?
+if [ "$add_table_rc" -ne 0 ]; then
+    if ! printf '%s\n' "$add_table_out" | grep -q 'already exists'; then
+        printf '%s\n' "$add_table_out" >&2
+        exit "$add_table_rc"
+    fi
+fi
+
+# Fast path: segment tar files from a previous ./load already exist on
+# disk. QuickStart -type batch writes them under $SEGMENTS_DIR (a plain
+# local directory, not process memory) and a stop/start cycle wipes only
+# the in-memory table/segment registration, not these files (verified by
+# reproducing this locally in Docker: kill -9 the QuickStart JVM, restart
+# it, curl POST each existing .tar.gz straight to the controller's
+# /segments endpoint — official "tar push" upload API, see
+# https://docs.pinot.apache.org/build-with-pinot/ingestion/batch-ingestion/segment-upload
+# — and the table is fully queryable again, star-tree index included,
+# without re-parsing hits.tsv). Re-pushing ~100 existing tars takes
+# seconds; re-running LaunchDataIngestionJob from hits.tsv takes ~78 min.
+if [ -d "$SEGMENTS_DIR" ] && ls "$SEGMENTS_DIR"/*.tar.gz >/dev/null 2>&1; then
+    for f in "$SEGMENTS_DIR"/*.tar.gz; do
+        curl -sS -X POST -H 'Content-Type: multipart/form-data' \
+            -F "file=@${f}" \
+            'http://localhost:9000/segments?tableName=hits&tableType=OFFLINE' \
+            | grep -q 'Successfully uploaded' || {
+                echo "bench: failed to re-push ${f}" >&2
+                exit 1
+            }
+    done
+
+    # Re-pushed segments take a few seconds to show up in the external
+    # view (Helix propagation), during which queries return a transient
+    # "N segments unavailable" error. Poll until every expected segment
+    # is ONLINE instead of racing the very first query against it
+    # (observed locally: up to ~20s for 5 segments; sized generously
+    # for ~100).
+    expected=$(ls "$SEGMENTS_DIR"/*.tar.gz | wc -l | tr -d ' ')
+    for _ in $(seq 1 120); do
+        online=$(curl -sf http://localhost:9000/tables/hits/externalview 2>/dev/null \
+            | python3 -c 'import json,sys
+d=json.load(sys.stdin)
+ov=d.get("OFFLINE") or {}
+print(sum(1 for st in ov.values() if list(st.values()) == ["ONLINE"]))' \
+            2>/dev/null || echo 0)
+        if [ "$online" -ge "$expected" ]; then
+            break
+        fi
+        sleep 1
+    done
+
+    exit 0
+fi
+
+# Slow path (first ./load only): generate segments from hits.tsv.
+# Pinot was unable to load data as a single file without errors. Split.
+split -d --additional-suffix .tsv -n l/100 hits.tsv parts
+
+# Pinot can't load value '"tatuirovarki_redmond' so we need to fix this row.
+sed parts93.tsv -e 's/"tatuirovarki_redmond/tatuirovarki_redmond/g' -i
+
+# Fix path in YAML to local directory (idempotent — only replace placeholder).
+sed splitted.yaml -e "s|PWD_DIR_PLACEHOLDER|$PWD|g" -i
+sed local.yaml    -e "s|PWD_DIR_PLACEHOLDER|$PWD|g" -i
+
+# pinot-admin.sh's own default is -Xms4G with NO -Xmx (falls back to the
+# JVM's default of ~25% of physical RAM). On a real ~74GB/100-segment
+# ClickBench hits.tsv this OOMed mid-job around segment 60/100 on a
+# 30GB-RAM c6a.4xlarge (OutOfMemoryError in SegmentDictionaryCreator) —
+# and LaunchDataIngestionJob still exited 0, silently leaving only 60/100
+# segments on disk.
+#
+# A fixed -Xmx20G (this PR's original fix) instead broke every machine
+# smaller than c6a.4xlarge — see ./start for the full explanation and the
+# same 64%-of-RAM/20G-cap/no-4G-floor rationale (anchored so c6a.4xlarge,
+# the only end-to-end-verified machine, gets back exactly its proven 20G).
+# Keep this in sync with ./start; both invoke pinot-admin.sh and both need
+# the same ceiling.
+RAM_MB=$(awk '/MemTotal/{ printf "%d", $2 / 1024 }' /proc/meminfo)
+XMX_MB=$(( RAM_MB * 64 / 100 ))
+[ "$XMX_MB" -gt 20480 ] && XMX_MB=20480
+XMS_MB=$XMX_MB
+[ "$XMS_MB" -gt 4096 ] && XMS_MB=4096
+export JAVA_OPTS="-Xms${XMS_MB}m -Xmx${XMX_MB}m"
+
+"./${PINOT_DIR}/bin/pinot-admin.sh" LaunchDataIngestionJob -jobSpecFile splitted.yaml
+
+# Defense against the exact failure this instance just hit: Pinot's own
+# ingestion job runner can swallow a per-file OutOfMemoryError (or other
+# per-task exception) and still exit 0, leaving fewer segment tars on
+# disk than input splits. Fail loudly instead of letting a partial load
+# silently pass bench_load's >5GB data-size check downstream.
+actual_segments=$(ls "$SEGMENTS_DIR"/*.tar.gz 2>/dev/null | wc -l | tr -d ' ')
+expected_segments=$(ls parts*.tsv 2>/dev/null | wc -l | tr -d ' ')
+if [ "$expected_segments" -gt 0 ] && [ "$actual_segments" -ne "$expected_segments" ]; then
+    echo "bench: LaunchDataIngestionJob produced ${actual_segments}/${expected_segments} segments — partial load (likely OOM swallowed per-task)" >&2
+    exit 1
+fi
+
+# Keep hits.tsv's derived parts only as long as needed; the source file
+# itself and the split parts are no longer needed once segments exist in
+# $SEGMENTS_DIR (used by the fast path above on every later cold cycle).
+rm -f hits.tsv parts*.tsv
+sync

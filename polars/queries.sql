@@ -20,7 +20,7 @@ hits.group_by([pl.col('UserID'), pl.col('EventTime').dt.minute(), 'SearchPhrase'
 hits.select('UserID').filter(pl.col('UserID') == 435090932899640449).collect()
 hits.filter(pl.col('URL').str.contains('google')).select(pl.len()).collect().item()
 hits.filter(pl.col('URL').str.contains('google') & (pl.col('SearchPhrase') != '')).group_by('SearchPhrase').agg([pl.col('URL').min(), pl.len().alias('count')]).sort('count', descending=True).head(10).collect()
-hits.filter(pl.col('Title').str.contains('Google') & ~pl.col('URL').str.contains('.google.') & (pl.col('SearchPhrase') != '')).group_by('SearchPhrase').agg([pl.col('URL').min(), pl.col('Title').min(), pl.len().alias('count'), pl.col('UserID').n_unique()]).sort('count', descending=True).head(10).collect()
+hits.filter(pl.col('Title').str.contains('Google') & ~pl.col('URL').str.contains('.google.', literal=True) & (pl.col('SearchPhrase') != '')).group_by('SearchPhrase').agg([pl.col('URL').min(), pl.col('Title').min(), pl.len().alias('count'), pl.col('UserID').n_unique()]).sort('count', descending=True).head(10).collect()
 hits.filter(pl.col('URL').str.contains('google')).sort('EventTime').head(10).collect()
 hits.filter(pl.col('SearchPhrase') != '').sort('EventTime').select('SearchPhrase').head(10).collect()
 hits.filter(pl.col('SearchPhrase') != '').sort('SearchPhrase').select('SearchPhrase').head(10).collect()

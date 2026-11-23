@@ -1,0 +1,14 @@
+#!/bin/bash
+# Stops Databend only. The storage keeps running: it plays the role of the
+# remote object storage, which survives restarts of the database.
+
+pkill -x databend-query 2>/dev/null || true
+pkill -x databend-meta 2>/dev/null || true
+
+# Wait briefly, escalate to KILL if needed.
+for _ in $(seq 1 15); do
+    pgrep -x databend-query >/dev/null 2>&1 || pgrep -x databend-meta >/dev/null 2>&1 || exit 0
+    sleep 1
+done
+pkill -9 -x databend-query 2>/dev/null || true
+pkill -9 -x databend-meta 2>/dev/null || true

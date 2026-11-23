@@ -1,0 +1,8 @@
+#!/bin/bash
+# The size of the data stream on disk (all backing indices), as in the
+# original JSONBench.
+set -e -o pipefail
+
+. ./es-common.sh
+
+es_curl "${ES_URL}/_data_stream/${ES_INDEX}/_stats" | jq -r '.total_store_size_bytes'

@@ -12,7 +12,7 @@
         "column-oriented",
         "search",
         "PostgreSQL compatible",
-        "lukewarm-cold-run"
+        "no-cold"
     ],
     "load_time": 1268,
     "data_size": 15415061091,

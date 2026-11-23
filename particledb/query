@@ -1,0 +1,21 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+source ./config.sh
+[ ! -e "$RUN/stop-failed" ]
+output=$(mktemp)
+trap 'rm -f "$output"' EXIT
+sql=$(cat)
+"${NATIVE[@]}" --timing -c "$sql" >"$output"
+# The native client prints the full result before its elapsed time.
+awk '
+  NR > 1 { print previous }
+  { previous=$0 }
+  END {
+    if (previous !~ /^Time: [0-9]+([.][0-9]+)? ms( [(].*[)])?$/) {
+      print "Missing native-client timing" > "/dev/stderr"; exit 1
+    }
+    split(previous, timing, " ")
+    printf "%.6f\n", timing[2] / 1000 > "/dev/stderr"
+  }
+' "$output"

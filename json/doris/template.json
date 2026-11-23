@@ -1,0 +1,11 @@
+{
+  "system": "Apache Doris",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "MySQL compatible",
+    "ClickHouse derivative"
+  ]
+}

@@ -134,10 +134,18 @@ if ! command -v dnsmasq >/dev/null 2>&1; then
 fi
 sudo tee /etc/dnsmasq.d/playground.conf >/dev/null <<'CONF'
 # Managed by playground/scripts/install-firecracker.sh — do not edit.
-port=53
-bind-interfaces
-# systemd-resolved already owns 127.0.0.53/54 on loopback; leave it.
-except-interface=lo
+#
+# We listen on 5353, not 53. Reason: the host runs systemd-resolved
+# with a stub on 127.0.0.53:53, and dnsmasq's socket setup with any
+# bind mode either collides on port 53 or misses freshly-created
+# fc-tap-<slot> interfaces (bind-interfaces snapshots the address
+# list at startup and won't rebind for new taps; bind-dynamic still
+# opens a wildcard fallback that collides with systemd-resolved).
+# Iptables `REDIRECT --to-ports 5353` in
+# net.enable_filtered_internet rewrites the VM's UDP/53 traffic to
+# this port on the host, so guests still send to :53 and don't
+# notice.
+port=5353
 no-resolv
 server=1.1.1.1
 server=8.8.8.8

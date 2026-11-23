@@ -1,0 +1,6 @@
+-- Attaches the Iceberg REST catalog as `lake`. The placeholders are
+-- substituted from lib/iceberg/env.sh by ./load and ./query.
+LOAD iceberg;
+CREATE SECRET storage (TYPE S3, KEY_ID '{AWS_ACCESS_KEY_ID}', SECRET '{AWS_SECRET_ACCESS_KEY}', REGION '{AWS_REGION}', ENDPOINT '{LAKE_S3_ENDPOINT_HOST}', URL_STYLE 'path', USE_SSL {LAKE_S3_USE_SSL});
+CREATE SECRET catalog (TYPE ICEBERG, CLIENT_ID '{LAKE_CLIENT_ID}', CLIENT_SECRET '{LAKE_CLIENT_SECRET}', OAUTH2_SERVER_URI '{LAKE_OAUTH_URI}');
+ATTACH '{LAKE_WAREHOUSE}' AS lake (TYPE ICEBERG, ENDPOINT '{LAKE_CATALOG_URI}', SECRET catalog);

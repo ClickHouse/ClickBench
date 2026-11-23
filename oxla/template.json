@@ -3,8 +3,8 @@
   "proprietary": "yes",
   "hardware": "cpu",
   "tuned": "no",
+  "category": "retired",
   "tags": [
-    "C",
-    "lukewarm-cold-run"
+    "C"
   ]
 }

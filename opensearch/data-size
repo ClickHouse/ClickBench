@@ -1,0 +1,5 @@
+#!/bin/bash
+# The size of the index on disk (there are no replicas).
+set -e -o pipefail
+
+curl -sS --fail 'http://localhost:9200/hits/_stats/store' | jq -r '._all.total.store.size_in_bytes'

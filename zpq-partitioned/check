@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+zpq --version >/dev/null

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+OG_ROOT=${OG_ROOT:-/opt/opengauss}
+OG_USER=${OG_USER:-omm}
+
+# gsql exits 0 even when it cannot connect, so match on the output instead.
+out=$(sudo -u "$OG_USER" "$OG_ROOT/run" gsql -d postgres -t -A -c 'SELECT 1' 2>&1)
+[ "$out" = "1" ]

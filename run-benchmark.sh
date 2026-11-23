@@ -42,9 +42,15 @@ if [ -z "${timeout:-}" ] && [ -r "$system/timeout-seconds" ]; then
 fi
 timeout="${timeout:-36000}"
 
-awk -v sys="$system" -v repo="$repo" -v branch="$branch" -v t="$timeout" -v pr="$clickbench_pr" '
+# Identifies the live log of this run in sink.logs, see lib/live-log.py.
+run_id=$(cat /proc/sys/kernel/random/uuid)
+
+awk -v sys="$system" -v repo="$repo" -v branch="$branch" -v t="$timeout" -v pr="$clickbench_pr" \
+    -v machine="$machine" -v run_id="$run_id" '
 {
     gsub(/@system@/, sys)
+    gsub(/@machine@/, machine)
+    gsub(/@run_id@/, run_id)
     gsub(/@repo@/, repo)
     gsub(/@branch@/, branch)
     gsub(/@timeout@/, t)
@@ -76,6 +82,9 @@ while :; do
 
     if [ "$rc" -eq 0 ]; then
         printf '%s\n' "$out"
+        live_log="Live log of ${system} on ${machine}: https://benchmark.clickhouse.com/live.html#${run_id}"
+        echo "$live_log"
+        if [ -n "$GITHUB_STEP_SUMMARY" ]; then echo "$live_log" >> "$GITHUB_STEP_SUMMARY"; fi
         break
     fi
 
