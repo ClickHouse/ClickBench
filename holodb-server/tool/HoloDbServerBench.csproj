@@ -13,7 +13,7 @@
     <SelfContained>false</SelfContained>
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <PublishReadyToRun>false</PublishReadyToRun>
-    <HoloDbVersion Condition="'$(HoloDbVersion)' == ''">23.0.2</HoloDbVersion>
+    <HoloDbVersion Condition="'$(HoloDbVersion)' == ''">23.3.0</HoloDbVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="DuckDB.NET.Data.Full" Version="1.5.5" />

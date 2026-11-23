@@ -297,6 +297,8 @@ internal static unsafe class Loader
         db.Dialect = SqlDialect.Extended;   // LIMIT, DATE_TRUNC and REGEXP_REPLACE are Extended; needs a HoloDb that has Database.Dialect (define HOLODB_DIALECT)
 #endif
         db.Execute(create);
+        // HOLODB_STORED_AGGREGATES (default off in this entry, set by bench.env): off = HoloDb 23.3.0 Database.SetStoredAggregates("hits", false), so the load builds no value counts and no statement is answered from the stored column totals; on = the product default.
+        if (Environment.GetEnvironmentVariable("HOLODB_STORED_AGGREGATES") != "on") db.SetStoredAggregates("hits", false);
         var names = cols.Select(c => c.Name).ToArray();
         using var ds = new Source(parquet, cols);
         long total = Math.Min(ds.Count(), maxRows);

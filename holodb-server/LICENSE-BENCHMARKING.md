@@ -10,6 +10,6 @@ This includes:
 2. examining its behaviour from the outside, including its query plans, timings, the files it writes, and how it behaves on changed queries or data;
 3. publishing the results and findings, including criticism.
 
-To that extent, clause 4(c) of the HoloDb licence (reverse engineering) does not apply. The same permission is written into Section 2A of the licence that ships with the software from the release that adds it.
+To that extent, clause 4(c) of the HoloDb licence (the clause that forbids reverse engineering, decompiling, disassembling and deriving the source code, algorithms or internal structure) does not apply. The same permission is written into Section 2A of the LICENSE file that ships in the `EvaluatedApplications.HoloDb` package from version 23.1.0.
 
 Nothing else changes. This grant gives no right to commercial use, to redistribute the software, to decompile it or obtain its source code, or to build a competing product from it.
