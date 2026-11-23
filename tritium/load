@@ -1,0 +1,6 @@
+#!/bin/bash
+# Nothing to load: hits.parquet is read in place (start registers it).
+set -e
+
+test -f hits.parquet
+sync

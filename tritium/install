@@ -1,0 +1,23 @@
+#!/bin/bash
+# tritium's binary, here as ./tritium: the release below (github.com/xmaton/tritium-release) for this machine's
+# architecture, checked against its checksum here, so a rerun measures the same binary; or a local linux-release build
+# from TRITIUM instead.
+set -e
+release=https://github.com/xmaton/tritium-release/releases/download/v0.1.0
+# The release's SHA256SUMS (release/make-release.sh prints it). Empty for an architecture v0.1.0 has no binary of
+# yet: the check fails there.
+sha256_x86_64=f10384d636b261bb95424569c0ca84d2780fa28d34acb6d80467189fc3c523cc
+sha256_aarch64=
+
+sudo apt-get update -y
+sudo apt-get install -y curl
+
+if [ -n "$TRITIUM" ]; then
+    cp "$TRITIUM" ./tritium
+    exit 0
+fi
+arch=$(uname -m)
+sha256_var=sha256_$arch
+curl -fsSL -o tritium "$release/tritium-linux-$arch"
+echo "${!sha256_var}  tritium" | sha256sum -c
+chmod +x tritium
