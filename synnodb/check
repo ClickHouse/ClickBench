@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")"
+
+curl -sf --unix-socket synnodb.sock http://localhost/health >/dev/null

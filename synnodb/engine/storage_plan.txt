@@ -1,0 +1,100 @@
+STORAGE PLAN - table hits (web analytics events, ~100M rows in production; the 5M-row full
+dataset is a 5% sample). Nothing below bakes in counts, cardinalities or ranges: every width,
+dictionary and zone boundary is computed at load time from the data. All row indexes, offsets
+and counters are 64-bit unless a per-chunk local index is provably bounded by the chunk size.
+
+0. Global organisation: row-chunked column store shared by all 16 workers
+- Rows keep their ORIGINAL load order (no reordering; the table flattens back trivially).
+  Rows are cut into chunks of 2^16 rows (last chunk partial); the chunk count is derived from
+  the row count at load. Morsels = contiguous ranges of chunks; each thread takes several
+  morsels (or a static slice of ~rows/16 contiguous rows so results emerge in slice order).
+  Each column is an array of per-chunk segments so statistics and widths adapt locally.
+- Per-chunk zone map (min, max) for filter columns: CounterID, EventDate, AdvEngineID,
+  SearchEngineID, IsRefresh, DontCountHits, IsLink, IsDownload, TraficSourceID. A zone map
+  only prunes chunks; it never answers a query. Q37-Q42 filter CounterID = const plus a date
+  range, so the CounterID/EventDate zone maps skip every chunk that cannot match. Whether the
+  data is clustered by CounterID is measured at load, never assumed.
+
+1. Numeric and small-domain columns (narrowest exact type from the WHOLE-column min/max,
+   computed in a first pass over the Arrow input; widened automatically if the production
+   range is larger)
+- WatchID, UserID, FUniqID, RefererHash, URLHash, ParamPrice: plain int64 arrays (hashes and
+  ids are incompressible). UserID is the hot column of Q4, Q5, Q9-Q12, Q14, Q16, Q17, Q19,
+  Q20, Q23; aggregation hashes the 64-bit value at query time (no stored hash tags).
+- ClientIP, RemoteIP, IPNetworkID, RegionID, CounterID, HID, CodeVersion, WindowName,
+  OpenerName, SilverlightVersion3, CLID, RefererRegionID, URLRegionID, the *Timing columns:
+  32-bit, or uint16 where the observed range fits. RegionID and CounterID have small domains,
+  so group-by on RegionID uses a direct-indexed array sized max+1 when max is small (decided
+  at query time from the stored column max), else a hash table.
+- SMALLINT columns (AdvEngineID, SearchEngineID, IsRefresh, DontCountHits, IsLink,
+  IsDownload, MobilePhone, TraficSourceID, flags, Age/Sex/Income/..., etc.): uint8/int8 when
+  the observed [min,max] fits, else int16. Wide ones (ResolutionWidth, WindowClientWidth,
+  WindowClientHeight, HistoryLength, ...) stay int16/uint16. Flag columns remain byte arrays
+  for branch-free vectorizable scans.
+- ResolutionWidth: uint16 array. Q30 asks for 90 sums SUM(w+k); the engine computes SUM(w)
+  and COUNT once and derives SUM(w)+k*COUNT in exact 64-bit integer arithmetic at query time
+  (an algebraic evaluation, nothing stored).
+- EventDate: days since epoch in uint16 if the range fits, else int32 (width chosen at load).
+  Q7 still scans the column; zone maps only prune.
+- EventTime, ClientEventTime, LocalEventTime: int64 epoch values. Per chunk: int64 base
+  (chunk min) plus uint32 deltas, used only when every value in the chunk is exactly
+  representable (whole-second resolution, span < 2^32), otherwise that chunk stays plain
+  int64. Q19 derives extract(minute) from the integer at query time.
+
+2. String columns
+Large strings (URL, Title, Referer, OriginalURL, Params, SocialSourcePage):
+- Arena layout: one contiguous byte array per super-chunk (about 2^20 rows) with a uint64
+  super-chunk base, plus 32-bit offsets relative to the chunk start. Totals may exceed 4 GiB
+  per column at production scale, hence 64-bit bases. No per-row std::string or heap
+  allocation; empty strings take zero bytes and emptiness is offset[i+1]==offset[i], so
+  `<> ''` is a length test. Strings are surfaced as string_view into the arena and copied
+  into std::string only for final result rows.
+- LIKE '%google%' (Q21-Q23) runs a substring search across the contiguous chunk bytes and
+  maps hit positions to rows via the offsets, avoiding per-row call overhead. No trigram
+  index (it would break the footprint budget).
+- STRLEN (Q28, Q29): per-chunk all_ascii flag recorded at load; when set, length is the
+  offset difference, otherwise count UTF-8 lead bytes (non-continuation bytes) in the row's
+  range, to match code-point semantics exactly.
+- URL, Title, Referer are high cardinality, so no global dictionary. GROUP BY on them
+  (Q29, Q34, Q35, Q37-Q40) hashes the bytes at query time with full-string verification on
+  collision. URLHash/RefererHash are NOT guaranteed to be hashes of the strings and are not
+  used as substitute keys.
+Group-by-critical strings (SearchPhrase, MobilePhoneModel):
+- SearchPhrase: mostly empty (about 87% on the sample). Global sorted dictionary built at
+  load (per-thread hash dedup, parallel sort of distinct values, per-chunk id remap): id 0 =
+  empty string, other ids in byte-lexicographic order so id order == string order. Ids are
+  uint32 (uint64 only if the distinct count requires). `SearchPhrase <> ''` becomes id != 0;
+  ORDER BY SearchPhrase (Q26) becomes a top-k over integers; GROUP BY SearchPhrase (Q13-Q15,
+  Q17, Q19, Q22, Q23, Q31) runs on 4-byte keys; COUNT(DISTINCT SearchPhrase) (Q6) uses
+  thread-private bitsets over ids OR-merged at the end.
+- MobilePhoneModel: same scheme, id 0 = empty, uint8/uint16 chosen from the dictionary size.
+Low-cardinality strings (PageCharset, BrowserLanguage, BrowserCountry, SocialNetwork,
+SocialAction, HitColor, ParamCurrency, FlashMinor2, UserAgentMinor, Openstat*, UTM*, FromTag,
+ParamOrderID): per-column dictionary (id 0 = empty), id width from the observed distinct
+count. Chunks that are >= 90% one id are stored as (single id, exception list of
+(row_in_chunk uint16, id)); the choice is made per chunk at load. Never read by the given
+queries, still stored losslessly.
+
+3. Query-time structures (not stored)
+- Keys such as (SearchEngineID, SearchPhrase id), (UserID, SearchPhrase id), (WatchID,
+  ClientIP) are packed into two-word keys in thread-private open-addressing tables, merged by
+  radix partition of the hash (partition p merged by thread p % 16), then bounded top-k heaps.
+- COUNT(DISTINCT UserID) is exact: thread-private hash sets (or (group, UserID) pair sets for
+  per-group distinct), merged by hash partition. No sketches.
+- Q20 (UserID = const) is a vectorized equality scan over the int64 column, split in 16
+  slices. Q1 uses the table length (a base property of the loaded table).
+
+4. Memory budget
+- Narrow types replace the natural 2/4-byte widths of SMALLINT/INTEGER columns and empty
+  strings cost zero bytes, so the footprint stays at or below the raw decompressed size; the
+  10-15% headroom is spent on the SearchPhrase dictionary, zone maps (~100 bytes per chunk
+  per column) and group-by scratch.
+- Load: pass 1 computes per-column min/max/distinct to choose widths; pass 2 fills
+  pre-sized column buffers in parallel, each thread owning a contiguous row range (no
+  locks). Every size is derived from the data at load; none is compiled in.
+
+5. Lossless reconstruction
+- Narrow ints widen with the same sign; dictionary ids map back through the dictionary;
+  arena strings rebuild from offsets; timestamps recompose from base+delta or plain int64;
+  empty strings and all values are preserved exactly. No lossy transformation, no dropped
+  column.
