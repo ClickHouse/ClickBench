@@ -2,7 +2,7 @@
   "system": "HoloDb (server)",
   "proprietary": "yes",
   "hardware": "cpu",
-  "tuned": "no",
+  "tuned": "yes",
   "category": "joke",
   "tags": [
     "column-oriented",

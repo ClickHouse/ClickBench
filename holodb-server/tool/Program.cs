@@ -1,5 +1,5 @@
-// HoloDb ClickBench service-mode tool (holodb-server\tool). Built from the existing holodb\tool loader plus the client.
-//   load    <db dir> <hits.parquet> <create.sql> [rows]   the official loader, unchanged: writes <db dir>/holo and <db dir>/holo.tables
+// HoloDb ClickBench service-mode tool (holodb-server\tool): the loader plus the client.
+//   load    <db dir> <hits.parquet> <create.sql> [rows]   the loader: writes <db dir>/holo and <db dir>/holo.tables
 //                                                         (paged layout) and closes the database cleanly. Offline: the server must be stopped.
 //   query   --port P --pin-file F --token-file T           reads one SQL statement on stdin, prints the rows on stdout, and the
 //                                                         client-timed round trip in seconds as the LAST stderr line. Connection not timed.

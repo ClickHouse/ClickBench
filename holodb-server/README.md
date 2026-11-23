@@ -4,7 +4,7 @@ HoloDb run as a server, pinned to HoloDb 23.3.0 (`HOLODB_VERSION` in `bench.env`
 
 This entry runs with HoloDb's stored aggregates off. `bench.env` sets `HOLODB_STORED_AGGREGATES=off` unless the environment already sets it (`HOLODB_STORED_AGGREGATES=on` or `off`). The setting is read by the loader, so it applies when `load` runs:
 
-- **off (this entry):** the loader calls `Database.SetStoredAggregates("hits", false)`. The load builds no value counts (`valuecounts.off` marker, no `valuecounts.idx`), and the whole-table totals route is switched off (`totalsroute.off` marker). Every statement reads rows. The totals are still kept current on every write and used inside the engine (checks, seal, zone maps); they answer no statement.
+- **off (this entry):** the loader calls `Database.SetStoredAggregates("hits", false)`. The load builds no value counts (`valuecounts.off` marker, no `valuecounts.idx`), and the whole-table totals route is switched off (`totalsroute.off` marker). Every statement is a scan (Q1 is `COUNT(*)`, which needs no column). The totals are still kept current on every write and used inside the engine (checks, seal, zone maps); they answer no statement. `EXPLAIN` names the switch `SetTotalsRoute`; `SetStoredAggregates` sets both it and the value counts.
 - **on:** the HoloDb product default. The load builds the value counts, and 14 of the 43 statements are answered from stored data (below).
 
 Zone maps, predicate records, function maps and order ranks are on in both settings. Predicate records and function maps are built by queries and deleted by `./stop` (see below).
@@ -16,13 +16,13 @@ The markers are saved in the store directory and are read when the store opens. 
 - `install` pulls the image and builds the client and loader.
 - `load` writes the store from `hits.parquet`; `start` runs the container; `stop` stops it.
 - `query` reads one statement on stdin, prints rows, and prints the elapsed seconds on the last stderr line. The timer covers `ExecuteAsync` (send, execute, receive, decode). Connection setup, the TLS handshake and printing the rows are outside it.
-- `STRLEN(` is rewritten to `OCTET_LENGTH(` (same byte count; the standard name).
-- The server is started with `--dialect extended` (the official queries use `LIMIT`, `DATE_TRUNC`, `REGEXP_REPLACE`), `--paged`, `--statement-seconds 600`, and a token file. The container runs with the .NET server GC (`DOTNET_gcServer=1`), and the image sets `DOTNET_TC_CallCountingDelayMs=0`. There are no other settings.
+- The client rewrites `STRLEN(` to `OCTET_LENGTH(` before sending (same byte count; the standard name), so `queries.sql` is the official file unchanged.
+- The server is started with `--wal /data/holo` (the write-ahead log beside the store), `--paged`, `--dialect extended` (the official queries use `LIMIT`, `DATE_TRUNC`, `REGEXP_REPLACE`), `--statement-seconds 600`, and a token file; the container runs as the benchmark user (`--user`) with the .NET server GC (`DOTNET_gcServer=1`), and the image sets `DOTNET_TC_CallCountingDelayMs=0`. Those and the stored-aggregates switch are all the settings we pass; `template.json` says `"tuned": "yes"` because the switch and the GC mode are choices made for this run.
 - The loader uses DuckDB (the `DuckDB.NET` package) only to read `hits.parquet` and hand the rows to HoloDb's bulk loader. No query runs on DuckDB, and the image contains no other database.
 
 ## What the engine keeps
 
-HoloDb keeps the columns as the authoritative data, in its own typed storage, and keeps statistics derived from them. Nothing is set up or configured. No result set is stored, and a structure answers a statement only when it is exact for that statement; otherwise the statement reads rows. Some structures are keyed by a predicate, or by a function and its constants (the predicate records and function maps below). They are saved in files and make the second and third runs of the queries that use them faster. The name HoloDb comes from its per-row holographic encodings (vector-symbolic bind and bundle), which serve the `NEAREST` operator. None of the 43 queries uses them.
+HoloDb keeps the columns as the authoritative data, in its own typed storage, and keeps statistics derived from them. No index is created by statement and no table option is set by hand. No result set is stored, and a structure answers a statement only when it is exact for that statement; otherwise the statement reads rows. Some structures are keyed by a predicate, or by a function and its constants (the predicate records and function maps below). They are saved in files and make the second and third runs of the queries that use them faster. The name HoloDb comes from its per-row holographic encodings (vector-symbolic bind and bundle), which serve the `NEAREST` operator. None of the 43 queries uses them.
 
 These structures are kept for analytic tables (tables without a primary key and without NULL columns, which `hits` is).
 
@@ -36,7 +36,7 @@ These structures are kept for analytic tables (tables without a primary key and 
 - Function maps, keyed by the function name and its constant arguments. The result of the function for each distinct text value (`REGEXP_REPLACE`, `SUBSTRING`, `REPLACE`, `LOWER`, `UPPER`, `TRIM`). Used by Q29.
 - Order ranks: the sort position of each distinct value, for a text column with at least 2^20 distinct values. None of the 43 queries used one at 10 million rows. At 100 million rows we saw an `orderrank.idx` of about 103 MB, so they are built there; we have not established which queries use them.
 
-These describe a column's values. The rows are still read and aggregated. `./stop` deletes the files that queries built and restores the load-time versions of the others, so each query's first run starts with only what `load` built. `learned.idx` and `derived.idx` are also written next to the table; they are small headers with no content for these queries (we saw 1,560 and 1,638 bytes). Because `stop` deletes the query-built files after each query, the data size of this entry counts at most the files of the last query, not all of them. During one run at 100 million rows we saw function maps of about 403 MB, order ranks of about 103 MB and predicate records of about 2.3 MB next to the table (so order ranks are built at that size; we have not established which queries use them). The deletion is in `./stop`; remove it to see the full set.
+These describe a column's values. The rows are still read and aggregated. `./stop` deletes the files that queries built and restores the load-time versions of the others, so each query's first run starts with only what `load` built. `learned.idx` and `derived.idx` are also written next to the table; they are small headers with no content for these queries (we saw 1,560 and 1,638 bytes). Because `stop` deletes the query-built files after each query, the data size of this entry counts at most the files of the last query, not all of them. During one run at 100 million rows we saw function maps of about 403 MB, order ranks of about 103 MB and predicate records of about 2.3 MB next to the table. The deletion is in `./stop` and covers `*.idx` and `summary.*` files; it ignores errors, and always exits 0, so a failed restore would not be reported. Remove it to see the full set.
 
 **Statements answered from stored data (with `HOLODB_STORED_AGGREGATES=on` only).** Counting from 1 in `queries.sql`, 14 statements read no row of the table:
 - Q1, Q3, Q4, Q7 and Q30 from the column totals. A `SUM(col + k)` is computed as `SUM(col) + k * COUNT(*)`, which is how Q30 is answered.
@@ -44,61 +44,61 @@ These describe a column's values. The rows are still read and aggregated. `./sto
 
 Only these shapes take the shortcut, and they are the forms the ClickBench queries use (the comparison with `0` or `''`, `SUM(col + k)`, a constant or `col - k` group key). The same question written another way is not recognised and scans, although the counts are stored. A `WHERE` clause such as `col <> 1` makes a statement scan. For the value-count statements, one more aggregate such as `SUM(IsRefresh)` also makes them scan. For the totals, an extra `SUM` of a plain column is still answered from the totals.
 
-A maintainer described the product's load as pre-aggregating every column. This entry runs with those stored aggregates off. The product default is on. The category is the maintainers' decision.
+## Routes at 100 million rows (this entry's configuration)
 
-## Routes at 10 million rows (this entry's configuration)
+This is the output of `./trace` (the `EXPLAIN` of each statement) on the 100 million row store of the 23.3.0 run below, with the stored aggregates off. Anyone can reproduce it with `./trace` (see the end of this file). "Rows" is the engine's estimate before the run ("about N of 99,997,497 slots"); the exact count is known only after the statement runs, and `EXPLAIN` does not print it afterwards. Where a zone test excludes sampled blocks, a scan skips the morsels (8,192-row scan units) inside the excluded blocks, so the rows read are fewer than the estimate for the rest. For Q37 to Q43 all eight sampled blocks are excluded, so the estimate is 0; that is an estimate from a sample, not a claim that no row is read (on a 10 million row store, the same statements read 644,736 rows).
 
-Routes and rows read come from the engine's counters on a 10 million row store loaded with both options off (`cbload ... vc=off totals=off`, HoloDb 23.3.0 Bench build). "Morsels" are 8,192-row scan units, rounded up; the table has 1,221. The rows are from one run of each statement in our check.
+| Query | How it is answered | Rows (estimate) | Zone / pruning |
+|---|---|---|---|
+| 1 | scan, hash aggregation | 99,997,497 |  |
+| 2 | scan, hash aggregation | 49,998,748 | zone test AdvEngineID <> 0 (4 of 8 sampled blocks excluded) |
+| 3 | scan, hash aggregation | 99,997,497 |  |
+| 4 | scan, hash aggregation | 99,997,497 |  |
+| 5 | scan, hash aggregation | 99,997,497 |  |
+| 6 | scan, hash aggregation | 99,997,497 |  |
+| 7 | scan, hash aggregation | 99,997,497 |  |
+| 8 | scan, dense array | 49,998,748 | zone test AdvEngineID <> 0 (4 of 8 sampled blocks excluded) |
+| 9 | scan, dense array | 99,997,497 |  |
+| 10 | scan, dense array | 99,997,497 |  |
+| 11 | scan, dense array | 99,997,497 |  |
+| 12 | scan, hash aggregation | 99,997,497 |  |
+| 13 | scan, hash aggregation | 99,997,497 |  |
+| 14 | scan, hash aggregation | 99,997,497 |  |
+| 15 | scan, hash aggregation | 99,997,497 |  |
+| 16 | scan, hash aggregation | 99,997,497 |  |
+| 17 | scan, hash aggregation | 99,997,497 |  |
+| 18 | scan, first-keys group | 99,997,497 |  |
+| 19 | scan, hash aggregation | 99,997,497 |  |
+| 20 | scan, plain | 49,998,748 | zone test UserID = 435090932899640449 (4 of 8 sampled blocks excluded) |
+| 21 | scan, hash aggregation | 99,997,497 |  |
+| 22 | scan, hash aggregation | 99,997,497 |  |
+| 23 | scan, hash aggregation | 99,997,497 |  |
+| 24 | scan, top-K heap | 99,997,497 | top-K morsel pruning |
+| 25 | scan, top-K heap | 99,997,497 | top-K morsel pruning |
+| 26 | scan, top-K heap | 99,997,497 |  |
+| 27 | scan, top-K heap | 99,997,497 | top-K morsel pruning |
+| 28 | scan, dense array | 99,997,497 |  |
+| 29 | scan, hash aggregation | 99,997,497 |  |
+| 30 | scan, hash aggregation | 99,997,497 |  |
+| 31 | scan, hash aggregation | 99,997,497 |  |
+| 32 | scan, hash aggregation | 99,997,497 |  |
+| 33 | scan, hash aggregation | 99,997,497 |  |
+| 34 | scan, hash aggregation | 99,997,497 |  |
+| 35 | scan, hash aggregation | 99,997,497 |  |
+| 36 | scan, hash aggregation | 99,997,497 |  |
+| 37 | scan, hash aggregation | 0 | zone test CounterID = 62 (8 of 8 sampled blocks excluded) |
+| 38 | scan, hash aggregation | 0 | zone test CounterID = 62 (8 of 8 sampled blocks excluded) |
+| 39 | scan, hash aggregation | 0 | zone test CounterID = 62 (8 of 8 sampled blocks excluded); zone test IsLink <> 0 (5 of 8 sampled blocks excluded) |
+| 40 | scan, hash aggregation | 0 | zone test CounterID = 62 (8 of 8 sampled blocks excluded) |
+| 41 | scan, hash aggregation | 0 | zone test CounterID = 62 (8 of 8 sampled blocks excluded) |
+| 42 | scan, hash aggregation | 0 | zone test CounterID = 62 (8 of 8 sampled blocks excluded) |
+| 43 | scan, hash aggregation | 0 | zone test CounterID = 62 (8 of 8 sampled blocks excluded); zone test EventDate <= 15901 (4 of 8 sampled blocks excluded) |
 
-| Query | How it is answered | Rows read at 10M (morsels/rows) |
-|---|---|---|
-| 1 | scan, hash aggregation | 1221m/10000000r |
-| 2 | scan, hash aggregation | 1221m/10000000r |
-| 3 | scan, hash aggregation | 1221m/10000000r |
-| 4 | scan, hash aggregation | 1221m/10000000r |
-| 5 | scan, hash aggregation | 1221m/10000000r |
-| 6 | scan, hash aggregation | 1221m/10000000r |
-| 7 | scan, hash aggregation | 1221m/10000000r |
-| 8 | scan, dense array | 1221m/10000000r |
-| 9 | scan, dense array | 1221m/10000000r |
-| 10 | scan, dense array | 1221m/10000000r |
-| 11 | scan, dense array | 1221m/10000000r |
-| 12 | scan, hash aggregation | 1221m/10000000r |
-| 13 | scan, hash aggregation | 1221m/10000000r |
-| 14 | scan, hash aggregation | 1221m/10000000r |
-| 15 | scan, hash aggregation | 1221m/10000000r |
-| 16 | scan, hash aggregation | 1221m/10000000r |
-| 17 | scan, hash aggregation | 1221m/10000000r |
-| 18 | scan, first-keys group (GROUP BY .. LIMIT with no ORDER BY) | 1221m/10000000r |
-| 19 | scan, hash aggregation | 1221m/10000000r |
-| 20 | scan, plain; zone-pruned (1060 of 1221 morsels skipped) | 161m/1316480r |
-| 21 | scan, hash aggregation; predicate record | 1221m/10000000r |
-| 22 | scan, hash aggregation; predicate record | 1221m/10000000r |
-| 23 | scan, hash aggregation; predicate record | 1221m/10000000r |
-| 24 | scan, top-K heap; predicate record; top-K morsel pruning | 1169m/9574016r |
-| 25 | scan, top-K heap; top-K morsel pruning | 990m/8107648r |
-| 26 | scan, top-K heap | 1221m/10000000r |
-| 27 | scan, top-K heap; top-K morsel pruning | 990m/8107648r |
-| 28 | scan, dense array | 1221m/10000000r |
-| 29 | scan, hash aggregation; function map | 1221m/10000000r |
-| 30 | scan, hash aggregation | 1221m/10000000r |
-| 31 | scan, hash aggregation | 1221m/10000000r |
-| 32 | scan, hash aggregation | 1221m/10000000r |
-| 33 | scan, hash aggregation | 1221m/10000000r |
-| 34 | scan, hash aggregation | 1221m/10000000r |
-| 35 | scan, hash aggregation | 1221m/10000000r |
-| 36 | scan, hash aggregation | 1221m/10000000r |
-| 37 | scan, hash aggregation; zone-pruned (1142 of 1221 morsels skipped) | 79m/644736r |
-| 38 | scan, hash aggregation; zone-pruned (1142 of 1221 morsels skipped) | 79m/644736r |
-| 39 | scan, hash aggregation; zone-pruned (1142 of 1221 morsels skipped) | 79m/644736r |
-| 40 | scan, hash aggregation; zone-pruned (1142 of 1221 morsels skipped) | 79m/644736r |
-| 41 | scan, hash aggregation; zone-pruned (1142 of 1221 morsels skipped) | 79m/644736r |
-| 42 | scan, hash aggregation; zone-pruned (1142 of 1221 morsels skipped) | 79m/644736r |
-| 43 | scan, hash aggregation; zone-pruned (1142 of 1221 morsels skipped) | 79m/644736r |
+All 43 statements are scans: each `EXPLAIN` says "no stored aggregate answers this statement: it reads rows". Q1 is `COUNT(*)`, which needs no column, so its scan touches none. We have not established how the engine evaluates the 90 sums of Q30 (whether it shares one pass over the column). "Hash aggregation" is the name `EXPLAIN` gives to the partitioned or per-worker aggregation, which it chooses at run time from a sample of four blocks.
 
-All 43 statements read rows. "Hash aggregation" is the name `EXPLAIN` gives to the partitioned or per-worker aggregation, which it chooses at run time from a sample of four blocks. The predicate-record and function-map annotations come from the engine's counters (the records served Q21 to Q24 on every run; the function map served Q29 on every run). `./trace` does not print these two annotations; its output lists the zone tests and the declined structures only.
+`EXPLAIN` does not print the predicate records, function maps or order ranks. From the engine's own counters on a 10 million row store (not reproducible with `./trace`) the predicate records served Q21 to Q24 and the function map served Q29 on every run; at 100 million rows we have not recorded which statements use which.
 
-With `HOLODB_STORED_AGGREGATES=on`, Q1 to Q8, Q13, Q16, Q30, Q34, Q35 and Q36 read no row and the other 29 routes are the ones in this table.
+With `HOLODB_STORED_AGGREGATES=on`, `./trace` shows Q1 to Q8, Q13, Q16, Q30, Q34, Q35 and Q36 answered from stored data with no row read (14 statements); the other 29 routes are the ones above (checked on the earlier on-run traces).
 
 ## Measured at 100 million rows (this entry's configuration)
 
@@ -112,24 +112,24 @@ After the run we reloaded the same instance with `HOLODB_STORED_AGGREGATES=on` a
 
 ## What EXPLAIN reports
 
-`EXPLAIN` (extended dialect) reports the route the engine takes for a statement on these tables: the route name, the structure that answered it or the reason each other structure declined, and the rows read. For `SELECT COUNT(*) FROM hits` with the totals route off, it says the totals route is switched off for the table and the rows are read. With the product default it says "typed executor: per-column totals" and "rows read 0 of 10,000,000 slots". For a scan it gives an estimate before the run ("about 10,000,000 of 10,000,000 slots"), because the exact count is known only after the statement runs. For a zone-pruned scan the estimate can differ from the rows the run reads: for Q37 it said about 1,250,000, and the run read 644,736. `./trace` prints this output for every statement.
+`EXPLAIN` (extended dialect) reports the route the engine takes for a statement on these tables: the route name, the stored structure that answered it or the reason each stored aggregate declined, zone tests, and an estimate of the rows read. It does not print the predicate records, function maps or order ranks, so it does not show every structure a statement used. For `SELECT COUNT(*) FROM hits` with the totals route off, it says the totals route is switched off for the table and the rows are read. With the product default it says "typed executor: per-column totals" and "rows read 0 of 10,000,000 slots". For a scan it gives an estimate before the run ("about 10,000,000 of 10,000,000 slots"), because the exact count is known only after the statement runs. For a zone-pruned scan the estimate can differ from the rows the run reads: for Q37 it said about 1,250,000, and the run read 644,736. `./trace` prints this output for every statement.
 
 ## Known problems
 
-These are measurements from our earlier runs (23.1.1 built from source, and the published 23.2.0 image) on the 100 million row table, with the stored aggregates on unless stated.
+These are measurements on the 100 million row table: our own runs (23.1.1 built from source; the published 23.2.0 and 23.3.0 images) and the CI runs of 23.0.2 whose files were removed from `results/` (below). The stored aggregates were on unless stated.
 
-- **192-vCPU machines (c6a.metal, c7a.metal-48xl).** In CI, 23.0.2 failed 21 of the 43 queries with `Index was outside the bounds of the array`. The cause was a table of 64 per-thread slots, which more than 64 threads overflow. 23.1.0 sizes the table from the number of chunks. We have not run this version on a real 192-vCPU host. Our many-core check simulates up to 256 workers on 16 cores.
-- **Concurrent test on c6a.4xlarge and c6a.2xlarge.** The CI runs failed here. The cause was memory: the kernel out-of-memory killer stopped the server when ten clients ran heavy statements on the 100 million row table. In one such run the server's anonymous memory was about 29.7 GiB (`dmesg`). The memory governor admitted statements on estimates and did not bound their memory once they ran. 23.1.1 changes this. On c6a.4xlarge at 100 million rows, the concurrent error ratio in our harness was 0.000 with the 23.1.1 code built from source, and two 10 minute runs of ten clients completed 1,709 and 1,900 statements with no failed statement. With the published 23.2.0 image we measured 0.000 on c6a.4xlarge with the value counts off (totals route on) and on c8g.4xlarge with the stored aggregates on. 23.1.0 still failed in this way (error ratio 0.246 in our run, with the kernel kill). With the published 23.3.0 image in this entry's configuration (stored aggregates off) the error ratio was 0.000 on c6a.4xlarge. We have not run c6a.2xlarge.
+- **192-vCPU machines (c6a.metal, c7a.metal-48xl).** In CI, 23.0.2 returned no result for at least one of the three runs of 21 of the 43 queries (15 of them in all three runs) on both machines, with `Index was outside the bounds of the array`. The cause was a table of 64 per-thread slots, which more than 64 threads overflow. 23.1.0 sizes the table from the number of chunks. We have not run this version on a real 192-vCPU host. Our many-core check simulates up to 256 workers on 16 cores.
+- **Concurrent test.** In the CI runs of 23.0.2 the concurrent error ratio was 0.837 on c6a.4xlarge, 0.174 on c6a.2xlarge, 0.216 on c6a.xlarge, 0.154 on c6a.metal and 0.094 on c7a.metal-48xl. We investigated c6a.4xlarge. The cause was memory: the kernel out-of-memory killer stopped the server when ten clients ran heavy statements on the 100 million row table. In one such run the server's anonymous memory was about 29.7 GiB (`dmesg`). The memory governor admitted statements on estimates and did not bound their memory once they ran. 23.1.1 changes this. On c6a.4xlarge at 100 million rows, the concurrent error ratio in our harness was 0.000 with the 23.1.1 code built from source, and two 10 minute runs of ten clients completed 1,709 and 1,900 statements with no failed statement. With the published 23.2.0 image we measured 0.000 on c6a.4xlarge with the value counts off (totals route on) and on c8g.4xlarge with the stored aggregates on. 23.1.0 still failed in this way (error ratio 0.246 in our run, with the kernel kill). With the published 23.3.0 image in this entry's configuration (stored aggregates off) the error ratio was 0.000 on c6a.4xlarge. We have not run c6a.2xlarge or c6a.xlarge, so we do not know that those fail no longer.
 - **arm64.** The image is published for linux/amd64 and linux/arm64 (a multi-architecture image from 23.1.0). We ran the whole entry (23.2.0, the published image and packages, `./install` to `./benchmark.sh`, stored aggregates on) on one c8g.4xlarge: the load took 358 s, the data size was identical to the x86 run (31,573,419,238 bytes), the concurrent error ratio was 0.000, and `./trace` printed the routes. We have not run the larger c8g machines or 23.3.0 on arm64.
-- **Results files.** The files under `results/` were produced by the CI runs of version 23.0.2 (for example the 192-vCPU machines with failed queries and c6a.4xlarge with the concurrent failure). They do not describe 23.3.0.
-- **Load time.** A 100 million row load took 362 s in our 23.1.1 run and 615 s in CI. Across our runs of this flow the load took between 356 s and 628 s. We have not established the cause. For what it is worth: our one run on a default gp3 volume (3,000 IOPS, 125 MB/s) took 568 s, and our runs on a volume provisioned at 6,000 IOPS and 500 MB/s took 358 s to 417 s. We changed nothing else on purpose, but the code differed slightly between those runs, so this is an observation, not a measurement of the disk's effect.
+- **Results files.** `results/20261122/` held five CI runs of version 23.0.2 with the stored aggregates on (c6a.xlarge, c6a.2xlarge, c6a.4xlarge, c6a.metal, c7a.metal-48xl). They do not describe this entry (23.3.0, stored aggregates off), so this change removes them; they remain in the history of this pull request. Their loads took 10,608 s (c6a.xlarge), 1,906 s (c6a.2xlarge), 615 s (c6a.4xlarge), 192 s (c6a.metal) and 218 s (c7a.metal-48xl). Results for the current version are to be produced by the maintainers' CI.
+- **Load time.** On c6a.4xlarge, a 100 million row load took 362 s in our 23.1.1 run and 615 s in CI (23.0.2). Across our own runs of this flow on that instance type the load took between 319 s and 628 s; the CI runs on smaller machines took far longer (above). We have not established the cause. For what it is worth: our one run on a default gp3 volume (3,000 IOPS, 125 MB/s) took 568 s, and our runs on a volume provisioned at 6,000 IOPS and 500 MB/s took 358 s to 417 s. We changed nothing else on purpose, but the code differed slightly between those runs, so this is an observation, not a measurement of the disk's effect.
 
 ## Reproducing the routes
 
 These commands need the server running (`./start`) on a loaded store. Each statement goes through `./query`, as in the timed runs.
 
 - `./trace` prints the `EXPLAIN` output of all 43 statements in `queries.sql`, in order. `./trace 5` prints query 5 only. It works with either setting.
-- `variants.sql` has 14 statements, one for each shortcut query in query order (line 1 is query 1, line 8 is query 8, and so on). Each keeps the query's select list and grouping, and adds or replaces the `WHERE` comparison with one the shortcut does not recognise (`<> 1` on an integer column, `<> 'a'` or `<> 'x'` on a text column). The variants only matter with `HOLODB_STORED_AGGREGATES=on`: there the plain statements read no row and the variants scan all rows. With `off`, the plain statements already scan, and the variants scan the same way. At 10 million rows each variant reads all 10,000,000 rows under both settings. To run variant 8: `sed -n '8p' variants.sql | ./query`. To see its route: `sed -n '8p' variants.sql | sed 's/^/EXPLAIN /; s/;$//' | ./query`.
+- `variants.sql` has 14 statements, one for each shortcut query in query order (lines 1 to 8 are queries 1 to 8; lines 9 to 14 are queries 13, 16, 30, 34, 35 and 36). Each keeps the query's select list and grouping, and adds or replaces the `WHERE` comparison with one the shortcut does not recognise (`<> 1` on an integer column, `<> 'a'` or `<> 'x'` on a text column). The variants only matter with `HOLODB_STORED_AGGREGATES=on`: there the plain statements read no row and the variants scan all rows. With `off`, the plain statements already scan, and the variants scan the same way. At 10 million rows each variant reads all 10,000,000 rows under both settings. To run variant 8 (query 8): `sed -n '8p' variants.sql | ./query`. To see its route: `sed -n '8p' variants.sql | sed 's/^/EXPLAIN /; s/;$//' | ./query`.
 - The product default, which answers 14 statements from stored data: `HOLODB_STORED_AGGREGATES=on ./benchmark.sh`. This entry's configuration: `./benchmark.sh` (the default in `bench.env` is off).
 - To change the setting on a store that already exists, run `HOLODB_STORED_AGGREGATES=on ./load` (or `off`). `./load` removes the old store first.
 
