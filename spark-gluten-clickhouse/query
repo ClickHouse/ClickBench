@@ -22,52 +22,47 @@ if [ -e "$HUNG_MARKER" ]; then
 fi
 
 query=$(cat)
-printf '%s' "$query" | python3 query.py &
+# The query runs in a session of its own, so that nothing it starts can signal
+# the benchmark driver: on c6a.metal, the driver itself was killed by a
+# core-dumping signal while this watchdog was dumping the stacks of a hung
+# query. It also lets the watchdog find and kill every process of the query,
+# including those that were reparented to init. setsid -w execs in place here
+# (a background job is not a process group leader), so $! is python3 itself.
+printf '%s' "$query" | setsid -w python3 query.py &
 pid=$!
-
-# All processes started for the query, $1 first: python3, spark-submit's
-# bash, the JVMs (libch.so is preloaded into all of them).
-descendants() {
-    echo "$1"
-    local child
-    for child in $(pgrep -P "$1"); do
-        descendants "$child"
-    done
-}
 
 # The dump goes to a file, not to stderr: stderr is the pipe the benchmark
 # driver reads until every writer has closed it, so a dump tool that outlives
-# its timeout would hold the driver forever. Each tool is killed with SIGKILL
-# by a `timeout` that is its direct parent (inside sudo: sudo does not relay
-# SIGKILL), because a gdb attached to a wedged process can ignore SIGTERM.
-# The readers get longer than the tools they read from, so that they print
-# what a killed tool has written. No `set -e` here: a killed tool must not end
-# the watchdog before it kills the query.
+# its timeout would hold the driver forever. Each tool runs in a session of
+# its own and is killed with SIGKILL by a `timeout` that is its direct parent
+# (inside sudo: sudo does not relay SIGKILL), because a gdb attached to a
+# wedged process can ignore SIGTERM. The readers get longer than the tools
+# they read from, so that they print what a killed tool has written. No
+# `set -e` here: a killed tool must not end the watchdog before it kills the
+# query.
 (
     set +e
     sleep "$QUERY_TIMEOUT" </dev/null >/dev/null 2>&1
     dump=$(mktemp)
     {
         echo "query: no result after ${QUERY_TIMEOUT}s; processes and stacks:"
-        procs=$(descendants "$pid")
+        procs=$(pgrep -s "$pid")
         for p in $procs; do
             ps -o pid=,ppid=,stat=,etimes=,nlwp=,rss=,wchan=,args= -p "$p" | cut -c1-300
         done
         for p in $procs; do
             if [ "$(ps -o comm= -p "$p")" = java ]; then
                 echo "query: Java stacks of $p:"
-                timeout -s KILL 120 jcmd "$p" Thread.print 2>&1 | timeout -s KILL 180 python3 stacks.py
+                setsid -w timeout -s KILL 120 jcmd "$p" Thread.print 2>&1 | timeout -s KILL 180 python3 stacks.py
             fi
             echo "query: native stacks of $p:"
-            sudo timeout -s KILL 300 gdb -p "$p" -batch -nx -iex 'set auto-load off' \
+            sudo setsid -w timeout -s KILL 300 gdb -p "$p" -batch -nx -iex 'set auto-load off' \
                 -ex 'thread apply all bt 16' 2>/dev/null | timeout -s KILL 360 python3 stacks.py
         done
     } </dev/null >"$dump" 2>&1
     # Only now: a query that finishes during the dump has not hung.
     touch "$HUNG_MARKER"
-    for p in $procs; do
-        kill -KILL "$p" 2>/dev/null || true
-    done
+    pkill -KILL -s "$pid"
     cat "$dump" >&2
     rm -f "$dump"
 ) &
