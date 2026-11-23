@@ -1,0 +1,14 @@
+{
+  "system": "Opteryx (VARIANT)",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "embedded"
+  ],
+  "date": "2026-11-23",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000000,
+  "error": "RuntimeError: a value nested deeper than 1024 cannot be held in a VARIANT"
+}

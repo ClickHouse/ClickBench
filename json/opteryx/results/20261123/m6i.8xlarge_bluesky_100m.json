@@ -1,0 +1,15 @@
+{
+  "system": "Opteryx",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "stateless",
+    "column-oriented",
+    "embedded"
+  ],
+  "date": "2026-11-23",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 100000000,
+  "error": "E: Failed to fetch https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu/pool/main/p/python3.14/libpython3.14-stdlib_3.14.10-1%2bnoble1_amd64.deb  503  Service Unavailable [IP: 185.125.189.187 443]"
+}
