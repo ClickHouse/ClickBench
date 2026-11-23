@@ -9,7 +9,7 @@ synnodb @ git+https://github.com/SynnoDB/SynnoDB@5efc9485f845247b4ddb0d63492a20d
 # not enough. SynnoDB does not work with DuckDB 2.x yet.
 abnf==2.2.0
 aiohappyeyeballs==2.6.2
-aiohttp==3.14.1
+aiohttp==3.14.4
 aiosignal==1.4.0
 annotated-doc==0.0.4
 annotated-types==0.7.0
