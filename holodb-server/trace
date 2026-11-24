@@ -1,0 +1,26 @@
+#!/bin/bash
+# Prints the route of each statement in queries.sql, as the server EXPLAIN reports it: ./trace (all 43) or ./trace N (query N,
+# counted from 1). Each statement goes through ./query, so the server must be running (./start after ./load). Stdout: the
+# EXPLAIN rows; the elapsed seconds that ./query prints on stderr belong to the EXPLAIN and are not a query time.
+set -e
+cd "$(dirname "$0")"
+
+want="$1"
+if [ -n "$want" ] && ! printf '%s' "$want" | grep -qx '[0-9]\+'; then
+    echo "usage: ./trace [query-number]" >&2
+    exit 2
+fi
+
+n=0
+while IFS= read -r line || [ -n "$line" ]; do
+    if [ -z "$line" ]; then
+        continue
+    fi
+    n=$((n + 1))
+    if [ -n "$want" ] && [ "$want" -ne "$n" ]; then
+        continue
+    fi
+    sql=${line%;}
+    echo "== Q$n"
+    printf 'EXPLAIN %s\n' "$sql" | ./query
+done < queries.sql

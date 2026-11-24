@@ -21,7 +21,8 @@ whatever their branch contains. The page
 [`live.html`](https://benchmark.clickhouse.com/live.html) lists the runs of
 the last three days and follows a run with a streaming query
 (`SELECT ... FROM sink.logs STREAM`, as the user `live_logs`). The launchers
-(`run-benchmark.sh`, `json/run-benchmark.sh`) print the link to the log of
+(`run-benchmark.sh`, `json/run-benchmark.sh`, `versions/run-benchmark.sh`,
+`hardware/run-benchmark.sh`) print the link to the log of
 every machine they start, `live.html#<run id>`, and add it to the job
 summary. The page is self-contained, so it can be published anywhere, e.g. on
 pastila.nl. See `prepare-database.sql` for the table and the users. The live
@@ -30,7 +31,7 @@ end, as before.
 
 | Workflow | Trigger | What it launches |
 |----------|---------|------------------|
-| `benchmark-daily.yml` | daily, 02:00 UTC | the ClickHouse variants, each on the whole set of machine types, and `clickhouse-memory`, which needs more than 32 GB of RAM, on the metal machines only, from main |
+| `benchmark-daily.yml` | daily, 02:00 UTC | the ClickHouse variants, each on the whole set of machine types, and `clickhouse-memory`, which needs more than 32 GB of RAM, on the metal machines only, `clickhouse-vortex` (the single-file Vortex writer needs about 22 GB of RAM) on the machines with 32 GB or more, and `clickhouse-vortex-partitioned` on every machine type except t3a.small, from main |
 | `benchmark-manual.yml` | manual | any systems, machines, repository and branch |
 | `benchmark-pr.yml` | pull requests | the systems whose directories the PR changes (results and *.md files don't count), from the PR's repository and branch, after manual approval. A `machine:<ec2-type>` label overrides the default c6a.4xlarge (one run per label; `machine:all`, `machine:all-amd` and `machine:all-arm` expand to the daily-run machine sets); adding such a label relaunches the benchmark |
 | `versions-benchmark.yml` | manual | the [versions benchmark](../../versions/README.md) (`versions/run-benchmark.sh`): one machine per (ClickHouse version, machine type), for an exact version, a version prefix, or `master` (the development build, installed on the machine with `curl https://clickhouse.com/ \| sh`). Sends its result to the same sink, tagged `kind: versions-benchmark` |

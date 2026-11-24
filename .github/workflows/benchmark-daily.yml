@@ -76,3 +76,42 @@ jobs:
             c8g.4xlarge
             c8g.metal-48xl
             c7a.metal-48xl
+
+  # The Vortex writer is single-threaded and buffers the whole file in memory:
+  # about 22 GB for the single 100M-row file, so clickhouse-vortex needs 32 GB
+  # of RAM or more; clickhouse-vortex-partitioned needs about 2.5 GB per
+  # partition, so it runs everywhere except t3a.small (2 GB of memory).
+  launch-vortex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/launch-benchmark
+        with:
+          systems: >-
+            clickhouse-vortex
+          machines: >-
+            c6a.4xlarge
+            c6a.metal
+            c8g.4xlarge
+            c8g.metal-48xl
+            c7a.metal-48xl
+
+  launch-vortex-partitioned:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/launch-benchmark
+        with:
+          systems: >-
+            clickhouse-vortex-partitioned
+          machines: >-
+            c6a.4xlarge
+            c6a.2xlarge
+            c6a.xlarge
+            c6a.large
+            c6a.metal
+            c8g.4xlarge
+            c8g.metal-48xl
+            c7a.metal-48xl

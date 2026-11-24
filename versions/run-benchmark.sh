@@ -108,12 +108,17 @@ fi
 arch=$(aws_retry aws ec2 describe-instance-types --instance-types "$machine" --query 'InstanceTypes[0].ProcessorInfo.SupportedArchitectures' --output text)
 ami=$(aws_retry aws ec2 describe-images --owners amazon --filters "Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04*" "Name=architecture,Values=${arch}" "Name=state,Values=available" --query 'sort_by(Images, &CreationDate) | [-1].[ImageId]' --output text)
 
+# Identifies the live log of this run in sink.logs, see ../lib/live-log.py.
+run_id=$(cat /proc/sys/kernel/random/uuid)
+
 awk -v repo="$repo" -v branch="$branch" -v version="$VERSION" -v image="$image" \
+    -v machine="$machine" -v run_id="$run_id" \
     -v tag="$tag" -v gcc="$gcc" -v datasets="$datasets" -v tries="$tries" -v t="$timeout" '
 {
     gsub(/@repo@/, repo); gsub(/@branch@/, branch); gsub(/@version@/, version)
     gsub(/@image@/, image); gsub(/@tag@/, tag); gsub(/@gcc@/, gcc)
     gsub(/@datasets@/, datasets); gsub(/@tries@/, tries); gsub(/@timeout@/, t)
+    gsub(/@machine@/, machine); gsub(/@run_id@/, run_id)
     print
 }' cloud-init.sh.in > "cloud-init.${VERSION}.sh"
 
@@ -123,3 +128,7 @@ aws_retry aws ec2 run-instances --image-id "$ami" --instance-type "$machine" \
     --instance-initiated-shutdown-behavior terminate \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=clickbench-versions-${VERSION}}]" \
     --user-data "file://cloud-init.${VERSION}.sh"
+
+live_log="Live log of ClickHouse ${VERSION} on ${machine}: https://benchmark.clickhouse.com/live.html#${run_id}"
+echo "${live_log}"
+if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then echo "${live_log}" >> "${GITHUB_STEP_SUMMARY}"; fi

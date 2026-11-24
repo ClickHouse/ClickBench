@@ -17,12 +17,32 @@
 # killed, and a trap for early exits. The `shutdown now` at the end replaces
 # the deadline in the normal case.
 shutdown -P "+$(( @timeout@ / 60 + 120 ))"
-trap 'shutdown now' EXIT
+trap 'live_log_stop; shutdown now' EXIT
+
+# The live log, see ../cloud-init.sh.in.
+live_log_pid=
+live_log_stop() {
+    if [ -n "$live_log_pid" ]; then
+        kill -TERM "$live_log_pid"
+        wait "$live_log_pid"
+        live_log_pid=
+    fi
+}
 
 export HOME="${HOME:-/root}"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y wget curl git jq mdadm
+
+# Live log: stream the output of this script to sink.logs as it goes, see
+# ../cloud-init.sh.in. Watch it on https://benchmark.clickhouse.com/live.html#@run_id@
+# The program is downloaded from the main branch of ClickBench, not taken from
+# the clone below, which is the branch under test and may not have it.
+curl -sSfL --retry 5 --retry-all-errors -o /root/live-log.py \
+    'https://raw.githubusercontent.com/ClickHouse/ClickBench/main/lib/live-log.py'
+LIVE_LOG_RUN_ID='@run_id@' LIVE_LOG_SYSTEM="hardware" LIVE_LOG_MACHINE='@machine@' \
+    nice -n 19 python3 /root/live-log.py /var/log/cloud-init-output.log &
+live_log_pid=$!
 
 git clone --depth 1 'https://github.com/@repo@.git' --branch '@branch@' ClickBench
 REPO_DIR="${PWD}/ClickBench"
@@ -134,4 +154,5 @@ send_log() {
 send_log "${LOG}"
 send_log /var/log/cloud-init-output.log
 
+live_log_stop
 shutdown now
