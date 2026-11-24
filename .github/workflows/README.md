@@ -21,7 +21,8 @@ whatever their branch contains. The page
 [`live.html`](https://benchmark.clickhouse.com/live.html) lists the runs of
 the last three days and follows a run with a streaming query
 (`SELECT ... FROM sink.logs STREAM`, as the user `live_logs`). The launchers
-(`run-benchmark.sh`, `json/run-benchmark.sh`) print the link to the log of
+(`run-benchmark.sh`, `json/run-benchmark.sh`, `versions/run-benchmark.sh`,
+`hardware/run-benchmark.sh`) print the link to the log of
 every machine they start, `live.html#<run id>`, and add it to the job
 summary. The page is self-contained, so it can be published anywhere, e.g. on
 pastila.nl. See `prepare-database.sql` for the table and the users. The live
