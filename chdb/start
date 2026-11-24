@@ -1,3 +1,15 @@
 #!/bin/bash
-# chdb is an embedded library — no daemon to start.
-exit 0
+# Starts server.py: one long-lived chDB instance over the .clickbench
+# directory, serving queries on the chdb.sock Unix socket. ./check succeeds
+# once it accepts connections.
+set -e
+
+# Idempotent: if already running, leave it alone.
+if [ -f server.pid ] && kill -0 "$(cat server.pid)" 2>/dev/null; then
+    exit 0
+fi
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+nohup python3 server.py </dev/null >server.log 2>&1 &
+echo $! > server.pid

@@ -1,0 +1,19 @@
+#!/bin/bash
+# Create the table and COPY the gzipped CSV dataset into it from S3, with the
+# IAM role that ./provision attached as the default.
+set -e
+cd "$(dirname "$0")"
+source ./env.sh
+
+# The us-east-1 mirror of the dataset bucket outside the EU (see
+# ../lib/dataset-bucket.sh).
+case "$AWS_REGION" in
+    eu-*) bucket=clickhouse-public-datasets; region=eu-central-1 ;;
+    *)    bucket=clickhouse-public-datasets--us-east-1; region=us-east-1 ;;
+esac
+
+redshift_run "DROP TABLE IF EXISTS hits" >/dev/null
+redshift_run "$(cat create.sql)" >/dev/null
+redshift_run "COPY hits FROM 's3://${bucket}/hits_compatible/hits.csv.gz' GZIP
+    IAM_ROLE default FORMAT AS CSV DELIMITER ',' QUOTE '\"' REGION '${region}'" >/dev/null
+redshift_run "ANALYZE hits" >/dev/null

@@ -1,0 +1,7 @@
+#!/bin/bash
+# Size of the hits table, in bytes (svv_table_info counts 1 MB blocks).
+set -e
+cd "$(dirname "$0")"
+source ./env.sh
+id=$(redshift_run "SELECT size * 1048576 FROM svv_table_info WHERE \"table\" = 'hits'")
+aws redshift-data get-statement-result --id "$id" --output text --query 'Records[0][0].longValue'

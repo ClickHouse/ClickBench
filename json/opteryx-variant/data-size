@@ -1,0 +1,5 @@
+#!/bin/bash
+# The storage is the Parquet files ./load wrote.
+set -e
+
+du -sb /var/lib/opteryx/bluesky_variant | cut -f1

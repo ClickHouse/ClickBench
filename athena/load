@@ -1,0 +1,10 @@
+#!/bin/bash
+# Athena reads the parquet files in place: "loading" is just registering an
+# external table over them in the Glue Data Catalog.
+set -e
+cd "$(dirname "$0")"
+source ./env.sh
+
+ATHENA_DATABASE=default athena_run "CREATE DATABASE IF NOT EXISTS ${ATHENA_DATABASE}" >/dev/null
+athena_run "DROP TABLE IF EXISTS hits" >/dev/null
+athena_run "$(sed "s|{LOCATION}|${ATHENA_LOCATION}|" create.sql)" >/dev/null

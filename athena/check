@@ -1,0 +1,6 @@
+#!/bin/bash
+# Athena is always up; confirm the credentials and the API are usable.
+set -e
+cd "$(dirname "$0")"
+source ./env.sh
+aws athena get-work-group --work-group "$ATHENA_WORKGROUP" >/dev/null

@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")"
+
+# Idempotent: if already running, leave it alone.
+if [ -f server.pid ] && kill -0 "$(cat server.pid)" 2>/dev/null; then
+    exit 0
+fi
+
+# The engine is loaded from an Arrow image of the table in /dev/shm. A server that was killed
+# cannot remove it, and a leftover image keeps tens of GB of memory.
+rm -rf /dev/shm/synno-ingest-*
+
+nohup venv/bin/python server.py >>server.log 2>&1 &
+echo $! > server.pid

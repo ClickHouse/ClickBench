@@ -1,0 +1,45 @@
+#!/bin/bash
+# Athena is a managed service: the client only needs the AWS CLI v2 and
+# credentials (env vars, an instance profile, or `aws sso login`).
+set -e
+cd "$(dirname "$0")"
+
+if ! command -v aws >/dev/null; then
+    sudo apt-get update -y
+    sudo apt-get install -y unzip curl
+    tmp=$(mktemp -d)
+    curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "$tmp/awscli.zip"
+    unzip -q "$tmp/awscli.zip" -d "$tmp"
+    sudo "$tmp/aws/install" --update
+    rm -rf "$tmp"
+fi
+
+# boto3 for ./query and concurrent-worker.
+if ! python3 -c 'import ensurepip' 2>/dev/null; then
+    sudo apt-get update -y
+    sudo apt-get install -y python3-venv
+fi
+[ -x .venv/bin/python3 ] || python3 -m venv .venv
+.venv/bin/pip install --quiet boto3
+
+source ./env.sh
+
+aws sts get-caller-identity >/dev/null
+
+# Default query-result location: a private bucket in Athena's region.
+if [ -z "${ATHENA_OUTPUT:-}" ]; then
+    account=$(aws sts get-caller-identity --output text --query Account)
+    bucket="clickbench-athena-${account}-${AWS_REGION}"
+    if ! aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
+        if [ "$AWS_REGION" = "us-east-1" ]; then
+            aws s3api create-bucket --bucket "$bucket" >/dev/null
+        else
+            aws s3api create-bucket --bucket "$bucket" \
+                --create-bucket-configuration "LocationConstraint=${AWS_REGION}" >/dev/null
+        fi
+        # Query results are only needed transiently.
+        aws s3api put-bucket-lifecycle-configuration --bucket "$bucket" \
+            --lifecycle-configuration '{"Rules":[{"ID":"expire","Status":"Enabled","Filter":{},"Expiration":{"Days":1}}]}' >/dev/null
+    fi
+    echo "s3://${bucket}/results/" > .athena-output
+fi

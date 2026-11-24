@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+# The array is a directory: the fragments (one file per attribute and
+# dimension, plus the fragment metadata), the schema and the commit files.
+# `du` counts the blocks allocated to all of them. Works whether or not the
+# server is running.
+du -s --block-size=1 hits_array | cut -f1

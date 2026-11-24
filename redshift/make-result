@@ -1,0 +1,83 @@
+#!/bin/bash
+# Convert a benchmark log into a ClickBench results JSON:
+#
+#   ./make-result [logfile] [date]
+#
+# logfile  default: log.txt. Its "Redshift configuration:" line (printed by
+#          benchmark.sh) gives the machine label and the file name:
+#            provisioned: results/YYYYMMDD/<nodes>x.<node type>.json
+#            serverless:  results/YYYYMMDD/serverless.json (128 RPU, the
+#                         default) or <rpu>rpu.json
+# date     YYYY-MM-DD, default today.
+#
+# Run from the entry directory (redshift/ or redshift-serverless/).
+set -eu
+logfile="${1:-log.txt}"
+date="${2:-$(date +%F)}"
+
+exec python3 -I - "$logfile" "$date" <<'PY'
+import json, os, re, sys
+
+logfile, date = sys.argv[1], sys.argv[2]
+log = open(logfile).read()
+
+def find(pattern, label):
+    m = re.search(pattern, log, re.M)
+    if not m:
+        sys.exit(f"make-result: no '{label}' in {logfile}")
+    return m.group(1)
+
+def find_optional(pattern):
+    m = re.search(pattern, log, re.M)
+    return None if not m or m.group(1) == 'null' else float(m.group(1))
+
+rows = [[None if x.strip() == 'null' else float(x) for x in line.split(',')]
+        for line in re.findall(r'^\[([^\]]*)\],?$', log, re.M)]
+if len(rows) != 43:
+    sys.exit(f"make-result: expected 43 result rows in {logfile}, found {len(rows)}")
+
+config = find(r'^Redshift configuration: (.+)$', 'Redshift configuration:').strip()
+m = re.fullmatch(r'(\d+)x (\S+)', config)
+if m:
+    nodes, node_type = int(m.group(1)), m.group(2)
+    machine, cluster_size, name = f"Redshift: {node_type}", nodes, f"{nodes}x.{node_type}"
+    comment = ""
+else:
+    rpu = int(re.fullmatch(r'serverless (\d+) RPU', config).group(1))
+    machine, cluster_size = "serverless", "serverless"
+    name = "serverless" if rpu == 128 else f"{rpu}rpu"
+    comment = f"Base capacity {rpu} RPU."
+
+version = re.search(r'^Redshift version: (.+)$', log, re.M)
+if version:
+    build = re.search(r'Redshift [\d.]+', version.group(1))
+    if build:
+        comment = (comment + " " + build.group(0)).strip()
+
+tmpl = json.load(open("template.json"))
+out = {
+    "system": tmpl["system"],
+    "date": date,
+    "machine": machine,
+    "cluster_size": cluster_size,
+    "proprietary": tmpl["proprietary"],
+    "hardware": tmpl["hardware"],
+    "tuned": tmpl["tuned"],
+    "comment": comment,
+    "tags": tmpl["tags"],
+    "load_time": float(find(r'^Load time: ([\d.]+)', 'Load time:')),
+    "data_size": int(find(r'^Data size: (\d+)', 'Data size:')),
+    "concurrent_qps": find_optional(r'^Concurrent QPS: ([\d.]+|null)'),
+    "concurrent_error_ratio": find_optional(r'^Concurrent error ratio: ([\d.]+|null)'),
+    "startup_time": find_optional(r'^Startup time: ([\d.]+|null)'),
+    "result": rows,
+}
+
+outdir = os.path.join("results", date.replace("-", ""))
+os.makedirs(outdir, exist_ok=True)
+path = os.path.join(outdir, f"{name}.json")
+with open(path, "w") as f:
+    json.dump(out, f, indent=4)
+    f.write("\n")
+print(path)
+PY

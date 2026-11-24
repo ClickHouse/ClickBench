@@ -1,0 +1,40 @@
+#!/bin/bash
+# Installs SynnoDB and compiles the pre-generated engine for this machine.
+#
+# The engine in engine/ was generated once, offline, by SynnoDB's LLM-driven "factory" for the
+# ClickBench queries (see README.md). Its C++ sources are committed, so nothing here needs access
+# to an LLM: this only compiles them, with SynnoDB's own compiler driver.
+set -e
+
+cd "$(dirname "$0")"
+
+sudo apt-get update -y
+sudo apt-get install -y --no-install-recommends \
+    build-essential g++ pkg-config git curl wget ca-certificates lsb-release
+
+# The engine is compiled against the Apache Arrow and Parquet C++ libraries. Recent Ubuntu
+# releases package them; older ones get them from the Apache Arrow APT repository, as SynnoDB's
+# README instructs.
+if ! apt-cache show libarrow-dev >/dev/null 2>&1; then
+    deb="apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb"
+    wget -nv "https://packages.apache.org/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/$deb"
+    sudo apt-get install -y -V "./$deb"
+    rm -f "$deb"
+    sudo apt-get update -y
+fi
+sudo apt-get install -y --no-install-recommends libarrow-dev libparquet-dev
+
+# SynnoDB requires Python 3.13 or newer, which Ubuntu 24.04 does not have: uv brings its own.
+export PATH="$HOME/.local/bin:$PATH"
+if ! command -v uv >/dev/null 2>&1; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+if [ ! -x venv/bin/python ]; then
+    uv venv --python 3.13 venv
+fi
+uv pip install --python venv/bin/python -r requirements.txt
+
+# SynnoDB's thread pool header is x86-only; give it the equivalent spin-wait hint on AArch64.
+venv/bin/python patch_thread_pool.py
+
+venv/bin/python build_engine.py

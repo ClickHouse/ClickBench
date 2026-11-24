@@ -1,0 +1,11 @@
+#!/bin/bash
+# Reads a SQL query from stdin and runs it once over a native connection
+# (redshift_connector), in a session with the result cache turned off.
+#   Stdout: query result rows.
+#   Stderr: query runtime in fractional seconds on the last line: the client's
+#           wall-clock of execute + fetch, like psql's \timing.
+#   Exit:   non-zero on error.
+set -e
+cd "$(dirname "$0")"
+source ./env.sh
+exec .venv/bin/python3 -I rs.py "$REDSHIFT_CONN_FILE" query
