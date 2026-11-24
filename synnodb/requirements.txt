@@ -67,7 +67,7 @@ markupsafe==3.0.3
 matplotlib==3.10.9
 mcp==1.27.2
 mdurl==0.1.2
-multidict==6.7.1
+multidict==6.9.1
 networkx==3.6.1
 numpy==2.4.6
 openai==2.41.0
