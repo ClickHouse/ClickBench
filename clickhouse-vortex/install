@@ -9,3 +9,7 @@ if [ ! -x ./clickhouse ]; then
 fi
 # The binary is self-extracting: it decompresses itself on the first run.
 ./clickhouse --version
+# For the run log: a master build may come with another Vortex version.
+echo "Vortex version: $(./clickhouse local --query "
+    SELECT if(count() = 0, 'unknown', any(value))
+    FROM system.build_options WHERE name = 'VORTEX_VERSION'")"
