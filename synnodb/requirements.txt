@@ -34,7 +34,7 @@ docstring-parser==0.18.0
 duckdb==1.5.3
 fastuuid==0.14.0
 fickling==0.1.11
-filelock==3.29.1
+filelock==4.2.1
 fonttools==4.63.0
 frozenlist==1.8.0
 fsspec==2026.4.0
