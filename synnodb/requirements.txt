@@ -61,7 +61,7 @@ jsonschema-specifications==2025.9.1
 kaitaistruct==0.11
 kiwisolver==1.5.0
 landlock==1.0.0.dev5
-litellm==1.88.1
+litellm==1.109.0.dev1
 markdown-it-py==4.2.0
 markupsafe==3.0.3
 matplotlib==3.10.9
