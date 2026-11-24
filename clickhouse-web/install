@@ -25,3 +25,14 @@ sudo mkdir -p /dev/shm/clickhouse /var/lib/clickhouse/caches/web
 sudo chown clickhouse:clickhouse /dev/shm/clickhouse /var/lib/clickhouse/caches/web
 sudo mount --bind /dev/shm/clickhouse /var/lib/clickhouse/caches/web
 sudo chown clickhouse:clickhouse /var/lib/clickhouse/caches/web
+
+# Skip the optional work the server does at startup: mlock of the executable,
+# its integrity check, and the checks of the environment for system.warnings.
+# With a cold page cache, the mlock and the check fault in the whole code
+# segment one page at a time: about 3 s of the 5.5 s startup on c6a.4xlarge.
+# Older versions ignore the unknown setting.
+# https://github.com/ClickHouse/ClickHouse/pull/131257
+sudo mkdir -p /etc/clickhouse-server/config.d
+sudo tee /etc/clickhouse-server/config.d/quick_startup.yaml >/dev/null <<'YAML'
+quick_startup: true
+YAML
