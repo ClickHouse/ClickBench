@@ -42,7 +42,7 @@ gitdb==4.0.12
 gitpython==3.1.50
 googleapis-common-protos==1.75.0
 gql==4.0.0
-graphql-core==3.2.11
+graphql-core==3.2.12
 graphviz==0.21
 griffelib==2.0.2
 h11==0.16.0
