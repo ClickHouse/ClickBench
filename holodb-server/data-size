@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+cd "$(dirname "$0")"
+du -sb holodb-data | cut -f1

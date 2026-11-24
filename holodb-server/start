@@ -1,0 +1,66 @@
+#!/bin/bash
+# Starts the HoloDb.Server image as container $HOLODB_CONTAINER on ./holodb-data (single-database mode, paged store).
+# Returns once the server accepts TLS connections and its dev certificate thumbprint is known to ./check and ./query.
+set -e
+cd "$(dirname "$0")"
+. ./bench.env
+
+RUN="$PWD/run"
+DATA="$PWD/holodb-data"
+mkdir -p "$RUN" "$DATA"
+
+# Already running: nothing to do (the framework always stops before it starts, so this is only a guard).
+if sudo docker inspect -f '{{.State.Running}}' "$HOLODB_CONTAINER" 2>/dev/null | grep -qx true; then
+    exit 0
+fi
+# A stopped container with the same name would make docker run fail.
+sudo docker rm -f "$HOLODB_CONTAINER" >/dev/null 2>&1 || true
+
+# The token is a random secret in a file readable by this user only. It is passed as a file, never on the command line
+# (the process list and docker inspect show arguments and environment).
+if [ ! -s "$RUN/token" ]; then
+    head -c 32 /dev/urandom | base64 | tr -d '/+=\n' > "$RUN/token"
+    chmod 600 "$RUN/token"
+fi
+rm -f "$RUN/thumbprint"
+
+# --user: the container runs as this uid:gid, so it can read the token and write the store that load created as this user.
+# The image's own user (app) is overridden for this reason; the image's ENTRYPOINT args (--host 0.0.0.0, --port 5432,
+# --wal /data/holodb.wal) are kept and the flags below override the last of them.
+sudo docker run -d \
+    --name "$HOLODB_CONTAINER" \
+    --user "$(id -u):$(id -g)" \
+    -e HOME=/tmp \
+    -e DOTNET_gcServer=1 \
+    -p "127.0.0.1:$HOLODB_PORT:5432" \
+    -v "$DATA:/data" \
+    -v "$RUN/token:/run/holodb/token:ro" \
+    "$HOLODB_IMAGE" \
+    --wal /data/holo --paged \
+    --dialect extended \
+    --statement-seconds "$HOLODB_STATEMENT_SECONDS" \
+    --token-file /run/holodb/token >/dev/null
+
+deadline=$((SECONDS + ${BENCH_CHECK_TIMEOUT:-300}))
+tp=""
+while [ "$SECONDS" -lt "$deadline" ]; do
+    if ! sudo docker inspect -f '{{.State.Running}}' "$HOLODB_CONTAINER" 2>/dev/null | grep -qx true; then
+        echo "holodb start: the container exited" >&2
+        sudo docker logs --tail 30 "$HOLODB_CONTAINER" >&2 || true
+        exit 1
+    fi
+    if [ -z "$tp" ]; then
+        tp=$(sudo docker logs "$HOLODB_CONTAINER" 2>&1 | sed -n 's/.*pin this on the client): *\([0-9A-Fa-f]\+\).*/\1/p' | head -n 1)
+        if [ -n "$tp" ]; then
+            printf '%s\n' "$tp" > "$RUN/thumbprint"
+        fi
+    fi
+    # The listener is up only after the store has opened (the server starts listening after Database.Open).
+    if [ -n "$tp" ] && (exec 3<>"/dev/tcp/127.0.0.1/$HOLODB_PORT") 2>/dev/null; then
+        exit 0
+    fi
+    sleep 0.05
+done
+echo "holodb start: not ready within ${BENCH_CHECK_TIMEOUT:-300} s" >&2
+sudo docker logs --tail 30 "$HOLODB_CONTAINER" >&2 || true
+exit 1
