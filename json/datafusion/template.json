@@ -1,0 +1,10 @@
+{
+  "system": "DataFusion",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "embedded"
+  ]
+}

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+exec target/release/jsonbench-datafusion load "${BENCH_DATA_DIR}" "${BENCH_FILES}"
