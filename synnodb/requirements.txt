@@ -97,7 +97,7 @@ pydantic==2.13.4
 pydantic-core==2.46.4
 pydantic-settings==2.14.1
 pygments==2.20.0
-pyjwt==2.13.0
+pyjwt==2.15.0
 pyparsing==3.3.2
 pyreadline3==3.5.6 ; sys_platform == 'win32'
 python-dateutil==2.9.0.post0
