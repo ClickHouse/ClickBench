@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+if command -v apt-get >/dev/null 2>&1; then
+    sudo -E apt-get update -y
+    sudo -E apt-get install -y python3-pip python3-venv curl
+fi
+
+if [ ! -x myenv/bin/python ]; then
+    python3 -m venv myenv
+fi
+myenv/bin/python -m pip install --quiet --retries 10 --upgrade pip
+myenv/bin/python -m pip install --quiet --retries 10 --upgrade --only-binary=:all: polars
+myenv/bin/python -c 'import polars as pl; print("Polars", pl.__version__)'

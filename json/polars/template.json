@@ -1,0 +1,11 @@
+{
+  "system": "Polars",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Rust",
+    "Python",
+    "column-oriented",
+    "embedded"
+  ]
+}
