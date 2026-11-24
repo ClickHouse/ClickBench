@@ -1,0 +1,21 @@
+#!/bin/bash
+# Offline load. The container is stopped first (it holds the store), the library loader writes ./holodb-data/holo and
+# ./holodb-data/holo.tables and closes the database cleanly (clean-close stamp), then the container starts on the new store.
+# Ownership: the loader runs as this user and the container runs as this same uid:gid (see start: --user), so the files need
+# no chown and no special umask (the default 022 leaves them owner-writable and readable by the container).
+set -e
+cd "$(dirname "$0")"
+. ./bench.env
+
+./stop
+rm -rf holodb-data
+dotnet bin/HoloDbServerBench.dll load holodb-data hits.parquet create.sql
+rm -f hits.parquet
+# Remember what the load built: a copy of its index files and their size and time. ./stop puts the files back as they were after the
+# load and deletes every other one (what queries built), so no run depends on an earlier query.
+rm -rf run-load-idx run-load-files.txt
+( cd holodb-data && find . -type f \( -name '*.idx' -o -name 'summary.*' \) | while IFS= read -r f; do
+    mkdir -p "../run-load-idx/$(dirname "$f")"; cp -p "$f" "../run-load-idx/$f"; echo "$(stat -c '%s %Y' "$f") $f" >> ../run-load-files.txt
+done )
+./start
+sync

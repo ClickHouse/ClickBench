@@ -1,0 +1,7 @@
+#!/bin/bash
+# Readiness probe: a TLS connection pinned to the server's certificate, the token, and a Ping. The protocol answers Ping
+# without touching a table, so the probe also works before the first load (the framework checks the server then).
+set -e
+cd "$(dirname "$0")"
+. ./bench.env
+exec dotnet bin/HoloDbServerBench.dll check --port "$HOLODB_PORT" --pin-file run/thumbprint --token-file run/token >/dev/null
