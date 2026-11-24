@@ -81,7 +81,7 @@ opentelemetry-semantic-conventions==0.63b1
 packaging==26.2
 pandas==3.0.3
 pdfminer-six==20260107
-pillow==12.2.0
+pillow==13.0.0
 platformdirs==4.10.0
 polyfile-weave==0.5.9
 prompt-toolkit==3.0.52
