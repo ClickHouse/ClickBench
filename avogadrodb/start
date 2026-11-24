@@ -1,0 +1,3 @@
+#!/bin/bash
+# AvogadroDB is embedded: one process per query, no daemon to start.
+exit 0
