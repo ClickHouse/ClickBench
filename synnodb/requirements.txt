@@ -18,7 +18,7 @@ anyio==4.13.0
 attrs==26.1.0
 backoff==2.2.1
 cachetools==7.1.4
-certifi==2026.5.20
+certifi==2026.10.18
 cffi==2.0.0 ; platform_python_implementation != 'PyPy'
 chardet==5.2.0
 charset-normalizer==3.4.7
