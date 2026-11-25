@@ -7,7 +7,6 @@
   "tags": [
     "Rust",
     "embedded",
-    "row-oriented",
-    "SQLite compatible"
+    "row-oriented"
   ]
 }
