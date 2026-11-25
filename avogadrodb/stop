@@ -1,0 +1,3 @@
+#!/bin/bash
+# AvogadroDB is embedded: no daemon to stop.
+exit 0

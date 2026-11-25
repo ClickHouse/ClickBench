@@ -1,0 +1,13 @@
+-- AvogadroDB takes no DDL: the table is created by `./load`, which runs
+--
+--     avogadrodb load --raiz db --banco hits --arquivo hits.parquet --nivel maximo --tabela hits
+--
+-- The schema is the parquet file's own (the 105 columns of hits.parquet, with
+-- their parquet types). The engine chooses the encoding of every column from
+-- the data, per partition; no per-column encoding, index, projection or
+-- materialized view is declared anywhere.
+--
+-- The one type adaptation the queries need, EventDate from uint16 days to DATE,
+-- is not done at load: it is the CTE in preludio.sql that `./query` prefixes to
+-- every statement, exactly as the official `datafusion` entry does with its
+-- VIEW `hits` over `hits_raw`.

@@ -1,0 +1,82 @@
+#!/bin/bash
+# install: fetch ONE verified executable. Nothing is compiled on this box.
+#
+# AvogadroDB ships as a single executable (Rust, statically linked except for
+# glibc). It imports nothing newer than GLIBC_2.28 (built inside manylinux_2_28)
+# and asks the machine only for libc, libm, libdl, libpthread, libgcc_s and the
+# loader: no library to place beside it, no C++ runtime to match.
+#
+# A binary off the network with nothing to check it against is not a deployment:
+# the release tag and the sha256 of its asset are pinned below and compared
+# before the file is ever executed. Point AVOGADRODB_URL somewhere else (an
+# https URL or a local path) and you must supply AVOGADRODB_SHA256 with it: a
+# URL without a digest is refused rather than trusted.
+set -eu
+cd "$(dirname "$0")"
+
+# The release this submission is: a tag and that tag's asset digest. They move
+# together or not at all. Empty = no published asset yet; install refuses by
+# name rather than fetching a file it cannot check.
+RELEASE_TAG_x86_64="clickbench-20261027"
+RELEASE_SHA256_x86_64="b8e3738c0e919fc75e11031d90ff74cd7e9737f511e7277fa21c9c5f1eb6b0fd"
+release_url() { echo "https://github.com/avogadrodb/avogadrodb-clickbench/releases/download/$2/avogadrodb-$2-linux-$1"; }
+
+# One asset, x86-64 baseline (no AVX2 or newer instruction assumed: the binary
+# runs on any x86-64 CPU; the c6a.4xlarge is Zen 3). No aarch64 asset yet.
+arch="$(uname -m)"
+case "$arch" in
+  x86_64) tag="$RELEASE_TAG_x86_64"; pinned="$RELEASE_SHA256_x86_64" ;;
+  *)      echo "install: this release has no asset for $arch (x86_64 only)." >&2
+          exit 1 ;;
+esac
+
+# glibc floor: the asset was linked against glibc 2.28 and refuses, by name,
+# an older machine instead of failing on a missing symbol at first run.
+glibc="$(ldd --version 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+$' || true)"
+if [ -n "$glibc" ] && [ "$(printf '%s\n2.28\n' "$glibc" | sort -V | head -1)" != "2.28" ]; then
+  echo "install: this machine has glibc $glibc; the asset needs glibc >= 2.28." >&2
+  exit 1
+fi
+
+url="${AVOGADRODB_URL:-}"
+sha="${AVOGADRODB_SHA256:-}"
+if [ -z "$url" ]; then
+  if [ -z "$pinned" ]; then
+    echo "install: no release is pinned for $arch yet." >&2
+    echo "install: to run an unreleased build, set AVOGADRODB_URL and AVOGADRODB_SHA256 together." >&2
+    exit 1
+  fi
+  url="$(release_url "$arch" "$tag")"; sha="$pinned"
+elif [ -z "$sha" ]; then
+  echo "install: AVOGADRODB_URL is set but AVOGADRODB_SHA256 is not." >&2
+  echo "install: refusing to run a binary this box cannot verify." >&2
+  exit 1
+fi
+
+mkdir -p bin
+tmp="bin/.avogadrodb.download"
+rm -f "$tmp"
+echo "install: fetching $url"
+case "$url" in
+  http://*|https://*) curl -fsSL --retry 3 -o "$tmp" "$url" ;;
+  *)                  [ -f "$url" ] || { echo "install: no such file: $url" >&2; exit 1; }
+                      cp -f "$url" "$tmp" ;;
+esac
+got="$(sha256sum "$tmp" | cut -d' ' -f1)"
+if [ "$got" != "$sha" ]; then
+  rm -f "$tmp"
+  echo "install: sha256 mismatch for $url" >&2
+  echo "install:   expected $sha" >&2
+  echo "install:   got      $got" >&2
+  exit 1
+fi
+chmod +x "$tmp"
+# Replaced last, so an interrupted fetch leaves the previous binary in place.
+mv -f "$tmp" bin/avogadrodb
+echo "install: bin/avogadrodb ($(du -h bin/avogadrodb | cut -f1)), sha256 ok"
+
+# What the executable asks the machine for, and the smoke test that it runs here.
+if command -v readelf >/dev/null 2>&1; then
+  readelf -d bin/avogadrodb | grep NEEDED || true
+fi
+./bin/avogadrodb version

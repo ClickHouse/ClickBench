@@ -1,0 +1,20 @@
+#!/bin/bash
+# load: one table from one parquet file, built inside the timed window.
+#
+# `avogadrodb load` reads hits.parquet and writes the table in the engine's own
+# column format at its final compression level (--nivel maximo): nothing is
+# re-compacted, cached or pre-computed after this script returns. The schema
+# comes from the parquet file itself (create.sql documents it; the engine takes
+# no DDL). The database lives in ./db (a root with one database, `hits`, with
+# one table, `hits`).
+set -eu
+cd "$(dirname "$0")"
+
+# Idempotent: blow away any prior partial database.
+rm -rf db
+mkdir -p db
+
+./bin/avogadrodb load --raiz db --banco hits --arquivo hits.parquet --nivel maximo --tabela hits
+
+rm -f hits.parquet
+sync

@@ -1,0 +1,18 @@
+#!/bin/bash
+# query: reads one SQL statement from stdin, runs it against db/hits.
+# Stdout: the whole result, as CSV.
+# Stderr: the query time in fractional seconds, on the last line.
+# Exit non-zero on error.
+#
+# preludio.sql is prefixed to every statement: a CTE that casts EventDate
+# (uint16 days since 1970 in the parquet) to DATE, the same type adaptation
+# the `datafusion` entry makes in its VIEW. The engine only reads.
+#
+# The clock (--tempo) starts with the catalog open and stops after the result
+# is written and flushed: planning, execution, decompression and output are
+# inside; process start, the root lock and the catalog are outside. This is
+# the boundary of duckdb's `.timer` and of datafusion-cli's `Elapsed`.
+set -eu
+cd "$(dirname "$0")"
+
+exec ./bin/avogadrodb query --raiz db --banco hits --preludio preludio.sql --formato csv --tempo

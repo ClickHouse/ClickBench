@@ -1,0 +1,8 @@
+#!/bin/bash
+# data-size: bytes of the database directory (the one table, all partitions,
+# the metadata pages). The root lock and spill directory live one level up and
+# are not counted; there is no temporary data left after load.
+set -eu
+cd "$(dirname "$0")"
+
+du -bs db/hits | cut -f1
