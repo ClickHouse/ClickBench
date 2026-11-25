@@ -1,0 +1,20 @@
+#!/bin/bash
+# Reads a query from stdin and sends it to the server.
+# Stdout: its rows. Stderr: on the last line, the seconds from sending it to its last row received (curl's
+# time_total). Exit non-zero on error.
+set -e
+
+query=$(cat)
+
+tmp=$(mktemp)
+read -r status seconds < <(curl -sS -o "$tmp" -w '%{http_code} %{time_total}\n' \
+    -X POST --data-binary @- http://127.0.0.1:8000/query <<<"$query")
+
+if [ "$status" != "200" ]; then
+    echo "query failed: HTTP $status: $(cat "$tmp")" >&2
+    rm -f "$tmp"
+    exit 1
+fi
+cat "$tmp"
+rm -f "$tmp"
+echo "$seconds" >&2

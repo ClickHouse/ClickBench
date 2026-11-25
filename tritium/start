@@ -1,0 +1,11 @@
+#!/bin/bash
+# tritium --serve: hits.parquet (here) as the table hits, with tables.sql's types; HTTP on 127.0.0.1:8000.
+set -e
+
+# Idempotent: if already running, leave it alone.
+if [ -f server.pid ] && kill -0 "$(cat server.pid)" 2>/dev/null; then
+    exit 0
+fi
+
+nohup ./tritium --data . --tables tables.sql --serve 8000 >server.log 2>&1 &
+echo $! > server.pid
