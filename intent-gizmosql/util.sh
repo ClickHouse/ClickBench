@@ -27,6 +27,17 @@ wait_for_gizmosql() {
 # releasing the lock).
 start_gizmosql() {
     local attempt
+    # More than 64 CPUs (README.md): one DuckDB thread per two CPUs (similar
+    # to the mariadb-duckdb entry's start, which caps DuckDB at nproc/2 above
+    # 32 CPUs) and the allocator settings of a large dedicated server.
+    # Smaller machines run the defaults.
+    local ncpu
+    ncpu=$(nproc)
+    if [ "${ncpu}" -gt 64 ]; then
+        export INIT_SQL_COMMANDS="SET threads=$(( ncpu / 2 )); SET allocator_flush_threshold='64GiB'; SET allocator_bulk_deallocation_flush_threshold='64GiB';"
+        export DUCKDB_JE_MALLOC_CONF="dirty_decay_ms:10000,muzzy_decay_ms:10000,thp:always,metadata_thp:auto"
+        echo "cpus: ${ncpu}; init-sql: threads $(( ncpu / 2 )) and allocator settings"
+    fi
     for attempt in 1 2 3 4 5; do
         nohup gizmosql_server \
             --username ${GIZMOSQL_USER} \
@@ -37,8 +48,8 @@ start_gizmosql() {
         echo "$pid" > "${PID_FILE}"
         echo "Waiting for gizmosql_server to start (attempt ${attempt})..."
 
-        local i
-        for i in $(seq 1 60); do
+        local deadline=$((SECONDS + 60))
+        while [ "${SECONDS}" -lt "${deadline}" ]; do
             if nc -z ${GIZMOSQL_HOST} ${GIZMOSQL_PORT} 2>/dev/null; then
                 echo "gizmosql_server is ready (PID: ${pid})"
                 return 0
@@ -47,7 +58,7 @@ start_gizmosql() {
                 echo "gizmosql_server (PID: ${pid}) exited before opening port" >&2
                 break
             fi
-            sleep 1
+            sleep "${GIZMOSQL_POLL_S:-1}"
         done
 
         # Either dead-on-arrival or didn't bind in 60 s. Clean up before
@@ -75,10 +86,10 @@ stop_gizmosql() {
             echo "Stopping gizmosql_server (PID: ${pid})..."
             kill "$pid"
             # Poll until the process is actually gone (kill -0 fails).
-            local i
-            for i in $(seq 1 60); do
+            local deadline=$((SECONDS + 60))
+            while [ "${SECONDS}" -lt "${deadline}" ]; do
                 kill -0 "$pid" 2>/dev/null || break
-                sleep 1
+                sleep "${GIZMOSQL_POLL_S:-1}"
             done
             # Still alive after 60 s — escalate.
             if kill -0 "$pid" 2>/dev/null; then

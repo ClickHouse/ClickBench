@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e -o pipefail
+
+. ./os-common.sh
+
+os_curl "${OS_URL}/${OS_INDEX}/_count" | jq -r '.count'

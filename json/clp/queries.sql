@@ -1,0 +1,5 @@
+SELECT "commit".collection AS event, count(*) AS count FROM "default" GROUP BY 1 ORDER BY count DESC
+SELECT "commit".collection AS event, count(*) AS count, count(DISTINCT did) AS users FROM "default" WHERE kind = 'commit' AND "commit".operation = 'create' GROUP BY 1 ORDER BY count DESC
+SELECT "commit".collection AS event, hour(from_unixtime(time_us / 1000000)) AS hour_of_day, count(*) AS count FROM "default" WHERE kind = 'commit' AND "commit".operation = 'create' AND "commit".collection IN ('app.bsky.feed.post', 'app.bsky.feed.repost', 'app.bsky.feed.like') GROUP BY 1, 2 ORDER BY hour_of_day, event
+SELECT did AS user_id, from_unixtime(min(time_us) / 1e6) AS first_post_ts FROM "default" WHERE kind = 'commit' AND "commit".operation = 'create' AND "commit".collection = 'app.bsky.feed.post' GROUP BY did ORDER BY first_post_ts ASC LIMIT 3
+SELECT did AS user_id, date_diff('millisecond', from_unixtime(min(time_us) / 1e6), from_unixtime(max(time_us) / 1e6)) AS activity_span FROM "default" WHERE kind = 'commit' AND "commit".operation = 'create' AND "commit".collection = 'app.bsky.feed.post' GROUP BY did ORDER BY activity_span DESC LIMIT 3

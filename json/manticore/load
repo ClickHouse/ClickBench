@@ -1,0 +1,19 @@
+#!/bin/bash
+# Creates the real-time table from scratch (ddl.sql) and loads the data with
+# the HTTP /bulk endpoint.
+set -e -o pipefail
+
+mysql -h 127.0.0.1 -P 9306 -e 'DROP TABLE IF EXISTS bluesky'
+mysql -h 127.0.0.1 -P 9306 < ddl.sql
+
+# Four files at a time, each with two concurrent bulk requests.
+ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}" \
+    | xargs -P 4 -I{} python3 -I "${PWD}/bulk-load.py" {} "http://127.0.0.1:9308" bluesky \
+    | awk '{ sent += $1; rejected += $2 } END { printf "load: sent %d documents, %d rejected\n", sent, rejected }' >&2
+
+# Write the RAM chunk to disk (otherwise it would be replayed from the binary
+# log at every restart) and merge the disk chunks as the automatic
+# optimization would do in the background, so that it does not run during the
+# queries.
+mysql -h 127.0.0.1 -P 9306 -e 'FLUSH RAMCHUNK bluesky'
+mysql -h 127.0.0.1 -P 9306 -e 'OPTIMIZE TABLE bluesky OPTION sync=1'

@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+# Apache Kylin 5.0.2-GA standalone (bundles Hadoop 3.2.4/HDFS/YARN/
+# Zookeeper/Hive 3.1.3/Spark 3.3.0-kylin-5.2.2 inside one container).
+# Docker is required; no external Hadoop cluster.
+# Version choice rationale: see README.md.
+if ! command -v docker >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo apt-get install -y docker.io
+fi
+sudo apt-get install -y curl jq
+
+# Add a 6GB swapfile if none exists: the container is -m 10G on a
+# 16GiB host, and Hive's CREATE TABLE/VIEW in ./load can push RAM.
+if [ "$(swapon --show | wc -l)" -eq 0 ] && [ ! -f /swapfile ]; then
+    sudo fallocate -l 6G /swapfile
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile
+    sudo swapon /swapfile
+fi
+
+sudo docker pull apachekylin/apache-kylin-standalone:5.0.2-GA

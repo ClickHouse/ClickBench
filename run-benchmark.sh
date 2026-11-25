@@ -28,11 +28,29 @@ ami=$(aws ec2 describe-images --owners amazon --filters "Name=name,Values=ubuntu
 
 # Global per-system benchmark timeout — substituted at render time.
 # Default keeps the 10h cap that worked for the slowest OLTP systems.
+#
+# A system that needs longer can ship a `timeout-seconds` file in its
+# directory holding the number of seconds; an explicit `timeout` in the
+# environment still wins over it. Turso is the case that forced this: even
+# with every query capped (BENCH_QUERY_TIMEOUT), 43 queries x 3 tries at
+# the ~350s per try it manages is over 12h before the ~1.8h load, so 10h
+# can only ever produce a dead machine. Note that the PR workflow checks
+# out the base branch for these launcher scripts, so a `timeout-seconds`
+# added by a pull request takes effect only once it is merged.
+if [ -z "${timeout:-}" ] && [ -r "$system/timeout-seconds" ]; then
+    timeout=$(tr -cd '0-9' < "$system/timeout-seconds")
+fi
 timeout="${timeout:-36000}"
 
-awk -v sys="$system" -v repo="$repo" -v branch="$branch" -v t="$timeout" -v pr="$clickbench_pr" '
+# Identifies the live log of this run in sink.logs, see lib/live-log.py.
+run_id=$(cat /proc/sys/kernel/random/uuid)
+
+awk -v sys="$system" -v repo="$repo" -v branch="$branch" -v t="$timeout" -v pr="$clickbench_pr" \
+    -v machine="$machine" -v run_id="$run_id" '
 {
     gsub(/@system@/, sys)
+    gsub(/@machine@/, machine)
+    gsub(/@run_id@/, run_id)
     gsub(/@repo@/, repo)
     gsub(/@branch@/, branch)
     gsub(/@timeout@/, t)
@@ -64,6 +82,9 @@ while :; do
 
     if [ "$rc" -eq 0 ]; then
         printf '%s\n' "$out"
+        live_log="Live log of ${system} on ${machine}: https://benchmark.clickhouse.com/live.html#${run_id}"
+        echo "$live_log"
+        if [ -n "$GITHUB_STEP_SUMMARY" ]; then echo "$live_log" >> "$GITHUB_STEP_SUMMARY"; fi
         break
     fi
 

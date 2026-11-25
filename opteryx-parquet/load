@@ -1,0 +1,23 @@
+#!/bin/bash
+# ClickBench ships parquet written by another writer; this entry rewrites it with
+# Opteryx's own (rugo) at the layout the engine reads fastest. That rewrite IS
+# the load step, and its wall-clock is what `Load time` reports.
+#
+# Layout: zstd (on a 500 GB gp2 volume cold runs are IO-bound, and zstd reads the
+# fewest bytes; hot runs are served by the engine's decompressed chunk cache),
+# 64k-row row groups, column-major blocks of 4 — rugo's writer defaults.
+set -e
+
+CODEC=zstd
+ROWS_PER_ROW_GROUP=65536
+ROW_GROUPS_PER_BLOCK=4
+
+mkdir -p parquet_src
+mv hits_*.parquet parquet_src/ 2>/dev/null || true
+
+"$HOME/opteryx_venv/bin/python" convert.py parquet_src hits "$CODEC" "$ROWS_PER_ROW_GROUP" "$ROW_GROUPS_PER_BLOCK"
+
+# Drop the source once converted: `data-size` must measure the rewritten
+# dataset only.
+rm -rf parquet_src
+sync

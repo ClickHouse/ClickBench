@@ -1,0 +1,19 @@
+#!/bin/bash
+# NostromoDB is distributed as a Docker image only (a binary built for a newer
+# libstdc++ than Ubuntu 24.04 has); the image has a single tag, latest.
+set -e
+
+export DEBIAN_FRONTEND=noninteractive
+
+if ! command -v docker >/dev/null 2>&1; then
+    sudo -E apt-get update -y
+    sudo -E apt-get install -y docker.io
+fi
+sudo systemctl start docker
+
+source ./env.sh
+for i in $(seq 1 10); do
+    sudo docker pull "${NOSTROMODB_IMAGE}" && break
+    [ "$i" -eq 10 ] && exit 1
+    sleep 30
+done

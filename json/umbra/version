@@ -1,0 +1,7 @@
+#!/bin/bash
+# The tag of the Docker image (`SELECT version()` gives an internal build name,
+# like "PostgreSQL 18.1 compatible umbra v0.2-3356-g92839196f2").
+set -e
+source ./env.sh
+
+echo "${UMBRA_IMAGE##*:}"

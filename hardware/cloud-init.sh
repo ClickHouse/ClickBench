@@ -2,6 +2,9 @@
 
 # See the docs in clickhouse/cloud-init.sh
 
+# Terminate even if the benchmark hangs.
+shutdown -P +600
+
 BASE_URL='https://raw.githubusercontent.com/ClickHouse/ClickBench/main/hardware/'
 
 apt-get update -y

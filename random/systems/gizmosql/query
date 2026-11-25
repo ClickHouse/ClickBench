@@ -1,0 +1,45 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it via gizmosql_client.
+# Stdout: query result.
+# Stderr: query runtime in fractional seconds on the last line (parsed from
+# gizmosql_client's ".timer on" "Run Time: <secs>s" output).
+# Exit non-zero on error.
+set -e
+
+. ./util.sh
+
+query=$(cat)
+
+# .timer on: emit "Run Time: <secs>s" per statement.
+# The query script of the main benchmark with `.mode csv` for the randomized
+# benchmark: `.mode box` cuts wide values ("0.1012148…") even with
+# `.maxwidth 0`, and the results could not be compared with the reference.
+#
+# .maxrows -1 / .maxwidth 0: gizmosql_client is a DuckDB-cli fork
+# and inherits its non-TTY truncation behavior, which collapses any
+# table taller than the default page to a "<N> rows (<M> columns)"
+# summary line. Disable both row and column truncation so the user
+# sees the whole result.
+script=$(printf '.timer on\n.maxrows -1\n.maxwidth 0\n.mode csv\n%s\n' "$query")
+
+raw=$(printf '%s' "$script" | gizmosql_client 2>&1) && exit_code=0 || exit_code=$?
+
+clean=$(printf '%s\n' "$raw" | tr -d '\r')
+
+if [ "$exit_code" -ne 0 ] || printf '%s\n' "$clean" | grep -qiE 'error|exception|Killed|Segmentation'; then
+    printf '%s\n' "$clean" >&2
+    exit 1
+fi
+
+printf '%s\n' "$clean"
+
+secs=$(printf '%s\n' "$clean" \
+    | grep -oP 'Run Time:\s*\K[0-9.]+' \
+    | tail -n1)
+
+if [ -z "$secs" ]; then
+    echo "no timing in gizmosql_client output" >&2
+    exit 1
+fi
+
+awk -v s="$secs" 'BEGIN { printf "%.3f\n", s }' >&2

@@ -1,0 +1,21 @@
+#!/bin/bash
+set -e
+
+# Idempotent: do nothing if it is already running.
+if pidof greptime >/dev/null; then
+    exit 0
+fi
+
+# The same settings as in the original JSONBench: data in the system
+# directory, a body limit large enough for a whole file of the dataset, a
+# timeout for long requests.
+BASEDIR=greptimedb_data
+export GREPTIMEDB_STANDALONE__WAL__DIR="${BASEDIR}/wal"
+export GREPTIMEDB_STANDALONE__STORAGE__DATA_HOME="${BASEDIR}"
+export GREPTIMEDB_STANDALONE__LOGGING__DIR="${BASEDIR}/logs"
+export GREPTIMEDB_STANDALONE__LOGGING__APPEND_STDOUT=false
+export GREPTIMEDB_STANDALONE__HTTP__BODY_LIMIT=1GB
+export GREPTIMEDB_STANDALONE__HTTP__TIMEOUT=500s
+
+nohup ./greptime standalone start > server.log 2>&1 &
+disown

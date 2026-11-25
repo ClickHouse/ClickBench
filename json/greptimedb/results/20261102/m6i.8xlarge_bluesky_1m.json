@@ -1,0 +1,25 @@
+{
+  "system": "GreptimeDB",
+  "proprietary": "no",
+  "retains_structure": "no",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "time-series"
+  ],
+  "version": "v1.3.0",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-02",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "load_time": 14.208,
+  "total_size": 112056550,
+  "result": [
+    [0.292281, 0.011118, 0.010191],
+    [0.413589, 0.055478, 0.049733],
+    [0.39498, 0.016698, 0.011927],
+    [0.369581, 0.012275, 0.01183],
+    [0.399887, 0.020708, 0.018208]
+  ]
+}

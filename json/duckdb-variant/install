@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+export HOME="${HOME:-/root}"
+
+# The official installer resolves the latest release and puts the CLI into
+# ~/.duckdb/cli/latest/duckdb. Symlink it into the PATH for the other scripts.
+if ! command -v duckdb >/dev/null 2>&1; then
+    installer=$(mktemp /var/tmp/duckdb-install.XXXXXX)
+    for i in $(seq 1 10); do
+        if curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors -o "${installer}" https://install.duckdb.org \
+            && sh "${installer}"; then
+            break
+        fi
+        [ "$i" -eq 10 ] && { echo "install: the DuckDB installer failed" >&2; exit 1; }
+        sleep 30
+    done
+    rm -f "${installer}"
+    sudo ln -sf "$HOME/.duckdb/cli/latest/duckdb" /usr/local/bin/duckdb
+fi
+
+duckdb --version

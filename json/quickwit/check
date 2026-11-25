@@ -1,0 +1,13 @@
+#!/bin/bash
+# The REST server answers /version before the searcher has joined the
+# cluster; the search endpoint answers 200 once it has (404 before the index
+# is created, which is fine too).
+set -e
+
+curl -sSf http://127.0.0.1:7280/api/v1/version >/dev/null
+code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+    -d '{"query":"*","max_hits":0}' http://127.0.0.1:7280/api/v1/jsonbench/search)
+case "$code" in
+    200|404) exit 0 ;;
+    *) echo "check: search returned HTTP $code" >&2; exit 1 ;;
+esac

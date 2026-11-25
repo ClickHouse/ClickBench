@@ -1,0 +1,12 @@
+{
+  "system": "Kylin (cube)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "yes",
+  "category": "enthusiast",
+  "tags": [
+    "Java",
+    "Spark derivative",
+    "no-cold"
+  ]
+}

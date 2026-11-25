@@ -1,0 +1,29 @@
+#!/bin/bash
+set -e -o pipefail
+
+if [ ! -x /usr/bin/clickhouse ]; then
+    curl -fsSL --retry 10 --retry-delay 60 --retry-all-errors https://clickhouse.com/ | sh
+    sudo ./clickhouse install --noninteractive
+    rm -f ./clickhouse
+fi
+
+# Load the tables and their primary keys at startup rather than on the first
+# (cold) query, as in the main ClickBench (see ../../clickhouse/install).
+sudo mkdir -p /etc/clickhouse-server/config.d
+sudo tee /etc/clickhouse-server/config.d/eager_load.yaml >/dev/null <<'YAML'
+async_load_databases: false
+merge_tree:
+  primary_key_lazy_load: 0
+  columns_and_secondary_indices_sizes_lazy_calculation: 0
+YAML
+
+# Skip the optional work the server does at startup: mlock of the executable,
+# its integrity check, and the checks of the environment for system.warnings.
+# With a cold page cache, the mlock and the check fault in the whole code
+# segment one page at a time: about 3 s of the 5.5 s startup on c6a.4xlarge.
+# Older versions ignore the unknown setting.
+# https://github.com/ClickHouse/ClickHouse/pull/131257
+sudo mkdir -p /etc/clickhouse-server/config.d
+sudo tee /etc/clickhouse-server/config.d/quick_startup.yaml >/dev/null <<'YAML'
+quick_startup: true
+YAML

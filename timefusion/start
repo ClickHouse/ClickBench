@@ -1,0 +1,21 @@
+#!/bin/bash
+set -e
+source "$(dirname "$0")/env.sh"
+cd "$DIR"
+
+# SeaweedFS: a single-process S3-compatible store on localhost.
+if ! curl -s -o /dev/null "$AWS_S3_ENDPOINT"; then
+    mkdir -p "$WEED_DIR"
+    nohup "$WEED_BIN" mini -dir="$WEED_DIR" -ip=127.0.0.1 -ip.bind=127.0.0.1 \
+        -master.telemetry=false -admin.ui=false -bucket="$AWS_S3_BUCKET" \
+        > seaweedfs.log 2>&1 &
+    for _ in $(seq 1 120); do
+        curl -s -o /dev/null "$AWS_S3_ENDPOINT" && break
+        sleep 1
+    done
+fi
+
+if ! pgrep -x timefusion >/dev/null; then
+    mkdir -p "$TIMEFUSION_DATA_DIR"
+    nohup "$TF_BIN" >> timefusion.log 2>&1 &
+fi

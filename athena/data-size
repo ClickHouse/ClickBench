@@ -1,0 +1,6 @@
+#!/bin/bash
+# Athena queries the parquet files in place; their total size is the data size.
+set -e
+cd "$(dirname "$0")"
+source ./env.sh
+aws s3 ls --recursive --summarize "$ATHENA_LOCATION" | awk '/Total Size:/ { print $3 }'

@@ -1,0 +1,19 @@
+#!/bin/bash
+# The latest CedarDB from its installer, as in the main ClickBench (../../cedardb/install).
+set -eu
+
+export DEBIAN_FRONTEND=noninteractive
+sudo apt-get update -y
+sudo apt-get install -y postgresql-client
+
+./stop || true
+rm -rf ./db
+
+for i in $(seq 1 10); do
+    curl -fsSL https://get.cedardb.com | bash -s -- -y \
+        --install-dir "$PWD" \
+        --db-dir "$PWD/db" \
+        --with-systemd=system && break
+    [ "$i" -eq 10 ] && exit 1
+    sleep 10
+done

@@ -1,0 +1,43 @@
+{
+  "system": "MongoDB (zstd)",
+  "version": "8.0.3",
+  "os": "Ubuntu 24.04",
+  "date": "2025-01-13",
+  "machine": "m6i.8xlarge",
+  "retains_structure": "yes",
+  "tags": [
+    "historical"
+  ],
+  "dataset_size": 10000000,
+  "num_loaded_documents": 7860000,
+  "total_size": 1411428352,
+  "data_size": 1212796928,
+  "index_size": 198631424,
+  "result": [
+    [
+      15.462,
+      3.001,
+      2.833
+    ],
+    [
+      33.838,
+      33.59,
+      33.529
+    ],
+    [
+      11.42,
+      11.431,
+      11.508
+    ],
+    [
+      1.854,
+      1.9,
+      1.908
+    ],
+    [
+      2.043,
+      2.013,
+      2.014
+    ]
+  ]
+}

@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+source ./env.sh
+
+${PSQL} -c 'SELECT 1' >/dev/null

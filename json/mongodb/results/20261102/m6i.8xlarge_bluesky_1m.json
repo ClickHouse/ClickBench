@@ -1,0 +1,25 @@
+{
+  "system": "MongoDB",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "row-oriented",
+    "document",
+    "C++"
+  ],
+  "version": "9.0.4",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-02",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "load_time": 22.554,
+  "total_size": 188436480,
+  "result": [
+    [1.17, 1.057, 1.056],
+    [1.623, 1.54, 1.497],
+    [1.423, 1.36, 1.367],
+    [0.246, 0.214, 0.213],
+    [0.265, 0.231, 0.233]
+  ]
+}

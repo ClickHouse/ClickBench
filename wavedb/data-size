@@ -1,0 +1,4 @@
+#!/bin/bash
+# Bytes on disk of the loaded database: the segment, its load statistics, its text lengths, the catalog.
+cd "$(dirname "$0")"
+du -sb cbdb | cut -f1

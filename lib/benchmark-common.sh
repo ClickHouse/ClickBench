@@ -50,6 +50,25 @@
 #   BENCH_QUERIES_FILE     Path to a queries file, one query per line.
 #                          Default "queries.sql" (in the system dir).
 #   BENCH_CHECK_TIMEOUT    Seconds to wait for ./check to succeed. Default 300.
+#   BENCH_QUERY_TIMEOUT    Wall-clock cap on a single ./query invocation, in
+#                          seconds. Default 0 — no cap, the historical
+#                          behaviour that every system keeps unless it opts
+#                          in. When set, a try that runs past the cap is
+#                          recorded as null AND the query's remaining tries
+#                          are skipped (also null): a query that can't
+#                          finish its cold run won't be rescued by two more
+#                          attempts, and without the skip one hopeless query
+#                          costs 3x the cap instead of 1x.
+#                          For engines where a few queries run for hours
+#                          this is the difference between a result row and
+#                          no result at all. Turso on c6a.4xlarge spent ~7h
+#                          inside Q5 (SELECT COUNT(DISTINCT UserID) FROM
+#                          hits) and the global timeout then killed the run
+#                          at query 5 of 43, discarding the four it had
+#                          finished. Raising the global timeout doesn't fix
+#                          that — it just moves where the run dies. Nulls
+#                          are already how ClickBench reports queries a
+#                          system can't do.
 #   BENCH_CONCURRENT_CONNECTIONS
 #                          Number of parallel workers in the QPS test
 #                          that runs after the cold/warm sweep. Default 10.
@@ -65,11 +84,30 @@
 #                          for daemons and the in-process server wrappers
 #                          (pandas/polars/*-dataframe), which do share one
 #                          process. See issue #946.
+#   BENCH_CONCURRENT_WORKER
+#                          Optional path to a per-connection worker for the
+#                          QPS test, used instead of forking ./query for every
+#                          query. Called once per connection with the deadline
+#                          (Unix seconds) as its argument and this connection's
+#                          query order on stdin, one query per line; it cycles
+#                          through the queries until the deadline, then prints
+#                          "<successful> <failed>" on stdout. For systems whose
+#                          ./query must open a new remote connection each time
+#                          (e.g. motherduck), so the test measures the
+#                          service's throughput, not connection setup.
 #   BENCH_CONCURRENT_SEED  Seed shared across systems so that connection
 #                          N hits the same query order on every engine
 #                          (the per-connection permutation is derived
 #                          deterministically from this seed + the
 #                          connection index). Default "clickbench".
+#   BENCH_STARTUP_TRIES    Number of cold startups measured after the load.
+#                          Default 3, the median is reported. 0 skips the
+#                          measurement (emits null).
+#   BENCH_STARTUP_QUERY    The trivial query that an embedded
+#                          (BENCH_RESTARTABLE=no) system runs through
+#                          ./query to measure its startup. Default
+#                          "SELECT 1". Systems whose query language is not
+#                          SQL set their equivalent. See bench_startup_time.
 
 set -e
 
@@ -88,9 +126,37 @@ export HOME="${HOME:-/root}"
 : "${BENCH_TRIES:=3}"
 : "${BENCH_QUERIES_FILE:=queries.sql}"
 : "${BENCH_CHECK_TIMEOUT:=300}"
+: "${BENCH_QUERY_TIMEOUT:=0}"
 : "${BENCH_CONCURRENT_CONNECTIONS:=10}"
 : "${BENCH_CONCURRENT_DURATION:=600}"
 : "${BENCH_CONCURRENT_SEED:=clickbench}"
+: "${BENCH_CONCURRENT_WORKER:=}"
+: "${BENCH_STARTUP_TRIES:=3}"
+: "${BENCH_STARTUP_QUERY:=SELECT 1}"
+
+# BENCH_QUERY_TIMEOUT is compared with -gt on every try. A non-numeric value
+# would make that comparison fail under `set -e` — hours into the run, after
+# the load, with an error message that says nothing about the typo. Check it
+# once, up front.
+if ! [[ "$BENCH_QUERY_TIMEOUT" =~ ^[0-9]+$ ]]; then
+    echo "bench: BENCH_QUERY_TIMEOUT must be a non-negative integer of seconds," >&2
+    echo "bench: got '${BENCH_QUERY_TIMEOUT}'" >&2
+    exit 1
+fi
+
+# Command prefix for every ./query invocation; empty when uncapped, so the
+# default path is byte-for-byte the old one.
+#
+# Deliberately no --foreground: in its default mode timeout(1) puts ./query
+# in a fresh process group and signals the whole group, so the engine
+# process the script spawned (tursodb, a client binary, a JVM) dies with it.
+# With --foreground only the wrapper script would be killed and the engine
+# would be left orphaned, still holding the machine's RAM and disk bandwidth
+# while the next query tries to run.
+query_timeout_cmd=()
+if [ "$BENCH_QUERY_TIMEOUT" -gt 0 ]; then
+    query_timeout_cmd=(timeout "$BENCH_QUERY_TIMEOUT")
+fi
 
 # Resolve the directory containing this script so we can find sibling
 # helpers (download-hits-*).
@@ -271,6 +337,26 @@ bench_load() {
     fi
 }
 
+# Prints the timing from the stderr of ./query, or nothing if there is none,
+# which means the query has failed even if ./query exited with zero.
+#
+# The query script's contract is "fractional seconds on the last line", but
+# several systems (pyspark, JVM-based ones, anything that prints
+# SparkSession shutdown lines after the measurement) emit additional log
+# noise after the timing, so plain `tail -n1` was reading "Stopping
+# SparkContext" or similar and producing all-null result rows. Pull the LAST
+# numeric-looking line instead.
+#
+# Spark also prints its console progress bar with carriage returns instead
+# of newlines:
+#     [Stage 1:>... (0 + 96) / 111]\r\r   spaces   \r{timing}\n
+# so the timing ends up on the same logical line as the progress bar, and
+# the strict ^number$ regex misses it. Translating \r to \n splits those
+# updates into their own lines and the timing stands alone for matching.
+bench_extract_timing() {
+    printf '%s\n' "$1" | tr '\r' '\n' | grep -E '^[0-9]+(\.[0-9]+)?$' | tail -n1
+}
+
 # Run a single query script and emit a single JSON-array `[t1,t2,t3],` line.
 # Per-try timing is also appended to result.csv as `<num>,<try>,<seconds>`.
 bench_run_query() {
@@ -279,6 +365,7 @@ bench_run_query() {
     local i raw_stderr exit_code timing
     local load_secs=0
     local results=()
+    local timed_out=no
 
     # Cold-cycle: stop, wait until really stopped, drop_caches, start,
     # check. Order matters: the naive order (flush, then stop) leaves
@@ -319,27 +406,29 @@ bench_run_query() {
     fi
 
     for i in $(seq 1 "$BENCH_TRIES"); do
+        # An earlier try ran past BENCH_QUERY_TIMEOUT — see the env docs at
+        # the top. Record the rest of the tries as null without running them.
+        if [ "$timed_out" = "yes" ]; then
+            results+=("null")
+            echo "${query_num},${i},null" >> result.csv
+            continue
+        fi
+
         # The query script's contract: stdout = result, stderr's last line =
         # fractional seconds, exit 0 on success.
-        raw_stderr=$(printf '%s\n' "$query" | ./query 2>&1 >/dev/null) && exit_code=0 || exit_code=$?
+        raw_stderr=$(printf '%s\n' "$query" | "${query_timeout_cmd[@]}" ./query 2>&1 >/dev/null) && exit_code=0 || exit_code=$?
+
+        # 124 is timeout(1)'s "the command timed out". A ./query that exited
+        # 124 on its own account would be misreported as a timeout; none of
+        # them do, and the consequence is only that we skip its retries.
+        if [ "$BENCH_QUERY_TIMEOUT" -gt 0 ] && [ "$exit_code" -eq 124 ]; then
+            timed_out=yes
+            echo "bench: query ${query_num} exceeded BENCH_QUERY_TIMEOUT=${BENCH_QUERY_TIMEOUT}s;" >&2
+            echo "bench: recording null for all ${BENCH_TRIES} tries and moving on" >&2
+        fi
 
         if [ "$exit_code" -eq 0 ]; then
-            # The query script's contract is "fractional seconds on the
-            # last line", but several systems (pyspark, JVM-based ones,
-            # anything that prints SparkSession shutdown lines after the
-            # measurement) emit additional log noise after the timing,
-            # so plain `tail -n1` was reading "Stopping SparkContext" or
-            # similar and producing all-null result rows. Pull the LAST
-            # numeric-looking line instead.
-            #
-            # Spark also prints its console progress bar with carriage
-            # returns instead of newlines:
-            #     [Stage 1:>... (0 + 96) / 111]\r\r   spaces   \r{timing}\n
-            # so the timing ends up on the same logical line as the
-            # progress bar, and the strict ^number$ regex misses it.
-            # Translating \r to \n splits those updates into their own
-            # lines and the timing stands alone for matching.
-            timing=$(printf '%s\n' "$raw_stderr" | tr '\r' '\n' | grep -E '^[0-9]+(\.[0-9]+)?$' | tail -n1)
+            timing=$(bench_extract_timing "$raw_stderr")
             [ -z "$timing" ] && timing="null"
         else
             timing="null"
@@ -365,6 +454,160 @@ bench_run_query() {
     done
     out+="],"
     echo "$out"
+}
+
+# The current time in microseconds since the epoch, in BENCH_NOW_US. Called
+# without a command substitution, it does not fork: EPOCHREALTIME is kept by
+# bash itself (5.0+), so the timestamps around a measured command cost
+# microseconds. Its decimal separator follows the locale; drop it, whatever it
+# is.
+bench_now_us() {
+    if [ -z "${EPOCHREALTIME:-}" ]; then
+        echo "bench: EPOCHREALTIME is unset, bash 5.0+ is required" >&2
+        return 1
+    fi
+    BENCH_NOW_US="${EPOCHREALTIME//[^0-9]/}"
+}
+
+# Microseconds as seconds with three decimals.
+bench_format_us() {
+    local ms=$((($1 + 500) / 1000))
+    printf '%d.%03d' $((ms / 1000)) $((ms % 1000))
+}
+
+# One cold startup of a client-server system, from launching ./start until
+# the server answers ./check. Sets BENCH_STARTUP_US, or leaves it empty if the
+# startup could not be measured.
+#
+# ./start runs in the background while ./check is polled every 10 ms from the
+# moment it was launched, because about a third of the start scripts wait for
+# readiness themselves with a loop of `sleep 1` (or longer), which would
+# round the measurement up to their polling interval.
+#
+# ./check includes the startup of its client and the round trip of a trivial
+# query. With s_k the moment the first successful ./check was launched and
+# e_k the moment it returned, the server became ready between the connection
+# attempt of the previous ./check and that of the successful one, at about
+# s_k + (client startup) = e_k - (the duration of ./check against a running
+# server). The latter is measured right after, as the minimum of three runs,
+# and subtracted. This is an upper bound; the lower one is the same moment of
+# the previous, failed ./check, launched at s_{k-1}. The reported value is
+# the middle of the interval, with the error of at most a half of it, which
+# is a half of the duration of a failed ./check plus 5 ms. Both are printed
+# to the log; for a client that fails fast on a refused connection the error
+# is about 10 ms.
+bench_startup_server_try() {
+    BENCH_STARTUP_US=""
+
+    ./stop >/dev/null 2>&1 || true
+    bench_wait_stopped
+    if ./check >/dev/null 2>&1; then
+        echo "bench: startup: ./check still succeeds after ./stop, cannot measure the startup" >&2
+        return 0
+    fi
+    bench_flush_caches
+
+    local t0 s prev_s e deadline start_pid ready=0
+    bench_now_us; t0=$BENCH_NOW_US
+    ./start </dev/null >/dev/null 2>&1 &
+    start_pid=$!
+    deadline=$((t0 + BENCH_CHECK_TIMEOUT * 1000000))
+    prev_s=$t0
+    while :; do
+        bench_now_us; s=$BENCH_NOW_US
+        if ./check </dev/null >/dev/null 2>&1; then
+            bench_now_us; e=$BENCH_NOW_US
+            ready=1
+            break
+        fi
+        [ "$s" -ge "$deadline" ] && break
+        prev_s=$s
+        sleep 0.01
+    done
+    # ./start may still be finishing its own readiness loop or setup.
+    wait "$start_pid" || true
+
+    if [ "$ready" -eq 0 ]; then
+        echo "bench: startup: ./check did not succeed within ${BENCH_CHECK_TIMEOUT}s" >&2
+        return 0
+    fi
+
+    local i a b warm=""
+    for i in 1 2 3; do
+        bench_now_us; a=$BENCH_NOW_US
+        if ! ./check </dev/null >/dev/null 2>&1; then
+            echo "bench: startup: ./check failed right after a successful one" >&2
+            return 0
+        fi
+        bench_now_us; b=$BENCH_NOW_US
+        if [ -z "$warm" ] || [ $((b - a)) -lt "$warm" ]; then
+            warm=$((b - a))
+        fi
+    done
+
+    local gap=$((s - prev_s))
+    BENCH_STARTUP_US=$((e - t0 - warm - gap / 2))
+    [ "$BENCH_STARTUP_US" -lt 0 ] && BENCH_STARTUP_US=0
+    echo "bench: startup: ready after $(bench_format_us "$BENCH_STARTUP_US") ± $(bench_format_us $((gap / 2))) s" \
+        "(the first successful ./check returned after $(bench_format_us $((e - t0))) s," \
+        "./check takes $(bench_format_us "$warm") s on a running server)" >&2
+}
+
+# One cold startup of an embedded system: the wall-clock time of running a
+# trivial query (BENCH_STARTUP_QUERY) with ./query in a new process, after
+# dropping the caches. This is the time from the process startup to the
+# result, including opening the database. The query must succeed by the same
+# criterion as in the main run (exit code zero and a timing line). Sets
+# BENCH_STARTUP_US, or leaves it empty if the query has failed.
+bench_startup_embedded_try() {
+    BENCH_STARTUP_US=""
+    bench_flush_caches
+
+    local t0 e raw_stderr exit_code
+    bench_now_us; t0=$BENCH_NOW_US
+    raw_stderr=$(printf '%s\n' "$BENCH_STARTUP_QUERY" | ./query 2>&1 >/dev/null) && exit_code=0 || exit_code=$?
+    bench_now_us; e=$BENCH_NOW_US
+
+    if [ "$exit_code" -ne 0 ] || [ -z "$(bench_extract_timing "$raw_stderr")" ]; then
+        echo "bench: startup: the query '${BENCH_STARTUP_QUERY}' has failed:" >&2
+        printf '%s\n' "$raw_stderr" | tail -n 20 | sed 's/^/    /' >&2
+        return 0
+    fi
+    BENCH_STARTUP_US=$((e - t0))
+    echo "bench: startup: '${BENCH_STARTUP_QUERY}' took $(bench_format_us "$BENCH_STARTUP_US") s" >&2
+}
+
+# Startup time: how long a cold system takes to become ready, with the data
+# loaded. For a client-server system (BENCH_RESTARTABLE=yes), from launching
+# ./start to accepting connections and answering ./check; for an embedded one,
+# from starting a process to the result of a trivial query. Each try starts
+# from dropped caches; the median of BENCH_STARTUP_TRIES tries is reported as
+# "Startup time: <seconds>", or "Startup time: null" if any try failed.
+#
+# Leaves a client-server system running.
+bench_startup_time() {
+    if [ "$BENCH_STARTUP_TRIES" -le 0 ]; then
+        echo "Startup time: null"
+        return 0
+    fi
+
+    local i values=()
+    for i in $(seq 1 "$BENCH_STARTUP_TRIES"); do
+        if [ "$BENCH_RESTARTABLE" = "yes" ]; then
+            bench_startup_server_try
+        else
+            bench_startup_embedded_try
+        fi
+        if [ -z "$BENCH_STARTUP_US" ]; then
+            echo "Startup time: null"
+            return 0
+        fi
+        values+=("$BENCH_STARTUP_US")
+    done
+
+    local sorted
+    mapfile -t sorted < <(printf '%s\n' "${values[@]}" | sort -n)
+    echo "Startup time: $(bench_format_us "${sorted[$(((${#sorted[@]} - 1) / 2))]}")"
 }
 
 # Concurrent-QPS sustained-throughput test. Runs after the cold/warm sweep
@@ -479,11 +722,46 @@ print('\n'.join(map(str, xs)))
 PY
 )
 
-            local ok=0 err=0 idx=0 qi q_text
+            # A system may supply its own worker (BENCH_CONCURRENT_WORKER)
+            # that keeps one connection open for the whole window instead of
+            # forking ./query per query. It gets this connection's query
+            # order on stdin and the deadline as its argument, and prints
+            # "<ok> <err>".
+            if [ -n "$BENCH_CONCURRENT_WORKER" ]; then
+                local ordered=()
+                for qi in "${perm[@]}"; do
+                    ordered+=("${queries[$qi]}")
+                done
+                local worker_out
+                if ! worker_out=$(printf '%s\n' "${ordered[@]}" \
+                    | "$BENCH_CONCURRENT_WORKER" "$deadline"); then
+                    # No stats file: the whole result becomes null rather
+                    # than silently undercounting.
+                    echo "bench: concurrent worker $c failed" >&2
+                elif ! [[ "$worker_out" =~ ^[0-9]+\ [0-9]+$ ]]; then
+                    echo "bench: concurrent worker $c printed '$worker_out'" \
+                        "instead of '<successful> <failed>'" >&2
+                else
+                    printf '%s\n' "$worker_out" > "$stats_dir/$c"
+                fi
+                exit 0
+            fi
+
+            local ok=0 err=0 idx=0 qi q_text raw_stderr
             while [ "$(date +%s)" -lt "$deadline" ]; do
                 qi="${perm[$idx]}"
                 q_text="${queries[$qi]}"
-                if printf '%s\n' "$q_text" | ./query >/dev/null 2>&1; then
+                # Same success criterion as bench_run_query: some query
+                # scripts exit with zero on errors, and the error would
+                # count as a (very fast) successful query.
+                #
+                # Honour BENCH_QUERY_TIMEOUT here too: without it a worker
+                # that draws a query the engine can't finish blocks past the
+                # deadline, and `wait` below hangs with it. A capped query
+                # counts as an error, which is the honest reading — the
+                # engine did not answer.
+                if raw_stderr=$(printf '%s\n' "$q_text" | "${query_timeout_cmd[@]}" ./query 2>&1 >/dev/null) \
+                    && [ -n "$(bench_extract_timing "$raw_stderr")" ]; then
                     ok=$((ok + 1))
                 else
                     err=$((err + 1))
@@ -495,8 +773,10 @@ PY
     done
     wait
 
-    local total_ok=0 total_err=0 ok err
+    local total_ok=0 total_err=0 ok err workers_done
+    workers_done=$(find "$stats_dir" -type f | wc -l)
     for f in "$stats_dir"/*; do
+        [ -f "$f" ] || continue
         read -r ok err < "$f"
         total_ok=$((total_ok + ok))
         total_err=$((total_err + err))
@@ -504,15 +784,16 @@ PY
     rm -rf "$stats_dir"
 
     local qps err_ratio
-    if [ "$total_ok" -eq 0 ]; then
+    if [ "$total_ok" -eq 0 ] || [ "$workers_done" -ne "$connections" ]; then
         # Watchdog never managed to bring the system back up, or no query
-        # ever succeeded — record as null per spec.
+        # ever succeeded, or a BENCH_CONCURRENT_WORKER failed — record as
+        # null per spec.
         qps="null"
     else
         qps=$(awk -v ok="$total_ok" -v d="$duration" 'BEGIN{printf "%.3f", ok/d}')
     fi
     local total=$((total_ok + total_err))
-    if [ "$total" -eq 0 ]; then
+    if [ "$total" -eq 0 ] || [ "$workers_done" -ne "$connections" ]; then
         err_ratio="null"
     else
         err_ratio=$(awk -v e="$total_err" -v t="$total" 'BEGIN{printf "%.3f", e/t}')
@@ -529,6 +810,11 @@ bench_main() {
     bench_download
     bench_wait_fs_init
     bench_load
+
+    # After the load, so that the startup includes opening the loaded data.
+    # Every query below starts from its own restart, so it does not matter
+    # in which state this leaves the system.
+    bench_startup_time
 
     : > result.csv
     local query_num=1

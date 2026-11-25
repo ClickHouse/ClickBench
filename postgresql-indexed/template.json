@@ -3,6 +3,7 @@
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "yes",
+  "category": "enthusiast",
   "tags": [
     "C",
     "row-oriented",

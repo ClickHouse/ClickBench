@@ -1,0 +1,31 @@
+#!/bin/bash
+# Reads one query (a mongosh aggregation, a line of queries.js) from stdin and
+# runs it against the `bluesky` database.
+# Stdout: the result, as Extended JSON.
+# Stderr: the runtime in fractional seconds on the last line, measured inside
+# mongosh around the aggregation with all its results fetched, as in the
+# original JSONBench.
+set -e -o pipefail
+
+query=$(cat)
+# Strip the trailing semicolon and whitespace to append .toArray().
+query=$(printf '%s' "${query}" | sed -E 's/[[:space:];]+$//')
+
+marker="__JSONBENCH_ELAPSED__"
+script="
+const __start = Date.now();
+const __result = ${query}.toArray();
+const __end = Date.now();
+print(EJSON.stringify(__result));
+print('${marker} ' + ((__end - __start) / 1000));
+"
+
+output=$(mongosh --quiet bluesky --eval "${script}")
+
+printf '%s\n' "${output}" | grep -v "^${marker} " || true
+elapsed=$(printf '%s\n' "${output}" | sed -n "s/^${marker} //p" | tail -n 1)
+if [ -z "${elapsed}" ]; then
+    echo "query: no elapsed time in the mongosh output" >&2
+    exit 1
+fi
+echo "${elapsed}" >&2

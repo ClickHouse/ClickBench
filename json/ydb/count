@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")"
+source ./env.sh
+"${YDB[@]}" sql -s 'SELECT COUNT(*) FROM bluesky' --format csv | tail -n1

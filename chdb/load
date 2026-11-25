@@ -1,25 +1,12 @@
 #!/bin/bash
+# Loads through the running server (./start): the server holds the
+# .clickbench directory, so no other process can open it.
 set -e
 
-# shellcheck disable=SC1091
-source myenv/bin/activate
-
-# Idempotent: blow away any prior data dir.
-rm -rf .clickbench
-
-python3 - <<'PY'
-from chdb import dbapi
-
-con = dbapi.connect(path=".clickbench")
-cur = con.cursor()
-
-cur.execute(open("create.sql").read())
-cur.execute(open("insert.sql").read())
-cur.execute("OPTIMIZE TABLE clickbench.hits FINAL")
-
-cur.close()
-con.close()
-PY
+# Idempotent: drop any prior table.
+echo "DROP TABLE IF EXISTS clickbench.hits SYNC" | ./query >/dev/null
+./query < create.sql >/dev/null
+./query < insert.sql >/dev/null
 
 rm -f hits.csv
 sync

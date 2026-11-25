@@ -1,42 +1,28 @@
 #!/bin/bash
-# Reads a SQL query from stdin, runs it via opteryx-core (Python in-process)
-# against the partitioned parquet under ./hits/.
+# Reads a SQL query from stdin and runs it on the long-lived server.
 # Stdout: query result as TSV (header + rows).
-# Stderr: query runtime in fractional seconds on the last line.
+# Stderr: query runtime in fractional seconds on the last line (server-measured
+#         drain of execute_to_morsels; see server.py).
+# Exit non-zero on error; the traceback is in server.log.
 set -e
 
-query=$(cat)
+body=$(mktemp)
+trap 'rm -f "$body"' EXIT
 
-"$HOME/opteryx_venv/bin/python" - "$query" <<'PY'
-import sys
-import timeit
+meta=$(curl -sS -o "$body" -w '%{http_code} %header{x-elapsed}' \
+    -X POST --data-binary @- http://127.0.0.1:8421/query) || {
+    echo "query failed: no response from server (see server.log)" >&2
+    exit 1
+}
 
-import opteryx
+code=${meta%% *}
+elapsed=${meta#* }
 
-query = sys.argv[1]
+if [ "$code" != "200" ] || [ -z "$elapsed" ]; then
+    echo "query failed: HTTP $code" >&2
+    cat "$body" >&2
+    exit 1
+fi
 
-# opteryx-core execution surface: a Session that yields native
-# morsels. `execute_to_morsels` runs entirely in the native engine; draining
-# the generator is the execution. We time the drain (matching the engine's own
-# ClickBench runner), holding the morsels so results can be emitted afterwards.
-# NB: opteryx.query() / Cursor.arrow() from the 0.x line no longer exist here.
-session = opteryx.session()
-start = timeit.default_timer()
-morsels = list(session.execute_to_morsels(query))
-end = timeit.default_timer()
-
-cols = None
-for morsel in morsels:
-    if cols is None:
-        cols = morsel.column_names
-        print("\t".join(
-            c.decode() if isinstance(c, (bytes, bytearray)) else str(c)
-            for c in cols
-        ))
-    for i in range(morsel.num_rows):
-        print("\t".join("" if v is None else str(v) for v in morsel[i]))
-
-session.close()
-
-print(f"{end - start:.3f}", file=sys.stderr)
-PY
+cat "$body"
+echo "$elapsed" >&2

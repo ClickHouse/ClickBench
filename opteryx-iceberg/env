@@ -1,0 +1,10 @@
+# Sourced by ./start and ./load: the Iceberg storage's variables, and the S3
+# endpoint opteryx-core reads (the key and region are AWS_* already).
+source ../lib/iceberg/env.sh
+export AWS_S3_ENDPOINT="$LAKE_S3_ENDPOINT"
+
+# Per-query spill store: a GROUP BY or ORDER BY whose state passes its memory
+# budget spills here instead of failing (q19, q33-q35 on 16 GB). Its contents
+# are scoped to one query and discarded when it ends - it is not a cache.
+export KVSTORE_LOCATION="file://$LAKE_ENTRY_DIR/spill"
+mkdir -p "$LAKE_ENTRY_DIR/spill"

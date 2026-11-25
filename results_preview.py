@@ -1,0 +1,323 @@
+#!/usr/bin/env python3
+"""Publish a preview of the benchmark page with the results of a pull request.
+
+The preview is the website's index.html with the data of generate-results.sh
+embedded into it, for the results of the base branch (origin/main) with the
+result files of the pull request laid over them. It is published on
+pastila.nl unencrypted, as a gzipped .html paste. If the pull request updates
+existing results, a second page compares them: it has only the old and the
+new results of the updated (system, machine) pairs, as separate systems,
+"<name> (old)" and "<name> (new)". If the pull request changes index.html,
+the page is built from its index.html instead, so that the change of the
+website can be seen - with its result files, if any, or with those of the
+base branch. The links are posted on
+the pull request: appended to the last comment if that is a comment of this
+automation (collect-new-results.py also puts the link into its comments),
+otherwise as a new comment.
+
+Everything is read from git objects - the PR head is fetched, never checked
+out, and no code from it runs - so this is safe to run for PRs from forks
+in pull_request_target (see .github/workflows/results-preview.yml).
+
+Usage: results_preview.py <pr-number>, in a checkout of the repository, with
+GH_TOKEN for `gh`. Set DRY_RUN=1 to print actions instead of performing them.
+"""
+
+import json
+import os
+import re
+import subprocess
+import sys
+
+import pastila
+
+REPO = os.environ.get("GITHUB_REPOSITORY") or "ClickHouse/ClickBench"
+DRY_RUN = bool(os.environ.get("DRY_RUN"))
+BOT_LOGIN = "github-actions[bot]"
+MARKER = "<!-- clickbench-preview -->"
+# Comments of collect-new-results.py, which the link is appended to.
+COLLECT_MARKER = "<!-- clickbench-collect: "
+
+# The same files as in generate-results.sh: <system>/results/<date>/<name>.json.
+RESULT_RE = re.compile(r"([^/]+)/results/([^/]+)/([^/]+\.json)$")
+SKIP_SYSTEMS = {"hardware", "versions", "gravitons", "random"}
+DATA_SCRIPT = '<script type="text/javascript" src="data.generated.js"></script>'
+
+
+def git(*args, input=None):
+    result = subprocess.run(["git", *args], capture_output=True, input=input)
+    if result.returncode != 0:
+        raise RuntimeError(f"git {' '.join(args)} failed: {result.stderr.decode().strip()}")
+    return result.stdout
+
+
+def result_files(rev):
+    """{path: blob id} of the result files in a commit."""
+    files = {}
+    for line in git("ls-tree", "-r", "-z", rev).decode().split("\0"):
+        if not line:
+            continue
+        meta, path = line.split("\t", 1)
+        mode, kind, oid = meta.split()
+        # Symlinks and submodules are not results.
+        if kind == "blob" and mode in ("100644", "100755") and RESULT_RE.match(path):
+            files[path] = oid
+    return files
+
+
+def read_blobs(oids):
+    """{blob id: content} via a single `git cat-file --batch`."""
+    oids = list(dict.fromkeys(oids))
+    out = git("cat-file", "--batch", input="".join(o + "\n" for o in oids).encode())
+    blobs = {}
+    pos = 0
+    for oid in oids:
+        end = out.index(b"\n", pos)
+        size = int(out[pos:end].split()[2])
+        blobs[oid] = out[end + 1:end + 1 + size]
+        pos = end + 1 + size + 1
+    return blobs
+
+
+def base_complexity(rev):
+    """{system directory: complexity} from data.generated.js of a commit. The complexity
+    is computed by generate-results.sh from the scripts of a system, which are
+    not read here, so the values of the base revision are used."""
+    try:
+        text = git("show", f"{rev}:data.generated.js").decode()
+        data = json.loads(text[text.index("["):text.rindex("]") + 1])
+    except (RuntimeError, ValueError):
+        return {}
+    return {entry["source"].split("/")[0]: entry.get("complexity") for entry in data if "source" in entry}
+
+
+def categories(rev):
+    """{system directory: category} from the template.json files of a commit,
+    as generate-results.sh takes them."""
+    oids = {}
+    for line in git("ls-tree", "-r", "-z", rev).decode().split("\0"):
+        if not line:
+            continue
+        meta, path = line.split("\t", 1)
+        mode, kind, oid = meta.split()
+        if kind == "blob" and re.fullmatch(r"[^/]+/template\.json", path):
+            oids[path.split("/")[0]] = oid
+    blobs = read_blobs(oids.values())
+    result = {}
+    for system, oid in oids.items():
+        try:
+            category = json.loads(blobs[oid]).get("category")
+        except (ValueError, AttributeError):
+            continue
+        if isinstance(category, str):
+            result[system] = category
+    return result
+
+
+def generate_data(files, complexity={}, category={}):
+    """The data array of the website, as built by generate-results.sh from
+    {path: content}: the latest dated copy per (system, file name), without
+    failed runs ({"error": ...}) and entries tagged "historical"."""
+    latest = {}
+    for path in sorted(files):
+        m = RESULT_RE.match(path)
+        if m and m.group(1) not in SKIP_SYSTEMS:
+            latest[(m.group(1), m.group(3))] = path
+    data = []
+    for path in sorted(latest.values()):
+        try:
+            entry = json.loads(files[path])
+        except ValueError:
+            print(f"Error in {path} - skipping", file=sys.stderr)
+            continue
+        if not isinstance(entry, dict) or entry.get("error") is not None:
+            continue
+        if "historical" in (entry.get("tags") or []):
+            continue
+        if not entry.get("date"):
+            date_dir = RESULT_RE.match(path).group(2)
+            entry["date"] = f"{date_dir[:4]}-{date_dir[4:6]}-{date_dir[6:8]}"
+        entry["source"] = path
+        entry["complexity"] = complexity.get(path.split("/")[0])
+        entry["category"] = category.get(path.split("/")[0])
+        data.append(entry)
+    return data
+
+
+def build_data(base, changes, head=None):
+    """The data arrays of the website for the result files of the base
+    revision and for them updated with changes: {path: content, or None for
+    a removed file}. The categories are from the head revision, if any, so
+    that new systems have them, and from the base otherwise."""
+    oids = result_files(base)
+    blobs = read_blobs(oids.values())
+    old_files = {path: blobs[oid] for path, oid in oids.items()}
+    new_files = {path: content for path, content in old_files.items() if path not in changes}
+    new_files.update({path: content for path, content in changes.items() if content is not None})
+    complexity = base_complexity(base)
+    category = categories(base)
+    if head:
+        category.update(categories(head))
+    return generate_data(old_files, complexity, category), generate_data(new_files, complexity, category)
+
+
+def comparison_data(old_data, new_data):
+    """The entries that changed, old and new, as separate systems: for every
+    (system directory, file name) that has a result both before and after."""
+    def key(entry):
+        m = RESULT_RE.match(entry["source"])
+        return m.group(1), m.group(3)
+    old = {key(entry): entry for entry in old_data}
+    data = []
+    for entry in new_data:
+        previous = old.get(key(entry))
+        if previous is None or previous == entry:
+            continue
+        for e, label in ((previous, "old"), (entry, "new")):
+            e = dict(e, system=f"{e['system']} ({label})")
+            e.pop("hide", None)
+            data.append(e)
+    return data
+
+
+# For the comparison: show all the entries, regardless of the default filters
+# (some machines, tuned systems, GPUs, enthusiast and joke categories are not
+# selected by default). Every group of checkboxes is selected - not a fixed
+# list of them, so that a new filter of index.html can't hide the entries.
+SELECT_ALL_SCRIPT = """<script type="text/javascript">
+if (!window.location.hash) {
+    for (const group of Object.values(selectors))
+        if (group && typeof group === 'object' && !Array.isArray(group))
+            Object.keys(group).forEach(x => { group[x] = true });
+    updateSelectors();
+    render();
+}
+</script>
+"""
+
+
+def build_page(page_rev, data, select_all=False):
+    """index.html of a revision with the data embedded. It is published, never
+    run here, so it can be taken from the head of a PR from a fork."""
+    page = git("show", f"{page_rev}:index.html").decode()
+    if DATA_SCRIPT not in page:
+        raise RuntimeError("index.html does not load data.generated.js")
+    # Results come from pull requests: escape "<" so that no string in them
+    # can close the script element.
+    data = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
+    script = f'<script type="text/javascript">\nconst data = {data};\n</script>'
+    page = page.replace(DATA_SCRIPT, script, 1)
+    if select_all:
+        if "</body>" not in page:
+            raise RuntimeError("index.html has no </body>")
+        page = page.replace("</body>", SELECT_ALL_SCRIPT + "</body>", 1)
+    return page
+
+
+def publish(base, changes, head=None, page_rev=None):
+    """Publish the preview page and, if the changes update existing results,
+    the comparison page of the old and new results. Returns their URLs: the
+    second one is None without the comparison. The page is index.html of
+    page_rev, by default of the base revision."""
+    page_rev = page_rev or base
+    old_data, new_data = build_data(base, changes, head)
+    url = pastila.post(build_page(page_rev, new_data), extension=".html", compress=True)
+    comparison = comparison_data(old_data, new_data)
+    comparison_url = None
+    if comparison:
+        comparison_url = pastila.post(build_page(page_rev, comparison, select_all=True), extension=".html", compress=True)
+    return url, comparison_url
+
+
+def preview_line(urls, what="these results"):
+    url, comparison_url = urls
+    line = f"[Preview of the benchmark page with {what}]({url})"
+    if comparison_url:
+        line += f" · [Comparison with the previous results]({comparison_url})"
+    return f"{line} {MARKER}"
+
+
+def pr_paths(pr_number):
+    """The paths of the files that the PR adds, changes, removes or renames."""
+    pages = json.loads(subprocess.run(
+        ["gh", "api", f"repos/{REPO}/pulls/{pr_number}/files", "--paginate", "--slurp"],
+        capture_output=True, text=True, check=True).stdout)
+    paths = set()
+    for f in (item for page in pages for item in page):
+        paths.add(f["filename"])
+        if f.get("previous_filename"):
+            paths.add(f["previous_filename"])
+    return paths
+
+
+def pr_changes(pr_number, head, paths=None):
+    """{path: content or None} of the result files that the PR adds, changes
+    or removes, with the contents at the head commit (which must be fetched)."""
+    if paths is None:
+        paths = pr_paths(pr_number)
+    head_files = result_files(head)
+    paths = {p for p in paths if RESULT_RE.match(p)}
+    blobs = read_blobs(head_files[p] for p in paths if p in head_files)
+    return {p: blobs[head_files[p]] if p in head_files else None for p in paths}
+
+
+def with_preview(body, line):
+    """A comment body with the preview line added, replacing an older one."""
+    lines = [l for l in body.split("\n") if MARKER not in l]
+    while lines and not lines[-1].strip():
+        lines.pop()
+    return "\n".join(lines) + "\n\n" + line
+
+
+def post_link(pr_number, urls, what="these results"):
+    comments = json.loads(subprocess.run(
+        ["gh", "api", f"repos/{REPO}/issues/{pr_number}/comments", "--paginate", "--slurp"],
+        capture_output=True, text=True, check=True).stdout)
+    comments = [c for page in comments for c in page]
+    last = comments[-1] if comments else None
+    if (last and last["user"]["login"] == BOT_LOGIN
+            and (MARKER in last["body"] or COLLECT_MARKER in last["body"])):
+        if urls[0] in last["body"]:
+            print(f"The last comment already links to {urls[0]}")
+            return
+        body = with_preview(last["body"], preview_line(urls, what))
+        cmd = ["gh", "api", "-X", "PATCH", f"repos/{REPO}/issues/comments/{last['id']}",
+               "-f", "body=" + body]
+    else:
+        body = preview_line(urls, what)
+        cmd = ["gh", "api", f"repos/{REPO}/issues/{pr_number}/comments", "-f", "body=" + body]
+    if DRY_RUN:
+        print(f"DRY_RUN: would run {cmd[:4]} with:\n{body}\n---")
+        return
+    subprocess.run(cmd, capture_output=True, check=True)
+
+
+def main():
+    if len(sys.argv) != 2 or not sys.argv[1].isdigit():
+        print(__doc__)
+        return 1
+    pr_number = sys.argv[1]
+    git("fetch", "-q", "--depth=1", "origin", "main")
+    base = git("rev-parse", "FETCH_HEAD").decode().strip()
+    git("fetch", "-q", "--depth=1", "origin", f"refs/pull/{pr_number}/head")
+    head = git("rev-parse", "FETCH_HEAD").decode().strip()
+
+    paths = pr_paths(pr_number)
+    changes = pr_changes(pr_number, head, paths)
+    page_changed = "index.html" in paths
+    if not changes and not page_changed:
+        print("The pull request changes neither results nor index.html.")
+        return 0
+    urls = publish(base, changes, head, head if page_changed else base)
+    print(f"Preview: {urls[0]}")
+    if urls[1]:
+        print(f"Comparison: {urls[1]}")
+    what = "these results"
+    if page_changed:
+        what = "this change and these results" if changes else "this change"
+    post_link(pr_number, urls, what)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

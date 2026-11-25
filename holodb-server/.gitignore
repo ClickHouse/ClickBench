@@ -1,0 +1,8 @@
+holodb-data/
+run/
+bin/
+obj/
+tool/bin/
+tool/obj/
+run-load-files.txt
+run-load-idx/

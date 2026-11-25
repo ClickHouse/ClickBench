@@ -2,5 +2,14 @@
 # Reads a Jd query line from stdin, runs it via ijconsole, prints the
 # result to stdout, and writes the wall-clock runtime in fractional
 # seconds on the last line of stderr.
+#
+# If the query fails, J abandons query.ijs before reaching `exit ''` and
+# ijconsole falls back to its prompt, which then reads EOF from the
+# (already consumed) stdin and exits with code zero. The timing is written
+# only after a successful evaluation, so its absence is the error signal.
 set -e
-ijconsole query.ijs
+stderr=$(mktemp)
+trap 'rm -f "$stderr"' EXIT
+ijconsole query.ijs 2>"$stderr" || { cat "$stderr" >&2; exit 1; }
+cat "$stderr" >&2
+tail -n1 "$stderr" | grep -qE '^[0-9]+(\.[0-9]+)?$' || { echo "Jd query failed" >&2; exit 1; }

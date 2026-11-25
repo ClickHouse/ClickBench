@@ -18,7 +18,7 @@ VERSION="${1:?usage: run-benchmark.sh <version>}"
 machine="${machine:=c7a.4xlarge}"
 repo="${repo:=ClickHouse/ClickBench}"
 branch="${branch:=main}"
-datasets="${datasets:=hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi}"   # each loads into its own database
+datasets="${datasets:=hits ssb mgbench tpch tpcds coffeeshop ontime uk job taxi jsonbench}"   # each loads into its own database
 tries="${tries:=6}"   # 1 cold + 5 hot runs
 timeout="${timeout:-18000}"                 # load + (optional source build) + queries
 volume="${volume:-1000}"                    # GB; headroom for loading all datasets in parallel (peak usage is higher than the on-disk total)
@@ -79,6 +79,12 @@ if [[ "${VERSION}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] \
     echo "pre-Docker/prehistoric ${VERSION}: datasets reduced to [${datasets}]" >&2
 fi
 
+# The JSON type, which jsonbench needs, exists from 24.8 (queries/jsonbench.minver); don't
+# download its 13 GB to the machines of the older versions, which never load it.
+if [ "${VERSION}" != "master" ] && ! awk -v v="${VERSION}" 'BEGIN{n=split(v,a,"."); exit !(n>=3 && (a[1]>24 || (a[1]==24 && a[2]>=8)) && a[1]<1000)}'; then
+    datasets="$(printf '%s' "${datasets}" | tr ' ' '\n' | grep -vxF jsonbench | tr '\n' ' ' | xargs)"
+fi
+
 # For source-built versions, get the tag and required GCC from versions.txt (the tagged /
 # bare-number builds). The prehistoric monthly reconstructions live in monthly.tsv instead
 # and are rebuilt from their commit + revision by run-version.sh's ensure_built_image on the
@@ -102,12 +108,17 @@ fi
 arch=$(aws_retry aws ec2 describe-instance-types --instance-types "$machine" --query 'InstanceTypes[0].ProcessorInfo.SupportedArchitectures' --output text)
 ami=$(aws_retry aws ec2 describe-images --owners amazon --filters "Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04*" "Name=architecture,Values=${arch}" "Name=state,Values=available" --query 'sort_by(Images, &CreationDate) | [-1].[ImageId]' --output text)
 
+# Identifies the live log of this run in sink.logs, see ../lib/live-log.py.
+run_id=$(cat /proc/sys/kernel/random/uuid)
+
 awk -v repo="$repo" -v branch="$branch" -v version="$VERSION" -v image="$image" \
+    -v machine="$machine" -v run_id="$run_id" \
     -v tag="$tag" -v gcc="$gcc" -v datasets="$datasets" -v tries="$tries" -v t="$timeout" '
 {
     gsub(/@repo@/, repo); gsub(/@branch@/, branch); gsub(/@version@/, version)
     gsub(/@image@/, image); gsub(/@tag@/, tag); gsub(/@gcc@/, gcc)
     gsub(/@datasets@/, datasets); gsub(/@tries@/, tries); gsub(/@timeout@/, t)
+    gsub(/@machine@/, machine); gsub(/@run_id@/, run_id)
     print
 }' cloud-init.sh.in > "cloud-init.${VERSION}.sh"
 
@@ -117,3 +128,7 @@ aws_retry aws ec2 run-instances --image-id "$ami" --instance-type "$machine" \
     --instance-initiated-shutdown-behavior terminate \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=clickbench-versions-${VERSION}}]" \
     --user-data "file://cloud-init.${VERSION}.sh"
+
+live_log="Live log of ClickHouse ${VERSION} on ${machine}: https://benchmark.clickhouse.com/live.html#${run_id}"
+echo "${live_log}"
+if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then echo "${live_log}" >> "${GITHUB_STEP_SUMMARY}"; fi

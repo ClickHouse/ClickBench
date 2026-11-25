@@ -1,0 +1,33 @@
+#!/bin/bash
+# Reads one ES|QL query from stdin and runs it.
+# Stdout: the result (columns and values).
+# Stderr: the runtime in fractional seconds on the last line: the `took` of the
+# response, in milliseconds, as in the original JSONBench.
+#
+# ES|QL does not cache results (the shard request cache is only for _search),
+# so the hot runs execute the query again.
+set -e -o pipefail
+
+. ./es-common.sh
+
+query=$(cat)
+body=$(jq -nc --arg q "${query}" '{query: $q}')
+
+if ! response=$(es_curl -X POST "${ES_URL}/_query" -d "${body}"); then
+    printf '%s\n' "${response}" >&2
+    exit 1
+fi
+
+if printf '%s' "${response}" | jq -e '.is_partial == true' >/dev/null; then
+    echo "query: partial result: ${response}" >&2
+    exit 1
+fi
+
+printf '%s' "${response}" | jq -c '{columns, values}'
+
+took=$(printf '%s' "${response}" | jq -r '.took // empty')
+if [ -z "${took}" ]; then
+    echo "query: no took in the response" >&2
+    exit 1
+fi
+awk -v ms="${took}" 'BEGIN { printf "%.3f\n", ms / 1000 }' >&2

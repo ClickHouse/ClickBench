@@ -1,0 +1,6 @@
+#!/bin/bash
+# The number of documents Opteryx reads: the few records that are not valid
+# JSON are skipped (ignore_errors), as in the queries.
+set -e
+
+echo 'SELECT COUNT(*) FROM {TABLE}' | ./query 2>/dev/null | tail -n1

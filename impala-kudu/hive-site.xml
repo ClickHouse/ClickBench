@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Bind-mounted into /opt/impala/conf/hive-site.xml on the catalogd and
+  impalad-1 containers. The image ships /opt/impala/conf/ empty, so
+  without this file the embedded HMS client in each daemon falls back
+  to a local Derby metastore (and fails with "No suitable driver"
+  because the Derby JDBC jar isn't on the classpath either). Pointing
+  hive.metastore.uris at the separate `hms` compose service routes all
+  metastore calls through the proper thrift HMS server.
+-->
+<configuration>
+  <property>
+    <name>hive.metastore.uris</name>
+    <value>thrift://hms:9083</value>
+  </property>
+</configuration>

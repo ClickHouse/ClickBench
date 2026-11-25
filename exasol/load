@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eu
+
+./venv/bin/python3 exa.py sql < create.sql
+./venv/bin/python3 exa.py import hits.tsv
+
+rows=$(./venv/bin/python3 exa.py scalar "SELECT COUNT(*) FROM hits")
+echo "Loaded $rows rows" >&2
+
+rm -f hits.tsv
+sync

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+sudo mysql bluesky -N -e "SELECT COUNT(*) FROM bluesky"

@@ -1,0 +1,16 @@
+#!/bin/bash
+# Ready when Presto runs a query, which needs an active worker.
+
+if echo "SELECT 1" | ./query >/dev/null; then
+    exit 0
+fi
+# Not ready: show why (the driver prints the last failure of ./check).
+if [ -f /var/tmp/clp-start.log ]; then
+    echo "--- the end of the output of ./start:" >&2
+    tail -n 100 /var/tmp/clp-start.log >&2
+fi
+if [ -f /clp/presto-clp/.env ]; then
+    echo "--- the Presto containers:" >&2
+    (cd /clp/presto-clp && docker compose ps -a && docker compose logs --no-color --tail 15) >&2 2>&1
+fi
+exit 1

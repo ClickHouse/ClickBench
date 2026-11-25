@@ -37,3 +37,81 @@ jobs:
             c8g.4xlarge
             c8g.metal-48xl
             c7a.metal-48xl
+
+  # clickhouse-memory keeps the whole table (30 GB compressed) in the server's
+  # heap, so the smaller machines of the fleet can't load it: run it only on
+  # the metal instances.
+  launch-memory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/launch-benchmark
+        with:
+          systems: >-
+            clickhouse-memory
+          machines: >-
+            c6a.metal
+            c8g.metal-48xl
+            c7a.metal-48xl
+
+  # clickhouse-iceberg also runs SeaweedFS as the Iceberg REST catalog and
+  # writes the whole dataset with one INSERT; it has results on every machine
+  # of the fleet except t3a.small (2 GB of memory), which it was never run on.
+  launch-iceberg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/launch-benchmark
+        with:
+          systems: >-
+            clickhouse-iceberg
+          machines: >-
+            c6a.4xlarge
+            c6a.2xlarge
+            c6a.xlarge
+            c6a.large
+            c6a.metal
+            c8g.4xlarge
+            c8g.metal-48xl
+            c7a.metal-48xl
+
+  # The Vortex writer is single-threaded and buffers the whole file in memory:
+  # about 22 GB for the single 100M-row file, so clickhouse-vortex needs 32 GB
+  # of RAM or more; clickhouse-vortex-partitioned needs about 2.5 GB per
+  # partition, so it runs everywhere except t3a.small (2 GB of memory).
+  launch-vortex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/launch-benchmark
+        with:
+          systems: >-
+            clickhouse-vortex
+          machines: >-
+            c6a.4xlarge
+            c6a.metal
+            c8g.4xlarge
+            c8g.metal-48xl
+            c7a.metal-48xl
+
+  launch-vortex-partitioned:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/launch-benchmark
+        with:
+          systems: >-
+            clickhouse-vortex-partitioned
+          machines: >-
+            c6a.4xlarge
+            c6a.2xlarge
+            c6a.xlarge
+            c6a.large
+            c6a.metal
+            c8g.4xlarge
+            c8g.metal-48xl
+            c7a.metal-48xl

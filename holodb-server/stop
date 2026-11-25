@@ -1,0 +1,24 @@
+#!/bin/bash
+# Graceful stop: docker stop sends SIGTERM, the server shuts down and closes the database (clean-close stamp), and the
+# container is removed. Returns once the container is gone.
+cd "$(dirname "$0")"
+. ./bench.env
+
+if sudo docker inspect "$HOLODB_CONTAINER" >/dev/null 2>&1; then
+    sudo docker stop -t 120 "$HOLODB_CONTAINER" >/dev/null 2>&1 || true
+    sudo docker rm -f "$HOLODB_CONTAINER" >/dev/null 2>&1 || true
+fi
+for _ in $(seq 1 600); do
+    sudo docker inspect "$HOLODB_CONTAINER" >/dev/null 2>&1 || break
+    sleep 0.1
+done
+# The container is gone. Put the index files the load built back as they were right after the load, and delete the index files
+# that queries built (match bits, order ranks and so on), so the next first run starts with only what the load built.
+if [ -s run-load-files.txt ] && [ -d holodb-data ]; then
+    ( cd holodb-data && find . -type f \( -name '*.idx' -o -name 'summary.*' \) | while IFS= read -r f; do
+        saved=$(awk -v f="$f" '$3 == f { print $1 " " $2 }' ../run-load-files.txt)
+        if [ -z "$saved" ]; then rm -f -- "$f"
+        elif [ "$(stat -c '%s %Y' "$f")" != "$saved" ]; then cp -p "../run-load-idx/$f" "$f"; fi
+    done ) 2>/dev/null || true
+fi
+exit 0

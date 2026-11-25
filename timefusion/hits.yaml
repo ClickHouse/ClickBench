@@ -1,0 +1,121 @@
+# ClickBench `hits` table. TimeFusion only serves tables declared in compiled-in
+# schema files, so ./install copies this file into the source tree before building.
+# There is no 16-bit integer type, so SMALLINT columns are Int32.
+table_name: hits
+# No `time_column` and no partitions: TimeFusion rewrites predicates on the time
+# column into filters on a `date` partition column, which this table does not have.
+partitions: []
+# Same sort key as the primary key of the ClickHouse entry.
+sorting_columns:
+  - { name: CounterID, descending: false, nulls_first: false }
+  - { name: EventDate, descending: false, nulls_first: false }
+  - { name: UserID, descending: false, nulls_first: false }
+  - { name: EventTime, descending: false, nulls_first: false }
+  - { name: WatchID, descending: false, nulls_first: false }
+z_order_columns: []
+fields:
+  - { name: WatchID, data_type: 'Int64', nullable: false }
+  - { name: JavaEnable, data_type: 'Int32', nullable: false }
+  - { name: Title, data_type: 'Utf8', nullable: false }
+  - { name: GoodEvent, data_type: 'Int32', nullable: false }
+  - { name: EventTime, data_type: 'Timestamp(Microsecond, Some("UTC"))', nullable: false }
+  - { name: EventDate, data_type: 'Date32', nullable: false }
+  - { name: CounterID, data_type: 'Int32', nullable: false }
+  - { name: ClientIP, data_type: 'Int32', nullable: false }
+  - { name: RegionID, data_type: 'Int32', nullable: false }
+  - { name: UserID, data_type: 'Int64', nullable: false }
+  - { name: CounterClass, data_type: 'Int32', nullable: false }
+  - { name: OS, data_type: 'Int32', nullable: false }
+  - { name: UserAgent, data_type: 'Int32', nullable: false }
+  - { name: URL, data_type: 'Utf8', nullable: false }
+  - { name: Referer, data_type: 'Utf8', nullable: false }
+  - { name: IsRefresh, data_type: 'Int32', nullable: false }
+  - { name: RefererCategoryID, data_type: 'Int32', nullable: false }
+  - { name: RefererRegionID, data_type: 'Int32', nullable: false }
+  - { name: URLCategoryID, data_type: 'Int32', nullable: false }
+  - { name: URLRegionID, data_type: 'Int32', nullable: false }
+  - { name: ResolutionWidth, data_type: 'Int32', nullable: false }
+  - { name: ResolutionHeight, data_type: 'Int32', nullable: false }
+  - { name: ResolutionDepth, data_type: 'Int32', nullable: false }
+  - { name: FlashMajor, data_type: 'Int32', nullable: false }
+  - { name: FlashMinor, data_type: 'Int32', nullable: false }
+  - { name: FlashMinor2, data_type: 'Utf8', nullable: false }
+  - { name: NetMajor, data_type: 'Int32', nullable: false }
+  - { name: NetMinor, data_type: 'Int32', nullable: false }
+  - { name: UserAgentMajor, data_type: 'Int32', nullable: false }
+  - { name: UserAgentMinor, data_type: 'Utf8', nullable: false }
+  - { name: CookieEnable, data_type: 'Int32', nullable: false }
+  - { name: JavascriptEnable, data_type: 'Int32', nullable: false }
+  - { name: IsMobile, data_type: 'Int32', nullable: false }
+  - { name: MobilePhone, data_type: 'Int32', nullable: false }
+  - { name: MobilePhoneModel, data_type: 'Utf8', nullable: false }
+  - { name: Params, data_type: 'Utf8', nullable: false }
+  - { name: IPNetworkID, data_type: 'Int32', nullable: false }
+  - { name: TraficSourceID, data_type: 'Int32', nullable: false }
+  - { name: SearchEngineID, data_type: 'Int32', nullable: false }
+  - { name: SearchPhrase, data_type: 'Utf8', nullable: false }
+  - { name: AdvEngineID, data_type: 'Int32', nullable: false }
+  - { name: IsArtifical, data_type: 'Int32', nullable: false }
+  - { name: WindowClientWidth, data_type: 'Int32', nullable: false }
+  - { name: WindowClientHeight, data_type: 'Int32', nullable: false }
+  - { name: ClientTimeZone, data_type: 'Int32', nullable: false }
+  - { name: ClientEventTime, data_type: 'Timestamp(Microsecond, Some("UTC"))', nullable: false }
+  - { name: SilverlightVersion1, data_type: 'Int32', nullable: false }
+  - { name: SilverlightVersion2, data_type: 'Int32', nullable: false }
+  - { name: SilverlightVersion3, data_type: 'Int32', nullable: false }
+  - { name: SilverlightVersion4, data_type: 'Int32', nullable: false }
+  - { name: PageCharset, data_type: 'Utf8', nullable: false }
+  - { name: CodeVersion, data_type: 'Int32', nullable: false }
+  - { name: IsLink, data_type: 'Int32', nullable: false }
+  - { name: IsDownload, data_type: 'Int32', nullable: false }
+  - { name: IsNotBounce, data_type: 'Int32', nullable: false }
+  - { name: FUniqID, data_type: 'Int64', nullable: false }
+  - { name: OriginalURL, data_type: 'Utf8', nullable: false }
+  - { name: HID, data_type: 'Int32', nullable: false }
+  - { name: IsOldCounter, data_type: 'Int32', nullable: false }
+  - { name: IsEvent, data_type: 'Int32', nullable: false }
+  - { name: IsParameter, data_type: 'Int32', nullable: false }
+  - { name: DontCountHits, data_type: 'Int32', nullable: false }
+  - { name: WithHash, data_type: 'Int32', nullable: false }
+  - { name: HitColor, data_type: 'Utf8', nullable: false }
+  - { name: LocalEventTime, data_type: 'Timestamp(Microsecond, Some("UTC"))', nullable: false }
+  - { name: Age, data_type: 'Int32', nullable: false }
+  - { name: Sex, data_type: 'Int32', nullable: false }
+  - { name: Income, data_type: 'Int32', nullable: false }
+  - { name: Interests, data_type: 'Int32', nullable: false }
+  - { name: Robotness, data_type: 'Int32', nullable: false }
+  - { name: RemoteIP, data_type: 'Int32', nullable: false }
+  - { name: WindowName, data_type: 'Int32', nullable: false }
+  - { name: OpenerName, data_type: 'Int32', nullable: false }
+  - { name: HistoryLength, data_type: 'Int32', nullable: false }
+  - { name: BrowserLanguage, data_type: 'Utf8', nullable: false }
+  - { name: BrowserCountry, data_type: 'Utf8', nullable: false }
+  - { name: SocialNetwork, data_type: 'Utf8', nullable: false }
+  - { name: SocialAction, data_type: 'Utf8', nullable: false }
+  - { name: HTTPError, data_type: 'Int32', nullable: false }
+  - { name: SendTiming, data_type: 'Int32', nullable: false }
+  - { name: DNSTiming, data_type: 'Int32', nullable: false }
+  - { name: ConnectTiming, data_type: 'Int32', nullable: false }
+  - { name: ResponseStartTiming, data_type: 'Int32', nullable: false }
+  - { name: ResponseEndTiming, data_type: 'Int32', nullable: false }
+  - { name: FetchTiming, data_type: 'Int32', nullable: false }
+  - { name: SocialSourceNetworkID, data_type: 'Int32', nullable: false }
+  - { name: SocialSourcePage, data_type: 'Utf8', nullable: false }
+  - { name: ParamPrice, data_type: 'Int64', nullable: false }
+  - { name: ParamOrderID, data_type: 'Utf8', nullable: false }
+  - { name: ParamCurrency, data_type: 'Utf8', nullable: false }
+  - { name: ParamCurrencyID, data_type: 'Int32', nullable: false }
+  - { name: OpenstatServiceName, data_type: 'Utf8', nullable: false }
+  - { name: OpenstatCampaignID, data_type: 'Utf8', nullable: false }
+  - { name: OpenstatAdID, data_type: 'Utf8', nullable: false }
+  - { name: OpenstatSourceID, data_type: 'Utf8', nullable: false }
+  - { name: UTMSource, data_type: 'Utf8', nullable: false }
+  - { name: UTMMedium, data_type: 'Utf8', nullable: false }
+  - { name: UTMCampaign, data_type: 'Utf8', nullable: false }
+  - { name: UTMContent, data_type: 'Utf8', nullable: false }
+  - { name: UTMTerm, data_type: 'Utf8', nullable: false }
+  - { name: FromTag, data_type: 'Utf8', nullable: false }
+  - { name: HasGCLID, data_type: 'Int32', nullable: false }
+  - { name: RefererHash, data_type: 'Int64', nullable: false }
+  - { name: URLHash, data_type: 'Int64', nullable: false }
+  - { name: CLID, data_type: 'Int32', nullable: false }

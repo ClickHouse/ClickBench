@@ -9,8 +9,6 @@
       "tags": ["C","column-oriented","embedded","array language"],
       "load_time": 993,
       "data_size": 140569892180,
-      "concurrent_qps": 93.623,
-      "concurrent_error_ratio": 0,
       "result": [
         [0.503, 0.395, 0.398],
         [3.493, 0.195, 0.194],

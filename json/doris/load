@@ -1,0 +1,58 @@
+#!/bin/bash
+set -e -o pipefail
+source ./env.sh
+
+doris_mysql -e "CREATE DATABASE IF NOT EXISTS bluesky"
+doris_mysql bluesky -e "DROP TABLE IF EXISTS bluesky FORCE"
+doris_mysql bluesky < create.sql
+
+# The session settings of the original JSONBench run_queries.sh. Also turn off
+# the SQL result cache, which is on by default since Doris 4.0 (it was off in
+# the version of the original results): repeated runs must execute the query.
+doris_mysql -e "SET GLOBAL parallel_pipeline_task_num = 32"
+doris_mysql -e "SET GLOBAL enable_parallel_scan = false"
+doris_mysql -e "SET GLOBAL enable_sql_cache = false"
+
+TEMP_DIR=$(mktemp -d /var/tmp/doris_json.XXXXXX)
+trap 'rm -rf "$TEMP_DIR"' EXIT
+RUN_ID=$(date +%s)
+
+# As in the original JSONBench: one stream load per file, uncompressed first,
+# up to 10% of the documents of a file may be filtered out, and a failed file
+# is retried up to 10 times and then skipped (the number of loaded documents
+# shows it). The label makes a retry of a load that did commit a no-op.
+loaded=0
+failed=0
+for file in $(ls "$BENCH_DATA_DIR"/file_*.json.gz | head -n "$BENCH_FILES"); do
+    name=$(basename "$file" .json.gz)
+    uncompressed="$TEMP_DIR/${name}.json"
+    gunzip -c "$file" > "$uncompressed"
+    ok=0
+    for attempt in $(seq 1 10); do
+        http_code=$(curl -s -o "$TEMP_DIR/response" -w '%{http_code}' --location-trusted -u root: \
+            -H "label: bluesky_${name}_${RUN_ID}" \
+            -H "max_filter_ratio: 0.1" \
+            -H "Expect:100-continue" \
+            -H "columns: data" \
+            -T "$uncompressed" \
+            -XPUT "http://127.0.0.1:8030/api/bluesky/bluesky/_stream_load") || http_code=000
+        status=$(jq -r '.Status // empty' "$TEMP_DIR/response" 2>/dev/null || true)
+        existing=$(jq -r '.ExistingJobStatus // empty' "$TEMP_DIR/response" 2>/dev/null || true)
+        if [[ "$http_code" == 2* ]] && { [ "$status" = "Success" ] || { [ "$status" = "Label Already Exists" ] && [ "$existing" = "FINISHED" ]; }; }; then
+            ok=1
+            break
+        fi
+        echo "load: attempt ${attempt} for ${file} failed, HTTP ${http_code}: $(head -c 2000 "$TEMP_DIR/response" 2>/dev/null)" >&2
+        sleep 2
+    done
+    rm -f "$uncompressed"
+    if [ "$ok" = 1 ]; then
+        loaded=$((loaded + 1))
+    else
+        failed=$((failed + 1))
+        echo "load: skipping ${file}" >&2
+    fi
+done
+
+echo "load: ${loaded} files loaded, ${failed} files failed" >&2
+[ "$loaded" -gt 0 ]

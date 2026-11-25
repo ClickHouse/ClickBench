@@ -1,0 +1,4 @@
+#!/bin/bash
+
+sudo systemctl stop filebeat.service 2>/dev/null || true
+sudo systemctl stop elasticsearch.service || true

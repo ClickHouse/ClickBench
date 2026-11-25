@@ -1,0 +1,26 @@
+#!/bin/bash
+set -e
+
+# Idempotent: start from an empty data directory.
+./stop
+rm -rf victoria-logs-data
+./start
+for i in $(seq 1 300); do
+    ./check >/dev/null 2>&1 && break
+    [ "$i" -eq 300 ] && { echo "load: VictoriaLogs did not start" >&2; exit 1; }
+    sleep 1
+done
+
+# As in the original JSONBench: up to 8 files are loaded in parallel, each
+# with one jsonline request; the stream fields and the time field are the
+# same. Lines that are not valid JSON (a few documents longer than 64 KiB
+# are split into two lines in the dataset) are skipped by VictoriaLogs.
+# Unlike the original, a failed request fails the load.
+URL='http://localhost:9428/insert/jsonline?_time_field=time_us&_stream_fields=kind,commit.collection,commit.operation'
+
+ls "${BENCH_DATA_DIR}"/file_*.json.gz | head -n "${BENCH_FILES}" \
+    | xargs -P 8 -I '{}' bash -c 'set -o pipefail; echo "load: $1"; gzip -dc "$1" | curl -sS --fail -T - -X POST "$2"' _ '{}' "${URL}"
+
+# Make the ingested data searchable and persisted now, rather than after the
+# periodic flush (the original waited for a second instead).
+curl -sS --fail -X POST 'http://localhost:9428/internal/force_flush'

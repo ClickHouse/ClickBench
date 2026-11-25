@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e
+
+# TimeFusion only serves tables declared in schema files compiled into the
+# binary, so we build it from source with `hits.yaml` added to `schemas/`.
+TIMEFUSION_COMMIT=d32177040f19fa861290ed316ef7f25813c8bce4
+SEAWEEDFS_VERSION=4.52
+
+sudo apt-get update -y
+sudo apt-get install -y git curl pkg-config make gcc g++ libssl-dev libunwind-dev postgresql-client
+
+if ! command -v cargo >/dev/null 2>&1 && [ ! -x "$HOME/.cargo/bin/cargo" ]; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+fi
+# shellcheck disable=SC1091
+source "$HOME/.cargo/env"
+
+if [ ! -d timefusion ]; then
+    git clone https://github.com/monoscope-tech/timefusion.git
+fi
+cp hits.yaml timefusion/schemas/hits.yaml
+(
+    cd timefusion
+    git checkout "$TIMEFUSION_COMMIT"
+    # rust-toolchain.toml pins the compiler version; rustup installs it on demand.
+    cargo build --release
+)
+
+if [ ! -x weed ]; then
+    case "$(uname -m)" in
+        x86_64) arch=amd64 ;;
+        aarch64) arch=arm64 ;;
+    esac
+    curl -sSL "https://github.com/seaweedfs/seaweedfs/releases/download/${SEAWEEDFS_VERSION}/linux_${arch}.tar.gz" | tar xz weed
+fi

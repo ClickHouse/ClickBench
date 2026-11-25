@@ -1,31 +1,34 @@
 # intent-gizmosql
 
-A released fork of GizmoSQL v1.38.0 (a server embedding DuckDB) whose embedded
-DuckDB v1.5.5 carries a small series of engine changes:
+A fork of GizmoSQL v1.38.0 (a Flight SQL server embedding DuckDB) and of its embedded DuckDB
+v1.5.5, with server and engine changes:
 
-- GizmoSQL: https://github.com/bddppqs/intent-gizmosql, tag `v1.38.0-clickbench.1` (the release this entry installs: portable
-  Linux amd64 and arm64 builds).
-- DuckDB: https://github.com/bddppqs/intent-duckdb, tag `v1.5.5-clickbench.1` (changes documented in that
-  repository's `CLICKBENCH-FORK.md`: batched RE2 character-class runs, CountZeros builtins with
-  selection-fed HyperLogLog, an evictable decoded-dictionary cache with admission back-off, and
-  a cross-request memo of literal `regexp_replace` domains over dictionary vectors).
+- GizmoSQL: https://github.com/bddppqs/intent-gizmosql, tag `v1.38.0-intent.8` (the release this entry installs, Linux
+  amd64 and arm64); changes in its `CHANGELOG.md` and `CLICKBENCH-FORK.md`.
+- DuckDB: https://github.com/bddppqs/intent-duckdb, tag `v1.5.5-intent.8`; changes in its `CLICKBENCH-FORK.md`.
 
-The scripts in this directory are the upstream `gizmosql` entry's, unchanged, except:
+The scripts are the upstream `gizmosql` entry's except: `install` (downloads the pinned release and checks it by
+SHA-256), `query` (detects a failed run from the client's exit status and its own error lines, not from result rows),
+`check` (`SELECT 1`), `util.sh` (the configuration below; start and stop waits bounded at 60 s by the clock) and `load`
+(waits polled every 50 ms; the load settings below). The schema and the load SQL are upstream's.
 
-- `install`, which downloads the pinned release zip for the machine's architecture (amd64 or
-  arm64) and verifies its SHA-256 instead of running the vendor's network installer;
-- `query`, whose failure check only looks at the client's own diagnostics (exit code, `Error:`
-  lines) and no longer at result rows: a URL or title containing the word "error" in a result
-  window over tied counts (e.g. Q39's `LIMIT 10 OFFSET 1000`) turned a valid run into a null
-  timing in the upstream version.
+Configuration: on machines with more than 64 CPUs, `util.sh` sets one DuckDB thread per two CPUs and allocator settings
+for a large dedicated host; smaller machines run the defaults.
 
-The server runs with its default configuration, the upstream schema (`create.sql`) and the
-upstream load path; there is no extra index, pre-aggregation or query-specific configuration.
+Load: on machines with more than 64 CPUs and one thread per core (as `lscpu` reports), the bulk insert runs with
+`threads` set to the CPU count (DuckDB's default) and `zstd_bulk_write_compression_level = 13`; both end with the server
+restart before the first query. Otherwise neither is set; with SMT the insert was slower with them.
 
-Disclosure: the DuckDB changes were developed and evaluated against the 43 ClickBench queries on
-the ClickBench dataset. They are general engine mechanisms that do not change query results, the
-storage format or the SQL surface. Because of that development history the entry is labelled
-`tuned: yes` at the maintainers' request; the ClickBench maintainers decide its final name and
-labels.
+Caches: for its lifetime the server keeps decoded string dictionaries, column-wide dictionaries, code translations and
+their byte lengths, row-group metadata, string-filter outcomes per dictionary entry (and the segments they let a scan
+skip) and optimized plans of repeated read-only statements. For a statement with a cached plan, the hash-aggregate state
+is released on a background thread after its result is sent.
+
+Storage: blocks are zstd level 9 with 64 or more threads, 3 otherwise; `zstd_block_compression_level` overrides it, and
+`zstd_bulk_write_compression_level` does for a bulk insert's blocks.
+
+The entry is `tuned: yes`: for the configuration and load settings above, engine thresholds and three
+per-architecture build-time defaults (named in the fork documents), and because the changes were developed and
+evaluated against the 43 ClickBench queries.
 
 Both repositories keep their upstream licenses (DuckDB: MIT; GizmoSQL: Apache-2.0).

@@ -1,0 +1,11 @@
+{
+  "features": {
+    "flush_caches_after_each_run": false,
+    "parallel_ready_impl": true,
+    "sample_trace": false,
+    "scaffold": "full",
+    "storage": "in_memory",
+    "tracing": false
+  },
+  "format_version": 5
+}

@@ -1,0 +1,34 @@
+#!/bin/bash
+# Reads one search request (query DSL with aggregations, JSON) from stdin and
+# runs it.
+# Stdout: the aggregation result.
+# Stderr: the runtime in fractional seconds on the last line: the `took` of the
+# response, in milliseconds, as in the Elasticsearch entry.
+#
+# request_cache=false: the shard request cache keeps the results of the
+# requests with size 0 by default, which JSONBench does not allow between hot
+# runs.
+set -e -o pipefail
+
+. ./os-common.sh
+
+query=$(cat)
+
+if ! response=$(os_curl -X POST "${OS_URL}/${OS_INDEX}/_search?request_cache=false" -d "${query}"); then
+    printf '%s\n' "${response}" >&2
+    exit 1
+fi
+
+if printf '%s' "${response}" | jq -e '.timed_out == true or ._shards.failed > 0' >/dev/null; then
+    echo "query: incomplete result: ${response}" >&2
+    exit 1
+fi
+
+printf '%s' "${response}" | jq -c '.aggregations'
+
+took=$(printf '%s' "${response}" | jq -r '.took // empty')
+if [ -z "${took}" ]; then
+    echo "query: no took in the response" >&2
+    exit 1
+fi
+awk -v ms="${took}" 'BEGIN { printf "%.3f\n", ms / 1000 }' >&2

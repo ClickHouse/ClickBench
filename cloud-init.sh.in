@@ -2,6 +2,25 @@
 
 # This is the script for cloud-init, to run on a VM in unattended fashion. See run-benchmark.sh
 
+# Make sure the machine terminates whatever happens to this script: a deadline
+# that systemd enforces even if the script hangs (a stalled download or upload,
+# or a background server holding the pipe of `timeout ... | tee` open) or is
+# killed, and a trap for early exits. The `shutdown now` at the end replaces
+# the deadline in the normal case.
+shutdown -P "+$(( @timeout@ / 60 + 120 ))"
+trap 'live_log_stop; shutdown now' EXIT
+
+# The live log (lib/live-log.py, started below) streams the output of this
+# script to sink.logs as it goes; stop it and let it send the rest.
+live_log_pid=
+live_log_stop() {
+    if [ -n "$live_log_pid" ]; then
+        kill -TERM "$live_log_pid"
+        wait "$live_log_pid"
+        live_log_pid=
+    fi
+}
+
 # Cloud-init runs scripts as root with no HOME exported. Tools that follow
 # XDG-ish conventions (DuckDB extensions in ~/.duckdb, the GizmoSQL one-line
 # installer that runs `sh -u`, etc.) then fall over with messages like
@@ -23,13 +42,42 @@ if [ ! -f /swapfile ]; then
     swapon /swapfile
 fi
 
+# The root filesystem is grown from the image's few GB to the whole 500 GB
+# disk during this first boot, and ext4 then zeroes the inode tables of the
+# new space in the background: 16.5 GB written by the ext4lazyinit kernel
+# thread over the first minutes of uptime. Its pace is a per-boot lottery (a
+# fixed pause of 10x the time the first block group happened to take), and a
+# fast draw takes most of the gp2 volume's throughput budget between queries,
+# so the cold run of a system whose dataset is quick to download (the
+# partitioned Parquet files land in seconds) starts with the burst allowance
+# only partly refilled and reads at the sustained rate for longer. Stop the
+# zeroing before the benchmark: the inode tables stay valid unzeroed (this is
+# the documented use of noinit_itable, and a fresh EBS volume reads as zeros
+# anyway), and the machine is terminated at the end of the run.
+mount -o remount,noinit_itable /
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y wget curl git jq earlyoom
 
 systemctl enable --now earlyoom
 
+# Live log: follow the output of this script from its start - the whole
+# cloud-init output, with the commands traced by `bash -x` - and insert it
+# into sink.logs on play.clickhouse.com about once a second, to watch the run
+# as it goes on https://benchmark.clickhouse.com/live.html#@run_id@
+# The program is downloaded from the main branch of ClickBench, not taken from
+# the clone below: that is the repository and branch under test, and the
+# branch of a pull request does not have lib/live-log.py if it was created
+# before the live logs and was not updated since.
+curl -sSfL --retry 5 --retry-all-errors -o /root/live-log.py \
+    'https://raw.githubusercontent.com/ClickHouse/ClickBench/main/lib/live-log.py'
+LIVE_LOG_RUN_ID='@run_id@' LIVE_LOG_SYSTEM='@system@' LIVE_LOG_MACHINE='@machine@' \
+    nice -n 19 python3 /root/live-log.py /var/log/cloud-init-output.log &
+live_log_pid=$!
+
 git clone --depth 1 'https://github.com/@repo@.git' --branch '@branch@' ClickBench
+
 cd ClickBench/@system@
 
 # The log will be sent to ClickHouse and processed then by materialized views:
@@ -86,15 +134,16 @@ send_log() {
     local f="$1" size
     size=$(stat -c%s "$f" 2>/dev/null || echo 0)
     if [ "$size" -le 1000000 ]; then
-        curl ${RESULTS_URL} --data-binary @"$f"
+        curl --max-time 300 ${RESULTS_URL} --data-binary @"$f"
     else
         { head -c 100000 "$f"
           printf '\n...[%d bytes truncated]...\n' "$((size - 1000000))"
           tail -c 900000 "$f"
-        } | curl ${RESULTS_URL} --data-binary @-
+        } | curl --max-time 300 ${RESULTS_URL} --data-binary @-
     fi
 }
 send_log log
 send_log /var/log/cloud-init-output.log
 
+live_log_stop
 shutdown now

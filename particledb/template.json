@@ -1,0 +1,12 @@
+{
+  "system": "ParticleDB",
+  "proprietary": "yes",
+  "storage": "native",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "enthusiast",
+  "tags": [
+    "Rust",
+    "column-oriented"
+  ]
+}

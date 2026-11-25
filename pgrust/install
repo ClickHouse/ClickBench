@@ -1,0 +1,60 @@
+#!/bin/bash
+# install: the pgrust release tarball (server, initdb, psql; no PostgreSQL install needed), initdb,
+# the configuration below, and the dataset download (untimed).
+set -eu
+. "$(dirname "$0")/env.sh"
+export DEBIAN_FRONTEND=noninteractive
+sudo apt-get update -y -qq
+sudo apt-get install -y -qq --no-install-recommends curl ca-certificates python3 wget
+id -u "$PGRUST_USER" >/dev/null 2>&1 || sudo useradd --system --home-dir "$PGRUST_HOME" --shell /bin/bash "$PGRUST_USER"
+sudo install -d -o "$PGRUST_USER" -g "$PGRUST_USER" "$PGRUST_HOME" "$PGSOCKDIR"
+sudo rm -rf "$PGRUST_PREFIX"; sudo install -d -o "$PGRUST_USER" -g "$PGRUST_USER" "$PGRUST_PREFIX"
+if [ -n "$PGRUST_TARBALL" ]; then
+    $AS_PG tar -xzf "$PGRUST_TARBALL" --strip-components=1 -C "$PGRUST_PREFIX"
+else
+    echo "pgrust build: $PGRUST_BUILD_CHOICE -> $PGRUST_BIN_URL"
+    $AS_PG curl -fsSL --retry 5 --retry-delay 5 -o "$PGRUST_HOME/release.tar.gz" "$PGRUST_BIN_URL"
+    $AS_PG curl -fsSL --retry 5 --retry-delay 5 -o "$PGRUST_HOME/release.tar.gz.sha256" "$PGRUST_BIN_URL.sha256"
+    (cd "$PGRUST_HOME" && echo "$(cut -c1-64 release.tar.gz.sha256)  release.tar.gz" | sha256sum -c -) >/dev/null
+    $AS_PG tar -xzf "$PGRUST_HOME/release.tar.gz" --strip-components=1 -C "$PGRUST_PREFIX"
+fi
+"$PGRUST_PREFIX/bin/postgres" --version
+sudo rm -rf "$PGDATA"
+$AS_PG "$PGRUST_PREFIX/bin/initdb" -D "$PGDATA" --no-locale --encoding=UTF8 -U postgres -A trust >/dev/null
+# Configuration: every non-default setting, each with its reason; RAM from MemTotal, threads from nproc
+memory=$(awk '/MemTotal/ {print $2}' /proc/meminfo)   # kB
+threads=$(nproc)
+$AS_PG tee -a "$PGDATA/postgresql.conf" >/dev/null <<CONF
+# memory: the official postgresql/ entry's formulas, except shared_buffers (left at its default;
+# columnar tables are read through the part cache below, not through shared buffers)
+effective_cache_size=$((memory - memory / 4))kB
+work_mem=$((memory / (2 * threads)))kB
+max_wal_size=32GB
+# parallelism
+max_worker_processes=$((threads + 15))
+max_parallel_workers=${threads}
+max_parallel_workers_per_gather=${threads}
+max_parallel_maintenance_workers=$((threads / 2))
+# server requirements
+listen_addresses=''
+unix_socket_directories='$PGSOCKDIR'
+io_method=sync
+max_stack_depth=60000
+autovacuum=off
+# memory for query execution (aggregation / sort state): RAM/4, and one statement may use all of it
+pgrust.gravity_grant_mb=$((memory / 4 / 1024))
+pgrust.gravity_statement_pool_fraction=1
+# columnar part cache: RAM*3/8
+pgrust.pgrc_part_cache_mb=$((memory * 3 / 8 / 1024))
+# caches and reuse across statements: the release defaults, spelled out so each one can be changed here.
+# All of them live in server memory only, so a restart empties them.
+# condition_cache: full | rows | granule | off
+pgrust.condition_cache=full
+# dict_filter_cache, zone_store: on | off
+pgrust.dict_filter_cache=on
+pgrust.zone_store=on
+CONF
+# Dataset (untimed): the plain-integer parquet; the server reads it (COPY FROM file)
+if [ ! -s "$HITS_PARQUET" ]; then
+    $AS_PG wget -q --continue -O "$HITS_PARQUET" https://datasets.clickhouse.com/hits_compatible/hits.parquet
+fi

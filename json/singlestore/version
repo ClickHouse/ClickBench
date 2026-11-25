@@ -1,0 +1,7 @@
+#!/bin/bash
+# The SingleStore version (@@version is the emulated MySQL version, 5.7.32,
+# which is what the original results show by mistake).
+set -e
+source ./env.sh
+
+ss_mysql -N -B -e "SELECT @@memsql_version"

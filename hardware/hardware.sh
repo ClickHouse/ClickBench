@@ -74,8 +74,8 @@ cat "$QUERIES_FILE" | sed "s/{table}/hits/g" | while read -r query; do
 
     echo -n "["
     for i in $(seq 1 $TRIES); do
-        RES=$(./clickhouse client --time --format=Null --query="$query" 2>&1 ||:)
-        [[ "$?" == "0" ]] && echo -n "${RES}" || echo -n "null"
+        RES=$(./clickhouse client --time --format=Null --query="$query" 2>&1) || RES="null"
+        echo -n "${RES}"
         [[ "$i" != $TRIES ]] && echo -n ", "
 
         echo "${QUERY_NUM},${i},${RES}" >> result.csv

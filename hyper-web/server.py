@@ -46,7 +46,7 @@ with HyperProcess(
     telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU,
     parameters={
         "storage_providers": json.dumps(provider_config()),
-        "blockpartition_prefetch_lookahead": "0",
+        "cache_storage_resource": "memory",
     },
 ) as hyper:
     # Attach before publishing the endpoint. Its presence therefore means the

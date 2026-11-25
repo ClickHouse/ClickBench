@@ -1,0 +1,32 @@
+#!/bin/bash
+# Builds hits.db from hits.parquet, loads the pre-generated engine and verifies every benchmark
+# query on it against DuckDB. All of it happens in the server; see server.py.
+set -e
+
+cd "$(dirname "$0")"
+
+body=$(curl -sS --unix-socket synnodb.sock -X POST http://localhost/load 2>&1) || {
+    echo "load: curl to /load failed:" >&2
+    printf '%s\n' "$body" >&2
+    echo "load: the server may have been killed for the lack of memory, see server.log" >&2
+    exit 1
+}
+
+# /load returns {"error": ...} if the engine could not be loaded or did not answer any query
+# correctly. The benchmark must stop then, instead of reporting the timings of DuckDB under the
+# name of SynnoDB.
+printf '%s' "$body" | python3 -c '
+import json, sys
+r = json.load(sys.stdin)
+if "elapsed" not in r:
+    sys.exit("load: " + str(r.get("error", r)))
+show = lambda numbers: " ".join(map(str, numbers)) or "none"
+print("Load (server-reported): %ss, of which the database %ss and the verification %ss"
+      % (r["elapsed"], r["database_seconds"], r["verification_seconds"]))
+print("Queries served by the engine:", show(r["engine"]))
+print("Queries whose engine answer was rejected (served by DuckDB):", show(r["rejected"]))
+print("Queries without an engine (served by DuckDB):", show(r["no_engine"]))
+'
+
+rm -f hits.parquet
+sync

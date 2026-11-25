@@ -2,6 +2,21 @@
 
 Changes in the benchmark methodology or presentation, as well as major news.
 
+### 2026-11-18
+Added `Vortex` to the "Storage" selector. Vortex entries were `Native` before. (Maksim Dergousov)
+
+### 2026-11-05
+Introduced system categories: Elite, Production, Challenger, Enthusiast, Retired, and Joke. The requirements for each category are described in the [README](README.md#system-categories). The category is set in the `template.json` of every system, and the report has a "Category" selector. Enthusiast and Joke entries are hidden by default; the other categories are shown. The selectors now also work correctly after opening a link with a saved selection. (Alexey Milovidov)
+
+### 2026-11-04
+Merged [JSONBench](https://benchmark.clickhouse.com/json/) - a benchmark for data analytics on JSON - into the ClickBench repository. The original JSONBench was not updated for more than a year. Now it has been revived, all contributions have been merged, and a dozen new entrants have been added. It adds all UI advancements and automations from ClickBench. (Alexey Milovidov)
+
+### 2026-10-15
+Add a history view. Clicking on any entry on the diagram will show the report of its historical results. The dataset is also available in the [public ClickHouse database](https://play.clickhouse.com/play?tab=ClickBench#U0VMRUNUICogRlJPTSBjbGlja2JlbmNoLnJlc3VsdHMgV0hFUkUgc3lzdGVtID0gJ0NsaWNrSG91c2UnIEFORCBtYWNoaW5lID0gJ2M2YS5tZXRhbCc=). (Alexey Milovidov)
+
+### 2026-10-09
+Added a new metric, "Complexity". It shows how much code is needed to run the benchmark for a system: the size of the zstd-compressed concatenation of all scripts and configs in the system's directory (`install`, `load`, `start`, `stop`, `query`, and the Python, Expect, and other scripts they invoke), with comments, blank lines, and redundant whitespace removed. Queries, table definitions, documentation, and the common runner in `lib/` are not counted. Cloud services and systems without the `install` script are excluded, as their setup is not scripted. The metric does not depend on the machine, so each system is shown once. It is not included in the Combined score. (Alexey Milovidov)
+
 ### 2026-09-18
 Added a "Storage" selector to the report, as requested in [#2048](https://github.com/ClickHouse/ClickBench/issues/2048). Every benchmark entry is now classified by where it keeps its data, and each kind can be enabled and disabled individually: `Native` — the database native format on local storage; `Cloud` — a cloud service, as its storage is opaque; `Memory` — the full dataset has to be represented in memory for the system to operate; `Parquet` — Parquet files on local storage, either the benchmark-provided ones, or converted on load, in which case the conversion is accounted as the load time; `Data Lake` — Parquet or a bunch of other files in a bucket on AWS S3 (it is a simplification to call it a data lake, but this simplification is good to allow many systems and distill what matters); `Web` — the database native format on a remote HTTP server represented as a bucket on AWS S3.
 
@@ -108,7 +123,7 @@ Displaying the tuned results can be toggled with [a button](https://github.com/C
 Add a new benchmark, [FastFormats](https://fastformats.clickhouse.com/) comparing the performance on data formats using ClickHouse.  Website by Alexey Milovidov, scripts and methodology by Tom Schreiber.
 
 ### 2025-02-04
-Add a new benchmark, [JSONBench](https://jsonbench.com/) for analytics on semistructured data. Website by Alexey Milovidov, scripts and methodology by Tom Schreiber.
+Add a new benchmark, [JSONBench](https://benchmark.clickhouse.com/json/) for analytics on semistructured data. Website by Alexey Milovidov, scripts and methodology by Tom Schreiber.
 
 ### 2024-11-08
 Add a [new benchmark](https://pastila.nl/?000b1ba6/c224ddf960900f4f2d0d9e100cef5445.html) to compare all generations of AWS Graviton. (Alexey Milovidov)

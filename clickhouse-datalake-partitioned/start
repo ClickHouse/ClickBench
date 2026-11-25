@@ -1,3 +1,8 @@
 #!/bin/bash
-# clickhouse-local is invoked per-query — no daemon to start.
-exit 0
+set -e
+
+if ! [ -f server-data/clickhouse.pid ] || ! kill -0 "$(cat server-data/clickhouse.pid)" 2>/dev/null; then
+    mkdir -p server-data
+    setsid nohup ./clickhouse server --config-file=config.yaml --pid-file=server-data/clickhouse.pid \
+        > server-data/stdout.log 2>&1 < /dev/null &
+fi

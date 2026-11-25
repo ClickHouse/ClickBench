@@ -1,0 +1,30 @@
+#!/bin/bash
+set -e
+
+# Convert the source Parquet file to Vortex with ClickHouse itself. create.sql
+# defines `hits` over hits.vortex; the INSERT takes the structure of `hits` for
+# reading hits.parquet, the same way clickhouse-parquet reads it.
+#
+# The server resolves the paths of `file` and of File tables relative to its
+# user_files directory: the Parquet file is symlinked there, and the Vortex
+# file is written there.
+#
+# Writing a Vortex file is single-threaded, and the writer keeps a large part
+# of the file in memory until it finishes (about 22 GB of RSS for this one).
+#
+# By default, parallel readers split the Parquet file between them, and their
+# blocks reach the writer interleaved, in an order that depends on the number
+# of threads. With input_format_parquet_preserve_order the rows keep the order
+# of hits.parquet whatever the number of threads, and the file compresses
+# better.
+mkdir -p server-data/user_files
+ln -sf "$PWD/hits.parquet" server-data/user_files/hits.parquet
+rm -f server-data/user_files/hits.vortex
+
+./clickhouse client --query "DROP TABLE IF EXISTS hits"
+./clickhouse client < create.sql
+./clickhouse client --query "INSERT INTO hits SELECT * FROM file('hits.parquet', Parquet) SETTINGS input_format_parquet_preserve_order = 1"
+
+# The source Parquet file is no longer needed.
+rm -f server-data/user_files/hits.parquet hits.parquet
+sync

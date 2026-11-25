@@ -1,0 +1,25 @@
+#!/bin/bash
+# Reads a SQL query from stdin, runs it with bendsql.
+# Stdout: bendsql output. Stderr: the runtime in fractional seconds on the
+# last line: `bendsql --time=local` prints the wall-clock time of the query,
+# including the transfer of the result, instead of the result.
+set -e
+
+. ./sql.sh
+
+query=$(cat)
+
+out=$(printf '%s\n' "${query}" | bendsql --time=local 2>&1) && status=0 || status=$?
+if [ "${status}" -ne 0 ]; then
+    printf '%s\n' "${out}" >&2
+    exit "${status}"
+fi
+
+t=$(printf '%s\n' "${out}" | grep -E '^[0-9]+(\.[0-9]+)?$' | tail -n1)
+if [ -z "${t}" ]; then
+    printf '%s\n' "${out}" >&2
+    echo "query: no timing in the bendsql output" >&2
+    exit 1
+fi
+printf '%s\n' "${out}"
+echo "${t}" >&2

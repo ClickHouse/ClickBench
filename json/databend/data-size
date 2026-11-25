@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e -o pipefail
+
+. ./sql.sh
+
+# The compressed data, the indexes and the virtual columns (the sub-columns
+# extracted from the VARIANT) of the current snapshot of the table.
+echo "SELECT data_compressed_size, index_size, bloom_index_size, virtual_column_size, data_size FROM system.tables WHERE database = 'default' AND name = 'bluesky'" \
+    | bendsql -o tsv >&2
+du -sb _data/data >&2
+echo "SELECT data_compressed_size + index_size + coalesce(virtual_column_size, 0) FROM system.tables WHERE database = 'default' AND name = 'bluesky'" \
+    | bendsql -o tsv

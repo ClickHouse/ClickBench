@@ -1,0 +1,25 @@
+{
+  "system": "CedarDB",
+  "proprietary": "yes",
+  "retains_structure": "yes",
+  "tags": [
+    "C++",
+    "column-oriented",
+    "PostgreSQL compatible"
+  ],
+  "version": "v2026-10-22",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-03",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000,
+  "num_loaded_documents": 1000000,
+  "load_time": 5.752,
+  "total_size": 457506816,
+  "result": [
+    [0.198, 0.009, 0.009],
+    [0.227, 0.028, 0.028],
+    [0.207, 0.013, 0.013],
+    [0.205, 0.013, 0.012],
+    [0.205, 0.014, 0.012]
+  ]
+}
