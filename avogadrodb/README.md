@@ -51,4 +51,6 @@ DATE), prefixed to every query as a CTE.
 `query` reports the time from the catalog being open to the result written and
 flushed: planning, execution, decompression and output are inside; process start,
 the root lock and opening the catalog are outside. It is the boundary of duckdb's
-`.timer` and of datafusion-cli's `Elapsed`.
+`.timer` and of datafusion-cli's `Elapsed`. Opening the catalog includes reading
+each partition's metadata (its min/max statistics), so that part is outside the
+reported query time; the driver's startup time measures it.

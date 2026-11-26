@@ -17,8 +17,8 @@ cd "$(dirname "$0")"
 # The release this submission is: a tag and that tag's asset digest. They move
 # together or not at all. Empty = no published asset yet; install refuses by
 # name rather than fetching a file it cannot check.
-RELEASE_TAG_x86_64="clickbench-20261027"
-RELEASE_SHA256_x86_64="b8e3738c0e919fc75e11031d90ff74cd7e9737f511e7277fa21c9c5f1eb6b0fd"
+RELEASE_TAG_x86_64="clickbench-20261125"
+RELEASE_SHA256_x86_64="be282929f4608bcaff68a9d9cafdd7f1100f97370188408c13327728111a2c48"
 release_url() { echo "https://github.com/avogadrodb/avogadrodb-clickbench/releases/download/$2/avogadrodb-$2-linux-$1"; }
 
 # One asset, x86-64 baseline (no AVX2 or newer instruction assumed: the binary
