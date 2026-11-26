@@ -1,0 +1,27 @@
+#!/bin/bash
+# Builds a small Rust binary (src/main.rs): DataFusion with the
+# datafusion-functions-json extension crate (modeled after ../../datafusion-iceberg).
+set -e -o pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+export HOME="${HOME:-/root}"
+
+if command -v apt-get >/dev/null 2>&1; then
+    sudo -E apt-get update -y
+    sudo -E apt-get install -y build-essential pkg-config curl
+fi
+
+if ! command -v cargo >/dev/null 2>&1 && [ ! -x "$HOME/.cargo/bin/cargo" ]; then
+    curl --proto '=https' --tlsv1.2 -fsSL --retry 5 --retry-delay 5 --retry-all-errors https://sh.rustup.rs \
+        | sh -s -- -y --no-modify-path
+fi
+if [ -f "$HOME/.cargo/env" ]; then
+    # shellcheck disable=SC1091
+    source "$HOME/.cargo/env"
+fi
+
+if [ ! -x target/release/jsonbench-datafusion ]; then
+    cargo build --release --locked
+fi
+
+target/release/jsonbench-datafusion version

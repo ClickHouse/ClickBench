@@ -1,0 +1,25 @@
+{
+  "system": "DataFusion",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Rust",
+    "column-oriented",
+    "embedded"
+  ],
+  "version": "55.3.0",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-25",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 1000000000,
+  "num_loaded_documents": 999999245,
+  "load_time": 223.176,
+  "total_size": 123803926840,
+  "result": [
+    [116.948786, 35.427918, 35.445272],
+    [128.203416, 125.594642, 124.81781],
+    [118.439593, 62.283115, 61.4928],
+    [118.567242, 63.09348, 63.75463],
+    [118.459947, 63.287507, 63.937448]
+  ]
+}

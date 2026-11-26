@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+[ -x target/release/jsonbench-datafusion ]
+target/release/jsonbench-datafusion version >/dev/null

@@ -1,0 +1,7 @@
+#!/bin/bash
+# Reads a SQL query from stdin and runs it in a fresh DataFusion process.
+# Stdout: full formatted query result. Stderr: runtime in fractional seconds on
+# the last line.
+set -e
+
+exec target/release/jsonbench-datafusion query
