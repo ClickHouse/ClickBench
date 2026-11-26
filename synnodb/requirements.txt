@@ -130,7 +130,7 @@ types-requests==2.33.0.20260518
 typing-extensions==4.15.0
 typing-inspection==0.4.2
 tzdata==2026.2 ; sys_platform == 'emscripten' or sys_platform == 'win32'
-urllib3==2.7.0
+urllib3==2.8.0
 uvicorn==0.49.0 ; sys_platform != 'emscripten'
 wandb==0.27.2
 wcwidth==0.8.1
