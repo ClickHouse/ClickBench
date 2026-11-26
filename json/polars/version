@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+myenv/bin/python -c 'import polars as pl; print(pl.__version__)'

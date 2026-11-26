@@ -1,0 +1,26 @@
+{
+  "system": "Polars",
+  "proprietary": "no",
+  "retains_structure": "yes",
+  "tags": [
+    "Rust",
+    "Python",
+    "column-oriented",
+    "embedded"
+  ],
+  "version": "2.2.0",
+  "os": "Ubuntu 24.04",
+  "date": "2026-11-24",
+  "machine": "m6i.8xlarge",
+  "dataset_size": 100000000,
+  "num_loaded_documents": 99999968,
+  "load_time": 38.202,
+  "total_size": 12415454207,
+  "result": [
+    [16.277004, 15.921129, 15.842855],
+    [55.557199, 54.920725, 55.083659],
+    [49.486405, 49.072121, 49.230783],
+    [45.029227, 44.621028, 44.666924],
+    [45.112634, 44.660148, 44.68314]
+  ]
+}

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+echo 'bluesky.select(pl.len()).collect().item()' | ./query 2>/dev/null | tail -n1

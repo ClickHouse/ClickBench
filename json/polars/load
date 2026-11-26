@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e -o pipefail
+
+# Idempotent: load.py recreates the bluesky/ Parquet directory.
+myenv/bin/python load.py "${BENCH_DATA_DIR}" "${BENCH_FILES}"
