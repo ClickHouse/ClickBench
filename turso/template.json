@@ -1,0 +1,12 @@
+{
+  "system": "Turso",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "enthusiast",
+  "tags": [
+    "Rust",
+    "embedded",
+    "row-oriented"
+  ]
+}

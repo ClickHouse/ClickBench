@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-# The import below pipes tursodb into grep, and grep's exit status would
+# The import below pipes tursodb into tee, and tee's exit status would
 # otherwise mask an import failure from `set -e`.
 set -o pipefail
 
@@ -17,35 +17,42 @@ source "$HOME/.turso/env"
 export RUST_BACKTRACE=1
 
 # Idempotent: blow away any prior DB.
-rm -f mydb
+rm -f mydb import.log
 
 tursodb mydb < create.sql
 
-# Import on `.import`'s own per-batch commits.
+# Import with tursodb's defaults: `.import` commits every batch of 1000
+# rows by itself, and `synchronous` stays at its default. Measured on
+# tursodb 0.8.4 with the first 2 million rows of hits.csv, this is linear
+# in the number of rows, keeps the WAL below 5 MB and the memory usage
+# around 125 MB. Both shortcuts that were tried here make it worse:
 #
-# Wrapping the whole import in one BEGIN/COMMIT is faster on paper — one
-# fsync instead of one per batch — but it makes tursodb accumulate the
-# entire ~70 GB dataset in a single uncommitted transaction, and 0.7.0
-# doesn't survive that. The 2026-07-28 run on c6a.4xlarge wrote ~76 GB of
-# db+WAL over ~6900s and then vanished: no panic, no backtrace, no stderr
-# despite RUST_BACKTRACE=1, i.e. killed by a signal (these machines run
-# earlyoom and have 32 GiB). Per-batch commits loaded the same data in
-# 6414s on 2026-07-21, so the single transaction bought nothing worth
-# that. The wal_checkpoint(TRUNCATE) that followed the COMMIT goes with
-# it: there is no longer a 70 GB WAL to fold back in.
+# - `PRAGMA synchronous = OFF`. In this mode tursodb never records WAL
+#   frames as backfilled, so the WAL is never restarted and every commit
+#   checkpoints all of it again: the import becomes quadratic (9x the CPU
+#   time already at 500 thousand rows, with a WAL as large as the table).
+#   The 2026-07-30 and 2026-11-23 runs on c6a.4xlarge had this pragma and
+#   wrote less than 18 GB of db+WAL in 10 hours.
 #
-# `PRAGMA synchronous = OFF` stays. It removes the per-batch fsync that
-# the single transaction was reaching for, without letting the write set
-# pile up in the first place.
+# - One BEGIN/COMMIT around the whole import. tursodb needs about 2.4x
+#   the size of the table in memory at COMMIT (1.7 GB for a 0.7 GB table),
+#   which a 32 GiB machine cannot give to ~75 GB of data. The 2026-07-28
+#   and 2026-10-03 runs wrote ~76 GB of db+WAL and then were killed by a
+#   signal (these machines run earlyoom), with no panic and no backtrace.
 #
-# grep: per-batch commits mean `.import` prints a progress line per 1000
-# rows — ~100k lines that would bury the benchmark log and push it past
-# the results sink's 1 MB cap. `|| true` because grep exits 1 when it
-# filters out every line, which with pipefail would fail the load.
-tursodb mydb <<'EOF' 2>&1 | { grep -v '^Inserting batch of' || true; }
-PRAGMA synchronous = OFF;
-.import --csv hits.csv hits
+# `.import` reports unreadable rows, failed batches and even a missing
+# input file only as text and still exits with 0, so ask for its summary
+# line (-v) and require that it shows rows and no errors. Otherwise a
+# partial or empty table would be benchmarked as if nothing happened.
+tursodb mydb <<'EOF' 2>&1 | tee import.log
+.import --csv -v hits.csv hits
 EOF
+echo
+if ! grep -q 'Added [1-9][0-9]* rows with 0 errors' import.log; then
+    echo "load: tursodb did not import hits.csv cleanly, see its output above" >&2
+    exit 1
+fi
+rm -f import.log
 
 rm -f hits.csv
 sync
