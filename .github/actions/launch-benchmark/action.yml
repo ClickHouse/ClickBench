@@ -33,8 +33,10 @@ inputs:
     default: ""
   timeout:
     description: "Time limit for benchmark.sh on the machine, seconds.
-      Empty: 36000 for the main benchmark, and for JSONBench a limit that
-      depends on the dataset size (see json/run-benchmark.sh)"
+      Empty: for the main benchmark, the number in the system's
+      timeout-seconds file, or 36000 if it has none (see run-benchmark.sh);
+      for JSONBench, a limit that depends on the dataset size (see
+      json/run-benchmark.sh)"
     default: ""
   pr:
     description: "Pull request number that launched the run, if any. Recorded
@@ -83,7 +85,11 @@ runs:
         failed=""
         for m in $machines; do
             for s in $main_systems; do
-                machine="$m" system="$s" timeout="${timeout:-36000}" ./run-benchmark.sh || failed="$failed $s/$m"
+                # An empty `timeout` is passed as is: run-benchmark.sh then
+                # takes the limit from the system's `timeout-seconds` file,
+                # and 36000 if there is none. Defaulting it here would
+                # hide that file.
+                machine="$m" system="$s" ./run-benchmark.sh || failed="$failed $s/$m"
             done
         done
         if [ -n "$json_systems" ]; then
