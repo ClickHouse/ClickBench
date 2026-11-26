@@ -21,7 +21,7 @@ on:
         description: "Branch to clone (empty: from the PR, or main)"
         default: ""
       timeout:
-        description: "Time limit for benchmark.sh, seconds (empty: 36000, and for JSONBench by the dataset size)"
+        description: "Time limit for benchmark.sh, seconds (empty: the system's timeout-seconds file or 36000, and for JSONBench by the dataset size)"
         default: ""
       json_machines:
         description: "EC2 instance types for the JSONBench systems (json/<name>)"
