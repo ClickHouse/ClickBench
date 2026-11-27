@@ -1,4 +1,8 @@
 #!/bin/bash
 
-PGVERSION=${PGVERSION:-18}
-sudo systemctl stop postgresql@$PGVERSION-main || true
+if [ -f /var/lib/pg_deltax/use_container ]; then
+    sudo docker stop -t 60 pg_deltax >/dev/null 2>&1 || true
+else
+    PGVERSION=${PGVERSION:-18}
+    sudo systemctl stop postgresql@$PGVERSION-main || true
+fi
