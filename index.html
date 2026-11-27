@@ -441,8 +441,11 @@
             margin-left: 0.5rem;
         }
 
+        #history-from, #history-to {
+            font: inherit;
+        }
+
         #history-range-text {
-            font-family: monospace;
             margin-right: 0.25rem;
         }
 
@@ -734,6 +737,8 @@ const additional_data_size_points = [
     <a id="history-back" class="selector selector-active">← All systems</a>
     History of<b id="history-title"></b>
     <a id="history-share" class="selector" title="Copy the link to this page">🔗 Copy link</a>
+    From <input type="date" id="history-from" class="selector">
+    To <input type="date" id="history-to" class="selector">
     <span id="history-range">
         <span id="history-range-text"></span>
         <a id="history-range-reset" class="selector">Show all dates</a>
@@ -2046,7 +2051,23 @@ function renderHistoryBar() {
 
     const range = history_view.range;
     document.getElementById('history-range').style.display = range ? 'inline' : 'none';
-    document.getElementById('history-range-text').textContent = range ? `${range.from} — ${range.to}` : '';
+    document.getElementById('history-range-text').textContent = range?.last ? `Last ${range.last} days` : '';
+    document.getElementById('history-from').value = range && range.from != min_date ? range.from : '';
+    document.getElementById('history-to').value = range && range.to != max_date ? range.to : '';
+}
+
+/// An empty input leaves its side of the range open.
+const min_date = '0000-01-01';
+const max_date = '9999-12-31';
+
+for (const id of ['history-from', 'history-to']) {
+    document.getElementById(id).addEventListener('change', () => {
+        const from = document.getElementById('history-from').value;
+        const to = document.getElementById('history-to').value;
+        setHistoryView(history_view.key, from || to ? {from: from || min_date, to: to || max_date} : null);
+        updateHistory();
+        render();
+    });
 }
 
 document.getElementById('history-range-reset').addEventListener('click', e => {
@@ -2056,8 +2077,8 @@ document.getElementById('history-range-reset').addEventListener('click', e => {
     render();
 });
 
-function openHistory(key) {
-    setHistoryView(key);
+function openHistory(key, range) {
+    setHistoryView(key, range);
     updateHistory();
     render();
     window.scrollTo(0, 0);
@@ -2096,7 +2117,8 @@ function render() {
         const range = history_view.range;
         filtered_data = (history_view.data || []).filter(elem => !range || (elem.date >= range.from && elem.date <= range.to));
         nothing_selected_elem.textContent = history_view.error ? `Cannot load the history: ${history_view.error}`
-            : !history_view.data ? 'Loading…' : history_view.data.length ? 'No results for this metric' : 'No results';
+            : !history_view.data ? 'Loading…' : !history_view.data.length ? 'No results'
+            : filtered_data.length ? 'No results for this metric' : 'No results in this date range';
     } else {
         applyTopRowFilters();
 
@@ -2602,7 +2624,13 @@ function updateHistory() {
     history.pushState(historyState(), '',
         window.location.pathname + (window.location.search || '') + '#' + encodeState(selectors)
         + (history_view ? '&history=' + encodeURIComponent(history_view.key) : '')
-        + (history_view?.range ? `&from=${history_view.range.from}&to=${history_view.range.to}` : ''));
+        + (history_view?.range?.last ? `&last=${history_view.range.last}`
+            : history_view?.range ? `&from=${history_view.range.from}&to=${history_view.range.to}` : ''));
+}
+
+/// The range of the last `days` days, relative to today, kept as `&last=` in the URL so that the link stays fresh.
+function lastDaysRange(days) {
+    return {from: new Date(Date.now() - days * 86400000).toISOString().slice(0, 10), to: max_date, last: days};
 }
 
 /// The selectors and the history view from the URL.
@@ -2612,7 +2640,9 @@ function applyHash() {
         const hash = decodeURIComponent(window.location.hash.substring(1));
         selectors = {...selectors, ...decodeState(hash)};
         const params = Object.fromEntries(hash.split('&').map(kv => kv.split('=')));
-        setHistoryView(params.history, params.from && params.to ? {from: params.from, to: params.to} : null);
+        const last = parseInt(params.last);
+        setHistoryView(params.history, last > 0 ? lastDaysRange(last)
+            : params.from && params.to ? {from: params.from, to: params.to} : null);
     } catch {}
 }
 
