@@ -2,7 +2,7 @@
 """FastAPI wrapper around the Polars SQL interface so it conforms to the
 ClickBench install/start/check/stop/load/query interface.
 
-Same as `polars-sql/`, but over the partitioned dataset
+Same as `polars-sql-parquet/`, but over the partitioned dataset
 (hits_0.parquet ... hits_99.parquet) instead of the single hits.parquet.
 
 Routes:

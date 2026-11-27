@@ -1,5 +1,5 @@
 {
-      "system": "Polars (SQL)",
+      "system": "Polars (SQL, Parquet)",
       "date": "2026-11-11",
       "machine": "c6a.2xlarge",
       "cluster_size": 1,

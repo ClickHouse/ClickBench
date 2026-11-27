@@ -1,5 +1,5 @@
 {
-  "system": "Polars (SQL)",
+  "system": "Polars (SQL, Parquet)",
   "proprietary": "no",
   "hardware": "cpu",
   "tuned": "no",
