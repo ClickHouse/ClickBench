@@ -1,0 +1,77 @@
+#!/bin/bash
+set -e
+
+# shellcheck disable=SC1091
+source myenv/bin/activate
+
+# Spark runs under JDK 17; Gluten was built under JDK 8 in ./install.
+arch=$(dpkg --print-architecture)
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-${arch}"
+export PATH="$JAVA_HOME/bin:$PATH"
+
+# The benchmark driver has no per-query time limit, so a hung query would
+# stall the whole run until the job's limit, with nothing in the log. Kill a
+# query after QUERY_TIMEOUT seconds, print the stacks of its processes first,
+# and fail the remaining queries right away: once the engine hangs, every
+# following query would hang the same way.
+QUERY_TIMEOUT="${QUERY_TIMEOUT:-600}"
+HUNG_MARKER=query_hung
+if [ -e "$HUNG_MARKER" ]; then
+    echo "query: an earlier query hung; failing without running" >&2
+    exit 1
+fi
+
+query=$(cat)
+# The query runs in a session of its own, so that nothing it starts can signal
+# the benchmark driver: on c6a.metal, the driver itself was killed by a
+# core-dumping signal while this watchdog was dumping the stacks of a hung
+# query. It also lets the watchdog find and kill every process of the query,
+# including those that were reparented to init. setsid -w execs in place here
+# (a background job is not a process group leader), so $! is python3 itself.
+printf '%s' "$query" | setsid -w python3 query.py &
+pid=$!
+
+# The dump goes to a file, not to stderr: stderr is the pipe the benchmark
+# driver reads until every writer has closed it, so a dump tool that outlives
+# its timeout would hold the driver forever. Each tool runs in a session of
+# its own and is killed with SIGKILL by a `timeout` that is its direct parent
+# (inside sudo: sudo does not relay SIGKILL), because a gdb attached to a
+# wedged process can ignore SIGTERM. The readers get longer than the tools
+# they read from, so that they print what a killed tool has written. No
+# `set -e` here: a killed tool must not end the watchdog before it kills the
+# query.
+(
+    set +e
+    sleep "$QUERY_TIMEOUT" </dev/null >/dev/null 2>&1
+    dump=$(mktemp)
+    {
+        echo "query: no result after ${QUERY_TIMEOUT}s; processes and stacks:"
+        procs=$(pgrep -s "$pid")
+        for p in $procs; do
+            ps -o pid=,ppid=,stat=,etimes=,nlwp=,rss=,wchan=,args= -p "$p" | cut -c1-300
+        done
+        for p in $procs; do
+            if [ "$(ps -o comm= -p "$p")" = java ]; then
+                echo "query: Java stacks of $p:"
+                setsid -w timeout -s KILL 120 jcmd "$p" Thread.print 2>&1 | timeout -s KILL 180 python3 stacks.py
+            fi
+            echo "query: native stacks of $p:"
+            sudo setsid -w timeout -s KILL 300 gdb -p "$p" -batch -nx -iex 'set auto-load off' \
+                -ex 'thread apply all bt 16' 2>/dev/null | timeout -s KILL 360 python3 stacks.py
+        done
+    } </dev/null >"$dump" 2>&1
+    # Only now: a query that finishes during the dump has not hung.
+    touch "$HUNG_MARKER"
+    pkill -KILL -s "$pid"
+    cat "$dump" >&2
+    rm -f "$dump"
+) &
+watchdog=$!
+
+rc=0
+wait "$pid" || rc=$?
+# Killing the subshell, not its sleep: if the sleep ended first, the subshell
+# would go on to the stack dump. The orphaned sleep holds only /dev/null.
+kill "$watchdog" 2>/dev/null || true
+wait "$watchdog" 2>/dev/null || true
+exit "$rc"

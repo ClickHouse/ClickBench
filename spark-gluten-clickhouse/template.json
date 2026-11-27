@@ -1,0 +1,13 @@
+{
+  "system": "Spark (Gluten-on-ClickHouse)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "tags": [
+    "Java",
+    "C++",
+    "column-oriented",
+    "Spark derivative",
+    "ClickHouse"
+  ]
+}

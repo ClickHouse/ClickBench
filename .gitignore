@@ -49,6 +49,11 @@ tiledb/hits_array
 # Python venvs created by install scripts
 myenv
 
+# spark-gluten-clickhouse: from-source build tree and symlinked artifacts
+spark-gluten-clickhouse/gluten/
+spark-gluten-clickhouse/*.jar
+spark-gluten-clickhouse/libch.so
+
 # Pivot's local datastores and generated server configs
 pivot-parquet/catalog
 pivot-parquet/config.yaml
