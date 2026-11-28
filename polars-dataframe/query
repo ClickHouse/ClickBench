@@ -13,7 +13,6 @@ while read -r q; do
     [ -z "$q" ] && continue
 
     sync
-    echo "3" | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
     start_time=$(date +%s%N)
     
