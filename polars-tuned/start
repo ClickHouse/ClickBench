@@ -64,16 +64,7 @@ for irq in /proc/irq/*; do
     if [ -d "$irq" ] && [ "$(basename "$irq")" != "0" ]; then echo "1" | sudo tee "$irq/smp_affinity" 2>/dev/null || true; fi
 done
 
-# 6. Initialize automated isolation cgroup configuration (Cores 1-95)
-if [ ! -d "/sys/fs/cgroup/cpuset/polars_core" ]; then
-    sudo mkdir -p /sys/fs/cgroup/cpuset/polars_core
-    echo "1-95" | sudo tee /sys/fs/cgroup/cpuset/polars_core/cpuset.cpus >/dev/null
-    echo "0" | sudo tee /sys/fs/cgroup/cpuset/polars_core/cpuset.mems >/dev/null
-    echo "1" | sudo tee /sys/fs/cgroup/cpuset/polars_core/cpuset.cpu_exclusive >/dev/null
-    echo "0" | sudo tee /sys/fs/cgroup/cpuset/polars_core/cpuset.sched_load_balance >/dev/null
-fi
-
-# 7. Start runner lifecycle securely using direct virtual environments
+# 6. Start runner lifecycle securely using direct virtual environments
 if [ -f server.pid ]; then kill "$(cat server.pid)" 2>/dev/null || true; fi
 
 source myenv/bin/activate
