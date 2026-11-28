@@ -29,8 +29,5 @@ pip install maturin
 echo "==> [INSTALL] Deploying core high-performance frameworks..."
 pip install polars pyarrow numpy fastapi uvicorn
 
-# Dynamically compile the hardware-accelerated core module from current directory
-echo "==> [INSTALL] Compiling native Rust bit-packing modules..."
-maturin develop --release
 
 echo "==> [SUCCESS] Native dependency environment successfully established."
