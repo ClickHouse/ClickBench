@@ -32,7 +32,6 @@ echo "0" | sudo tee /sys/kernel/mm/transparent_hugepages/khugepaged/alloc_sleep_
 # Memory allocation limits and background flush prevention
 sudo sysctl -w vm.max_map_count=1600000
 sudo sysctl -w vm.overcommit_memory=1
-sudo sysctl -w vm.min_free_kbytes=2097152
 sudo sysctl -w vm.swappiness=0
 sudo sysctl -w vm.zone_reclaim_mode=1
 sudo sysctl -w vm.watermark_boost_factor=0
