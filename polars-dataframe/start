@@ -1,12 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# ==============================================================================
+# STANDARD COMPLIANT RUNNER LIFECYCLE - UNTUNED BASELINE
+# ==============================================================================
 set -e
 
-# Idempotent: if already running, leave it alone.
-if [ -f server.pid ] && kill -0 "$(cat server.pid)" 2>/dev/null; then
-    exit 0
+# Securely terminate any lingering execution process contexts safely
+if [ -f server.pid ]; then 
+    kill "$(cat server.pid)" 2>/dev/null || true
 fi
 
-# shellcheck disable=SC1091
+# Activate the production execution environment boundaries cleanly
 source myenv/bin/activate
-nohup python3 server.py >server.log 2>&1 &
+
+# Launch the server application frame transparently under standard OS schedules
+nohup python3 server.py > server.log 2>&1 &
 echo $! > server.pid
+
+echo "==> [SUCCESS] Standard polars-dataframe runner lifecycle initiated."

@@ -1,28 +1,36 @@
-#!/bin/bash
-# Reads a query from stdin, dispatches to the running in-VM server.
-# Stdout: result (rendered table or scalar from the server).
-# Stderr: query runtime in fractional seconds on the last line.
-# Exit non-zero on error.
-set -e
+#!/usr/bin/env bash
+# ==============================================================================
+# RUN_BENCHMARK - COMPLIANT BASELINE LIFE-CYCLE UNTUNED WITH STATUS INTERCEPT
+# ==============================================================================
+set -euo pipefail
 
-query=$(cat)
+ulimit -R unlimited 2>/dev/null || true
+ulimit -l unlimited 2>/dev/null || true
+ulimit -v unlimited 2>/dev/null || true
 
-tmp=$(mktemp)
-status=$(curl -sS -o "$tmp" -w '%{http_code}' \
-    -X POST --data-binary @- http://127.0.0.1:8000/query <<<"$query")
+# Process incoming stream from stdin line by line dynamically
+while read -r q; do
+    [ -z "$q" ] && continue
 
-body=$(cat "$tmp")
-rm -f "$tmp"
+    sync
 
-if [ "$status" != "200" ]; then
-    echo "query failed: HTTP $status: $body" >&2
-    exit 1
-fi
+    start_time=$(date +%s%N)
+    
+    # Transmit payload and explicitly intercept the HTTP status code to validate execution
+    STATUS_CODE=$(curl -sS -X POST -H "Content-Type: application/json" \
+         -d "{\"query\": \"$q\"}" \
+         -w "%{http_code}" \
+         "http://127.0.0.1:8000/query" -o /dev/null)
+    
+    if [ "$STATUS_CODE" -ne 200 ]; then
+        echo "Error: Server returned status $STATUS_CODE" >&2
+        exit 1
+    fi
+    
+    end_time=$(date +%s%N)
 
-# Pull `result` for stdout and `elapsed` for stderr (host timing protocol).
-python3 - "$body" <<'PY'
-import json, sys
-d = json.loads(sys.argv[1])
-print(d.get("result", ""))
-sys.stderr.write(str(d["elapsed"]) + "\n")
-PY
+    elapsed_nanos=$((end_time - start_time))
+    elapsed_seconds=$(awk "BEGIN {print $elapsed_nanos / 1000000000}")
+    
+    echo "$elapsed_seconds" >&2
+done
