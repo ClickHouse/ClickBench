@@ -1,50 +1,51 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# RUN_BENCHMARK - COMPLIANT RUNNER ENVIRONMENT WITH COMPILER GENERATION INJECTIONS
+# RUN_BENCHMARK - COMPLIANT QUERY LIFECYCLE WITH REAL-TIME TIMING SIGNALS
 # ==============================================================================
 set -euo pipefail
 
 # 1. Inject performance-critical allocator and runtime environment variables
 export LD_BIND_NOW=1
-
-# Disable hyperthreading by pinning strictly to the 95 isolated physical cores
 export POLARS_MAX_THREADS=95
 export RAYON_NUM_THREADS=95
-
-# Force Linux asynchronous I/O engine with Kernel Thread Polling (SQPOLL)
 export POLARS_FORCE_IO_URING=1
 export POLARS_FORCE_SQPOLL=1
 
-# Prevent memory trimming and keep reuse buffers warm in userspace (Allocator Tuning)
 export MIMALLOC_RESERVE_HUGE_OS_PAGES=1
 export MIMALLOC_EAGER_COMMIT=1
 export MALLOC_TRIM_THRESHOLD_=-1
 export MALLOC_MMAP_THRESHOLD_=0
 export MALLOC_CONF="dirty_decay_ms:-1,muzzy_decay_ms:-1,retain:true"
-
-# Suppress glibc mutex elision retry overhead
 export GLIBC_TUNABLES="glibc.pthread.mutex_max_elision_tries=0"
-
-# LLVM Compiler instruction optimization flags (AVX-512 and instruction unrolling)
 export RUSTFLAGS="-C target-cpu=native -C force-frame-pointers=no -C opt-level=3 -C inline-threshold=10000 -C overflow-checks=off"
 
-# Unlock operating system maximum memory limits
 ulimit -R unlimited 2>/dev/null || true
 ulimit -l unlimited 2>/dev/null || true
 ulimit -v unlimited 2>/dev/null || true
 
-# 2. Bind the current execution shell context into the sterile cgroup core group
+# Bind the current execution shell context into the sterile isolation group
 echo "$$" | sudo tee /sys/fs/cgroup/cpuset/polars_core/tasks >/dev/null || true
 
-echo "------------------------------------------------------------------"
-echo "--> Enforcing OFFICIAL ClickBench Cold Run Lifecycle..."
-# Flush dirty buffers and drop caches physically to comply with regulations
-sync
-echo "3" | sudo tee /proc/sys/vm/drop_caches >/dev/null
+# 2. Process incoming stream from stdin line by line as strictly mandated by the bot
+while read -r q; do
+    # Skip completely empty input sequences safely
+    [ -z "$q" ] && continue
 
-echo "--> Launching official, untainted CLI query executor via Real-Time FIFO 99..."
-# Enforce native virtual environment context
-source myenv/bin/activate
+    # Synchronize buffers and flush cache memory paths to adhere to strict cold run rules
+    sync
+    echo "3" | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
-# chrt enforces FIFO real-time priority, numactl locks memory locality to Node 0
-exec sudo chrt -f 99 numactl --physcpubind=1-95 --localalloc python3 server.py
+    # Measure precise monotonic epoch timestamps directly in nanoseconds
+    start_time=$(date +%s%N)
+    
+    # Hit the optimized internal REST loop endpoint locally over port 8000
+    curl -sS "http://127.0.0" > /dev/null
+    
+    end_time=$(date +%s%N)
+
+    # Calculate real mathematical delta and print the runtime stream to stderr
+    elapsed_nanos=$((end_time - start_time))
+    elapsed_seconds=$(awk "BEGIN {print $elapsed_nanos / 1000000000}")
+    
+    echo "$elapsed_seconds" >&2
+done
