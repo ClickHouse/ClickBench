@@ -11,6 +11,7 @@ pl.enable_string_cache()
 
 DATA_PATH = "hits.parquet"
 hits = None
+eager_df = None
 
 app = FastAPI()
 
@@ -21,27 +22,27 @@ def read_health():
 
 @app.post("/load")
 def load_data():
-    global hits
+    global hits, eager_df
     start_time = time.time()
     
-    # Load into an eager DataFrame first to ensure full in-memory compliance
-    df = pl.read_parquet(DATA_PATH).with_columns([
+    # Load into a global eager DataFrame to satisfy in-memory and size requirements
+    eager_df = pl.read_parquet(DATA_PATH).with_columns([
         (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
         pl.col("EventDate").cast(pl.Date)
     ])
     
-    # Keep the dataset as a compliant lazy mapping to satisfy incoming .collect() pipeline calls
-    hits = df.lazy()
+    # Expose the dataset as a compliant lazy mapping to satisfy incoming execution calls
+    hits = eager_df.lazy()
     
     elapsed_time = time.time() - start_time
     return {"status": "success", "elapsed": float(elapsed_time)}
 
 @app.get("/data-size")
 def data_size():
-    global hits
-    if hits is not None:
-        # Return the accurate physical size in bytes via native Polars estimation queries
-        return {"bytes": hits.estimated_size(), "status": "success"}
+    global eager_df
+    if eager_df is not None:
+        # Request memory footprint safely directly from the global eager dataframe
+        return {"bytes": eager_df.estimated_size(), "status": "success"}
     return {"bytes": 70000000000, "status": "success"}
 
 @app.post("/query", response_class=PlainTextResponse)
@@ -50,7 +51,7 @@ def execute_pipeline(payload: dict = Body(...)):
     expr_str = payload.get("query", "").strip()
     
     if expr_str and hits is not None:
-        # Evaluate incoming expressions directly against the initialized dataframe mapping context
+        # Evaluate expressions seamlessly against the functional LazyFrame mapping
         res = eval(expr_str)
         return str(res)
         
