@@ -1,29 +1,30 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+# ==============================================================================
+# CLICKBENCH PRODUCTION SUITE: ENVIRONMENT INSTALLATION SUITE
+# This script prepares the system with all required native toolchains.
+# ==============================================================================
+set -euo pipefail
 
-# 1. Install package manager tools and build dependencies cleanly
+echo "==> [INSTALL] Updating system packages..."
 sudo apt-get update -y
-sudo apt-get install -y python3-pip python3-venv python3-dev build-essential curl
+sudo apt-get install -y git wget curl numactl cpupower build-essential libssl-dev python3-pip python3-dev python3-venv
 
-# Install Rust toolchain directly if not present using the correct raw script URL
-if ! command -v cargo &> /dev/null; then
-    echo "[Mechanicus Install] Installing Rust toolchain..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    source "$HOME/.cargo/env"
-fi
-
-# 2. Setup the virtual environment using the official expected framework name 'myenv'
+# Ensure a clean virtual environment exists and is utilized
 python3 -m venv myenv
 source myenv/bin/activate
 
-# 3. Install build tools and light precise python packages (dropped tabular and pandas)
+echo "==> [INSTALL] Upgrading package manager..."
 pip install --upgrade pip
-pip install wheel maturin numpy fastapi uvicorn polars pyarrow
+pip install maturin
 
-# 4. Compile the native Rust core into the Python virtual environment
-if [ -f "Cargo.toml" ]; then
-    echo "[Mechanicus Install] Compiling hardware-accelerated mechanicus_core in release mode..."
-    maturin develop --release
-fi
+# Install pure data processing frameworks and requirements for native core
+echo "==> [INSTALL] Installing core high-performance libraries..."
+pip install polars pyarrow numpy
 
-echo "[Mechanicus Install] Environment successfully prepared for Phase 3!"
+# Dynamically compile the hardware-accelerated Mechanicus Core engine
+echo "==> [INSTALL] Compiling native Rust bit-packing modules..."
+cd mechanicus_core
+maturin develop --release
+cd ..
+
+echo "==> [SUCCESS] Legal dependency environment successfully established."
