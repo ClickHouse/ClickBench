@@ -1,6 +1,5 @@
 import os
 import gc
-import ctypes
 from datetime import date
 from fastapi import FastAPI, Body
 from fastapi.responses import PlainTextResponse
@@ -9,12 +8,6 @@ import polars as pl
 
 STATIC_PID = os.getpid()
 os.getpid = lambda: STATIC_PID
-
-try:
-    libc = ctypes.CDLL(None)
-    libc.mlockall(3)
-except Exception:
-    pass
 
 gc.disable()
 pl.enable_string_cache()
