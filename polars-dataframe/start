@@ -1,91 +1,19 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# OPERATING SYSTEM AND HARDWARE CORE ISOLATION ENVIRONMENT
+# STANDARD COMPLIANT RUNNER LIFECYCLE - UNTUNED BASELINE
 # ==============================================================================
 set -e
 
-# 1. Terminate non-critical background services and logging daemons
-sudo systemctl stop cron atd snapd amazon-ssm-agent ufw acpid systemd-oomd auditd irqbalance sysstat sysstat-collect.timer 2>/dev/null || true
-sudo systemctl disable cron snapd amazon-ssm-agent systemd-oomd auditd 2>/dev/null || true
-sudo systemctl mask irqbalance sysstat sysstat-collect.timer 2>/dev/null || true
-sudo accton off 2>/dev/null || true
-sudo swapoff -a 2>/dev/null || true
-
-# 2. Lock CPU power states and stabilize core frequencies to maximum thresholds
-echo "0" | sudo tee /sys/module/cpuidle/parameters/off || true
-for dev in /sys/devices/system/cpu/cpu*/cpuidle/state*/disable; do
-    echo "1" | sudo tee "$dev" 2>/dev/null || true
-done
-for cpu in /sys/devices/system/cpu/cpu*/cpufreq; do
-    if [ -f "$cpu/cpuinfo_max_freq" ]; then cat "$cpu/cpuinfo_max_freq" | sudo tee "$cpu/scaling_min_freq" >/dev/null; fi
-    if [ -f "$cpu/energy_performance_preference" ]; then echo "performance" | sudo tee "$cpu/energy_performance_preference" >/dev/null; fi
-done
-echo "performance" | sudo tee /sys/devices/system/cpu/amd_pstate/status 2>/dev/null || true
-
-# 3. Optimize virtual memory, preemption latency, and translation lookaside properties
-sudo sysctl -w kernel.randomize_va_space=0
-sudo sysctl -w vm.transparent_hugepages=always
-echo "always" | sudo tee /sys/kernel/mm/transparent_hugepages/enabled >/dev/null || true
-echo "always" | sudo tee /sys/kernel/mm/transparent_hugepages/defrag >/dev/null || true
-echo "never" | sudo tee /sys/kernel/mm/transparent_hugepages/khugepaged/defrag >/dev/null || true
-echo "0" | sudo tee /sys/kernel/mm/transparent_hugepages/khugepaged/alloc_sleep_millisecs >/dev/null || true
-
-# CFS Scheduler optimizations to ensure cache locality
-sudo sysctl -w kernel.sched_latency_ns=1000000000
-sudo sysctl -w kernel.sched_min_granularity_ns=100000000
-sudo sysctl -w kernel.sched_wakeup_granularity_ns=150000000
-sudo sysctl -w kernel.sched_migration_cost_ns=5000000
-sudo sysctl -w kernel.sched_nr_migrate=128
-
-# Memory allocation limits and background flush prevention
-sudo sysctl -w vm.max_map_count=1600000
-sudo sysctl -w vm.overcommit_memory=1
-sudo sysctl -w vm.min_free_kbytes=2097152
-sudo sysctl -w vm.swappiness=0
-sudo sysctl -w vm.zone_reclaim_mode=1
-sudo sysctl -w vm.watermark_boost_factor=0
-sudo sysctl -w vm.watermark_scale_factor=100
-sudo sysctl -w vm.stat_interval=60
-sudo sysctl -w vm.dirty_background_ratio=80
-sudo sysctl -w vm.dirty_ratio=90
-sudo sysctl -w vm.dirty_expire_centisecs=8640000
-sudo sysctl -w vm.dirty_writeback_centisecs=8640000
-sudo sysctl -w vm.vfs_cache_pressure=0
-sudo sysctl -w vm.percpu_pagelist_fraction=100
-
-# Slab allocator partial optimization
-for kmalloc in /sys/kernel/slab/kmalloc-*; do
-    if [ -d "$kmalloc" ]; then echo "128" | sudo tee "$kmalloc/cpu_partial" >/dev/null; fi
-done
-
-# 4. Storage Block-I/O queue optimizations (Max transactions)
-echo "0" | sudo tee /sys/block/nvme1n1/queue/iostats >/dev/null
-echo "1024" | sudo tee /sys/block/nvme1n1/queue/max_sectors_kb >/dev/null
-for dev in /sys/devices/system/block/nvme* /sys/devices/system/block/sd*; do
-    if [ -d "$dev/queue" ]; then
-        echo "none" | sudo tee "$dev/queue/scheduler" >/dev/null || true
-        echo "1024" | sudo tee "$dev/queue/nr_requests" >/dev/null || true
-    fi
-done
-for dev in /dev/nvme* /dev/sd*; do sudo blockdev --setra 65536 "$dev" 2>/dev/null || true; done
-
-# 5. Reroute hardware interrupts completely to Core 0 to sterilize execution cores
-for irq in /proc/irq/*; do
-    if [ -d "$irq" ] && [ "$(basename "$irq")" != "0" ]; then echo "1" | sudo tee "$irq/smp_affinity" 2>/dev/null || true; fi
-done
-
-# 6. Initialize automated isolation cgroup configuration (Cores 1-95)
-if [ ! -d "/sys/fs/cgroup/cpuset/polars_core" ]; then
-    sudo mkdir -p /sys/fs/cgroup/cpuset/polars_core
-    echo "1-95" | sudo tee /sys/fs/cgroup/cpuset/polars_core/cpuset.cpus >/dev/null
-    echo "0" | sudo tee /sys/fs/cgroup/cpuset/polars_core/cpuset.mems >/dev/null
-    echo "1" | sudo tee /sys/fs/cgroup/cpuset/polars_core/cpuset.cpu_exclusive >/dev/null
-    echo "0" | sudo tee /sys/fs/cgroup/cpuset/polars_core/cpuset.sched_load_balance >/dev/null
+# Securely terminate any lingering execution process contexts safely
+if [ -f server.pid ]; then 
+    kill "$(cat server.pid)" 2>/dev/null || true
 fi
 
-# 7. Start runner lifecycle securely using direct virtual environments
-if [ -f server.pid ]; then kill "$(cat server.pid)" 2>/dev/null || true; fi
-
+# Activate the production execution environment boundaries cleanly
 source myenv/bin/activate
+
+# Launch the server application frame transparently under standard OS schedules
 nohup python3 server.py > server.log 2>&1 &
 echo $! > server.pid
+
+echo "==> [SUCCESS] Standard polars-dataframe runner lifecycle initiated."
