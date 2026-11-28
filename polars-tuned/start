@@ -22,19 +22,12 @@ for cpu in /sys/devices/system/cpu/cpu*/cpufreq; do
 done
 echo "performance" | sudo tee /sys/devices/system/cpu/amd_pstate/status 2>/dev/null || true
 
-# 3. Optimize virtual memory, preemption latency, and translation lookaside properties
+# 3. Optimize virtual memory and translation lookaside properties via native sysfs
 sudo sysctl -w kernel.randomize_va_space=0
 echo "always" | sudo tee /sys/kernel/mm/transparent_hugepages/enabled >/dev/null || true
 echo "always" | sudo tee /sys/kernel/mm/transparent_hugepages/defrag >/dev/null || true
 echo "never" | sudo tee /sys/kernel/mm/transparent_hugepages/khugepaged/defrag >/dev/null || true
 echo "0" | sudo tee /sys/kernel/mm/transparent_hugepages/khugepaged/alloc_sleep_millisecs >/dev/null || true
-
-# CFS Scheduler optimizations to ensure cache locality
-sudo sysctl -w kernel.sched_latency_ns=1000000000
-sudo sysctl -w kernel.sched_min_granularity_ns=100000000
-sudo sysctl -w kernel.sched_wakeup_granularity_ns=150000000
-sudo sysctl -w kernel.sched_migration_cost_ns=5000000
-sudo sysctl -w kernel.sched_nr_migrate=128
 
 # Memory allocation limits and background flush prevention
 sudo sysctl -w vm.max_map_count=1600000
@@ -52,7 +45,6 @@ sudo sysctl -w vm.dirty_writeback_centisecs=8640000
 sudo sysctl -w vm.vfs_cache_pressure=0
 sudo sysctl -w vm.percpu_pagelist_fraction=100
 
-# Slab allocator partial optimization
 for kmalloc in /sys/kernel/slab/kmalloc-*; do
     if [ -d "$kmalloc" ]; then echo "128" | sudo tee "$kmalloc/cpu_partial" >/dev/null; fi
 done
