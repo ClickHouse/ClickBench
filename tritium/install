@@ -3,11 +3,10 @@
 # architecture, checked against its checksum here, so a rerun measures the same binary; or a local linux-release build
 # from TRITIUM instead.
 set -e
-release=https://github.com/xmaton/tritium-release/releases/download/v0.1.0
-# The release's SHA256SUMS (release/make-release.sh prints it). Empty for an architecture v0.1.0 has no binary of
-# yet: the check fails there.
-sha256_x86_64=f10384d636b261bb95424569c0ca84d2780fa28d34acb6d80467189fc3c523cc
-sha256_aarch64=
+release=https://github.com/xmaton/tritium-release/releases/download/v0.2.0
+# The release's SHA256SUMS (release/make-release.sh prints it).
+sha256_x86_64=71638369c112bc7ba2b678c3070ffd320e4c99e06cac6581e7d5d5bdc9e5f5c2
+sha256_aarch64=3f02e629c63c4e19ebf870eda775c865782a919b71db4935257fbcb6efc4c674
 
 sudo apt-get update -y
 sudo apt-get install -y curl
