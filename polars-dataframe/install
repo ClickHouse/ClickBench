@@ -11,7 +11,7 @@ sudo apt-get install -y git wget curl numactl cpupower build-essential libssl-de
 # Install Rust toolchain natively since maturin requires cargo
 echo "==> [INSTALL] Deploying native compiler toolchain..."
 if ! command -v cargo &> /dev/null; then
-    curl --proto '=https' --tlsv1.2 -sSf https://rustup.rs | sh -s -- -y
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     source "$HOME/.cargo/env"
 else
     source "$HOME/.cargo/env" || true
