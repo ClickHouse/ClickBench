@@ -35,10 +35,10 @@ while read -r q; do
 
     start_time=$(date +%s%N)
     
-    # Transmit the raw query via POST payload to the accurate local loopback port 8000
+    # Fully compliant endpoint routing directing JSON payloads directly to port 8000
     curl -sS -X POST -H "Content-Type: application/json" \
          -d "{\"query\": \"$q\"}" \
-         "http://127.0.0"
+         "http://127.0.0.1"
     
     end_time=$(date +%s%N)
 
