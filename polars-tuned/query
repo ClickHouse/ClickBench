@@ -26,24 +26,22 @@ ulimit -v unlimited 2>/dev/null || true
 # Bind the current execution shell context into the sterile isolation group
 echo "$$" | sudo tee /sys/fs/cgroup/cpuset/polars_core/tasks >/dev/null || true
 
-# 2. Process incoming stream from stdin line by line as strictly mandated by the bot
+# 2. Process incoming stream from stdin line by line dynamically
 while read -r q; do
-    # Skip completely empty input sequences safely
     [ -z "$q" ] && continue
 
-    # Synchronize buffers and flush cache memory paths to adhere to strict cold run rules
     sync
     echo "3" | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
-    # Measure precise monotonic epoch timestamps directly in nanoseconds
     start_time=$(date +%s%N)
     
-    # Hit the optimized internal REST loop endpoint locally over port 8000
-    curl -sS "http://127.0.0" > /dev/null
+    # Transmit the raw SQL query inside a structured JSON payload to port 8000
+    curl -sS -X POST -H "Content-Type: application/json" \
+         -d "{\"query\": \"$q\"}" \
+         "http://127.0.0" > /dev/null
     
     end_time=$(date +%s%N)
 
-    # Calculate real mathematical delta and print the runtime stream to stderr
     elapsed_nanos=$((end_time - start_time))
     elapsed_seconds=$(awk "BEGIN {print $elapsed_nanos / 1000000000}")
     
