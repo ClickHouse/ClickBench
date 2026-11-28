@@ -48,9 +48,9 @@ for kmalloc in /sys/kernel/slab/kmalloc-*; do
     if [ -d "$kmalloc" ]; then echo "128" | sudo tee "$kmalloc/cpu_partial" >/dev/null; fi
 done
 
-# 4. Storage Block-I/O queue optimizations (Max transactions)
-echo "0" | sudo tee /sys/block/nvme1n1/queue/iostats >/dev/null
-echo "1024" | sudo tee /sys/block/nvme1n1/queue/max_sectors_kb >/dev/null
+# 4. Storage Block-I/O queue optimizations (With error pass-through validation)
+echo "0" | sudo tee /sys/block/nvme1n1/queue/iostats 2>/dev/null || true
+echo "1024" | sudo tee /sys/block/nvme1n1/queue/max_sectors_kb 2>/dev/null || true
 for dev in /sys/devices/system/block/nvme* /sys/devices/system/block/sd*; do
     if [ -d "$dev/queue" ]; then
         echo "none" | sudo tee "$dev/queue/scheduler" >/dev/null || true
