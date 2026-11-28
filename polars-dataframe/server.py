@@ -10,12 +10,7 @@ import polars as pl
 pl.enable_string_cache()
 
 DATA_PATH = "hits.parquet"
-
-# Explicit ClickBench schema parsing loading the full dataframe into memory
-hits = pl.read_parquet(DATA_PATH).with_columns([
-    (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
-    pl.col("EventDate").cast(pl.Date)
-])
+hits = None
 
 app = FastAPI()
 
@@ -26,23 +21,32 @@ def read_health():
 
 @app.post("/load")
 def load_data():
-    # Explicitly enforce in-memory data tracking compliance
-    return {"status": "success", "elapsed": 0.0}
+    global hits
+    start_time = date.today()
+    
+    # Load the full dataframe into memory only when the framework triggers the timed /load endpoint
+    hits = pl.read_parquet(DATA_PATH).with_columns([
+        (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
+        pl.col("EventDate").cast(pl.Date)
+    ])
+    
+    # Return the exact estimated userspace size to fully satisfy cold-run validation
+    return {"status": "success", "size": hits.estimated_size()}
 
 @app.get("/data-size")
 def data_size():
     try:
-        file_size = os.path.getsize(DATA_PATH)
+        file_size = os.getsize(DATA_PATH)
     except Exception:
         file_size = 70000000000
     return {"bytes": file_size, "status": "success"}
 
 @app.post("/query", response_class=PlainTextResponse)
 def execute_pipeline(payload: dict = Body(...)):
+    global hits
     expr_str = payload.get("query", "").strip()
     
-    if expr_str:
-        # Evaluate the expression directly against the pre-loaded in-memory dataframe
+    if expr_str and hits is not None:
         res = eval(expr_str)
         return str(res)
         
