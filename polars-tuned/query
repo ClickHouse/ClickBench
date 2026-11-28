@@ -4,6 +4,7 @@
 # ==============================================================================
 set -euo pipefail
 
+# 1. Inject performance-critical allocator and runtime environment variables
 export LD_BIND_NOW=1
 export POLARS_MAX_THREADS=95
 export RAYON_NUM_THREADS=95
@@ -22,9 +23,10 @@ ulimit -R unlimited 2>/dev/null || true
 ulimit -l unlimited 2>/dev/null || true
 ulimit -v unlimited 2>/dev/null || true
 
+# Bind the current execution shell context into the sterile isolation group
 echo "$$" | sudo tee /sys/fs/cgroup/cpuset/polars_core/tasks >/dev/null || true
 
-# Process incoming stream from stdin line by line dynamically
+# 2. Process incoming stream from stdin line by line dynamically
 while read -r q; do
     [ -z "$q" ] && continue
 
