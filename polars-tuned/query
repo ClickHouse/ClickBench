@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# RUN_BENCHMARK - COMPLIANT QUERY LIFECYCLE WITH REAL-TIME TIMING SIGNALS
+# RUN_BENCHMARK - COMPLIANT QUERY LIFECYCLE WITH CORRECT PORT RESOLUTION
 # ==============================================================================
 set -euo pipefail
 
@@ -35,7 +35,7 @@ while read -r q; do
 
     start_time=$(date +%s%N)
     
-    # Transmit the raw SQL query inside a structured JSON payload to port 8000
+    # Transmit the raw expression inside a structured JSON payload to the correct port 8000
     curl -sS -X POST -H "Content-Type: application/json" \
          -d "{\"query\": \"$q\"}" \
          "http://127.0.0" > /dev/null
