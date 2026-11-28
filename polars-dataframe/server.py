@@ -11,15 +11,10 @@ pl.enable_string_cache()
 
 DATA_PATH = "hits.parquet"
 
-# Explicit ClickBench schema casting to ensure EventTime and EventDate evaluation passes smoothly
-CAST_SCHEMA = {
-    "EventTime": pl.Datetime("ns"),
-    "EventDate": pl.Date
-}
-
+# Compliant ClickBench schema casting transforming Unix seconds accurately to microseconds context
 hits = pl.scan_parquet(DATA_PATH, low_memory=False, cache=False, parallel="prefiltered").with_columns([
-    pl.col("EventTime").cast(CAST_SCHEMA["EventTime"]),
-    pl.col("EventDate").cast(CAST_SCHEMA["EventDate"])
+    (pl.col("EventTime") * int(1e6)).cast(pl.Datetime(time_unit="us")),
+    pl.col("EventDate").cast(pl.Date)
 ])
 
 app = FastAPI()
