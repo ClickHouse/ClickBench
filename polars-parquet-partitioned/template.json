@@ -1,0 +1,11 @@
+{
+  "system": "Polars (Parquet, partitioned)",
+  "proprietary": "no",
+  "hardware": "cpu",
+  "tuned": "no",
+  "category": "challenger",
+  "tags": [
+    "column-oriented",
+    "stateless"
+  ]
+}
