@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# RUN_BENCHMARK - COMPLIANT BASELINE LIFE-CYCLE UNTUNED
+# RUN_BENCHMARK - COMPLIANT BASELINE LIFE-CYCLE UNTUNED WITH STATUS INTERCEPT
 # ==============================================================================
 set -euo pipefail
 
@@ -17,10 +17,16 @@ while read -r q; do
 
     start_time=$(date +%s%N)
     
-    # Transmit the raw expression inside a structured JSON payload to the correct local port 8000
-    curl -sS -X POST -H "Content-Type: application/json" \
+    # Transmit payload and explicitly intercept the HTTP status code to validate execution
+    STATUS_CODE=$(curl -sS -X POST -H "Content-Type: application/json" \
          -d "{\"query\": \"$q\"}" \
-         "http://127.0.0.1:8000/query"
+         -w "%{http_code}" \
+         "http://127.0.0.1:8000/query" -o /dev/null)
+    
+    if [ "$STATUS_CODE" -ne 200 ]; then
+        echo "Error: Server returned status $STATUS_CODE" >&2
+        exit 1
+    fi
     
     end_time=$(date +%s%N)
 
