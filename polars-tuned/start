@@ -43,7 +43,6 @@ sudo sysctl -w vm.dirty_ratio=90
 sudo sysctl -w vm.dirty_expire_centisecs=8640000
 sudo sysctl -w vm.dirty_writeback_centisecs=8640000
 sudo sysctl -w vm.vfs_cache_pressure=0
-sudo sysctl -w vm.percpu_pagelist_fraction=100
 
 for kmalloc in /sys/kernel/slab/kmalloc-*; do
     if [ -d "$kmalloc" ]; then echo "128" | sudo tee "$kmalloc/cpu_partial" >/dev/null; fi
