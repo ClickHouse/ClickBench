@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# RUN_BENCHMARK - COMPLIANT QUERY LIFECYCLE WITH CORRECT PORT RESOLUTION
+# RUN_BENCHMARK - COMPLIANT QUERY LIFECYCLE WITH EXPLICIT PORT TARGET
 # ==============================================================================
 set -euo pipefail
 
@@ -23,9 +23,6 @@ ulimit -R unlimited 2>/dev/null || true
 ulimit -l unlimited 2>/dev/null || true
 ulimit -v unlimited 2>/dev/null || true
 
-# Bind the current execution shell context into the sterile isolation group
-echo "$$" | sudo tee /sys/fs/cgroup/cpuset/polars_core/tasks >/dev/null || true
-
 # 2. Process incoming stream from stdin line by line dynamically
 while read -r q; do
     [ -z "$q" ] && continue
@@ -35,10 +32,16 @@ while read -r q; do
 
     start_time=$(date +%s%N)
     
-    # Fully compliant endpoint routing directing JSON payloads directly to port 8000
-    curl -sS -X POST -H "Content-Type: application/json" \
+    # Send payload and explicitly intercept the HTTP status code to validate execution
+    STATUS_CODE=$(curl -sS -X POST -H "Content-Type: application/json" \
          -d "{\"query\": \"$q\"}" \
-         "http://127.0.0.1:8000/query"
+         -w "%{http_code}" \
+         "http://127.0.0.1:8000/query" -o /dev/null)
+    
+    if [ "$STATUS_CODE" -ne 200 ]; then
+        echo "Error: Server returned status $STATUS_CODE" >&2
+        exit 1
+    fi
     
     end_time=$(date +%s%N)
 
