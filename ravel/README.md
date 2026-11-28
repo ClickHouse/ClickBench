@@ -277,6 +277,26 @@ The earlier reference, v0.16.1 with ~4 MB objects, measured a 483 s cold and
   instance that ran v0.32.0 just before it, as a check on an earlier
   v0.34.0 run on another instance whose hot total was 11% higher; on the
   same instance the two versions' hot totals are equal (16.1 s).
+- Since v0.37.0 each commit record carries, for every typed integer column,
+  the column's sum and its count of zero values, beside the min, max and null
+  count it held before. The load writes them for all such columns by default;
+  nothing in this entry enables or selects them. q2
+  (`COUNT(*) WHERE "AdvEngineID" <> 0`), q3 (a `SUM`, `COUNT(*)` and `AVG`),
+  q4 (`AVG("UserID")`) and q30 (the 90 sums over `ResolutionWidth`) are
+  answered from those figures without reading a data object.
+  `ravel-cli load --no-declared-stat-aggregates` withholds them, and those
+  four statements then scan as before. In the v0.37.0 results
+  (`results/20261128`) all 43 statements answered on every machine. Against
+  the previous results (`results/20261122`, a run of v0.34.0), those four
+  statements take 0.014 to 0.080 s hot, where they took 0.042 to 3.64 s, and
+  0.047 to 0.152 s cold, where they took 0.251 to 5.59 s. The other 39
+  statements are, by geometric mean of their hot times, between 0.94 and 1.02
+  of the previous results on each machine. On c6a.4xlarge the hot total is
+  31.4 s against 30.6 s. On c6a.large q34 and q35 drop from 227 s to 60 s hot,
+  and on c6a.xlarge from 47 and 50 s to 32 s: since v0.36.0 the bucketed spill
+  retry no longer recopies its chunks as they fill. The data size is 151,429
+  bytes larger on a machine that writes 222 objects, which is what the two
+  figures add to the commit records.
 - q28 averages `octet_length("URL")`. ClickHouse's `length()` counts bytes and
   DataFusion's counts characters, so `octet_length` is the faithful
   translation; q29 still uses `length("Referer")`.
