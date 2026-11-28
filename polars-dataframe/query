@@ -20,7 +20,7 @@ while read -r q; do
     # Transmit the raw expression inside a structured JSON payload to the correct local port 8000
     curl -sS -X POST -H "Content-Type: application/json" \
          -d "{\"query\": \"$q\"}" \
-         "http://127.0.0.1"
+         "http://127.0.0.1:8000/query"
     
     end_time=$(date +%s%N)
 
