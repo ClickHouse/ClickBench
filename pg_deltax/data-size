@@ -3,5 +3,4 @@
 # by measuring the base/ directory directly.
 set -eu
 
-PGVERSION=${PGVERSION:-18}
-sudo du -bcs /var/lib/postgresql/$PGVERSION/main/base | grep total | awk '{print $1}'
+sudo du -bcs /var/lib/pg_deltax/data/base | awk '/total$/{print $1}'

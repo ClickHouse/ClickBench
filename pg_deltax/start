@@ -1,5 +1,12 @@
 #!/bin/bash
 set -eu
 
-PGVERSION=${PGVERSION:-18}
-sudo systemctl start postgresql@$PGVERSION-main
+if [ -f /var/lib/pg_deltax/use_container ]; then
+    sudo mkdir -p /var/run/postgresql
+    sudo chown 26:26 /var/run/postgresql
+    sudo chmod 2775 /var/run/postgresql
+    sudo docker start pg_deltax >/dev/null
+else
+    PGVERSION=${PGVERSION:-18}
+    sudo systemctl start postgresql@$PGVERSION-main
+fi

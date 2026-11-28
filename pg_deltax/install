@@ -1,53 +1,151 @@
 #!/bin/bash
-# Install PostgreSQL 18, Rust + cargo-pgrx, build and install the pg_deltax
-# extension from source, and wire it into shared_preload_libraries. Idempotent.
+# Install PostgreSQL 18 + pg_deltax (pinned to 33151a6, post-0.2.1 with
+# condition cache and group-by filter prefetch). On x86_64 we install official
+# PGDG postgresql18-server together with a SHA-256-verified third-party
+# PGDG-layout (/usr/pgsql-18) RPM for pg_deltax (built via pgrx-rpm-builder,
+# not an official PGDG repository package) inside a host-network, host-volume
+# AlmaLinux 9 container so runs do not spend ~17 minutes compiling Rust +
+# fat-LTO on the benchmark machine.
+# Falls back to building the same pinned ref from source on non-x86_64 hosts,
+# when PG_DELTAX_BUILD_FROM_SOURCE=1, or when ~/pg_deltax is pre-populated.
 set -eu
 
 PGVERSION=${PGVERSION:-18}
 PG_DELTAX_REPO=${PG_DELTAX_REPO:-https://github.com/xataio/deltax.git}
-# Empty by default: don't touch git state. Set to a tag/branch/sha to force
-# a checkout. Avoids clobbering local iteration when ~/pg_deltax is either a
-# git checkout on a feature branch or a non-git rsync from `make deploy`.
-PG_DELTAX_REF=${PG_DELTAX_REF:-}
+PG_DELTAX_REF=${PG_DELTAX_REF:-33151a6be70e59de7df11c112dbc49524a97fe53}
+PG_DELTAX_RPM_URL=${PG_DELTAX_RPM_URL:-https://github.com/suleymanngulter/pgrx-rpm-builder/releases/download/pg_deltax-0.2.1-git33151a6/pg_deltax_18-0.2.1-0.1.20260813git33151a6.el9.x86_64.rpm}
+PG_DELTAX_RPM_SHA256=${PG_DELTAX_RPM_SHA256:-7967d8abc0bb435ea196243e9dd4871455c534e218021404dd6ad29c7bc77906}
+PG_DELTAX_RPM_FILE=${PG_DELTAX_RPM_FILE:-}
+PG_DELTAX_IMAGE=${PG_DELTAX_IMAGE:-pg_deltax_pgdg:18-0.2.1-git33151a6}
+CONTAINER_NAME=${CONTAINER_NAME:-pg_deltax}
+STATE_DIR=/var/lib/pg_deltax
+
+export DEBIAN_FRONTEND=noninteractive
+mem_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo)
+
+write_pg_tuning() {
+    local target_conf="$1"
+    if [ "$mem_kb" -lt $((24 * 1024 * 1024)) ]; then
+        cat <<EOF | sudo tee -a "$target_conf" >/dev/null
+work_mem = 64MB
+shared_buffers = 1GB
+max_worker_processes = 8
+max_parallel_workers = 2
+max_parallel_workers_per_gather = 2
+EOF
+    else
+        cat <<EOF | sudo tee -a "$target_conf" >/dev/null
+work_mem = 64MB
+EOF
+    fi
+}
+
+if [ "${PG_DELTAX_BUILD_FROM_SOURCE:-0}" != "1" ] \
+    && [ ! -d "$HOME/pg_deltax" ] \
+    && [ "$(uname -m)" = "x86_64" ]; then
+
+    sudo apt-get update -y
+    sudo apt-get install -y ca-certificates curl docker.io postgresql-client
+
+    # Ensure no host PostgreSQL daemon occupies /var/run/postgresql:5432.
+    sudo systemctl stop 'postgresql*' 2>/dev/null || true
+    sudo systemctl disable 'postgresql*' 2>/dev/null || true
+
+    if sudo docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+        sudo docker rm -f "$CONTAINER_NAME" >/dev/null
+    fi
+
+    sudo rm -rf "$STATE_DIR"
+    sudo mkdir -p "$STATE_DIR/data" "$STATE_DIR/parquet" /var/run/postgresql
+    # PGDG RHEL/AlmaLinux postgresql18-server runs as uid:gid 26:26 (postgres).
+    sudo chown -R 26:26 "$STATE_DIR" /var/run/postgresql
+    sudo chmod 0700 "$STATE_DIR/data"
+    sudo chmod 0755 "$STATE_DIR" "$STATE_DIR/parquet"
+    sudo chmod 2775 /var/run/postgresql
+
+    build_ctx=$(mktemp -d /tmp/pg-deltax-img-XXXXXX)
+    trap 'rm -rf "$build_ctx"' EXIT
+
+    if [ -n "$PG_DELTAX_RPM_FILE" ]; then
+        cp "$PG_DELTAX_RPM_FILE" "$build_ctx/pg_deltax.rpm"
+    else
+        curl -fsSL --retry 5 --retry-delay 5 -o "$build_ctx/pg_deltax.rpm" "$PG_DELTAX_RPM_URL"
+    fi
+    echo "${PG_DELTAX_RPM_SHA256}  $build_ctx/pg_deltax.rpm" | sha256sum -c -
+
+    cat > "$build_ctx/Dockerfile" <<'DOCKERFILE'
+FROM almalinux:9
+RUN dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
+    && dnf -qy module disable postgresql || true
+COPY pg_deltax.rpm /tmp/pg_deltax.rpm
+RUN dnf install -y \
+        --setopt=baseos.exclude=postgresql* \
+        --setopt=appstream.exclude=postgresql* \
+        postgresql18-server \
+        postgresql18 \
+        /tmp/pg_deltax.rpm \
+    && rm -f /tmp/pg_deltax.rpm \
+    && dnf clean all
+USER postgres
+STOPSIGNAL SIGINT
+CMD ["/usr/pgsql-18/bin/postgres", "-D", "/var/lib/pg_deltax/data"]
+DOCKERFILE
+
+    sudo docker build -q -t "$PG_DELTAX_IMAGE" "$build_ctx" >/dev/null
+
+    sudo docker run --rm \
+        -v "$STATE_DIR:/var/lib/pg_deltax" \
+        "$PG_DELTAX_IMAGE" \
+        /usr/pgsql-18/bin/initdb --locale=C --encoding=UTF8 -A trust -D /var/lib/pg_deltax/data >/dev/null
+
+    cat <<'EOF' | sudo tee -a "$STATE_DIR/data/postgresql.conf" >/dev/null
+listen_addresses = ''
+unix_socket_directories = '/var/run/postgresql'
+shared_preload_libraries = 'pg_deltax'
+EOF
+    write_pg_tuning "$STATE_DIR/data/postgresql.conf"
+    sudo chown -R 26:26 "$STATE_DIR/data"
+
+    # Match Linux systemd's 50%-of-RAM /dev/shm ceiling so PostgreSQL DSA
+    # (used by pg_deltax's shared-memory blob and condition caches) never hits
+    # Docker's default 64 MiB /dev/shm cap.
+    shm_kb=$((mem_kb / 2))
+    sudo docker create \
+        --name "$CONTAINER_NAME" \
+        --network host \
+        --shm-size="${shm_kb}k" \
+        -v "$STATE_DIR:/var/lib/pg_deltax" \
+        -v /var/run/postgresql:/var/run/postgresql \
+        "$PG_DELTAX_IMAGE" >/dev/null
+
+    sudo touch "$STATE_DIR/use_container"
+    sudo docker start "$CONTAINER_NAME" >/dev/null
+    exit 0
+fi
+
+# Fallback path (aarch64, PG_DELTAX_BUILD_FROM_SOURCE=1, or pre-populated ~/pg_deltax)
 PG_CONFIG=/usr/lib/postgresql/$PGVERSION/bin/pg_config
 
-# PostgreSQL 18
-export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update -y
-sudo apt-get install -y gnupg postgresql-common apt-transport-https lsb-release wget git
+sudo apt-get install -y gnupg postgresql-common apt-transport-https lsb-release wget git curl
 sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
 sudo apt-get update -y
 sudo apt-get install -y postgresql-$PGVERSION postgresql-client-$PGVERSION postgresql-server-dev-$PGVERSION
 
-# PostgreSQL runs with stock configuration except work_mem=64MB, the same
-# value the vanilla postgresql/ benchmark uses. On the 16 GiB playground
-# VM we also cap shared_buffers + parallel-workers so pg_deltax's own
-# parallel-decoder pipeline doesn't push the backend past physical RAM
-# during the direct-backfill COPY (previously visible as
-# "server closed the connection unexpectedly" after ~6 min of load).
-# Skip the overrides on hosts with ≥24 GiB RAM so the standalone
-# benchmark keeps its historical defaults.
-mem_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo)
-if [ "$mem_kb" -lt $((24 * 1024 * 1024)) ]; then
-    sudo tee /etc/postgresql/$PGVERSION/main/conf.d/clickbench.conf <<EOF
-work_mem=64MB
-shared_buffers=1GB
-max_worker_processes=8
-max_parallel_workers=2
-max_parallel_workers_per_gather=2
-EOF
-else
-    sudo tee /etc/postgresql/$PGVERSION/main/conf.d/clickbench.conf <<EOF
-work_mem=64MB
-EOF
-fi
+sudo rm -f /etc/postgresql/$PGVERSION/main/conf.d/clickbench.conf
+write_pg_tuning /etc/postgresql/$PGVERSION/main/conf.d/clickbench.conf
 
-# pg_deltax must be preloaded.
 if ! sudo grep -q "shared_preload_libraries.*pg_deltax" /etc/postgresql/$PGVERSION/main/postgresql.conf; then
     sudo bash -c "echo \"shared_preload_libraries = 'pg_deltax'\" >> /etc/postgresql/$PGVERSION/main/postgresql.conf"
 fi
+sudo sed -i -E 's/^(local\s+all\s+all\s+).*/\1trust/; s/^(local\s+all\s+postgres\s+).*/\1trust/' \
+    /etc/postgresql/$PGVERSION/main/pg_hba.conf
 
-# Rust toolchain (idempotent: rustup is a no-op if already installed).
+sudo rm -rf "$STATE_DIR"
+sudo mkdir -p "$STATE_DIR/parquet"
+sudo chmod 0755 "$STATE_DIR" "$STATE_DIR/parquet"
+sudo ln -s "/var/lib/postgresql/$PGVERSION/main" "$STATE_DIR/data"
+
 if ! command -v cargo >/dev/null 2>&1; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
 fi
@@ -55,22 +153,17 @@ fi
 source "$HOME/.cargo/env"
 
 sudo apt-get install -y pkg-config libssl-dev libclang-dev clang
-
 cargo install --locked cargo-pgrx --version 0.17.0
 
-# Build and install pg_deltax against this PG.
-# - Fresh box: clone the public repo.
-# - Existing git checkout: leave it alone unless PG_DELTAX_REF is set.
-# - Existing non-git dir (e.g. rsync'd by `make deploy`): just build whatever
-#   is there. Don't try to `git fetch` — it would fail.
 if [ ! -d "$HOME/pg_deltax" ]; then
     git clone "$PG_DELTAX_REPO" "$HOME/pg_deltax"
+    git -C "$HOME/pg_deltax" checkout "$PG_DELTAX_REF"
+elif [ -n "${PG_DELTAX_FORCE_REF:-}" ] && [ -d "$HOME/pg_deltax/.git" ]; then
+    git -C "$HOME/pg_deltax" fetch --tags origin
+    git -C "$HOME/pg_deltax" checkout "$PG_DELTAX_FORCE_REF"
 fi
+
 cd "$HOME/pg_deltax"
-if [ -n "$PG_DELTAX_REF" ] && [ -d .git ]; then
-    git fetch --tags origin
-    git checkout "$PG_DELTAX_REF"
-fi
 cargo pgrx init --pg$PGVERSION "$PG_CONFIG"
 sudo env "PATH=$PATH" "RUSTUP_HOME=${RUSTUP_HOME:-$HOME/.rustup}" "CARGO_HOME=${CARGO_HOME:-$HOME/.cargo}" "PGRX_HOME=$HOME/.pgrx" \
     cargo pgrx install --pg-config "$PG_CONFIG" --release

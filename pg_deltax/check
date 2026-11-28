@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-sudo -u postgres psql -t -c 'SELECT 1' >/dev/null
+psql -X -h /var/run/postgresql -U postgres -d postgres -t -c 'SELECT 1' >/dev/null
