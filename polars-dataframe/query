@@ -1,49 +1,29 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# RUN_BENCHMARK - COMPLIANT QUERY LIFECYCLE WITH REAL-TIME TIMING SIGNALS
+# RUN_BENCHMARK - COMPLIANT BASELINE LIFE-CYCLE UNTUNED
 # ==============================================================================
 set -euo pipefail
-
-# 1. Inject performance-critical allocator and runtime environment variables
-export LD_BIND_NOW=1
-export POLARS_MAX_THREADS=95
-export RAYON_NUM_THREADS=95
-export POLARS_FORCE_IO_URING=1
-export POLARS_FORCE_SQPOLL=1
-
-export MIMALLOC_RESERVE_HUGE_OS_PAGES=1
-export MIMALLOC_EAGER_COMMIT=1
-export MALLOC_TRIM_THRESHOLD_=-1
-export MALLOC_MMAP_THRESHOLD_=0
-export MALLOC_CONF="dirty_decay_ms:-1,muzzy_decay_ms:-1,retain:true"
-export GLIBC_TUNABLES="glibc.pthread.mutex_max_elision_tries=0"
-export RUSTFLAGS="-C target-cpu=native -C force-frame-pointers=no -C opt-level=3 -C inline-threshold=10000 -C overflow-checks=off"
 
 ulimit -R unlimited 2>/dev/null || true
 ulimit -l unlimited 2>/dev/null || true
 ulimit -v unlimited 2>/dev/null || true
 
-# Bind the current execution shell context into the sterile isolation group
-echo "$$" | sudo tee /sys/fs/cgroup/cpuset/polars_core/tasks >/dev/null || true
-
-# 2. Process incoming stream from stdin line by line as strictly mandated by the bot
+# Process incoming stream from stdin line by line dynamically
 while read -r q; do
-    # Skip completely empty input sequences safely
     [ -z "$q" ] && continue
 
-    # Synchronize buffers and flush cache memory paths to adhere to strict cold run rules
     sync
     echo "3" | sudo tee /proc/sys/vm/drop_caches >/dev/null
 
-    # Measure precise monotonic epoch timestamps directly in nanoseconds
     start_time=$(date +%s%N)
     
-    # Hit the optimized internal REST loop endpoint locally over port 8000
-    curl -sS "http://127.0.0" > /dev/null
+    # Transmit the raw expression inside a structured JSON payload to the correct local port 8000
+    curl -sS -X POST -H "Content-Type: application/json" \
+         -d "{\"query\": \"$q\"}" \
+         "http://127.0.0"
     
     end_time=$(date +%s%N)
 
-    # Calculate real mathematical delta and print the runtime stream to stderr
     elapsed_nanos=$((end_time - start_time))
     elapsed_seconds=$(awk "BEGIN {print $elapsed_nanos / 1000000000}")
     
