@@ -6,7 +6,7 @@ set -euo pipefail
 
 echo "==> [INSTALL] Updating system packages..."
 sudo apt-get update -y
-sudo apt-get install -y git wget curl numactl cpupower build-essential libssl-dev python3-pip python3-dev python3-venv
+sudo apt-get install -y git wget curl numactl build-essential libssl-dev python3-pip python3-dev python3-venv
 
 # Install Rust toolchain natively since maturin requires cargo
 echo "==> [INSTALL] Deploying native compiler toolchain..."
